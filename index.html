@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Union Election - Nomination Form</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Styles for printing the nomination form preview */
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            body * {
+                visibility: hidden;
+            }
+            #nomination-preview, #nomination-preview * {
+                visibility: visible;
+            }
+            #nomination-preview {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                border: none;
+                padding: 1cm; /* Standard print margin */
+            }
+            #printButton, #disclaimer-section {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-4xl bg-white rounded-xl shadow-lg p-8 space-y-6">
+        
+        <header class="text-center border-b pb-4">
+            <h1 class="text-3xl font-bold text-gray-800">College Union Election Nomination</h1>
+            <p class="text-gray-500 mt-1">Automated Nomination Form Generator</p>
+        </header>
+
+        <!-- Disclaimer Section -->
+        <div id="disclaimer-section" class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
+            <h3 class="font-bold text-yellow-800">Disclaimer</h3>
+            <p class="text-sm text-yellow-700 mt-2">
+                This system is designed solely to assist students in filing their nomination form. The responsibility for ensuring the accuracy of all data rests with the student. Any mistakes in the generated form will not be the responsibility of this system. Students must verify all details before submitting the form. The rejection of a nomination due to any errors in the form is the sole responsibility of the student.
+            </p>
+        </div>
+
+        <!-- Step 1: Data Source Status -->
+        <div id="dataSourceSection" class="bg-blue-50 p-4 rounded-lg">
+            <h2 class="text-lg font-semibold text-gray-700 mb-2">Nominal Roll Data Status</h2>
+            <p id="dataStatus" class="text-sm mt-2 text-gray-500">Loading student data from the nominal roll...</p>
+        </div>
+
+        <!-- Step 2: Nomination Form - Initially Hidden -->
+        <div id="nominationFormSection" class="hidden space-y-6">
+            <h2 class="text-lg font-semibold text-gray-700 border-b pb-2">Step 2: Fill Nomination Details</h2>
+            
+            <div id="validation-warnings" class="hidden p-3 rounded-md bg-red-50 border-l-4 border-red-400">
+                <p class="text-red-800 font-medium"></p>
+            </div>
+
+            <form id="nominationForm" class="space-y-8">
+                <!-- Post Selection -->
+                <div>
+                    <label for="post" class="block text-sm font-medium text-gray-700">Post for which nomination is made</label>
+                    <select id="post" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <option>The Chairman</option>
+                        <option>The Vice Chairman</option>
+                        <option>The Secretary</option>
+                        <option>The Joint Secretary</option>
+                        <option>The Chief Student Editor</option>
+                        <option>The Secretary Fine Arts</option>
+                        <option>The General Captain For Sports And Games</option>
+                        <option>The University Union Councillor</option>
+                        <option>I UG Representative</option>
+                        <option>II UG Representative</option>
+                        <option>III UG Representative</option>
+                        <option>PG Representative</option>
+                        <option>Association Secretary Botany</option>
+                        <option>Association Secretary Chemistry</option>
+                        <option>Association Secretary Commerce</option>
+                        <option>Association Secretary Computer Science</option>
+                        <option>Association Secretary Economics</option>
+                        <option>Association Secretary English</option>
+                        <option>Association Secretary Hindi</option>
+                        <option>Association Secretary History</option>
+                        <option>Association Secretary Malayalam</option>
+                        <option>Association Secretary Mathematics</option>
+                        <option>Association Secretary Physics</option>
+                        <option>Association Secretary Psychology</option>
+                        <option>Association Secretary Sanskrit</option>
+                        <option>Association Secretary Tamil</option>
+                        <option>Association Secretary Zoology</option>
+                    </select>
+                </div>
+
+                <!-- Fields Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Candidate -->
+                    <div class="space-y-2">
+                        <h3 class="font-semibold text-gray-800 border-b pb-1">Candidate</h3>
+                        <label class="text-sm font-medium text-gray-700">Nominal Roll Serial Number</label>
+                        <input type="number" data-type="candidate" class="serial-input mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                        <div data-type="candidate-details" class="mt-2 text-sm text-gray-600 space-y-1"></div>
+                        <div class="mt-2">
+                            <label class="block text-sm font-medium text-gray-700">Gender</label>
+                            <div class="flex gap-4 mt-1">
+                                <label><input type="radio" name="gender" value="Male" class="gender-radio"> Male</label>
+                                <label><input type="radio" name="gender" value="Female" class="gender-radio"> Female</label>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Proposer -->
+                    <div class="space-y-2">
+                        <h3 class="font-semibold text-gray-800 border-b pb-1">Proposer</h3>
+                        <label class="text-sm font-medium text-gray-700">Nominal Roll Serial Number</label>
+                        <input type="number" data-type="proposer" class="serial-input mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                        <div data-type="proposer-details" class="mt-2 text-sm text-gray-600 space-y-1"></div>
+                    </div>
+                    <!-- Seconder -->
+                    <div class="space-y-2">
+                        <h3 class="font-semibold text-gray-800 border-b pb-1">Seconder</h3>
+                        <label class="text-sm font-medium text-gray-700">Nominal Roll Serial Number</label>
+                        <input type="number" data-type="seconder" class="serial-input mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                        <div data-type="seconder-details" class="mt-2 text-sm text-gray-600 space-y-1"></div>
+                    </div>
+                </div>
+                
+                <div class="text-center pt-4">
+                     <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition font-semibold text-lg">Generate & Preview Form</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Step 3: Preview - Initially Hidden -->
+        <div id="nomination-preview-container" class="hidden">
+             <h2 class="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">Step 3: Preview Nomination Paper</h2>
+             <div id="nomination-preview" class="border-2 border-dashed border-gray-400 p-6 bg-white text-sm">
+                <h2 class="text-center font-bold text-lg mb-4">Nomination Paper</h2>
+                <div class="space-y-2">
+                    <div class="flex"><p class="w-2/5 font-semibold">Post for which nomination is made:</p><p id="preview-post"></p></div>
+                    <hr class="my-3">
+                    
+                    <h3 class="font-bold">Candidate Details</h3>
+                    <div class="flex"><p class="w-2/5 font-semibold">Name:</p><p id="preview-candidate-name"></p></div>
+                    <div class="flex"><p class="w-2/5 font-semibold">Class:</p><p id="preview-candidate-class"></p></div>
+                    <div class="flex"><p class="w-2/5 font-semibold">Department:</p><p id="preview-candidate-dept"></p></div>
+                    <div class="flex"><p class="w-2/5 font-semibold">Electoral Roll No:</p><p id="preview-candidate-serial"></p></div>
+                    <hr class="my-3">
+
+                    <h3 class="font-bold">Proposer Details</h3>
+                    <div class="flex"><p class="w-2/5 font-semibold">Name:</p><p id="preview-proposer-name"></p></div>
+                    <div class="flex"><p class="w-2/5 font-semibold">Class:</p><p id="preview-proposer-class"></p></div>
+                    <div class="flex"><p class="w-2/5 font-semibold">Department:</p><p id="preview-proposer-dept"></p></div>
+                    <div class="flex"><p class="w-2/5 font-semibold">Electoral Roll No:</p><p id="preview-proposer-serial"></p></div>
+                    <div class="flex justify-between mt-6">
+                        <p>Date: ______ / ______ / ________</p>
+                        <p>Signature: ___________________</p>
+                    </div>
+                    <hr class="my-3">
+
+                    <h3 class="font-bold">Seconder Details</h3>
+                    <div class="flex"><p class="w-2/5 font-semibold">Name:</p><p id="preview-seconder-name"></p></div>
+                    <div class="flex"><p class="w-2/5 font-semibold">Class:</p><p id="preview-seconder-class"></p></div>
+                    <div class="flex"><p class="w-2/5 font-semibold">Department:</p><p id="preview-seconder-dept"></p></div>
+                    <div class="flex"><p class="w-2/5 font-semibold">Electoral Roll No:</p><p id="preview-seconder-serial"></p></div>
+                     <div class="flex justify-between mt-6">
+                        <p>Date: ______ / ______ / ________</p>
+                        <p>Signature: ___________________</p>
+                    </div>
+                    <hr class="my-3">
+
+                    <div class="text-center pt-8">
+                        <h3 class="font-bold mb-2">Consent of the Candidate</h3>
+                        <p class="mb-6">I agree, if elected, to serve on the body to which I am proposed as a candidate.</p>
+                        <p class="mt-8 mb-2">Signature: _________________________</p>
+                        <p class="mb-6">Date: ______ / ______ / ________</p>
+                        <p class="text-xs italic">(To be signed in front of the Returning Officer)</p>
+                    </div>
+                </div>
+             </div>
+             <div class="text-center mt-6">
+                <button id="printButton" class="bg-gray-700 text-white px-6 py-2 rounded-md hover:bg-gray-800 transition font-semibold">Print Form</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log("LOG: Script initialized.");
+        // Store nominal roll data globally
+        let nominalRollData = [];
+        // Define expected header names for mapping. Case-sensitive.
+        const columnNames = {
+            serial: 'Nominal Roll Serial Number',
+            name: 'NAME',
+            class: 'CLASS',
+            admissionNo: 'ADMISION NO',
+            dept: 'Dept' // Corrected key to match user's sheet
+        };
+
+        // --- 1. Data Loading on Page Load ---
+        async function loadNominalRollData() {
+            console.log("LOG: Starting loadNominalRollData function...");
+            const url = 'https://script.google.com/macros/s/AKfycbyLATZx7XDkYWeHS9MKkCK3pXohgVPuH6wakteq4amZQu5HgGLFqOCyw3vocYq85ibE/exec';
+            const dataStatus = document.getElementById('dataStatus');
+            const nominationFormSection = document.getElementById('nominationFormSection');
+            
+            console.log(`LOG: Fetching data from URL: ${url}`);
+
+            try {
+                const response = await fetch(url);
+                console.log(`LOG: Fetch response received. Status: ${response.status}`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const jsonData = await response.json();
+                console.log("LOG: JSON data parsed successfully.", jsonData);
+                
+                if (!Array.isArray(jsonData)) {
+                    if (jsonData.error) { throw new Error(`Error from Google Script: ${jsonData.error}`); }
+                    const firstKey = Object.keys(jsonData)[0] || '';
+                    if (jsonData[firstKey] && jsonData[firstKey].candidates) { throw new Error("Incorrect Data Source: The script is returning election results, not the nominal roll. Please ensure your Google Apps Script is reading the correct sheet and then redeploy it."); }
+                    console.error("LOG: The data received was not an array. Data received:", jsonData);
+                    throw new Error("Received data is not in the expected format (not an array). Check the console log for details.");
+                }
+
+                if (jsonData.length === 0) { throw new Error("The nominal roll is empty. No student data was found."); }
+                if (!jsonData[0] || !jsonData[0][columnNames.serial]) { throw new Error(`The required column "${columnNames.serial}" was not found in the data. Please check your Google Sheet headers.`); }
+
+                nominalRollData = jsonData;
+                console.log(`LOG: Stored ${nominalRollData.length} records globally.`);
+
+                dataStatus.textContent = `Successfully loaded ${nominalRollData.length} student records. You can now fill the form.`;
+                dataStatus.style.color = 'green';
+                nominationFormSection.classList.remove('hidden');
+
+            } catch (error) {
+                console.error('LOG: CRITICAL - Error loading data:', error);
+                dataStatus.innerHTML = `<strong>Failed to load data.</strong><br>Error: ${error.message}. <br>Please check your internet connection, the Web App URL, and the browser console (F12) for more details.`;
+                dataStatus.style.color = 'red';
+            }
+        }
+        
+        /**
+         * Checks if a student is eligible for a specific post.
+         * @param {object} student - The student object from the nominal roll.
+         * @param {string} post - The name of the post.
+         * @param {string} role - The role of the person (e.g., 'Candidate', 'Proposer').
+         * @returns {string[]} An array of warning messages.
+         */
+        function checkEligibility(student, post, role) {
+            if (!student) return [];
+            
+            const warnings = [];
+            const studentClassUpper = String(student[columnNames.class]).toUpperCase();
+            
+            // Rule: Association Secretary Department Restriction
+            if (post.startsWith('Association Secretary')) {
+                const requiredDept = post.split('Association Secretary ')[1].toUpperCase();
+                const studentDept = String(student[columnNames.dept]).toUpperCase();
+                if (studentDept !== requiredDept) {
+                    warnings.push(`${role} for ${post} must be from the ${requiredDept} department.`);
+                }
+            }
+            
+            // Rule: Year Representative Restriction
+            if (post === 'I UG Representative' && !studentClassUpper.includes('1ST YEAR')) {
+                warnings.push(`${role} for I UG Representative must be a 1st Year student.`);
+            }
+            if (post === 'II UG Representative' && !studentClassUpper.includes('2ND YEAR')) {
+                warnings.push(`${role} for II UG Representative must be a 2nd Year student.`);
+            }
+            if (post === 'III UG Representative' && !studentClassUpper.includes('3RD YEAR')) {
+                warnings.push(`${role} for III UG Representative must be a 3rd Year student.`);
+            }
+
+            // Rule: PG Representative Restriction
+            if (post === 'PG Representative') {
+                const isPG = studentClassUpper.includes('MA') || studentClassUpper.includes('MSC') || studentClassUpper.includes('MCOM');
+                if (!isPG) {
+                    warnings.push(`${role} for PG Representative must be a postgraduate (MA, MSc, MCom) student.`);
+                }
+            }
+            return warnings;
+        }
+
+        // --- 3. Main Validation Logic ---
+        function validateForm() {
+            const warningBox = document.getElementById('validation-warnings');
+            let allWarnings = [];
+            
+            const selectedPost = document.getElementById('post').value;
+            const selectedGender = document.querySelector('input[name="gender"]:checked');
+            
+            const candidateSerial = document.querySelector('[data-type="candidate"]').value;
+            const proposerSerial = document.querySelector('[data-type="proposer"]').value;
+            const seconderSerial = document.querySelector('[data-type="seconder"]').value;
+
+            const candidate = nominalRollData.find(s => String(s[columnNames.serial]) === candidateSerial);
+            const proposer = nominalRollData.find(s => String(s[columnNames.serial]) === proposerSerial);
+            const seconder = nominalRollData.find(s => String(s[columnNames.serial]) === seconderSerial);
+
+            // --- Run all validation checks ---
+
+            if (candidate) {
+                // Candidate-specific rules
+                if (!selectedGender) {
+                    allWarnings.push('Please select a gender for the candidate.');
+                }
+                const reservedForFemale = ['The Vice Chairman', 'The Joint Secretary'];
+                if (reservedForFemale.includes(selectedPost) && selectedGender && selectedGender.value === 'Male') {
+                    allWarnings.push(`The post of ${selectedPost} is reserved for female candidates.`);
+                }
+                const isChiefEditorPost = selectedPost === 'The Chief Student Editor';
+                const candidateClassUpper = String(candidate[columnNames.class]).toUpperCase();
+                const isFinalYear = candidateClassUpper.includes('3RD YEAR') || candidateClassUpper.includes('2ND YEAR M');
+                if (isChiefEditorPost && isFinalYear) {
+                    allWarnings.push('Candidate (final year student) is not eligible for Chief Student Editor.');
+                }
+                // Shared eligibility rules
+                allWarnings.push(...checkEligibility(candidate, selectedPost, 'Candidate'));
+            }
+
+            // Check Proposer and Seconder eligibility
+            allWarnings.push(...checkEligibility(proposer, selectedPost, 'Proposer'));
+            allWarnings.push(...checkEligibility(seconder, selectedPost, 'Seconder'));
+            
+            // --- Display warnings or hide the box ---
+            if (allWarnings.length > 0) {
+                warningBox.querySelector('p').innerHTML = allWarnings.join('<br>');
+                warningBox.classList.remove('hidden');
+            } else {
+                warningBox.classList.add('hidden');
+            }
+            
+            return allWarnings.length === 0;
+        }
+        
+        // --- Main script execution after DOM is loaded ---
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log("LOG: DOM content loaded. Initializing application.");
+            
+            // Get all elements
+            const serialInputs = document.querySelectorAll('.serial-input');
+            const nominationForm = document.getElementById('nominationForm');
+            const postSelect = document.getElementById('post');
+            const printButton = document.getElementById('printButton');
+            const previewContainer = document.getElementById('nomination-preview-container');
+
+            // Start loading data
+            loadNominalRollData();
+
+            // --- 2. Auto-population ---
+            serialInputs.forEach(input => {
+                input.addEventListener('change', (event) => {
+                    const serialNumber = event.target.value;
+                    const type = event.target.dataset.type;
+                    const detailsContainer = document.querySelector(`[data-type="${type}-details"]`);
+                    const student = nominalRollData.find(s => String(s[columnNames.serial]) === serialNumber);
+
+                    if (student) {
+                        detailsContainer.innerHTML = `
+                            <p><strong>Name:</strong> ${student[columnNames.name]}</p>
+                            <p><strong>Class:</strong> ${student[columnNames.class]}</p>
+                            <p><strong>Dept:</strong> ${student[columnNames.dept] || 'N/A'}</p>
+                        `;
+                    } else {
+                        detailsContainer.innerHTML = '<p class="text-red-500">Student not found.</p>';
+                    }
+                    validateForm();
+                });
+            });
+
+            // Attach validation listeners
+            postSelect.addEventListener('change', validateForm);
+            document.querySelectorAll('.gender-radio').forEach(radio => {
+                radio.addEventListener('change', validateForm);
+            });
+
+            // --- 4. Form Submission and Preview Generation ---
+            nominationForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                
+                if (!validateForm()) {
+                    alert('Please resolve the warnings before generating the form.');
+                    return;
+                }
+
+                const post = postSelect.value;
+                const candidateSerial = document.querySelector('[data-type="candidate"]').value;
+                const proposerSerial = document.querySelector('[data-type="proposer"]').value;
+                const seconderSerial = document.querySelector('[data-type="seconder"]').value;
+
+                const candidate = nominalRollData.find(s => String(s[columnNames.serial]) === candidateSerial);
+                const proposer = nominalRollData.find(s => String(s[columnNames.serial]) === proposerSerial);
+                const seconder = nominalRollData.find(s => String(s[columnNames.serial]) === seconderSerial);
+
+                if (!candidate || !proposer || !seconder) {
+                    alert('Please ensure all serial numbers are valid before generating the form.');
+                    return;
+                }
+
+                // Populate preview
+                document.getElementById('preview-post').textContent = post;
+                document.getElementById('preview-candidate-name').textContent = candidate[columnNames.name];
+                document.getElementById('preview-candidate-class').textContent = candidate[columnNames.class];
+                document.getElementById('preview-candidate-dept').textContent = candidate[columnNames.dept];
+                document.getElementById('preview-candidate-serial').textContent = candidate[columnNames.serial];
+                document.getElementById('preview-proposer-name').textContent = proposer[columnNames.name];
+                document.getElementById('preview-proposer-class').textContent = proposer[columnNames.class];
+                document.getElementById('preview-proposer-dept').textContent = proposer[columnNames.dept];
+                document.getElementById('preview-proposer-serial').textContent = proposer[columnNames.serial];
+                document.getElementById('preview-seconder-name').textContent = seconder[columnNames.name];
+                document.getElementById('preview-seconder-class').textContent = seconder[columnNames.class];
+                document.getElementById('preview-seconder-dept').textContent = seconder[columnNames.dept];
+                document.getElementById('preview-seconder-serial').textContent = seconder[columnNames.serial];
+                
+                // Show preview
+                previewContainer.classList.remove('hidden');
+                window.scrollTo(0, document.body.scrollHeight);
+            });
+
+            // --- 5. Printing ---
+            printButton.addEventListener('click', () => {
+                console.log("LOG: Print button clicked. Calling window.print().");
+                window.print();
+            });
+        });
+    </script>
+</body>
+</html>
+
