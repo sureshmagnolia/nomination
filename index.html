@@ -272,7 +272,7 @@
          */
         function calculateAge(dobString) {
             if (!dobString) return "N/A";
-            const today = new Date("2025-10-12T10:03:00"); // Using current system time
+            const today = new Date("2025-10-12T13:13:00"); // Using current system time
             const birthDate = new Date(dobString);
 
             let years = today.getFullYear() - birthDate.getFullYear();
@@ -353,6 +353,17 @@
             const seconder = nominalRollData.find(s => String(s[columnNames.serial]) === seconderSerial);
 
             // --- Run all validation checks ---
+
+            // Rule: Candidate, Proposer, and Seconder must be different people
+            if (candidateSerial && candidateSerial === proposerSerial) {
+                allWarnings.push('Candidate and Proposer cannot be the same person.');
+            }
+            if (candidateSerial && candidateSerial === seconderSerial) {
+                allWarnings.push('Candidate and Seconder cannot be the same person.');
+            }
+            if (proposerSerial && proposerSerial === seconderSerial) {
+                allWarnings.push('Proposer and Seconder cannot be the same person.');
+            }
 
             if (candidate) {
                 // Candidate-specific rules
@@ -476,7 +487,7 @@
                 const dobForCalculation = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const formattedDob = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
                 const calculatedAge = calculateAge(dobForCalculation);
-                const generationDate = new Date("2025-10-12T10:03:00").toLocaleDateString('en-GB');
+                const generationDate = new Date("2025-10-12T13:13:00").toLocaleDateString('en-GB');
 
                 // Populate preview
                 document.getElementById('preview-generation-date').textContent = `Date: ${generationDate}`;
