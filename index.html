@@ -117,6 +117,14 @@
                                 <label><input type="radio" name="gender" value="Female" class="gender-radio"> Female</label>
                             </div>
                         </div>
+                        <div class="mt-2">
+                            <label for="dob-day" class="block text-sm font-medium text-gray-700">Date of Birth</label>
+                            <div class="flex gap-2">
+                                <select id="dob-day" class="dob-select mt-1 block w-full p-2 border border-gray-300 rounded-md"><option value="">Day</option></select>
+                                <select id="dob-month" class="dob-select mt-1 block w-full p-2 border border-gray-300 rounded-md"><option value="">Month</option></select>
+                                <select id="dob-year" class="dob-select mt-1 block w-full p-2 border border-gray-300 rounded-md"><option value="">Year</option></select>
+                            </div>
+                        </div>
                     </div>
                     <!-- Proposer -->
                     <div class="space-y-2">
@@ -144,6 +152,10 @@
         <div id="nomination-preview-container" class="hidden">
              <h2 class="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">Step 3: Preview Nomination Paper</h2>
              <div id="nomination-preview" class="border-2 border-dashed border-gray-400 p-6 bg-white text-sm">
+                <div class="flex justify-between mb-4">
+                    <p class="font-semibold">Name of College</p>
+                    <p class="font-semibold" id="preview-generation-date"></p>
+                </div>
                 <h2 class="text-center font-bold text-lg mb-4">Nomination Paper</h2>
                 <div class="space-y-2">
                     <div class="flex"><p class="w-2/5 font-semibold">Post for which nomination is made:</p><p id="preview-post"></p></div>
@@ -154,6 +166,8 @@
                     <div class="flex"><p class="w-2/5 font-semibold">Class:</p><p id="preview-candidate-class"></p></div>
                     <div class="flex"><p class="w-2/5 font-semibold">Department:</p><p id="preview-candidate-dept"></p></div>
                     <div class="flex"><p class="w-2/5 font-semibold">Electoral Roll No:</p><p id="preview-candidate-serial"></p></div>
+                    <div class="flex"><p class="w-2/5 font-semibold">Date of Birth:</p><p id="preview-candidate-dob"></p></div>
+                    <div class="flex"><p class="w-2/5 font-semibold">Age as on date:</p><p id="preview-candidate-age"></p></div>
                     <hr class="my-3">
 
                     <h3 class="font-bold">Proposer Details</h3>
@@ -252,6 +266,31 @@
         }
         
         /**
+         * Calculates age based on a date of birth string.
+         * @param {string} dobString - The date of birth in YYYY-MM-DD format.
+         * @returns {string} The formatted age string.
+         */
+        function calculateAge(dobString) {
+            if (!dobString) return "N/A";
+            const today = new Date("2025-10-12T09:31:00"); // Using current system time
+            const birthDate = new Date(dobString);
+
+            let years = today.getFullYear() - birthDate.getFullYear();
+            let months = today.getMonth() - birthDate.getMonth();
+            let days = today.getDate() - birthDate.getDate();
+
+            if (days < 0) {
+                months--;
+                days += new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+            }
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+            return `${years} Years, ${months} Months, ${days} Days`;
+        }
+
+        /**
          * Checks if a student is eligible for a specific post.
          * @param {object} student - The student object from the nominal roll.
          * @param {string} post - The name of the post.
@@ -301,6 +340,9 @@
             
             const selectedPost = document.getElementById('post').value;
             const selectedGender = document.querySelector('input[name="gender"]:checked');
+            const dobDay = document.getElementById('dob-day').value;
+            const dobMonth = document.getElementById('dob-month').value;
+            const dobYear = document.getElementById('dob-year').value;
             
             const candidateSerial = document.querySelector('[data-type="candidate"]').value;
             const proposerSerial = document.querySelector('[data-type="proposer"]').value;
@@ -316,6 +358,9 @@
                 // Candidate-specific rules
                 if (!selectedGender) {
                     allWarnings.push('Please select a gender for the candidate.');
+                }
+                if (!dobDay || !dobMonth || !dobYear) {
+                    allWarnings.push('Please enter the complete date of birth for the candidate.');
                 }
                 const reservedForFemale = ['The Vice Chairman', 'The Joint Secretary'];
                 if (reservedForFemale.includes(selectedPost) && selectedGender && selectedGender.value === 'Male') {
@@ -356,6 +401,21 @@
             const postSelect = document.getElementById('post');
             const printButton = document.getElementById('printButton');
             const previewContainer = document.getElementById('nomination-preview-container');
+            const dobDaySelect = document.getElementById('dob-day');
+            const dobMonthSelect = document.getElementById('dob-month');
+            const dobYearSelect = document.getElementById('dob-year');
+
+            // --- Populate DOB dropdowns ---
+            for (let i = 1; i <= 31; i++) {
+                dobDaySelect.innerHTML += `<option value="${i}">${i}</option>`;
+            }
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            for (let i = 0; i < 12; i++) {
+                dobMonthSelect.innerHTML += `<option value="${i + 1}">${monthNames[i]}</option>`;
+            }
+            for (let i = 2015; i >= 1950; i--) {
+                dobYearSelect.innerHTML += `<option value="${i}">${i}</option>`;
+            }
 
             // Start loading data
             loadNominalRollData();
@@ -383,9 +443,8 @@
 
             // Attach validation listeners
             postSelect.addEventListener('change', validateForm);
-            document.querySelectorAll('.gender-radio').forEach(radio => {
-                radio.addEventListener('change', validateForm);
-            });
+            document.querySelectorAll('.dob-select').forEach(select => select.addEventListener('change', validateForm));
+            document.querySelectorAll('.gender-radio').forEach(radio => radio.addEventListener('change', validateForm));
 
             // --- 4. Form Submission and Preview Generation ---
             nominationForm.addEventListener('submit', (event) => {
@@ -409,17 +468,31 @@
                     alert('Please ensure all serial numbers are valid before generating the form.');
                     return;
                 }
+                
+                const day = dobDaySelect.value;
+                const month = dobMonthSelect.value;
+                const year = dobYearSelect.value;
+
+                const dobForCalculation = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const formattedDob = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+                const calculatedAge = calculateAge(dobForCalculation);
+                const generationDate = new Date("2025-10-12T09:31:00").toLocaleDateString('en-GB');
 
                 // Populate preview
+                document.getElementById('preview-generation-date').textContent = `Date: ${generationDate}`;
                 document.getElementById('preview-post').textContent = post;
                 document.getElementById('preview-candidate-name').textContent = candidate[columnNames.name];
                 document.getElementById('preview-candidate-class').textContent = candidate[columnNames.class];
                 document.getElementById('preview-candidate-dept').textContent = candidate[columnNames.dept];
                 document.getElementById('preview-candidate-serial').textContent = candidate[columnNames.serial];
+                document.getElementById('preview-candidate-dob').textContent = formattedDob;
+                document.getElementById('preview-candidate-age').textContent = calculatedAge;
+                
                 document.getElementById('preview-proposer-name').textContent = proposer[columnNames.name];
                 document.getElementById('preview-proposer-class').textContent = proposer[columnNames.class];
                 document.getElementById('preview-proposer-dept').textContent = proposer[columnNames.dept];
                 document.getElementById('preview-proposer-serial').textContent = proposer[columnNames.serial];
+                
                 document.getElementById('preview-seconder-name').textContent = seconder[columnNames.name];
                 document.getElementById('preview-seconder-class').textContent = seconder[columnNames.class];
                 document.getElementById('preview-seconder-dept').textContent = seconder[columnNames.dept];
