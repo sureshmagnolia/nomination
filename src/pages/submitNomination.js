@@ -1,0 +1,350 @@
+/**
+ * pages/submitNomination.js
+ * Multi-step nomination form with auto-fill, eligibility checks, captcha, and print preview.
+ */
+import { api } from '../api.js';
+import { CONFIG } from '../config.js';
+import { router } from '../router.js';
+import {
+  checkEligibility, generateCaptcha, populateDobSelects,
+  buildDobString, displayDob, calculateAge, esc,
+  setLoading, showToast, todayFormatted, triggerPrint
+} from '../utils.js';
+
+let nominalRoll = [];
+let captchaAnswer = '';
+let generatedId = null;
+let formSnapshot = null;
+
+export async function renderSubmitNomination(container) {
+  container.innerHTML = publicLayout('Submit Nomination', `
+    <div id="stepWrap">
+      <!-- Loading state -->
+      <div id="loadingState" class="flex flex-col items-center justify-center py-24 gap-4">
+        <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
+        <p class="text-slate-400 text-sm">Loading nominal roll data...</p>
+      </div>
+      <div id="formArea" class="hidden"></div>
+    </div>
+  `);
+
+  try {
+    const data = await api.getNominalRoll();
+    nominalRoll = Array.isArray(data) ? data : [];
+    if (nominalRoll.length === 0) throw new Error('Nominal roll is empty. Please contact the admin.');
+    renderForm(container);
+  } catch (e) {
+    container.querySelector('#loadingState').innerHTML = `
+      <div class="alert alert-error">${esc(e.message)}</div>
+      <button class="btn btn-secondary mt-4" id="backBtn">← Back to Home</button>`;
+    container.querySelector('#backBtn').addEventListener('click', () => router.navigate('/'));
+  }
+}
+
+function renderForm(container) {
+  const captcha = generateCaptcha();
+  captchaAnswer = captcha.answer;
+
+  container.querySelector('#loadingState').classList.add('hidden');
+  const formArea = container.querySelector('#formArea');
+  formArea.classList.remove('hidden');
+
+  formArea.innerHTML = `
+    <div id="warningBox" class="hidden alert alert-warning mb-4"></div>
+
+    <form id="nomForm" class="space-y-8">
+      <!-- Post -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-300 mb-1">Post Applied For</label>
+        <select id="postSelect" class="field">
+          ${CONFIG.POSTS.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('')}
+        </select>
+      </div>
+
+      <!-- Three columns: Candidate / Proposer / Seconder -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        ${personBlock('candidate', 'Candidate', true)}
+        ${personBlock('proposer', 'Proposer', false)}
+        ${personBlock('seconder', 'Seconder', false)}
+      </div>
+
+      <!-- Captcha -->
+      <div class="glass rounded-xl p-5">
+        <label class="block text-sm font-semibold text-slate-300 mb-2">
+          🤖 Captcha Verification
+        </label>
+        <p class="text-slate-400 text-sm mb-3">What is <strong class="text-white text-base">${captcha.question}</strong>?</p>
+        <input id="captchaInput" type="number" class="field w-40" placeholder="Your answer" />
+        <button type="button" id="refreshCaptcha" class="btn btn-secondary btn-sm ml-3">↺ Refresh</button>
+      </div>
+
+      <!-- Submit -->
+      <div class="flex gap-3">
+        <button type="button" id="backHomeBtn" class="btn btn-secondary">← Back</button>
+        <button type="submit" id="submitBtn" class="btn btn-primary flex-1">Generate &amp; Preview Nomination</button>
+      </div>
+    </form>
+
+    <!-- Print Preview (hidden until submitted) -->
+    <div id="previewSection" class="hidden mt-10">
+      <div class="flex items-center justify-between mb-4 no-print">
+        <h2 class="text-lg font-bold text-white">📄 Nomination Preview</h2>
+        <div class="flex gap-3">
+          <button id="printBtn" class="btn btn-success">🖨️ Print Form</button>
+          <button id="newNomBtn" class="btn btn-secondary">Submit Another</button>
+        </div>
+      </div>
+      <div id="printZone" class="print-zone"></div>
+    </div>
+  `;
+
+  // Populate DOB dropdowns
+  populateDobSelects(
+    formArea.querySelector('#dob-day'),
+    formArea.querySelector('#dob-month'),
+    formArea.querySelector('#dob-year')
+  );
+
+  // Wire up auto-fill
+  ['candidate','proposer','seconder'].forEach(role => {
+    formArea.querySelector(`#serial-${role}`).addEventListener('change', () => fillDetails(formArea, role));
+  });
+
+  // Validation on post/gender/dob changes
+  formArea.querySelector('#postSelect').addEventListener('change', () => runValidation(formArea));
+  formArea.querySelectorAll('[name="gender"]').forEach(r => r.addEventListener('change', () => runValidation(formArea)));
+  formArea.querySelectorAll('.dob-sel').forEach(s => s.addEventListener('change', () => runValidation(formArea)));
+
+  // Captcha refresh
+  formArea.querySelector('#refreshCaptcha').addEventListener('click', () => {
+    const c = generateCaptcha();
+    captchaAnswer = c.answer;
+    formArea.querySelector('#captchaInput').value = '';
+    formArea.querySelector('strong.text-white').textContent = c.question;
+  });
+
+  formArea.querySelector('#backHomeBtn').addEventListener('click', () => router.navigate('/'));
+  formArea.querySelector('#nomForm').addEventListener('submit', (e) => handleSubmit(e, formArea));
+}
+
+function personBlock(role, label, isCandidate) {
+  return `
+  <div class="glass rounded-xl p-4 space-y-3">
+    <h3 class="font-bold text-white text-sm uppercase tracking-wide border-b border-white/10 pb-2">${label}</h3>
+    <div>
+      <label class="text-xs text-slate-400">Nominal Roll Serial No.</label>
+      <input id="serial-${role}" type="number" class="field mt-1" placeholder="Enter serial number" />
+    </div>
+    <div id="details-${role}" class="text-xs text-slate-400 space-y-1 min-h-[3rem]"></div>
+    ${isCandidate ? `
+    <div>
+      <label class="text-xs text-slate-400 block mb-1">Gender</label>
+      <div class="flex gap-4">
+        <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+          <input type="radio" name="gender" value="Male" class="accent-indigo-500" /> Male
+        </label>
+        <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+          <input type="radio" name="gender" value="Female" class="accent-indigo-500" /> Female
+        </label>
+      </div>
+    </div>
+    <div>
+      <label class="text-xs text-slate-400 block mb-1">Date of Birth</label>
+      <div class="flex gap-2">
+        <select id="dob-day"   class="field dob-sel"><option value="">Day</option></select>
+        <select id="dob-month" class="field dob-sel"><option value="">Month</option></select>
+        <select id="dob-year"  class="field dob-sel"><option value="">Year</option></select>
+      </div>
+    </div>` : ''}
+  </div>`;
+}
+
+function fillDetails(formArea, role) {
+  const serial = formArea.querySelector(`#serial-${role}`).value.trim();
+  const box = formArea.querySelector(`#details-${role}`);
+  const student = nominalRoll.find(s => String(s['Nominal Roll Serial Number']) === serial);
+  if (!student) {
+    box.innerHTML = serial ? `<span class="text-red-400">⚠ Student not found</span>` : '';
+    return;
+  }
+  box.innerHTML = `
+    <p><span class="text-slate-500">Name:</span> <strong class="text-slate-200">${esc(student['NAME'])}</strong></p>
+    <p><span class="text-slate-500">Class:</span> ${esc(student['CLASS'])}</p>
+    <p><span class="text-slate-500">Dept:</span> ${esc(student['Dept'] || 'N/A')}</p>`;
+  runValidation(formArea);
+}
+
+function runValidation(formArea) {
+  const warnings = [];
+  const post = formArea.querySelector('#postSelect').value;
+  const gender = formArea.querySelector('[name="gender"]:checked')?.value || null;
+
+  const roles = ['candidate','proposer','seconder'];
+  const students = roles.map(r => {
+    const serial = formArea.querySelector(`#serial-${r}`).value.trim();
+    return serial ? nominalRoll.find(s => String(s['Nominal Roll Serial Number']) === serial) : null;
+  });
+
+  // Uniqueness checks
+  const [cS, pS, sS] = roles.map(r => formArea.querySelector(`#serial-${r}`).value.trim());
+  if (cS && cS === pS) warnings.push('Candidate and Proposer cannot be the same person.');
+  if (cS && cS === sS) warnings.push('Candidate and Seconder cannot be the same person.');
+  if (pS && pS === sS) warnings.push('Proposer and Seconder cannot be the same person.');
+
+  // Eligibility
+  students.forEach((st, i) => {
+    if (st) warnings.push(...checkEligibility(st, post, i === 0 ? 'Candidate' : roles[i] === 'proposer' ? 'Proposer' : 'Seconder', i === 0 ? gender : null));
+  });
+
+  const box = formArea.querySelector('#warningBox');
+  if (warnings.length) {
+    box.innerHTML = '<strong class="block mb-1">⚠ Eligibility Warnings</strong>' + warnings.map(w => `<p class="text-sm">• ${esc(w)}</p>`).join('');
+    box.classList.remove('hidden');
+  } else {
+    box.classList.add('hidden');
+  }
+  return warnings;
+}
+
+async function handleSubmit(e, formArea) {
+  e.preventDefault();
+  const warnings = runValidation(formArea);
+  if (warnings.length) { showToast('Please resolve all eligibility warnings first.', 'error'); return; }
+
+  const captchaVal = formArea.querySelector('#captchaInput').value.trim();
+  if (captchaVal !== captchaAnswer) { showToast('Captcha answer is incorrect. Please try again.', 'error'); return; }
+
+  const post = formArea.querySelector('#postSelect').value;
+  const gender = formArea.querySelector('[name="gender"]:checked')?.value;
+  const day = formArea.querySelector('#dob-day').value;
+  const month = formArea.querySelector('#dob-month').value;
+  const year = formArea.querySelector('#dob-year').value;
+
+  if (!gender) { showToast('Please select a gender for the candidate.', 'error'); return; }
+  if (!day || !month || !year) { showToast('Please enter a complete date of birth.', 'error'); return; }
+
+  const roles = ['candidate','proposer','seconder'];
+  const serials = roles.map(r => formArea.querySelector(`#serial-${r}`).value.trim());
+  const students = serials.map(s => nominalRoll.find(st => String(st['Nominal Roll Serial Number']) === s));
+
+  if (students.some(s => !s)) { showToast('One or more serial numbers are invalid.', 'error'); return; }
+
+  const submitBtn = formArea.querySelector('#submitBtn');
+  setLoading(submitBtn, true, 'Generate &amp; Preview Nomination');
+
+  try {
+    const result = await api.submitNomination({
+      post, gender,
+      dob: buildDobString(day, month, year),
+      candidateSerial: serials[0],
+      proposerSerial:  serials[1],
+      seconderSerial:  serials[2],
+    });
+
+    generatedId = result.id;
+    formSnapshot = { post, gender, day, month, year, students };
+    showPreview(formArea, generatedId, formSnapshot);
+    showToast(`Nomination submitted! ID: ${generatedId}`, 'success');
+  } catch (err) {
+    showToast(`Submission failed: ${err.message}`, 'error');
+  } finally {
+    setLoading(submitBtn, false, 'Generate &amp; Preview Nomination');
+  }
+}
+
+function showPreview(formArea, id, { post, gender, day, month, year, students }) {
+  const [candidate, proposer, seconder] = students;
+  const dob = buildDobString(day, month, year);
+  const dobDisplay = displayDob(day, month, year);
+  const age = calculateAge(dob);
+
+  const preview = formArea.querySelector('#previewSection');
+  const printZone = formArea.querySelector('#printZone');
+
+  printZone.innerHTML = buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder);
+
+  preview.classList.remove('hidden');
+  preview.scrollIntoView({ behavior: 'smooth' });
+
+  preview.querySelector('#printBtn').addEventListener('click', triggerPrint);
+  preview.querySelector('#newNomBtn').addEventListener('click', () => renderSubmitNomination(formArea.closest('#app')));
+}
+
+export function buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, status = '') {
+  const today = todayFormatted();
+  return `
+  <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-4">
+    <div class="flex justify-between items-start text-sm">
+      <div>
+        <p class="font-bold text-white text-base">${CONFIG.COLLEGE_NAME}</p>
+        <p class="text-slate-400">College Union Election</p>
+      </div>
+      <div class="text-right">
+        <p class="text-slate-400 text-xs">Generated: ${today}</p>
+        ${status ? `<span class="badge badge-${status.toLowerCase()}">${status}</span>` : ''}
+      </div>
+    </div>
+    <h2 class="text-center font-bold text-xl text-white border-y border-white/10 py-3">NOMINATION PAPER</h2>
+    <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 text-center">
+      <p class="text-xs text-indigo-300 uppercase tracking-widest mb-1">Your Unique Nomination ID</p>
+      <p class="text-3xl font-mono font-bold text-indigo-300 tracking-widest">${id}</p>
+      <p class="text-xs text-slate-500 mt-1">Keep this number safe — you will need it for future reference.</p>
+    </div>
+    <div class="space-y-1 text-sm">
+      <p><span class="font-semibold text-slate-400 w-40 inline-block">Post Applied For:</span> <strong class="text-white">${esc(post)}</strong></p>
+    </div>
+    <div class="space-y-3">
+      ${sectionBlock('Candidate', candidate, gender, dobDisplay, age)}
+      ${sectionBlock('Proposer', proposer)}
+      ${sectionBlock('Seconder', seconder)}
+    </div>
+    <div class="border-t border-white/10 pt-6 text-center space-y-3">
+      <h3 class="font-bold text-white">Consent of Candidate</h3>
+      <p class="text-sm text-slate-400">I agree, if elected, to serve on the body to which I am proposed as a candidate.</p>
+      <div class="flex justify-around mt-6 text-sm text-slate-400">
+        <p>Signature: _______________________</p>
+        <p>Date: ______ / ______ / ________</p>
+      </div>
+      <p class="text-xs text-slate-500 italic">(To be signed in front of the Returning Officer)</p>
+    </div>
+  </div>`;
+}
+
+function sectionBlock(label, s, gender = null, dob = null, age = null) {
+  return `
+  <div class="glass rounded-lg p-4 text-sm space-y-1">
+    <h3 class="font-bold text-white uppercase text-xs tracking-widest mb-2 border-b border-white/10 pb-1">${label} Details</h3>
+    <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+      <p><span class="text-slate-500">Name:</span> <strong class="text-slate-200">${esc(s['NAME'])}</strong></p>
+      <p><span class="text-slate-500">Class:</span> ${esc(s['CLASS'])}</p>
+      <p><span class="text-slate-500">Dept:</span> ${esc(s['Dept'] || 'N/A')}</p>
+      <p><span class="text-slate-500">Electoral Roll No:</span> ${esc(s['Nominal Roll Serial Number'])}</p>
+      ${gender ? `<p><span class="text-slate-500">Gender:</span> ${esc(gender)}</p>` : ''}
+      ${dob ? `<p><span class="text-slate-500">Date of Birth:</span> ${esc(dob)}</p>` : ''}
+      ${age ? `<p class="col-span-2"><span class="text-slate-500">Age as on Election Date:</span> ${esc(age)}</p>` : ''}
+    </div>
+    ${label !== 'Candidate' ? `
+    <div class="flex justify-between mt-4 text-slate-500 text-xs">
+      <span>Date: ______ / ______ / ________</span>
+      <span>Signature: _______________</span>
+    </div>` : ''}
+  </div>`;
+}
+
+function publicLayout(title, bodyHtml) {
+  return `
+  <div class="page-enter min-h-screen">
+    <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
+      <div class="max-w-4xl mx-auto px-6 py-3 flex items-center gap-4">
+        <button data-nav="/" id="backToHome" class="text-slate-400 hover:text-white transition text-sm flex items-center gap-2">
+          ← Home
+        </button>
+        <span class="text-slate-600">|</span>
+        <h1 class="font-bold text-white text-sm">${esc(title)}</h1>
+      </div>
+    </header>
+    <main class="max-w-4xl mx-auto px-4 py-8">
+      ${bodyHtml}
+    </main>
+  </div>`;
+}
