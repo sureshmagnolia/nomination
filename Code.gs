@@ -11,18 +11,19 @@
  *     - "Posts"        (leave blank — auto-initialized with defaults)
  *     - "Settings"     (leave blank — auto-initialized)
  *  2. In Google Apps Script (script.google.com), paste this entire file.
- *  3. Update SPREADSHEET_ID and ADMIN_PASSWORD below.
- *  4. Deploy → New Deployment → Web App:
+ *  3. IMPORTANT: Set SPREADSHEET_ID to your Google Sheet ID (the long string in the URL).
+ *  4. Set ADMIN_PASSWORD to your desired password.
+ *  5. Deploy → New Deployment → Web App:
  *       Execute as: Me | Who has access: Anyone
- *  5. Copy the URL into src/config.js → APPS_SCRIPT_URL
+ *  6. Copy the URL into src/config.js → APPS_SCRIPT_URL
  * ============================================================
  */
 
 // ─────────────────────────────────────────────────────────────
-//  CONFIGURATION
+//  CONFIGURATION — UPDATE THESE
 // ─────────────────────────────────────────────────────────────
-const SPREADSHEET_ID = 'https://script.google.com/macros/s/AKfycbw29XuhvNI4cV-tlAWz5IaRrWPY1T9P7ZiQJbu-7za9226PyEqlhuLOrOMTG2QulzzOog/exec';
-const ADMIN_PASSWORD = '678001alliswell$';
+const SPREADSHEET_ID = 'YOUR_GOOGLE_SHEET_ID_HERE'; // <--- NOT the script URL!
+const ADMIN_PASSWORD = 'YourSecurePasswordHere';
 
 const SHEET_NOMINAL  = 'NominalRoll';
 const SHEET_NOMS     = 'Nominations';
@@ -39,7 +40,6 @@ const POST_COLS = [
   'Post', 'FemaleOnly', 'FinalYearIneligible', 'YearRestriction', 'DeptRestriction',
 ];
 
-// Default posts seeded into the sheet on first run
 const DEFAULT_POSTS = [
   ['The Chairman',                          false, false, '',   false],
   ['The Vice Chairman',                     true,  false, '',   false],
@@ -70,22 +70,25 @@ const DEFAULT_POSTS = [
   ['Association Secretary Zoology',         false, false, '',   true],
 ];
 
-
 // ─────────────────────────────────────────────────────────────
-//  CORS & OUTPUT HELPERS
+//  OUTPUT HELPERS
 // ─────────────────────────────────────────────────────────────
 function jsonOut(data) {
+  // NOTE: Google Apps Script automatically handles CORS for public Web Apps.
+  // Do NOT add manual Access-Control-Allow-Origin headers; they cause crashes.
   return ContentService
     .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
 }
 function errOut(msg) { return jsonOut({ error: msg }); }
 
-
 // ─────────────────────────────────────────────────────────────
 //  SHEET HELPERS
 // ─────────────────────────────────────────────────────────────
 function getSheet(name) {
+  if (SPREADSHEET_ID === 'YOUR_GOOGLE_SHEET_ID_HERE') {
+    throw new Error('SPREADSHEET_ID is not configured in Code.gs');
+  }
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   return ss.getSheetByName(name) || ss.insertSheet(name);
 }
@@ -209,7 +212,6 @@ function checkAdmin(pwd) {
   if (pwd !== ADMIN_PASSWORD) throw new Error('Invalid admin password.');
 }
 
-
 // ─────────────────────────────────────────────────────────────
 //  doGet
 // ─────────────────────────────────────────────────────────────
@@ -275,7 +277,6 @@ function doGet(e) {
     return errOut(err.message);
   }
 }
-
 
 // ─────────────────────────────────────────────────────────────
 //  doPost
