@@ -13,7 +13,12 @@
 body {
   font-family: 'Inter', sans-serif;
   background: #0f172a;
+  color: #f1f5f9;
   min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #ffffff !important;
 }
 
 /* Glassmorphism card */
@@ -65,11 +70,11 @@ body {
   display: block;
   width: 100%;
   padding: 0.625rem 0.875rem;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 0.5rem;
-  color: #f1f5f9;
-  font-size: 0.9rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 0.625rem;
+  color: #ffffff;
+  font-size: 0.95rem;
   transition: border-color 0.2s, box-shadow 0.2s;
   outline: none;
 }

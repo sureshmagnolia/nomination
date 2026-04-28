@@ -337,11 +337,18 @@ function sectionBlock(label, s, gender = null, dob = null, age = null) {
 function publicLayout(title, bodyHtml) {
   return `
   <div class="page-enter min-h-screen">
-    <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
-      <div class="max-w-4xl mx-auto px-6 py-3 flex items-center gap-4">
-        <button id="backToHome" class="text-slate-400 hover:text-white transition text-sm flex items-center gap-2">← Home</button>
-        <span class="text-slate-600">|</span>
-        <h1 class="font-bold text-white text-sm">${esc(title)}</h1>
+    <header class="no-print sticky top-0 z-50 border-b border-white/10 glass">
+      <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <button id="backToHome" class="btn btn-secondary btn-sm flex items-center gap-2">
+            <span class="text-lg">←</span> Home
+          </button>
+          <div class="h-6 w-px bg-white/10 mx-2"></div>
+          <h1 class="font-bold text-white text-lg tracking-tight">${esc(title)}</h1>
+        </div>
+        <div class="text-xs text-slate-500 font-medium hidden md:block uppercase tracking-widest">
+          GVC Election Portal
+        </div>
       </div>
     </header>
     <main class="max-w-4xl mx-auto px-4 py-8">${bodyHtml}</main>
