@@ -3,37 +3,28 @@
  *  GVC College Union Election — Google Apps Script Backend
  *  File: Code.gs
  * ============================================================
- *
- *  SETUP INSTRUCTIONS:
- *  1. Create a new Google Sheet with 4 tabs:
- *     - "NominalRoll"  (columns: Nominal Roll Serial Number, NAME, CLASS, ADMISION NO, Dept)
- *     - "Nominations"  (leave blank — auto-initialized)
- *     - "Posts"        (leave blank — auto-initialized with defaults)
- *     - "Settings"     (leave blank — auto-initialized)
- *  2. In Google Apps Script (script.google.com), paste this entire file.
- *  3. IMPORTANT: Set SPREADSHEET_ID to your Google Sheet ID (the long string in the URL).
- *  4. Set ADMIN_PASSWORD to your desired password.
- *  5. Deploy → New Deployment → Web App:
- *       Execute as: Me | Who has access: Anyone
- *  6. Copy the URL into src/config.js → APPS_SCRIPT_URL
- * ============================================================
  */
 
 // ─────────────────────────────────────────────────────────────
 //  CONFIGURATION — UPDATE THESE
 // ─────────────────────────────────────────────────────────────
-const SPREADSHEET_ID = 'https://script.google.com/macros/s/AKfycbw29XuhvNI4cV-tlAWz5IaRrWPY1T9P7ZiQJbu-7za9226PyEqlhuLOrOMTG2QulzzOog/exec'; // <--- NOT the script URL!
+const SPREADSHEET_ID = 'YOUR_GOOGLE_SHEET_ID_HERE'; 
 const ADMIN_PASSWORD = '678001alliswell$';
 
 const SHEET_NOMINAL  = 'NominalRoll';
-const SHEET_NOMS     = 'Nominations';
+const SHEET_NOMS     = 'Nominations'; // All submissions
+const SHEET_VALID    = 'ValidList';   // Verified by admin
+const SHEET_FINAL    = 'FinalList';   // Published after withdrawals
 const SHEET_SETTINGS = 'Settings';
 const SHEET_POSTS    = 'Posts';
 
+// Expanded columns to store full details of candidate, proposer, and seconder
 const NOM_COLS = [
-  'ID', 'Post', 'Gender', 'DOB',
-  'CandidateSerial', 'ProposerSerial', 'SeconderSerial',
-  'Status', 'WithdrawalStatus', 'Timestamp',
+  'ID', 'Post', 'Gender', 'DOB', 'Timestamp',
+  'CandidateSerial', 'CandidateName', 'CandidateClass', 'CandidateAdmission', 'CandidateDept',
+  'ProposerSerial',  'ProposerName',  'ProposerClass',  'ProposerAdmission',  'ProposerDept',
+  'SeconderSerial',  'SeconderName',  'SeconderClass',  'SeconderAdmission',  'SeconderDept',
+  'Status', 'WithdrawalStatus'
 ];
 
 const POST_COLS = [
@@ -74,8 +65,6 @@ const DEFAULT_POSTS = [
 //  OUTPUT HELPERS
 // ─────────────────────────────────────────────────────────────
 function jsonOut(data) {
-  // NOTE: Google Apps Script automatically handles CORS for public Web Apps.
-  // Do NOT add manual Access-Control-Allow-Origin headers; they cause crashes.
   return ContentService
     .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
@@ -87,35 +76,36 @@ function errOut(msg) { return jsonOut({ error: msg }); }
 // ─────────────────────────────────────────────────────────────
 function getSheet(name) {
   if (SPREADSHEET_ID === 'YOUR_GOOGLE_SHEET_ID_HERE') {
-    throw new Error('SPREADSHEET_ID is not configured in Code.gs');
+    throw new Error('SPREADSHEET_ID is not configured in Code.gs. Please put your Google Sheet ID.');
   }
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   return ss.getSheetByName(name) || ss.insertSheet(name);
 }
 
-function ensureNomHeaders() {
-  const s = getSheet(SHEET_NOMS);
+function ensureSheet(name, headers) {
+  const s = getSheet(name);
   if (s.getLastRow() === 0) {
-    s.appendRow(NOM_COLS);
-    s.getRange(1, 1, 1, NOM_COLS.length).setFontWeight('bold');
+    s.appendRow(headers);
+    s.getRange(1, 1, 1, headers.length).setFontWeight('bold');
   }
 }
 
-function ensureSettings() {
+function ensureAll() {
+  ensureSheet(SHEET_NOMS, NOM_COLS);
+  ensureSheet(SHEET_VALID, NOM_COLS);
+  ensureSheet(SHEET_FINAL, NOM_COLS);
+  ensureSheet(SHEET_POSTS, POST_COLS);
+  ensureSheet(SHEET_SETTINGS, ['Key', 'Value']);
+  
   const s = getSheet(SHEET_SETTINGS);
-  if (s.getLastRow() === 0) {
-    s.appendRow(['Key', 'Value']);
+  if (s.getLastRow() <= 1) {
     s.appendRow(['validListPublished', 'false']);
     s.appendRow(['finalListPublished', 'false']);
   }
-}
-
-function ensurePostsSheet() {
-  const s = getSheet(SHEET_POSTS);
-  if (s.getLastRow() === 0) {
-    s.appendRow(POST_COLS);
-    s.getRange(1, 1, 1, POST_COLS.length).setFontWeight('bold');
-    DEFAULT_POSTS.forEach(row => s.appendRow(row));
+  
+  const ps = getSheet(SHEET_POSTS);
+  if (ps.getLastRow() <= 1) {
+    DEFAULT_POSTS.forEach(row => ps.appendRow(row));
   }
 }
 
@@ -143,13 +133,56 @@ function getNominalRollData() {
   const headers = v[0];
   return v.slice(1).map(row => {
     const obj = {};
-    headers.forEach((h, i) => obj[h] = row[i]);
+    headers.forEach((h, i) => obj[h.trim()] = row[i]);
     return obj;
   });
 }
 
+function getAllNominations(sheetName = SHEET_NOMS) {
+  const s = getSheet(sheetName);
+  const v = s.getDataRange().getValues();
+  if (v.length < 2) return [];
+  return v.slice(1).map((row, idx) => {
+    const nom = {
+      _row:             idx + 2,
+      id:               String(row[0]),
+      post:             row[1],
+      gender:           row[2],
+      dob:              row[3],
+      timestamp:        row[4],
+      candidateSerial:  String(row[5]),
+      proposerSerial:   String(row[10]),
+      seconderSerial:   String(row[15]),
+      status:           row[20],
+      withdrawalStatus: row[21] || 'None',
+    };
+    
+    // Reconstruct objects for frontend compatibility
+    nom.candidate = {
+      'Nominal Roll Serial Number': nom.candidateSerial,
+      'NAME': row[6], 'CLASS': row[7], 'ADMISION NO': row[8], 'Dept': row[9]
+    };
+    nom.proposer = {
+      'Nominal Roll Serial Number': nom.proposerSerial,
+      'NAME': row[11], 'CLASS': row[12], 'ADMISION NO': row[13], 'Dept': row[14]
+    };
+    nom.seconder = {
+      'Nominal Roll Serial Number': nom.seconderSerial,
+      'NAME': row[16], 'CLASS': row[17], 'ADMISION NO': row[18], 'Dept': row[19]
+    };
+
+    // Add convenience fields
+    nom.candidateName  = nom.candidate.NAME;
+    nom.candidateClass = nom.candidate.CLASS;
+    nom.candidateDept  = nom.candidate.Dept;
+    nom.proposerName   = nom.proposer.NAME;
+    nom.seconderName   = nom.seconder.NAME;
+    
+    return nom;
+  });
+}
+
 function getPostsData() {
-  ensurePostsSheet();
   const s = getSheet(SHEET_POSTS);
   const v = s.getDataRange().getValues();
   if (v.length < 2) return [];
@@ -162,52 +195,6 @@ function getPostsData() {
   }));
 }
 
-function getAllNominations() {
-  ensureNomHeaders();
-  const s = getSheet(SHEET_NOMS);
-  const v = s.getDataRange().getValues();
-  if (v.length < 2) return [];
-  return v.slice(1).map((row, idx) => ({
-    _row:             idx + 2,
-    id:               String(row[0]),
-    post:             row[1],
-    gender:           row[2],
-    dob:              row[3],
-    candidateSerial:  String(row[4]),
-    proposerSerial:   String(row[5]),
-    seconderSerial:   String(row[6]),
-    status:           row[7],
-    withdrawalStatus: row[8] || 'None',
-    timestamp:        row[9],
-  }));
-}
-
-function generateUniqueId(existingIds) {
-  let id;
-  do {
-    id = String(Math.floor(1000000000 + Math.random() * 9000000000));
-  } while (existingIds.has(id));
-  return id;
-}
-
-function enrichNomination(nom, rollData) {
-  const find = (serial) => rollData.find(s => String(s['Nominal Roll Serial Number']) === serial) || null;
-  const candidate = find(nom.candidateSerial);
-  const proposer  = find(nom.proposerSerial);
-  const seconder  = find(nom.seconderSerial);
-  return {
-    ...nom,
-    candidate,
-    proposer,
-    seconder,
-    candidateName:  candidate?.NAME  || nom.candidateSerial,
-    candidateClass: candidate?.CLASS || '',
-    candidateDept:  candidate?.Dept  || '',
-    proposerName:   proposer?.NAME   || nom.proposerSerial,
-    seconderName:   seconder?.NAME   || nom.seconderSerial,
-  };
-}
-
 function checkAdmin(pwd) {
   if (pwd !== ADMIN_PASSWORD) throw new Error('Invalid admin password.');
 }
@@ -217,46 +204,35 @@ function checkAdmin(pwd) {
 // ─────────────────────────────────────────────────────────────
 function doGet(e) {
   try {
-    ensureSettings();
+    ensureAll();
     const action = e.parameter.action;
 
-    if (action === 'getNominalRoll') {
-      return jsonOut(getNominalRollData());
-    }
-
-    if (action === 'getPosts') {
-      return jsonOut(getPostsData());
-    }
+    if (action === 'getNominalRoll') return jsonOut(getNominalRollData());
+    if (action === 'getPosts') return jsonOut(getPostsData());
 
     if (action === 'getNomination') {
       const id  = e.parameter.id;
       const nom = getAllNominations().find(n => n.id === id);
-      if (!nom) return errOut(`No nomination found with ID: ${id}`);
-      return jsonOut(enrichNomination(nom, getNominalRollData()));
+      return nom ? jsonOut(nom) : errOut(`No nomination found with ID: ${id}`);
     }
 
     if (action === 'getValidNominations') {
-      if (getSetting('validListPublished') !== 'true')
-        return errOut('The valid nominations list has not been published yet.');
-      const roll = getNominalRollData();
-      return jsonOut(getAllNominations().filter(n => n.status === 'Valid').map(n => enrichNomination(n, roll)));
+      if (getSetting('validListPublished') !== 'true') return errOut('Valid list not published.');
+      return jsonOut(getAllNominations(SHEET_VALID));
     }
 
     if (action === 'getFinalNominations') {
-      if (getSetting('finalListPublished') !== 'true')
-        return errOut('The final nominations list has not been published yet.');
-      const roll  = getNominalRollData();
-      const valid = getAllNominations().filter(n => n.status === 'Valid');
+      if (getSetting('finalListPublished') !== 'true') return errOut('Final list not published.');
+      const all = getAllNominations(SHEET_FINAL);
       return jsonOut({
-        active:    valid.filter(n => n.withdrawalStatus !== 'Approved').map(n => enrichNomination(n, roll)),
-        withdrawn: valid.filter(n => n.withdrawalStatus === 'Approved').map(n => enrichNomination(n, roll)),
+        active:    all.filter(n => n.withdrawalStatus !== 'Approved'),
+        withdrawn: all.filter(n => n.withdrawalStatus === 'Approved'),
       });
     }
 
     if (action === 'adminGetNominations') {
       checkAdmin(e.parameter.password);
-      const roll = getNominalRollData();
-      return jsonOut(getAllNominations().map(n => enrichNomination(n, roll)));
+      return jsonOut(getAllNominations());
     }
 
     if (action === 'adminGetSettings') {
@@ -283,8 +259,7 @@ function doGet(e) {
 // ─────────────────────────────────────────────────────────────
 function doPost(e) {
   try {
-    ensureSettings();
-    ensureNomHeaders();
+    ensureAll();
     const body   = JSON.parse(e.postData.contents);
     const action = body.action;
 
@@ -295,105 +270,103 @@ function doPost(e) {
 
     if (action === 'submitNomination') {
       const { post, gender, dob, candidateSerial, proposerSerial, seconderSerial } = body;
-      if (!post || !gender || !dob || !candidateSerial || !proposerSerial || !seconderSerial)
-        return errOut('Missing required nomination fields.');
-      const roll     = getNominalRollData();
-      const findS    = (s) => roll.find(r => String(r['Nominal Roll Serial Number']) === String(s));
-      if (!findS(candidateSerial)) return errOut(`Candidate serial ${candidateSerial} not found in nominal roll.`);
-      if (!findS(proposerSerial))  return errOut(`Proposer serial ${proposerSerial} not found in nominal roll.`);
-      if (!findS(seconderSerial))  return errOut(`Seconder serial ${seconderSerial} not found in nominal roll.`);
-      if (candidateSerial === proposerSerial) return errOut('Candidate and Proposer cannot be the same.');
-      if (candidateSerial === seconderSerial) return errOut('Candidate and Seconder cannot be the same.');
-      if (proposerSerial  === seconderSerial) return errOut('Proposer and Seconder cannot be the same.');
+      const roll = getNominalRollData();
+      const findS = (s) => roll.find(r => String(r['Nominal Roll Serial Number']) === String(s));
+      
+      const c = findS(candidateSerial);
+      const p = findS(proposerSerial);
+      const s = findS(seconderSerial);
+
+      if (!c || !p || !s) return errOut('Candidate/Proposer/Seconder serial not found.');
+
       const existingIds = new Set(getAllNominations().map(n => n.id));
-      const id = generateUniqueId(existingIds);
-      getSheet(SHEET_NOMS).appendRow([
-        id, post, gender, dob,
-        String(candidateSerial), String(proposerSerial), String(seconderSerial),
-        'Pending', 'None', new Date().toISOString(),
-      ]);
+      let id; do { id = String(Math.floor(1000000000 + Math.random() * 9000000000)); } while (existingIds.has(id));
+
+      const getAdm = (st) => st['ADMISION NO'] || st['ADMISSION NO'] || 'N/A';
+
+      const row = [
+        id, post, gender, dob, new Date().toISOString(),
+        String(candidateSerial), c.NAME, c.CLASS, getAdm(c), c.Dept || 'N/A',
+        String(proposerSerial),  p.NAME, p.CLASS, getAdm(p), p.Dept || 'N/A',
+        String(seconderSerial),  s.NAME, s.CLASS, getAdm(s), s.Dept || 'N/A',
+        'Pending', 'None'
+      ];
+      
+      getSheet(SHEET_NOMS).appendRow(row);
       return jsonOut({ ok: true, id });
     }
 
     if (action === 'submitWithdrawal') {
-      const noms = getAllNominations();
-      const nom  = noms.find(n => n.id === body.id);
-      if (!nom) return errOut(`Nomination ${body.id} not found.`);
-      if (nom.status !== 'Valid') return errOut(`Only Valid nominations can be withdrawn.`);
-      if (nom.withdrawalStatus !== 'None') return errOut('A withdrawal has already been submitted.');
-      getSheet(SHEET_NOMS).getRange(nom._row, 9).setValue('Requested');
+      const nom = getAllNominations().find(n => n.id === body.id);
+      if (!nom || nom.status !== 'Valid') return errOut(`Invalid nomination status.`);
+      getSheet(SHEET_NOMS).getRange(nom._row, 22).setValue('Requested');
       return jsonOut({ ok: true });
     }
 
     if (action === 'adminVerifyNomination') {
       checkAdmin(body.password);
-      if (!['Valid','Rejected'].includes(body.status)) return errOut('Status must be Valid or Rejected.');
       const nom = getAllNominations().find(n => n.id === body.id);
-      if (!nom) return errOut(`Nomination ${body.id} not found.`);
-      getSheet(SHEET_NOMS).getRange(nom._row, 8).setValue(body.status);
+      if (!nom) return errOut(`Not found.`);
+      getSheet(SHEET_NOMS).getRange(nom._row, 21).setValue(body.status);
       return jsonOut({ ok: true });
     }
 
     if (action === 'adminApproveWithdrawal') {
       checkAdmin(body.password);
       const nom = getAllNominations().find(n => n.id === body.id);
-      if (!nom) return errOut(`Nomination ${body.id} not found.`);
-      if (nom.withdrawalStatus !== 'Requested') return errOut('No withdrawal request pending.');
-      getSheet(SHEET_NOMS).getRange(nom._row, 9).setValue('Approved');
+      if (!nom) return errOut(`Not found.`);
+      getSheet(SHEET_NOMS).getRange(nom._row, 22).setValue('Approved');
       return jsonOut({ ok: true });
     }
 
     if (action === 'adminPublishValidList') {
       checkAdmin(body.password);
+      const validNoms = getAllNominations().filter(n => n.status === 'Valid');
+      const sValid = getSheet(SHEET_VALID);
+      sValid.clear();
+      sValid.appendRow(NOM_COLS);
+      validNoms.forEach(n => {
+        const row = [
+          n.id, n.post, n.gender, n.dob, n.timestamp,
+          n.candidateSerial, n.candidateName, n.candidateClass, n.candidateAdmission, n.candidateDept,
+          n.proposerSerial,  n.proposerName,  n.proposerClass,  n.proposerAdmission,  n.proposerDept,
+          n.seconderSerial,  n.seconderName,  n.seconderClass,  n.seconderAdmission,  n.seconderDept,
+          n.status, n.withdrawalStatus
+        ];
+        sValid.appendRow(row);
+      });
       setSetting('validListPublished', 'true');
       return jsonOut({ ok: true });
     }
 
     if (action === 'adminPublishFinalList') {
       checkAdmin(body.password);
+      const finalNoms = getAllNominations().filter(n => n.status === 'Valid');
+      const sFinal = getSheet(SHEET_FINAL);
+      sFinal.clear();
+      sFinal.appendRow(NOM_COLS);
+      finalNoms.forEach(n => {
+        const row = [
+          n.id, n.post, n.gender, n.dob, n.timestamp,
+          n.candidateSerial, n.candidateName, n.candidateClass, n.candidateAdmission, n.candidateDept,
+          n.proposerSerial,  n.proposerName,  n.proposerClass,  n.proposerAdmission,  n.proposerDept,
+          n.seconderSerial,  n.seconderName,  n.seconderClass,  n.seconderAdmission,  n.seconderDept,
+          n.status, n.withdrawalStatus
+        ];
+        sFinal.appendRow(row);
+      });
       setSetting('finalListPublished', 'true');
       return jsonOut({ ok: true });
     }
 
-    // ─── Posts Management ───────────────────────────────────
-
-    if (action === 'adminAddPost') {
-      checkAdmin(body.password);
-      ensurePostsSheet();
-      const { postName, yearRestriction, femaleOnly, finalYearIneligible, deptRestriction } = body;
-      if (!postName) return errOut('Post name is required.');
-      const existing = getPostsData();
-      if (existing.find(p => p.post === postName)) return errOut(`Post "${postName}" already exists.`);
-      getSheet(SHEET_POSTS).appendRow([postName, !!femaleOnly, !!finalYearIneligible, yearRestriction || '', !!deptRestriction]);
-      return jsonOut({ ok: true });
-    }
-
-    if (action === 'adminUpdatePost') {
-      checkAdmin(body.password);
-      ensurePostsSheet();
-      const { postName, originalName, yearRestriction, femaleOnly, finalYearIneligible, deptRestriction } = body;
-      const s    = getSheet(SHEET_POSTS);
-      const data = s.getDataRange().getValues();
-      for (let i = 1; i < data.length; i++) {
-        if (data[i][0] === originalName) {
-          s.getRange(i + 1, 1, 1, 5).setValues([[postName, !!femaleOnly, !!finalYearIneligible, yearRestriction || '', !!deptRestriction]]);
-          return jsonOut({ ok: true });
-        }
-      }
-      return errOut(`Post "${originalName}" not found.`);
-    }
-
     if (action === 'adminDeletePost') {
       checkAdmin(body.password);
-      const s    = getSheet(SHEET_POSTS);
-      const data = s.getDataRange().getValues();
-      for (let i = 1; i < data.length; i++) {
-        if (data[i][0] === body.postName) {
-          s.deleteRow(i + 1);
-          return jsonOut({ ok: true });
-        }
+      const s = getSheet(SHEET_POSTS);
+      const d = s.getDataRange().getValues();
+      for (let i = 1; i < d.length; i++) {
+        if (d[i][0] === body.postName) { s.deleteRow(i + 1); return jsonOut({ ok: true }); }
       }
-      return errOut(`Post "${body.postName}" not found.`);
+      return errOut('Post not found.');
     }
 
     return errOut(`Unknown action: ${action}`);
