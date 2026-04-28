@@ -22,8 +22,8 @@
 // ─────────────────────────────────────────────────────────────
 //  CONFIGURATION — UPDATE THESE
 // ─────────────────────────────────────────────────────────────
-const SPREADSHEET_ID = 'YOUR_GOOGLE_SHEET_ID_HERE'; // <--- NOT the script URL!
-const ADMIN_PASSWORD = 'YourSecurePasswordHere';
+const SPREADSHEET_ID = 'https://script.google.com/macros/s/AKfycbw29XuhvNI4cV-tlAWz5IaRrWPY1T9P7ZiQJbu-7za9226PyEqlhuLOrOMTG2QulzzOog/exec'; // <--- NOT the script URL!
+const ADMIN_PASSWORD = '678001alliswell$';
 
 const SHEET_NOMINAL  = 'NominalRoll';
 const SHEET_NOMS     = 'Nominations';
