@@ -34,6 +34,9 @@ export const api = {
   /** Fetch the full nominal roll */
   getNominalRoll: () => get({ action: 'getNominalRoll' }),
 
+  /** Fetch all configured posts with their rules */
+  getPosts: () => get({ action: 'getPosts' }),
+
   /** Fetch a single nomination by its 10-digit ID */
   getNomination: (id) => get({ action: 'getNomination', id }),
 
@@ -75,4 +78,25 @@ export const api = {
 
   /** Get current publish settings */
   adminGetSettings: (password) => get({ action: 'adminGetSettings', password }),
+
+  // ─── Posts Management ───────────────────────────────────────────────────────
+
+  /** Admin: get all posts */
+  adminGetPosts: (password) => get({ action: 'adminGetPosts', password }),
+
+  /** Admin: add a new post */
+  adminAddPost: (password, postData) =>
+    post({ action: 'adminAddPost', password, ...postData }),
+
+  /** Admin: update an existing post */
+  adminUpdatePost: (password, postData) =>
+    post({ action: 'adminUpdatePost', password, ...postData }),
+
+  /** Admin: delete a post */
+  adminDeletePost: (password, postName) =>
+    post({ action: 'adminDeletePost', password, postName }),
+
+  /** Admin: reorder posts (send full ordered array of post names) */
+  adminReorderPosts: (password, posts) =>
+    post({ action: 'adminReorderPosts', password, posts }),
 };

@@ -2,9 +2,14 @@
  * utils.js
  * Shared utility functions: eligibility checking, age calculation,
  * captcha generation, printing, etc.
+ *
+ * Posts are now dynamic — passed in as an array of post rule objects.
+ * Each object has the shape:
+ *   { post, femaleOnly, finalYearIneligible, yearRestriction, deptRestriction }
  */
 import { CONFIG } from './config.js';
 
+// ─── Age Calculation ───────────────────────────────────────────────────────────
 export function calculateAge(dobString, asOfDate = CONFIG.ELECTION_DATE) {
   if (!dobString) return 'N/A';
   const today = new Date(asOfDate);
@@ -17,55 +22,73 @@ export function calculateAge(dobString, asOfDate = CONFIG.ELECTION_DATE) {
   return `${years} Years, ${months} Months, ${days} Days`;
 }
 
-export function checkEligibility(student, post, role, gender = null) {
+// ─── Eligibility Rules ─────────────────────────────────────────────────────────
+/**
+ * Returns array of warning strings. Empty = eligible.
+ * @param {object} student    - Row from nominal roll
+ * @param {string} postName   - Name of the selected post
+ * @param {string} role       - 'Candidate' | 'Proposer' | 'Seconder'
+ * @param {string|null} gender
+ * @param {object[]} allPosts - Array of post-rule objects from the sheet/config
+ */
+export function checkEligibility(student, postName, role, gender = null, allPosts = []) {
   if (!student) return [];
   const warnings = [];
-  const cls = String(student['CLASS'] || '').toUpperCase();
+  const cls  = String(student['CLASS'] || '').toUpperCase();
   const dept = String(student['Dept'] || '').toUpperCase();
 
-  if (post.startsWith('Association Secretary ')) {
-    const reqDept = post.replace('Association Secretary ', '').toUpperCase();
-    if (dept !== reqDept) {
-      warnings.push(`${role} for "${post}" must be from the ${reqDept} dept (current: ${student['Dept'] || 'N/A'}).`);
+  // Find the rule for this post
+  const rule = allPosts.find(p => p.post === postName) || {};
+
+  // Department restriction
+  if (rule.deptRestriction) {
+    // For "Association Secretary X", the dept must match X
+    const prefix = 'Association Secretary ';
+    const reqDept = postName.startsWith(prefix)
+      ? postName.replace(prefix, '').toUpperCase()
+      : null;
+    if (reqDept && dept !== reqDept) {
+      warnings.push(`${role} for "${postName}" must be from the ${reqDept} dept (current: ${student['Dept'] || 'N/A'}).`);
     }
   }
 
-  if (post === 'I UG Representative'   && !cls.includes('1ST YEAR')) warnings.push(`${role} must be a 1st Year student for this post.`);
-  if (post === 'II UG Representative'  && !cls.includes('2ND YEAR')) warnings.push(`${role} must be a 2nd Year student for this post.`);
-  if (post === 'III UG Representative' && !cls.includes('3RD YEAR')) warnings.push(`${role} must be a 3rd Year student for this post.`);
-
-  if (post === 'PG Representative') {
-    const isPG = cls.includes('MA') || cls.includes('MSC') || cls.includes('MCOM') || cls.includes('M.SC') || cls.includes('M.COM') || cls.includes('M.A');
+  // Year restriction
+  const yr = String(rule.yearRestriction || '');
+  if (yr === '1' && !cls.includes('1ST YEAR')) warnings.push(`${role} must be a 1st Year student for this post.`);
+  if (yr === '2' && !cls.includes('2ND YEAR')) warnings.push(`${role} must be a 2nd Year student for this post.`);
+  if (yr === '3' && !cls.includes('3RD YEAR')) warnings.push(`${role} must be a 3rd Year student for this post.`);
+  if (yr === 'PG') {
+    const isPG = cls.includes('MA') || cls.includes('MSC') || cls.includes('MCOM') ||
+                 cls.includes('M.SC') || cls.includes('M.COM') || cls.includes('M.A');
     if (!isPG) warnings.push(`${role} for PG Representative must be a PG student (MA/MSc/MCom).`);
   }
 
+  // Candidate-only rules
   if (role === 'Candidate' && gender) {
-    if (CONFIG.FEMALE_ONLY_POSTS.includes(post) && gender === 'Male') {
-      warnings.push(`The post of "${post}" is reserved for female candidates only.`);
+    if (rule.femaleOnly && gender === 'Male') {
+      warnings.push(`The post of "${postName}" is reserved for female candidates only.`);
     }
-    if (CONFIG.FINAL_YEAR_INELIGIBLE_POSTS.includes(post)) {
+    if (rule.finalYearIneligible) {
       const isFinalYear = cls.includes('3RD YEAR') || cls.includes('2ND YEAR M');
-      if (isFinalYear) warnings.push(`Final year students are not eligible for "${post}".`);
+      if (isFinalYear) warnings.push(`Final year students are not eligible for "${postName}".`);
     }
   }
   return warnings;
 }
 
+// ─── Captcha ───────────────────────────────────────────────────────────────────
 export function generateCaptcha() {
   const a = Math.floor(Math.random() * 10) + 1;
   const b = Math.floor(Math.random() * 10) + 1;
   return { question: `${a} + ${b}`, answer: String(a + b) };
 }
 
-export function formatDate(dateStr) {
-  if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('en-GB');
-}
-
+// ─── Date formatting ───────────────────────────────────────────────────────────
 export function todayFormatted() {
   return new Date().toLocaleDateString('en-GB');
 }
 
+// ─── DOB dropdowns ─────────────────────────────────────────────────────────────
 export function populateDobSelects(dayEl, monthEl, yearEl) {
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   for (let i = 1; i <= 31; i++) dayEl.innerHTML += `<option value="${i}">${i}</option>`;
@@ -81,12 +104,15 @@ export function displayDob(day, month, year) {
   return `${String(day).padStart(2,'0')}/${String(month).padStart(2,'0')}/${year}`;
 }
 
+// ─── Print helper ──────────────────────────────────────────────────────────────
 export function triggerPrint() { window.print(); }
 
+// ─── HTML escape ──────────────────────────────────────────────────────────────
 export function esc(str) {
   return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ─── Loading state helper ─────────────────────────────────────────────────────
 export function setLoading(btn, isLoading, defaultText) {
   if (isLoading) {
     btn.disabled = true;
@@ -97,6 +123,7 @@ export function setLoading(btn, isLoading, defaultText) {
   }
 }
 
+// ─── Toast notification ────────────────────────────────────────────────────────
 export function showToast(message, type = 'info') {
   const colors = { info: '#6366f1', success: '#10b981', error: '#ef4444', warning: '#f59e0b' };
   const toast = document.createElement('div');

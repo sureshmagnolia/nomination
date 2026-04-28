@@ -1,6 +1,7 @@
 /**
  * pages/submitNomination.js
  * Multi-step nomination form with auto-fill, eligibility checks, captcha, and print preview.
+ * Posts are loaded dynamically from the Google Sheet via the API.
  */
 import { api } from '../api.js';
 import { CONFIG } from '../config.js';
@@ -12,26 +13,35 @@ import {
 } from '../utils.js';
 
 let nominalRoll = [];
+let allPosts = [];      // [{post, femaleOnly, finalYearIneligible, yearRestriction, deptRestriction}]
 let captchaAnswer = '';
-let generatedId = null;
-let formSnapshot = null;
 
 export async function renderSubmitNomination(container) {
   container.innerHTML = publicLayout('Submit Nomination', `
-    <div id="stepWrap">
-      <!-- Loading state -->
-      <div id="loadingState" class="flex flex-col items-center justify-center py-24 gap-4">
-        <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
-        <p class="text-slate-400 text-sm">Loading nominal roll data...</p>
-      </div>
-      <div id="formArea" class="hidden"></div>
+    <div id="loadingState" class="flex flex-col items-center justify-center py-24 gap-4">
+      <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
+      <p class="text-slate-400 text-sm">Loading data...</p>
     </div>
+    <div id="formArea" class="hidden"></div>
   `);
 
+  container.querySelector('#backToHome').addEventListener('click', () => router.navigate('/'));
+
   try {
-    const data = await api.getNominalRoll();
-    nominalRoll = Array.isArray(data) ? data : [];
+    // Load nominal roll and posts in parallel
+    const [rollData, postsData] = await Promise.all([
+      api.getNominalRoll(),
+      api.getPosts().catch(() => null), // Falls back to config if sheet not set up yet
+    ]);
+
+    nominalRoll = Array.isArray(rollData) ? rollData : [];
     if (nominalRoll.length === 0) throw new Error('Nominal roll is empty. Please contact the admin.');
+
+    // Use sheet posts if available, otherwise fall back to config defaults
+    allPosts = Array.isArray(postsData) && postsData.length > 0
+      ? postsData
+      : CONFIG.DEFAULT_POSTS;
+
     renderForm(container);
   } catch (e) {
     container.querySelector('#loadingState').innerHTML = `
@@ -49,6 +59,8 @@ function renderForm(container) {
   const formArea = container.querySelector('#formArea');
   formArea.classList.remove('hidden');
 
+  const postOptions = allPosts.map(p => `<option value="${esc(p.post)}">${esc(p.post)}</option>`).join('');
+
   formArea.innerHTML = `
     <div id="warningBox" class="hidden alert alert-warning mb-4"></div>
 
@@ -56,9 +68,7 @@ function renderForm(container) {
       <!-- Post -->
       <div>
         <label class="block text-sm font-semibold text-slate-300 mb-1">Post Applied For</label>
-        <select id="postSelect" class="field">
-          ${CONFIG.POSTS.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('')}
-        </select>
+        <select id="postSelect" class="field">${postOptions}</select>
       </div>
 
       <!-- Three columns: Candidate / Proposer / Seconder -->
@@ -70,12 +80,12 @@ function renderForm(container) {
 
       <!-- Captcha -->
       <div class="glass rounded-xl p-5">
-        <label class="block text-sm font-semibold text-slate-300 mb-2">
-          🤖 Captcha Verification
-        </label>
-        <p class="text-slate-400 text-sm mb-3">What is <strong class="text-white text-base">${captcha.question}</strong>?</p>
-        <input id="captchaInput" type="number" class="field w-40" placeholder="Your answer" />
-        <button type="button" id="refreshCaptcha" class="btn btn-secondary btn-sm ml-3">↺ Refresh</button>
+        <label class="block text-sm font-semibold text-slate-300 mb-2">🤖 Captcha Verification</label>
+        <p class="text-slate-400 text-sm mb-3">What is <strong id="captchaQuestion" class="text-white text-base">${captcha.question}</strong>?</p>
+        <div class="flex items-center gap-3">
+          <input id="captchaInput" type="number" class="field w-40" placeholder="Your answer" />
+          <button type="button" id="refreshCaptcha" class="btn btn-secondary btn-sm">↺ Refresh</button>
+        </div>
       </div>
 
       <!-- Submit -->
@@ -105,12 +115,12 @@ function renderForm(container) {
     formArea.querySelector('#dob-year')
   );
 
-  // Wire up auto-fill
+  // Auto-fill listeners
   ['candidate','proposer','seconder'].forEach(role => {
     formArea.querySelector(`#serial-${role}`).addEventListener('change', () => fillDetails(formArea, role));
   });
 
-  // Validation on post/gender/dob changes
+  // Revalidate on any change
   formArea.querySelector('#postSelect').addEventListener('change', () => runValidation(formArea));
   formArea.querySelectorAll('[name="gender"]').forEach(r => r.addEventListener('change', () => runValidation(formArea)));
   formArea.querySelectorAll('.dob-sel').forEach(s => s.addEventListener('change', () => runValidation(formArea)));
@@ -120,7 +130,7 @@ function renderForm(container) {
     const c = generateCaptcha();
     captchaAnswer = c.answer;
     formArea.querySelector('#captchaInput').value = '';
-    formArea.querySelector('strong.text-white').textContent = c.question;
+    formArea.querySelector('#captchaQuestion').textContent = c.question;
   });
 
   formArea.querySelector('#backHomeBtn').addEventListener('click', () => router.navigate('/'));
@@ -176,24 +186,23 @@ function fillDetails(formArea, role) {
 
 function runValidation(formArea) {
   const warnings = [];
-  const post = formArea.querySelector('#postSelect').value;
+  const postName = formArea.querySelector('#postSelect').value;
   const gender = formArea.querySelector('[name="gender"]:checked')?.value || null;
 
   const roles = ['candidate','proposer','seconder'];
-  const students = roles.map(r => {
-    const serial = formArea.querySelector(`#serial-${r}`).value.trim();
-    return serial ? nominalRoll.find(s => String(s['Nominal Roll Serial Number']) === serial) : null;
-  });
+  const serials = roles.map(r => formArea.querySelector(`#serial-${r}`).value.trim());
+  const students = serials.map(s => s ? nominalRoll.find(st => String(st['Nominal Roll Serial Number']) === s) : null);
 
-  // Uniqueness checks
-  const [cS, pS, sS] = roles.map(r => formArea.querySelector(`#serial-${r}`).value.trim());
+  // Uniqueness
+  const [cS, pS, sS] = serials;
   if (cS && cS === pS) warnings.push('Candidate and Proposer cannot be the same person.');
   if (cS && cS === sS) warnings.push('Candidate and Seconder cannot be the same person.');
   if (pS && pS === sS) warnings.push('Proposer and Seconder cannot be the same person.');
 
-  // Eligibility
+  // Eligibility (pass dynamic allPosts rules)
+  const roleLabels = ['Candidate', 'Proposer', 'Seconder'];
   students.forEach((st, i) => {
-    if (st) warnings.push(...checkEligibility(st, post, i === 0 ? 'Candidate' : roles[i] === 'proposer' ? 'Proposer' : 'Seconder', i === 0 ? gender : null));
+    if (st) warnings.push(...checkEligibility(st, postName, roleLabels[i], i === 0 ? gender : null, allPosts));
   });
 
   const box = formArea.querySelector('#warningBox');
@@ -212,7 +221,7 @@ async function handleSubmit(e, formArea) {
   if (warnings.length) { showToast('Please resolve all eligibility warnings first.', 'error'); return; }
 
   const captchaVal = formArea.querySelector('#captchaInput').value.trim();
-  if (captchaVal !== captchaAnswer) { showToast('Captcha answer is incorrect. Please try again.', 'error'); return; }
+  if (captchaVal !== captchaAnswer) { showToast('Captcha answer is incorrect.', 'error'); return; }
 
   const post = formArea.querySelector('#postSelect').value;
   const gender = formArea.querySelector('[name="gender"]:checked')?.value;
@@ -226,7 +235,6 @@ async function handleSubmit(e, formArea) {
   const roles = ['candidate','proposer','seconder'];
   const serials = roles.map(r => formArea.querySelector(`#serial-${r}`).value.trim());
   const students = serials.map(s => nominalRoll.find(st => String(st['Nominal Roll Serial Number']) === s));
-
   if (students.some(s => !s)) { showToast('One or more serial numbers are invalid.', 'error'); return; }
 
   const submitBtn = formArea.querySelector('#submitBtn');
@@ -241,10 +249,8 @@ async function handleSubmit(e, formArea) {
       seconderSerial:  serials[2],
     });
 
-    generatedId = result.id;
-    formSnapshot = { post, gender, day, month, year, students };
-    showPreview(formArea, generatedId, formSnapshot);
-    showToast(`Nomination submitted! ID: ${generatedId}`, 'success');
+    showPreview(formArea, result.id, { post, gender, day, month, year, students });
+    showToast(`Nomination submitted! ID: ${result.id}`, 'success');
   } catch (err) {
     showToast(`Submission failed: ${err.message}`, 'error');
   } finally {
@@ -259,13 +265,11 @@ function showPreview(formArea, id, { post, gender, day, month, year, students })
   const age = calculateAge(dob);
 
   const preview = formArea.querySelector('#previewSection');
-  const printZone = formArea.querySelector('#printZone');
-
-  printZone.innerHTML = buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder);
+  formArea.querySelector('#printZone').innerHTML =
+    buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder);
 
   preview.classList.remove('hidden');
   preview.scrollIntoView({ behavior: 'smooth' });
-
   preview.querySelector('#printBtn').addEventListener('click', triggerPrint);
   preview.querySelector('#newNomBtn').addEventListener('click', () => renderSubmitNomination(formArea.closest('#app')));
 }
@@ -281,18 +285,16 @@ export function buildNominationPaper(id, post, gender, dobDisplay, age, candidat
       </div>
       <div class="text-right">
         <p class="text-slate-400 text-xs">Generated: ${today}</p>
-        ${status ? `<span class="badge badge-${status.toLowerCase()}">${status}</span>` : ''}
+        ${status ? `<span class="badge badge-${status.toLowerCase()}">${esc(status)}</span>` : ''}
       </div>
     </div>
     <h2 class="text-center font-bold text-xl text-white border-y border-white/10 py-3">NOMINATION PAPER</h2>
     <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 text-center">
       <p class="text-xs text-indigo-300 uppercase tracking-widest mb-1">Your Unique Nomination ID</p>
-      <p class="text-3xl font-mono font-bold text-indigo-300 tracking-widest">${id}</p>
+      <p class="text-3xl font-mono font-bold text-indigo-300 tracking-widest">${esc(id)}</p>
       <p class="text-xs text-slate-500 mt-1">Keep this number safe — you will need it for future reference.</p>
     </div>
-    <div class="space-y-1 text-sm">
-      <p><span class="font-semibold text-slate-400 w-40 inline-block">Post Applied For:</span> <strong class="text-white">${esc(post)}</strong></p>
-    </div>
+    <p class="text-sm"><span class="font-semibold text-slate-400 w-40 inline-block">Post Applied For:</span> <strong class="text-white">${esc(post)}</strong></p>
     <div class="space-y-3">
       ${sectionBlock('Candidate', candidate, gender, dobDisplay, age)}
       ${sectionBlock('Proposer', proposer)}
@@ -311,6 +313,7 @@ export function buildNominationPaper(id, post, gender, dobDisplay, age, candidat
 }
 
 function sectionBlock(label, s, gender = null, dob = null, age = null) {
+  if (!s) return '';
   return `
   <div class="glass rounded-lg p-4 text-sm space-y-1">
     <h3 class="font-bold text-white uppercase text-xs tracking-widest mb-2 border-b border-white/10 pb-1">${label} Details</h3>
@@ -336,15 +339,11 @@ function publicLayout(title, bodyHtml) {
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
       <div class="max-w-4xl mx-auto px-6 py-3 flex items-center gap-4">
-        <button data-nav="/" id="backToHome" class="text-slate-400 hover:text-white transition text-sm flex items-center gap-2">
-          ← Home
-        </button>
+        <button id="backToHome" class="text-slate-400 hover:text-white transition text-sm flex items-center gap-2">← Home</button>
         <span class="text-slate-600">|</span>
         <h1 class="font-bold text-white text-sm">${esc(title)}</h1>
       </div>
     </header>
-    <main class="max-w-4xl mx-auto px-4 py-8">
-      ${bodyHtml}
-    </main>
+    <main class="max-w-4xl mx-auto px-4 py-8">${bodyHtml}</main>
   </div>`;
 }

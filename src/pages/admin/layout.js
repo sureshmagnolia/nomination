@@ -35,6 +35,7 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
         ${navItem('verify',      '✅', 'Verify Nominations', activeSection)}
         ${navItem('withdrawals', '↩️', 'Withdrawals',       activeSection)}
         ${navItem('publish',     '📢', 'Publish Lists',      activeSection)}
+        ${navItem('posts',       '📋', 'Manage Posts',       activeSection)}
         <div class="border-t border-white/10 my-2"></div>
         ${navItem('public',      '🌐', 'Public Portal',      activeSection)}
       </nav>

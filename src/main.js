@@ -15,6 +15,7 @@ import { renderAdminDashboard }     from './pages/admin/dashboard.js';
 import { renderAdminVerify }        from './pages/admin/verify.js';
 import { renderAdminWithdrawals }   from './pages/admin/withdrawals.js';
 import { renderAdminPublish }       from './pages/admin/publish.js';
+import { renderAdminPosts }         from './pages/admin/posts.js';
 
 // ─── Background decoration ────────────────────────────────────────────────────
 const app = document.getElementById('app');
@@ -42,6 +43,7 @@ router
   .on('/admin/verify',      render(renderAdminVerify))
   .on('/admin/withdrawals', render(renderAdminWithdrawals))
   .on('/admin/publish',     render(renderAdminPublish))
+  .on('/admin/posts',       render(renderAdminPosts))
   .setDefault('/');
 
 // Handle clicks on data-nav attributes globally (delegation)
