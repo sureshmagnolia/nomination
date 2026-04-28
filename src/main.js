@@ -3,6 +3,7 @@
  * Sets up the router and background decorations, then starts the app.
  */
 import './style.css';
+import { CONFIG } from './config.js';
 import { router } from './router.js';
 import { renderHome }               from './pages/home.js';
 import { renderSubmitNomination }   from './pages/submitNomination.js';
