@@ -19,7 +19,10 @@ async function get(params) {
 async function post(body) {
   const res = await fetch(BASE_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    // IMPORTANT: Must use text/plain (not application/json) to avoid CORS preflight
+    // OPTIONS requests that Google Apps Script cannot handle. The body is still
+    // valid JSON and Apps Script reads it via e.postData.contents.
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`Network error: ${res.status}`);
