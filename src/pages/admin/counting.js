@@ -159,27 +159,27 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     const matrix = Array.from({ length: T }, (_, t) => {
       const rounds = [];
       
-      // 1. General Posts (Rotated per table so not everyone counts same post at once)
-      for (let i = 0; i < G; i++) {
-        rounds.push(generalPosts[(t + i) % G]);
-      }
-      
-      // 2. Year Reps (only if this booth has that year)
-      yearRepPosts.forEach(yp => {
-        if (boothYears[t].has(String(yp.yearRestriction))) {
-          rounds.push(yp);
-        }
-      });
-      
-      // 3. Association Posts (only if this booth has that department)
+      // 1. Association Posts (FIRST)
       assocPosts.forEach(ap => {
         const d = getPostDept(ap);
         if (d && boothDepts[t].has(d)) {
           rounds.push(ap);
         }
       });
+
+      // 2. Year Reps
+      yearRepPosts.forEach(yp => {
+        if (boothYears[t].has(String(yp.yearRestriction))) {
+          rounds.push(yp);
+        }
+      });
       
-      // 4. UUC Posts (always at the end)
+      // 3. General Posts (Rotated per table)
+      for (let i = 0; i < G; i++) {
+        rounds.push(generalPosts[(t + i) % G]);
+      }
+      
+      // 4. UUC Posts (LAST)
       uucPosts.forEach(up => rounds.push(up));
       
       return rounds;
