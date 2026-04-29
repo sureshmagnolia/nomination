@@ -140,4 +140,14 @@ export const api = {
   /** Admin: wipe all transactional data (Nominations, Valid/Final Lists, Results) */
   adminWipeData: (password) =>
     post({ action: 'adminWipeData', password }),
+
+  // ─── Counting Matrix Persistence ─────────────────────────────────────────────
+
+  /** Admin: get saved counting matrix */
+  adminGetCountingMatrix: (password) =>
+    get({ action: 'adminGetCountingMatrix', password }),
+
+  /** Admin: save counting matrix */
+  adminSaveCountingMatrix: (password, matrixData) =>
+    post({ action: 'adminSaveCountingMatrix', password, matrixData }),
 };

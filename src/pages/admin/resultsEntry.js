@@ -13,102 +13,45 @@ export async function renderAdminResultsEntry(container) {
   `);
 
   try {
-    const [booths, posts, nominationsRaw, allResults, nominalRoll] = await Promise.all([
+    const [booths, posts, nominationsRaw, allResults, savedMatrix] = await Promise.all([
       api.adminGetBooths(pwd).catch(() => []),
       api.getPosts(),
       api.adminGetNominations(pwd).catch(() => []),
       api.getResults().catch(() => []),
-      api.getNominalRoll().catch(() => [])
+      api.adminGetCountingMatrix(pwd).catch(() => null)
     ]);
     const allNoms  = Array.isArray(nominationsRaw) ? nominationsRaw : [];
     const finalList = allNoms.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved');
-    renderEntryUI(container.querySelector('#adminMain'), pwd, booths, posts, finalList, allResults, nominalRoll);
+    renderEntryUI(container.querySelector('#adminMain'), pwd, booths, posts, finalList, allResults, savedMatrix);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
   }
 }
 
-function renderEntryUI(main, pwd, booths, posts, finalList, allResults, nominalRoll) {
+function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMatrix) {
   const pName = p => String(p.post || p.name || '');
-  const T = booths.length;
 
-  // ── REPLICATE MATRIX LOGIC (Must match counting.js exactly) ──────────────────
-  const classToDept = {};
-  nominalRoll.forEach(s => {
-    const c = String(s['CLASS'] || '').trim();
-    const d = String(s['Dept']  || '').trim().toUpperCase();
-    if (c && d) classToDept[c] = d;
-  });
-
-  const boothDepts = booths.map(b => new Set((b.classes || []).map(c => classToDept[c] || '').filter(Boolean)));
-  const boothYears = booths.map(b => {
-    const yrs = new Set();
-    (b.classes || []).forEach(c => {
-      const u = c.toUpperCase();
-      if (u.includes('1ST YEAR')) yrs.add('1');
-      if (u.includes('2ND YEAR') && !u.includes('M')) yrs.add('2');
-      if (u.includes('3RD YEAR') && !u.includes('M')) yrs.add('3');
-      if (['MA ','MSC ','MCOM','M.SC','M.COM','M.A '].some(pg => u.includes(pg.trim()))) yrs.add('PG');
-    });
-    return yrs;
-  });
-
-  const uucPosts     = posts.filter(p => {
-    const name = pName(p).toUpperCase();
-    return name.includes('UUC') || name.includes('UNIVERSITY UNION COUNCILLOR');
-  });
-  const assocPosts   = posts.filter(p => !uucPosts.includes(p) && pName(p).toUpperCase().includes('ASSOCIATION'));
-  const yearRepPosts = posts.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && p.yearRestriction && String(p.yearRestriction).trim() !== '');
-  const generalPosts = posts.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && !yearRepPosts.includes(p));
-  const G = generalPosts.length;
-
-  const tableR1 = Array.from({ length: T }, () => []);
-  assocPosts.forEach(ap => {
-    const apUp = pName(ap).toUpperCase();
-    let assigned = false;
-    for (let t = 0; t < T; t++) {
-      if (Array.from(boothDepts[t]).some(d => apUp.includes(d))) {
-        tableR1[t].push(ap); assigned = true; break;
-      }
-    }
-    if (!assigned) {
-      let mi = 0;
-      tableR1.forEach((a, i) => { if (a.length < tableR1[mi].length) mi = i; });
-      tableR1[mi].push(ap);
-    }
-  });
-
-  yearRepPosts.forEach(yp => {
-    const yr = String(yp.yearRestriction || '');
-    for (let t = 0; t < T; t++) {
-      if (boothYears[t].has(yr)) tableR1[t].push(yp);
-    }
-    const any = tableR1.some(r => r.includes(yp));
-    if (!any) { let mi = 0; tableR1.forEach((a,i) => { if (a.length < tableR1[mi].length) mi=i; }); tableR1[mi].push(yp); }
-  });
-
-  const numGeneralRounds = G;
-  const maxRestricted = Math.max(...tableR1.map(r => r.length), 0);
-  const totalRounds = maxRestricted + numGeneralRounds + uucPosts.length;
-
-  const matrix = Array.from({ length: T }, (_, t) => {
-    const rounds = [];
-    for (let r = 0; r < maxRestricted; r++) rounds.push(tableR1[t][r] || null);
-    for (let r = 0; r < numGeneralRounds; r++) rounds.push(generalPosts[(t + r) % G]);
-    uucPosts.forEach(up => rounds.push(up));
-    return rounds;
-  });
-
-  // Map serial -> {tableIdx, roundIdx, post}
-  const serialMap = {};
-  let serialCounter = 1;
-  for (let r = 0; r < totalRounds; r++) {
-    for (let t = 0; t < T; t++) {
-      if (matrix[t][r]) {
-        serialMap[serialCounter++] = { t, r, post: matrix[t][r] };
-      }
-    }
+  // ── IMPORTANT: Use the SAVED matrix data from the backend ──────────────────
+  if (!savedMatrix) {
+    main.innerHTML = `
+      <div class="text-center py-20 bg-white/5 rounded-2xl border border-white/10">
+        <div class="text-5xl mb-4">⚠️</div>
+        <h3 class="text-xl font-bold text-white mb-2">Matrix Not Set</h3>
+        <p class="text-slate-400 mb-6">The Counting Matrix must be generated and saved in the "Counting Setup" page before you can enter results by Serial Number.</p>
+      </div>
+    `;
+    return;
   }
+
+  const { matrix, formSerials } = savedMatrix;
+  
+  // Reconstruct serialMap for lookup: serial -> {t, r, postName}
+  const serialMap = {};
+  Object.entries(formSerials).forEach(([key, serial]) => {
+    const [t, r] = key.split('-').map(Number);
+    const post = matrix[t][r];
+    serialMap[serial] = { t, r, postName: pName(post) };
+  });
 
   main.innerHTML = `
     <div class="page-enter space-y-6 max-w-4xl mx-auto">
@@ -154,23 +97,16 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, nominalR
     const s = txtSerial.value.trim();
     if (!s) return;
     const info = serialMap[s];
-    if (!info) {
-      showToast(`Invalid Serial Number: ${s}`, 'error');
-      return;
-    }
-    const tableNum = booths[info.t].boothNumber;
-    const postName = pName(info.post);
+    if (!info) { showToast(`Invalid Serial Number: ${s}`, 'error'); return; }
     
-    // Refresh results just before loading form to ensure fresh data
     try {
       setLoading(btnSerial, true, 'Loading...');
       const freshResults = await api.getResults().catch(() => []);
       allResults.length = 0;
       allResults.push(...freshResults);
-      renderFormGrid(tableNum, postName, s);
+      renderFormGrid(booths[info.t].boothNumber, info.postName, s);
     } catch (e) {
-      showToast('Error refreshing data', 'error');
-      renderFormGrid(tableNum, postName, s);
+      renderFormGrid(booths[info.t].boothNumber, info.postName, s);
     } finally {
       setLoading(btnSerial, false, 'Load Form');
     }
@@ -249,7 +185,7 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, nominalR
           
           <div class="flex items-center justify-between bg-red-500/5 p-4 rounded-lg border border-red-500/20">
             <div>
-              <div class="font-bold text-red-400">Invalid / Blank Votes</div>
+              <div class="font-bold text-red-400">INVALID</div>
               <div class="text-xs text-slate-500">Rejected ballots</div>
             </div>
             <div class="w-32">

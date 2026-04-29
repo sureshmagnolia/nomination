@@ -19,6 +19,7 @@ const SHEET_SETTINGS = 'Settings';
 const SHEET_POSTS    = 'Posts';
 const SHEET_BOOTHS   = 'Booths';
 const SHEET_RESULTS  = 'Results';
+const SHEET_MATRIX   = 'CountingMatrix';
 
 // Expanded columns to store full details of candidate, proposer, and seconder
 const NOM_COLS = [
@@ -297,6 +298,14 @@ function doGet(e) {
       }));
     }
 
+    if (action === 'adminGetCountingMatrix') {
+      checkAdmin(e.parameter.password);
+      const s = getSheet(SHEET_MATRIX);
+      const d = s.getDataRange().getValues();
+      if (d.length < 2) return jsonOut(null);
+      return jsonOut(JSON.parse(d[1][0]));
+    }
+
     return errOut(`Unknown action: ${action}`);
   } catch (err) {
     return errOut(err.message);
@@ -512,6 +521,15 @@ function doPost(e) {
       return jsonOut({ ok: true });
     }
 
+    if (action === 'adminSaveCountingMatrix') {
+      checkAdmin(body.password);
+      const s = getSheet(SHEET_MATRIX);
+      s.clear();
+      s.appendRow(['MatrixDataJSON']);
+      s.appendRow([JSON.stringify(body.matrixData)]);
+      return jsonOut({ ok: true });
+    }
+
     if (action === 'adminInjectTestData') {
       checkAdmin(body.password);
 
@@ -661,7 +679,7 @@ function doPost(e) {
       checkAdmin(body.password);
       
       // Wipe transactional data only — never wipe NominalRoll, Posts, or Booths
-      const sheetsToWipe = [SHEET_NOMS, SHEET_VALID, SHEET_FINAL, SHEET_RESULTS];
+      const sheetsToWipe = [SHEET_NOMS, SHEET_VALID, SHEET_FINAL, SHEET_RESULTS, SHEET_MATRIX];
       sheetsToWipe.forEach(name => {
         const s = getSheet(name);
         const firstRow = s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0];
