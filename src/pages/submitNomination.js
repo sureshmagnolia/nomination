@@ -69,7 +69,8 @@ function renderForm(container) {
   const now = new Date();
   const deadline = electionSchedule.nominationDeadline ? new Date(electionSchedule.nominationDeadline) : null;
 
-  if (deadline && now > deadline) {
+  // Skip deadline check if admin is doing direct entry
+  if (!window.ADMIN_BYPASS_PWD && deadline && now > deadline) {
     formArea.innerHTML = `
       <div class="glass p-12 text-center rounded-2xl border border-rose-500/20 max-w-2xl mx-auto page-enter">
         <div class="text-6xl mb-6">⏳</div>
@@ -264,13 +265,20 @@ async function handleSubmit(e, formArea) {
   setLoading(submitBtn, true, 'Generate &amp; Preview Nomination');
 
   try {
-    const result = await api.submitNomination({
+    const payload = {
       post, gender,
       dob: buildDobString(day, month, year),
       candidateSerial: serials[0],
       proposerSerial:  serials[1],
       seconderSerial:  serials[2],
-    });
+    };
+
+    // If admin is doing direct entry, include password to bypass deadline
+    if (window.ADMIN_BYPASS_PWD) {
+      payload.password = window.ADMIN_BYPASS_PWD;
+    }
+
+    const result = await api.submitNomination(payload);
 
     showPreview(formArea, result.id, { post, gender, day, month, year, students });
     showToast(`Nomination submitted! ID: ${result.id}`, 'success');

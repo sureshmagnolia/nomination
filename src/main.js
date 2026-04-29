@@ -25,6 +25,7 @@ import { renderResults }            from './pages/results.js';
 import { renderNominalRoll }        from './pages/nominalRoll.js';
 import { renderAdminNominalRoll }   from './pages/admin/nominalRoll.js';
 import { renderAdminSchedule }      from './pages/admin/schedule.js';
+import { renderAdminDirectNomination } from './pages/admin/directNomination.js';
 
 // ─── Background decoration ────────────────────────────────────────────────────
 const app = document.getElementById('app');
@@ -77,6 +78,7 @@ router
   .on('/admin/results-entry', render(renderAdminResultsEntry))
   .on('/admin/nominal-roll', render(renderAdminNominalRoll))
   .on('/admin/schedule',     render(renderAdminSchedule))
+  .on('/admin/direct-nomination', render(renderAdminDirectNomination))
   .on('/admin/testing',     render(renderAdminTesting))
   .setDefault('/');
 

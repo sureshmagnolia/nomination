@@ -33,6 +33,7 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
       <nav class="flex-1 p-3 space-y-1">
         ${navItem('dashboard',   '📊', 'Dashboard',         activeSection)}
         ${navItem('schedule',    '📅', 'Election Schedule',  activeSection)}
+        ${navItem('direct-nomination', '📝', 'Direct Entry',  activeSection)}
         ${navItem('verify',      '✅', 'Verify Nominations', activeSection)}
         ${navItem('withdrawals', '↩️', 'Withdrawals',       activeSection)}
         ${navItem('publish',     '📢', 'Publish Lists',      activeSection)}
