@@ -31,28 +31,38 @@ export function calculateAge(dobString, asOfDate = CONFIG.ELECTION_DATE) {
  * @param {string|null} gender
  * @param {object[]} allPosts - Array of post-rule objects from the sheet/config
  */
-export function checkEligibility(student, postName, role, gender = null, allPosts = []) {
+export function checkEligibility(student, postName, role, gender = null, allPosts = [], existingNominations = []) {
   if (!student) return [];
   const warnings = [];
   const cls  = String(student['CLASS'] || '').toUpperCase();
   const dept = String(student['Dept'] || '').toUpperCase();
+  const serial = String(student['Nominal Roll Serial Number']);
 
   // Find the rule for this post
   const rule = allPosts.find(p => p.post === postName) || {};
 
-  // Department restriction
+  // 1. Multi-Proposing/Seconding Check (ONLY for Proposer/Seconder)
+  if (role === 'Proposer' || role === 'Seconder') {
+    const alreadyEndorsedThisPost = existingNominations.some(n => 
+      n.post === postName && 
+      n.status !== 'Rejected' && 
+      (String(n.proposerSerial) === serial || String(n.seconderSerial) === serial)
+    );
+    if (alreadyEndorsedThisPost) {
+      warnings.push(`Student #${serial} has already proposed or seconded a candidate for "${postName}". They cannot endorse multiple candidates for the same post.`);
+    }
+  }
+
+  // 2. Department restriction
   if (rule.deptRestriction) {
-    // For "Association Secretary X", the dept must match X
     const prefix = 'Association Secretary ';
-    const reqDept = postName.startsWith(prefix)
-      ? postName.replace(prefix, '').toUpperCase()
-      : null;
+    const reqDept = postName.startsWith(prefix) ? postName.replace(prefix, '').toUpperCase() : null;
     if (reqDept && dept !== reqDept) {
       warnings.push(`${role} for "${postName}" must be from the ${reqDept} dept (current: ${student['Dept'] || 'N/A'}).`);
     }
   }
 
-  // Year restriction
+  // 3. Year restriction
   const yr = String(rule.yearRestriction || '');
   if (yr === '1' && !cls.includes('1ST YEAR')) warnings.push(`${role} must be a 1st Year student for this post.`);
   if (yr === '2' && !cls.includes('2ND YEAR')) warnings.push(`${role} must be a 2nd Year student for this post.`);
@@ -63,14 +73,19 @@ export function checkEligibility(student, postName, role, gender = null, allPost
     if (!isPG) warnings.push(`${role} for PG Representative must be a PG student (MA/MSc/MCom).`);
   }
 
-  // Candidate-only rules
-  if (role === 'Candidate' && gender) {
-    if (rule.femaleOnly && gender === 'Male') {
-      warnings.push(`The post of "${postName}" is reserved for female candidates only.`);
-    }
-    if (rule.finalYearIneligible) {
-      const isFinalYear = cls.includes('3RD YEAR') || cls.includes('2ND YEAR M');
-      if (isFinalYear) warnings.push(`Final year students are not eligible for "${postName}".`);
+  // 4. Candidate-only rules
+  if (role === 'Candidate') {
+    // Cannot propose/second themselves (common sense check)
+    // Handled in UI, but safe to keep.
+
+    if (gender) {
+      if (rule.femaleOnly && gender === 'Male') {
+        warnings.push(`The post of "${postName}" is reserved for female candidates only.`);
+      }
+      if (rule.finalYearIneligible) {
+        const isFinalYear = cls.includes('3RD YEAR') || cls.includes('2ND YEAR M');
+        if (isFinalYear) warnings.push(`Final year students are not eligible for "${postName}".`);
+      }
     }
   }
   return warnings;

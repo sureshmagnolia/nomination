@@ -14,6 +14,7 @@ import {
 
 let nominalRoll = [];
 let allPosts = [];      // [{post, femaleOnly, finalYearIneligible, yearRestriction, deptRestriction}]
+let existingNominations = [];
 let captchaAnswer = '';
 
 export async function renderSubmitNomination(container) {
@@ -28,13 +29,16 @@ export async function renderSubmitNomination(container) {
   container.querySelector('#backToHome').addEventListener('click', () => router.navigate('/'));
 
   try {
-    // Load nominal roll and posts in parallel
-    const [rollData, postsData] = await Promise.all([
+    // Load nominal roll, posts, and existing nominations in parallel
+    const [rollData, postsData, nomsData] = await Promise.all([
       api.getNominalRoll(),
-      api.getPosts().catch(() => null), // Falls back to config if sheet not set up yet
+      api.getPosts().catch(() => null),
+      api.getPublicNominations().catch(() => []),
     ]);
 
     nominalRoll = Array.isArray(rollData) ? rollData : [];
+    existingNominations = Array.isArray(nomsData) ? nomsData : [];
+
     if (nominalRoll.length === 0) throw new Error('Nominal roll is empty. Please contact the admin.');
 
     // Use sheet posts if available, otherwise fall back to config defaults
@@ -199,10 +203,10 @@ function runValidation(formArea) {
   if (cS && cS === sS) warnings.push('Candidate and Seconder cannot be the same person.');
   if (pS && pS === sS) warnings.push('Proposer and Seconder cannot be the same person.');
 
-  // Eligibility (pass dynamic allPosts rules)
+  // Eligibility (pass dynamic allPosts rules and existing noms for endorsing checks)
   const roleLabels = ['Candidate', 'Proposer', 'Seconder'];
   students.forEach((st, i) => {
-    if (st) warnings.push(...checkEligibility(st, postName, roleLabels[i], i === 0 ? gender : null, allPosts));
+    if (st) warnings.push(...checkEligibility(st, postName, roleLabels[i], i === 0 ? gender : null, allPosts, existingNominations));
   });
 
   const box = formArea.querySelector('#warningBox');

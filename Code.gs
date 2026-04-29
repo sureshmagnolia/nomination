@@ -222,6 +222,16 @@ function doGet(e) {
     ensureAll();
     const action = e.parameter.action;
 
+    if (action === 'getPublicNominations') {
+      const all = getAllNominations().filter(n => n.status !== 'Rejected');
+      return jsonOut(all.map(n => ({
+        post: n.post,
+        proposerSerial: n.proposerSerial,
+        seconderSerial: n.seconderSerial,
+        status: n.status
+      })));
+    }
+
     if (action === 'getNominalRoll') return jsonOut(getNominalRollData());
     if (action === 'getPosts') return jsonOut(getPostsData());
 

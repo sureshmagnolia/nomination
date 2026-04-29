@@ -41,6 +41,9 @@ export const api = {
   /** Fetch all configured posts with their rules */
   getPosts: () => get({ action: 'getPosts' }),
 
+  /** Fetch a sanitized list of all nominations for endorsement checking */
+  getPublicNominations: () => get({ action: 'getPublicNominations' }),
+
   /** Fetch a single nomination by its 10-digit ID */
   getNomination: (id) => get({ action: 'getNomination', id }),
 
