@@ -1,94 +1,102 @@
 /**
  * pages/finalList.js
- * Public page displaying the final nominations list after withdrawals.
+ * Public page displaying the published final list of candidates.
  */
 import { api } from '../api.js';
 import { router } from '../router.js';
 import { esc } from '../utils.js';
 
 export async function renderFinalList(container) {
-  container.innerHTML = publicLayout('Final Nominations List', `
-    <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading final list...</p></div>
+  container.innerHTML = publicLayout('Final Candidates List', `
+    <div class="text-center py-20"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Final List...</p></div>
   `);
   container.querySelector('#backToHome').addEventListener('click', () => router.navigate('/'));
 
   try {
     const data = await api.getFinalNominations();
-    renderFinal(container.querySelector('main'), data);
+    renderList(container.querySelector('main'), data);
   } catch (e) {
-    container.querySelector('main').innerHTML = `<div class="alert alert-warning text-center">${esc(e.message)}</div>`;
+    container.querySelector('main').innerHTML = `<div class="alert alert-warning text-center py-10 shadow-xl">${esc(e.message)}</div>`;
   }
 }
 
-function renderFinal(main, { active = [], withdrawn = [] } = {}) {
-  if (!active.length && !withdrawn.length) {
-    main.innerHTML = `<div class="alert alert-info text-center">The final nominations list has not been published yet. Please check back later.</div>`;
+function renderList(main, nominations) {
+  if (!nominations || nominations.length === 0) {
+    main.innerHTML = `
+      <div class="glass rounded-3xl p-20 text-center border-dashed border-white/10">
+        <div class="text-6xl mb-6">🏁</div>
+        <h2 class="text-2xl font-bold text-white mb-2">Final List Pending</h2>
+        <p class="text-slate-400 max-w-md mx-auto">The final candidate list will be published after the withdrawal period and scrutiny. Please check back later.</p>
+      </div>
+    `;
     return;
   }
-
-  // Group active by post
+  
+  // Group by post
   const byPost = {};
-  active.forEach(n => {
+  nominations.forEach(n => {
     if (!byPost[n.post]) byPost[n.post] = [];
     byPost[n.post].push(n);
   });
 
   main.innerHTML = `
-    <div class="mb-6">
-      <h2 class="text-2xl font-bold text-white">🏁 Final Nominations</h2>
-      <p class="text-slate-400 text-sm mt-1">Final list of candidates after processing withdrawals.</p>
-    </div>
-
-    <h3 class="text-lg font-bold text-emerald-400 mb-4">Active Candidates</h3>
-    ${Object.keys(byPost).length ? Object.entries(byPost).map(([post, noms]) => `
-      <div class="glass rounded-xl mb-6 overflow-hidden">
-        <div class="px-5 py-3 bg-emerald-500/10 border-b border-white/10">
-          <h4 class="font-bold text-emerald-300 text-sm uppercase tracking-wide">${esc(post)}</h4>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="data-table">
-            <thead><tr><th>#</th><th>Nomination ID</th><th>Name</th><th>Class</th><th>Dept</th></tr></thead>
-            <tbody>${noms.map((n,i) => `<tr>
-              <td class="text-slate-500">${i+1}</td>
-              <td class="font-mono text-indigo-300 text-xs">${esc(n.id)}</td>
-              <td class="font-semibold">${esc(n.candidateName)}</td>
-              <td>${esc(n.candidateClass)}</td>
-              <td>${esc(n.candidateDept)}</td>
-            </tr>`).join('')}</tbody>
-          </table>
-        </div>
+    <div class="page-enter space-y-10">
+      <div class="text-center md:text-left border-b border-white/5 pb-8">
+        <h2 class="text-3xl font-black text-white tracking-tight">Final Candidate List</h2>
+        <p class="text-slate-400 mt-2">Official approved list of candidates for the College Union Election.</p>
       </div>
-    `).join('') : '<div class="alert alert-info mb-6">No active candidates.</div>'}
-
-    ${withdrawn.length ? `
-    <h3 class="text-lg font-bold text-slate-400 mb-4 mt-8">Withdrawn Nominations</h3>
-    <div class="glass rounded-xl overflow-hidden opacity-70">
-      <div class="overflow-x-auto">
-        <table class="data-table">
-          <thead><tr><th>Nomination ID</th><th>Post</th><th>Name</th><th>Class</th><th>Dept</th></tr></thead>
-          <tbody>${withdrawn.map(n => `<tr>
-            <td class="font-mono text-slate-500 text-xs">${esc(n.id)}</td>
-            <td>${esc(n.post)}</td>
-            <td class="line-through text-slate-500">${esc(n.candidateName)}</td>
-            <td>${esc(n.candidateClass)}</td>
-            <td>${esc(n.candidateDept)}</td>
-          </tr>`).join('')}</tbody>
-        </table>
+      
+      <div class="space-y-12">
+        ${Object.entries(byPost).map(([post, noms]) => `
+          <div class="glass rounded-2xl overflow-hidden shadow-2xl border border-white/5">
+            <div class="px-6 py-4 bg-gradient-to-r from-emerald-500/10 to-indigo-500/5 border-b border-white/10 flex justify-between items-center">
+              <h3 class="font-bold text-emerald-400 text-sm uppercase tracking-widest">${esc(post)}</h3>
+              <span class="text-[10px] text-slate-500 font-mono">${noms.length} Approved</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th class="w-16">#</th>
+                    <th>Candidate Details</th>
+                    <th>Department</th>
+                    <th class="text-right">Nomination ID</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${noms.map((n, i) => `
+                    <tr class="hover:bg-white/[0.02] transition-colors">
+                      <td class="text-slate-600 font-mono text-xs text-center">${i + 1}</td>
+                      <td>
+                        <div class="font-bold text-white text-base">${esc(n.candidateName)}</div>
+                        <div class="text-xs text-slate-500 mt-0.5">${esc(n.candidateClass)}</div>
+                      </td>
+                      <td class="text-sm text-slate-400">${esc(n.candidateDept)}</td>
+                      <td class="text-right font-mono text-emerald-400/70 text-[10px]">${esc(n.id)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `).join('')}
       </div>
-    </div>` : ''}
-  `;
+    </div>`;
 }
 
 function publicLayout(title, bodyHtml) {
   return `
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
-      <div class="max-w-5xl mx-auto px-6 py-3 flex items-center gap-4">
-        <button id="backToHome" class="text-slate-400 hover:text-white transition text-sm">← Home</button>
-        <span class="text-slate-600">|</span>
-        <h1 class="font-bold text-white text-sm">${esc(title)}</h1>
+      <div class="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <button id="backToHome" class="text-slate-400 hover:text-white transition text-sm">← Home</button>
+          <span class="text-slate-600">|</span>
+          <h1 class="font-bold text-white text-sm tracking-tight">${esc(title)}</h1>
+        </div>
+        <div class="text-[10px] text-slate-500 font-mono hidden sm:block">OFFICIAL ELECTION PORTAL</div>
       </div>
     </header>
-    <main class="max-w-5xl mx-auto px-4 py-8">${bodyHtml}</main>
+    <main class="max-w-5xl mx-auto px-4 py-12">${bodyHtml}</main>
   </div>`;
 }

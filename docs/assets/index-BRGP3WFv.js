@@ -312,99 +312,131 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     </header>
     <main class="max-w-4xl mx-auto px-4 py-8">${t}</main>
   </div>`}async function ae(e){e.innerHTML=se(`Valid Nominations List`,`
-    <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading list...</p></div>
-  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));try{let t=await C.getValidNominations();oe(e.querySelector(`main`),t)}catch(t){e.querySelector(`main`).innerHTML=`<div class="alert alert-warning text-center">${h(t.message)}</div>`}}function oe(e,t){if(!t||t.length===0){e.innerHTML=`<div class="alert alert-info text-center">The valid nominations list has not been published yet. Please check back later.</div>`;return}let n={};t.forEach(e=>{n[e.post]||(n[e.post]=[]),n[e.post].push(e)}),e.innerHTML=`
-    <div class="mb-6">
-      <h2 class="text-2xl font-bold text-white">✅ Valid Nominations</h2>
-      <p class="text-slate-400 text-sm mt-1">Official list of candidates with valid nominations.</p>
-    </div>
-    ${Object.entries(n).map(([e,t])=>`
-      <div class="glass rounded-xl mb-6 overflow-hidden">
-        <div class="px-5 py-3 bg-indigo-500/10 border-b border-white/10">
-          <h3 class="font-bold text-indigo-300 text-sm uppercase tracking-wide">${h(e)}</h3>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="data-table">
-            <thead><tr>
-              <th>#</th><th>Nomination ID</th><th>Name</th><th>Class</th><th>Dept</th>
-            </tr></thead>
-            <tbody>
-              ${t.map((e,t)=>`<tr>
-                <td class="text-slate-500">${t+1}</td>
-                <td class="font-mono text-indigo-300 text-xs">${h(e.id)}</td>
-                <td class="font-semibold">${h(e.candidateName)}</td>
-                <td>${h(e.candidateClass)}</td>
-                <td>${h(e.candidateDept)}</td>
-              </tr>`).join(``)}
-            </tbody>
-          </table>
-        </div>
+    <div class="text-center py-20"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Valid Nominations...</p></div>
+  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));try{let t=await C.getValidNominations();oe(e.querySelector(`main`),t)}catch(t){e.querySelector(`main`).innerHTML=`<div class="alert alert-warning text-center py-10 shadow-xl">${h(t.message)}</div>`}}function oe(e,t){if(!t||t.length===0){e.innerHTML=`
+      <div class="glass rounded-3xl p-20 text-center border-dashed border-white/10">
+        <div class="text-6xl mb-6">📋</div>
+        <h2 class="text-2xl font-bold text-white mb-2">List Not Published</h2>
+        <p class="text-slate-400 max-w-md mx-auto">The valid nominations list has not been released yet. Please check back later for updates.</p>
       </div>
-    `).join(``)}`}function se(e,t){return`
+    `;return}let n={};t.forEach(e=>{n[e.post]||(n[e.post]=[]),n[e.post].push(e)}),e.innerHTML=`
+    <div class="page-enter space-y-10">
+      <div class="text-center md:text-left border-b border-white/5 pb-8">
+        <h2 class="text-3xl font-black text-white tracking-tight">Verified Nominations</h2>
+        <p class="text-slate-400 mt-2">Official list of all candidates whose nominations have been verified as valid.</p>
+      </div>
+      
+      <div class="space-y-12">
+        ${Object.entries(n).map(([e,t])=>`
+          <div class="glass rounded-2xl overflow-hidden shadow-2xl border border-white/5">
+            <div class="px-6 py-4 bg-gradient-to-r from-indigo-500/10 to-purple-500/5 border-b border-white/10 flex justify-between items-center">
+              <h3 class="font-bold text-indigo-300 text-sm uppercase tracking-widest">${h(e)}</h3>
+              <span class="text-[10px] text-slate-500 font-mono">${t.length} Candidate${t.length>1?`s`:``}</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th class="w-16">#</th>
+                    <th>Candidate Details</th>
+                    <th>Department</th>
+                    <th class="text-right">Nomination ID</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${t.map((e,t)=>`
+                    <tr class="hover:bg-white/[0.02] transition-colors">
+                      <td class="text-slate-600 font-mono text-xs text-center">${t+1}</td>
+                      <td>
+                        <div class="font-bold text-white text-base">${h(e.candidateName)}</div>
+                        <div class="text-xs text-slate-500 mt-0.5">${h(e.candidateClass)}</div>
+                      </td>
+                      <td class="text-sm text-slate-400">${h(e.candidateDept)}</td>
+                      <td class="text-right font-mono text-indigo-400/70 text-[10px]">${h(e.id)}</td>
+                    </tr>
+                  `).join(``)}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `).join(``)}
+      </div>
+    </div>`}function se(e,t){return`
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
-      <div class="max-w-5xl mx-auto px-6 py-3 flex items-center gap-4">
-        <button id="backToHome" class="text-slate-400 hover:text-white transition text-sm">← Home</button>
-        <span class="text-slate-600">|</span>
-        <h1 class="font-bold text-white text-sm">${h(e)}</h1>
+      <div class="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <button id="backToHome" class="text-slate-400 hover:text-white transition text-sm">← Home</button>
+          <span class="text-slate-600">|</span>
+          <h1 class="font-bold text-white text-sm tracking-tight">${h(e)}</h1>
+        </div>
+        <div class="text-[10px] text-slate-500 font-mono hidden sm:block">OFFICIAL ELECTION PORTAL</div>
       </div>
     </header>
-    <main class="max-w-5xl mx-auto px-4 py-8">${t}</main>
-  </div>`}async function ce(e){e.innerHTML=ue(`Final Nominations List`,`
-    <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading final list...</p></div>
-  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));try{let t=await C.getFinalNominations();le(e.querySelector(`main`),t)}catch(t){e.querySelector(`main`).innerHTML=`<div class="alert alert-warning text-center">${h(t.message)}</div>`}}function le(e,{active:t=[],withdrawn:n=[]}={}){if(!t.length&&!n.length){e.innerHTML=`<div class="alert alert-info text-center">The final nominations list has not been published yet. Please check back later.</div>`;return}let r={};t.forEach(e=>{r[e.post]||(r[e.post]=[]),r[e.post].push(e)}),e.innerHTML=`
-    <div class="mb-6">
-      <h2 class="text-2xl font-bold text-white">🏁 Final Nominations</h2>
-      <p class="text-slate-400 text-sm mt-1">Final list of candidates after processing withdrawals.</p>
-    </div>
-
-    <h3 class="text-lg font-bold text-emerald-400 mb-4">Active Candidates</h3>
-    ${Object.keys(r).length?Object.entries(r).map(([e,t])=>`
-      <div class="glass rounded-xl mb-6 overflow-hidden">
-        <div class="px-5 py-3 bg-emerald-500/10 border-b border-white/10">
-          <h4 class="font-bold text-emerald-300 text-sm uppercase tracking-wide">${h(e)}</h4>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="data-table">
-            <thead><tr><th>#</th><th>Nomination ID</th><th>Name</th><th>Class</th><th>Dept</th></tr></thead>
-            <tbody>${t.map((e,t)=>`<tr>
-              <td class="text-slate-500">${t+1}</td>
-              <td class="font-mono text-indigo-300 text-xs">${h(e.id)}</td>
-              <td class="font-semibold">${h(e.candidateName)}</td>
-              <td>${h(e.candidateClass)}</td>
-              <td>${h(e.candidateDept)}</td>
-            </tr>`).join(``)}</tbody>
-          </table>
-        </div>
+    <main class="max-w-5xl mx-auto px-4 py-12">${t}</main>
+  </div>`}async function ce(e){e.innerHTML=ue(`Final Candidates List`,`
+    <div class="text-center py-20"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Final List...</p></div>
+  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));try{let t=await C.getFinalNominations();le(e.querySelector(`main`),t)}catch(t){e.querySelector(`main`).innerHTML=`<div class="alert alert-warning text-center py-10 shadow-xl">${h(t.message)}</div>`}}function le(e,t){if(!t||t.length===0){e.innerHTML=`
+      <div class="glass rounded-3xl p-20 text-center border-dashed border-white/10">
+        <div class="text-6xl mb-6">🏁</div>
+        <h2 class="text-2xl font-bold text-white mb-2">Final List Pending</h2>
+        <p class="text-slate-400 max-w-md mx-auto">The final candidate list will be published after the withdrawal period and scrutiny. Please check back later.</p>
       </div>
-    `).join(``):`<div class="alert alert-info mb-6">No active candidates.</div>`}
-
-    ${n.length?`
-    <h3 class="text-lg font-bold text-slate-400 mb-4 mt-8">Withdrawn Nominations</h3>
-    <div class="glass rounded-xl overflow-hidden opacity-70">
-      <div class="overflow-x-auto">
-        <table class="data-table">
-          <thead><tr><th>Nomination ID</th><th>Post</th><th>Name</th><th>Class</th><th>Dept</th></tr></thead>
-          <tbody>${n.map(e=>`<tr>
-            <td class="font-mono text-slate-500 text-xs">${h(e.id)}</td>
-            <td>${h(e.post)}</td>
-            <td class="line-through text-slate-500">${h(e.candidateName)}</td>
-            <td>${h(e.candidateClass)}</td>
-            <td>${h(e.candidateDept)}</td>
-          </tr>`).join(``)}</tbody>
-        </table>
+    `;return}let n={};t.forEach(e=>{n[e.post]||(n[e.post]=[]),n[e.post].push(e)}),e.innerHTML=`
+    <div class="page-enter space-y-10">
+      <div class="text-center md:text-left border-b border-white/5 pb-8">
+        <h2 class="text-3xl font-black text-white tracking-tight">Final Candidate List</h2>
+        <p class="text-slate-400 mt-2">Official approved list of candidates for the College Union Election.</p>
       </div>
-    </div>`:``}
-  `}function ue(e,t){return`
+      
+      <div class="space-y-12">
+        ${Object.entries(n).map(([e,t])=>`
+          <div class="glass rounded-2xl overflow-hidden shadow-2xl border border-white/5">
+            <div class="px-6 py-4 bg-gradient-to-r from-emerald-500/10 to-indigo-500/5 border-b border-white/10 flex justify-between items-center">
+              <h3 class="font-bold text-emerald-400 text-sm uppercase tracking-widest">${h(e)}</h3>
+              <span class="text-[10px] text-slate-500 font-mono">${t.length} Approved</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th class="w-16">#</th>
+                    <th>Candidate Details</th>
+                    <th>Department</th>
+                    <th class="text-right">Nomination ID</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${t.map((e,t)=>`
+                    <tr class="hover:bg-white/[0.02] transition-colors">
+                      <td class="text-slate-600 font-mono text-xs text-center">${t+1}</td>
+                      <td>
+                        <div class="font-bold text-white text-base">${h(e.candidateName)}</div>
+                        <div class="text-xs text-slate-500 mt-0.5">${h(e.candidateClass)}</div>
+                      </td>
+                      <td class="text-sm text-slate-400">${h(e.candidateDept)}</td>
+                      <td class="text-right font-mono text-emerald-400/70 text-[10px]">${h(e.id)}</td>
+                    </tr>
+                  `).join(``)}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `).join(``)}
+      </div>
+    </div>`}function ue(e,t){return`
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
-      <div class="max-w-5xl mx-auto px-6 py-3 flex items-center gap-4">
-        <button id="backToHome" class="text-slate-400 hover:text-white transition text-sm">← Home</button>
-        <span class="text-slate-600">|</span>
-        <h1 class="font-bold text-white text-sm">${h(e)}</h1>
+      <div class="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <button id="backToHome" class="text-slate-400 hover:text-white transition text-sm">← Home</button>
+          <span class="text-slate-600">|</span>
+          <h1 class="font-bold text-white text-sm tracking-tight">${h(e)}</h1>
+        </div>
+        <div class="text-[10px] text-slate-500 font-mono hidden sm:block">OFFICIAL ELECTION PORTAL</div>
       </div>
     </header>
-    <main class="max-w-5xl mx-auto px-4 py-8">${t}</main>
+    <main class="max-w-5xl mx-auto px-4 py-12">${t}</main>
   </div>`}async function de(e){e.innerHTML=L(`Withdrawal Form`,`
     <div class="glass rounded-2xl p-8 max-w-2xl mx-auto">
       <div class="text-center mb-8">
@@ -557,61 +589,104 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
   </button>`}var H=`modulepreload`,fe=function(e){return`/nomination/`+e},U={},pe=function(e,t,n){let r=Promise.resolve();if(t&&t.length>0){let e=document.getElementsByTagName(`link`),i=document.querySelector(`meta[property=csp-nonce]`),a=i?.nonce||i?.getAttribute(`nonce`);function o(e){return Promise.all(e.map(e=>Promise.resolve(e).then(e=>({status:`fulfilled`,value:e}),e=>({status:`rejected`,reason:e}))))}r=o(t.map(t=>{if(t=fe(t,n),t in U)return;U[t]=!0;let r=t.endsWith(`.css`),i=r?`[rel="stylesheet"]`:``;if(n)for(let n=e.length-1;n>=0;n--){let i=e[n];if(i.href===t&&(!r||i.rel===`stylesheet`))return}else if(document.querySelector(`link[href="${t}"]${i}`))return;let o=document.createElement(`link`);if(o.rel=r?`stylesheet`:H,r||(o.as=`script`),o.crossOrigin=``,o.href=t,a&&o.setAttribute(`nonce`,a),document.head.appendChild(o),r)return new Promise((e,n)=>{o.addEventListener(`load`,e),o.addEventListener(`error`,()=>n(Error(`Unable to preload CSS for ${t}`)))})}))}function i(e){let t=new Event(`vite:preloadError`,{cancelable:!0});if(t.payload=e,window.dispatchEvent(t),!t.defaultPrevented)throw e}return r.then(t=>{for(let e of t||[])e.status===`rejected`&&i(e.reason);return e().catch(i)})};async function me(e){let t=z();if(t){B(e,`dashboard`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading dashboard...</p></div>
   `);try{let[n,i]=await Promise.all([C.adminGetNominations(t),C.adminGetSettings(t)]),a=n.length,o=n.filter(e=>e.status===`Pending`).length,s=n.filter(e=>e.status===`Valid`).length,c=n.filter(e=>e.status===`Rejected`).length,l=n.filter(e=>e.withdrawalStatus===`Requested`).length,u=e.querySelector(`#adminMain`);u.innerHTML=`
-      <div class="page-enter space-y-6">
-        <div>
-          <h3 class="text-xl font-bold text-white">Dashboard Overview</h3>
-          <p class="text-slate-400 text-sm mt-1">Summary of the current election status.</p>
-        </div>
-
-        <!-- Stats -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          ${W(`Total Nominations`,a,`#6366f1`)}
-          ${W(`Pending Review`,o,`#f59e0b`)}
-          ${W(`Valid`,s,`#10b981`)}
-          ${W(`Rejected`,c,`#ef4444`)}
-        </div>
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-          ${W(`Withdrawal Requests`,l,`#8b5cf6`)}
-          ${W(`Valid List Published`,i.validListPublished===`true`?`✅ Yes`:`❌ No`,`#0ea5e9`)}
-          ${W(`Final List Published`,i.finalListPublished===`true`?`✅ Yes`:`❌ No`,`#0ea5e9`)}
-        </div>
-
-        <!-- Quick actions -->
-        <div class="glass rounded-xl p-5 space-y-3">
-          <h4 class="font-semibold text-white">Quick Actions</h4>
-          <div class="flex flex-wrap gap-3">
-            <button class="btn btn-secondary btn-sm" data-admin-nav="verify">✅ Review Nominations (${o} pending)</button>
-            <button class="btn btn-secondary btn-sm" data-admin-nav="withdrawals">↩️ Process Withdrawals (${l} pending)</button>
-            <button class="btn btn-secondary btn-sm" data-admin-nav="publish">📢 Publish Lists</button>
+      <div class="page-enter space-y-8">
+        <div class="flex items-end justify-between">
+          <div>
+            <h3 class="text-2xl font-bold text-white">Admin Dashboard</h3>
+            <p class="text-slate-400 text-sm mt-1">Real-time overview of nomination and election status.</p>
+          </div>
+          <div class="text-right hidden md:block">
+            <p class="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Last Updated</p>
+            <p class="text-xs text-indigo-400 font-mono">${new Date().toLocaleTimeString()}</p>
           </div>
         </div>
 
-        <!-- Recent nominations -->
-        <div class="glass rounded-xl overflow-hidden">
-          <div class="px-5 py-3 border-b border-white/10 flex items-center justify-between">
-            <h4 class="font-semibold text-white text-sm">Recent Nominations</h4>
-            <span class="text-xs text-slate-500">${a} total</span>
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          ${W(`Total Submissions`,a,`from-indigo-500/20 to-indigo-600/5`,`text-indigo-400`)}
+          ${W(`Pending Review`,o,`from-amber-500/20 to-amber-600/5`,`text-amber-400`)}
+          ${W(`Valid Nominations`,s,`from-emerald-500/20 to-emerald-600/5`,`text-emerald-400`)}
+          ${W(`Rejected`,c,`from-rose-500/20 to-rose-600/5`,`text-rose-400`)}
+        </div>
+
+        <!-- Secondary Stats & Actions -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 glass rounded-2xl p-6 flex flex-col justify-between">
+            <div>
+              <h4 class="font-bold text-white mb-2">Management Actions</h4>
+              <p class="text-slate-400 text-xs mb-6">Process incoming requests and publish official lists to the public portal.</p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+              <button class="btn btn-primary" data-admin-nav="verify">
+                <span>✅ Review Nominations</span>
+                ${o>0?`<span class="ml-1 bg-white/20 px-1.5 py-0.5 rounded text-[10px]">${o}</span>`:``}
+              </button>
+              <button class="btn btn-secondary" data-admin-nav="withdrawals">
+                <span>↩️ Withdrawals</span>
+                ${l>0?`<span class="ml-1 bg-indigo-500/40 px-1.5 py-0.5 rounded text-[10px]">${l}</span>`:``}
+              </button>
+              <button class="btn btn-secondary" data-admin-nav="publish">📢 Publish Lists</button>
+            </div>
+          </div>
+          
+          <div class="glass rounded-2xl p-6 space-y-4">
+            <h4 class="font-bold text-white text-sm">Visibility Status</h4>
+            <div class="space-y-3">
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-slate-400">Valid List</span>
+                <span class="badge ${i.validListPublished===`true`?`badge-valid`:`badge-pending`}">${i.validListPublished===`true`?`Published`:`Hidden`}</span>
+              </div>
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-slate-400">Final List</span>
+                <span class="badge ${i.finalListPublished===`true`?`badge-valid`:`badge-pending`}">${i.finalListPublished===`true`?`Published`:`Hidden`}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table View -->
+        <div class="glass rounded-2xl overflow-hidden shadow-2xl">
+          <div class="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+            <h4 class="font-bold text-white text-sm">Recent Activity</h4>
+            <span class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Top 10 Latest</span>
           </div>
           <div class="overflow-x-auto">
             <table class="data-table">
-              <thead><tr><th>Nom. ID</th><th>Post</th><th>Candidate</th><th>Dept</th><th>Status</th><th>Withdrawal</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Nomination ID</th>
+                  <th>Candidate Name</th>
+                  <th>Post</th>
+                  <th>Department</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
               <tbody>
-                ${n.slice(-10).reverse().map(e=>`<tr>
-                  <td class="font-mono text-indigo-300 text-xs">${h(e.id)}</td>
-                  <td class="text-xs">${h(e.post)}</td>
-                  <td class="font-medium">${h(e.candidateName)}</td>
-                  <td class="text-xs">${h(e.candidateDept)}</td>
-                  <td><span class="badge badge-${(e.status||`pending`).toLowerCase()}">${h(e.status)}</span></td>
-                  <td class="text-xs text-slate-500">${h(e.withdrawalStatus||`None`)}</td>
-                </tr>`).join(``)}
+                ${n.slice(-10).reverse().map(e=>`
+                  <tr>
+                    <td class="font-mono text-indigo-400 text-xs">${h(e.id)}</td>
+                    <td>
+                      <div class="font-semibold text-white">${h(e.candidateName)}</div>
+                      <div class="text-[10px] text-slate-500">${h(e.candidateClass)}</div>
+                    </td>
+                    <td class="text-xs text-slate-300 font-medium">${h(e.post)}</td>
+                    <td class="text-xs text-slate-400">${h(e.candidateDept)}</td>
+                    <td><span class="badge badge-${(e.status||`pending`).toLowerCase()}">${h(e.status)}</span></td>
+                  </tr>
+                `).join(``)}
               </tbody>
             </table>
           </div>
+          ${a>10?`
+          <div class="p-3 text-center border-t border-white/5 bg-white/[0.01]">
+            <button class="text-[10px] text-indigo-400 font-bold uppercase tracking-widest hover:text-indigo-300 transition" data-admin-nav="verify">View All Nominations →</button>
+          </div>`:``}
         </div>
-      </div>`,e.querySelectorAll(`[data-admin-nav]`).forEach(e=>{e.addEventListener(`click`,()=>{let{router:t}=window._appRouter||{};pe(async()=>{let{router:e}=await Promise.resolve().then(()=>r);return{router:e}},void 0).then(({router:t})=>t.navigate(`/admin/${e.dataset.adminNav}`))})})}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function W(e,t,n){return`
-  <div class="glass rounded-xl p-5">
-    <p class="text-xs text-slate-400 uppercase tracking-wide mb-2">${e}</p>
-    <p class="text-3xl font-bold" style="color:${n}">${t}</p>
+      </div>`,e.querySelectorAll(`[data-admin-nav]`).forEach(e=>{e.addEventListener(`click`,()=>{pe(async()=>{let{router:e}=await Promise.resolve().then(()=>r);return{router:e}},void 0).then(({router:t})=>t.navigate(`/admin/${e.dataset.adminNav}`))})})}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function W(e,t,n,r){return`
+  <div class="glass rounded-2xl p-6 relative overflow-hidden group">
+    <div class="absolute inset-0 bg-gradient-to-br ${n} opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+    <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-3 relative z-10">${e}</p>
+    <p class="text-3xl font-black ${r} relative z-10">${t}</p>
   </div>`}async function he(e){let t=z();if(t){B(e,`verify`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading nominations...</p></div>
   `);try{let n=await C.adminGetNominations(t);ge(e.querySelector(`#adminMain`),n,t)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function ge(e,t,n){e.innerHTML=`
