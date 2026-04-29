@@ -1125,7 +1125,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             ${t.innerHTML}
           </body>
         </html>
-      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)});function a(e,t,r,i){let a=``;return e.forEach(e=>{if(!e.classes||e.classes.length===0)return;let o=e.classes.map(e=>i[e]).filter(Boolean),s=o.reduce((e,t)=>e+t.count,0),c=[...new Set(o.map(e=>e.dept.toUpperCase()))],l=r.filter(e=>{if(!e.deptRestriction)return!0;let t=`Association Secretary `,n=e.post.startsWith(t)?e.post.replace(t,``).toUpperCase():null;return n&&c.includes(n)});a+=`
+      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)});function a(e,t,r,i){let a=``;return e.forEach(e=>{if(!e.classes||e.classes.length===0)return;let o=e.classes.map(e=>i[e]).filter(Boolean),s=o.reduce((e,t)=>e+t.count,0),c=[...new Set(o.map(e=>e.dept.toUpperCase()))],l=o.reduce((e,t)=>{let n=t.name.toUpperCase();return[`MA`,`MSC`,`MCOM`,`M.SC`,`M.COM`,`M.A`].some(e=>n.includes(e))?e.add(`PG`):(n.includes(`1ST YEAR`)&&e.add(`1`),n.includes(`2ND YEAR`)&&e.add(`2`),n.includes(`3RD YEAR`)&&e.add(`3`)),e},new Set),u=r.filter(e=>!e.deptRestriction&&(!e.yearRestriction||String(e.yearRestriction).trim()===``)),d=r.filter(e=>{if(!e.post.toUpperCase().startsWith(`ASSOCIATION SECRETARY `))return!1;let t=e.post.substring(22).toUpperCase().trim();return c.includes(t)}),f=r.filter(e=>!e.yearRestriction||String(e.yearRestriction).trim()===``?!1:l.has(String(e.yearRestriction)));a+=`
         <div class="page-break">
           <div class="facing-sheet">
             <div class="header">
@@ -1148,8 +1148,10 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 </tbody>
               </table>
               <h4 style="margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Ballots Assigned to this Booth</h4>
-              <div style="display:flex; flex-wrap:wrap; gap:10px; font-size: 11px;">
-                ${l.map(e=>`<span style="padding:4px 8px; border:1px solid #ccc; border-radius:4px;">${h(e.post)}</span>`).join(``)}
+              <div style="font-size: 13px; line-height: 1.8;">
+                <div>• <strong>General Posts:</strong> ${u.length} Ballots (Chairman, Vice Chairman, UUC, etc.)</div>
+                ${d.length?`<div>• <strong>Association:</strong> ${d.map(e=>h(e.post)).join(`, `)}</div>`:``}
+                ${f.length?`<div>• <strong>Year Representatives:</strong> ${f.map(e=>h(e.post)).join(`, `)}</div>`:``}
               </div>
             </div>
             <div class="footer">

@@ -216,11 +216,28 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         const boothClasses = b.classes.map(cn => classStats[cn]).filter(Boolean);
         const totalVoters = boothClasses.reduce((sum, c) => sum + c.count, 0);
         const boothDepts = [...new Set(boothClasses.map(c => c.dept.toUpperCase()))];
-        const assignedPosts = posts.filter(p => {
-          if (!p.deptRestriction) return true;
+        const boothYears = boothClasses.reduce((set, c) => {
+          const u = c.name.toUpperCase();
+          const isPG = ['MA','MSC','MCOM','M.SC','M.COM','M.A'].some(pg => u.includes(pg));
+          if (isPG) set.add('PG');
+          else {
+            if (u.includes('1ST YEAR')) set.add('1');
+            if (u.includes('2ND YEAR')) set.add('2');
+            if (u.includes('3RD YEAR')) set.add('3');
+          }
+          return set;
+        }, new Set());
+
+        const genPosts = posts.filter(p => !p.deptRestriction && (!p.yearRestriction || String(p.yearRestriction).trim() === ''));
+        const relevantAssoc = posts.filter(p => {
           const prefix = 'Association Secretary ';
-          const reqDept = p.post.startsWith(prefix) ? p.post.replace(prefix, '').toUpperCase() : null;
-          return reqDept && boothDepts.includes(reqDept);
+          if (!p.post.toUpperCase().startsWith(prefix.toUpperCase())) return false;
+          const reqDept = p.post.substring(prefix.length).toUpperCase().trim();
+          return boothDepts.includes(reqDept);
+        });
+        const relevantReps = posts.filter(p => {
+          if (!p.yearRestriction || String(p.yearRestriction).trim() === '') return false;
+          return boothYears.has(String(p.yearRestriction));
         });
 
         html += `
@@ -246,8 +263,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                 </tbody>
               </table>
               <h4 style="margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Ballots Assigned to this Booth</h4>
-              <div style="display:flex; flex-wrap:wrap; gap:10px; font-size: 11px;">
-                ${assignedPosts.map(p => `<span style="padding:4px 8px; border:1px solid #ccc; border-radius:4px;">${esc(p.post)}</span>`).join('')}
+              <div style="font-size: 13px; line-height: 1.8;">
+                <div>• <strong>General Posts:</strong> ${genPosts.length} Ballots (Chairman, Vice Chairman, UUC, etc.)</div>
+                ${relevantAssoc.length ? `<div>• <strong>Association:</strong> ${relevantAssoc.map(p => esc(p.post)).join(', ')}</div>` : ''}
+                ${relevantReps.length ? `<div>• <strong>Year Representatives:</strong> ${relevantReps.map(p => esc(p.post)).join(', ')}</div>` : ''}
               </div>
             </div>
             <div class="footer">
