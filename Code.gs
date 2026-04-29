@@ -272,6 +272,16 @@ function doGet(e) {
       })));
     }
 
+    if (action === 'adminGetLocations') {
+      checkAdmin(e.parameter.password);
+      const locStr = getSetting('availableLocations');
+      try {
+        return jsonOut(locStr ? JSON.parse(locStr) : []);
+      } catch (e) {
+        return jsonOut([]);
+      }
+    }
+
     return errOut(`Unknown action: ${action}`);
   } catch (err) {
     return errOut(err.message);
@@ -449,6 +459,15 @@ function doPost(e) {
         });
       }
       return jsonOut({ ok: true });
+    }
+
+    if (action === 'adminSaveLocations') {
+      checkAdmin(body.password);
+      if (Array.isArray(body.locations)) {
+        setSetting('availableLocations', JSON.stringify(body.locations));
+        return jsonOut({ ok: true });
+      }
+      return errOut('Invalid locations data.');
     }
 
     return errOut(`Unknown action: ${action}`);

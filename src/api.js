@@ -111,4 +111,13 @@ export const api = {
   /** Admin: save all booths */
   adminSaveBooths: (password, booths) =>
     post({ action: 'adminSaveBooths', password, booths }),
+
+  // ─── Locations Management ────────────────────────────────────────────────────
+
+  /** Admin: get available locations */
+  adminGetLocations: (password) => get({ action: 'adminGetLocations', password }),
+
+  /** Admin: save locations */
+  adminSaveLocations: (password, locations) =>
+    post({ action: 'adminSaveLocations', password, locations }),
 };

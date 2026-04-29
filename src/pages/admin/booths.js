@@ -13,17 +13,18 @@ export async function renderAdminBooths(container) {
   `);
 
   try {
-    const [nominalRoll, booths] = await Promise.all([
+    const [nominalRoll, booths, locations] = await Promise.all([
       api.getNominalRoll(),
-      api.adminGetBooths(pwd).catch(() => [])
+      api.adminGetBooths(pwd).catch(() => []),
+      api.adminGetLocations(pwd).catch(() => [])
     ]);
-    renderBoothsUI(container.querySelector('#adminMain'), pwd, nominalRoll, booths);
+    renderBoothsUI(container.querySelector('#adminMain'), pwd, nominalRoll, booths, locations);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
   }
 }
 
-function renderBoothsUI(main, pwd, nominalRoll, initialBooths) {
+function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations) {
   // 1. Process Nominal Roll to get classes and sizes
   const classStats = {};
   nominalRoll.forEach(student => {
@@ -36,7 +37,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths) {
   });
   
   const allClasses = Object.values(classStats).sort((a, b) => a.name.localeCompare(b.name));
-  let booths = initialBooths.length ? [...initialBooths] : [{ boothNumber: 1, roomName: 'Room 1', classes: [] }];
+  let booths = initialBooths.length ? [...initialBooths] : [{ boothNumber: 1, roomName: '', classes: [] }];
+  let locations = [...initialLocations];
 
   const refreshUI = () => {
     // Recalculate booth stats
@@ -65,8 +67,26 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths) {
           </div>
         </div>
 
+        <!-- Location Management -->
+        <div class="glass rounded-xl p-5 border-l-4 border-l-purple-500">
+          <h4 class="font-bold text-white mb-3">Manage Locations</h4>
+          <div class="flex gap-2 mb-3">
+            <input type="text" id="newLocationInput" class="field flex-1" placeholder="Add a new room or location name...">
+            <button id="btnAddLocation" class="btn btn-secondary">Add Location</button>
+            <button id="btnSaveLocations" class="btn btn-primary">💾 Save Locations</button>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            ${locations.length ? locations.map((loc, i) => `
+              <span class="badge badge-valid bg-white/10 text-white border border-white/20 px-3 py-1 flex items-center gap-2">
+                ${esc(loc)}
+                <button class="text-red-400 hover:text-red-300 font-bold delete-location" data-idx="${i}">×</button>
+              </span>
+            `).join('') : '<span class="text-slate-500 text-sm">No locations added yet.</span>'}
+          </div>
+        </div>
+
         <!-- Booth Configuration -->
-        <div class="glass rounded-xl p-5">
+        <div class="glass rounded-xl p-5 border-l-4 border-l-indigo-500">
           <div class="flex justify-between items-center mb-4">
             <h4 class="font-bold text-white">Booth Setup</h4>
             <div class="flex gap-2 items-center">
@@ -83,7 +103,15 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths) {
                   <span>Booth ${i + 1}</span>
                   <span class="${b.totalStudents > 0 ? 'text-indigo-400' : ''}">${b.totalStudents} Students</span>
                 </div>
-                <input type="text" class="field text-sm py-1 mb-2 room-name-input" data-idx="${i}" placeholder="Room Name / Number" value="${esc(b.roomName)}">
+                <select class="field text-sm py-1 mb-2 room-name-select" data-idx="${i}">
+                  <option value="">-- Assign Location --</option>
+                  ${locations.map(loc => `
+                    <option value="${esc(loc)}" 
+                      ${b.roomName === loc ? 'selected' : ''}
+                      ${booths.some((ob, oi) => oi !== i && ob.roomName === loc) ? 'disabled' : ''}
+                    >${esc(loc)}</option>
+                  `).join('')}
+                </select>
                 <div class="text-xs text-slate-500 h-16 overflow-y-auto">
                   ${b.classes.length ? b.classes.map(c => `<div>• ${esc(c)} (${classStats[c]?.count || 0})</div>`).join('') : '<em>No classes assigned</em>'}
                 </div>
@@ -140,20 +168,52 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths) {
       const num = parseInt(main.querySelector('#numBoothsInput').value, 10);
       if (num > 0 && num <= 50) {
         if (num > booths.length) {
-          for (let i = booths.length; i < num; i++) booths.push({ boothNumber: i + 1, roomName: `Room ${i + 1}`, classes: [] });
+          for (let i = booths.length; i < num; i++) booths.push({ boothNumber: i + 1, roomName: '', classes: [] });
         } else if (num < booths.length) {
-          // Remove extra booths, move their classes to unassigned
           booths = booths.slice(0, num);
-          // Any class that was in a removed booth is now simply not in any booth's classes array.
         }
         refreshUI();
       }
     });
 
-    main.querySelectorAll('.room-name-input').forEach(input => {
-      input.addEventListener('change', (e) => {
-        booths[e.target.dataset.idx].roomName = e.target.value.trim();
+    main.querySelectorAll('.room-name-select').forEach(select => {
+      select.addEventListener('change', (e) => {
+        booths[e.target.dataset.idx].roomName = e.target.value;
+        refreshUI(); // refresh to update disabled state of options in other dropdowns
       });
+    });
+
+    // Location Management Listeners
+    main.querySelector('#btnAddLocation').addEventListener('click', () => {
+      const val = main.querySelector('#newLocationInput').value.trim();
+      if (val && !locations.includes(val)) {
+        locations.push(val);
+        refreshUI();
+      }
+    });
+
+    main.querySelectorAll('.delete-location').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = e.target.dataset.idx;
+        const loc = locations[idx];
+        locations.splice(idx, 1);
+        // Clear it from any booth using it
+        booths.forEach(b => { if (b.roomName === loc) b.roomName = ''; });
+        refreshUI();
+      });
+    });
+
+    main.querySelector('#btnSaveLocations').addEventListener('click', async (e) => {
+      const btn = e.target;
+      setLoading(btn, true, '💾 Save Locations');
+      try {
+        await api.adminSaveLocations(pwd, locations);
+        showToast('Locations saved successfully!', 'success');
+      } catch (err) {
+        showToast(`Failed to save: ${err.message}`, 'error');
+      } finally {
+        setLoading(btn, false, '💾 Save Locations');
+      }
     });
 
     main.querySelectorAll('.class-booth-select').forEach(select => {
@@ -219,13 +279,18 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths) {
 
       // If adding this entire department exceeds max tolerance and it has multiple classes, split it
       if (targetBooth.totalStudents + dept.total > maxTolerance && dept.classes.length > 1) {
+        // Strict split into max 2 booths
+        booths.sort((a, b) => a.totalStudents - b.totalStudents);
+        const splitBooth1 = booths[0];
+        const splitBooth2 = booths.length > 1 ? booths[1] : booths[0]; // fallback to 1 if only 1 booth exists
+        
         // Sort classes within dept by size descending
         const sortedClasses = [...dept.classes].sort((a, b) => b.count - a.count);
         sortedClasses.forEach(cls => {
-          // Find emptiest booth for each class
-          booths.sort((a, b) => a.totalStudents - b.totalStudents);
-          booths[0].classes.push(cls.name);
-          booths[0].totalStudents += cls.count;
+          // Distribute only between the two emptiest booths
+          const currentBooth = splitBooth1.totalStudents <= splitBooth2.totalStudents ? splitBooth1 : splitBooth2;
+          currentBooth.classes.push(cls.name);
+          currentBooth.totalStudents += cls.count;
         });
       } else {
         // Place whole department in the emptiest booth
