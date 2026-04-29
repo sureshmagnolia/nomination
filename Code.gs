@@ -196,7 +196,17 @@ function getPostsData() {
 }
 
 function checkAdmin(pwd) {
-  if (pwd !== ADMIN_PASSWORD) throw new Error('Invalid admin password.');
+  // Generate dynamic password based on current date in India (Asia/Kolkata)
+  // Format: ddmmyyyyday (e.g., 29042026wednesday)
+  const now = new Date();
+  const dateStr = Utilities.formatDate(now, "Asia/Kolkata", "ddMMyyyy");
+  const dayStr = Utilities.formatDate(now, "Asia/Kolkata", "EEEE").toLowerCase();
+  const dynamicPassword = dateStr + dayStr;
+
+  // Allow either the dynamic password or the hardcoded fallback password
+  if (pwd !== dynamicPassword && pwd !== ADMIN_PASSWORD) {
+    throw new Error('Invalid admin password.');
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
