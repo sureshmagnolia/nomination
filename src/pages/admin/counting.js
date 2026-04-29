@@ -116,6 +116,16 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
   const generateAndSave = async () => {
     const T = booths.length;
     
+    // Helper to get department from post name
+    const getPostDept = (p) => {
+      const name = pName(p);
+      const prefix = 'Association Secretary ';
+      if (name.toUpperCase().startsWith(prefix.toUpperCase())) {
+        return name.substring(prefix.length).toUpperCase().trim();
+      }
+      return null;
+    };
+
     const classToDept = {};
     nominalRoll.forEach(s => {
       const c = String(s['CLASS'] || '').trim();
@@ -145,42 +155,41 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     const generalPosts = posts.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && !yearRepPosts.includes(p));
     const G = generalPosts.length;
 
-    const tableR1 = Array.from({ length: T }, () => []);
-    assocPosts.forEach(ap => {
-      const apUp = pName(ap).toUpperCase();
-      let assigned = false;
-      for (let t = 0; t < T; t++) {
-        if (Array.from(boothDepts[t]).some(d => apUp.includes(d))) {
-          tableR1[t].push(ap); assigned = true; break;
-        }
-      }
-      if (!assigned) {
-        let mi = 0;
-        tableR1.forEach((a, i) => { if (a.length < tableR1[mi].length) mi = i; });
-        tableR1[mi].push(ap);
-      }
-    });
-
-    yearRepPosts.forEach(yp => {
-      const yr = String(yp.yearRestriction || '');
-      for (let t = 0; t < T; t++) {
-        if (boothYears[t].has(yr)) tableR1[t].push(yp);
-      }
-      const any = tableR1.some(r => r.includes(yp));
-      if (!any) { let mi = 0; tableR1.forEach((a,i) => { if (a.length < tableR1[mi].length) mi=i; }); tableR1[mi].push(yp); }
-    });
-
-    const maxRestricted = Math.max(...tableR1.map(r => r.length), 0);
-
+    // Generate individual table schedules based on booth eligibility
     const matrix = Array.from({ length: T }, (_, t) => {
       const rounds = [];
-      for (let r = 0; r < maxRestricted; r++) rounds.push(tableR1[t][r] || null);
-      for (let r = 0; r < G; r++) rounds.push(generalPosts[(t + r) % G]);
+      
+      // 1. General Posts (Rotated per table so not everyone counts same post at once)
+      for (let i = 0; i < G; i++) {
+        rounds.push(generalPosts[(t + i) % G]);
+      }
+      
+      // 2. Year Reps (only if this booth has that year)
+      yearRepPosts.forEach(yp => {
+        if (boothYears[t].has(String(yp.yearRestriction))) {
+          rounds.push(yp);
+        }
+      });
+      
+      // 3. Association Posts (only if this booth has that department)
+      assocPosts.forEach(ap => {
+        const d = getPostDept(ap);
+        if (d && boothDepts[t].has(d)) {
+          rounds.push(ap);
+        }
+      });
+      
+      // 4. UUC Posts (always at the end)
       uucPosts.forEach(up => rounds.push(up));
+      
       return rounds;
     });
 
-    const totalRounds = maxRestricted + G + uucPosts.length;
+    const totalRounds = Math.max(...matrix.map(m => m.length), 0);
+    // Pad all tables to same number of rounds
+    matrix.forEach(m => {
+      while (m.length < totalRounds) m.push(null);
+    });
     const formSerials = {};
     let serialCounter = 1;
     for (let r = 0; r < totalRounds; r++) {
@@ -190,9 +199,9 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     }
 
     const roundLabels = [];
-    for (let r = 0; r < maxRestricted; r++)      roundLabels.push(`Round ${r + 1}${r === 0 ? ' (Assoc/Reps)' : ''}`);
-    for (let r = 0; r < G; r++)                  roundLabels.push(`Round ${maxRestricted + r + 1}`);
-    uucPosts.forEach((up, i) => roundLabels.push(`Round ${maxRestricted + G + i + 1} (UUC)`));
+    for (let r = 0; r < totalRounds; r++) {
+      roundLabels.push(`Round ${r + 1}`);
+    }
 
     const matrixData = { matrix, formSerials, totalRounds, roundLabels };
     
