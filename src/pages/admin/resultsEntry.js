@@ -116,14 +116,27 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
     const postName = main.querySelector('#selPost').value;
     if (!tableNum || !postName) { showToast('Select Table and Post', 'warning'); return; }
     
+    const boothIdx = booths.findIndex(b => String(b.boothNumber) === String(tableNum));
+    let foundSerial = null;
+    let foundRound = null;
+    if (boothIdx >= 0) {
+      for (let r = 0; r < matrix[boothIdx].length; r++) {
+        if (pName(matrix[boothIdx][r]) === postName) {
+          foundRound = r + 1;
+          foundSerial = formSerials[`${boothIdx}-${r}`];
+          break;
+        }
+      }
+    }
+
     try {
       setLoading(main.querySelector('#btnLoadForm'), true, '...');
       const freshResults = await api.getResults().catch(() => []);
       allResults.length = 0;
       allResults.push(...freshResults);
-      renderFormGrid(tableNum, postName, null, null);
+      renderFormGrid(tableNum, postName, foundSerial, foundRound);
     } catch (e) {
-      renderFormGrid(tableNum, postName, null, null);
+      renderFormGrid(tableNum, postName, foundSerial, foundRound);
     } finally {
       setLoading(main.querySelector('#btnLoadForm'), false, 'Load');
     }
