@@ -384,21 +384,66 @@ export async function renderAdminBallots(container) {
     return html;
   };
 
+  const triggerPrint = (html) => {
+    const printWin = window.open('', '_blank');
+    printWin.document.write(`
+      <html>
+        <head>
+          <title>Print Ballots - GVC Election</title>
+          <style>
+            @media print {
+              .no-print { display: none !important; }
+              .page-break { page-break-after: always; }
+            }
+            body { margin: 0; padding: 0; background: #eee; }
+            .ballot-container {
+              background: white;
+              color: black;
+              padding: 40px;
+              font-family: "Times New Roman", Times, serif;
+              width: 210mm;
+              min-height: 297mm;
+              margin: 20px auto;
+              box-shadow: 0 0 10px rgba(0,0,0,0.2);
+              box-sizing: border-box;
+            }
+            @media print {
+              body { background: white; }
+              .ballot-container { margin: 0; box-shadow: none; width: 100%; }
+            }
+            .ballot-header { text-align: center; border-bottom: 3px double #000; margin-bottom: 30px; padding-bottom: 10px; }
+            .ballot-header h1 { font-size: 18px; margin: 0; text-transform: uppercase; }
+            .ballot-header h2 { font-size: 15px; margin: 5px 0 0 0; }
+            .ballot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+            .post-box { border: 2px solid #000; padding: 0; display: flex; flex-direction: column; margin-bottom: 10px; break-inside: avoid; }
+            .post-title { background: #ccc; color: #000; text-align: center; padding: 5px; font-weight: bold; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #000; }
+            .candidate-row { display: flex; align-items: center; border-bottom: 1px solid #000; height: 50px; }
+            .candidate-row:last-child { border-bottom: none; }
+            .sl-no { width: 30px; text-align: center; border-right: 1px solid #000; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+            .c-name { flex-grow: 1; padding: 0 10px; font-weight: bold; display: flex; flex-direction: column; justify-content: center; }
+            .stamp-box { width: 60px; height: 100%; border-left: 1px solid #000; display: flex; align-items: center; justify-content: center; position: relative; }
+            .stamp-box::after { content: ""; width: 30px; height: 30px; border: 1px dashed #ccc; border-radius: 4px; }
+          </style>
+        </head>
+        <body>
+          ${html}
+          <script>
+            // Wait for images if any, then print
+            window.onload = () => {
+              // window.print(); 
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWin.document.close();
+  };
+
   const handlePreview = async (type) => {
     try {
-      showToast('Generating preview...', 'info');
+      showToast('Generating ballots...', 'info');
       const html = await generateBallotsHTML(type);
-      previewArea.innerHTML = `
-        <div class="flex justify-between items-center mb-6 no-print">
-          <h3 class="text-white font-bold">Ballot Preview</h3>
-          <button id="btnPrintNow" class="btn btn-success btn-sm">🖨️ Print This Preview</button>
-        </div>
-        <div class="scale-75 origin-top">
-          ${html}
-        </div>
-      `;
-      previewArea.classList.remove('hidden');
-      previewArea.querySelector('#btnPrintNow').onclick = () => window.print();
+      triggerPrint(html);
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -412,13 +457,7 @@ export async function renderAdminBallots(container) {
     try {
       setLoading(e.target, true, 'Generating...');
       const html = await generateBallotsHTML('all');
-      
-      // Temporary injection for printing
-      const oldPrint = document.getElementById('printSection');
-      if (oldPrint) oldPrint.remove();
-      document.body.insertAdjacentHTML('beforeend', html);
-      
-      window.print();
+      triggerPrint(html);
       setLoading(e.target, false, '🖨️ Generate All Ballots');
     } catch (err) {
       showToast(err.message, 'error');

@@ -1608,7 +1608,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         font-style: italic;
       }
     </style>
-  `;let r=n.querySelector(`#ballotPreviewArea`),i=async(e=`all`)=>{let n,r;try{[n,r]=await Promise.all([C.adminGetPosts(t),C.getFinalNominations()])}catch(e){throw e.message.includes(`not published`)?Error(`Final List Not Published. Please finalize and publish the list before printing ballots.`):e}let i=r.active||[];if(i.length===0)throw Error(`No active candidates found in the Final List. Please ensure candidates are verified and the list is published.`);let a=e=>e.post.toLowerCase().includes(`year`),o=e=>e.post.toLowerCase().includes(`assoc`)||e.post.toLowerCase().includes(`association`),s=e=>!a(e)&&!o(e),c=`<div id="printSection">`;if(e===`all`||e===`general`){let e=n.filter(s);e.length>0&&(c+=`
+  `,n.querySelector(`#ballotPreviewArea`);let r=async(e=`all`)=>{let n,r;try{[n,r]=await Promise.all([C.adminGetPosts(t),C.getFinalNominations()])}catch(e){throw e.message.includes(`not published`)?Error(`Final List Not Published. Please finalize and publish the list before printing ballots.`):e}let i=r.active||[];if(i.length===0)throw Error(`No active candidates found in the Final List. Please ensure candidates are verified and the list is published.`);let a=e=>e.post.toLowerCase().includes(`year`),o=e=>e.post.toLowerCase().includes(`assoc`)||e.post.toLowerCase().includes(`association`),s=e=>!a(e)&&!o(e),c=`<div id="printSection">`;if(e===`all`||e===`general`){let e=n.filter(s);e.length>0&&(c+=`
           <div class="ballot-container page-break">
             <div class="ballot-header">
               <h1 style="font-size: 18px;">COLLEGE UNION ELECTION ${new Date().getFullYear()}</h1>
@@ -1727,15 +1727,56 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               </div>
             </div>
           </div>
-        `)}),c+=`</div>`,c},a=async e=>{try{_(`Generating preview...`,`info`),r.innerHTML=`
-        <div class="flex justify-between items-center mb-6 no-print">
-          <h3 class="text-white font-bold">Ballot Preview</h3>
-          <button id="btnPrintNow" class="btn btn-success btn-sm">🖨️ Print This Preview</button>
-        </div>
-        <div class="scale-75 origin-top">
-          ${await i(e)}
-        </div>
-      `,r.classList.remove(`hidden`),r.querySelector(`#btnPrintNow`).onclick=()=>window.print()}catch(e){_(e.message,`error`)}};n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)}),n.querySelector(`#btnPrintBallots`).onclick=async e=>{try{g(e.target,!0,`Generating...`);let t=await i(`all`),n=document.getElementById(`printSection`);n&&n.remove(),document.body.insertAdjacentHTML(`beforeend`,t),window.print(),g(e.target,!1,`🖨️ Generate All Ballots`)}catch(t){_(t.message,`error`),g(e.target,!1,`🖨️ Generate All Ballots`)}}}function Fe(e){let t=L();if(!t)return;R(e,`testing`,`
+        `)}),c+=`</div>`,c},i=e=>{let t=window.open(``,`_blank`);t.document.write(`
+      <html>
+        <head>
+          <title>Print Ballots - GVC Election</title>
+          <style>
+            @media print {
+              .no-print { display: none !important; }
+              .page-break { page-break-after: always; }
+            }
+            body { margin: 0; padding: 0; background: #eee; }
+            .ballot-container {
+              background: white;
+              color: black;
+              padding: 40px;
+              font-family: "Times New Roman", Times, serif;
+              width: 210mm;
+              min-height: 297mm;
+              margin: 20px auto;
+              box-shadow: 0 0 10px rgba(0,0,0,0.2);
+              box-sizing: border-box;
+            }
+            @media print {
+              body { background: white; }
+              .ballot-container { margin: 0; box-shadow: none; width: 100%; }
+            }
+            .ballot-header { text-align: center; border-bottom: 3px double #000; margin-bottom: 30px; padding-bottom: 10px; }
+            .ballot-header h1 { font-size: 18px; margin: 0; text-transform: uppercase; }
+            .ballot-header h2 { font-size: 15px; margin: 5px 0 0 0; }
+            .ballot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+            .post-box { border: 2px solid #000; padding: 0; display: flex; flex-direction: column; margin-bottom: 10px; break-inside: avoid; }
+            .post-title { background: #ccc; color: #000; text-align: center; padding: 5px; font-weight: bold; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #000; }
+            .candidate-row { display: flex; align-items: center; border-bottom: 1px solid #000; height: 50px; }
+            .candidate-row:last-child { border-bottom: none; }
+            .sl-no { width: 30px; text-align: center; border-right: 1px solid #000; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+            .c-name { flex-grow: 1; padding: 0 10px; font-weight: bold; display: flex; flex-direction: column; justify-content: center; }
+            .stamp-box { width: 60px; height: 100%; border-left: 1px solid #000; display: flex; align-items: center; justify-content: center; position: relative; }
+            .stamp-box::after { content: ""; width: 30px; height: 30px; border: 1px dashed #ccc; border-radius: 4px; }
+          </style>
+        </head>
+        <body>
+          ${e}
+          <script>
+            // Wait for images if any, then print
+            window.onload = () => {
+              // window.print(); 
+            };
+          <\/script>
+        </body>
+      </html>
+    `),t.document.close()},a=async e=>{try{_(`Generating ballots...`,`info`),i(await r(e))}catch(e){_(e.message,`error`)}};n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)}),n.querySelector(`#btnPrintBallots`).onclick=async e=>{try{g(e.target,!0,`Generating...`),i(await r(`all`)),g(e.target,!1,`🖨️ Generate All Ballots`)}catch(t){_(t.message,`error`),g(e.target,!1,`🖨️ Generate All Ballots`)}}}function Fe(e){let t=L();if(!t)return;R(e,`testing`,`
     <div class="page-enter space-y-8 max-w-3xl mx-auto">
 
       <!-- Warning Banner -->
