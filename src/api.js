@@ -102,4 +102,13 @@ export const api = {
   /** Admin: reorder posts (send full ordered array of post names) */
   adminReorderPosts: (password, posts) =>
     post({ action: 'adminReorderPosts', password, posts }),
+
+  // ─── Booths Management ───────────────────────────────────────────────────────
+
+  /** Admin: get all booths */
+  adminGetBooths: (password) => get({ action: 'adminGetBooths', password }),
+
+  /** Admin: save all booths */
+  adminSaveBooths: (password, booths) =>
+    post({ action: 'adminSaveBooths', password, booths }),
 };

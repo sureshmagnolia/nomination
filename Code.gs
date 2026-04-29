@@ -17,6 +17,7 @@ const SHEET_VALID    = 'ValidList';   // Verified by admin
 const SHEET_FINAL    = 'FinalList';   // Published after withdrawals
 const SHEET_SETTINGS = 'Settings';
 const SHEET_POSTS    = 'Posts';
+const SHEET_BOOTHS   = 'Booths';
 
 // Expanded columns to store full details of candidate, proposer, and seconder
 const NOM_COLS = [
@@ -95,6 +96,7 @@ function ensureAll() {
   ensureSheet(SHEET_VALID, NOM_COLS);
   ensureSheet(SHEET_FINAL, NOM_COLS);
   ensureSheet(SHEET_POSTS, POST_COLS);
+  ensureSheet(SHEET_BOOTHS, ['BoothNumber', 'RoomName', 'AllocatedClasses']);
   ensureSheet(SHEET_SETTINGS, ['Key', 'Value']);
   
   const s = getSheet(SHEET_SETTINGS);
@@ -256,6 +258,18 @@ function doGet(e) {
     if (action === 'adminGetPosts') {
       checkAdmin(e.parameter.password);
       return jsonOut(getPostsData());
+    }
+
+    if (action === 'adminGetBooths') {
+      checkAdmin(e.parameter.password);
+      const s = getSheet(SHEET_BOOTHS);
+      const d = s.getDataRange().getValues();
+      if (d.length < 2) return jsonOut([]);
+      return jsonOut(d.slice(1).map(r => ({
+        boothNumber: r[0],
+        roomName: String(r[1] || ''),
+        classes: JSON.parse(r[2] || '[]')
+      })));
     }
 
     return errOut(`Unknown action: ${action}`);
@@ -421,6 +435,19 @@ function doPost(e) {
         }
       });
       
+      return jsonOut({ ok: true });
+    }
+
+    if (action === 'adminSaveBooths') {
+      checkAdmin(body.password);
+      const s = getSheet(SHEET_BOOTHS);
+      s.clear();
+      s.appendRow(['BoothNumber', 'RoomName', 'AllocatedClasses']);
+      if (Array.isArray(body.booths)) {
+        body.booths.forEach(b => {
+          s.appendRow([b.boothNumber, b.roomName, JSON.stringify(b.classes || [])]);
+        });
+      }
       return jsonOut({ ok: true });
     }
 
