@@ -1611,68 +1611,120 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
   `;let r=n.querySelector(`#ballotPreviewArea`),i=async(e=`all`)=>{let n,r;try{[n,r]=await Promise.all([C.adminGetPosts(t),C.getFinalNominations()])}catch(e){throw e.message.includes(`not published`)?Error(`Final List Not Published. Please finalize and publish the list before printing ballots.`):e}let i=r.active||[];if(i.length===0)throw Error(`No active candidates found in the Final List. Please ensure candidates are verified and the list is published.`);let a=e=>e.post.toLowerCase().includes(`year`),o=e=>e.post.toLowerCase().includes(`assoc`)||e.post.toLowerCase().includes(`association`),s=e=>!a(e)&&!o(e),c=`<div id="printSection">`;if(e===`all`||e===`general`){let e=n.filter(s);e.length>0&&(c+=`
           <div class="ballot-container page-break">
             <div class="ballot-header">
-              <h1>COLLEGE UNION ELECTION 2026-27</h1>
-              <h2>OFFICIAL BALLOT PAPER — GENERAL UNION</h2>
+              <h1 style="font-size: 18px;">COLLEGE UNION ELECTION ${new Date().getFullYear()}</h1>
+              <h1 style="font-size: 16px;">GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
+              <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER</h2>
             </div>
+            
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; font-size: 14px;">
+              <div>SL.NO. ____________</div>
+              <div>Signature of PRO</div>
+            </div>
+
+            <div style="text-align: center; border: 1px solid #000; padding: 5px; margin-bottom: 20px; font-weight: bold; font-size: 13px; text-transform: uppercase;">
+              MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED
+            </div>
+
             <div class="ballot-grid">
-        `,[...e].sort((e,t)=>{let n=e.post.toLowerCase(),r=t.post.toLowerCase();return n.includes(`chairman`)&&!n.includes(`vice`)?-1:r.includes(`chairman`)&&!r.includes(`vice`)?1:n.includes(`vice chairman`)?-1:+!!r.includes(`vice chairman`)}).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(e.post.toLowerCase().includes(`chairman`),c+=`
+        `,[...e].sort((e,t)=>{let n=e.post.toLowerCase(),r=t.post.toLowerCase();return n.includes(`chairman`)&&!n.includes(`vice`)?-1:r.includes(`chairman`)&&!r.includes(`vice`)?1:n.includes(`vice chairman`)?-1:+!!r.includes(`vice chairman`)}).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(c+=`
             <div class="post-box">
-              <div class="post-title">${h(e.post)}</div>
+              <div class="post-title" style="background: #ccc; color: #000; border-bottom: 1px solid #000;">${h(e.post.toUpperCase())}</div>
               ${t.map((e,t)=>`
                 <div class="candidate-row">
                   <div class="sl-no">${t+1}</div>
-                  <div class="c-name">${h(e.candidateName)}</div>
+                  <div class="c-name">
+                    <div style="font-size: 12px; text-transform: uppercase;">${h(e.candidateName)}</div>
+                    <div style="font-size: 10px; font-weight: normal; color: #444;">${h(e.candidateClass)}</div>
+                  </div>
                   <div class="stamp-box"></div>
                 </div>
               `).join(``)}
+              <!-- NOTA Entry -->
+              <div class="candidate-row">
+                <div class="sl-no">${t.length+1}</div>
+                <div class="c-name">
+                  <div style="font-size: 12px; text-transform: uppercase;">NOTA</div>
+                </div>
+                <div class="stamp-box"></div>
+              </div>
             </div>
           `)}),c+=`
-            </div>
-            <div class="ballot-footer">
-              <div>Facsimile of Returning Officer</div>
-              <div>Series: GEN-${Date.now().toString().slice(-6)}</div>
             </div>
           </div>
         `)}return(e===`all`||e===`year`)&&n.filter(a).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(c+=`
           <div class="ballot-container page-break">
             <div class="ballot-header">
-              <h1>COLLEGE UNION ELECTION 2026-27</h1>
-              <h2>BALLOT PAPER — ${h(e.post.toUpperCase())}</h2>
+              <h1 style="font-size: 18px;">COLLEGE UNION ELECTION ${new Date().getFullYear()}</h1>
+              <h1 style="font-size: 16px;">GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
+              <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER</h2>
             </div>
-            <div style="max-width: 500px; margin: 0 auto; border: 2px solid #000; padding: 20px;">
-              <div class="post-title">${h(e.post)}</div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; font-size: 14px;">
+              <div>SL.NO. ____________</div>
+              <div>Signature of PRO</div>
+            </div>
+
+            <div style="text-align: center; border: 1px solid #000; padding: 5px; margin-bottom: 20px; font-weight: bold; font-size: 13px; text-transform: uppercase;">
+              MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED
+            </div>
+
+            <div style="max-width: 500px; margin: 0 auto; border: 2px solid #000;">
+              <div class="post-title" style="background: #ccc; color: #000; border-bottom: 1px solid #000; text-align: center; padding: 5px; font-weight: bold;">${h(e.post.toUpperCase())}</div>
               ${t.map((e,t)=>`
                 <div class="candidate-row">
                   <div class="sl-no">${t+1}</div>
-                  <div class="c-name">${h(e.candidateName)}</div>
+                  <div class="c-name">
+                    <div style="font-size: 12px; text-transform: uppercase;">${h(e.candidateName)}</div>
+                    <div style="font-size: 10px; font-weight: normal; color: #444;">${h(e.candidateClass)}</div>
+                  </div>
                   <div class="stamp-box"></div>
                 </div>
               `).join(``)}
-            </div>
-            <div class="ballot-footer">
-              <div>Facsimile of Returning Officer</div>
-              <div>Series: YR-${Date.now().toString().slice(-6)}</div>
+              <div class="candidate-row">
+                <div class="sl-no">${t.length+1}</div>
+                <div class="c-name">
+                  <div style="font-size: 12px; text-transform: uppercase;">NOTA</div>
+                </div>
+                <div class="stamp-box"></div>
+              </div>
             </div>
           </div>
         `)}),(e===`all`||e===`assoc`)&&n.filter(o).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(c+=`
           <div class="ballot-container page-break">
             <div class="ballot-header">
-              <h1>COLLEGE UNION ELECTION 2026-27</h1>
-              <h2>BALLOT PAPER — ASSOCIATION</h2>
+              <h1 style="font-size: 18px;">COLLEGE UNION ELECTION ${new Date().getFullYear()}</h1>
+              <h1 style="font-size: 16px;">GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
+              <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER</h2>
             </div>
-            <div style="max-width: 500px; margin: 0 auto; border: 2px solid #000; padding: 20px;">
-              <div class="post-title">${h(e.post)}</div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; font-size: 14px;">
+              <div>SL.NO. ____________</div>
+              <div>Signature of PRO</div>
+            </div>
+
+            <div style="text-align: center; border: 1px solid #000; padding: 5px; margin-bottom: 20px; font-weight: bold; font-size: 13px; text-transform: uppercase;">
+              MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED
+            </div>
+
+            <div style="max-width: 500px; margin: 0 auto; border: 2px solid #000;">
+              <div class="post-title" style="background: #ccc; color: #000; border-bottom: 1px solid #000; text-align: center; padding: 5px; font-weight: bold;">${h(e.post.toUpperCase())}</div>
               ${t.map((e,t)=>`
                 <div class="candidate-row">
                   <div class="sl-no">${t+1}</div>
-                  <div class="c-name">${h(e.candidateName)}</div>
+                  <div class="c-name">
+                    <div style="font-size: 12px; text-transform: uppercase;">${h(e.candidateName)}</div>
+                    <div style="font-size: 10px; font-weight: normal; color: #444;">${h(e.candidateClass)}</div>
+                  </div>
                   <div class="stamp-box"></div>
                 </div>
               `).join(``)}
-            </div>
-            <div class="ballot-footer" style="margin-top: 100px;">
-              <div>Facsimile of Returning Officer</div>
-              <div>Series: ASC-${Date.now().toString().slice(-6)}</div>
+              <div class="candidate-row">
+                <div class="sl-no">${t.length+1}</div>
+                <div class="c-name">
+                  <div style="font-size: 12px; text-transform: uppercase;">NOTA</div>
+                </div>
+                <div class="stamp-box"></div>
+              </div>
             </div>
           </div>
         `)}),c+=`</div>`,c},a=async e=>{try{_(`Generating preview...`,`info`),r.innerHTML=`
