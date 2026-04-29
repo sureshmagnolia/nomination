@@ -184,8 +184,9 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
             <div class="w-32">
               <input type="number" class="field text-center text-lg font-bold border-red-500/30 vote-input" data-cid="INVALID" data-cname="Invalid" placeholder="0" value="${getVotes('INVALID')}" min="0">
             </div>
+          </div>
           <div class="flex items-center justify-between bg-indigo-500/20 p-4 rounded-lg border border-indigo-500/40">
-            <div class="font-black text-indigo-300 text-xl tracking-wider">TOTAL VOTES</div>
+            <div class="font-black text-indigo-300 text-xl tracking-wider">Total</div>
             <div class="w-32 text-center text-2xl font-black text-white" id="totalVotesDisplay">0</div>
           </div>
         </div>
