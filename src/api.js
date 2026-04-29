@@ -9,6 +9,7 @@ const BASE_URL = CONFIG.APPS_SCRIPT_URL;
 async function get(params) {
   const url = new URL(BASE_URL);
   Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
+  url.searchParams.append('_t', Date.now()); // Cache busting
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`Network error: ${res.status}`);
   const data = await res.json();

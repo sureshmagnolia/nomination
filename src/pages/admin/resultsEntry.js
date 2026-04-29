@@ -150,7 +150,7 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, nominalR
   const txtSerial = main.querySelector('#txtSerial');
   const btnSerial = main.querySelector('#btnLoadBySerial');
 
-  const loadBySerial = () => {
+  const loadBySerial = async () => {
     const s = txtSerial.value.trim();
     if (!s) return;
     const info = serialMap[s];
@@ -160,17 +160,42 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, nominalR
     }
     const tableNum = booths[info.t].boothNumber;
     const postName = pName(info.post);
-    renderFormGrid(tableNum, postName, s);
+    
+    // Refresh results just before loading form to ensure fresh data
+    try {
+      setLoading(btnSerial, true, 'Loading...');
+      const freshResults = await api.getResults().catch(() => []);
+      allResults.length = 0;
+      allResults.push(...freshResults);
+      renderFormGrid(tableNum, postName, s);
+    } catch (e) {
+      showToast('Error refreshing data', 'error');
+      renderFormGrid(tableNum, postName, s);
+    } finally {
+      setLoading(btnSerial, false, 'Load Form');
+    }
   };
 
   btnSerial.addEventListener('click', loadBySerial);
   txtSerial.addEventListener('keypress', (e) => { if (e.key === 'Enter') loadBySerial(); });
 
-  main.querySelector('#btnLoadForm').addEventListener('click', () => {
+  const btnLoadManual = main.querySelector('#btnLoadForm');
+  btnLoadManual.addEventListener('click', async () => {
     const tableNum = main.querySelector('#selTable').value;
     const postName = main.querySelector('#selPost').value;
     if (!tableNum || !postName) { showToast('Select Table and Post', 'warning'); return; }
-    renderFormGrid(tableNum, postName, null);
+    
+    try {
+      setLoading(btnLoadManual, true, '...');
+      const freshResults = await api.getResults().catch(() => []);
+      allResults.length = 0;
+      allResults.push(...freshResults);
+      renderFormGrid(tableNum, postName, null);
+    } catch (e) {
+      renderFormGrid(tableNum, postName, null);
+    } finally {
+      setLoading(btnLoadManual, false, 'Load');
+    }
   });
 
   const renderFormGrid = (tableNum, postName, serial) => {

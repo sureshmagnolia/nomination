@@ -127,7 +127,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <div class="mt-6 flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition">
       Continue <span>→</span>
     </div>
-  </div>`}var b=n.APPS_SCRIPT_URL;async function x(e){let t=new URL(b);Object.entries(e).forEach(([e,n])=>t.searchParams.append(e,n));let n=await fetch(t.toString());if(!n.ok)throw Error(`Network error: ${n.status}`);let r=await n.json();if(r.error)throw Error(r.error);return r}async function S(e){let t=await fetch(b,{method:`POST`,headers:{"Content-Type":`text/plain;charset=utf-8`},body:JSON.stringify(e)});if(!t.ok)throw Error(`Network error: ${t.status}`);let n=await t.json();if(n.error)throw Error(n.error);return n}var C={getNominalRoll:()=>x({action:`getNominalRoll`}),getPosts:()=>x({action:`getPosts`}),getNomination:e=>x({action:`getNomination`,id:e}),getValidNominations:()=>x({action:`getValidNominations`}),getFinalNominations:()=>x({action:`getFinalNominations`}),submitNomination:e=>S({action:`submitNomination`,...e}),submitWithdrawal:e=>S({action:`submitWithdrawal`,id:e}),adminLogin:e=>S({action:`adminLogin`,password:e}),adminGetNominations:e=>x({action:`adminGetNominations`,password:e}),adminVerifyNomination:(e,t,n)=>S({action:`adminVerifyNomination`,password:e,id:t,status:n}),adminApproveWithdrawal:(e,t)=>S({action:`adminApproveWithdrawal`,password:e,id:t}),adminPublishValidList:e=>S({action:`adminPublishValidList`,password:e}),adminPublishFinalList:e=>S({action:`adminPublishFinalList`,password:e}),adminGetSettings:e=>x({action:`adminGetSettings`,password:e}),adminGetPosts:e=>x({action:`adminGetPosts`,password:e}),adminAddPost:(e,t)=>S({action:`adminAddPost`,password:e,...t}),adminUpdatePost:(e,t)=>S({action:`adminUpdatePost`,password:e,...t}),adminDeletePost:(e,t)=>S({action:`adminDeletePost`,password:e,postName:t}),adminReorderPosts:(e,t)=>S({action:`adminReorderPosts`,password:e,posts:t}),adminGetBooths:e=>x({action:`adminGetBooths`,password:e}),adminSaveBooths:(e,t)=>S({action:`adminSaveBooths`,password:e,booths:t}),adminGetLocations:e=>x({action:`adminGetLocations`,password:e}),adminSaveLocations:(e,t)=>S({action:`adminSaveLocations`,password:e,locations:t}),getResults:()=>x({action:`getResults`}),adminSaveResults:(e,t)=>S({action:`adminSaveResults`,password:e,results:t}),adminInjectTestData:e=>S({action:`adminInjectTestData`,password:e}),adminWipeData:e=>S({action:`adminWipeData`,password:e})},w=[],T=[],E=``;async function D(e){e.innerHTML=I(`Submit Nomination`,`
+  </div>`}var b=n.APPS_SCRIPT_URL;async function x(e){let t=new URL(b);Object.entries(e).forEach(([e,n])=>t.searchParams.append(e,n)),t.searchParams.append(`_t`,Date.now());let n=await fetch(t.toString());if(!n.ok)throw Error(`Network error: ${n.status}`);let r=await n.json();if(r.error)throw Error(r.error);return r}async function S(e){let t=await fetch(b,{method:`POST`,headers:{"Content-Type":`text/plain;charset=utf-8`},body:JSON.stringify(e)});if(!t.ok)throw Error(`Network error: ${t.status}`);let n=await t.json();if(n.error)throw Error(n.error);return n}var C={getNominalRoll:()=>x({action:`getNominalRoll`}),getPosts:()=>x({action:`getPosts`}),getNomination:e=>x({action:`getNomination`,id:e}),getValidNominations:()=>x({action:`getValidNominations`}),getFinalNominations:()=>x({action:`getFinalNominations`}),submitNomination:e=>S({action:`submitNomination`,...e}),submitWithdrawal:e=>S({action:`submitWithdrawal`,id:e}),adminLogin:e=>S({action:`adminLogin`,password:e}),adminGetNominations:e=>x({action:`adminGetNominations`,password:e}),adminVerifyNomination:(e,t,n)=>S({action:`adminVerifyNomination`,password:e,id:t,status:n}),adminApproveWithdrawal:(e,t)=>S({action:`adminApproveWithdrawal`,password:e,id:t}),adminPublishValidList:e=>S({action:`adminPublishValidList`,password:e}),adminPublishFinalList:e=>S({action:`adminPublishFinalList`,password:e}),adminGetSettings:e=>x({action:`adminGetSettings`,password:e}),adminGetPosts:e=>x({action:`adminGetPosts`,password:e}),adminAddPost:(e,t)=>S({action:`adminAddPost`,password:e,...t}),adminUpdatePost:(e,t)=>S({action:`adminUpdatePost`,password:e,...t}),adminDeletePost:(e,t)=>S({action:`adminDeletePost`,password:e,postName:t}),adminReorderPosts:(e,t)=>S({action:`adminReorderPosts`,password:e,posts:t}),adminGetBooths:e=>x({action:`adminGetBooths`,password:e}),adminSaveBooths:(e,t)=>S({action:`adminSaveBooths`,password:e,booths:t}),adminGetLocations:e=>x({action:`adminGetLocations`,password:e}),adminSaveLocations:(e,t)=>S({action:`adminSaveLocations`,password:e,locations:t}),getResults:()=>x({action:`getResults`}),adminSaveResults:(e,t)=>S({action:`adminSaveResults`,password:e,results:t}),adminInjectTestData:e=>S({action:`adminInjectTestData`,password:e}),adminWipeData:e=>S({action:`adminWipeData`,password:e})},w=[],T=[],E=``;async function D(e){e.innerHTML=I(`Submit Nomination`,`
     <div id="loadingState" class="flex flex-col items-center justify-center py-24 gap-4">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 text-sm">Loading data...</p>
@@ -276,7 +276,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </div>
     </header>
     <main class="max-w-4xl mx-auto px-4 py-8">${t}</main>
-  </div>`}async function L(e){e.innerHTML=te(`Find My Nomination`,`
+  </div>`}async function L(e){e.innerHTML=ee(`Find My Nomination`,`
     <div class="glass rounded-2xl p-8 max-w-lg mx-auto">
       <div class="text-center mb-8">
         <div class="text-5xl mb-3">🔍</div>
@@ -292,7 +292,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </div>
       <div id="resultArea" class="mt-8"></div>
     </div>
-  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));let t=e.querySelector(`#searchBtn`);t.addEventListener(`click`,async()=>{let n=e.querySelector(`#searchId`).value.trim();if(n.length!==10||!/^\d+$/.test(n)){_(`Please enter a valid 10-digit numeric ID.`,`error`);return}g(t,!0,`🔍 Find Nomination`);try{let t=await C.getNomination(n);ee(e.querySelector(`#resultArea`),t,n)}catch(t){e.querySelector(`#resultArea`).innerHTML=`<div class="alert alert-error mt-4">❌ ${h(t.message)}</div>`}finally{g(t,!1,`🔍 Find Nomination`)}})}function ee(e,t,n){let r=t.dob||`N/A`,i=new Date(t.dob);isNaN(i.getTime())||(r=`${String(i.getDate()).padStart(2,`0`)}/${String(i.getMonth()+1).padStart(2,`0`)}/${i.getFullYear()}`);let a=s(t.dob);e.innerHTML=`
+  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));let t=e.querySelector(`#searchBtn`);t.addEventListener(`click`,async()=>{let n=e.querySelector(`#searchId`).value.trim();if(n.length!==10||!/^\d+$/.test(n)){_(`Please enter a valid 10-digit numeric ID.`,`error`);return}g(t,!0,`🔍 Find Nomination`);try{let t=await C.getNomination(n);R(e.querySelector(`#resultArea`),t,n)}catch(t){e.querySelector(`#resultArea`).innerHTML=`<div class="alert alert-error mt-4">❌ ${h(t.message)}</div>`}finally{g(t,!1,`🔍 Find Nomination`)}})}function R(e,t,n){let r=t.dob||`N/A`,i=new Date(t.dob);isNaN(i.getTime())||(r=`${String(i.getDate()).padStart(2,`0`)}/${String(i.getMonth()+1).padStart(2,`0`)}/${i.getFullYear()}`);let a=s(t.dob);e.innerHTML=`
     <div class="space-y-4">
       <div class="alert alert-success">✅ Nomination found! Status: <strong>${h(t.status)}</strong></div>
       <div id="printZone" class="print-zone">
@@ -301,7 +301,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       <div class="flex gap-3 no-print">
         <button id="printBtn" class="btn btn-success flex-1">🖨️ Print</button>
       </div>
-    </div>`,e.querySelector(`#printBtn`).addEventListener(`click`,()=>{m(e.querySelector(`#printZone`).innerHTML)})}function te(e,t){return`
+    </div>`,e.querySelector(`#printBtn`).addEventListener(`click`,()=>{m(e.querySelector(`#printZone`).innerHTML)})}function ee(e,t){return`
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
       <div class="max-w-4xl mx-auto px-6 py-3 flex items-center gap-4">
@@ -311,9 +311,9 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </div>
     </header>
     <main class="max-w-4xl mx-auto px-4 py-8">${t}</main>
-  </div>`}async function ne(e){e.innerHTML=ie(`Valid Nominations List`,`
+  </div>`}async function te(e){e.innerHTML=re(`Valid Nominations List`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading list...</p></div>
-  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));try{let t=await C.getValidNominations();re(e.querySelector(`main`),t)}catch(t){e.querySelector(`main`).innerHTML=`<div class="alert alert-warning text-center">${h(t.message)}</div>`}}function re(e,t){if(!t||t.length===0){e.innerHTML=`<div class="alert alert-info text-center">The valid nominations list has not been published yet. Please check back later.</div>`;return}let n={};t.forEach(e=>{n[e.post]||(n[e.post]=[]),n[e.post].push(e)}),e.innerHTML=`
+  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));try{let t=await C.getValidNominations();ne(e.querySelector(`main`),t)}catch(t){e.querySelector(`main`).innerHTML=`<div class="alert alert-warning text-center">${h(t.message)}</div>`}}function ne(e,t){if(!t||t.length===0){e.innerHTML=`<div class="alert alert-info text-center">The valid nominations list has not been published yet. Please check back later.</div>`;return}let n={};t.forEach(e=>{n[e.post]||(n[e.post]=[]),n[e.post].push(e)}),e.innerHTML=`
     <div class="mb-6">
       <h2 class="text-2xl font-bold text-white">✅ Valid Nominations</h2>
       <p class="text-slate-400 text-sm mt-1">Official list of candidates with valid nominations.</p>
@@ -340,7 +340,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </table>
         </div>
       </div>
-    `).join(``)}`}function ie(e,t){return`
+    `).join(``)}`}function re(e,t){return`
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
       <div class="max-w-5xl mx-auto px-6 py-3 flex items-center gap-4">
@@ -350,9 +350,9 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </div>
     </header>
     <main class="max-w-5xl mx-auto px-4 py-8">${t}</main>
-  </div>`}async function ae(e){e.innerHTML=se(`Final Nominations List`,`
+  </div>`}async function ie(e){e.innerHTML=oe(`Final Nominations List`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading final list...</p></div>
-  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));try{let t=await C.getFinalNominations();oe(e.querySelector(`main`),t)}catch(t){e.querySelector(`main`).innerHTML=`<div class="alert alert-warning text-center">${h(t.message)}</div>`}}function oe(e,{active:t=[],withdrawn:n=[]}={}){if(!t.length&&!n.length){e.innerHTML=`<div class="alert alert-info text-center">The final nominations list has not been published yet. Please check back later.</div>`;return}let r={};t.forEach(e=>{r[e.post]||(r[e.post]=[]),r[e.post].push(e)}),e.innerHTML=`
+  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));try{let t=await C.getFinalNominations();ae(e.querySelector(`main`),t)}catch(t){e.querySelector(`main`).innerHTML=`<div class="alert alert-warning text-center">${h(t.message)}</div>`}}function ae(e,{active:t=[],withdrawn:n=[]}={}){if(!t.length&&!n.length){e.innerHTML=`<div class="alert alert-info text-center">The final nominations list has not been published yet. Please check back later.</div>`;return}let r={};t.forEach(e=>{r[e.post]||(r[e.post]=[]),r[e.post].push(e)}),e.innerHTML=`
     <div class="mb-6">
       <h2 class="text-2xl font-bold text-white">🏁 Final Nominations</h2>
       <p class="text-slate-400 text-sm mt-1">Final list of candidates after processing withdrawals.</p>
@@ -395,7 +395,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         </table>
       </div>
     </div>`:``}
-  `}function se(e,t){return`
+  `}function oe(e,t){return`
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
       <div class="max-w-5xl mx-auto px-6 py-3 flex items-center gap-4">
@@ -405,7 +405,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </div>
     </header>
     <main class="max-w-5xl mx-auto px-4 py-8">${t}</main>
-  </div>`}async function ce(e){e.innerHTML=B(`Withdrawal Form`,`
+  </div>`}async function se(e){e.innerHTML=B(`Withdrawal Form`,`
     <div class="glass rounded-2xl p-8 max-w-2xl mx-auto">
       <div class="text-center mb-8">
         <div class="text-5xl mb-3">↩️</div>
@@ -421,7 +421,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </div>
       <div id="nominationDetails" class="mt-8"></div>
     </div>
-  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));let t=e.querySelector(`#fetchBtn`);t.addEventListener(`click`,async()=>{let n=e.querySelector(`#withdrawId`).value.trim();if(n.length!==10||!/^\d+$/.test(n)){_(`Please enter a valid 10-digit numeric ID.`,`error`);return}g(t,!0,`Fetch Nomination Details`);try{let t=await C.getNomination(n);R(e.querySelector(`#nominationDetails`),t,n)}catch(t){e.querySelector(`#nominationDetails`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}finally{g(t,!1,`Fetch Nomination Details`)}})}function R(e,t,n){if(t.status!==`Valid`){e.innerHTML=`<div class="alert alert-warning">⚠ This nomination has status <strong>${h(t.status)}</strong>. Only <strong>Valid</strong> nominations can be withdrawn.</div>`;return}if(t.withdrawalStatus===`Requested`||t.withdrawalStatus===`Approved`){e.innerHTML=`<div class="alert alert-info">ℹ A withdrawal has already been ${h(t.withdrawalStatus.toLowerCase())} for this nomination.</div>`;return}e.innerHTML=`
+  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));let t=e.querySelector(`#fetchBtn`);t.addEventListener(`click`,async()=>{let n=e.querySelector(`#withdrawId`).value.trim();if(n.length!==10||!/^\d+$/.test(n)){_(`Please enter a valid 10-digit numeric ID.`,`error`);return}g(t,!0,`Fetch Nomination Details`);try{let t=await C.getNomination(n);ce(e.querySelector(`#nominationDetails`),t,n)}catch(t){e.querySelector(`#nominationDetails`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}finally{g(t,!1,`Fetch Nomination Details`)}})}function ce(e,t,n){if(t.status!==`Valid`){e.innerHTML=`<div class="alert alert-warning">⚠ This nomination has status <strong>${h(t.status)}</strong>. Only <strong>Valid</strong> nominations can be withdrawn.</div>`;return}if(t.withdrawalStatus===`Requested`||t.withdrawalStatus===`Approved`){e.innerHTML=`<div class="alert alert-info">ℹ A withdrawal has already been ${h(t.withdrawalStatus.toLowerCase())} for this nomination.</div>`;return}e.innerHTML=`
     <div class="space-y-4">
       <div class="alert alert-success">✅ Nomination found. Please review the details below before submitting your withdrawal.</div>
       <div class="glass rounded-xl p-5 text-sm space-y-2">
@@ -1068,7 +1068,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
 
       <div id="entryFormArea"></div>
     </div>
-  `;let O=e.querySelector(`#txtSerial`),k=e.querySelector(`#btnLoadBySerial`),A=()=>{let e=O.value.trim();if(!e)return;let t=E[e];if(!t){_(`Invalid Serial Number: ${e}`,`error`);return}let r=n[t.t].boothNumber;j(r,s(t.post),e)};k.addEventListener(`click`,A),O.addEventListener(`keypress`,e=>{e.key===`Enter`&&A()}),e.querySelector(`#btnLoadForm`).addEventListener(`click`,()=>{let t=e.querySelector(`#selTable`).value,n=e.querySelector(`#selPost`).value;if(!t||!n){_(`Select Table and Post`,`warning`);return}j(t,n,null)});let j=(n,r,o)=>{let s=e.querySelector(`#entryFormArea`),c=i.filter(e=>e.post===r);if(c.length===0){s.innerHTML=`<div class="alert alert-warning">No candidates found for ${h(r)}.</div>`;return}let l=a.filter(e=>String(e.TableNumber)===String(n)&&String(e.Post)===r),u=e=>l.find(t=>t.CandidateId===e)?.Votes||``;s.innerHTML=`
+  `;let O=e.querySelector(`#txtSerial`),k=e.querySelector(`#btnLoadBySerial`),A=async()=>{let e=O.value.trim();if(!e)return;let t=E[e];if(!t){_(`Invalid Serial Number: ${e}`,`error`);return}let r=n[t.t].boothNumber,i=s(t.post);try{g(k,!0,`Loading...`);let t=await C.getResults().catch(()=>[]);a.length=0,a.push(...t),M(r,i,e)}catch{_(`Error refreshing data`,`error`),M(r,i,e)}finally{g(k,!1,`Load Form`)}};k.addEventListener(`click`,A),O.addEventListener(`keypress`,e=>{e.key===`Enter`&&A()});let j=e.querySelector(`#btnLoadForm`);j.addEventListener(`click`,async()=>{let t=e.querySelector(`#selTable`).value,n=e.querySelector(`#selPost`).value;if(!t||!n){_(`Select Table and Post`,`warning`);return}try{g(j,!0,`...`);let e=await C.getResults().catch(()=>[]);a.length=0,a.push(...e),M(t,n,null)}catch{M(t,n,null)}finally{g(j,!1,`Load`)}});let M=(n,r,o)=>{let s=e.querySelector(`#entryFormArea`),c=i.filter(e=>e.post===r);if(c.length===0){s.innerHTML=`<div class="alert alert-warning">No candidates found for ${h(r)}.</div>`;return}let l=a.filter(e=>String(e.TableNumber)===String(n)&&String(e.Post)===r),u=e=>l.find(t=>t.CandidateId===e)?.Votes||``;s.innerHTML=`
       <div class="glass rounded-xl overflow-hidden page-enter">
         <div class="bg-indigo-500/10 p-4 border-b border-indigo-500/20 flex justify-between items-center">
           <div>
@@ -1298,4 +1298,4 @@ Are you absolutely sure?`))return;g(t,!0,`🗑️ Wiping...`);let i=n.querySelec
       and replace <code style="background:rgba(0,0,0,0.3);padding:0.1rem 0.4rem;border-radius:4px;">YOUR_SCRIPT_ID</code>
       with your Google Apps Script Web App URL, then rebuild &amp; push.
     </div>
-  `),document.getElementById(`app`).style.marginTop=`48px`);var $=e=>t=>{Q.innerHTML=``,e(Q,t)};o.on(`/`,$(v)).on(`/submit`,$(D)).on(`/find`,$(L)).on(`/valid-list`,$(ne)).on(`/final-list`,$(ae)).on(`/withdraw`,$(ce)).on(`/results`,$(De)).on(`/admin`,$(V)).on(`/admin/dashboard`,$(de)).on(`/admin/verify`,$(fe)).on(`/admin/withdrawals`,$(me)).on(`/admin/publish`,$(ge)).on(`/admin/posts`,$(_e)).on(`/admin/booths`,$(be)).on(`/admin/counting`,$(Se)).on(`/admin/results-entry`,$(we)).on(`/admin/testing`,$(Ee)).setDefault(`/`),document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-nav]`);t&&(e.preventDefault(),o.navigate(t.dataset.nav))}),o.start();
+  `),document.getElementById(`app`).style.marginTop=`48px`);var $=e=>t=>{Q.innerHTML=``,e(Q,t)};o.on(`/`,$(v)).on(`/submit`,$(D)).on(`/find`,$(L)).on(`/valid-list`,$(te)).on(`/final-list`,$(ie)).on(`/withdraw`,$(se)).on(`/results`,$(De)).on(`/admin`,$(V)).on(`/admin/dashboard`,$(de)).on(`/admin/verify`,$(fe)).on(`/admin/withdrawals`,$(me)).on(`/admin/publish`,$(ge)).on(`/admin/posts`,$(_e)).on(`/admin/booths`,$(be)).on(`/admin/counting`,$(Se)).on(`/admin/results-entry`,$(we)).on(`/admin/testing`,$(Ee)).setDefault(`/`),document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-nav]`);t&&(e.preventDefault(),o.navigate(t.dataset.nav))}),o.start();
