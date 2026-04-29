@@ -1453,330 +1453,147 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <span class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">🗳️</span>
             Print Ballots
           </h2>
-          <p class="text-slate-400 mt-1">Generate official ballots for General, Year Rep, and Association posts.</p>
+          <p class="text-slate-400 mt-1">Official ballots on A3 (General) and A5 (Others) paper sizes.</p>
         </div>
         <div class="flex gap-3">
-          <button id="btnPrintBallots" class="btn btn-primary px-8">
+          <button id="btnPrintBallots" class="btn btn-primary px-8 shadow-lg shadow-indigo-500/20">
             🖨️ Generate All Ballots
           </button>
         </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="glass p-6 rounded-2xl border border-white/10 space-y-4">
+        <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-indigo-500/50 transition-all">
           <div class="text-indigo-400 font-bold flex items-center gap-2">
-            <span>🏆</span> General Ballot
+            <span>🏆</span> General Ballot (A3)
           </div>
           <p class="text-xs text-slate-400 leading-relaxed">
-            Major union posts (Chairman, Secretary, etc.) in a 2-column professional layout. Chairman & Vice Chairman on top.
+            Main union posts in 2 columns. Designed for A3 paper. Chairman & Vice Chairman on top.
           </p>
           <button data-type="general" class="btn btn-secondary w-full py-2 text-xs preview-btn">Preview General</button>
         </div>
 
-        <div class="glass p-6 rounded-2xl border border-white/10 space-y-4">
+        <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-emerald-500/50 transition-all">
           <div class="text-emerald-400 font-bold flex items-center gap-2">
-            <span>📅</span> Year Rep Ballots
+            <span>📅</span> Year Rep Ballots (A5)
           </div>
           <p class="text-xs text-slate-400 leading-relaxed">
-            Separate ballots for 1st, 2nd, and 3rd year representatives. Each year on a new page.
+            Individual ballots for each year. Designed for A5 paper (one post per page).
           </p>
           <button data-type="year" class="btn btn-secondary w-full py-2 text-xs preview-btn">Preview Year Reps</button>
         </div>
 
-        <div class="glass p-6 rounded-2xl border border-white/10 space-y-4">
+        <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-amber-500/50 transition-all">
           <div class="text-amber-400 font-bold flex items-center gap-2">
-            <span>🤝</span> Association Ballots
+            <span>🤝</span> Association Ballots (A5)
           </div>
           <p class="text-xs text-slate-400 leading-relaxed">
-            Departmental Association Secretary ballots. Each department on a dedicated page.
+            Individual ballots for Department Association Secretaries. Designed for A5 paper.
           </p>
           <button data-type="assoc" class="btn btn-secondary w-full py-2 text-xs preview-btn">Preview Associations</button>
         </div>
       </div>
-
-      <div id="ballotPreviewArea" class="hidden glass p-8 rounded-3xl border border-white/20 bg-white/5 overflow-auto max-h-[600px]">
-        <!-- Preview will be rendered here -->
-      </div>
     </div>
-
-    <style>
-      @media print {
-        body * { visibility: hidden; }
-        #printSection, #printSection * { visibility: visible; }
-        #printSection { position: absolute; left: 0; top: 0; width: 100%; }
-        .page-break { page-break-after: always; }
-        .no-print { display: none !important; }
-      }
-      
-      .ballot-container {
-        background: white;
-        color: black;
-        padding: 40px;
-        font-family: "Times New Roman", Times, serif;
-        width: 210mm; /* A4 width */
-        margin: 0 auto;
-        box-shadow: 0 0 20px rgba(0,0,0,0.5);
-      }
-      
-      .ballot-header {
-        text-align: center;
-        border-bottom: 3px double #000;
-        margin-bottom: 30px;
-        padding-bottom: 10px;
-      }
-      
-      .ballot-header h1 { font-size: 24px; margin: 0; text-transform: uppercase; }
-      .ballot-header h2 { font-size: 18px; margin: 5px 0 0 0; }
-      
-      .ballot-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-      }
-      
-      .post-box {
-        border: 2px solid #000;
-        padding: 10px;
-        display: flex;
-        flex-direction: column;
-      }
-      
-      .post-box.full-width {
-        grid-column: span 2;
-      }
-      
-      .post-title {
-        background: #000;
-        color: #fff;
-        text-align: center;
-        padding: 5px;
-        font-weight: bold;
-        font-size: 14px;
-        margin-bottom: 10px;
-        text-transform: uppercase;
-      }
-      
-      .candidate-row {
-        display: flex;
-        align-items: center;
-        border: 1px solid #000;
-        margin-bottom: 5px;
-        height: 50px;
-      }
-      
-      .sl-no {
-        width: 30px;
-        text-align: center;
-        border-right: 1px solid #000;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-      }
-      
-      .c-name {
-        flex-grow: 1;
-        padding: 0 10px;
-        font-size: 14px;
-        font-weight: bold;
-      }
-      
-      .stamp-box {
-        width: 60px;
-        height: 100%;
-        border-left: 1px solid #000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-      }
-      
-      .stamp-box::after {
-        content: "";
-        width: 30px;
-        height: 30px;
-        border: 1px dashed #ccc;
-        border-radius: 4px;
-      }
-      
-      .ballot-footer {
-        margin-top: 40px;
-        display: flex;
-        justify-content: space-between;
-        font-size: 12px;
-        font-style: italic;
-      }
-    </style>
-  `,n.querySelector(`#ballotPreviewArea`);let r=async(e=`all`)=>{let n,r;try{[n,r]=await Promise.all([C.adminGetPosts(t),C.getFinalNominations()])}catch(e){throw e.message.includes(`not published`)?Error(`Final List Not Published. Please finalize and publish the list before printing ballots.`):e}let i=r.active||[];if(i.length===0)throw Error(`No active candidates found in the Final List. Please ensure candidates are verified and the list is published.`);let a=e=>e.post.toLowerCase().includes(`year`),o=e=>e.post.toLowerCase().includes(`assoc`)||e.post.toLowerCase().includes(`association`),s=e=>!a(e)&&!o(e),c=`<div id="printSection">`;if(e===`all`||e===`general`){let e=n.filter(s);e.length>0&&(c+=`
-          <div class="ballot-container page-break">
-            <div class="ballot-header">
-              <h1 style="font-size: 18px;">COLLEGE UNION ELECTION ${new Date().getFullYear()}</h1>
-              <h1 style="font-size: 16px;">GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
-              <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER</h2>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; font-size: 14px;">
-              <div>SL.NO. ____________</div>
-              <div>Signature of PRO</div>
-            </div>
-
-            <div style="text-align: center; border: 1px solid #000; padding: 5px; margin-bottom: 20px; font-weight: bold; font-size: 13px; text-transform: uppercase;">
-              MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED
-            </div>
-
-            <div class="ballot-grid">
-        `,[...e].sort((e,t)=>{let n=e.post.toLowerCase(),r=t.post.toLowerCase();return n.includes(`chairman`)&&!n.includes(`vice`)?-1:r.includes(`chairman`)&&!r.includes(`vice`)?1:n.includes(`vice chairman`)?-1:+!!r.includes(`vice chairman`)}).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(c+=`
-            <div class="post-box">
-              <div class="post-title" style="background: #ccc; color: #000; border-bottom: 1px solid #000;">${h(e.post.toUpperCase())}</div>
-              ${t.map((e,t)=>`
-                <div class="candidate-row">
-                  <div class="sl-no">${t+1}</div>
-                  <div class="c-name">
-                    <div style="font-size: 12px; text-transform: uppercase;">${h(e.candidateName)}</div>
-                    <div style="font-size: 10px; font-weight: normal; color: #444;">${h(e.candidateClass)}</div>
-                  </div>
-                  <div class="stamp-box"></div>
-                </div>
-              `).join(``)}
-              <!-- NOTA Entry -->
-              <div class="candidate-row">
-                <div class="sl-no">${t.length+1}</div>
-                <div class="c-name">
-                  <div style="font-size: 12px; text-transform: uppercase;">NOTA</div>
-                </div>
-                <div class="stamp-box"></div>
-              </div>
-            </div>
-          `)}),c+=`
-            </div>
-          </div>
-        `)}return(e===`all`||e===`year`)&&n.filter(a).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(c+=`
-          <div class="ballot-container page-break">
-            <div class="ballot-header">
-              <h1 style="font-size: 18px;">COLLEGE UNION ELECTION ${new Date().getFullYear()}</h1>
-              <h1 style="font-size: 16px;">GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
-              <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER</h2>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; font-size: 14px;">
-              <div>SL.NO. ____________</div>
-              <div>Signature of PRO</div>
-            </div>
-
-            <div style="text-align: center; border: 1px solid #000; padding: 5px; margin-bottom: 20px; font-weight: bold; font-size: 13px; text-transform: uppercase;">
-              MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED
-            </div>
-
-            <div style="max-width: 500px; margin: 0 auto; border: 2px solid #000;">
-              <div class="post-title" style="background: #ccc; color: #000; border-bottom: 1px solid #000; text-align: center; padding: 5px; font-weight: bold;">${h(e.post.toUpperCase())}</div>
-              ${t.map((e,t)=>`
-                <div class="candidate-row">
-                  <div class="sl-no">${t+1}</div>
-                  <div class="c-name">
-                    <div style="font-size: 12px; text-transform: uppercase;">${h(e.candidateName)}</div>
-                    <div style="font-size: 10px; font-weight: normal; color: #444;">${h(e.candidateClass)}</div>
-                  </div>
-                  <div class="stamp-box"></div>
-                </div>
-              `).join(``)}
-              <div class="candidate-row">
-                <div class="sl-no">${t.length+1}</div>
-                <div class="c-name">
-                  <div style="font-size: 12px; text-transform: uppercase;">NOTA</div>
-                </div>
-                <div class="stamp-box"></div>
-              </div>
-            </div>
-          </div>
-        `)}),(e===`all`||e===`assoc`)&&n.filter(o).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(c+=`
-          <div class="ballot-container page-break">
-            <div class="ballot-header">
-              <h1 style="font-size: 18px;">COLLEGE UNION ELECTION ${new Date().getFullYear()}</h1>
-              <h1 style="font-size: 16px;">GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
-              <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER</h2>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; font-size: 14px;">
-              <div>SL.NO. ____________</div>
-              <div>Signature of PRO</div>
-            </div>
-
-            <div style="text-align: center; border: 1px solid #000; padding: 5px; margin-bottom: 20px; font-weight: bold; font-size: 13px; text-transform: uppercase;">
-              MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED
-            </div>
-
-            <div style="max-width: 500px; margin: 0 auto; border: 2px solid #000;">
-              <div class="post-title" style="background: #ccc; color: #000; border-bottom: 1px solid #000; text-align: center; padding: 5px; font-weight: bold;">${h(e.post.toUpperCase())}</div>
-              ${t.map((e,t)=>`
-                <div class="candidate-row">
-                  <div class="sl-no">${t+1}</div>
-                  <div class="c-name">
-                    <div style="font-size: 12px; text-transform: uppercase;">${h(e.candidateName)}</div>
-                    <div style="font-size: 10px; font-weight: normal; color: #444;">${h(e.candidateClass)}</div>
-                  </div>
-                  <div class="stamp-box"></div>
-                </div>
-              `).join(``)}
-              <div class="candidate-row">
-                <div class="sl-no">${t.length+1}</div>
-                <div class="c-name">
-                  <div style="font-size: 12px; text-transform: uppercase;">NOTA</div>
-                </div>
-                <div class="stamp-box"></div>
-              </div>
-            </div>
-          </div>
-        `)}),c+=`</div>`,c},i=e=>{let t=window.open(``,`_blank`);t.document.write(`
+  `;let r=e=>{let t=window.open(``,`_blank`);t.document.write(`
       <html>
         <head>
-          <title>Print Ballots - GVC Election</title>
+          <title>Official Ballots - GVC Election</title>
           <style>
             @media print {
               .no-print { display: none !important; }
               .page-break { page-break-after: always; }
+              body { background: white !important; }
+              .ballot-container { margin: 0 !important; box-shadow: none !important; }
             }
             body { margin: 0; padding: 0; background: #eee; }
+            
             .ballot-container {
               background: white;
               color: black;
-              padding: 40px;
               font-family: "Times New Roman", Times, serif;
-              width: 210mm;
-              min-height: 297mm;
               margin: 20px auto;
               box-shadow: 0 0 10px rgba(0,0,0,0.2);
               box-sizing: border-box;
+              overflow: hidden;
             }
-            @media print {
-              body { background: white; }
-              .ballot-container { margin: 0; box-shadow: none; width: 100%; }
-            }
-            .ballot-header { text-align: center; border-bottom: 3px double #000; margin-bottom: 30px; padding-bottom: 10px; }
-            .ballot-header h1 { font-size: 18px; margin: 0; text-transform: uppercase; }
-            .ballot-header h2 { font-size: 15px; margin: 5px 0 0 0; }
-            .ballot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-            .post-box { border: 2px solid #000; padding: 0; display: flex; flex-direction: column; margin-bottom: 10px; break-inside: avoid; }
-            .post-title { background: #ccc; color: #000; text-align: center; padding: 5px; font-weight: bold; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #000; }
-            .candidate-row { display: flex; align-items: center; border-bottom: 1px solid #000; height: 50px; }
+
+            .a3 { width: 297mm; min-height: 420mm; padding: 50px; }
+            .a5 { width: 148mm; min-height: 210mm; padding: 25px; }
+
+            .ballot-header { text-align: center; border-bottom: 3px double #000; margin-bottom: 25px; padding-bottom: 10px; }
+            .ballot-header h1 { font-size: 22px; margin: 0; text-transform: uppercase; }
+            .ballot-header h2 { font-size: 18px; margin: 5px 0 0 0; }
+            
+            .a3 .ballot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+            .a5 .ballot-grid { display: block; }
+
+            .post-box { border: 2px solid #000; padding: 0; display: flex; flex-direction: column; margin-bottom: 15px; break-inside: avoid; }
+            .post-title { background: #ccc; color: #000; text-align: center; padding: 8px; font-weight: bold; font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #000; }
+            
+            .candidate-row { display: flex; align-items: center; border-bottom: 1px solid #000; height: 55px; }
             .candidate-row:last-child { border-bottom: none; }
-            .sl-no { width: 30px; text-align: center; border-right: 1px solid #000; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-            .c-name { flex-grow: 1; padding: 0 10px; font-weight: bold; display: flex; flex-direction: column; justify-content: center; }
-            .stamp-box { width: 60px; height: 100%; border-left: 1px solid #000; display: flex; align-items: center; justify-content: center; position: relative; }
-            .stamp-box::after { content: ""; width: 30px; height: 30px; border: 1px dashed #ccc; border-radius: 4px; }
+            
+            .sl-no { width: 40px; text-align: center; border-right: 1px solid #000; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; }
+            .c-name { flex-grow: 1; padding: 0 15px; font-weight: bold; display: flex; flex-direction: column; justify-content: center; }
+            .stamp-box { width: 75px; height: 100%; border-left: 1px solid #000; display: flex; align-items: center; justify-content: center; position: relative; }
+            .stamp-box::after { content: ""; width: 35px; height: 35px; border: 1px dashed #ccc; border-radius: 4px; }
+            
+            .instr-box { text-align: center; border: 1px solid #000; padding: 8px; margin-bottom: 25px; font-weight: bold; font-size: 13px; text-transform: uppercase; }
+            .meta-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; font-size: 14px; }
           </style>
         </head>
         <body>
           ${e}
-          <script>
-            // Wait for images if any, then print
-            window.onload = () => {
-              // window.print(); 
-            };
-          <\/script>
         </body>
       </html>
-    `),t.document.close()},a=async e=>{try{_(`Generating ballots...`,`info`),i(await r(e))}catch(e){_(e.message,`error`)}};n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)}),n.querySelector(`#btnPrintBallots`).onclick=async e=>{try{g(e.target,!0,`Generating...`),i(await r(`all`)),g(e.target,!1,`🖨️ Generate All Ballots`)}catch(t){_(t.message,`error`),g(e.target,!1,`🖨️ Generate All Ballots`)}}}function Fe(e){let t=L();if(!t)return;R(e,`testing`,`
+    `),t.document.close()},i=async(e=`all`)=>{let n,r;try{[n,r]=await Promise.all([C.adminGetPosts(t),C.getFinalNominations()])}catch(e){throw Error(e.message.includes(`not published`)?`Final List Not Published. Please finalize and publish the list first.`:e.message)}let i=r.active||[];if(i.length===0)throw Error(`No active candidates found.`);let a=e=>e.post.toLowerCase().includes(`year`),o=e=>e.post.toLowerCase().includes(`assoc`)||e.post.toLowerCase().includes(`association`),s=e=>!a(e)&&!o(e),c=``;if(e===`all`||e===`general`){let e=n.filter(s);e.length>0&&(c+=`
+          <div class="ballot-container a3 page-break">
+            <div class="ballot-header">
+              <h1>COLLEGE UNION ELECTION ${new Date().getFullYear()}</h1>
+              <h1>GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
+              <h2>OFFICIAL BALLOT PAPER (GENERAL)</h2>
+            </div>
+            <div class="meta-row"><div>SL.NO. ____________</div><div>Signature of PRO</div></div>
+            <div class="instr-box">MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED</div>
+            <div class="ballot-grid">
+        `,[...e].sort((e,t)=>{let n=e.post.toLowerCase(),r=t.post.toLowerCase();return n.includes(`chairman`)&&!n.includes(`vice`)?-1:r.includes(`chairman`)&&!r.includes(`vice`)?1:n.includes(`vice chairman`)?-1:+!!r.includes(`vice chairman`)}).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(c+=`
+            <div class="post-box">
+              <div class="post-title">${h(e.post.toUpperCase())}</div>
+              ${t.map((e,t)=>`
+                <div class="candidate-row">
+                  <div class="sl-no">${t+1}</div>
+                  <div class="c-name">
+                    <div style="font-size: 13px; text-transform: uppercase;">${h(e.candidateName)}</div>
+                    <div style="font-size: 10px; font-weight: normal; color: #444;">${h(e.candidateClass)}</div>
+                  </div>
+                  <div class="stamp-box"></div>
+                </div>
+              `).join(``)}
+              <div class="candidate-row"><div class="sl-no">${t.length+1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
+            </div>
+          `)}),c+=`</div></div>`)}let l=n.filter(e=>a(e)||o(e));return(e===`all`||e===`year`||e===`assoc`)&&l.filter(t=>e===`all`||e===`year`&&a(t)||e===`assoc`&&o(t)).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(c+=`
+          <div class="ballot-container a5 page-break">
+            <div class="ballot-header">
+              <h1>GVC ELECTION ${new Date().getFullYear()}</h1>
+              <h2>${a(e)?`YEAR REP`:`ASSOCIATION`} BALLOT</h2>
+            </div>
+            <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ______</div><div>PRO Sign</div></div>
+            <div class="post-box">
+              <div class="post-title">${h(e.post.toUpperCase())}</div>
+              ${t.map((e,t)=>`
+                <div class="candidate-row">
+                  <div class="sl-no">${t+1}</div>
+                  <div class="c-name">
+                    <div style="font-size: 13px; text-transform: uppercase;">${h(e.candidateName)}</div>
+                    <div style="font-size: 10px; font-weight: normal; color: #444;">${h(e.candidateClass)}</div>
+                  </div>
+                  <div class="stamp-box"></div>
+                </div>
+              `).join(``)}
+              <div class="candidate-row"><div class="sl-no">${t.length+1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
+            </div>
+          </div>
+        `)}),c},a=async e=>{try{_(`Generating ballots...`,`info`),r(await i(e))}catch(e){_(e.message,`error`)}};n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)}),n.querySelector(`#btnPrintBallots`).onclick=async e=>{try{g(e.target,!0,`Generating...`),r(await i(`all`)),g(e.target,!1,`🖨️ Generate All Ballots`)}catch(t){_(t.message,`error`),g(e.target,!1,`🖨️ Generate All Ballots`)}}}function Fe(e){let t=L();if(!t)return;R(e,`testing`,`
     <div class="page-enter space-y-8 max-w-3xl mx-auto">
 
       <!-- Warning Banner -->
