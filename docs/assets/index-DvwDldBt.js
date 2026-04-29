@@ -127,7 +127,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <div class="mt-6 flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition">
       Continue <span>→</span>
     </div>
-  </div>`}var b=n.APPS_SCRIPT_URL;async function x(e){let t=new URL(b);Object.entries(e).forEach(([e,n])=>t.searchParams.append(e,n));let n=await fetch(t.toString());if(!n.ok)throw Error(`Network error: ${n.status}`);let r=await n.json();if(r.error)throw Error(r.error);return r}async function S(e){let t=await fetch(b,{method:`POST`,headers:{"Content-Type":`text/plain;charset=utf-8`},body:JSON.stringify(e)});if(!t.ok)throw Error(`Network error: ${t.status}`);let n=await t.json();if(n.error)throw Error(n.error);return n}var C={getNominalRoll:()=>x({action:`getNominalRoll`}),getPosts:()=>x({action:`getPosts`}),getNomination:e=>x({action:`getNomination`,id:e}),getValidNominations:()=>x({action:`getValidNominations`}),getFinalNominations:()=>x({action:`getFinalNominations`}),submitNomination:e=>S({action:`submitNomination`,...e}),submitWithdrawal:e=>S({action:`submitWithdrawal`,id:e}),adminLogin:e=>S({action:`adminLogin`,password:e}),adminGetNominations:e=>x({action:`adminGetNominations`,password:e}),adminVerifyNomination:(e,t,n)=>S({action:`adminVerifyNomination`,password:e,id:t,status:n}),adminApproveWithdrawal:(e,t)=>S({action:`adminApproveWithdrawal`,password:e,id:t}),adminPublishValidList:e=>S({action:`adminPublishValidList`,password:e}),adminPublishFinalList:e=>S({action:`adminPublishFinalList`,password:e}),adminGetSettings:e=>x({action:`adminGetSettings`,password:e}),adminGetPosts:e=>x({action:`adminGetPosts`,password:e}),adminAddPost:(e,t)=>S({action:`adminAddPost`,password:e,...t}),adminUpdatePost:(e,t)=>S({action:`adminUpdatePost`,password:e,...t}),adminDeletePost:(e,t)=>S({action:`adminDeletePost`,password:e,postName:t}),adminReorderPosts:(e,t)=>S({action:`adminReorderPosts`,password:e,posts:t}),adminGetBooths:e=>x({action:`adminGetBooths`,password:e}),adminSaveBooths:(e,t)=>S({action:`adminSaveBooths`,password:e,booths:t}),adminGetLocations:e=>x({action:`adminGetLocations`,password:e}),adminSaveLocations:(e,t)=>S({action:`adminSaveLocations`,password:e,locations:t}),getResults:()=>x({action:`getResults`}),adminSaveResults:(e,t)=>S({action:`adminSaveResults`,password:e,results:t})},w=[],T=[],E=``;async function D(e){e.innerHTML=te(`Submit Nomination`,`
+  </div>`}var b=n.APPS_SCRIPT_URL;async function x(e){let t=new URL(b);Object.entries(e).forEach(([e,n])=>t.searchParams.append(e,n));let n=await fetch(t.toString());if(!n.ok)throw Error(`Network error: ${n.status}`);let r=await n.json();if(r.error)throw Error(r.error);return r}async function S(e){let t=await fetch(b,{method:`POST`,headers:{"Content-Type":`text/plain;charset=utf-8`},body:JSON.stringify(e)});if(!t.ok)throw Error(`Network error: ${t.status}`);let n=await t.json();if(n.error)throw Error(n.error);return n}var C={getNominalRoll:()=>x({action:`getNominalRoll`}),getPosts:()=>x({action:`getPosts`}),getNomination:e=>x({action:`getNomination`,id:e}),getValidNominations:()=>x({action:`getValidNominations`}),getFinalNominations:()=>x({action:`getFinalNominations`}),submitNomination:e=>S({action:`submitNomination`,...e}),submitWithdrawal:e=>S({action:`submitWithdrawal`,id:e}),adminLogin:e=>S({action:`adminLogin`,password:e}),adminGetNominations:e=>x({action:`adminGetNominations`,password:e}),adminVerifyNomination:(e,t,n)=>S({action:`adminVerifyNomination`,password:e,id:t,status:n}),adminApproveWithdrawal:(e,t)=>S({action:`adminApproveWithdrawal`,password:e,id:t}),adminPublishValidList:e=>S({action:`adminPublishValidList`,password:e}),adminPublishFinalList:e=>S({action:`adminPublishFinalList`,password:e}),adminGetSettings:e=>x({action:`adminGetSettings`,password:e}),adminGetPosts:e=>x({action:`adminGetPosts`,password:e}),adminAddPost:(e,t)=>S({action:`adminAddPost`,password:e,...t}),adminUpdatePost:(e,t)=>S({action:`adminUpdatePost`,password:e,...t}),adminDeletePost:(e,t)=>S({action:`adminDeletePost`,password:e,postName:t}),adminReorderPosts:(e,t)=>S({action:`adminReorderPosts`,password:e,posts:t}),adminGetBooths:e=>x({action:`adminGetBooths`,password:e}),adminSaveBooths:(e,t)=>S({action:`adminSaveBooths`,password:e,booths:t}),adminGetLocations:e=>x({action:`adminGetLocations`,password:e}),adminSaveLocations:(e,t)=>S({action:`adminSaveLocations`,password:e,locations:t}),getResults:()=>x({action:`getResults`}),adminSaveResults:(e,t)=>S({action:`adminSaveResults`,password:e,results:t}),adminInjectTestData:e=>S({action:`adminInjectTestData`,password:e}),adminWipeData:e=>S({action:`adminWipeData`,password:e})},w=[],T=[],E=``;async function D(e){e.innerHTML=te(`Submit Nomination`,`
     <div id="loadingState" class="flex flex-col items-center justify-center py-24 gap-4">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 text-sm">Loading data...</p>
@@ -535,6 +535,8 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         ${W(`results-entry`,`📥`,`Results Entry`,t)}
         <div class="border-t border-white/10 my-2"></div>
         ${W(`public`,`🌐`,`Public Portal`,t)}
+        <div class="border-t border-white/10 my-2"></div>
+        ${W(`testing`,`🧪`,`Testing Tools`,t)}
       </nav>
       <div class="p-3 border-t border-white/10">
         <button id="logoutBtn" class="sidebar-item text-red-400 hover:text-red-300 hover:bg-red-500/10">
@@ -1151,7 +1153,102 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <button id="btnSaveVotes" class="btn btn-success px-8">💾 Save Votes</button>
         </div>
       </div>
-    `,o.querySelector(`#btnSaveVotes`).addEventListener(`click`,async i=>{let s=i.target,c=o.querySelectorAll(`.vote-input`),l=[];if(c.forEach(e=>{let t=e.value.trim();t!==``&&l.push({TableNumber:n,Post:r,CandidateId:e.dataset.cid,CandidateName:e.dataset.cname,Votes:parseInt(t,10)})}),l.length===0){_(`No votes entered. Please enter at least one value.`,`warning`);return}g(s,!0,`💾 Saving...`);try{await C.adminSaveResults(t,l),l.forEach(e=>{let t=a.findIndex(t=>String(t.TableNumber)===String(n)&&String(t.Post)===r&&t.CandidateId===e.CandidateId);t>=0?a[t].Votes=e.Votes:a.push(e)}),_(`Results saved successfully!`,`success`),o.innerHTML=``,e.querySelector(`#selTable`).value=``,e.querySelector(`#selPost`).value=``}catch(e){_(`Failed: ${e.message}`,`error`)}finally{g(s,!1,`💾 Save Votes`)}})}}async function De(e){e.innerHTML=`
+    `,o.querySelector(`#btnSaveVotes`).addEventListener(`click`,async i=>{let s=i.target,c=o.querySelectorAll(`.vote-input`),l=[];if(c.forEach(e=>{let t=e.value.trim();t!==``&&l.push({TableNumber:n,Post:r,CandidateId:e.dataset.cid,CandidateName:e.dataset.cname,Votes:parseInt(t,10)})}),l.length===0){_(`No votes entered. Please enter at least one value.`,`warning`);return}g(s,!0,`💾 Saving...`);try{await C.adminSaveResults(t,l),l.forEach(e=>{let t=a.findIndex(t=>String(t.TableNumber)===String(n)&&String(t.Post)===r&&t.CandidateId===e.CandidateId);t>=0?a[t].Votes=e.Votes:a.push(e)}),_(`Results saved successfully!`,`success`),o.innerHTML=``,e.querySelector(`#selTable`).value=``,e.querySelector(`#selPost`).value=``}catch(e){_(`Failed: ${e.message}`,`error`)}finally{g(s,!1,`💾 Save Votes`)}})}}function De(e){let t=H();if(!t)return;U(e,`testing`,`
+    <div class="page-enter space-y-8 max-w-3xl mx-auto">
+
+      <!-- Warning Banner -->
+      <div class="rounded-xl border border-amber-500/40 bg-amber-500/10 p-5 flex items-start gap-4">
+        <div class="text-3xl">⚠️</div>
+        <div>
+          <h4 class="font-bold text-amber-400 text-lg">Testing Environment Tools</h4>
+          <p class="text-amber-200/70 text-sm mt-1">
+            These tools are for <strong>testing and debugging only</strong>. 
+            Do not inject test data during or after the actual election process begins.
+            Wiping data is <strong>irreversible</strong> — always confirm before acting.
+          </p>
+        </div>
+      </div>
+
+      <!-- Inject Test Data -->
+      <div class="glass rounded-2xl overflow-hidden border border-indigo-500/20">
+        <div class="bg-indigo-500/10 p-5 border-b border-indigo-500/20 flex items-center gap-3">
+          <div class="text-2xl">🧪</div>
+          <div>
+            <h4 class="font-bold text-white text-lg">Inject Test Data</h4>
+            <p class="text-slate-400 text-sm">Creates 2 synthetic, pre-approved candidates for every configured post using real students from the Nominal Roll.</p>
+          </div>
+        </div>
+        <div class="p-6 space-y-4">
+          <ul class="text-sm text-slate-400 space-y-1 list-disc list-inside">
+            <li>Reads all posts from the <strong class="text-white">Posts</strong> sheet.</li>
+            <li>Picks real students from <strong class="text-white">NominalRoll</strong> as candidates, proposers, and seconders.</li>
+            <li>Sets status to <strong class="text-green-400">Valid</strong> and populates <strong class="text-white">Nominations, ValidList, and FinalList</strong>.</li>
+            <li>IDs are prefixed with <code class="text-indigo-300 bg-black/30 px-1 rounded">TEST</code> for easy identification.</li>
+          </ul>
+          <div class="pt-2">
+            <button id="btnInjectData" class="btn btn-primary gap-2">
+              🧪 Inject Test Nominations
+            </button>
+          </div>
+          <div id="injectStatus"></div>
+        </div>
+      </div>
+
+      <!-- Wipe All Data -->
+      <div class="glass rounded-2xl overflow-hidden border border-red-500/30">
+        <div class="bg-red-500/10 p-5 border-b border-red-500/30 flex items-center gap-3">
+          <div class="text-2xl">🗑️</div>
+          <div>
+            <h4 class="font-bold text-red-400 text-lg">Wipe All Transactional Data</h4>
+            <p class="text-slate-400 text-sm">Permanently deletes all nominations, results, and resets the publish flags. Leaves NominalRoll, Posts, and Booth configuration intact.</p>
+          </div>
+        </div>
+        <div class="p-6 space-y-4">
+          <div class="rounded-lg bg-red-900/20 border border-red-800/40 p-4 text-sm text-red-300 space-y-1">
+            <p>🗑️ <strong>Nominations</strong> sheet — will be cleared</p>
+            <p>🗑️ <strong>ValidList</strong> sheet — will be cleared</p>
+            <p>🗑️ <strong>FinalList</strong> sheet — will be cleared</p>
+            <p>🗑️ <strong>Results</strong> sheet — will be cleared</p>
+            <p>🔄 <strong>Publish flags</strong> — will be reset to false</p>
+            <p class="text-green-400 mt-2">✅ NominalRoll, Posts, Booths, Settings (locations) — <strong>preserved</strong></p>
+          </div>
+          
+          <!-- Password confirmation -->
+          <div class="space-y-2 pt-2">
+            <label class="block text-sm text-slate-300 font-medium">Confirm Admin Password</label>
+            <input type="password" id="wipePasswordInput" class="field max-w-xs" placeholder="Enter today's admin password to confirm...">
+          </div>
+          
+          <div>
+            <button id="btnWipeData" class="btn bg-red-600 hover:bg-red-500 text-white border-none gap-2 px-6">
+              🗑️ Permanently Wipe All Data
+            </button>
+          </div>
+          <div id="wipeStatus"></div>
+        </div>
+      </div>
+
+    </div>
+  `);let n=e.querySelector(`#adminMain`);n.querySelector(`#btnInjectData`).addEventListener(`click`,async e=>{let r=e.target;if(!confirm(`This will inject test nominations for ALL configured posts.
+
+Proceed?`))return;g(r,!0,`🧪 Inject Test Nominations`);let i=n.querySelector(`#injectStatus`);i.innerHTML=``;try{let e=await C.adminInjectTestData(t);i.innerHTML=`
+        <div class="alert mt-3" style="background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #6ee7b7;">
+          ✅ Successfully injected <strong>${e.injected}</strong> test nominations across all posts.
+          They are pre-approved and appear in Valid/Final lists.
+        </div>`,_(`Injected ${e.injected} test nominations!`,`success`)}catch(e){i.innerHTML=`<div class="alert alert-error mt-3">❌ ${h(e.message)}</div>`,_(`Failed: ${e.message}`,`error`)}finally{g(r,!1,`🧪 Inject Test Nominations`)}}),n.querySelector(`#btnWipeData`).addEventListener(`click`,async e=>{let t=e.target,r=n.querySelector(`#wipePasswordInput`).value.trim();if(!r){_(`Please enter the admin password to confirm the wipe.`,`warning`),n.querySelector(`#wipePasswordInput`).focus();return}if(!confirm(`⚠️ DANGER ZONE ⚠️
+
+This will PERMANENTLY DELETE:
+• All Nominations
+• ValidList
+• FinalList
+• Results
+
+This action CANNOT be undone.
+
+Are you absolutely sure?`))return;g(t,!0,`🗑️ Wiping...`);let i=n.querySelector(`#wipeStatus`);i.innerHTML=``;try{await C.adminWipeData(r),n.querySelector(`#wipePasswordInput`).value=``,i.innerHTML=`
+        <div class="alert mt-3" style="background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #fca5a5;">
+          ✅ All transactional data has been wiped. Publish flags reset to false.
+        </div>`,_(`All data wiped successfully.`,`success`)}catch(e){i.innerHTML=`<div class="alert alert-error mt-3">❌ ${h(e.message)}</div>`,_(`Failed: ${e.message}`,`error`)}finally{g(t,!1,`🗑️ Permanently Wipe All Data`)}})}async function Oe(e){e.innerHTML=`
     <div class="page-enter min-h-screen">
       <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
         <div class="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
@@ -1236,4 +1333,4 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       and replace <code style="background:rgba(0,0,0,0.3);padding:0.1rem 0.4rem;border-radius:4px;">YOUR_SCRIPT_ID</code>
       with your Google Apps Script Web App URL, then rebuild &amp; push.
     </div>
-  `),document.getElementById(`app`).style.marginTop=`48px`);var $=e=>t=>{Q.innerHTML=``,e(Q,t)};o.on(`/`,$(v)).on(`/submit`,$(D)).on(`/find`,$(ne)).on(`/valid-list`,$(ae)).on(`/final-list`,$(ce)).on(`/withdraw`,$(L)).on(`/results`,$(De)).on(`/admin`,$(V)).on(`/admin/dashboard`,$(de)).on(`/admin/verify`,$(fe)).on(`/admin/withdrawals`,$(me)).on(`/admin/publish`,$(ge)).on(`/admin/posts`,$(_e)).on(`/admin/booths`,$(be)).on(`/admin/counting`,$(Se)).on(`/admin/results-entry`,$(Te)).setDefault(`/`),document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-nav]`);t&&(e.preventDefault(),o.navigate(t.dataset.nav))}),o.start();
+  `),document.getElementById(`app`).style.marginTop=`48px`);var $=e=>t=>{Q.innerHTML=``,e(Q,t)};o.on(`/`,$(v)).on(`/submit`,$(D)).on(`/find`,$(ne)).on(`/valid-list`,$(ae)).on(`/final-list`,$(ce)).on(`/withdraw`,$(L)).on(`/results`,$(Oe)).on(`/admin`,$(V)).on(`/admin/dashboard`,$(de)).on(`/admin/verify`,$(fe)).on(`/admin/withdrawals`,$(me)).on(`/admin/publish`,$(ge)).on(`/admin/posts`,$(_e)).on(`/admin/booths`,$(be)).on(`/admin/counting`,$(Se)).on(`/admin/results-entry`,$(Te)).on(`/admin/testing`,$(De)).setDefault(`/`),document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-nav]`);t&&(e.preventDefault(),o.navigate(t.dataset.nav))}),o.start();

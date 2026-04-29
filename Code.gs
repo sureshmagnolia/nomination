@@ -512,6 +512,98 @@ function doPost(e) {
       return jsonOut({ ok: true });
     }
 
+    if (action === 'adminInjectTestData') {
+      checkAdmin(body.password);
+      
+      const nomSheet   = getSheet(SHEET_NOMS);
+      const validSheet = getSheet(SHEET_VALID);
+      const finalSheet = getSheet(SHEET_FINAL);
+      const students   = getNominalRollData();
+      const posts      = getPostsData();
+      
+      if (students.length < 9) return errOut('Not enough students in NominalRoll to generate test data.');
+      if (posts.length === 0) return errOut('No posts configured. Add posts first.');
+
+      // Helper to get unique student by index cycling
+      const getStudent = (idx) => students[idx % students.length];
+      
+      // Helper to generate a unique test ID
+      function makeTestId() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let id;
+        do {
+          id = 'TEST' + Array.from({length: 6}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        } while (getAllNominations().some(n => n.id === id));
+        return id;
+      }
+
+      const injected = [];
+      let studentOffset = 0;
+      const now = new Date().toISOString();
+
+      posts.forEach((p) => {
+        // 2 candidates per post
+        for (let c = 0; c < 2; c++) {
+          const candidate = getStudent(studentOffset++);
+          const proposer  = getStudent(studentOffset++);
+          const seconder  = getStudent(studentOffset++);
+          const id = makeTestId();
+          
+          const row = [
+            id,
+            p.post || p.name,
+            candidate['Gender'] || 'Male',
+            candidate['DOB'] || '2000-01-01',
+            now,
+            candidate['Nominal Roll Serial Number'] || String(studentOffset),
+            candidate['NAME'] || 'Test Candidate ' + c,
+            candidate['CLASS'] || '1st Year',
+            candidate['ADMISION NO'] || 'ADM' + studentOffset,
+            candidate['Dept'] || 'Test Dept',
+            proposer['Nominal Roll Serial Number'] || String(studentOffset+1),
+            proposer['NAME'] || 'Test Proposer',
+            proposer['CLASS'] || '1st Year',
+            proposer['ADMISION NO'] || 'ADM' + (studentOffset+1),
+            proposer['Dept'] || 'Test Dept',
+            seconder['Nominal Roll Serial Number'] || String(studentOffset+2),
+            seconder['NAME'] || 'Test Seconder',
+            seconder['CLASS'] || '1st Year',
+            seconder['ADMISION NO'] || 'ADM' + (studentOffset+2),
+            seconder['Dept'] || 'Test Dept',
+            'Valid',           // Status — pre-approved for testing
+            'None'             // WithdrawalStatus
+          ];
+          
+          nomSheet.appendRow(row);
+          validSheet.appendRow(row);
+          finalSheet.appendRow(row);
+          injected.push(id);
+        }
+      });
+      
+      return jsonOut({ ok: true, injected: injected.length });
+    }
+
+    if (action === 'adminWipeData') {
+      checkAdmin(body.password);
+      
+      // Wipe transactional data only — never wipe NominalRoll, Posts, or Booths
+      const sheetsToWipe = [SHEET_NOMS, SHEET_VALID, SHEET_FINAL, SHEET_RESULTS];
+      sheetsToWipe.forEach(name => {
+        const s = getSheet(name);
+        const firstRow = s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0];
+        s.clear();
+        s.appendRow(firstRow);
+        s.getRange(1, 1, 1, firstRow.length).setFontWeight('bold');
+      });
+      
+      // Also reset the publish flags
+      setSetting('validListPublished', 'false');
+      setSetting('finalListPublished', 'false');
+      
+      return jsonOut({ ok: true });
+    }
+
     return errOut(`Unknown action: ${action}`);
   } catch (err) {
     return errOut(err.message);

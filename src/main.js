@@ -20,6 +20,7 @@ import { renderAdminPosts }         from './pages/admin/posts.js';
 import { renderAdminBooths }        from './pages/admin/booths.js';
 import { renderAdminCounting }      from './pages/admin/counting.js';
 import { renderAdminResultsEntry }  from './pages/admin/resultsEntry.js';
+import { renderAdminTesting }       from './pages/admin/testing.js';
 import { renderResults }            from './pages/results.js';
 
 // ─── Background decoration ────────────────────────────────────────────────────
@@ -70,6 +71,7 @@ router
   .on('/admin/booths',      render(renderAdminBooths))
   .on('/admin/counting',    render(renderAdminCounting))
   .on('/admin/results-entry',render(renderAdminResultsEntry))
+  .on('/admin/testing',     render(renderAdminTesting))
   .setDefault('/');
 
 // Handle clicks on data-nav attributes globally (delegation)

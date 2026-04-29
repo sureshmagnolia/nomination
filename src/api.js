@@ -129,4 +129,14 @@ export const api = {
   /** Admin: save results for a table and post */
   adminSaveResults: (password, results) =>
     post({ action: 'adminSaveResults', password, results }),
+
+  // ─── Testing Tools ───────────────────────────────────────────────────────────
+
+  /** Admin: inject synthetic test nominations for all posts */
+  adminInjectTestData: (password) =>
+    post({ action: 'adminInjectTestData', password }),
+
+  /** Admin: wipe all transactional data (Nominations, Valid/Final Lists, Results) */
+  adminWipeData: (password) =>
+    post({ action: 'adminWipeData', password }),
 };
