@@ -29,6 +29,9 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
   let students = [...nominalRoll];
   let filterText = '';
 
+  const allClasses = [...new Set(nominalRoll.map(s => String(s['CLASS']).trim()))].sort();
+  const allDepts = [...new Set(nominalRoll.map(s => String(s['Dept'] || '–').trim()))].sort();
+
   const refreshTable = () => {
     const filtered = students.filter(s => 
       [s['NAME'], s['CLASS'], s['ADMISION NO'], s['Nominal Roll Serial Number']].some(v => 
@@ -97,7 +100,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
         </div>
       </div>
 
-      <!-- Add Student Modal (Placeholder logic) -->
+      <!-- Add Student Modal -->
       <div id="addModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
         <div class="glass w-full max-w-md rounded-2xl p-6 shadow-2xl border border-white/10">
           <h4 class="text-xl font-bold text-white mb-4">Add New Student</h4>
@@ -113,7 +116,10 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Class Name</label>
-              <input type="text" id="addClass" class="field" placeholder="e.g. 1ST YEAR BA HISTORY">
+              <select id="addClass" class="field">
+                <option value="">-- Select Class --</option>
+                ${allClasses.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+              </select>
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Admission No</label>
@@ -121,7 +127,10 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Department</label>
-              <input type="text" id="addDept" class="field" placeholder="e.g. History">
+              <select id="addDept" class="field">
+                <option value="">-- Select Department --</option>
+                ${allDepts.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}
+              </select>
             </div>
           </div>
           <div class="flex gap-2 mt-8">

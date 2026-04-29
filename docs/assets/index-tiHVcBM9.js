@@ -1656,7 +1656,7 @@ Are you absolutely sure?`))return;g(t,!0,`🗑️ Wiping...`);let i=n.querySelec
     </html>
   `),c.document.close()}async function X(e){let t=I();if(t){L(e,`nominalRoll`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading nominal roll...</p></div>
-  `);try{let[n,r]=await Promise.all([C.getNominalRoll(),C.getSettings()]);Ie(e.querySelector(`#adminMain`),t,n,r)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function Ie(e,t,n,r){let i=r.nominalRollFinalized===`true`,a=[...n],o=``,s=()=>{let n=a.filter(e=>[e.NAME,e.CLASS,e[`ADMISION NO`],e[`Nominal Roll Serial Number`]].some(e=>String(e||``).toLowerCase().includes(o.toLowerCase())));e.innerHTML=`
+  `);try{let[n,r]=await Promise.all([C.getNominalRoll(),C.getSettings()]);Ie(e.querySelector(`#adminMain`),t,n,r)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function Ie(e,t,n,r){let i=r.nominalRollFinalized===`true`,a=[...n],o=``,s=[...new Set(n.map(e=>String(e.CLASS).trim()))].sort(),c=[...new Set(n.map(e=>String(e.Dept||`–`).trim()))].sort(),l=()=>{let n=a.filter(e=>[e.NAME,e.CLASS,e[`ADMISION NO`],e[`Nominal Roll Serial Number`]].some(e=>String(e||``).toLowerCase().includes(o.toLowerCase())));e.innerHTML=`
       <div class="page-enter space-y-6">
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
@@ -1717,7 +1717,7 @@ Are you absolutely sure?`))return;g(t,!0,`🗑️ Wiping...`);let i=n.querySelec
         </div>
       </div>
 
-      <!-- Add Student Modal (Placeholder logic) -->
+      <!-- Add Student Modal -->
       <div id="addModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
         <div class="glass w-full max-w-md rounded-2xl p-6 shadow-2xl border border-white/10">
           <h4 class="text-xl font-bold text-white mb-4">Add New Student</h4>
@@ -1733,7 +1733,10 @@ Are you absolutely sure?`))return;g(t,!0,`🗑️ Wiping...`);let i=n.querySelec
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Class Name</label>
-              <input type="text" id="addClass" class="field" placeholder="e.g. 1ST YEAR BA HISTORY">
+              <select id="addClass" class="field">
+                <option value="">-- Select Class --</option>
+                ${s.map(e=>`<option value="${h(e)}">${h(e)}</option>`).join(``)}
+              </select>
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Admission No</label>
@@ -1741,7 +1744,10 @@ Are you absolutely sure?`))return;g(t,!0,`🗑️ Wiping...`);let i=n.querySelec
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Department</label>
-              <input type="text" id="addDept" class="field" placeholder="e.g. History">
+              <select id="addDept" class="field">
+                <option value="">-- Select Department --</option>
+                ${c.map(e=>`<option value="${h(e)}">${h(e)}</option>`).join(``)}
+              </select>
             </div>
           </div>
           <div class="flex gap-2 mt-8">
@@ -1750,13 +1756,13 @@ Are you absolutely sure?`))return;g(t,!0,`🗑️ Wiping...`);let i=n.querySelec
           </div>
         </div>
       </div>
-    `;let r=e.querySelector(`.dropdown-toggle`),c=e.querySelector(`.dropdown-menu`);r&&(r.onclick=e=>{e.stopPropagation(),c.classList.toggle(`hidden`)}),window.onclick=()=>c?.classList.add(`hidden`),e.querySelector(`#searchInput`).oninput=t=>{o=t.target.value,s(),e.querySelector(`#searchInput`).focus();let n=e.querySelector(`#searchInput`).value;e.querySelector(`#searchInput`).value=``,e.querySelector(`#searchInput`).value=n},i||(e.querySelector(`#btnAddNew`).onclick=()=>e.querySelector(`#addModal`).classList.remove(`hidden`),e.querySelector(`#btnCancelAdd`).onclick=()=>e.querySelector(`#addModal`).classList.add(`hidden`),e.querySelector(`#btnConfirmAdd`).onclick=async n=>{let r={serial:e.querySelector(`#addSerial`).value,name:e.querySelector(`#addName`).value,class:e.querySelector(`#addClass`).value,admission:e.querySelector(`#addAdm`).value,dept:e.querySelector(`#addDept`).value};if(!r.serial||!r.name||!r.class)return _(`Please fill required fields.`,`warning`);g(n.target,!0,`Save Student`);try{await C.adminAddStudent(t,r),_(`Student added to roll.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){_(e.message,`error`),g(n.target,!1,`Save Student`)}},e.querySelectorAll(`.delete-student`).forEach(n=>{n.onclick=async()=>{if(confirm(`Delete student #${n.dataset.serial}?`))try{await C.adminDeleteStudent(t,n.dataset.serial),_(`Student removed.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){_(e.message,`error`)}}}),e.querySelector(`#btnFinalize`).onclick=async n=>{if(confirm(`FINALIZATION WARNING:
+    `;let r=e.querySelector(`.dropdown-toggle`),u=e.querySelector(`.dropdown-menu`);r&&(r.onclick=e=>{e.stopPropagation(),u.classList.toggle(`hidden`)}),window.onclick=()=>u?.classList.add(`hidden`),e.querySelector(`#searchInput`).oninput=t=>{o=t.target.value,l(),e.querySelector(`#searchInput`).focus();let n=e.querySelector(`#searchInput`).value;e.querySelector(`#searchInput`).value=``,e.querySelector(`#searchInput`).value=n},i||(e.querySelector(`#btnAddNew`).onclick=()=>e.querySelector(`#addModal`).classList.remove(`hidden`),e.querySelector(`#btnCancelAdd`).onclick=()=>e.querySelector(`#addModal`).classList.add(`hidden`),e.querySelector(`#btnConfirmAdd`).onclick=async n=>{let r={serial:e.querySelector(`#addSerial`).value,name:e.querySelector(`#addName`).value,class:e.querySelector(`#addClass`).value,admission:e.querySelector(`#addAdm`).value,dept:e.querySelector(`#addDept`).value};if(!r.serial||!r.name||!r.class)return _(`Please fill required fields.`,`warning`);g(n.target,!0,`Save Student`);try{await C.adminAddStudent(t,r),_(`Student added to roll.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){_(e.message,`error`),g(n.target,!1,`Save Student`)}},e.querySelectorAll(`.delete-student`).forEach(n=>{n.onclick=async()=>{if(confirm(`Delete student #${n.dataset.serial}?`))try{await C.adminDeleteStudent(t,n.dataset.serial),_(`Student removed.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){_(e.message,`error`)}}}),e.querySelector(`#btnFinalize`).onclick=async n=>{if(confirm(`FINALIZATION WARNING:
 
 1. All students will be sorted by Class and Name.
 2. NEW Serial Numbers will be generated sequentially (1, 2, 3...).
 3. The roll will be LOCKED for all future edits.
 
-Are you absolutely sure?`)){g(n.target,!0,`Finalizing...`);try{await C.adminFinalizeRoll(t),_(`Nominal Roll Finalized Successfully!`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){_(e.message,`error`),g(n.target,!1,`Finalize & Lock Roll`)}}}),e.querySelector(`#btnPrintSerial`).onclick=()=>Z(a,i,`serial`),e.querySelector(`#btnPrintClass`).onclick=()=>Z(a,i,`class`)};s()}function Z(e,t,r){let i=[...e];r===`class`?i.sort((e,t)=>{let n=String(e.CLASS).toUpperCase(),r=String(t.CLASS).toUpperCase();return n===r?String(e.NAME).toUpperCase().localeCompare(String(t.NAME).toUpperCase()):n.localeCompare(r)}):i.sort((e,t)=>Number(e[`Nominal Roll Serial Number`])-Number(t[`Nominal Roll Serial Number`]));let a=n.COLLEGE_NAME||`GOVERNMENT VICTORIA COLLEGE, PALAKKAD`,o=t?`FINAL NOMINAL ROLL`:`DRAFT NOMINAL ROLL`,s=new Date().toLocaleString(),c=window.open(``,`_blank`);c.document.write(`
+Are you absolutely sure?`)){g(n.target,!0,`Finalizing...`);try{await C.adminFinalizeRoll(t),_(`Nominal Roll Finalized Successfully!`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){_(e.message,`error`),g(n.target,!1,`Finalize & Lock Roll`)}}}),e.querySelector(`#btnPrintSerial`).onclick=()=>Z(a,i,`serial`),e.querySelector(`#btnPrintClass`).onclick=()=>Z(a,i,`class`)};l()}function Z(e,t,r){let i=[...e];r===`class`?i.sort((e,t)=>{let n=String(e.CLASS).toUpperCase(),r=String(t.CLASS).toUpperCase();return n===r?String(e.NAME).toUpperCase().localeCompare(String(t.NAME).toUpperCase()):n.localeCompare(r)}):i.sort((e,t)=>Number(e[`Nominal Roll Serial Number`])-Number(t[`Nominal Roll Serial Number`]));let a=n.COLLEGE_NAME||`GOVERNMENT VICTORIA COLLEGE, PALAKKAD`,o=t?`FINAL NOMINAL ROLL`:`DRAFT NOMINAL ROLL`,s=new Date().toLocaleString(),c=window.open(``,`_blank`);c.document.write(`
     <html>
       <head>
         <title>${o}</title>
