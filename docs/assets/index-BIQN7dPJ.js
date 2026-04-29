@@ -1608,14 +1608,14 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         font-style: italic;
       }
     </style>
-  `;let r=n.querySelector(`#ballotPreviewArea`),i=async(e=`all`)=>{let[n,r]=await Promise.all([C.adminGetPosts(t),C.getFinalNominations()]),i=e=>e.post.toLowerCase().includes(`year`),a=e=>e.post.toLowerCase().includes(`assoc`)||e.post.toLowerCase().includes(`association`),o=e=>!i(e)&&!a(e),s=`<div id="printSection">`;if(e===`all`||e===`general`){let e=n.filter(o);e.length>0&&(s+=`
+  `;let r=n.querySelector(`#ballotPreviewArea`),i=async(e=`all`)=>{let n,r;try{[n,r]=await Promise.all([C.adminGetPosts(t),C.getFinalNominations()])}catch(e){throw e.message.includes(`not published`)?Error(`Final List Not Published. Please finalize and publish the list before printing ballots.`):e}let i=r.active||[];if(i.length===0)throw Error(`No active candidates found in the Final List. Please ensure candidates are verified and the list is published.`);let a=e=>e.post.toLowerCase().includes(`year`),o=e=>e.post.toLowerCase().includes(`assoc`)||e.post.toLowerCase().includes(`association`),s=e=>!a(e)&&!o(e),c=`<div id="printSection">`;if(e===`all`||e===`general`){let e=n.filter(s);e.length>0&&(c+=`
           <div class="ballot-container page-break">
             <div class="ballot-header">
               <h1>COLLEGE UNION ELECTION 2026-27</h1>
               <h2>OFFICIAL BALLOT PAPER — GENERAL UNION</h2>
             </div>
             <div class="ballot-grid">
-        `,[...e].sort((e,t)=>{let n=e.post.toLowerCase(),r=t.post.toLowerCase();return n.includes(`chairman`)&&!n.includes(`vice`)?-1:r.includes(`chairman`)&&!r.includes(`vice`)?1:n.includes(`vice chairman`)?-1:+!!r.includes(`vice chairman`)}).forEach(e=>{let t=r.filter(t=>t.post===e.post);t.length!==0&&(e.post.toLowerCase().includes(`chairman`),s+=`
+        `,[...e].sort((e,t)=>{let n=e.post.toLowerCase(),r=t.post.toLowerCase();return n.includes(`chairman`)&&!n.includes(`vice`)?-1:r.includes(`chairman`)&&!r.includes(`vice`)?1:n.includes(`vice chairman`)?-1:+!!r.includes(`vice chairman`)}).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(e.post.toLowerCase().includes(`chairman`),c+=`
             <div class="post-box">
               <div class="post-title">${h(e.post)}</div>
               ${t.map((e,t)=>`
@@ -1626,14 +1626,14 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 </div>
               `).join(``)}
             </div>
-          `)}),s+=`
+          `)}),c+=`
             </div>
             <div class="ballot-footer">
               <div>Facsimile of Returning Officer</div>
               <div>Series: GEN-${Date.now().toString().slice(-6)}</div>
             </div>
           </div>
-        `)}return(e===`all`||e===`year`)&&n.filter(i).forEach(e=>{let t=r.filter(t=>t.post===e.post);t.length!==0&&(s+=`
+        `)}return(e===`all`||e===`year`)&&n.filter(a).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(c+=`
           <div class="ballot-container page-break">
             <div class="ballot-header">
               <h1>COLLEGE UNION ELECTION 2026-27</h1>
@@ -1654,7 +1654,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <div>Series: YR-${Date.now().toString().slice(-6)}</div>
             </div>
           </div>
-        `)}),(e===`all`||e===`assoc`)&&n.filter(a).forEach(e=>{let t=r.filter(t=>t.post===e.post);t.length!==0&&(s+=`
+        `)}),(e===`all`||e===`assoc`)&&n.filter(o).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(c+=`
           <div class="ballot-container page-break">
             <div class="ballot-header">
               <h1>COLLEGE UNION ELECTION 2026-27</h1>
@@ -1675,7 +1675,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <div>Series: ASC-${Date.now().toString().slice(-6)}</div>
             </div>
           </div>
-        `)}),s+=`</div>`,s},a=async e=>{try{_(`Generating preview...`,`info`),r.innerHTML=`
+        `)}),c+=`</div>`,c},a=async e=>{try{_(`Generating preview...`,`info`),r.innerHTML=`
         <div class="flex justify-between items-center mb-6 no-print">
           <h3 class="text-white font-bold">Ballot Preview</h3>
           <button id="btnPrintNow" class="btn btn-success btn-sm">🖨️ Print This Preview</button>

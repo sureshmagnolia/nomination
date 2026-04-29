@@ -186,10 +186,23 @@ export async function renderAdminBallots(container) {
   const previewArea = main.querySelector('#ballotPreviewArea');
 
   const generateBallotsHTML = async (filterType = 'all') => {
-    const [posts, candidates] = await Promise.all([
-      api.adminGetPosts(pwd),
-      api.getFinalNominations()
-    ]);
+    let posts, candidatesResponse;
+    try {
+      [posts, candidatesResponse] = await Promise.all([
+        api.adminGetPosts(pwd),
+        api.getFinalNominations()
+      ]);
+    } catch (err) {
+      if (err.message.includes('not published')) {
+        throw new Error('Final List Not Published. Please finalize and publish the list before printing ballots.');
+      }
+      throw err;
+    }
+
+    const candidates = candidatesResponse.active || [];
+    if (candidates.length === 0) {
+      throw new Error('No active candidates found in the Final List. Please ensure candidates are verified and the list is published.');
+    }
 
     // Categorize posts
     const isYear = (p) => p.post.toLowerCase().includes('year');
