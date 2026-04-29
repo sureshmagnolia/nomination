@@ -989,7 +989,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </td>
     </tr>`).join(``):`<tr><td colspan="7" class="text-center text-slate-500 py-8">No posts configured.</td></tr>`,r.querySelectorAll(`.delete-post-btn`).forEach(t=>{t.addEventListener(`click`,async()=>{let r=t.dataset.name;if(confirm(`Delete post "${r}"? This cannot be undone.`)){t.disabled=!0;try{await C.adminDeletePost(n,r),_(`Post "${r}" deleted.`,`success`),K(e,await C.adminGetPosts(n),n)}catch(e){_(`Failed: ${e.message}`,`error`),t.disabled=!1}}})});let i=e.querySelector(`#postFormWrap`);r.querySelectorAll(`.edit-post-btn`).forEach(n=>{n.addEventListener(`click`,()=>{let r=t[parseInt(n.dataset.idx)];e.querySelector(`#postFormTitle`).textContent=`Edit Post`,e.querySelector(`#pfPost`).value=r.post,e.querySelector(`#pfYear`).value=r.yearRestriction||``,e.querySelector(`#pfFemale`).checked=!!r.femaleOnly,e.querySelector(`#pfFinalYear`).checked=!!r.finalYearIneligible,e.querySelector(`#pfDept`).checked=!!r.deptRestriction,e.querySelector(`#pfOriginalName`).value=r.post,i.classList.remove(`hidden`),i.scrollIntoView({behavior:`smooth`})})})}function Se(e,t,n){let r=e.querySelector(`#postFormWrap`),i=e.querySelector(`#addPostBtn`),a=e.querySelector(`#cancelPostBtn`),o=e.querySelector(`#savePostBtn`);i.addEventListener(`click`,()=>{e.querySelector(`#postFormTitle`).textContent=`Add New Post`,e.querySelector(`#pfPost`).value=``,e.querySelector(`#pfYear`).value=``,e.querySelector(`#pfFemale`).checked=!1,e.querySelector(`#pfFinalYear`).checked=!1,e.querySelector(`#pfDept`).checked=!1,e.querySelector(`#pfOriginalName`).value=``,r.classList.remove(`hidden`),r.scrollIntoView({behavior:`smooth`})}),a.addEventListener(`click`,()=>r.classList.add(`hidden`)),o.addEventListener(`click`,async()=>{let t=e.querySelector(`#pfPost`).value.trim(),i=e.querySelector(`#pfYear`).value,a=e.querySelector(`#pfFemale`).checked,s=e.querySelector(`#pfFinalYear`).checked,c=e.querySelector(`#pfDept`).checked,l=e.querySelector(`#pfOriginalName`).value;if(!t){_(`Post name is required.`,`error`);return}let u={postName:t,yearRestriction:i,femaleOnly:a,finalYearIneligible:s,deptRestriction:c,originalName:l};g(o,!0,`💾 Save Post`);try{l?(await C.adminUpdatePost(n,u),_(`Post updated successfully!`,`success`)):(await C.adminAddPost(n,u),_(`Post added successfully!`,`success`)),r.classList.add(`hidden`),K(e,await C.adminGetPosts(n),n)}catch(e){_(`Failed: ${e.message}`,`error`)}finally{g(o,!1,`💾 Save Post`)}})}async function Ce(e){let t=z();if(t){B(e,`booths`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading booth data...</p></div>
-  `);try{let[n,r,i,a]=await Promise.all([C.getNominalRoll(),C.adminGetBooths(t).catch(()=>[]),C.adminGetLocations(t).catch(()=>[]),C.getPosts().catch(()=>[])]);we(e.querySelector(`#adminMain`),t,n,r,i,a)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function we(e,t,n,r,i,a){let o={};n.forEach(e=>{let t=String(e.CLASS||`Unknown`).trim(),n=String(e.Dept||`Unknown`).trim();o[t]||(o[t]={name:t,dept:n,count:0}),o[t].count++});let s=Object.values(o).sort((e,t)=>e.name.localeCompare(t.name)),c=r.length?[...r]:[{boothNumber:1,roomName:``,classes:[]}],l=[...i],u=()=>{c.forEach(e=>e.totalStudents=0);let r=[];s.forEach(e=>{let t=c.find(t=>t.classes.includes(e.name));t?t.totalStudents+=e.count:r.push(e)}),e.innerHTML=`
+  `);try{let[n,r,i,a]=await Promise.all([C.getNominalRoll(),C.adminGetBooths(t).catch(()=>[]),C.adminGetLocations(t).catch(()=>[]),C.getPosts().catch(()=>[])]);we(e.querySelector(`#adminMain`),t,n,r,i,a)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function we(e,t,r,i,a,o){let s={};r.forEach(e=>{let t=String(e.CLASS||`Unknown`).trim(),n=String(e.Dept||`Unknown`).trim();s[t]||(s[t]={name:t,dept:n,count:0}),s[t].count++});let c=Object.values(s).sort((e,t)=>e.name.localeCompare(t.name)),l=i.length?[...i]:[{boothNumber:1,roomName:``,classes:[]}],u=[...a],d=()=>{l.forEach(e=>e.totalStudents=0);let i=[];c.forEach(e=>{let t=l.find(t=>t.classes.includes(e.name));t?t.totalStudents+=e.count:i.push(e)}),e.innerHTML=`
       <div class="page-enter space-y-6">
         <div class="flex items-center justify-between">
           <div>
@@ -1013,7 +1013,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <button id="btnSaveLocations" class="btn btn-primary">💾 Save Locations</button>
           </div>
           <div class="flex flex-wrap gap-2">
-            ${l.length?l.map((e,t)=>`
+            ${u.length?u.map((e,t)=>`
               <span class="badge badge-valid bg-white/10 text-white border border-white/20 px-3 py-1 flex items-center gap-2">
                 ${h(e)}
                 <button class="text-red-400 hover:text-red-300 font-bold delete-location" data-idx="${t}">×</button>
@@ -1028,13 +1028,13 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <h4 class="font-bold text-white">Booth Setup</h4>
             <div class="flex gap-2 items-center">
               <label class="text-sm text-slate-300 mb-0">Total Booths:</label>
-              <input type="number" id="numBoothsInput" class="field w-20 py-1" min="1" max="20" value="${c.length}">
+              <input type="number" id="numBoothsInput" class="field w-20 py-1" min="1" max="20" value="${l.length}">
               <button id="btnUpdateBoothCount" class="btn btn-secondary btn-sm">Update</button>
             </div>
           </div>
           
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="boothsContainer">
-            ${c.map((e,t)=>`
+            ${l.map((e,t)=>`
               <div class="border border-white/10 rounded-lg p-3 bg-white/5">
                 <div class="text-xs text-slate-400 font-bold uppercase mb-1 flex justify-between">
                   <span>Booth ${t+1}</span>
@@ -1042,15 +1042,15 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 </div>
                 <select class="field text-sm py-1 mb-2 room-name-select" data-idx="${t}">
                   <option value="">-- Assign Location --</option>
-                  ${l.map(n=>`
+                  ${u.map(n=>`
                     <option value="${h(n)}" 
                       ${e.roomName===n?`selected`:``}
-                      ${c.some((e,r)=>r!==t&&e.roomName===n)?`disabled`:``}
+                      ${l.some((e,r)=>r!==t&&e.roomName===n)?`disabled`:``}
                     >${h(n)}</option>
                   `).join(``)}
                 </select>
                 <div class="text-xs text-slate-500 h-16 overflow-y-auto">
-                  ${e.classes.length?e.classes.map(e=>`<div>• ${h(e)} (${o[e]?.count||0})</div>`).join(``):`<em>No classes assigned</em>`}
+                  ${e.classes.length?e.classes.map(e=>`<div>• ${h(e)} (${s[e]?.count||0})</div>`).join(``):`<em>No classes assigned</em>`}
                 </div>
               </div>
             `).join(``)}
@@ -1058,9 +1058,9 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         </div>
 
         <!-- Unallocated Warning -->
-        ${r.length?`
+        ${i.length?`
           <div class="alert alert-warning">
-            ⚠️ <strong>${r.length} classes</strong> are not assigned to any booth!
+            ⚠️ <strong>${i.length} classes</strong> are not assigned to any booth!
           </div>
         `:``}
 
@@ -1075,7 +1075,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 <th>Assigned Booth</th>
               </tr></thead>
               <tbody>
-                ${s.map(e=>{let t=c.find(t=>t.classes.includes(e.name));return`
+                ${c.map(e=>{let t=l.find(t=>t.classes.includes(e.name));return`
                     <tr>
                       <td class="text-xs text-slate-400">${h(e.dept)}</td>
                       <td class="font-medium text-sm">${h(e.name)}</td>
@@ -1083,7 +1083,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                       <td>
                         <select class="field w-40 py-1 text-sm class-booth-select" data-class="${h(e.name)}">
                           <option value="">-- Unassigned --</option>
-                          ${c.map((e,n)=>`
+                          ${l.map((e,n)=>`
                             <option value="${n}" ${t===e?`selected`:``}>Booth ${n+1}</option>
                           `).join(``)}
                         </select>
@@ -1095,7 +1095,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </div>
         </div>
       </div>
-    `,e.querySelector(`#btnPrintRolls`).addEventListener(`click`,()=>{let t=e.querySelector(`#printArea`);t.innerHTML=i(c,n,a,o);let r=window.open(``,`_blank`);r.document.write(`
+    `,e.querySelector(`#btnPrintRolls`).addEventListener(`click`,()=>{let t=e.querySelector(`#printArea`);t.innerHTML=a(l,r,o,s);let n=window.open(``,`_blank`);n.document.write(`
         <html>
           <head>
             <title>Electoral Rolls - Booth Allotment</title>
@@ -1125,11 +1125,11 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             ${t.innerHTML}
           </body>
         </html>
-      `),r.document.close(),r.focus(),setTimeout(()=>{r.print(),r.close()},500)});function i(e,t,n,r){let i=``;return e.forEach(e=>{if(!e.classes||e.classes.length===0)return;let a=e.classes.map(e=>r[e]).filter(Boolean),o=a.reduce((e,t)=>e+t.count,0),s=[...new Set(a.map(e=>e.dept.toUpperCase()))],c=n.filter(e=>{if(!e.deptRestriction)return!0;let t=`Association Secretary `,n=e.post.startsWith(t)?e.post.replace(t,``).toUpperCase():null;return n&&s.includes(n)});i+=`
+      `),n.document.close(),n.focus(),setTimeout(()=>{n.print(),n.close()},500)});function a(e,t,r,i){let a=``;return e.forEach(e=>{if(!e.classes||e.classes.length===0)return;let o=e.classes.map(e=>i[e]).filter(Boolean),s=o.reduce((e,t)=>e+t.count,0),c=[...new Set(o.map(e=>e.dept.toUpperCase()))],l=r.filter(e=>{if(!e.deptRestriction)return!0;let t=`Association Secretary `,n=e.post.startsWith(t)?e.post.replace(t,``).toUpperCase():null;return n&&c.includes(n)});a+=`
         <div class="page-break">
           <div class="facing-sheet">
             <div class="header">
-              <div class="college-name">${h(CONFIG.COLLEGE_NAME||`COLLEGE UNION ELECTION`)}</div>
+              <div class="college-name">${h(n.COLLEGE_NAME||`COLLEGE UNION ELECTION`)}</div>
               <div class="title">Electoral Roll — Booth Facing Sheet</div>
             </div>
             <div style="font-size: 20px; margin-bottom: 30px;">
@@ -1141,15 +1141,15 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <table class="stats-table">
                 <thead><tr><th>#</th><th>Department</th><th>Class Name</th><th style="text-align:right">Voters</th></tr></thead>
                 <tbody>
-                  ${a.map((e,t)=>`
+                  ${o.map((e,t)=>`
                     <tr><td>${t+1}</td><td>${h(e.dept)}</td><td>${h(e.name)}</td><td style="text-align:right">${e.count}</td></tr>
                   `).join(``)}
-                  <tr style="font-weight:bold; background:#f9f9f9"><td colspan="3">GRAND TOTAL VOTERS</td><td style="text-align:right">${o}</td></tr>
+                  <tr style="font-weight:bold; background:#f9f9f9"><td colspan="3">GRAND TOTAL VOTERS</td><td style="text-align:right">${s}</td></tr>
                 </tbody>
               </table>
               <h4 style="margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Ballots Assigned to this Booth</h4>
               <div style="display:flex; flex-wrap:wrap; gap:10px; font-size: 11px;">
-                ${c.map(e=>`<span style="padding:4px 8px; border:1px solid #ccc; border-radius:4px;">${h(e.post)}</span>`).join(``)}
+                ${l.map(e=>`<span style="padding:4px 8px; border:1px solid #ccc; border-radius:4px;">${h(e.post)}</span>`).join(``)}
               </div>
             </div>
             <div class="footer">
@@ -1157,7 +1157,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <div>Presiding Officer Signature</div>
             </div>
           </div>
-        </div>`,a.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),i+=`
+        </div>`,o.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),a+=`
           <div class="page-break">
             <div class="roll-page">
               <div class="roll-header">
@@ -1180,7 +1180,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               </table>
               <div style="margin-top:20px; text-align:right; font-size:10px; color:#999">Total Voters: ${r.length}</div>
             </div>
-          </div>`})}),i}e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>c.length)for(let e=c.length;e<t;e++)c.push({boothNumber:e+1,roomName:``,classes:[]});else t<c.length&&(c=c.slice(0,t));u()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{c[e.target.dataset.idx].roomName=e.target.value,u()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!l.includes(t)&&(l.push(t),u())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=l[t];l.splice(t,1),c.forEach(e=>{e.roomName===n&&(e.roomName=``)}),u()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;g(n,!0,`💾 Save Locations`);try{await C.adminSaveLocations(t,l),_(`Locations saved successfully!`,`success`)}catch(e){_(`Failed to save: ${e.message}`,`error`)}finally{g(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;c.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&c[parseInt(n,10)].classes.push(t),u()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;g(n,!0,`💾 Save Configuration`);try{await C.adminSaveBooths(t,c),_(`Booth configuration saved successfully!`,`success`)}catch(e){_(`Failed to save: ${e.message}`,`error`)}finally{g(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{d(),u(),_(`Auto allotment complete. Please review and save.`,`info`)})},d=()=>{c.forEach(e=>{e.classes=[],e.totalStudents=0});let e={};s.forEach(t=>{e[t.dept]||(e[t.dept]={name:t.dept,total:0,classes:[]}),e[t.dept].classes.push(t),e[t.dept].total+=t.count});let t=c.length,r=n.length/t*1.25;Object.values(e).sort((e,t)=>t.total-e.total).forEach(e=>{c.sort((e,t)=>e.totalStudents-t.totalStudents);let t=c[0];if(t.totalStudents+e.total>r&&e.classes.length>1){c.sort((e,t)=>e.totalStudents-t.totalStudents);let t=c[0],n=c.length>1?c[1]:c[0];[...e.classes].sort((e,t)=>t.count-e.count).forEach(e=>{let r=t.totalStudents<=n.totalStudents?t:n;r.classes.push(e.name),r.totalStudents+=e.count})}else e.classes.forEach(e=>t.classes.push(e.name)),t.totalStudents+=e.total}),c.sort((e,t)=>e.boothNumber-t.boothNumber)};u()}async function Te(e){let t=z();if(t){B(e,`counting`,`
+          </div>`})}),a}e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>l.length)for(let e=l.length;e<t;e++)l.push({boothNumber:e+1,roomName:``,classes:[]});else t<l.length&&(l=l.slice(0,t));d()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{l[e.target.dataset.idx].roomName=e.target.value,d()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!u.includes(t)&&(u.push(t),d())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=u[t];u.splice(t,1),l.forEach(e=>{e.roomName===n&&(e.roomName=``)}),d()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;g(n,!0,`💾 Save Locations`);try{await C.adminSaveLocations(t,u),_(`Locations saved successfully!`,`success`)}catch(e){_(`Failed to save: ${e.message}`,`error`)}finally{g(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;l.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&l[parseInt(n,10)].classes.push(t),d()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;g(n,!0,`💾 Save Configuration`);try{await C.adminSaveBooths(t,l),_(`Booth configuration saved successfully!`,`success`)}catch(e){_(`Failed to save: ${e.message}`,`error`)}finally{g(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{f(),d(),_(`Auto allotment complete. Please review and save.`,`info`)})},f=()=>{l.forEach(e=>{e.classes=[],e.totalStudents=0});let e={};c.forEach(t=>{e[t.dept]||(e[t.dept]={name:t.dept,total:0,classes:[]}),e[t.dept].classes.push(t),e[t.dept].total+=t.count});let t=l.length,n=r.length/t*1.25;Object.values(e).sort((e,t)=>t.total-e.total).forEach(e=>{l.sort((e,t)=>e.totalStudents-t.totalStudents);let t=l[0];if(t.totalStudents+e.total>n&&e.classes.length>1){l.sort((e,t)=>e.totalStudents-t.totalStudents);let t=l[0],n=l.length>1?l[1]:l[0];[...e.classes].sort((e,t)=>t.count-e.count).forEach(e=>{let r=t.totalStudents<=n.totalStudents?t:n;r.classes.push(e.name),r.totalStudents+=e.count})}else e.classes.forEach(e=>t.classes.push(e.name)),t.totalStudents+=e.total}),l.sort((e,t)=>e.boothNumber-t.boothNumber)};d()}async function Te(e){let t=z();if(t){B(e,`counting`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Counting Setup...</p></div>
   `);try{let[n,r,i,a,o]=await Promise.all([C.adminGetCountingMatrix(t).catch(()=>null),C.getPosts(),C.adminGetNominations(t).catch(()=>[]),C.adminGetBooths(t),C.getNominalRoll()]),s=(Array.isArray(i)?i:[]).filter(e=>e.status===`Valid`&&e.withdrawalStatus!==`Approved`);Ee(e.querySelector(`#adminMain`),t,n,r,s,a,o)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function Ee(e,t,n,r,i,a,o){if(!a.length){e.innerHTML=`<div class="alert alert-error">❌ No booths configured.</div>`;return}if(!r.length){e.innerHTML=`<div class="alert alert-error">❌ No posts configured.</div>`;return}let s=e=>String(e.post||e.name||``),c=t=>{let{matrix:n,formSerials:o,totalRounds:c,roundLabels:u}=t,d=a.length;e.innerHTML=`
       <div class="page-enter space-y-6">

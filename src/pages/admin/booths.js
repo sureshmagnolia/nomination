@@ -5,6 +5,7 @@
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
+import { CONFIG } from '../../config.js';
 
 export async function renderAdminBooths(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
