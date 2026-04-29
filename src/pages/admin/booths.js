@@ -327,16 +327,29 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         return set;
       }, new Set());
 
-      const genPosts = posts.filter(p => !p.deptRestriction && (!p.yearRestriction || String(p.yearRestriction).trim() === ''));
-      const relevantAssoc = posts.filter(p => {
-        const prefix = 'Association Secretary ';
-        if (!p.post.toUpperCase().startsWith(prefix.toUpperCase())) return false;
-        const reqDept = p.post.substring(prefix.length).toUpperCase().trim();
-        return boothDepts.includes(reqDept);
-      });
-      const relevantReps = posts.filter(p => {
-        if (!p.yearRestriction || String(p.yearRestriction).trim() === '') return false;
-        return boothYears.has(String(p.yearRestriction));
+      // Ballot Type Calculations
+      const ballotCounts = {
+        general: totalVoters,
+        association: {}, // Dept Name -> Count
+        yearRep: {}      // Year Label -> Count
+      };
+
+      boothClasses.forEach(c => {
+        // Association Ballot (one per Dept)
+        const d = String(c.dept || 'N/A').trim();
+        ballotCounts.association[d] = (ballotCounts.association[d] || 0) + c.count;
+
+        // Year Rep Ballot
+        const u = c.name.toUpperCase();
+        let yr = '';
+        if (['MA','MSC','MCOM','M.SC','M.COM','M.A'].some(pg => u.includes(pg))) yr = 'PG Representative';
+        else if (u.includes('1ST YEAR')) yr = '1st Year Representative';
+        else if (u.includes('2ND YEAR')) yr = '2nd Year Representative';
+        else if (u.includes('3RD YEAR')) yr = '3rd Year Representative';
+        
+        if (yr) {
+          ballotCounts.yearRep[yr] = (ballotCounts.yearRep[yr] || 0) + c.count;
+        }
       });
 
       html += `
@@ -346,9 +359,14 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             <div class="college-name">${esc(CONFIG.COLLEGE_NAME || 'COLLEGE UNION ELECTION')}</div>
             <div class="title">Electoral Roll — Booth Facing Sheet</div>
           </div>
-          <div style="font-size: 20px; margin-bottom: 30px;">
-            <p><strong>BOOTH NO:</strong> <span style="font-size: 32px; border: 2px solid #000; padding: 5px 20px; margin-left: 10px;">${b.boothNumber}</span></p>
-            <p><strong>LOCATION:</strong> ${esc(b.roomName || 'UNSPECIFIED')}</p>
+          <div style="font-size: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: baseline;">
+            <div>
+              <p><strong>BOOTH NO:</strong> <span style="font-size: 32px; border: 2px solid #000; padding: 5px 20px; margin-left: 10px;">${b.boothNumber}</span></p>
+              <p><strong>LOCATION:</strong> ${esc(b.roomName || 'UNSPECIFIED')}</p>
+            </div>
+            <div style="text-align: right; font-size: 14px; color: #666;">
+              Ref: Union Election ${new Date().getFullYear()}
+            </div>
           </div>
           <div style="flex-grow: 1;">
             <h4 style="border-bottom: 1px solid #eee; padding-bottom: 5px;">Allocation Statistics</h4>
@@ -361,16 +379,41 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                 <tr style="font-weight:bold; background:#f9f9f9"><td colspan="3">GRAND TOTAL VOTERS</td><td style="text-align:right">${totalVoters}</td></tr>
               </tbody>
             </table>
+
             <h4 style="margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Ballots Assigned to this Booth</h4>
             <div style="font-size: 13px; line-height: 1.8;">
-              <div>• <strong>General Posts:</strong> ${genPosts.length} Ballots (Chairman, Vice Chairman, UUC, etc.)</div>
-              ${relevantAssoc.length ? `<div>• <strong>Association:</strong> ${relevantAssoc.map(p => esc(p.post)).join(', ')}</div>` : ''}
-              ${relevantReps.length ? `<div>• <strong>Year Representatives:</strong> ${relevantReps.map(p => esc(p.post)).join(', ')}</div>` : ''}
+              <table class="stats-table" style="margin-top:10px; width: 100%; max-width: 500px;">
+                <thead>
+                  <tr style="background:#f0f7ff">
+                    <th>Ballot Type / Category</th>
+                    <th style="text-align:right">Required Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="font-weight:bold">
+                    <td>General Union Posts (Chairman, UUC, Sec, etc.)</td>
+                    <td style="text-align:right">${totalVoters}</td>
+                  </tr>
+                  ${Object.entries(ballotCounts.yearRep).map(([yr, count]) => `
+                    <tr>
+                      <td>${esc(yr)} Ballot</td>
+                      <td style="text-align:right">${count}</td>
+                    </tr>
+                  `).join('')}
+                  ${Object.entries(ballotCounts.association).map(([dept, count]) => `
+                    <tr>
+                      <td>${esc(dept)} Association Secretary Ballot</td>
+                      <td style="text-align:right">${count}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+              <p style="font-size: 10px; color: #666; margin-top: 5px;">* Verify the physical ballot counts against this list before opening the booth.</p>
             </div>
           </div>
           <div class="footer">
-            <div>Returning Officer Signature</div>
-            <div>Presiding Officer Signature</div>
+            <div style="border-top: 1px solid #000; padding-top: 10px; width: 200px; text-align: center;">Returning Officer Signature</div>
+            <div style="border-top: 1px solid #000; padding-top: 10px; width: 200px; text-align: center;">Presiding Officer Signature</div>
           </div>
         </div>
       </div>`;

@@ -1157,41 +1157,71 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             ${t.innerHTML}
           </body>
         </html>
-      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>l.length)for(let e=l.length;e<t;e++)l.push({boothNumber:e+1,roomName:``,classes:[]});else t<l.length&&(l=l.slice(0,t));f()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{l[e.target.dataset.idx].roomName=e.target.value,f()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!u.includes(t)&&(u.push(t),f())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=u[t];u.splice(t,1),l.forEach(e=>{e.roomName===n&&(e.roomName=``)}),f()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;g(n,!0,`💾 Save Locations`);try{await C.adminSaveLocations(t,u),_(`Locations saved successfully!`,`success`)}catch(e){_(`Failed to save: ${e.message}`,`error`)}finally{g(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;l.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&l[parseInt(n,10)].classes.push(t),f()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;g(n,!0,`💾 Save Configuration`);try{await C.adminSaveBooths(t,l),_(`Booth configuration saved successfully!`,`success`)}catch(e){_(`Failed to save: ${e.message}`,`error`)}finally{g(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{m(),f(),_(`Auto allotment complete. Please review and save.`,`info`)})},p=(e,t,r,i)=>{let a=``;return e.forEach(e=>{if(!e.classes||e.classes.length===0)return;let o=e.classes.map(e=>i[e]).filter(Boolean),s=o.reduce((e,t)=>e+t.count,0),c=[...new Set(o.map(e=>e.dept.toUpperCase()))],l=o.reduce((e,t)=>{let n=t.name.toUpperCase();return[`MA`,`MSC`,`MCOM`,`M.SC`,`M.COM`,`M.A`].some(e=>n.includes(e))?e.add(`PG`):(n.includes(`1ST YEAR`)&&e.add(`1`),n.includes(`2ND YEAR`)&&e.add(`2`),n.includes(`3RD YEAR`)&&e.add(`3`)),e},new Set),u=r.filter(e=>!e.deptRestriction&&(!e.yearRestriction||String(e.yearRestriction).trim()===``)),d=r.filter(e=>{if(!e.post.toUpperCase().startsWith(`ASSOCIATION SECRETARY `))return!1;let t=e.post.substring(22).toUpperCase().trim();return c.includes(t)}),f=r.filter(e=>!e.yearRestriction||String(e.yearRestriction).trim()===``?!1:l.has(String(e.yearRestriction)));a+=`
+      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>l.length)for(let e=l.length;e<t;e++)l.push({boothNumber:e+1,roomName:``,classes:[]});else t<l.length&&(l=l.slice(0,t));f()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{l[e.target.dataset.idx].roomName=e.target.value,f()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!u.includes(t)&&(u.push(t),f())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=u[t];u.splice(t,1),l.forEach(e=>{e.roomName===n&&(e.roomName=``)}),f()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;g(n,!0,`💾 Save Locations`);try{await C.adminSaveLocations(t,u),_(`Locations saved successfully!`,`success`)}catch(e){_(`Failed to save: ${e.message}`,`error`)}finally{g(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;l.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&l[parseInt(n,10)].classes.push(t),f()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;g(n,!0,`💾 Save Configuration`);try{await C.adminSaveBooths(t,l),_(`Booth configuration saved successfully!`,`success`)}catch(e){_(`Failed to save: ${e.message}`,`error`)}finally{g(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{m(),f(),_(`Auto allotment complete. Please review and save.`,`info`)})},p=(e,t,r,i)=>{let a=``;return e.forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=e.classes.map(e=>i[e]).filter(Boolean),o=r.reduce((e,t)=>e+t.count,0);[...new Set(r.map(e=>e.dept.toUpperCase()))],r.reduce((e,t)=>{let n=t.name.toUpperCase();return[`MA`,`MSC`,`MCOM`,`M.SC`,`M.COM`,`M.A`].some(e=>n.includes(e))?e.add(`PG`):(n.includes(`1ST YEAR`)&&e.add(`1`),n.includes(`2ND YEAR`)&&e.add(`2`),n.includes(`3RD YEAR`)&&e.add(`3`)),e},new Set);let s={general:o,association:{},yearRep:{}};r.forEach(e=>{let t=String(e.dept||`N/A`).trim();s.association[t]=(s.association[t]||0)+e.count;let n=e.name.toUpperCase(),r=``;[`MA`,`MSC`,`MCOM`,`M.SC`,`M.COM`,`M.A`].some(e=>n.includes(e))?r=`PG Representative`:n.includes(`1ST YEAR`)?r=`1st Year Representative`:n.includes(`2ND YEAR`)?r=`2nd Year Representative`:n.includes(`3RD YEAR`)&&(r=`3rd Year Representative`),r&&(s.yearRep[r]=(s.yearRep[r]||0)+e.count)}),a+=`
       <div class="page-break">
         <div class="facing-sheet">
           <div class="header">
             <div class="college-name">${h(n.COLLEGE_NAME||`COLLEGE UNION ELECTION`)}</div>
             <div class="title">Electoral Roll — Booth Facing Sheet</div>
           </div>
-          <div style="font-size: 20px; margin-bottom: 30px;">
-            <p><strong>BOOTH NO:</strong> <span style="font-size: 32px; border: 2px solid #000; padding: 5px 20px; margin-left: 10px;">${e.boothNumber}</span></p>
-            <p><strong>LOCATION:</strong> ${h(e.roomName||`UNSPECIFIED`)}</p>
+          <div style="font-size: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: baseline;">
+            <div>
+              <p><strong>BOOTH NO:</strong> <span style="font-size: 32px; border: 2px solid #000; padding: 5px 20px; margin-left: 10px;">${e.boothNumber}</span></p>
+              <p><strong>LOCATION:</strong> ${h(e.roomName||`UNSPECIFIED`)}</p>
+            </div>
+            <div style="text-align: right; font-size: 14px; color: #666;">
+              Ref: Union Election ${new Date().getFullYear()}
+            </div>
           </div>
           <div style="flex-grow: 1;">
             <h4 style="border-bottom: 1px solid #eee; padding-bottom: 5px;">Allocation Statistics</h4>
             <table class="stats-table">
               <thead><tr><th>#</th><th>Department</th><th>Class Name</th><th style="text-align:right">Voters</th></tr></thead>
               <tbody>
-                ${o.map((e,t)=>`
+                ${r.map((e,t)=>`
                   <tr><td>${t+1}</td><td>${h(e.dept)}</td><td>${h(e.name)}</td><td style="text-align:right">${e.count}</td></tr>
                 `).join(``)}
-                <tr style="font-weight:bold; background:#f9f9f9"><td colspan="3">GRAND TOTAL VOTERS</td><td style="text-align:right">${s}</td></tr>
+                <tr style="font-weight:bold; background:#f9f9f9"><td colspan="3">GRAND TOTAL VOTERS</td><td style="text-align:right">${o}</td></tr>
               </tbody>
             </table>
+
             <h4 style="margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Ballots Assigned to this Booth</h4>
             <div style="font-size: 13px; line-height: 1.8;">
-              <div>• <strong>General Posts:</strong> ${u.length} Ballots (Chairman, Vice Chairman, UUC, etc.)</div>
-              ${d.length?`<div>• <strong>Association:</strong> ${d.map(e=>h(e.post)).join(`, `)}</div>`:``}
-              ${f.length?`<div>• <strong>Year Representatives:</strong> ${f.map(e=>h(e.post)).join(`, `)}</div>`:``}
+              <table class="stats-table" style="margin-top:10px; width: 100%; max-width: 500px;">
+                <thead>
+                  <tr style="background:#f0f7ff">
+                    <th>Ballot Type / Category</th>
+                    <th style="text-align:right">Required Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="font-weight:bold">
+                    <td>General Union Posts (Chairman, UUC, Sec, etc.)</td>
+                    <td style="text-align:right">${o}</td>
+                  </tr>
+                  ${Object.entries(s.yearRep).map(([e,t])=>`
+                    <tr>
+                      <td>${h(e)} Ballot</td>
+                      <td style="text-align:right">${t}</td>
+                    </tr>
+                  `).join(``)}
+                  ${Object.entries(s.association).map(([e,t])=>`
+                    <tr>
+                      <td>${h(e)} Association Secretary Ballot</td>
+                      <td style="text-align:right">${t}</td>
+                    </tr>
+                  `).join(``)}
+                </tbody>
+              </table>
+              <p style="font-size: 10px; color: #666; margin-top: 5px;">* Verify the physical ballot counts against this list before opening the booth.</p>
             </div>
           </div>
           <div class="footer">
-            <div>Returning Officer Signature</div>
-            <div>Presiding Officer Signature</div>
+            <div style="border-top: 1px solid #000; padding-top: 10px; width: 200px; text-align: center;">Returning Officer Signature</div>
+            <div style="border-top: 1px solid #000; padding-top: 10px; width: 200px; text-align: center;">Presiding Officer Signature</div>
           </div>
         </div>
-      </div>`,o.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),a+=`
+      </div>`,r.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),a+=`
         <div class="page-break">
           <div class="roll-page">
             <div class="roll-header">
