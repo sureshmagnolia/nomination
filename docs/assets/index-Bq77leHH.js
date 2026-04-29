@@ -291,11 +291,11 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </div>
       <div id="resultArea" class="mt-8"></div>
     </div>
-  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));let t=e.querySelector(`#searchBtn`);t.addEventListener(`click`,async()=>{let n=e.querySelector(`#searchId`).value.trim();if(n.length!==10||!/^\d+$/.test(n)){_(`Please enter a valid 10-digit numeric ID.`,`error`);return}g(t,!0,`🔍 Find Nomination`);try{let t=await C.getNomination(n);re(e.querySelector(`#resultArea`),t,n)}catch(t){e.querySelector(`#resultArea`).innerHTML=`<div class="alert alert-error mt-4">❌ ${h(t.message)}</div>`}finally{g(t,!1,`🔍 Find Nomination`)}})}function re(e,t,n){e.innerHTML=`
+  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));let t=e.querySelector(`#searchBtn`);t.addEventListener(`click`,async()=>{let n=e.querySelector(`#searchId`).value.trim();if(n.length!==10||!/^\d+$/.test(n)){_(`Please enter a valid 10-digit numeric ID.`,`error`);return}g(t,!0,`🔍 Find Nomination`);try{let t=await C.getNomination(n);re(e.querySelector(`#resultArea`),t,n)}catch(t){e.querySelector(`#resultArea`).innerHTML=`<div class="alert alert-error mt-4">❌ ${h(t.message)}</div>`}finally{g(t,!1,`🔍 Find Nomination`)}})}function re(e,t,n){let r=t.dob||`N/A`,i=new Date(t.dob);isNaN(i.getTime())||(r=`${String(i.getDate()).padStart(2,`0`)}/${String(i.getMonth()+1).padStart(2,`0`)}/${i.getFullYear()}`);let a=s(t.dob);e.innerHTML=`
     <div class="space-y-4">
       <div class="alert alert-success">✅ Nomination found! Status: <strong>${h(t.status)}</strong></div>
       <div id="printZone" class="print-zone">
-        ${N(n,t.post,t.gender,t.dob,t.age,t.candidate,t.proposer,t.seconder,t.status)}
+        ${N(n,t.post,t.gender,r,a,t.candidate,t.proposer,t.seconder,t.status)}
       </div>
       <div class="flex gap-3 no-print">
         <button id="printBtn" class="btn btn-success flex-1">🖨️ Print</button>

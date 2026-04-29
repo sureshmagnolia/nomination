@@ -4,7 +4,7 @@
  */
 import { api } from '../api.js';
 import { router } from '../router.js';
-import { esc, showToast, setLoading, triggerPrint } from '../utils.js';
+import { esc, showToast, setLoading, triggerPrint, calculateAge } from '../utils.js';
 import { buildNominationPaper } from './submitNomination.js';
 
 export async function renderFindNomination(container) {
@@ -46,12 +46,22 @@ export async function renderFindNomination(container) {
 }
 
 function showNomResult(area, nom, id) {
+  // Format DOB from ISO string (or YYYY-MM-DD) to DD/MM/YYYY
+  let dobDisplay = nom.dob || 'N/A';
+  const d = new Date(nom.dob);
+  if (!isNaN(d.getTime())) {
+    dobDisplay = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  }
+  
+  // Calculate age using the utility function
+  const age = calculateAge(nom.dob);
+
   const statusMap = { Pending: 'pending', Valid: 'valid', Rejected: 'rejected' };
   area.innerHTML = `
     <div class="space-y-4">
       <div class="alert alert-success">✅ Nomination found! Status: <strong>${esc(nom.status)}</strong></div>
       <div id="printZone" class="print-zone">
-        ${buildNominationPaper(id, nom.post, nom.gender, nom.dob, nom.age, nom.candidate, nom.proposer, nom.seconder, nom.status)}
+        ${buildNominationPaper(id, nom.post, nom.gender, dobDisplay, age, nom.candidate, nom.proposer, nom.seconder, nom.status)}
       </div>
       <div class="flex gap-3 no-print">
         <button id="printBtn" class="btn btn-success flex-1">🖨️ Print</button>
