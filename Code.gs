@@ -556,11 +556,9 @@ function doPost(e) {
           if (isFinalYear) return false;
         }
 
-        // Female only
-        if (postRule.femaleOnly) {
-          const gender = String(student['Gender'] || student['GENDER'] || '').toLowerCase();
-          if (gender !== 'female') return false;
-        }
+        // NOTE: femaleOnly is NOT filtered here — gender is self-declared in the nomination
+        // form, not read from NominalRoll. We override the gender field to 'Female' when
+        // building the row for female-only posts.
 
         return true;
       }
