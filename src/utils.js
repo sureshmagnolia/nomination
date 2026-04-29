@@ -113,7 +113,8 @@ export function triggerPrint(htmlContent, title = 'Nomination Form') {
       <head>
         <title>${title}</title>
         <style>
-          @page { size: A4; margin: 20mm; }
+          @page { size: A4; margin: 15mm; }
+          * { box-sizing: border-box; }
           body {
             font-family: Arial, sans-serif;
             color: black !important;
@@ -125,7 +126,7 @@ export function triggerPrint(htmlContent, title = 'Nomination Form') {
           }
           /* Reset dark theme classes to clean B&W for printing */
           * { color: black !important; background: transparent !important; border-color: #333 !important; }
-          .print-paper { width: 100%; max-width: 210mm; margin: 0 auto; }
+          .print-paper { width: 100%; margin: 0 auto; padding: 1rem; }
           .border { border: 1px solid #333; }
           .border-b { border-bottom: 1px solid #333; }
           .border-y { border-top: 1px solid #333; border-bottom: 1px solid #333; }
