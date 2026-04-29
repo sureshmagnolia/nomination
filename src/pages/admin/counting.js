@@ -211,13 +211,13 @@ function buildForm(tableNum, roundNum, postName, candidates, serial) {
       </tr></thead>
       <tbody>
         ${rows}
-        <tr><td style="text-align:center;padding:18px 8px">–</td><td style="padding:18px 8px;font-weight:bold">NOTA (None Of The Above)</td><td></td></tr>
-        <tr><td style="text-align:center;padding:18px 8px">–</td><td style="padding:18px 8px;font-weight:bold;color:#555">INVALID / BLANK VOTES</td><td></td></tr>
+        <tr><td style="text-align:center;padding:18px 8px">–</td><td style="padding:18px 8px;font-weight:bold">NOTA</td><td></td></tr>
+        <tr><td style="text-align:center;padding:18px 8px">–</td><td style="padding:18px 8px;font-weight:bold;color:#555">INVALID</td><td></td></tr>
       </tbody>
     </table>
-    <div style="display:flex;justify-content:space-between;margin-top:40px;text-align:center">
-      <div><div style="border-top:1.5px solid #000;width:200px;margin-bottom:5px"></div><div style="font-size:11px">Counting Officer Signature</div></div>
-      <div><div style="border-top:1.5px solid #000;width:200px;margin-bottom:5px"></div><div style="font-size:11px">Returning Officer Signature</div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:60px;text-align:center">
+      <div><div style="border-top:1.5px solid #000;width:200px;margin-bottom:5px"></div><div style="font-size:11px">Signature of the Agents</div></div>
+      <div><div style="border-top:1.5px solid #000;width:200px;margin-bottom:5px"></div><div style="font-size:11px">Counting Supervisor Signature</div></div>
     </div>
   </div>`;
 }
