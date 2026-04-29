@@ -514,28 +514,26 @@ function doPost(e) {
 
     if (action === 'adminInjectTestData') {
       checkAdmin(body.password);
-      
+
       const nomSheet   = getSheet(SHEET_NOMS);
       const validSheet = getSheet(SHEET_VALID);
       const finalSheet = getSheet(SHEET_FINAL);
       const students   = getNominalRollData();
       const posts      = getPostsData();
-      
-      if (students.length < 9) return errOut('Not enough students in NominalRoll to generate test data.');
-      if (posts.length === 0) return errOut('No posts configured. Add posts first.');
 
-      // ─── Eligibility filter — mirrors frontend checkEligibility() logic ───────
+      if (students.length < 9) return errOut('Not enough students in NominalRoll to generate test data.');
+      if (posts.length === 0)  return errOut('No posts configured. Add posts first.');
+
+      // ── Eligibility filter: mirrors frontend checkEligibility() ──────────────
       function isEligibleCandidate(student, postRule) {
         const cls  = String(student['CLASS'] || '').toUpperCase();
-        const dept = String(student['Dept'] || '').toUpperCase();
+        const dept = String(student['Dept']  || '').toUpperCase();
 
-        // Department restriction (Association Secretary posts)
+        // Dept restriction (Association posts)
         if (postRule.deptRestriction) {
-          const prefix = 'Association Secretary ';
+          const prefix  = 'Association Secretary ';
           const postName = String(postRule.post || '');
-          const reqDept = postName.startsWith(prefix)
-            ? postName.replace(prefix, '').toUpperCase()
-            : null;
+          const reqDept  = postName.startsWith(prefix) ? postName.replace(prefix, '').toUpperCase() : null;
           if (reqDept && dept !== reqDept) return false;
         }
 
@@ -552,31 +550,35 @@ function doPost(e) {
 
         // Final year ineligible
         if (postRule.finalYearIneligible) {
-          const isFinalYear = cls.includes('3RD YEAR') || cls.includes('2ND YEAR M');
-          if (isFinalYear) return false;
+          if (cls.includes('3RD YEAR') || cls.includes('2ND YEAR M')) return false;
         }
 
-        // NOTE: femaleOnly is NOT filtered here — gender is self-declared in the nomination
-        // form, not read from NominalRoll. We override the gender field to 'Female' when
-        // building the row for female-only posts.
-
+        // NOTE: femaleOnly is NOT filtered from NominalRoll — gender is self-declared.
+        // The nomination row will have gender set to 'Female' for femaleOnly posts.
         return true;
       }
 
-      // ─── Proposer/Seconder eligibility (no gender/year restrictions, but dept restriction for Assoc posts) ─
       function isEligibleSupporter(student, postRule) {
         if (!postRule.deptRestriction) return true;
-        const dept = String(student['Dept'] || '').toUpperCase();
-        const prefix = 'Association Secretary ';
+        const dept    = String(student['Dept'] || '').toUpperCase();
+        const prefix  = 'Association Secretary ';
         const postName = String(postRule.post || '');
-        const reqDept = postName.startsWith(prefix)
-          ? postName.replace(prefix, '').toUpperCase()
-          : null;
+        const reqDept  = postName.startsWith(prefix) ? postName.replace(prefix, '').toUpperCase() : null;
         if (reqDept && dept !== reqDept) return false;
         return true;
       }
 
-      // Helper to generate a unique test ID
+      // ── Fisher-Yates shuffle for variety ─────────────────────────────────────
+      function shuffle(arr) {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+
+      // ── Unique ID generator ───────────────────────────────────────────────────
       const existingIds = new Set(getAllNominations().map(n => n.id));
       function makeTestId() {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -590,62 +592,55 @@ function doPost(e) {
 
       const injected = [];
       const skipped  = [];
-      const now = new Date().toISOString();
-      const getAdm = (st) => st['ADMISION NO'] || st['ADMISSION NO'] || 'N/A';
+      const now      = new Date().toISOString();
+      const getAdm   = (st) => st['ADMISION NO'] || st['ADMISSION NO'] || 'N/A';
+
+      // Global offsets advance across posts so each post gets DIFFERENT students
+      let globalCandidateOffset = 0;
+      let globalSupporterOffset = 0;
 
       posts.forEach((p) => {
-        const eligibleCandidates  = students.filter(s => isEligibleCandidate(s, p));
-        const eligibleSupporters  = students.filter(s => isEligibleSupporter(s, p));
+        // Shuffle eligible lists for this post
+        const eligibleCandidates = shuffle(students.filter(s => isEligibleCandidate(s, p)));
+        const eligibleSupporters = shuffle(students.filter(s => isEligibleSupporter(s, p)));
 
         if (eligibleCandidates.length < 2 || eligibleSupporters.length < 4) {
           skipped.push(p.post);
-          return; // Not enough valid students for this post
+          return;
         }
 
-        // 2 candidates per post — each uses a different candidate + unique proposer/seconder
+        // Inject 2 candidates per post
         for (let i = 0; i < 2; i++) {
-          const candidate = eligibleCandidates[i % eligibleCandidates.length];
-          // Pick proposer/seconder from supporters, ensuring they're different from each other and candidate
+          // Use global offset so candidate selection differs across posts
+          const candidate = eligibleCandidates[(globalCandidateOffset + i) % eligibleCandidates.length];
+
+          // Pick proposer + seconder — must be different from candidate and each other
           const usedSerials = new Set([String(candidate['Nominal Roll Serial Number'])]);
-          const availSupporters = eligibleSupporters.filter(
-            s => !usedSerials.has(String(s['Nominal Roll Serial Number']))
-          );
+          const availSupporters = [];
+          for (let k = 0; k < eligibleSupporters.length; k++) {
+            const s = eligibleSupporters[(globalSupporterOffset + k) % eligibleSupporters.length];
+            if (!usedSerials.has(String(s['Nominal Roll Serial Number']))) {
+              availSupporters.push(s);
+              usedSerials.add(String(s['Nominal Roll Serial Number']));
+              if (availSupporters.length === 2) break;
+            }
+          }
           if (availSupporters.length < 2) { skipped.push(p.post); break; }
 
-          const proposer = availSupporters[0];
-          usedSerials.add(String(proposer['Nominal Roll Serial Number']));
-          const seconder = availSupporters.find(
-            s => !usedSerials.has(String(s['Nominal Roll Serial Number']))
-          );
-          if (!seconder) { skipped.push(p.post); break; }
-
-          const id = makeTestId();
+          const [proposer, seconder] = availSupporters;
+          const id     = makeTestId();
           const gender = p.femaleOnly ? 'Female' : (String(candidate['Gender'] || 'Male'));
-          const dob = candidate['DOB'] ? String(candidate['DOB']) : '2003-06-15';
+          const dob    = candidate['DOB'] ? String(candidate['DOB']) : '2003-06-15';
 
           const row = [
-            id,
-            p.post,
-            gender,
-            dob,
-            now,
+            id, p.post, gender, dob, now,
             String(candidate['Nominal Roll Serial Number']),
-            candidate['NAME'],
-            candidate['CLASS'],
-            getAdm(candidate),
-            candidate['Dept'] || 'N/A',
+            candidate['NAME'], candidate['CLASS'], getAdm(candidate), candidate['Dept'] || 'N/A',
             String(proposer['Nominal Roll Serial Number']),
-            proposer['NAME'],
-            proposer['CLASS'],
-            getAdm(proposer),
-            proposer['Dept'] || 'N/A',
+            proposer['NAME'], proposer['CLASS'], getAdm(proposer), proposer['Dept'] || 'N/A',
             String(seconder['Nominal Roll Serial Number']),
-            seconder['NAME'],
-            seconder['CLASS'],
-            getAdm(seconder),
-            seconder['Dept'] || 'N/A',
-            'Valid',
-            'None'
+            seconder['NAME'], seconder['CLASS'], getAdm(seconder), seconder['Dept'] || 'N/A',
+            'Valid', 'None'
           ];
           
           nomSheet.appendRow(row);
@@ -653,8 +648,12 @@ function doPost(e) {
           finalSheet.appendRow(row);
           injected.push(id);
         }
+
+        // Advance global offsets by prime-ish steps to avoid clustering
+        globalCandidateOffset += 5;
+        globalSupporterOffset += 7;
       });
-      
+
       return jsonOut({ ok: true, injected: injected.length, skipped: skipped.length, skippedPosts: skipped });
     }
 
