@@ -1112,8 +1112,8 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               .roll-page { padding: 30px; }
               .roll-header { display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 10px; margin-bottom: 15px; font-size: 12px; }
               .roll-table { width: 100%; border-collapse: collapse; }
-              .roll-table th, .roll-table td { border: 1px solid #eee; padding: 6px 10px; text-align: left; font-size: 11px; }
-              .roll-table th { background: #fafafa; }
+              .roll-table th, .roll-table td { border: 1.2px solid #000; padding: 6px 10px; text-align: left; font-size: 11px; }
+              .roll-table th { background: #eee; font-weight: bold; }
               .footer { display: flex; justify-content: space-around; margin-top: 50px; font-size: 13px; font-weight: bold; }
               @media print {
                 .no-print { display: none; }
@@ -1125,7 +1125,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             ${t.innerHTML}
           </body>
         </html>
-      `),n.document.close(),n.focus(),setTimeout(()=>{n.print(),n.close()},500)});function a(e,t,r,i){let a=``;return e.forEach(e=>{if(!e.classes||e.classes.length===0)return;let o=e.classes.map(e=>i[e]).filter(Boolean),s=o.reduce((e,t)=>e+t.count,0),c=[...new Set(o.map(e=>e.dept.toUpperCase()))],l=r.filter(e=>{if(!e.deptRestriction)return!0;let t=`Association Secretary `,n=e.post.startsWith(t)?e.post.replace(t,``).toUpperCase():null;return n&&c.includes(n)});a+=`
+      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)});function a(e,t,r,i){let a=``;return e.forEach(e=>{if(!e.classes||e.classes.length===0)return;let o=e.classes.map(e=>i[e]).filter(Boolean),s=o.reduce((e,t)=>e+t.count,0),c=[...new Set(o.map(e=>e.dept.toUpperCase()))],l=r.filter(e=>{if(!e.deptRestriction)return!0;let t=`Association Secretary `,n=e.post.startsWith(t)?e.post.replace(t,``).toUpperCase():null;return n&&c.includes(n)});a+=`
         <div class="page-break">
           <div class="facing-sheet">
             <div class="header">
@@ -1166,13 +1166,20 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 <div>Dept: ${h(n.dept)}</div>
               </div>
               <table class="roll-table">
-                <thead><tr><th style="width:40px">S.No</th><th style="width:100px">Adm. No</th><th>Student Name</th><th style="width:120px">Signature</th></tr></thead>
+                <thead><tr>
+                  <th style="width:40px">Sl.No</th>
+                  <th style="width:90px">Adm. No</th>
+                  <th>Student Name</th>
+                  <th style="width:140px">Class</th>
+                  <th style="width:100px">Signature</th>
+                </tr></thead>
                 <tbody>
-                  ${r.map((e,t)=>`
+                  ${r.map(e=>`
                     <tr>
-                      <td style="text-align:center; color:#888">${t+1}</td>
+                      <td style="text-align:center; font-weight:bold">${h(e[`Nominal Roll Serial Number`]||`–`)}</td>
                       <td style="font-family:monospace">${h(e[`ADMISION NO`]||e[`ADMISSION NO`]||`–`)}</td>
                       <td style="font-weight:bold">${h(e.NAME)}</td>
+                      <td style="font-size:10px">${h(e.CLASS)}</td>
                       <td></td>
                     </tr>
                   `).join(``)}

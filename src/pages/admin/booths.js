@@ -190,8 +190,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               .roll-page { padding: 30px; }
               .roll-header { display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 10px; margin-bottom: 15px; font-size: 12px; }
               .roll-table { width: 100%; border-collapse: collapse; }
-              .roll-table th, .roll-table td { border: 1px solid #eee; padding: 6px 10px; text-align: left; font-size: 11px; }
-              .roll-table th { background: #fafafa; }
+              .roll-table th, .roll-table td { border: 1.2px solid #000; padding: 6px 10px; text-align: left; font-size: 11px; }
+              .roll-table th { background: #eee; font-weight: bold; }
               .footer { display: flex; justify-content: space-around; margin-top: 50px; font-size: 13px; font-weight: bold; }
               @media print {
                 .no-print { display: none; }
@@ -206,7 +206,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       `);
       printWin.document.close();
       printWin.focus();
-      setTimeout(() => { printWin.print(); printWin.close(); }, 500);
+      setTimeout(() => { printWin.print(); }, 500);
     });
 
     function buildElectoralRollHtml(booths, students, posts, classStats) {
@@ -269,13 +269,20 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                 <div>Dept: ${esc(cls.dept)}</div>
               </div>
               <table class="roll-table">
-                <thead><tr><th style="width:40px">S.No</th><th style="width:100px">Adm. No</th><th>Student Name</th><th style="width:120px">Signature</th></tr></thead>
+                <thead><tr>
+                  <th style="width:40px">Sl.No</th>
+                  <th style="width:90px">Adm. No</th>
+                  <th>Student Name</th>
+                  <th style="width:140px">Class</th>
+                  <th style="width:100px">Signature</th>
+                </tr></thead>
                 <tbody>
-                  ${classStudents.map((s, si) => `
+                  ${classStudents.map((s) => `
                     <tr>
-                      <td style="text-align:center; color:#888">${si+1}</td>
+                      <td style="text-align:center; font-weight:bold">${esc(s['Nominal Roll Serial Number'] || '–')}</td>
                       <td style="font-family:monospace">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
                       <td style="font-weight:bold">${esc(s['NAME'])}</td>
+                      <td style="font-size:10px">${esc(s['CLASS'])}</td>
                       <td></td>
                     </tr>
                   `).join('')}
