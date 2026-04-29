@@ -13,17 +13,18 @@ export async function renderAdminPublish(container) {
   `);
 
   try {
-    const [settings, nominations] = await Promise.all([
+    const [settings, nominations, postsData] = await Promise.all([
       api.adminGetSettings(pwd),
-      api.adminGetNominations(pwd)
+      api.adminGetNominations(pwd),
+      api.getPosts()
     ]);
-    renderPublishPage(container.querySelector('#adminMain'), settings, nominations, pwd);
+    renderPublishPage(container.querySelector('#adminMain'), settings, nominations, postsData, pwd);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
   }
 }
 
-function renderPublishPage(main, settings, nominations, pwd) {
+function renderPublishPage(main, settings, nominations, postsData, pwd) {
   const validPublished = settings.validListPublished === 'true';
   const finalPublished = settings.finalListPublished === 'true';
 
@@ -97,7 +98,8 @@ function renderPublishPage(main, settings, nominations, pwd) {
       grouped[n.post].push(n);
     });
 
-    const posts = Object.keys(grouped).sort();
+    // Use official post order from postsData
+    const orderedPostNames = postsData.map(p => p.post || p.name).filter(name => grouped[name]);
     
     let html = `
       <div style="text-align:center;margin-bottom:30px;border-bottom:2px solid #000;padding-bottom:15px">
@@ -117,7 +119,7 @@ function renderPublishPage(main, settings, nominations, pwd) {
         <tbody>
     `;
 
-    posts.forEach(post => {
+    orderedPostNames.forEach(post => {
       html += `
         <tr>
           <td colspan="4" style="border:1px solid #000;padding:10px 8px;background:#eee;font-weight:bold;text-transform:uppercase">
@@ -167,7 +169,7 @@ function renderPublishPage(main, settings, nominations, pwd) {
     try {
       await api.adminPublishValidList(pwd);
       showToast('Valid nominations list published successfully!', 'success');
-      renderPublishPage(main, { validListPublished: 'true', finalListPublished: finalPublished ? 'true' : 'false' }, nominations, pwd);
+      renderPublishPage(main, { validListPublished: 'true', finalListPublished: finalPublished ? 'true' : 'false' }, nominations, postsData, pwd);
     } catch (err) {
       showToast(`Failed: ${err.message}`, 'error');
       setLoading(btn, false, '📢 Publish Valid Nominations List');
@@ -181,7 +183,7 @@ function renderPublishPage(main, settings, nominations, pwd) {
     try {
       await api.adminPublishFinalList(pwd);
       showToast('Final nominations list published successfully!', 'success');
-      renderPublishPage(main, { validListPublished: 'true', finalListPublished: 'true' }, nominations, pwd);
+      renderPublishPage(main, { validListPublished: 'true', finalListPublished: 'true' }, nominations, postsData, pwd);
     } catch (err) {
       showToast(`Failed: ${err.message}`, 'error');
       setLoading(btn, false, '📢 Publish Final Nominations List');

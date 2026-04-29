@@ -709,7 +709,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </div>`}
     </div>`,e.addEventListener(`click`,async t=>{let r=t.target.closest(`.approve-btn`);if(!r)return;let i=r.dataset.id;r.disabled=!0,r.innerHTML=`<span class="spinner" style="width:1rem;height:1rem;border-width:2px;"></span>`;try{await C.adminApproveWithdrawal(n,i),_(`Withdrawal for ${i} approved.`,`success`);let t=e.querySelector(`#wrow-${i}`);if(t){let e=t.querySelector(`.badge`);e.textContent=`Approved`,e.className=`badge badge-valid`,r.textContent=`✅ Approve`,r.disabled=!0}}catch(e){_(`Failed: ${e.message}`,`error`),r.disabled=!1,r.textContent=`✅ Approve`}})}async function ye(e){let t=z();if(t){B(e,`publish`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading data...</p></div>
-  `);try{let[n,r]=await Promise.all([C.adminGetSettings(t),C.adminGetNominations(t)]);G(e.querySelector(`#adminMain`),n,r,t)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function G(e,t,n,r){let i=t.validListPublished===`true`,a=t.finalListPublished===`true`;e.innerHTML=`
+  `);try{let[n,r,i]=await Promise.all([C.adminGetSettings(t),C.adminGetNominations(t),C.getPosts()]);G(e.querySelector(`#adminMain`),n,r,i,t)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function G(e,t,n,r,i){let a=t.validListPublished===`true`,o=t.finalListPublished===`true`;e.innerHTML=`
     <div class="page-enter space-y-6">
       <div class="flex justify-between items-center">
         <div>
@@ -727,12 +727,12 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </div>
           <div class="flex items-center gap-2">
             <button id="btnPrintValid" class="btn btn-secondary btn-sm">🖨️ Print List</button>
-            <span class="badge ${i?`badge-valid`:`badge-pending`} text-sm">
-              ${i?`✅ Published`:`⏳ Not Published`}
+            <span class="badge ${a?`badge-valid`:`badge-pending`} text-sm">
+              ${a?`✅ Published`:`⏳ Not Published`}
             </span>
           </div>
         </div>
-        ${i?`
+        ${a?`
         <div class="alert alert-success text-sm">✅ This list is currently visible to the public.</div>`:`
         <div class="alert alert-warning text-sm">
           ⚠ Ensure all nominations have been reviewed before publishing.
@@ -749,19 +749,19 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </div>
           <div class="flex items-center gap-2">
             <button id="btnPrintFinal" class="btn btn-secondary btn-sm">🖨️ Print List</button>
-            <span class="badge ${a?`badge-valid`:`badge-pending`} text-sm">
-              ${a?`✅ Published`:`⏳ Not Published`}
+            <span class="badge ${o?`badge-valid`:`badge-pending`} text-sm">
+              ${o?`✅ Published`:`⏳ Not Published`}
             </span>
           </div>
         </div>
-        ${a?`
+        ${o?`
         <div class="alert alert-success text-sm">✅ The final list is currently visible to the public.</div>`:`
         <div class="alert alert-warning text-sm">
           ⚠ Ensure all withdrawal requests have been processed before publishing.
         </div>
-        <button id="publishFinalBtn" class="btn btn-primary" ${i?``:`disabled title="Publish the valid list first"`}>📢 Publish Final Nominations List</button>`}
+        <button id="publishFinalBtn" class="btn btn-primary" ${a?``:`disabled title="Publish the valid list first"`}>📢 Publish Final Nominations List</button>`}
       </div>
-    </div>`;let o=e=>{let t=e===`final`,r=t?n.filter(e=>e.status===`Valid`&&e.withdrawalStatus!==`Approved`):n.filter(e=>e.status===`Valid`);if(r.length===0){alert(`No valid nominations found to print.`);return}let i={};r.forEach(e=>{i[e.post]||(i[e.post]=[]),i[e.post].push(e)});let a=Object.keys(i).sort(),o=`
+    </div>`;let s=e=>{let t=e===`final`,i=t?n.filter(e=>e.status===`Valid`&&e.withdrawalStatus!==`Approved`):n.filter(e=>e.status===`Valid`);if(i.length===0){alert(`No valid nominations found to print.`);return}let a={};i.forEach(e=>{a[e.post]||(a[e.post]=[]),a[e.post].push(e)});let o=r.map(e=>e.post||e.name).filter(e=>a[e]),s=`
       <div style="text-align:center;margin-bottom:30px;border-bottom:2px solid #000;padding-bottom:15px">
         <div style="font-size:12px;color:#444">Government Victoria College, Palakkad</div>
         <h1 style="margin:5px 0;font-size:22px;text-transform:uppercase">College Union Election 2026-27</h1>
@@ -777,20 +777,20 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </tr>
         </thead>
         <tbody>
-    `;a.forEach(e=>{o+=`
+    `;o.forEach(e=>{s+=`
         <tr>
           <td colspan="4" style="border:1px solid #000;padding:10px 8px;background:#eee;font-weight:bold;text-transform:uppercase">
             POST: ${h(e)}
           </td>
         </tr>
-      `,i[e].forEach((e,t)=>{o+=`
+      `,a[e].forEach((e,t)=>{s+=`
           <tr>
             <td style="border:1px solid #000;padding:8px;text-align:center">${t+1}</td>
             <td style="border:1px solid #000;padding:8px;font-weight:bold">${h(e.candidateName)}</td>
             <td style="border:1px solid #000;padding:8px">${h(e.candidateClass)}</td>
             <td style="border:1px solid #000;padding:8px">${h(e.candidateDept)}</td>
           </tr>
-        `})}),o+=`
+        `})}),s+=`
         </tbody>
       </table>
       <div style="margin-top:60px;display:flex;justify-content:flex-end">
@@ -799,10 +799,10 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <div style="font-size:11px">Signature & Seal</div>
         </div>
       </div>
-    `;let s=window.open(``,`_blank`);s.document.write(`<!DOCTYPE html><html><head><title>Print List</title><style>
+    `;let c=window.open(``,`_blank`);c.document.write(`<!DOCTYPE html><html><head><title>Print List</title><style>
       @page{size:A4;margin:20mm}
       body{font-family:Arial,sans-serif;line-height:1.4}
-    </style></head><body>${o}<script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`),s.document.close()};e.querySelector(`#btnPrintValid`).addEventListener(`click`,()=>o(`valid`)),e.querySelector(`#btnPrintFinal`).addEventListener(`click`,()=>o(`final`)),e.querySelector(`#publishValidBtn`)?.addEventListener(`click`,async t=>{let i=t.currentTarget;if(confirm(`Are you sure you want to publish the valid nominations list? This will be visible to all students.`)){g(i,!0,`📢 Publish Valid Nominations List`);try{await C.adminPublishValidList(r),_(`Valid nominations list published successfully!`,`success`),G(e,{validListPublished:`true`,finalListPublished:a?`true`:`false`},n,r)}catch(e){_(`Failed: ${e.message}`,`error`),g(i,!1,`📢 Publish Valid Nominations List`)}}}),e.querySelector(`#publishFinalBtn`)?.addEventListener(`click`,async t=>{let i=t.currentTarget;if(confirm(`Are you sure you want to publish the final nominations list?`)){g(i,!0,`📢 Publish Final Nominations List`);try{await C.adminPublishFinalList(r),_(`Final nominations list published successfully!`,`success`),G(e,{validListPublished:`true`,finalListPublished:`true`},n,r)}catch(e){_(`Failed: ${e.message}`,`error`),g(i,!1,`📢 Publish Final Nominations List`)}}})}async function be(e){let t=z();if(t){B(e,`posts`,`
+    </style></head><body>${s}<script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`),c.document.close()};e.querySelector(`#btnPrintValid`).addEventListener(`click`,()=>s(`valid`)),e.querySelector(`#btnPrintFinal`).addEventListener(`click`,()=>s(`final`)),e.querySelector(`#publishValidBtn`)?.addEventListener(`click`,async t=>{let a=t.currentTarget;if(confirm(`Are you sure you want to publish the valid nominations list? This will be visible to all students.`)){g(a,!0,`📢 Publish Valid Nominations List`);try{await C.adminPublishValidList(i),_(`Valid nominations list published successfully!`,`success`),G(e,{validListPublished:`true`,finalListPublished:o?`true`:`false`},n,r,i)}catch(e){_(`Failed: ${e.message}`,`error`),g(a,!1,`📢 Publish Valid Nominations List`)}}}),e.querySelector(`#publishFinalBtn`)?.addEventListener(`click`,async t=>{let a=t.currentTarget;if(confirm(`Are you sure you want to publish the final nominations list?`)){g(a,!0,`📢 Publish Final Nominations List`);try{await C.adminPublishFinalList(i),_(`Final nominations list published successfully!`,`success`),G(e,{validListPublished:`true`,finalListPublished:`true`},n,r,i)}catch(e){_(`Failed: ${e.message}`,`error`),g(a,!1,`📢 Publish Final Nominations List`)}}})}async function be(e){let t=z();if(t){B(e,`posts`,`
     <div class="text-center py-16">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 mt-4 text-sm">Loading posts...</p>
