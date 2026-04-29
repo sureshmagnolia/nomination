@@ -40,9 +40,10 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
   });
 
   // Segregate Posts
-  const uucPostName = posts.find(p => p.name.toUpperCase().includes('UUC'))?.name || null;
-  const associationPosts = posts.filter(p => p.name.toUpperCase().includes('ASSOCIATION'));
-  const generalPosts = posts.filter(p => p.name !== uucPostName && !associationPosts.includes(p));
+  const uucPostName = posts.find(p => (p.post||p.name||'').toUpperCase().includes('UUC'))?.post
+    || posts.find(p => (p.post||p.name||'').toUpperCase().includes('UUC'))?.name || null;
+  const associationPosts = posts.filter(p => (p.post||p.name||'').toUpperCase().includes('ASSOCIATION'));
+  const generalPosts = posts.filter(p => (p.post||p.name) !== uucPostName && !associationPosts.includes(p));
 
   // Determine what each table counts in Round 1 (Associations)
   // We look at the booths, see what classes are there, map to Depts, and check if an association post matches that Dept.
@@ -51,8 +52,8 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
     // Find association posts that match these departments. 
     // E.g., "Association Secretary Physics" matches Dept "PHYSICS".
     const assignedAssocs = associationPosts.filter(ap => {
-      // Very basic matching: check if the department name is IN the post name
-      return Array.from(tableDepts).some(dept => ap.name.toUpperCase().includes(dept.toUpperCase()));
+      const apName = (ap.post || ap.name || '').toUpperCase();
+      return Array.from(tableDepts).some(dept => apName.includes(dept.toUpperCase()));
     });
     return assignedAssocs;
   });
@@ -74,7 +75,7 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
 
     // Final Round
     if (uucPostName) {
-      matrix[t].push([{ name: uucPostName }]);
+      matrix[t].push([{ post: uucPostName, name: uucPostName }]);
     }
   }
 
@@ -105,7 +106,7 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
                   <td class="font-bold text-indigo-300 whitespace-nowrap">Table ${b.boothNumber} <br><span class="text-xs text-slate-500 font-normal">${esc(b.roomName)}</span></td>
                   ${matrix[t].map(roundPosts => `
                     <td class="text-xs">
-                      ${roundPosts.length ? roundPosts.map(p => `<div class="badge badge-valid mb-1 truncate max-w-[120px]" title="${esc(p.name)}">${esc(p.name)}</div>`).join('') : '<span class="text-slate-600">Idle</span>'}
+                      ${roundPosts.length ? roundPosts.map(p => `<div class="badge badge-valid mb-1 truncate max-w-[120px]" title="${esc(p.post||p.name)}">${esc(p.post||p.name)}</div>`).join('') : '<span class="text-slate-600">Idle</span>'}
                     </td>
                   `).join('')}
                 </tr>
@@ -131,9 +132,8 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
 
         postsToCount.forEach(post => {
           // Get Final Candidates for this post
-          const candidates = finalList.filter(c => c.post === post.name);
-          // Generate an A4 Page for this specific Table + Round + Post
-          printHtml += generateCountingFormHtml(booths[t].boothNumber, r + 1, post.name, candidates);
+          const candidates = finalList.filter(c => c.post === (post.post || post.name));
+          printHtml += generateCountingFormHtml(booths[t].boothNumber, r + 1, post.post || post.name, candidates);
         });
       }
     }
