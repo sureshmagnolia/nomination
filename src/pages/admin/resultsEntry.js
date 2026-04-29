@@ -212,7 +212,8 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
             Post: postName,
             CandidateId: inp.dataset.cid,
             CandidateName: inp.dataset.cname,
-            Votes: parseInt(votes, 10)
+            Votes: parseInt(votes, 10),
+            FormSerial: serial || 'N/A'
           });
         }
       });

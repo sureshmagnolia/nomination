@@ -499,9 +499,8 @@ function doPost(e) {
       // body.results = [{ TableNumber, Post, CandidateId, CandidateName, Votes }]
       const s = getSheet(SHEET_RESULTS);
       const d = s.getDataRange().getValues();
-      const headers = d[0];
+      const headers = ['TableNumber', 'Post', 'CandidateId', 'CandidateName', 'Votes', 'FormSerial'];
       
-      // We will completely replace the rows for the given TableNumber + Post
       if (!Array.isArray(body.results) || body.results.length === 0) return jsonOut({ ok: true });
       
       const targetTable = String(body.results[0].TableNumber);
@@ -512,10 +511,15 @@ function doPost(e) {
       
       s.clear();
       s.appendRow(headers);
-      rowsToKeep.forEach(r => s.appendRow(r));
+      rowsToKeep.forEach(r => {
+        // Ensure rows are padded to match new header length if they were old format
+        const row = [...r];
+        while (row.length < headers.length) row.push('');
+        s.appendRow(row);
+      });
       
       body.results.forEach(res => {
-        s.appendRow([res.TableNumber, res.Post, res.CandidateId, res.CandidateName, Number(res.Votes) || 0]);
+        s.appendRow([res.TableNumber, res.Post, res.CandidateId, res.CandidateName, Number(res.Votes) || 0, res.FormSerial || 'N/A']);
       });
       
       return jsonOut({ ok: true });
