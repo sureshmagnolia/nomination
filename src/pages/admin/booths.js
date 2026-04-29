@@ -41,6 +41,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
   const allClasses = Object.values(classStats).sort((a, b) => a.name.localeCompare(b.name));
   let booths = initialBooths.length ? [...initialBooths] : [{ boothNumber: 1, roomName: '', classes: [] }];
   let locations = [...initialLocations];
+  let isFirstRender = true;
 
   const refreshUI = () => {
     // Recalculate booth stats
@@ -56,14 +57,17 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       }
     });
 
+    const scrollPos = window.scrollY;
+
     main.innerHTML = `
       <div class="page-enter space-y-6">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h3 class="text-xl font-bold text-white">Polling Booth Allotment</h3>
             <p class="text-slate-400 text-sm">Designate rooms and allot classes to polling booths.</p>
           </div>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-2">
+            <button id="btnClearAll" class="btn btn-secondary border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white">🗑️ Clear All</button>
             <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Electoral Rolls</button>
             <button id="btnAutoAllot" class="btn btn-secondary">⚡ Auto Allot</button>
             <button id="btnSaveBooths" class="btn btn-primary">💾 Save Configuration</button>
@@ -102,8 +106,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="boothsContainer">
             ${booths.map((b, i) => `
-              <div class="border border-white/10 rounded-lg p-3 bg-white/5">
-                <div class="text-xs text-slate-400 font-bold uppercase mb-1 flex justify-between">
+              <div class="border border-white/10 rounded-lg p-3 bg-white/5 shadow-inner">
+                <div class="text-[10px] text-slate-500 font-bold uppercase mb-1 flex justify-between">
                   <span>Booth ${i + 1}</span>
                   <span class="${b.totalStudents > 0 ? 'text-indigo-400' : ''}">${b.totalStudents} Students</span>
                 </div>
@@ -116,8 +120,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                     >${esc(loc)}</option>
                   `).join('')}
                 </select>
-                <div class="text-xs text-slate-500 h-16 overflow-y-auto">
-                  ${b.classes.length ? b.classes.map(c => `<div>• ${esc(c)} (${classStats[c]?.count || 0})</div>`).join('') : '<em>No classes assigned</em>'}
+                <div class="text-xs text-slate-500 h-16 overflow-y-auto bg-black/20 rounded p-1">
+                  ${b.classes.length ? b.classes.map(c => `<div class="whitespace-nowrap overflow-hidden text-ellipsis">• ${esc(c)} (${classStats[c]?.count || 0})</div>`).join('') : '<em class="opacity-30">No classes assigned</em>'}
                 </div>
               </div>
             `).join('')}
@@ -126,13 +130,13 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
         <!-- Unallocated Warning -->
         ${unallocated.length ? `
-          <div class="alert alert-warning">
-            ⚠️ <strong>${unallocated.length} classes</strong> are not assigned to any booth!
+          <div class="alert alert-warning py-2 text-sm">
+            ⚠️ <strong>${unallocated.length} classes</strong> are currently unassigned.
           </div>
         ` : ''}
 
         <!-- Class Allocation Table -->
-        <div class="glass rounded-xl overflow-hidden">
+        <div class="glass rounded-xl overflow-hidden shadow-2xl">
           <div class="overflow-x-auto">
             <table class="data-table">
               <thead><tr>
@@ -147,10 +151,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                   return `
                     <tr>
                       <td class="text-xs text-slate-400">${esc(cls.dept)}</td>
-                      <td class="font-medium text-sm">${esc(cls.name)}</td>
-                      <td>${cls.count}</td>
+                      <td class="font-medium text-sm text-white">${esc(cls.name)}</td>
+                      <td class="font-mono text-indigo-300">${cls.count}</td>
                       <td>
-                        <select class="field w-40 py-1 text-sm class-booth-select" data-class="${esc(cls.name)}">
+                        <select class="field w-full md:w-44 py-1 text-xs class-booth-select" data-class="${esc(cls.name)}">
                           <option value="">-- Unassigned --</option>
                           ${booths.map((b, i) => `
                             <option value="${i}" ${assignedBooth === b ? 'selected' : ''}>Booth ${i + 1}</option>
@@ -167,7 +171,20 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       </div>
     `;
 
-    // Attach Event Listeners
+    // Re-scroll to previous position
+    if (!isFirstRender) {
+      window.scrollTo(0, scrollPos);
+    }
+    isFirstRender = false;
+
+    // --- Listeners ---
+    main.querySelector('#btnClearAll').addEventListener('click', () => {
+      if (confirm('Clear all class allotments? Room locations will be kept.')) {
+        booths.forEach(b => b.classes = []);
+        refreshUI();
+      }
+    });
+
     main.querySelector('#btnPrintRolls').addEventListener('click', () => {
       const area = main.querySelector('#printArea');
       area.innerHTML = buildElectoralRollHtml(booths, nominalRoll, posts, classStats);
@@ -209,113 +226,6 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       setTimeout(() => { printWin.print(); }, 500);
     });
 
-    function buildElectoralRollHtml(booths, students, posts, classStats) {
-      let html = '';
-      booths.forEach((b) => {
-        if (!b.classes || b.classes.length === 0) return;
-        const boothClasses = b.classes.map(cn => classStats[cn]).filter(Boolean);
-        const totalVoters = boothClasses.reduce((sum, c) => sum + c.count, 0);
-        const boothDepts = [...new Set(boothClasses.map(c => c.dept.toUpperCase()))];
-        const boothYears = boothClasses.reduce((set, c) => {
-          const u = c.name.toUpperCase();
-          const isPG = ['MA','MSC','MCOM','M.SC','M.COM','M.A'].some(pg => u.includes(pg));
-          if (isPG) set.add('PG');
-          else {
-            if (u.includes('1ST YEAR')) set.add('1');
-            if (u.includes('2ND YEAR')) set.add('2');
-            if (u.includes('3RD YEAR')) set.add('3');
-          }
-          return set;
-        }, new Set());
-
-        const genPosts = posts.filter(p => !p.deptRestriction && (!p.yearRestriction || String(p.yearRestriction).trim() === ''));
-        const relevantAssoc = posts.filter(p => {
-          const prefix = 'Association Secretary ';
-          if (!p.post.toUpperCase().startsWith(prefix.toUpperCase())) return false;
-          const reqDept = p.post.substring(prefix.length).toUpperCase().trim();
-          return boothDepts.includes(reqDept);
-        });
-        const relevantReps = posts.filter(p => {
-          if (!p.yearRestriction || String(p.yearRestriction).trim() === '') return false;
-          return boothYears.has(String(p.yearRestriction));
-        });
-
-        html += `
-        <div class="page-break">
-          <div class="facing-sheet">
-            <div class="header">
-              <div class="college-name">${esc(CONFIG.COLLEGE_NAME || 'COLLEGE UNION ELECTION')}</div>
-              <div class="title">Electoral Roll — Booth Facing Sheet</div>
-            </div>
-            <div style="font-size: 20px; margin-bottom: 30px;">
-              <p><strong>BOOTH NO:</strong> <span style="font-size: 32px; border: 2px solid #000; padding: 5px 20px; margin-left: 10px;">${b.boothNumber}</span></p>
-              <p><strong>LOCATION:</strong> ${esc(b.roomName || 'UNSPECIFIED')}</p>
-            </div>
-            <div style="flex-grow: 1;">
-              <h4 style="border-bottom: 1px solid #eee; padding-bottom: 5px;">Allocation Statistics</h4>
-              <table class="stats-table">
-                <thead><tr><th>#</th><th>Department</th><th>Class Name</th><th style="text-align:right">Voters</th></tr></thead>
-                <tbody>
-                  ${boothClasses.map((c, i) => `
-                    <tr><td>${i+1}</td><td>${esc(c.dept)}</td><td>${esc(c.name)}</td><td style="text-align:right">${c.count}</td></tr>
-                  `).join('')}
-                  <tr style="font-weight:bold; background:#f9f9f9"><td colspan="3">GRAND TOTAL VOTERS</td><td style="text-align:right">${totalVoters}</td></tr>
-                </tbody>
-              </table>
-              <h4 style="margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Ballots Assigned to this Booth</h4>
-              <div style="font-size: 13px; line-height: 1.8;">
-                <div>• <strong>General Posts:</strong> ${genPosts.length} Ballots (Chairman, Vice Chairman, UUC, etc.)</div>
-                ${relevantAssoc.length ? `<div>• <strong>Association:</strong> ${relevantAssoc.map(p => esc(p.post)).join(', ')}</div>` : ''}
-                ${relevantReps.length ? `<div>• <strong>Year Representatives:</strong> ${relevantReps.map(p => esc(p.post)).join(', ')}</div>` : ''}
-              </div>
-            </div>
-            <div class="footer">
-              <div>Returning Officer Signature</div>
-              <div>Presiding Officer Signature</div>
-            </div>
-          </div>
-        </div>`;
-
-        boothClasses.forEach(cls => {
-          const classStudents = students.filter(s => String(s['CLASS']).trim() === cls.name);
-          classStudents.sort((a, b) => String(a['NAME']).localeCompare(String(b['NAME'])));
-          html += `
-          <div class="page-break">
-            <div class="roll-page">
-              <div class="roll-header">
-                <div><strong>BOOTH ${b.boothNumber}</strong> | ${esc(b.roomName || 'No Room')}</div>
-                <div style="text-align:center; flex-grow:1; font-weight:bold; font-size:14px;">ELECTORAL ROLL - ${esc(cls.name)}</div>
-                <div>Dept: ${esc(cls.dept)}</div>
-              </div>
-              <table class="roll-table">
-                <thead><tr>
-                  <th style="width:40px">Sl.No</th>
-                  <th style="width:90px">Adm. No</th>
-                  <th>Student Name</th>
-                  <th style="width:140px">Class</th>
-                  <th style="width:100px">Signature</th>
-                </tr></thead>
-                <tbody>
-                  ${classStudents.map((s) => `
-                    <tr>
-                      <td style="text-align:center; font-weight:bold">${esc(s['Nominal Roll Serial Number'] || '–')}</td>
-                      <td style="font-family:monospace">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
-                      <td style="font-weight:bold">${esc(s['NAME'])}</td>
-                      <td style="font-size:10px">${esc(s['CLASS'])}</td>
-                      <td></td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-              <div style="margin-top:20px; text-align:right; font-size:10px; color:#999">Total Voters: ${classStudents.length}</div>
-            </div>
-          </div>`;
-        });
-      });
-      return html;
-    }
-
-    // Existing Listeners
     main.querySelector('#btnUpdateBoothCount').addEventListener('click', () => {
       const num = parseInt(main.querySelector('#numBoothsInput').value, 10);
       if (num > 0 && num <= 50) {
@@ -331,11 +241,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     main.querySelectorAll('.room-name-select').forEach(select => {
       select.addEventListener('change', (e) => {
         booths[e.target.dataset.idx].roomName = e.target.value;
-        refreshUI(); // refresh to update disabled state of options in other dropdowns
+        refreshUI();
       });
     });
 
-    // Location Management Listeners
     main.querySelector('#btnAddLocation').addEventListener('click', () => {
       const val = main.querySelector('#newLocationInput').value.trim();
       if (val && !locations.includes(val)) {
@@ -349,7 +258,6 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         const idx = e.target.dataset.idx;
         const loc = locations[idx];
         locations.splice(idx, 1);
-        // Clear it from any booth using it
         booths.forEach(b => { if (b.roomName === loc) b.roomName = ''; });
         refreshUI();
       });
@@ -372,11 +280,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       select.addEventListener('change', (e) => {
         const clsName = e.target.dataset.class;
         const newBoothIdx = e.target.value;
-        
-        // Remove from all booths first
         booths.forEach(b => { b.classes = b.classes.filter(c => c !== clsName); });
-        
-        // Add to new booth
         if (newBoothIdx !== '') {
           booths[parseInt(newBoothIdx, 10)].classes.push(clsName);
         }
@@ -404,54 +308,144 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     });
   };
 
+  const buildElectoralRollHtml = (booths, students, posts, classStats) => {
+    let html = '';
+    booths.forEach((b) => {
+      if (!b.classes || b.classes.length === 0) return;
+      const boothClasses = b.classes.map(cn => classStats[cn]).filter(Boolean);
+      const totalVoters = boothClasses.reduce((sum, c) => sum + c.count, 0);
+      const boothDepts = [...new Set(boothClasses.map(c => c.dept.toUpperCase()))];
+      const boothYears = boothClasses.reduce((set, c) => {
+        const u = c.name.toUpperCase();
+        const isPG = ['MA','MSC','MCOM','M.SC','M.COM','M.A'].some(pg => u.includes(pg));
+        if (isPG) set.add('PG');
+        else {
+          if (u.includes('1ST YEAR')) set.add('1');
+          if (u.includes('2ND YEAR')) set.add('2');
+          if (u.includes('3RD YEAR')) set.add('3');
+        }
+        return set;
+      }, new Set());
+
+      const genPosts = posts.filter(p => !p.deptRestriction && (!p.yearRestriction || String(p.yearRestriction).trim() === ''));
+      const relevantAssoc = posts.filter(p => {
+        const prefix = 'Association Secretary ';
+        if (!p.post.toUpperCase().startsWith(prefix.toUpperCase())) return false;
+        const reqDept = p.post.substring(prefix.length).toUpperCase().trim();
+        return boothDepts.includes(reqDept);
+      });
+      const relevantReps = posts.filter(p => {
+        if (!p.yearRestriction || String(p.yearRestriction).trim() === '') return false;
+        return boothYears.has(String(p.yearRestriction));
+      });
+
+      html += `
+      <div class="page-break">
+        <div class="facing-sheet">
+          <div class="header">
+            <div class="college-name">${esc(CONFIG.COLLEGE_NAME || 'COLLEGE UNION ELECTION')}</div>
+            <div class="title">Electoral Roll — Booth Facing Sheet</div>
+          </div>
+          <div style="font-size: 20px; margin-bottom: 30px;">
+            <p><strong>BOOTH NO:</strong> <span style="font-size: 32px; border: 2px solid #000; padding: 5px 20px; margin-left: 10px;">${b.boothNumber}</span></p>
+            <p><strong>LOCATION:</strong> ${esc(b.roomName || 'UNSPECIFIED')}</p>
+          </div>
+          <div style="flex-grow: 1;">
+            <h4 style="border-bottom: 1px solid #eee; padding-bottom: 5px;">Allocation Statistics</h4>
+            <table class="stats-table">
+              <thead><tr><th>#</th><th>Department</th><th>Class Name</th><th style="text-align:right">Voters</th></tr></thead>
+              <tbody>
+                ${boothClasses.map((c, i) => `
+                  <tr><td>${i+1}</td><td>${esc(c.dept)}</td><td>${esc(c.name)}</td><td style="text-align:right">${c.count}</td></tr>
+                `).join('')}
+                <tr style="font-weight:bold; background:#f9f9f9"><td colspan="3">GRAND TOTAL VOTERS</td><td style="text-align:right">${totalVoters}</td></tr>
+              </tbody>
+            </table>
+            <h4 style="margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Ballots Assigned to this Booth</h4>
+            <div style="font-size: 13px; line-height: 1.8;">
+              <div>• <strong>General Posts:</strong> ${genPosts.length} Ballots (Chairman, Vice Chairman, UUC, etc.)</div>
+              ${relevantAssoc.length ? `<div>• <strong>Association:</strong> ${relevantAssoc.map(p => esc(p.post)).join(', ')}</div>` : ''}
+              ${relevantReps.length ? `<div>• <strong>Year Representatives:</strong> ${relevantReps.map(p => esc(p.post)).join(', ')}</div>` : ''}
+            </div>
+          </div>
+          <div class="footer">
+            <div>Returning Officer Signature</div>
+            <div>Presiding Officer Signature</div>
+          </div>
+        </div>
+      </div>`;
+
+      boothClasses.forEach(cls => {
+        const classStudents = students.filter(s => String(s['CLASS']).trim() === cls.name);
+        classStudents.sort((a, b) => String(a['NAME']).localeCompare(String(b['NAME'])));
+        html += `
+        <div class="page-break">
+          <div class="roll-page">
+            <div class="roll-header">
+              <div><strong>BOOTH ${b.boothNumber}</strong> | ${esc(b.roomName || 'No Room')}</div>
+              <div style="text-align:center; flex-grow:1; font-weight:bold; font-size:14px;">ELECTORAL ROLL - ${esc(cls.name)}</div>
+              <div>Dept: ${esc(cls.dept)}</div>
+            </div>
+            <table class="roll-table">
+              <thead><tr>
+                <th style="width:40px">Sl.No</th>
+                <th style="width:90px">Adm. No</th>
+                <th>Student Name</th>
+                <th style="width:140px">Class</th>
+                <th style="width:100px">Signature</th>
+              </tr></thead>
+              <tbody>
+                ${classStudents.map((s) => `
+                  <tr>
+                    <td style="text-align:center; font-weight:bold">${esc(s['Nominal Roll Serial Number'] || '–')}</td>
+                    <td style="font-family:monospace">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
+                    <td style="font-weight:bold">${esc(s['NAME'])}</td>
+                    <td style="font-size:10px">${esc(s['CLASS'])}</td>
+                    <td></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <div style="margin-top:20px; text-align:right; font-size:10px; color:#999">Total Voters: ${classStudents.length}</div>
+          </div>
+        </div>`;
+      });
+    });
+    return html;
+  };
+
   const autoAllot = () => {
-    // Reset all allocations
     booths.forEach(b => { b.classes = []; b.totalStudents = 0; });
-    
-    // Group classes by department
     const depts = {};
     allClasses.forEach(cls => {
       if (!depts[cls.dept]) depts[cls.dept] = { name: cls.dept, total: 0, classes: [] };
       depts[cls.dept].classes.push(cls);
       depts[cls.dept].total += cls.count;
     });
-
     const numBooths = booths.length;
     const totalStudents = nominalRoll.length;
     const mean = totalStudents / numBooths;
-    const maxTolerance = mean * 1.25; // allow up to 25% deviation before splitting a dept
-
-    // Sort departments by size descending
+    const maxTolerance = mean * 1.25;
     const deptList = Object.values(depts).sort((a, b) => b.total - a.total);
 
     deptList.forEach(dept => {
-      // Find the booth with the least students
       booths.sort((a, b) => a.totalStudents - b.totalStudents);
       const targetBooth = booths[0];
-
-      // If adding this entire department exceeds max tolerance and it has multiple classes, split it
       if (targetBooth.totalStudents + dept.total > maxTolerance && dept.classes.length > 1) {
-        // Strict split into max 2 booths
         booths.sort((a, b) => a.totalStudents - b.totalStudents);
         const splitBooth1 = booths[0];
-        const splitBooth2 = booths.length > 1 ? booths[1] : booths[0]; // fallback to 1 if only 1 booth exists
-        
-        // Sort classes within dept by size descending
+        const splitBooth2 = booths.length > 1 ? booths[1] : booths[0];
         const sortedClasses = [...dept.classes].sort((a, b) => b.count - a.count);
         sortedClasses.forEach(cls => {
-          // Distribute only between the two emptiest booths
           const currentBooth = splitBooth1.totalStudents <= splitBooth2.totalStudents ? splitBooth1 : splitBooth2;
           currentBooth.classes.push(cls.name);
           currentBooth.totalStudents += cls.count;
         });
       } else {
-        // Place whole department in the emptiest booth
         dept.classes.forEach(cls => targetBooth.classes.push(cls.name));
         targetBooth.totalStudents += dept.total;
       }
     });
-
-    // Re-sort booths by their original number for display
     booths.sort((a, b) => a.boothNumber - b.boothNumber);
   };
 
