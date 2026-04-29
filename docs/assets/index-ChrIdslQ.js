@@ -403,7 +403,6 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                     <th class="w-16">#</th>
                     <th>Candidate Details</th>
                     <th>Department</th>
-                    <th class="text-right">Nomination ID</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -415,7 +414,6 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                         <div class="text-xs text-slate-500 mt-0.5">${h(e.candidateClass)}</div>
                       </td>
                       <td class="text-sm text-slate-400">${h(e.candidateDept)}</td>
-                      <td class="text-right font-mono text-emerald-400/70 text-[10px]">${h(e.id)}</td>
                     </tr>
                   `).join(``)}
                 </tbody>
