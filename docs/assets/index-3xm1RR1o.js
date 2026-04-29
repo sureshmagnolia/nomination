@@ -1081,6 +1081,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         ${a}
         <tr><td style="text-align:center;padding:18px 8px">–</td><td style="padding:18px 8px;font-weight:bold">NOTA</td><td></td></tr>
         <tr><td style="text-align:center;padding:18px 8px">–</td><td style="padding:18px 8px;font-weight:bold;color:#555">INVALID</td><td></td></tr>
+        <tr style="background:#eee"><td style="text-align:center;padding:18px 8px">–</td><td style="padding:18px 8px;font-weight:black;font-size:16px">TOTAL VOTES COUNTED</td><td></td></tr>
       </tbody>
     </table>
     <div style="display:flex;justify-content:space-between;margin-top:60px;text-align:center">
@@ -1172,13 +1173,17 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <div class="w-32">
               <input type="number" class="field text-center text-lg font-bold border-red-500/30 vote-input" data-cid="INVALID" data-cname="Invalid" placeholder="0" value="${f(`INVALID`)}" min="0">
             </div>
+          <div class="flex items-center justify-between bg-indigo-500/20 p-4 rounded-lg border border-indigo-500/40">
+            <div class="font-black text-indigo-300 text-xl tracking-wider">TOTAL VOTES</div>
+            <div class="w-32 text-center text-2xl font-black text-white" id="totalVotesDisplay">0</div>
           </div>
         </div>
-        <div class="bg-slate-900/50 p-4 border-t border-white/10 text-right">
+        <div class="bg-slate-900/50 p-4 border-t border-white/10 flex justify-between items-center">
+          <p class="text-xs text-slate-500 italic ml-2">Verify that this total matches the physical ballot count.</p>
           <button id="btnSaveVotes" class="btn btn-success px-12">💾 Save Form Results</button>
         </div>
       </div>
-    `,c.querySelector(`#btnSaveVotes`).addEventListener(`click`,async e=>{let i=e.target,l=c.querySelectorAll(`.vote-input`),u=[];if(l.forEach(e=>{let t=e.value.trim();t!==``&&u.push({TableNumber:n,RoundNumber:s,Post:r,CandidateId:e.dataset.cid,CandidateName:e.dataset.cname,Votes:parseInt(t,10),FormSerial:o||`N/A`})}),u.length===0){_(`Enter votes`,`warning`);return}g(i,!0,`💾 Saving...`);try{await C.adminSaveResults(t,u),u.forEach(e=>{let t=a.findIndex(t=>String(t.TableNumber)===String(n)&&String(t.Post)===r&&t.CandidateId===e.CandidateId);t>=0?(a[t].Votes=e.Votes,a[t].RoundNumber=e.RoundNumber,a[t].FormSerial=e.FormSerial):a.push(e)}),_(`Form results saved!`,`success`),c.innerHTML=``,d.value=``,d.focus()}catch(e){_(`Failed: ${e.message}`,`error`)}finally{g(i,!1,`💾 Save Form Results`)}})}}function ke(e){let t=z();if(!t)return;B(e,`testing`,`
+    `;let p=()=>{let e=0;c.querySelectorAll(`.vote-input`).forEach(t=>{e+=parseInt(t.value,10)||0});let t=c.querySelector(`#totalVotesDisplay`);t&&(t.textContent=e)};c.querySelectorAll(`.vote-input`).forEach(e=>{e.addEventListener(`input`,p)}),p(),c.querySelector(`#btnSaveVotes`).addEventListener(`click`,async e=>{let i=e.target,l=c.querySelectorAll(`.vote-input`),u=[];if(l.forEach(e=>{let t=e.value.trim();t!==``&&u.push({TableNumber:n,RoundNumber:s,Post:r,CandidateId:e.dataset.cid,CandidateName:e.dataset.cname,Votes:parseInt(t,10),FormSerial:o||`N/A`})}),u.length===0){_(`Enter votes`,`warning`);return}g(i,!0,`💾 Saving...`);try{await C.adminSaveResults(t,u),u.forEach(e=>{let t=a.findIndex(t=>String(t.TableNumber)===String(n)&&String(t.Post)===r&&t.CandidateId===e.CandidateId);t>=0?(a[t].Votes=e.Votes,a[t].RoundNumber=e.RoundNumber,a[t].FormSerial=e.FormSerial):a.push(e)}),_(`Form results saved!`,`success`),c.innerHTML=``,d.value=``,d.focus()}catch(e){_(`Failed: ${e.message}`,`error`)}finally{g(i,!1,`💾 Save Form Results`)}})}}function ke(e){let t=z();if(!t)return;B(e,`testing`,`
     <div class="page-enter space-y-8 max-w-3xl mx-auto">
 
       <!-- Warning Banner -->

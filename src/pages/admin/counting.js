@@ -255,6 +255,7 @@ function buildFormHtml(tableNum, roundNum, postName, candidates, serial) {
         ${rows}
         <tr><td style="text-align:center;padding:18px 8px">–</td><td style="padding:18px 8px;font-weight:bold">NOTA</td><td></td></tr>
         <tr><td style="text-align:center;padding:18px 8px">–</td><td style="padding:18px 8px;font-weight:bold;color:#555">INVALID</td><td></td></tr>
+        <tr style="background:#eee"><td style="text-align:center;padding:18px 8px">–</td><td style="padding:18px 8px;font-weight:black;font-size:16px">TOTAL VOTES COUNTED</td><td></td></tr>
       </tbody>
     </table>
     <div style="display:flex;justify-content:space-between;margin-top:60px;text-align:center">

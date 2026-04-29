@@ -184,13 +184,30 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
             <div class="w-32">
               <input type="number" class="field text-center text-lg font-bold border-red-500/30 vote-input" data-cid="INVALID" data-cname="Invalid" placeholder="0" value="${getVotes('INVALID')}" min="0">
             </div>
+          <div class="flex items-center justify-between bg-indigo-500/20 p-4 rounded-lg border border-indigo-500/40">
+            <div class="font-black text-indigo-300 text-xl tracking-wider">TOTAL VOTES</div>
+            <div class="w-32 text-center text-2xl font-black text-white" id="totalVotesDisplay">0</div>
           </div>
         </div>
-        <div class="bg-slate-900/50 p-4 border-t border-white/10 text-right">
+        <div class="bg-slate-900/50 p-4 border-t border-white/10 flex justify-between items-center">
+          <p class="text-xs text-slate-500 italic ml-2">Verify that this total matches the physical ballot count.</p>
           <button id="btnSaveVotes" class="btn btn-success px-12">💾 Save Form Results</button>
         </div>
       </div>
     `;
+
+    const updateGrandTotal = () => {
+      let total = 0;
+      area.querySelectorAll('.vote-input').forEach(inp => {
+        total += parseInt(inp.value, 10) || 0;
+      });
+      const disp = area.querySelector('#totalVotesDisplay');
+      if (disp) disp.textContent = total;
+    };
+    area.querySelectorAll('.vote-input').forEach(inp => {
+      inp.addEventListener('input', updateGrandTotal);
+    });
+    updateGrandTotal();
 
     area.querySelector('#btnSaveVotes').addEventListener('click', async (e) => {
       const btn = e.target;
