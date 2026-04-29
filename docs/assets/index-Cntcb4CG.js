@@ -1134,9 +1134,9 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <style>
               body { font-family: sans-serif; color: #333; margin: 0; padding: 0; }
               .page-break { page-break-after: always; }
-              .facing-sheet { padding: 40px; border: 2px solid #000; height: 92vh; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; }
-              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px; }
-              .college-name { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+              .facing-sheet { padding: 30px; border: 2px solid #000; height: 95vh; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; }
+              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+              .college-name { font-size: 20px; font-weight: bold; margin-bottom: 2px; }
               .title { font-size: 18px; font-weight: bold; text-transform: uppercase; }
               .stats-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
               .stats-table th, .stats-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
@@ -1162,63 +1162,75 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         <div class="facing-sheet">
           <div class="header">
             <div class="college-name">${h(n.COLLEGE_NAME||`COLLEGE UNION ELECTION`)}</div>
-            <div class="title">Electoral Roll — Booth Facing Sheet</div>
+            <div class="title" style="font-size: 14px;">Electoral Roll — Booth Facing Sheet</div>
           </div>
-          <div style="font-size: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: baseline;">
+          
+          <div style="font-size: 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #ccc; padding-bottom: 10px;">
             <div>
-              <p><strong>BOOTH NO:</strong> <span style="font-size: 32px; border: 2px solid #000; padding: 5px 20px; margin-left: 10px;">${e.boothNumber}</span></p>
-              <p><strong>LOCATION:</strong> ${h(e.roomName||`UNSPECIFIED`)}</p>
+              <strong>BOOTH:</strong> <span style="font-size: 24px; border: 2px solid #000; padding: 2px 15px; margin-left: 5px;">${e.boothNumber}</span>
+              <span style="margin-left: 20px;"><strong>LOC:</strong> ${h(e.roomName||`UNSPECIFIED`)}</span>
             </div>
-            <div style="text-align: right; font-size: 14px; color: #666;">
-              Ref: Union Election ${new Date().getFullYear()}
+            <div style="text-align: right; font-size: 11px; color: #666;">
+              Ref: ${new Date().getFullYear()} Election
             </div>
           </div>
-          <div style="flex-grow: 1;">
-            <h4 style="border-bottom: 1px solid #eee; padding-bottom: 5px;">Allocation Statistics</h4>
-            <table class="stats-table">
-              <thead><tr><th>#</th><th>Department</th><th>Class Name</th><th style="text-align:right">Voters</th></tr></thead>
-              <tbody>
-                ${r.map((e,t)=>`
-                  <tr><td>${t+1}</td><td>${h(e.dept)}</td><td>${h(e.name)}</td><td style="text-align:right">${e.count}</td></tr>
-                `).join(``)}
-                <tr style="font-weight:bold; background:#f9f9f9"><td colspan="3">GRAND TOTAL VOTERS</td><td style="text-align:right">${o}</td></tr>
-              </tbody>
-            </table>
 
-            <h4 style="margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Ballots Assigned to this Booth</h4>
-            <div style="font-size: 13px; line-height: 1.8;">
-              <table class="stats-table" style="margin-top:10px; width: 100%; max-width: 500px;">
+          <div style="flex-grow: 1; display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px;">
+            <!-- Left Column: Classes -->
+            <div>
+              <h4 style="border-bottom: 1px solid #eee; padding-bottom: 3px; font-size: 12px; margin: 0;">Allocation Statistics</h4>
+              <table class="stats-table" style="font-size: 10px; margin-top: 5px;">
+                <thead><tr><th>Dept</th><th>Class Name</th><th style="text-align:right">Voters</th></tr></thead>
+                <tbody>
+                  ${r.map(e=>`
+                    <tr><td>${h(e.dept)}</td><td>${h(e.name)}</td><td style="text-align:right">${e.count}</td></tr>
+                  `).join(``)}
+                  <tr style="font-weight:bold; background:#f9f9f9"><td colspan="2">TOTAL VOTERS</td><td style="text-align:right">${o}</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Right Column: Ballots -->
+            <div>
+              <h4 style="border-bottom: 1px solid #eee; padding-bottom: 3px; font-size: 12px; margin: 0;">Ballots Assigned</h4>
+              <table class="stats-table" style="font-size: 10px; margin-top: 5px; width: 100%;">
                 <thead>
                   <tr style="background:#f0f7ff">
-                    <th>Ballot Type / Category</th>
-                    <th style="text-align:right">Required Count</th>
+                    <th>Ballot Category</th>
+                    <th style="text-align:right">Count</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr style="font-weight:bold">
-                    <td>General Union Posts (Chairman, UUC, Sec, etc.)</td>
+                    <td>General Union Posts</td>
                     <td style="text-align:right">${o}</td>
                   </tr>
                   ${Object.entries(s.yearRep).map(([e,t])=>`
                     <tr>
-                      <td>${h(e)} Ballot</td>
+                      <td>${h(e)}</td>
                       <td style="text-align:right">${t}</td>
                     </tr>
                   `).join(``)}
                   ${Object.entries(s.association).map(([e,t])=>`
                     <tr>
-                      <td>${h(e)} Association Secretary Ballot</td>
+                      <td>${h(e)} Assoc. Sec.</td>
                       <td style="text-align:right">${t}</td>
                     </tr>
                   `).join(``)}
                 </tbody>
               </table>
-              <p style="font-size: 10px; color: #666; margin-top: 5px;">* Verify the physical ballot counts against this list before opening the booth.</p>
+              <div style="margin-top: 15px; padding: 8px; border: 1px solid #eee; background: #fafafa; font-size: 9px; line-height: 1.4;">
+                <strong>Instructions:</strong><br>
+                1. Verify counts before opening.<br>
+                2. Mark signatures in Electoral Roll.<br>
+                3. Total votes polled must match roll count.
+              </div>
             </div>
           </div>
-          <div class="footer">
-            <div style="border-top: 1px solid #000; padding-top: 10px; width: 200px; text-align: center;">Returning Officer Signature</div>
-            <div style="border-top: 1px solid #000; padding-top: 10px; width: 200px; text-align: center;">Presiding Officer Signature</div>
+
+          <div class="footer" style="margin-top: 20px;">
+            <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Returning Officer</div>
+            <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Presiding Officer</div>
           </div>
         </div>
       </div>`,r.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),a+=`
