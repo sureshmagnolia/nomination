@@ -91,24 +91,35 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
   });
 
   // ── General rounds: ALL tables cycle through ALL general posts ────────────────
-  // Round r (0-indexed): table t counts generalPosts[(t + r) % G]
-  // Runs for exactly G rounds so every table has counted every general post once.
+  // Each table counts ALL general posts, one per round, in cyclic rotation.
   const numGeneralRounds = G;
 
-  // ── Build matrix[t][round] = Post[] ──────────────────────────────────────────
+  // ── Restricted rounds: each restricted post gets its OWN round ───────────────
+  // Find the maximum number of restricted posts any single table has.
+  const maxRestricted = Math.max(...tableR1.map(r => r.length), 0);
+
+  // ── Build matrix[t][round] = Post | null ─────────────────────────────────────
+  // Each element is a single post (or null = idle) — NEVER multiple per slot.
   const matrix = Array.from({ length: T }, (_, t) => {
-    const rounds = [tableR1[t]];
-    for (let r = 0; r < numGeneralRounds; r++) {
-      rounds.push([generalPosts[(t + r) % G]]);
+    const rounds = [];
+    // Restricted rounds: one post per round, pad shorter tables with null
+    for (let r = 0; r < maxRestricted; r++) {
+      rounds.push(tableR1[t][r] || null);
     }
-    if (uucPost) rounds.push([uucPost]);
+    // General rounds: cyclic across all tables
+    for (let r = 0; r < numGeneralRounds; r++) {
+      rounds.push(generalPosts[(t + r) % G]);
+    }
+    // Final round: UUC for every table
+    if (uucPost) rounds.push(uucPost);
     return rounds;
   });
 
-  const totalRounds = 1 + numGeneralRounds + (uucPost ? 1 : 0);
-  const roundLabels = ['Round 1 (Associations & Reps)'];
-  for (let r = 0; r < numGeneralRounds; r++) roundLabels.push(`Round ${r + 2}`);
-  if (uucPost) roundLabels.push('Final Round (UUC)');
+  const totalRounds = maxRestricted + numGeneralRounds + (uucPost ? 1 : 0);
+  const roundLabels = [];
+  for (let r = 0; r < maxRestricted; r++)      roundLabels.push(`Round ${r + 1}${r === 0 ? ' (Assoc/Reps)' : ''}`);
+  for (let r = 0; r < numGeneralRounds; r++)   roundLabels.push(`Round ${maxRestricted + r + 1}`);
+  if (uucPost) roundLabels.push(`Round ${totalRounds} (UUC)`);
 
   main.innerHTML = `
     <div class="page-enter space-y-6">
@@ -133,10 +144,10 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
                     Table ${b.boothNumber}<br>
                     <span class="text-xs text-slate-500 font-normal">${esc(b.roomName || '')}</span>
                   </td>
-                  ${matrix[t].map(rPosts => `
+                  ${matrix[t].map(post => `
                     <td class="align-top py-2 min-w-[100px]">
-                      ${rPosts.length
-                        ? rPosts.map(p => `<div class="badge badge-valid mb-1 block text-left" title="${esc(pName(p))}">${esc(pName(p))}</div>`).join('')
+                      ${post
+                        ? `<div class="badge badge-valid block text-left" title="${esc(pName(post))}">${esc(pName(post))}</div>`
                         : '<span class="text-slate-600">–</span>'}
                     </td>`).join('')}
                 </tr>`).join('')}
@@ -151,12 +162,12 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
     let html = ''; let count = 0;
     for (let t = 0; t < T; t++) {
       for (let r = 0; r < matrix[t].length; r++) {
-        (matrix[t][r] || []).forEach(post => {
-          const pn = pName(post);
-          const cands = finalList.filter(c => c.post === pn);
-          html += buildForm(booths[t].boothNumber, r + 1, pn, cands);
-          count++;
-        });
+        const post = matrix[t][r];
+        if (!post) continue;                          // idle slot — skip
+        const pn = pName(post);
+        const cands = finalList.filter(c => c.post === pn);
+        html += buildForm(booths[t].boothNumber, r + 1, pn, cands);
+        count++;
       }
     }
     if (!count) { alert('No forms generated. Check Posts and Booths are configured.'); return; }
