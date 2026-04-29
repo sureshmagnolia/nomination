@@ -216,7 +216,7 @@ export async function renderAdminBallots(container) {
           <div class="ballot-container a5 page-break">
             <div class="ballot-header">
               <h1>GVC ELECTION ${new Date().getFullYear()}</h1>
-              <h2>${isYear(p) ? 'YEAR REP' : 'ASSOCIATION'} BALLOT</h2>
+              <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER</h2>
             </div>
             <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ______</div><div>PRO Sign</div></div>
             <div class="post-box">
