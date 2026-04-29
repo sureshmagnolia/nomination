@@ -18,6 +18,7 @@ const SHEET_FINAL    = 'FinalList';   // Published after withdrawals
 const SHEET_SETTINGS = 'Settings';
 const SHEET_POSTS    = 'Posts';
 const SHEET_BOOTHS   = 'Booths';
+const SHEET_RESULTS  = 'Results';
 
 // Expanded columns to store full details of candidate, proposer, and seconder
 const NOM_COLS = [
@@ -97,6 +98,7 @@ function ensureAll() {
   ensureSheet(SHEET_FINAL, NOM_COLS);
   ensureSheet(SHEET_POSTS, POST_COLS);
   ensureSheet(SHEET_BOOTHS, ['BoothNumber', 'RoomName', 'AllocatedClasses']);
+  ensureSheet(SHEET_RESULTS, ['TableNumber', 'Post', 'CandidateId', 'CandidateName', 'Votes']);
   ensureSheet(SHEET_SETTINGS, ['Key', 'Value']);
   
   const s = getSheet(SHEET_SETTINGS);
@@ -280,6 +282,19 @@ function doGet(e) {
       } catch (e) {
         return jsonOut([]);
       }
+    }
+
+    if (action === 'getResults') {
+      // Public endpoint
+      const s = getSheet(SHEET_RESULTS);
+      const d = s.getDataRange().getValues();
+      if (d.length < 2) return jsonOut([]);
+      const headers = d[0];
+      return jsonOut(d.slice(1).map(r => {
+        let obj = {};
+        headers.forEach((h, i) => obj[h] = r[i]);
+        return obj;
+      }));
     }
 
     return errOut(`Unknown action: ${action}`);
@@ -468,6 +483,33 @@ function doPost(e) {
         return jsonOut({ ok: true });
       }
       return errOut('Invalid locations data.');
+    }
+
+    if (action === 'adminSaveResults') {
+      checkAdmin(body.password);
+      // body.results = [{ TableNumber, Post, CandidateId, CandidateName, Votes }]
+      const s = getSheet(SHEET_RESULTS);
+      const d = s.getDataRange().getValues();
+      const headers = d[0];
+      
+      // We will completely replace the rows for the given TableNumber + Post
+      if (!Array.isArray(body.results) || body.results.length === 0) return jsonOut({ ok: true });
+      
+      const targetTable = String(body.results[0].TableNumber);
+      const targetPost = String(body.results[0].Post);
+      
+      // Filter out existing rows that match the target table and post
+      const rowsToKeep = d.slice(1).filter(r => String(r[0]) !== targetTable || String(r[1]) !== targetPost);
+      
+      s.clear();
+      s.appendRow(headers);
+      rowsToKeep.forEach(r => s.appendRow(r));
+      
+      body.results.forEach(res => {
+        s.appendRow([res.TableNumber, res.Post, res.CandidateId, res.CandidateName, Number(res.Votes) || 0]);
+      });
+      
+      return jsonOut({ ok: true });
     }
 
     return errOut(`Unknown action: ${action}`);

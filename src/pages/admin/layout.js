@@ -38,6 +38,9 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
         ${navItem('posts',       '📋', 'Manage Posts',       activeSection)}
         ${navItem('booths',      '🏫', 'Polling Booths',     activeSection)}
         <div class="border-t border-white/10 my-2"></div>
+        ${navItem('counting',    '🧮', 'Counting Setup',     activeSection)}
+        ${navItem('results-entry','📥', 'Results Entry',      activeSection)}
+        <div class="border-t border-white/10 my-2"></div>
         ${navItem('public',      '🌐', 'Public Portal',      activeSection)}
       </nav>
       <div class="p-3 border-t border-white/10">

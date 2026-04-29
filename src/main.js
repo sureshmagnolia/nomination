@@ -18,6 +18,9 @@ import { renderAdminWithdrawals }   from './pages/admin/withdrawals.js';
 import { renderAdminPublish }       from './pages/admin/publish.js';
 import { renderAdminPosts }         from './pages/admin/posts.js';
 import { renderAdminBooths }        from './pages/admin/booths.js';
+import { renderAdminCounting }      from './pages/admin/counting.js';
+import { renderAdminResultsEntry }  from './pages/admin/resultsEntry.js';
+import { renderResults }            from './pages/results.js';
 
 // ─── Background decoration ────────────────────────────────────────────────────
 const app = document.getElementById('app');
@@ -57,6 +60,7 @@ router
   .on('/valid-list',        render(renderValidList))
   .on('/final-list',        render(renderFinalList))
   .on('/withdraw',          render(renderWithdraw))
+  .on('/results',           render(renderResults))
   .on('/admin',             render(renderAdminLogin))
   .on('/admin/dashboard',   render(renderAdminDashboard))
   .on('/admin/verify',      render(renderAdminVerify))
@@ -64,6 +68,8 @@ router
   .on('/admin/publish',     render(renderAdminPublish))
   .on('/admin/posts',       render(renderAdminPosts))
   .on('/admin/booths',      render(renderAdminBooths))
+  .on('/admin/counting',    render(renderAdminCounting))
+  .on('/admin/results-entry',render(renderAdminResultsEntry))
   .setDefault('/');
 
 // Handle clicks on data-nav attributes globally (delegation)

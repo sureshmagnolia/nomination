@@ -120,4 +120,13 @@ export const api = {
   /** Admin: save locations */
   adminSaveLocations: (password, locations) =>
     post({ action: 'adminSaveLocations', password, locations }),
+
+  // ─── Results Management ──────────────────────────────────────────────────────
+
+  /** Public: get all results */
+  getResults: () => get({ action: 'getResults' }),
+
+  /** Admin: save results for a table and post */
+  adminSaveResults: (password, results) =>
+    post({ action: 'adminSaveResults', password, results }),
 };

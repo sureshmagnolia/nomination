@@ -38,6 +38,7 @@ export function renderHome(container) {
           ${card('/withdraw', '↩️', 'Withdraw Nomination', 'Request withdrawal of your candidacy.')}
           ${card('/valid-list', '✅', 'Valid Nominations', 'View the list of verified candidates.')}
           ${card('/final-list', '🏆', 'Final Candidate List', 'View the final list post-withdrawals.')}
+          ${card('/results', '📊', 'Live Results', 'View live vote counting and election results.')}
         </div>
       </main>
 
