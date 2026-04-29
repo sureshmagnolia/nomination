@@ -499,7 +499,7 @@ function doPost(e) {
       // body.results = [{ TableNumber, Post, CandidateId, CandidateName, Votes }]
       const s = getSheet(SHEET_RESULTS);
       const d = s.getDataRange().getValues();
-      const headers = ['TableNumber', 'Post', 'CandidateId', 'CandidateName', 'Votes', 'FormSerial'];
+      const headers = ['TableNumber', 'RoundNumber', 'Post', 'CandidateId', 'CandidateName', 'Votes', 'FormSerial'];
       
       if (!Array.isArray(body.results) || body.results.length === 0) return jsonOut({ ok: true });
       
@@ -507,19 +507,26 @@ function doPost(e) {
       const targetPost = String(body.results[0].Post);
       
       // Filter out existing rows that match the target table and post
-      const rowsToKeep = d.slice(1).filter(r => String(r[0]) !== targetTable || String(r[1]) !== targetPost);
+      const rowsToKeep = d.slice(1).filter(r => String(r[0]) !== targetTable || String(r[2]) !== targetPost);
       
       s.clear();
       s.appendRow(headers);
       rowsToKeep.forEach(r => {
-        // Ensure rows are padded to match new header length if they were old format
         const row = [...r];
         while (row.length < headers.length) row.push('');
         s.appendRow(row);
       });
       
       body.results.forEach(res => {
-        s.appendRow([res.TableNumber, res.Post, res.CandidateId, res.CandidateName, Number(res.Votes) || 0, res.FormSerial || 'N/A']);
+        s.appendRow([
+          res.TableNumber, 
+          res.RoundNumber || 'N/A',
+          res.Post, 
+          res.CandidateId, 
+          res.CandidateName, 
+          Number(res.Votes) || 0, 
+          res.FormSerial || 'N/A'
+        ]);
       });
       
       return jsonOut({ ok: true });

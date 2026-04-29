@@ -1048,7 +1048,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       <div class="text-center py-20 bg-white/5 rounded-2xl border border-white/10">
         <div class="text-5xl mb-4">⚠️</div>
         <h3 class="text-xl font-bold text-white mb-2">Matrix Not Set</h3>
-        <p class="text-slate-400 mb-6">The Counting Matrix must be generated and saved in the "Counting Setup" page before you can enter results by Serial Number.</p>
+        <p class="text-slate-400 mb-6">The Counting Matrix must be generated and saved in the "Counting Setup" page before you can enter results.</p>
       </div>
     `;return}let{matrix:c,formSerials:l}=o,u={};Object.entries(l).forEach(([e,t])=>{let[n,r]=e.split(`-`).map(Number),i=c[n][r];u[t]={t:n,r,postName:s(i)}}),e.innerHTML=`
     <div class="page-enter space-y-6 max-w-4xl mx-auto">
@@ -1064,7 +1064,6 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <input type="number" id="txtSerial" class="field" placeholder="e.g. 15" autofocus>
             <button id="btnLoadBySerial" class="btn btn-primary px-6">Load Form</button>
           </div>
-          <p class="text-[10px] text-slate-500 mt-2 italic">Found on the top-right corner of the printed counting form.</p>
         </div>
 
         <div class="glass rounded-xl p-6 opacity-60">
@@ -1085,17 +1084,17 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
 
       <div id="entryFormArea"></div>
     </div>
-  `;let d=e.querySelector(`#txtSerial`),f=e.querySelector(`#btnLoadBySerial`),p=async()=>{let e=d.value.trim();if(!e)return;let t=u[e];if(!t){_(`Invalid Serial Number: ${e}`,`error`);return}try{g(f,!0,`Loading...`);let r=await C.getResults().catch(()=>[]);a.length=0,a.push(...r),v(n[t.t].boothNumber,t.postName,e)}catch{v(n[t.t].boothNumber,t.postName,e)}finally{g(f,!1,`Load Form`)}};f.addEventListener(`click`,p),d.addEventListener(`keypress`,e=>{e.key===`Enter`&&p()});let m=e.querySelector(`#btnLoadForm`);m.addEventListener(`click`,async()=>{let t=e.querySelector(`#selTable`).value,n=e.querySelector(`#selPost`).value;if(!t||!n){_(`Select Table and Post`,`warning`);return}try{g(m,!0,`...`);let e=await C.getResults().catch(()=>[]);a.length=0,a.push(...e),v(t,n,null)}catch{v(t,n,null)}finally{g(m,!1,`Load`)}});let v=(n,r,o)=>{let s=e.querySelector(`#entryFormArea`),c=i.filter(e=>e.post===r);if(c.length===0){s.innerHTML=`<div class="alert alert-warning">No candidates found for ${h(r)}.</div>`;return}let l=a.filter(e=>String(e.TableNumber)===String(n)&&String(e.Post)===r),u=e=>l.find(t=>t.CandidateId===e)?.Votes||``;s.innerHTML=`
+  `;let d=e.querySelector(`#txtSerial`),f=e.querySelector(`#btnLoadBySerial`),p=async()=>{let e=d.value.trim();if(!e)return;let t=u[e];if(!t){_(`Invalid Serial Number: ${e}`,`error`);return}try{g(f,!0,`Loading...`);let r=await C.getResults().catch(()=>[]);a.length=0,a.push(...r),m(n[t.t].boothNumber,t.postName,e,t.r+1)}catch{m(n[t.t].boothNumber,t.postName,e,t.r+1)}finally{g(f,!1,`Load Form`)}};f.addEventListener(`click`,p),d.addEventListener(`keypress`,e=>{e.key===`Enter`&&p()}),e.querySelector(`#btnLoadForm`).addEventListener(`click`,async()=>{let t=e.querySelector(`#selTable`).value,n=e.querySelector(`#selPost`).value;if(!t||!n){_(`Select Table and Post`,`warning`);return}try{g(e.querySelector(`#btnLoadForm`),!0,`...`);let r=await C.getResults().catch(()=>[]);a.length=0,a.push(...r),m(t,n,null,null)}catch{m(t,n,null,null)}finally{g(e.querySelector(`#btnLoadForm`),!1,`Load`)}});let m=(n,r,o,s)=>{let c=e.querySelector(`#entryFormArea`),l=i.filter(e=>e.post===r);if(l.length===0){c.innerHTML=`<div class="alert alert-warning">No candidates found for ${h(r)}.</div>`;return}let u=a.filter(e=>String(e.TableNumber)===String(n)&&String(e.Post)===r),f=e=>u.find(t=>t.CandidateId===e)?.Votes||``;c.innerHTML=`
       <div class="glass rounded-xl overflow-hidden page-enter">
         <div class="bg-indigo-500/10 p-4 border-b border-indigo-500/20 flex justify-between items-center">
           <div>
-            <h4 class="font-bold text-indigo-300">Form #${o||`N/A`} • Table ${n} • ${h(r)}</h4>
-            <p class="text-[10px] text-slate-500 mt-1">Enter total votes counted for each candidate below.</p>
+            <h4 class="font-bold text-indigo-300">Table ${n} • Round ${s||`N/A`} • ${h(r)}</h4>
+            <p class="text-[10px] text-slate-400 mt-1">Form Serial: #${o||`Manual`}</p>
           </div>
-          ${o?`<div class="bg-indigo-500 text-white text-xs px-2 py-1 rounded font-bold">SERIAL #${o}</div>`:``}
+          ${o?`<div class="bg-indigo-500 text-white text-xs px-2 py-1 rounded font-bold">FORM #${o}</div>`:``}
         </div>
         <div class="p-6 space-y-4">
-          ${c.map((e,t)=>`
+          ${l.map((e,t)=>`
             <div class="flex items-center justify-between bg-white/5 p-4 rounded-lg border border-white/5">
               <div class="flex items-center gap-4">
                 <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold">${t+1}</div>
@@ -1105,7 +1104,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 </div>
               </div>
               <div class="w-32">
-                <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="${h(e.id)}" data-cname="${h(e.candidateName)}" placeholder="0" value="${u(e.id)}" min="0">
+                <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="${h(e.id)}" data-cname="${h(e.candidateName)}" placeholder="0" value="${f(e.id)}" min="0">
               </div>
             </div>
           `).join(``)}
@@ -1115,20 +1114,18 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <div class="flex items-center justify-between bg-slate-800/50 p-4 rounded-lg border border-slate-700">
             <div>
               <div class="font-bold text-slate-300">NOTA</div>
-              <div class="text-xs text-slate-500">None Of The Above</div>
             </div>
             <div class="w-32">
-              <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="NOTA" data-cname="NOTA" placeholder="0" value="${u(`NOTA`)}" min="0">
+              <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="NOTA" data-cname="NOTA" placeholder="0" value="${f(`NOTA`)}" min="0">
             </div>
           </div>
           
           <div class="flex items-center justify-between bg-red-500/5 p-4 rounded-lg border border-red-500/20">
             <div>
               <div class="font-bold text-red-400">INVALID</div>
-              <div class="text-xs text-slate-500">Rejected ballots</div>
             </div>
             <div class="w-32">
-              <input type="number" class="field text-center text-lg font-bold border-red-500/30 vote-input" data-cid="INVALID" data-cname="Invalid" placeholder="0" value="${u(`INVALID`)}" min="0">
+              <input type="number" class="field text-center text-lg font-bold border-red-500/30 vote-input" data-cid="INVALID" data-cname="Invalid" placeholder="0" value="${f(`INVALID`)}" min="0">
             </div>
           </div>
         </div>
@@ -1136,7 +1133,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <button id="btnSaveVotes" class="btn btn-success px-12">💾 Save Form Results</button>
         </div>
       </div>
-    `,s.querySelector(`#btnSaveVotes`).addEventListener(`click`,async e=>{let i=e.target,c=s.querySelectorAll(`.vote-input`),l=[];if(c.forEach(e=>{let t=e.value.trim();t!==``&&l.push({TableNumber:n,Post:r,CandidateId:e.dataset.cid,CandidateName:e.dataset.cname,Votes:parseInt(t,10),FormSerial:o||`N/A`})}),l.length===0){_(`Enter votes`,`warning`);return}g(i,!0,`💾 Saving...`);try{await C.adminSaveResults(t,l),l.forEach(e=>{let t=a.findIndex(t=>String(t.TableNumber)===String(n)&&String(t.Post)===r&&t.CandidateId===e.CandidateId);t>=0?a[t].Votes=e.Votes:a.push(e)}),_(`Form results saved!`,`success`),s.innerHTML=``,d.value=``,d.focus()}catch(e){_(`Failed: ${e.message}`,`error`)}finally{g(i,!1,`💾 Save Form Results`)}})}}function ke(e){let t=z();if(!t)return;B(e,`testing`,`
+    `,c.querySelector(`#btnSaveVotes`).addEventListener(`click`,async e=>{let i=e.target,l=c.querySelectorAll(`.vote-input`),u=[];if(l.forEach(e=>{let t=e.value.trim();t!==``&&u.push({TableNumber:n,RoundNumber:s,Post:r,CandidateId:e.dataset.cid,CandidateName:e.dataset.cname,Votes:parseInt(t,10),FormSerial:o||`N/A`})}),u.length===0){_(`Enter votes`,`warning`);return}g(i,!0,`💾 Saving...`);try{await C.adminSaveResults(t,u),u.forEach(e=>{let t=a.findIndex(t=>String(t.TableNumber)===String(n)&&String(t.Post)===r&&t.CandidateId===e.CandidateId);t>=0?(a[t].Votes=e.Votes,a[t].RoundNumber=e.RoundNumber,a[t].FormSerial=e.FormSerial):a.push(e)}),_(`Form results saved!`,`success`),c.innerHTML=``,d.value=``,d.focus()}catch(e){_(`Failed: ${e.message}`,`error`)}finally{g(i,!1,`💾 Save Form Results`)}})}}function ke(e){let t=z();if(!t)return;B(e,`testing`,`
     <div class="page-enter space-y-8 max-w-3xl mx-auto">
 
       <!-- Warning Banner -->

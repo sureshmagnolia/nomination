@@ -31,21 +31,18 @@ export async function renderAdminResultsEntry(container) {
 function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMatrix) {
   const pName = p => String(p.post || p.name || '');
 
-  // ── IMPORTANT: Use the SAVED matrix data from the backend ──────────────────
   if (!savedMatrix) {
     main.innerHTML = `
       <div class="text-center py-20 bg-white/5 rounded-2xl border border-white/10">
         <div class="text-5xl mb-4">⚠️</div>
         <h3 class="text-xl font-bold text-white mb-2">Matrix Not Set</h3>
-        <p class="text-slate-400 mb-6">The Counting Matrix must be generated and saved in the "Counting Setup" page before you can enter results by Serial Number.</p>
+        <p class="text-slate-400 mb-6">The Counting Matrix must be generated and saved in the "Counting Setup" page before you can enter results.</p>
       </div>
     `;
     return;
   }
 
   const { matrix, formSerials } = savedMatrix;
-  
-  // Reconstruct serialMap for lookup: serial -> {t, r, postName}
   const serialMap = {};
   Object.entries(formSerials).forEach(([key, serial]) => {
     const [t, r] = key.split('-').map(Number);
@@ -67,7 +64,6 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
             <input type="number" id="txtSerial" class="field" placeholder="e.g. 15" autofocus>
             <button id="btnLoadBySerial" class="btn btn-primary px-6">Load Form</button>
           </div>
-          <p class="text-[10px] text-slate-500 mt-2 italic">Found on the top-right corner of the printed counting form.</p>
         </div>
 
         <div class="glass rounded-xl p-6 opacity-60">
@@ -104,9 +100,9 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       const freshResults = await api.getResults().catch(() => []);
       allResults.length = 0;
       allResults.push(...freshResults);
-      renderFormGrid(booths[info.t].boothNumber, info.postName, s);
+      renderFormGrid(booths[info.t].boothNumber, info.postName, s, info.r + 1);
     } catch (e) {
-      renderFormGrid(booths[info.t].boothNumber, info.postName, s);
+      renderFormGrid(booths[info.t].boothNumber, info.postName, s, info.r + 1);
     } finally {
       setLoading(btnSerial, false, 'Load Form');
     }
@@ -115,26 +111,25 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
   btnSerial.addEventListener('click', loadBySerial);
   txtSerial.addEventListener('keypress', (e) => { if (e.key === 'Enter') loadBySerial(); });
 
-  const btnLoadManual = main.querySelector('#btnLoadForm');
-  btnLoadManual.addEventListener('click', async () => {
+  main.querySelector('#btnLoadForm').addEventListener('click', async () => {
     const tableNum = main.querySelector('#selTable').value;
     const postName = main.querySelector('#selPost').value;
     if (!tableNum || !postName) { showToast('Select Table and Post', 'warning'); return; }
     
     try {
-      setLoading(btnLoadManual, true, '...');
+      setLoading(main.querySelector('#btnLoadForm'), true, '...');
       const freshResults = await api.getResults().catch(() => []);
       allResults.length = 0;
       allResults.push(...freshResults);
-      renderFormGrid(tableNum, postName, null);
+      renderFormGrid(tableNum, postName, null, null);
     } catch (e) {
-      renderFormGrid(tableNum, postName, null);
+      renderFormGrid(tableNum, postName, null, null);
     } finally {
-      setLoading(btnLoadManual, false, 'Load');
+      setLoading(main.querySelector('#btnLoadForm'), false, 'Load');
     }
   });
 
-  const renderFormGrid = (tableNum, postName, serial) => {
+  const renderFormGrid = (tableNum, postName, serial, roundNum) => {
     const area = main.querySelector('#entryFormArea');
     const candidates = finalList.filter(c => c.post === postName);
     
@@ -150,10 +145,10 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       <div class="glass rounded-xl overflow-hidden page-enter">
         <div class="bg-indigo-500/10 p-4 border-b border-indigo-500/20 flex justify-between items-center">
           <div>
-            <h4 class="font-bold text-indigo-300">Form #${serial || 'N/A'} • Table ${tableNum} • ${esc(postName)}</h4>
-            <p class="text-[10px] text-slate-500 mt-1">Enter total votes counted for each candidate below.</p>
+            <h4 class="font-bold text-indigo-300">Table ${tableNum} • Round ${roundNum || 'N/A'} • ${esc(postName)}</h4>
+            <p class="text-[10px] text-slate-400 mt-1">Form Serial: #${serial || 'Manual'}</p>
           </div>
-          ${serial ? `<div class="bg-indigo-500 text-white text-xs px-2 py-1 rounded font-bold">SERIAL #${serial}</div>` : ''}
+          ${serial ? `<div class="bg-indigo-500 text-white text-xs px-2 py-1 rounded font-bold">FORM #${serial}</div>` : ''}
         </div>
         <div class="p-6 space-y-4">
           ${candidates.map((c, i) => `
@@ -176,7 +171,6 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
           <div class="flex items-center justify-between bg-slate-800/50 p-4 rounded-lg border border-slate-700">
             <div>
               <div class="font-bold text-slate-300">NOTA</div>
-              <div class="text-xs text-slate-500">None Of The Above</div>
             </div>
             <div class="w-32">
               <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="NOTA" data-cname="NOTA" placeholder="0" value="${getVotes('NOTA')}" min="0">
@@ -186,7 +180,6 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
           <div class="flex items-center justify-between bg-red-500/5 p-4 rounded-lg border border-red-500/20">
             <div>
               <div class="font-bold text-red-400">INVALID</div>
-              <div class="text-xs text-slate-500">Rejected ballots</div>
             </div>
             <div class="w-32">
               <input type="number" class="field text-center text-lg font-bold border-red-500/30 vote-input" data-cid="INVALID" data-cname="Invalid" placeholder="0" value="${getVotes('INVALID')}" min="0">
@@ -209,6 +202,7 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
         if (votes !== '') {
           resultsToSave.push({
             TableNumber: tableNum,
+            RoundNumber: roundNum,
             Post: postName,
             CandidateId: inp.dataset.cid,
             CandidateName: inp.dataset.cname,
@@ -225,7 +219,13 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
         await api.adminSaveResults(pwd, resultsToSave);
         resultsToSave.forEach(ns => {
           const idx = allResults.findIndex(r => String(r.TableNumber) === String(tableNum) && String(r.Post) === postName && r.CandidateId === ns.CandidateId);
-          if (idx >= 0) allResults[idx].Votes = ns.Votes; else allResults.push(ns);
+          if (idx >= 0) {
+              allResults[idx].Votes = ns.Votes;
+              allResults[idx].RoundNumber = ns.RoundNumber;
+              allResults[idx].FormSerial = ns.FormSerial;
+          } else {
+              allResults.push(ns);
+          }
         });
         showToast('Form results saved!', 'success');
         area.innerHTML = '';
