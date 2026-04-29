@@ -144,15 +144,15 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
 
 function generateCountingFormHtml(tableNum, roundNum, postName, candidates) {
   // Page break after each form so they print individually
-  return \`
+  return `
     <div style="page-break-after: always; width: 100%; max-width: 210mm; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; box-sizing: border-box; color: black;">
       <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px;">
         <h2 style="margin: 0; font-size: 24px; text-transform: uppercase;">Election Counting Form</h2>
         <div style="display: flex; justify-content: space-between; margin-top: 15px; font-weight: bold;">
-          <span>TABLE: \${tableNum}</span>
-          <span>ROUND: \${roundNum}</span>
+          <span>TABLE: ${tableNum}</span>
+          <span>ROUND: ${roundNum}</span>
         </div>
-        <h3 style="margin: 15px 0 0 0; font-size: 20px; text-decoration: underline;">POST: \${esc(postName)}</h3>
+        <h3 style="margin: 15px 0 0 0; font-size: 20px; text-decoration: underline;">POST: ${esc(postName)}</h3>
       </div>
       
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
@@ -164,14 +164,14 @@ function generateCountingFormHtml(tableNum, roundNum, postName, candidates) {
           </tr>
         </thead>
         <tbody>
-          \${candidates.length === 0 ? \`<tr><td colspan="3" style="border: 1px solid black; padding: 10px; text-align: center;">No Candidates (Uncontested/Vacant)</td></tr>\` : ''}
-          \${candidates.map((c, i) => \`
+          ${candidates.length === 0 ? `<tr><td colspan="3" style="border: 1px solid black; padding: 10px; text-align: center;">No Candidates (Uncontested/Vacant)</td></tr>` : ''}
+          ${candidates.map((c, i) => `
             <tr>
-              <td style="border: 1px solid black; padding: 20px 10px; text-align: center; font-weight: bold;">\${i + 1}</td>
-              <td style="border: 1px solid black; padding: 20px 10px; font-size: 16px; font-weight: bold;">\${esc(c.candidateName || c.candidate?.NAME)}</td>
+              <td style="border: 1px solid black; padding: 20px 10px; text-align: center; font-weight: bold;">${i + 1}</td>
+              <td style="border: 1px solid black; padding: 20px 10px; font-size: 16px; font-weight: bold;">${esc(c.candidateName || c.candidate?.NAME)}</td>
               <td style="border: 1px solid black; padding: 20px 10px;"></td>
             </tr>
-          \`).join('')}
+          `).join('')}
             <tr>
               <td style="border: 1px solid black; padding: 20px 10px; text-align: center; font-weight: bold;">-</td>
               <td style="border: 1px solid black; padding: 20px 10px; font-size: 16px; font-weight: bold; color: #555;">INVALID / BLANK VOTES</td>
@@ -191,12 +191,12 @@ function generateCountingFormHtml(tableNum, roundNum, postName, candidates) {
         </div>
       </div>
     </div>
-  \`;
+  `;
 }
 
 function triggerMatrixPrint(htmlContent) {
   const win = window.open('', '_blank');
-  win.document.write(\`
+  win.document.write(`
     <!DOCTYPE html>
     <html>
       <head>
@@ -208,7 +208,7 @@ function triggerMatrixPrint(htmlContent) {
         </style>
       </head>
       <body>
-        \${htmlContent}
+        ${htmlContent}
         <script>
           window.onload = function() {
             setTimeout(function() { window.print(); }, 200);
@@ -216,6 +216,6 @@ function triggerMatrixPrint(htmlContent) {
         </script>
       </body>
     </html>
-  \`);
+  `);
   win.document.close();
 }
