@@ -13,12 +13,14 @@ export async function renderAdminResultsEntry(container) {
   `);
 
   try {
-    const [booths, posts, finalList, allResults] = await Promise.all([
+    const [booths, posts, nominationsRaw, allResults] = await Promise.all([
       api.adminGetBooths(pwd).catch(() => []),
       api.getPosts(),
-      api.getFinalNominations(),
+      api.adminGetNominations(pwd).catch(() => []),
       api.getResults().catch(() => [])
     ]);
+    const allNoms  = Array.isArray(nominationsRaw) ? nominationsRaw : [];
+    const finalList = allNoms.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved');
     renderEntryUI(container.querySelector('#adminMain'), pwd, booths, posts, finalList, allResults);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;

@@ -8,11 +8,13 @@ export async function renderAdminCounting(container) {
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Generating Counting Matrix...</p></div>
   `);
   try {
-    const [posts, finalListRaw, booths, nominalRoll] = await Promise.all([
-      api.getPosts(), api.getFinalNominations().catch(() => []),
+    const [posts, nominationsRaw, booths, nominalRoll] = await Promise.all([
+      api.getPosts(), api.adminGetNominations(pwd).catch(() => []),
       api.adminGetBooths(pwd), api.getNominalRoll()
     ]);
-    const finalList = Array.isArray(finalListRaw) ? finalListRaw : [];
+    // Use all Valid nominations regardless of whether the list has been published
+    const allNoms = Array.isArray(nominationsRaw) ? nominationsRaw : [];
+    const finalList = allNoms.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved');
     renderCountingUI(container.querySelector('#adminMain'), posts, finalList, booths, nominalRoll);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
