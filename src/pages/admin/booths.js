@@ -25,7 +25,7 @@ export async function renderAdminBooths(container) {
   }
 }
 
-function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations) {
+function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations, posts) {
   // 1. Process Nominal Roll to get classes and sizes
   const classStats = {};
   nominalRoll.forEach(student => {
