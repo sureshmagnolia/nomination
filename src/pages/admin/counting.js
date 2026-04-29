@@ -53,10 +53,10 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
   });
 
   // ── Classify posts ────────────────────────────────────────────────────────────
-  const uucPost      = posts.find(p => pName(p).toUpperCase().includes('UUC')) || null;
-  const assocPosts   = posts.filter(p => p !== uucPost && pName(p).toUpperCase().includes('ASSOCIATION'));
-  const yearRepPosts = posts.filter(p => p !== uucPost && !assocPosts.includes(p) && p.yearRestriction && String(p.yearRestriction).trim() !== '');
-  const generalPosts = posts.filter(p => p !== uucPost && !assocPosts.includes(p) && !yearRepPosts.includes(p));
+  const uucPosts     = posts.filter(p => pName(p).toUpperCase().includes('UUC'));
+  const assocPosts   = posts.filter(p => !uucPosts.includes(p) && pName(p).toUpperCase().includes('ASSOCIATION'));
+  const yearRepPosts = posts.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && p.yearRestriction && String(p.yearRestriction).trim() !== '');
+  const generalPosts = posts.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && !yearRepPosts.includes(p));
   const G = generalPosts.length;
 
   // ── Round 1: Restricted posts per booth ───────────────────────────────────────
@@ -112,16 +112,18 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
     for (let r = 0; r < numGeneralRounds; r++) {
       rounds.push(generalPosts[(t + r) % G]);
     }
-    // Final round: UUC for every table
-    if (uucPost) rounds.push(uucPost);
+    // Final rounds: UUC(s) for every table
+    uucPosts.forEach(up => rounds.push(up));
     return rounds;
   });
 
-  const totalRounds = maxRestricted + numGeneralRounds + (uucPost ? 1 : 0);
+  const totalRounds = maxRestricted + numGeneralRounds + uucPosts.length;
   const roundLabels = [];
   for (let r = 0; r < maxRestricted; r++)      roundLabels.push(`Round ${r + 1}${r === 0 ? ' (Assoc/Reps)' : ''}`);
   for (let r = 0; r < numGeneralRounds; r++)   roundLabels.push(`Round ${maxRestricted + r + 1}`);
-  if (uucPost) roundLabels.push(`Round ${totalRounds} (UUC)`);
+  uucPosts.forEach((up, i) => {
+    roundLabels.push(`Round ${maxRestricted + numGeneralRounds + i + 1} (UUC)`);
+  });
 
   main.innerHTML = `
     <div class="page-enter space-y-6">
