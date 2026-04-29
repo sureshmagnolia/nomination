@@ -12,7 +12,6 @@ export async function renderAdminCounting(container) {
       api.getPosts(), api.adminGetNominations(pwd).catch(() => []),
       api.adminGetBooths(pwd), api.getNominalRoll()
     ]);
-    // Use all Valid nominations regardless of whether the list has been published
     const allNoms = Array.isArray(nominationsRaw) ? nominationsRaw : [];
     const finalList = allNoms.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved');
     renderCountingUI(container.querySelector('#adminMain'), posts, finalList, booths, nominalRoll);
@@ -28,7 +27,6 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
   const T = booths.length;
   const pName = p => String(p.post || p.name || '');
 
-  // ── Build class→dept and booth year-group maps from NominalRoll ──────────────
   const classToDept = {};
   nominalRoll.forEach(s => {
     const c = String(s['CLASS'] || '').trim();
@@ -52,7 +50,6 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
     return yrs;
   });
 
-  // ── Classify posts ────────────────────────────────────────────────────────────
   const uucPosts     = posts.filter(p => {
     const name = pName(p).toUpperCase();
     return name.includes('UUC') || name.includes('UNIVERSITY UNION COUNCILLOR');
@@ -62,65 +59,56 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
   const generalPosts = posts.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && !yearRepPosts.includes(p));
   const G = generalPosts.length;
 
-  // ── Round 1: Restricted posts per booth ───────────────────────────────────────
-  // Each table counts the association + year-rep posts whose voters are IN that booth.
   const tableR1 = Array.from({ length: T }, () => []);
-
-  // Association posts → booths whose classes match the dept in the post name
-  const assocMatched = new Set();
   assocPosts.forEach(ap => {
     const apUp = pName(ap).toUpperCase();
     let assigned = false;
     for (let t = 0; t < T; t++) {
       if (Array.from(boothDepts[t]).some(d => apUp.includes(d))) {
-        tableR1[t].push(ap); assocMatched.add(ap); assigned = true; break;
+        tableR1[t].push(ap); assigned = true; break;
       }
     }
     if (!assigned) {
-      // Fallback: least-loaded table
       let mi = 0;
       tableR1.forEach((a, i) => { if (a.length < tableR1[mi].length) mi = i; });
       tableR1[mi].push(ap);
     }
   });
 
-  // Year rep posts → every booth that has students from that year
   yearRepPosts.forEach(yp => {
     const yr = String(yp.yearRestriction || '');
     for (let t = 0; t < T; t++) {
       if (boothYears[t].has(yr)) tableR1[t].push(yp);
     }
-    // Fallback if no booth matched (year data missing)
     const any = tableR1.some(r => r.includes(yp));
     if (!any) { let mi = 0; tableR1.forEach((a,i) => { if (a.length < tableR1[mi].length) mi=i; }); tableR1[mi].push(yp); }
   });
 
-  // ── General rounds: ALL tables cycle through ALL general posts ────────────────
-  // Each table counts ALL general posts, one per round, in cyclic rotation.
   const numGeneralRounds = G;
-
-  // ── Restricted rounds: each restricted post gets its OWN round ───────────────
-  // Find the maximum number of restricted posts any single table has.
   const maxRestricted = Math.max(...tableR1.map(r => r.length), 0);
 
-  // ── Build matrix[t][round] = Post | null ─────────────────────────────────────
-  // Each element is a single post (or null = idle) — NEVER multiple per slot.
   const matrix = Array.from({ length: T }, (_, t) => {
     const rounds = [];
-    // Restricted rounds: one post per round, pad shorter tables with null
-    for (let r = 0; r < maxRestricted; r++) {
-      rounds.push(tableR1[t][r] || null);
-    }
-    // General rounds: cyclic across all tables
-    for (let r = 0; r < numGeneralRounds; r++) {
-      rounds.push(generalPosts[(t + r) % G]);
-    }
-    // Final rounds: UUC(s) for every table
+    for (let r = 0; r < maxRestricted; r++) rounds.push(tableR1[t][r] || null);
+    for (let r = 0; r < numGeneralRounds; r++) rounds.push(generalPosts[(t + r) % G]);
     uucPosts.forEach(up => rounds.push(up));
     return rounds;
   });
 
   const totalRounds = maxRestricted + numGeneralRounds + uucPosts.length;
+
+  // ── Pre-assign Serial Numbers for every valid form ────────────────────────────
+  const formSerials = {};
+  let serialCounter = 1;
+  // Iterate by Round then Table so serials follow a chronological counting order
+  for (let r = 0; r < totalRounds; r++) {
+    for (let t = 0; t < T; t++) {
+      if (matrix[t][r]) {
+        formSerials[`${t}-${r}`] = serialCounter++;
+      }
+    }
+  }
+
   const roundLabels = [];
   for (let r = 0; r < maxRestricted; r++)      roundLabels.push(`Round ${r + 1}${r === 0 ? ' (Assoc/Reps)' : ''}`);
   for (let r = 0; r < numGeneralRounds; r++)   roundLabels.push(`Round ${maxRestricted + r + 1}`);
@@ -151,10 +139,11 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
                     Table ${b.boothNumber}<br>
                     <span class="text-xs text-slate-500 font-normal">${esc(b.roomName || '')}</span>
                   </td>
-                  ${matrix[t].map(post => `
+                  ${matrix[t].map((post, r) => `
                     <td class="align-top py-2 min-w-[100px]">
                       ${post
-                        ? `<div class="badge badge-valid block text-left" title="${esc(pName(post))}">${esc(pName(post))}</div>`
+                        ? `<div class="text-[10px] text-slate-500 mb-0.5 font-mono">#${formSerials[`${t}-${r}`]}</div>
+                           <div class="badge badge-valid block text-left" title="${esc(pName(post))}">${esc(pName(post))}</div>`
                         : '<span class="text-slate-600">–</span>'}
                     </td>`).join('')}
                 </tr>`).join('')}
@@ -164,26 +153,28 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
       </div>
     </div>`;
 
-  // ── Print ─────────────────────────────────────────────────────────────────────
   main.querySelector('#btnPrintForms').addEventListener('click', () => {
     let html = ''; let count = 0;
-    for (let t = 0; t < T; t++) {
-      for (let r = 0; r < matrix[t].length; r++) {
+    // We loop rounds then tables to keep printed pack sorted by Round
+    for (let r = 0; r < totalRounds; r++) {
+      for (let t = 0; t < T; t++) {
         const post = matrix[t][r];
-        if (!post) continue;                          // idle slot — skip
+        if (!post) continue;
         const pn = pName(post);
+        const serial = formSerials[`${t}-${r}`];
         const cands = finalList.filter(c => c.post === pn);
-        html += buildForm(booths[t].boothNumber, r + 1, pn, cands);
+        html += buildForm(booths[t].boothNumber, r + 1, pn, cands, serial);
         count++;
       }
     }
-    if (!count) { alert('No forms generated. Check Posts and Booths are configured.'); return; }
+    if (!count) { alert('No forms generated.'); return; }
     const w = window.open('', '_blank');
-    if (!w) { alert('Pop-up blocked — please allow pop-ups for this site.'); return; }
+    if (!w) { alert('Pop-up blocked.'); return; }
     w.document.write(`<!DOCTYPE html><html><head><title>Counting Forms</title><style>
       @page{size:A4;margin:12mm}*{box-sizing:border-box}
       body{margin:0;font-family:Arial,sans-serif;background:#fff;color:#000}
-      .pg{page-break-after:always;padding:10px}.pg:last-child{page-break-after:avoid}
+      .pg{page-break-after:always;padding:10px;position:relative}.pg:last-child{page-break-after:avoid}
+      .serial-tag{position:absolute;top:10px;right:10px;border:2px solid #000;padding:5px 12px;font-family:monospace;font-size:18px;font-weight:bold}
       table{width:100%;border-collapse:collapse;margin-bottom:18px}
       th,td{border:1.5px solid #000;padding:8px}th{background:#eee}
     </style></head><body>${html}<script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`);
@@ -191,16 +182,20 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
   });
 }
 
-function buildForm(tableNum, roundNum, postName, candidates) {
+function buildForm(tableNum, roundNum, postName, candidates, serial) {
   const rows = candidates.length
     ? candidates.map((c, i) => `<tr>
         <td style="text-align:center;padding:18px 8px;font-weight:bold">${i+1}</td>
-        <td style="padding:18px 8px;font-size:15px;font-weight:bold">${esc(c.candidateName || '')}</td>
+        <td style="padding:18px 8px;font-size:15px;font-weight:bold">
+          ${esc(c.candidateName || '')}
+          <div style="font-size:11px;font-weight:normal;color:#333;margin-top:2px;">${esc(c.candidateClass || '')}</div>
+        </td>
         <td style="padding:18px 8px"></td></tr>`).join('')
     : `<tr><td colspan="3" style="padding:14px;text-align:center;color:#555">No Candidates Found</td></tr>`;
 
   return `<div class="pg">
-    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:16px">
+    <div class="serial-tag">FORM #${serial}</div>
+    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:16px;padding-right:100px;">
       <div style="font-size:11px;color:#555">Government Victoria College, Palakkad — College Union Election</div>
       <h2 style="margin:6px 0 0;font-size:20px;text-transform:uppercase;letter-spacing:2px">Counting Form</h2>
       <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:15px;font-weight:bold">
@@ -211,7 +206,7 @@ function buildForm(tableNum, roundNum, postName, candidates) {
     <table>
       <thead><tr>
         <th style="width:8%;text-align:center">#</th>
-        <th style="text-align:left;width:62%">Candidate Name</th>
+        <th style="text-align:left;width:62%">Candidate Name & Class</th>
         <th style="width:30%;text-align:center">Votes</th>
       </tr></thead>
       <tbody>
