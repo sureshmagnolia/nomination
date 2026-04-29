@@ -369,6 +369,51 @@ function doPost(e) {
       return errOut('Post not found.');
     }
 
+    if (action === 'adminAddPost') {
+      checkAdmin(body.password);
+      const s = getSheet(SHEET_POSTS);
+      s.appendRow([body.post, body.femaleOnly, body.finalYearIneligible, body.yearRestriction, body.deptRestriction]);
+      return jsonOut({ ok: true });
+    }
+
+    if (action === 'adminUpdatePost') {
+      checkAdmin(body.password);
+      const s = getSheet(SHEET_POSTS);
+      const d = s.getDataRange().getValues();
+      for (let i = 1; i < d.length; i++) {
+        if (d[i][0] === body.post) {
+          // Update the row
+          s.getRange(i + 1, 1, 1, 5).setValues([[body.post, body.femaleOnly, body.finalYearIneligible, body.yearRestriction, body.deptRestriction]]);
+          return jsonOut({ ok: true });
+        }
+      }
+      return errOut('Post not found.');
+    }
+
+    if (action === 'adminReorderPosts') {
+      checkAdmin(body.password);
+      const s = getSheet(SHEET_POSTS);
+      const d = s.getDataRange().getValues();
+      if (d.length <= 1) return jsonOut({ ok: true });
+      
+      const headers = d[0];
+      const postsMap = new Map();
+      for (let i = 1; i < d.length; i++) {
+        postsMap.set(String(d[i][0]), d[i]);
+      }
+      
+      s.clear();
+      s.appendRow(headers);
+      
+      body.posts.forEach(postName => {
+        if (postsMap.has(postName)) {
+          s.appendRow(postsMap.get(postName));
+        }
+      });
+      
+      return jsonOut({ ok: true });
+    }
+
     return errOut(`Unknown action: ${action}`);
   } catch (err) {
     return errOut(err.message);

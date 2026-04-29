@@ -423,16 +423,16 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         <p class="text-slate-400 text-sm mt-1">Election Management Portal</p>
       </div>
       <div id="errorMsg" class="hidden alert alert-error text-left"></div>
-      <div class="space-y-4 text-left">
+      <form id="loginForm" class="space-y-4 text-left">
         <div>
           <label class="block text-sm font-semibold text-slate-300 mb-1">Admin Password</label>
           <input id="adminPassword" type="password" class="field" placeholder="Enter admin password" />
         </div>
-        <button id="loginBtn" class="btn btn-primary w-full text-base py-3">Login to Admin Panel →</button>
-      </div>
+        <button type="submit" id="loginBtn" class="btn btn-primary w-full text-base py-3">Login to Admin Panel →</button>
+      </form>
       <button id="backHome" class="text-slate-500 hover:text-slate-300 text-sm transition">← Back to Public Portal</button>
     </div>
-  </div>`,e.querySelector(`#backHome`).addEventListener(`click`,()=>o.navigate(`/`));let t=e.querySelector(`#loginBtn`),n=e.querySelector(`#adminPassword`),r=e.querySelector(`#errorMsg`),i=async()=>{let e=n.value;if(!e){_(`Please enter the admin password.`,`error`);return}g(t,!0,`Login to Admin Panel →`),r.classList.add(`hidden`);try{await C.adminLogin(e),sessionStorage.setItem(`adminPwd`,e),_(`Logged in successfully!`,`success`),o.navigate(`/admin/dashboard`)}catch(e){r.textContent=`❌ ${e.message}`,r.classList.remove(`hidden`)}finally{g(t,!1,`Login to Admin Panel →`)}};t.addEventListener(`click`,i),n.addEventListener(`keydown`,e=>{e.key===`Enter`&&i()})}function W(){return sessionStorage.getItem(`adminPwd`)||(_(`Session expired. Please log in again.`,`warning`),o.navigate(`/admin`),null)}function G(e,t,n){e.innerHTML=`
+  </div>`,e.querySelector(`#backHome`).addEventListener(`click`,()=>o.navigate(`/`));let t=e.querySelector(`#loginForm`),n=e.querySelector(`#adminPassword`),r=e.querySelector(`#errorMsg`),i=e.querySelector(`#loginBtn`);t.addEventListener(`submit`,async e=>{e.preventDefault();let t=n.value;if(!t){_(`Please enter the admin password.`,`error`);return}g(i,!0,`Login to Admin Panel →`),r.classList.add(`hidden`);try{await C.adminLogin(t),sessionStorage.setItem(`adminPwd`,t),_(`Logged in successfully!`,`success`),o.navigate(`/admin/dashboard`)}catch(e){r.textContent=`❌ ${e.message}`,r.classList.remove(`hidden`)}finally{g(i,!1,`Login to Admin Panel →`)}})}function W(){return sessionStorage.getItem(`adminPwd`)||(_(`Session expired. Please log in again.`,`warning`),o.navigate(`/admin`),null)}function G(e,t,n){e.innerHTML=`
   <div class="min-h-screen flex">
     <!-- Sidebar -->
     <aside class="no-print w-60 flex-shrink-0 glass border-r border-white/10 flex flex-col">
