@@ -587,6 +587,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         ${z(`posts`,`📋`,`Manage Posts`,t)}
         ${z(`nominal-roll`,`📜`,`Nominal Roll`,t)}
         ${z(`booths`,`🏫`,`Polling Booths`,t)}
+        ${z(`ballots`,`🗳️`,`Ballot Printing`,t)}
         <div class="border-t border-white/10 my-2"></div>
         ${z(`counting`,`🧮`,`Counting Setup`,t)}
         ${z(`results-entry`,`📥`,`Results Entry`,t)}
@@ -1439,101 +1440,245 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <button id="btnSaveVotes" class="btn btn-success px-12">💾 Save Form Results</button>
         </div>
       </div>
-    `;let p=()=>{let e=0;c.querySelectorAll(`.vote-input`).forEach(t=>{e+=parseInt(t.value,10)||0});let t=c.querySelector(`#totalVotesDisplay`);t&&(t.textContent=e)};c.querySelectorAll(`.vote-input`).forEach(e=>{e.addEventListener(`input`,p)}),p(),c.querySelector(`#btnSaveVotes`).addEventListener(`click`,async e=>{let i=e.target,l=c.querySelectorAll(`.vote-input`),u=[];if(l.forEach(e=>{let t=e.value.trim();t!==``&&u.push({TableNumber:n,RoundNumber:s,Post:r,CandidateId:e.dataset.cid,CandidateName:e.dataset.cname,Votes:parseInt(t,10),FormSerial:o||`N/A`})}),u.length===0){_(`Enter votes`,`warning`);return}g(i,!0,`💾 Saving...`);try{await C.adminSaveResults(t,u),u.forEach(e=>{let t=a.findIndex(t=>String(t.TableNumber)===String(n)&&String(t.Post)===r&&t.CandidateId===e.CandidateId);t>=0?(a[t].Votes=e.Votes,a[t].RoundNumber=e.RoundNumber,a[t].FormSerial=e.FormSerial):a.push(e)}),_(`Form results saved!`,`success`),c.innerHTML=``,d.value=``,d.focus()}catch(e){_(`Failed: ${e.message}`,`error`)}finally{g(i,!1,`💾 Save Form Results`)}})}}function Pe(e){let t=L();if(!t)return;R(e,`testing`,`
-    <div class="page-enter space-y-8 max-w-3xl mx-auto">
-
-      <!-- Warning Banner -->
-      <div class="rounded-xl border border-amber-500/40 bg-amber-500/10 p-5 flex items-start gap-4">
-        <div class="text-3xl">⚠️</div>
+    `;let p=()=>{let e=0;c.querySelectorAll(`.vote-input`).forEach(t=>{e+=parseInt(t.value,10)||0});let t=c.querySelector(`#totalVotesDisplay`);t&&(t.textContent=e)};c.querySelectorAll(`.vote-input`).forEach(e=>{e.addEventListener(`input`,p)}),p(),c.querySelector(`#btnSaveVotes`).addEventListener(`click`,async e=>{let i=e.target,l=c.querySelectorAll(`.vote-input`),u=[];if(l.forEach(e=>{let t=e.value.trim();t!==``&&u.push({TableNumber:n,RoundNumber:s,Post:r,CandidateId:e.dataset.cid,CandidateName:e.dataset.cname,Votes:parseInt(t,10),FormSerial:o||`N/A`})}),u.length===0){_(`Enter votes`,`warning`);return}g(i,!0,`💾 Saving...`);try{await C.adminSaveResults(t,u),u.forEach(e=>{let t=a.findIndex(t=>String(t.TableNumber)===String(n)&&String(t.Post)===r&&t.CandidateId===e.CandidateId);t>=0?(a[t].Votes=e.Votes,a[t].RoundNumber=e.RoundNumber,a[t].FormSerial=e.FormSerial):a.push(e)}),_(`Form results saved!`,`success`),c.innerHTML=``,d.value=``,d.focus()}catch(e){_(`Failed: ${e.message}`,`error`)}finally{g(i,!1,`💾 Save Form Results`)}})}}function Pe(e){let t=sessionStorage.getItem(`adminPassword`);if(!t){window.location.hash=`/admin`;return}R(e,`Ballot Printing`);let n=e.querySelector(`#adminMain`);n.innerHTML=`
+    <div class="space-y-6 page-enter">
+      <div class="flex justify-between items-center bg-white/5 p-6 rounded-2xl border border-white/10 backdrop-blur-md">
         <div>
-          <h4 class="font-bold text-amber-400 text-lg">Testing Environment Tools</h4>
-          <p class="text-amber-200/70 text-sm mt-1">
-            These tools are for <strong>testing and debugging only</strong>. 
-            Do not inject test data during or after the actual election process begins.
-            Wiping data is <strong>irreversible</strong> — always confirm before acting.
+          <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">🗳️</span>
+            Print Ballots
+          </h2>
+          <p class="text-slate-400 mt-1">Generate official ballots for General, Year Rep, and Association posts.</p>
+        </div>
+        <div class="flex gap-3">
+          <button id="btnPrintBallots" class="btn btn-primary px-8">
+            🖨️ Generate All Ballots
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="glass p-6 rounded-2xl border border-white/10 space-y-4">
+          <div class="text-indigo-400 font-bold flex items-center gap-2">
+            <span>🏆</span> General Ballot
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Major union posts (Chairman, Secretary, etc.) in a 2-column professional layout. Chairman & Vice Chairman on top.
           </p>
+          <button data-type="general" class="btn btn-secondary w-full py-2 text-xs preview-btn">Preview General</button>
+        </div>
+
+        <div class="glass p-6 rounded-2xl border border-white/10 space-y-4">
+          <div class="text-emerald-400 font-bold flex items-center gap-2">
+            <span>📅</span> Year Rep Ballots
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Separate ballots for 1st, 2nd, and 3rd year representatives. Each year on a new page.
+          </p>
+          <button data-type="year" class="btn btn-secondary w-full py-2 text-xs preview-btn">Preview Year Reps</button>
+        </div>
+
+        <div class="glass p-6 rounded-2xl border border-white/10 space-y-4">
+          <div class="text-amber-400 font-bold flex items-center gap-2">
+            <span>🤝</span> Association Ballots
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Departmental Association Secretary ballots. Each department on a dedicated page.
+          </p>
+          <button data-type="assoc" class="btn btn-secondary w-full py-2 text-xs preview-btn">Preview Associations</button>
         </div>
       </div>
 
-      <!-- Inject Test Data -->
-      <div class="glass rounded-2xl overflow-hidden border border-indigo-500/20">
-        <div class="bg-indigo-500/10 p-5 border-b border-indigo-500/20 flex items-center gap-3">
-          <div class="text-2xl">🧪</div>
-          <div>
-            <h4 class="font-bold text-white text-lg">Inject Test Data</h4>
-            <p class="text-slate-400 text-sm">Creates 2 synthetic, pre-approved candidates for every configured post using real students from the Nominal Roll.</p>
-          </div>
-        </div>
-        <div class="p-6 space-y-4">
-          <ul class="text-sm text-slate-400 space-y-1 list-disc list-inside">
-            <li>Reads all posts from the <strong class="text-white">Posts</strong> sheet.</li>
-            <li>Picks real students from <strong class="text-white">NominalRoll</strong> as candidates, proposers, and seconders.</li>
-            <li>Sets status to <strong class="text-green-400">Valid</strong> and populates <strong class="text-white">Nominations, ValidList, and FinalList</strong>.</li>
-            <li>IDs are prefixed with <code class="text-indigo-300 bg-black/30 px-1 rounded">TEST</code> for easy identification.</li>
-          </ul>
-          <div class="pt-2">
-            <button id="btnInjectData" class="btn btn-primary gap-2">
-              🧪 Inject Test Nominations
-            </button>
-          </div>
-          <div id="injectStatus"></div>
-        </div>
+      <div id="ballotPreviewArea" class="hidden glass p-8 rounded-3xl border border-white/20 bg-white/5 overflow-auto max-h-[600px]">
+        <!-- Preview will be rendered here -->
       </div>
-
-      <!-- Wipe All Data -->
-      <div class="glass rounded-2xl overflow-hidden border border-red-500/30">
-        <div class="bg-red-500/10 p-5 border-b border-red-500/30 flex items-center gap-3">
-          <div class="text-2xl">🗑️</div>
-          <div>
-            <h4 class="font-bold text-red-400 text-lg">Wipe All Transactional Data</h4>
-            <p class="text-slate-400 text-sm">Permanently deletes all nominations, results, and resets the publish flags. Leaves NominalRoll, Posts, and Booth configuration intact.</p>
-          </div>
-        </div>
-        <div class="p-6 space-y-4">
-          <div class="rounded-lg bg-red-900/20 border border-red-800/40 p-4 text-sm text-red-300 space-y-1">
-            <p>🗑️ <strong>Nominations</strong> sheet — will be cleared</p>
-            <p>🗑️ <strong>ValidList</strong> sheet — will be cleared</p>
-            <p>🗑️ <strong>FinalList</strong> sheet — will be cleared</p>
-            <p>🗑️ <strong>Results</strong> sheet — will be cleared</p>
-            <p>🔄 <strong>Publish flags</strong> — will be reset to false</p>
-            <p class="text-green-400 mt-2">✅ NominalRoll, Posts, Booths, Settings (locations) — <strong>preserved</strong></p>
-          </div>
-          
-          <!-- Password confirmation -->
-          <div class="space-y-2 pt-2">
-            <label class="block text-sm text-slate-300 font-medium">Confirm Admin Password</label>
-            <input type="password" id="wipePasswordInput" class="field max-w-xs" placeholder="Enter admin password to confirm...">
-          </div>
-          
-          <div>
-            <button id="btnWipeData" class="btn bg-red-600 hover:bg-red-500 text-white border-none gap-2 px-6">
-              🗑️ Permanently Wipe All Data
-            </button>
-          </div>
-          <div id="wipeStatus"></div>
-        </div>
-      </div>
-
     </div>
-  `);let n=e.querySelector(`#adminMain`);n.querySelector(`#btnInjectData`).addEventListener(`click`,async e=>{let r=e.target;if(!confirm(`This will inject test nominations for ALL configured posts.
 
-Proceed?`))return;g(r,!0,`🧪 Inject Test Nominations`);let i=n.querySelector(`#injectStatus`);i.innerHTML=``;try{let e=await C.adminInjectTestData(t),n=e.skipped>0?`<br><span class="text-amber-400 text-xs mt-1 block">⚠️ ${e.skipped} post(s) skipped — not enough eligible students in NominalRoll: <em>${e.skippedPosts.join(`, `)}</em></span>`:``;i.innerHTML=`
-        <div class="alert mt-3" style="background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #6ee7b7;">
-          ✅ Successfully injected <strong>${e.injected}</strong> test nominations across posts. All rules (gender, year, dept) were respected.${n}
-        </div>`,_(`Injected ${e.injected} test nominations!`,`success`)}catch(e){i.innerHTML=`<div class="alert alert-error mt-3">❌ ${h(e.message)}</div>`,_(`Failed: ${e.message}`,`error`)}finally{g(r,!1,`🧪 Inject Test Nominations`)}}),n.querySelector(`#btnWipeData`).addEventListener(`click`,async e=>{let t=e.target,r=n.querySelector(`#wipePasswordInput`).value.trim();if(!r){_(`Please enter the admin password to confirm the wipe.`,`warning`),n.querySelector(`#wipePasswordInput`).focus();return}if(!confirm(`⚠️ DANGER ZONE ⚠️
-
-This will PERMANENTLY DELETE:
-• All Nominations
-• ValidList
-• FinalList
-• Results
-
-This action CANNOT be undone.
-
-Are you absolutely sure?`))return;g(t,!0,`🗑️ Wiping...`);let i=n.querySelector(`#wipeStatus`);i.innerHTML=``;try{await C.adminWipeData(r),n.querySelector(`#wipePasswordInput`).value=``,i.innerHTML=`
-        <div class="alert mt-3" style="background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #fca5a5;">
-          ✅ All transactional data has been wiped. Publish flags reset to false.
-        </div>`,_(`All data wiped successfully.`,`success`)}catch(e){i.innerHTML=`<div class="alert alert-error mt-3">❌ ${h(e.message)}</div>`,_(`Failed: ${e.message}`,`error`)}finally{g(t,!1,`🗑️ Permanently Wipe All Data`)}})}var G=`election_results_cache`,K=`election_results_last_fetch`,q=300*1e3;async function Fe(e){e.innerHTML=`
+    <style>
+      @media print {
+        body * { visibility: hidden; }
+        #printSection, #printSection * { visibility: visible; }
+        #printSection { position: absolute; left: 0; top: 0; width: 100%; }
+        .page-break { page-break-after: always; }
+        .no-print { display: none !important; }
+      }
+      
+      .ballot-container {
+        background: white;
+        color: black;
+        padding: 40px;
+        font-family: "Times New Roman", Times, serif;
+        width: 210mm; /* A4 width */
+        margin: 0 auto;
+        box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      }
+      
+      .ballot-header {
+        text-align: center;
+        border-bottom: 3px double #000;
+        margin-bottom: 30px;
+        padding-bottom: 10px;
+      }
+      
+      .ballot-header h1 { font-size: 24px; margin: 0; text-transform: uppercase; }
+      .ballot-header h2 { font-size: 18px; margin: 5px 0 0 0; }
+      
+      .ballot-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      
+      .post-box {
+        border: 2px solid #000;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .post-box.full-width {
+        grid-column: span 2;
+      }
+      
+      .post-title {
+        background: #000;
+        color: #fff;
+        text-align: center;
+        padding: 5px;
+        font-weight: bold;
+        font-size: 14px;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+      }
+      
+      .candidate-row {
+        display: flex;
+        align-items: center;
+        border: 1px solid #000;
+        margin-bottom: 5px;
+        height: 50px;
+      }
+      
+      .sl-no {
+        width: 30px;
+        text-align: center;
+        border-right: 1px solid #000;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+      }
+      
+      .c-name {
+        flex-grow: 1;
+        padding: 0 10px;
+        font-size: 14px;
+        font-weight: bold;
+      }
+      
+      .stamp-box {
+        width: 60px;
+        height: 100%;
+        border-left: 1px solid #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+      
+      .stamp-box::after {
+        content: "";
+        width: 30px;
+        height: 30px;
+        border: 1px dashed #ccc;
+        border-radius: 4px;
+      }
+      
+      .ballot-footer {
+        margin-top: 40px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        font-style: italic;
+      }
+    </style>
+  `;let r=n.querySelector(`#ballotPreviewArea`),i=async(e=`all`)=>{let[n,r]=await Promise.all([C.adminGetPosts(t),C.getFinalNominations()]),i=e=>e.post.toLowerCase().includes(`year`),a=e=>e.post.toLowerCase().includes(`assoc`)||e.post.toLowerCase().includes(`association`),o=e=>!i(e)&&!a(e),s=`<div id="printSection">`;if(e===`all`||e===`general`){let e=n.filter(o);e.length>0&&(s+=`
+          <div class="ballot-container page-break">
+            <div class="ballot-header">
+              <h1>COLLEGE UNION ELECTION 2026-27</h1>
+              <h2>OFFICIAL BALLOT PAPER — GENERAL UNION</h2>
+            </div>
+            <div class="ballot-grid">
+        `,[...e].sort((e,t)=>{let n=e.post.toLowerCase(),r=t.post.toLowerCase();return n.includes(`chairman`)&&!n.includes(`vice`)?-1:r.includes(`chairman`)&&!r.includes(`vice`)?1:n.includes(`vice chairman`)?-1:+!!r.includes(`vice chairman`)}).forEach(e=>{let t=r.filter(t=>t.post===e.post);t.length!==0&&(e.post.toLowerCase().includes(`chairman`),s+=`
+            <div class="post-box">
+              <div class="post-title">${h(e.post)}</div>
+              ${t.map((e,t)=>`
+                <div class="candidate-row">
+                  <div class="sl-no">${t+1}</div>
+                  <div class="c-name">${h(e.candidateName)}</div>
+                  <div class="stamp-box"></div>
+                </div>
+              `).join(``)}
+            </div>
+          `)}),s+=`
+            </div>
+            <div class="ballot-footer">
+              <div>Facsimile of Returning Officer</div>
+              <div>Series: GEN-${Date.now().toString().slice(-6)}</div>
+            </div>
+          </div>
+        `)}return(e===`all`||e===`year`)&&n.filter(i).forEach(e=>{let t=r.filter(t=>t.post===e.post);t.length!==0&&(s+=`
+          <div class="ballot-container page-break">
+            <div class="ballot-header">
+              <h1>COLLEGE UNION ELECTION 2026-27</h1>
+              <h2>BALLOT PAPER — ${h(e.post.toUpperCase())}</h2>
+            </div>
+            <div style="max-width: 500px; margin: 0 auto; border: 2px solid #000; padding: 20px;">
+              <div class="post-title">${h(e.post)}</div>
+              ${t.map((e,t)=>`
+                <div class="candidate-row">
+                  <div class="sl-no">${t+1}</div>
+                  <div class="c-name">${h(e.candidateName)}</div>
+                  <div class="stamp-box"></div>
+                </div>
+              `).join(``)}
+            </div>
+            <div class="ballot-footer">
+              <div>Facsimile of Returning Officer</div>
+              <div>Series: YR-${Date.now().toString().slice(-6)}</div>
+            </div>
+          </div>
+        `)}),(e===`all`||e===`assoc`)&&n.filter(a).forEach(e=>{let t=r.filter(t=>t.post===e.post);t.length!==0&&(s+=`
+          <div class="ballot-container page-break">
+            <div class="ballot-header">
+              <h1>COLLEGE UNION ELECTION 2026-27</h1>
+              <h2>BALLOT PAPER — ASSOCIATION</h2>
+            </div>
+            <div style="max-width: 500px; margin: 0 auto; border: 2px solid #000; padding: 20px;">
+              <div class="post-title">${h(e.post)}</div>
+              ${t.map((e,t)=>`
+                <div class="candidate-row">
+                  <div class="sl-no">${t+1}</div>
+                  <div class="c-name">${h(e.candidateName)}</div>
+                  <div class="stamp-box"></div>
+                </div>
+              `).join(``)}
+            </div>
+            <div class="ballot-footer" style="margin-top: 100px;">
+              <div>Facsimile of Returning Officer</div>
+              <div>Series: ASC-${Date.now().toString().slice(-6)}</div>
+            </div>
+          </div>
+        `)}),s+=`</div>`,s},a=async e=>{try{_(`Generating preview...`,`info`),r.innerHTML=`
+        <div class="flex justify-between items-center mb-6 no-print">
+          <h3 class="text-white font-bold">Ballot Preview</h3>
+          <button id="btnPrintNow" class="btn btn-success btn-sm">🖨️ Print This Preview</button>
+        </div>
+        <div class="scale-75 origin-top">
+          ${await i(e)}
+        </div>
+      `,r.classList.remove(`hidden`),r.querySelector(`#btnPrintNow`).onclick=()=>window.print()}catch(e){_(e.message,`error`)}};n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)}),n.querySelector(`#btnPrintBallots`).onclick=async e=>{try{g(e.target,!0,`Generating...`);let t=await i(`all`),n=document.getElementById(`printSection`);n&&n.remove(),document.body.insertAdjacentHTML(`beforeend`,t),window.print(),g(e.target,!1,`🖨️ Generate All Ballots`)}catch(t){_(t.message,`error`),g(e.target,!1,`🖨️ Generate All Ballots`)}}}var G=`election_results_cache`,K=`election_results_last_fetch`,q=300*1e3;async function Fe(e){e.innerHTML=`
     <div class="page-enter min-h-screen">
       <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
         <div class="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
@@ -1975,4 +2120,4 @@ Are you absolutely sure?`)){g(n.target,!0,`Finalizing...`);try{await C.adminFina
       and replace <code style="background:rgba(0,0,0,0.3);padding:0.1rem 0.4rem;border-radius:4px;">YOUR_SCRIPT_ID</code>
       with your Google Apps Script Web App URL, then rebuild &amp; push.
     </div>
-  `),document.getElementById(`app`).style.marginTop=`48px`);var $=e=>t=>{Q.innerHTML=``,e(Q,t)};o.on(`/`,$(v)).on(`/submit`,$(k)).on(`/find`,$(re)).on(`/valid-list`,$(oe)).on(`/final-list`,$(le)).on(`/withdraw`,$(fe)).on(`/results`,$(Fe)).on(`/nominal-roll`,$(Ie)).on(`/admin`,$(I)).on(`/admin/dashboard`,$(ye)).on(`/admin/verify`,$(be)).on(`/admin/withdrawals`,$(Se)).on(`/admin/publish`,$(H)).on(`/admin/posts`,$(we)).on(`/admin/booths`,$(De)).on(`/admin/counting`,$(ke)).on(`/admin/results-entry`,$(Me)).on(`/admin/nominal-roll`,$(X)).on(`/admin/schedule`,$(ze)).on(`/admin/direct-nomination`,$(Ve)).on(`/admin/testing`,$(Pe)).setDefault(`/`),document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-nav]`);t&&(e.preventDefault(),o.navigate(t.dataset.nav))}),o.start();
+  `),document.getElementById(`app`).style.marginTop=`48px`);var $=e=>t=>{Q.innerHTML=``,e(Q,t)};o.on(`/`,$(v)).on(`/submit`,$(k)).on(`/find`,$(re)).on(`/valid-list`,$(oe)).on(`/final-list`,$(le)).on(`/withdraw`,$(fe)).on(`/results`,$(Fe)).on(`/nominal-roll`,$(Ie)).on(`/admin`,$(I)).on(`/admin/dashboard`,$(ye)).on(`/admin/verify`,$(be)).on(`/admin/withdrawals`,$(Se)).on(`/admin/publish`,$(H)).on(`/admin/posts`,$(we)).on(`/admin/ballots`,$(Pe)).on(`/admin/booths`,$(De)).on(`/admin/counting`,$(ke)).on(`/admin/results-entry`,$(Me)).on(`/admin/nominal-roll`,$(X)).on(`/admin/schedule`,$(ze)).on(`/admin/direct-nomination`,$(Ve)).on(`/admin/testing`,$(renderAdminTesting)).setDefault(`/`),document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-nav]`);t&&(e.preventDefault(),o.navigate(t.dataset.nav))}),o.start();
