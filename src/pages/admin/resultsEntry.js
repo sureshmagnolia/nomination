@@ -103,6 +103,19 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults) {
           `).join('')}
           
           <div class="border-t border-white/10 my-4"></div>
+
+          <div class="flex items-center justify-between bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+            <div class="flex items-center gap-4">
+              <div class="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-slate-400 font-bold">N</div>
+              <div>
+                <div class="font-bold text-slate-300">NOTA</div>
+                <div class="text-xs text-slate-500">None Of The Above</div>
+              </div>
+            </div>
+            <div class="w-32">
+              <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="NOTA" data-cname="NOTA" placeholder="0" value="${getVotes('NOTA')}" min="0">
+            </div>
+          </div>
           
           <div class="flex items-center justify-between bg-red-500/5 p-4 rounded-lg border border-red-500/20">
             <div class="flex items-center gap-4">

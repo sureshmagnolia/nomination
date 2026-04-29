@@ -70,15 +70,16 @@ async function fetchAndRender(main) {
       const candidateIds = Object.keys(pAgg);
       if (candidateIds.length === 0) return; // No votes entered for this post yet
 
-      // Separate valid candidates and Invalid
-      const valids = candidateIds.filter(id => id !== 'INVALID').map(id => pAgg[id]);
+      // Separate valid candidates, NOTA, and Invalid
+      const valids = candidateIds.filter(id => id !== 'INVALID' && id !== 'NOTA').map(id => pAgg[id]);
       const invalid = pAgg['INVALID'];
+      const nota = pAgg['NOTA'];
 
       // Sort valids by votes descending
       valids.sort((a, b) => b.votes - a.votes);
       
       const maxVotes = valids.length ? valids[0].votes : 0;
-      const totalValidVotes = valids.reduce((sum, c) => sum + c.votes, 0);
+      const totalValidVotes = valids.reduce((sum, c) => sum + c.votes, 0) + (nota ? nota.votes : 0);
 
       html += `
         <div class="glass rounded-2xl overflow-hidden border border-white/10 page-enter">
@@ -116,8 +117,15 @@ async function fetchAndRender(main) {
               `;
             }).join('')}
             
+            ${nota && nota.votes > 0 ? `
+              <div class="border-t border-white/10 pt-4 mt-6 flex justify-between text-sm text-slate-400">
+                <span>NOTA (None Of The Above)</span>
+                <span class="font-bold text-white">${nota.votes} <span class="text-xs text-slate-500 font-normal">votes (${((nota.votes / totalValidVotes) * 100).toFixed(1)}%)</span></span>
+              </div>
+            ` : ''}
+
             ${invalid && invalid.votes > 0 ? `
-              <div class="border-t border-white/10 pt-4 mt-6 flex justify-between text-sm text-slate-500">
+              <div class="${nota && nota.votes > 0 ? 'border-t border-white/10 pt-4 mt-4' : 'border-t border-white/10 pt-4 mt-6'} flex justify-between text-sm text-slate-500">
                 <span>Invalid / Blank Votes</span>
                 <span class="font-bold text-red-400">${invalid.votes}</span>
               </div>

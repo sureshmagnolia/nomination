@@ -174,6 +174,11 @@ function generateCountingFormHtml(tableNum, roundNum, postName, candidates) {
           `).join('')}
             <tr>
               <td style="border: 1px solid black; padding: 20px 10px; text-align: center; font-weight: bold;">-</td>
+              <td style="border: 1px solid black; padding: 20px 10px; font-size: 16px; font-weight: bold; color: #333;">NOTA (None Of The Above)</td>
+              <td style="border: 1px solid black; padding: 20px 10px;"></td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid black; padding: 20px 10px; text-align: center; font-weight: bold;">-</td>
               <td style="border: 1px solid black; padding: 20px 10px; font-size: 16px; font-weight: bold; color: #555;">INVALID / BLANK VOTES</td>
               <td style="border: 1px solid black; padding: 20px 10px;"></td>
             </tr>

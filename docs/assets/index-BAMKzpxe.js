@@ -1027,6 +1027,11 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           `).join(``)}
             <tr>
               <td style="border: 1px solid black; padding: 20px 10px; text-align: center; font-weight: bold;">-</td>
+              <td style="border: 1px solid black; padding: 20px 10px; font-size: 16px; font-weight: bold; color: #333;">NOTA (None Of The Above)</td>
+              <td style="border: 1px solid black; padding: 20px 10px;"></td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid black; padding: 20px 10px; text-align: center; font-weight: bold;">-</td>
               <td style="border: 1px solid black; padding: 20px 10px; font-size: 16px; font-weight: bold; color: #555;">INVALID / BLANK VOTES</td>
               <td style="border: 1px solid black; padding: 20px 10px;"></td>
             </tr>
@@ -1115,6 +1120,19 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           `).join(``)}
           
           <div class="border-t border-white/10 my-4"></div>
+
+          <div class="flex items-center justify-between bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+            <div class="flex items-center gap-4">
+              <div class="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-slate-400 font-bold">N</div>
+              <div>
+                <div class="font-bold text-slate-300">NOTA</div>
+                <div class="text-xs text-slate-500">None Of The Above</div>
+              </div>
+            </div>
+            <div class="w-32">
+              <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="NOTA" data-cname="NOTA" placeholder="0" value="${l(`NOTA`)}" min="0">
+            </div>
+          </div>
           
           <div class="flex items-center justify-between bg-red-500/5 p-4 rounded-lg border border-red-500/20">
             <div class="flex items-center gap-4">
@@ -1155,16 +1173,16 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <h2 class="text-2xl font-bold text-white mb-2">Counting in Progress</h2>
           <p class="text-slate-400">No results have been published yet. Please check back later.</p>
         </div>
-      `;return}let r={};t.forEach(e=>r[e.name]={}),n.forEach(e=>{let t=e.Post;r[t]||(r[t]={}),r[t][e.CandidateId]||(r[t][e.CandidateId]={name:e.CandidateName,votes:0}),r[t][e.CandidateId].votes+=Number(e.Votes)||0});let i=`<div class="space-y-12">`;t.forEach(e=>{let t=r[e.name],n=Object.keys(t);if(n.length===0)return;let a=n.filter(e=>e!==`INVALID`).map(e=>t[e]),o=t.INVALID;a.sort((e,t)=>t.votes-e.votes);let s=a.length?a[0].votes:0,c=a.reduce((e,t)=>e+t.votes,0);i+=`
+      `;return}let r={};t.forEach(e=>r[e.name]={}),n.forEach(e=>{let t=e.Post;r[t]||(r[t]={}),r[t][e.CandidateId]||(r[t][e.CandidateId]={name:e.CandidateName,votes:0}),r[t][e.CandidateId].votes+=Number(e.Votes)||0});let i=`<div class="space-y-12">`;t.forEach(e=>{let t=r[e.name],n=Object.keys(t);if(n.length===0)return;let a=n.filter(e=>e!==`INVALID`&&e!==`NOTA`).map(e=>t[e]),o=t.INVALID,s=t.NOTA;a.sort((e,t)=>t.votes-e.votes);let c=a.length?a[0].votes:0,l=a.reduce((e,t)=>e+t.votes,0)+(s?s.votes:0);i+=`
         <div class="glass rounded-2xl overflow-hidden border border-white/10 page-enter">
           <div class="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 p-5 border-b border-white/10 flex justify-between items-end">
             <div>
               <h2 class="text-2xl font-bold text-white">${h(e.name)}</h2>
-              <p class="text-sm text-indigo-300 mt-1">${c} Total Valid Votes Counted</p>
+              <p class="text-sm text-indigo-300 mt-1">${l} Total Valid Votes Counted</p>
             </div>
           </div>
           <div class="p-6 space-y-6">
-            ${a.map((e,t)=>{let n=c>0?(e.votes/c*100).toFixed(1):0,r=s>0?e.votes/s*100:0,i=t===0&&e.votes>0;return`
+            ${a.map((e,t)=>{let n=l>0?(e.votes/l*100).toFixed(1):0,r=c>0?e.votes/c*100:0,i=t===0&&e.votes>0;return`
                 <div class="relative">
                   <div class="flex justify-between items-end mb-2 relative z-10">
                     <div class="flex items-center gap-3">
@@ -1186,8 +1204,15 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 </div>
               `}).join(``)}
             
+            ${s&&s.votes>0?`
+              <div class="border-t border-white/10 pt-4 mt-6 flex justify-between text-sm text-slate-400">
+                <span>NOTA (None Of The Above)</span>
+                <span class="font-bold text-white">${s.votes} <span class="text-xs text-slate-500 font-normal">votes (${(s.votes/l*100).toFixed(1)}%)</span></span>
+              </div>
+            `:``}
+
             ${o&&o.votes>0?`
-              <div class="border-t border-white/10 pt-4 mt-6 flex justify-between text-sm text-slate-500">
+              <div class="${s&&s.votes>0?`border-t border-white/10 pt-4 mt-4`:`border-t border-white/10 pt-4 mt-6`} flex justify-between text-sm text-slate-500">
                 <span>Invalid / Blank Votes</span>
                 <span class="font-bold text-red-400">${o.votes}</span>
               </div>
