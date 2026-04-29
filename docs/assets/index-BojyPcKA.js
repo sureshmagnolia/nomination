@@ -1219,12 +1219,6 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                   `).join(``)}
                 </tbody>
               </table>
-              <div style="margin-top: 15px; padding: 8px; border: 1px solid #eee; background: #fafafa; font-size: 9px; line-height: 1.4;">
-                <strong>Instructions:</strong><br>
-                1. Verify counts before opening.<br>
-                2. Mark signatures in Electoral Roll.<br>
-                3. Total votes polled must match roll count.
-              </div>
             </div>
           </div>
 
