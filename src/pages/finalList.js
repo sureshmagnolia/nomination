@@ -14,7 +14,8 @@ export async function renderFinalList(container) {
 
   try {
     const data = await api.getFinalNominations();
-    renderList(container.querySelector('main'), data);
+    // getFinalNominations returns { active: [], withdrawn: [] }
+    renderList(container.querySelector('main'), data.active || []);
   } catch (e) {
     container.querySelector('main').innerHTML = `<div class="alert alert-warning text-center py-10 shadow-xl">${esc(e.message)}</div>`;
   }

@@ -376,7 +376,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <main class="max-w-5xl mx-auto px-4 py-12">${t}</main>
   </div>`}async function ce(e){e.innerHTML=ue(`Final Candidates List`,`
     <div class="text-center py-20"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Final List...</p></div>
-  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));try{let t=await C.getFinalNominations();le(e.querySelector(`main`),t)}catch(t){e.querySelector(`main`).innerHTML=`<div class="alert alert-warning text-center py-10 shadow-xl">${h(t.message)}</div>`}}function le(e,t){if(!t||t.length===0){e.innerHTML=`
+  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));try{let t=await C.getFinalNominations();le(e.querySelector(`main`),t.active||[])}catch(t){e.querySelector(`main`).innerHTML=`<div class="alert alert-warning text-center py-10 shadow-xl">${h(t.message)}</div>`}}function le(e,t){if(!t||t.length===0){e.innerHTML=`
       <div class="glass rounded-3xl p-20 text-center border-dashed border-white/10">
         <div class="text-6xl mb-6">🏁</div>
         <h2 class="text-2xl font-bold text-white mb-2">Final List Pending</h2>
