@@ -367,7 +367,11 @@ function doPost(e) {
       if (body.password) { try { checkAdmin(body.password); isAdmin = true; } catch(e) {} }
 
       const deadline = getSetting('nominationDeadline');
-      if (!isAdmin && deadline && new Date() > new Date(deadline)) return errOut('Nomination filing period has ended.');
+      const deadlineDate = (deadline && deadline.trim()) ? new Date(deadline) : null;
+      
+      if (!isAdmin && deadlineDate && !isNaN(deadlineDate.getTime()) && new Date() > deadlineDate) {
+        return errOut('Nomination filing period has ended.');
+      }
       
       const { post, gender, dob, candidateSerial, proposerSerial, seconderSerial } = body;
       const roll = getNominalRollData();
@@ -411,11 +415,16 @@ function doPost(e) {
     if (action === 'submitWithdrawal') {
       let isAdmin = false;
       if (body.password) { try { checkAdmin(body.password); isAdmin = true; } catch(e) {} }
+      
       const start = getSetting('withdrawalStart'), end = getSetting('withdrawalEnd'), now = new Date();
+      const startDate = (start && start.trim()) ? new Date(start) : null;
+      const endDate = (end && end.trim()) ? new Date(end) : null;
+
       if (!isAdmin) {
-        if (start && now < new Date(start)) return errOut('Withdrawal window has not opened yet.');
-        if (end && now > new Date(end)) return errOut('Withdrawal window has closed.');
+        if (startDate && !isNaN(startDate.getTime()) && now < startDate) return errOut('Withdrawal window has not opened yet.');
+        if (endDate && !isNaN(endDate.getTime()) && now > endDate) return errOut('Withdrawal window has closed.');
       }
+      
       const nom = getAllNominations().find(n => n.id === body.id);
       if (!nom || nom.status !== 'Valid') return errOut(`Invalid nomination status.`);
       getSheet(SHEET_NOMS).getRange(nom._row, 22).setValue('Requested');
