@@ -13,9 +13,9 @@ election-app/
     ├── main.js                   # Entry point, SPA router wiring
     ├── config.js                 # Election config (URL, posts, rules)
     ├── api.js                    # All API calls to Apps Script
-    ├── utils.js                  # Eligibility, captcha, DOB, age, toast
+    ├── utils.js                  # Shared logic: eligibility, printing, toasts
     ├── router.js                 # Hash-based SPA router
-    ├── style.css                 # Global styles (glass, animations, print)
+    ├── style.css                 # Global styles (glassmorphism, animations, print)
     └── pages/
         ├── home.js               # Public landing page
         ├── submitNomination.js   # Nomination form + print preview
@@ -24,11 +24,14 @@ election-app/
         ├── finalList.js          # Final list (active + withdrawn)
         ├── withdraw.js           # Withdrawal request + print form
         └── admin/
-            ├── login.js          # Admin login
+            ├── login.js          # Admin login (dynamic password)
             ├── layout.js         # Sidebar layout + session guard
             ├── dashboard.js      # Stats overview + quick actions
-            ├── verify.js         # Mark nominations Valid/Rejected
-            ├── withdrawals.js    # Approve withdrawal requests
+            ├── verify.js         # Scrutiny (Valid/Rejected) + Search
+            ├── withdrawals.js    # Approve withdrawal requests + Search
+            ├── booths.js         # Booth allotment & Electoral Roll printing
+            ├── counting.js       # Booth-aligned Counting Matrix generation
+            ├── resultsEntry.js   # Real-time vote entry with audit totals
             └── publish.js        # Publish valid/final lists
 ```
 
@@ -75,12 +78,14 @@ election-app/
 | Unique 10-digit random ID assigned | `Code.gs → generateUniqueId()` |
 | Print-ready nomination paper | `buildNominationPaper()` + CSS print media |
 | Retrieve nomination by ID | `findNomination.js` |
-| Withdrawal form + print | `withdraw.js + buildWithdrawalPaper()` |
+| Withdrawal form + print (Post-submit) | `withdraw.js + buildWithdrawalPaper()` |
 | Published valid/final lists (public) | `validList.js`, `finalList.js` |
-| Admin login (session-based) | `admin/login.js` + `sessionStorage` |
-| Admin nomination verification | `admin/verify.js` |
-| Admin withdrawal approval | `admin/withdrawals.js` |
-| Publish list controls (guarded) | `admin/publish.js` |
+| Admin Search & Filters | `admin/verify.js`, `admin/withdrawals.js` |
+| Polling Booth & Location Allotment | `admin/booths.js` |
+| Electoral Roll Printing (A4 Class-wise) | `admin/booths.js` |
+| Counting Matrix Setup (Booth-Aligned) | `admin/counting.js` |
+| Real-time Vote Entry Portal (Audit Ready) | `admin/resultsEntry.js` |
+| Professional UI Design System | `style.css` |
 | All data stored in Google Sheets | `Code.gs` |
 
 ## Dev Server

@@ -30,7 +30,8 @@ The GVC College Union Election Management System is a fully digital solution for
 1. **Pre-Election**: Student nomination submission with live eligibility checking.
 2. **Scrutiny**: Admin verification of nominations and publication of the Valid List.
 3. **Withdrawal Window**: Candidates may request withdrawal; admin approves; Final List is published.
-4. **Election Day & Results**: Polling booth allotment, round-based counting matrix generation, vote entry, and a live public results dashboard.
+4. **Election Logistics**: Polling booth allotment, room-wise class distribution, and automated generation of printable Electoral Rolls (class-wise).
+5. **Counting & Results**: Booth-aligned counting matrix generation, real-time vote entry with audit trails, and a live results dashboard.
 
 ---
 
