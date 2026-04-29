@@ -16,7 +16,7 @@ export async function renderAdminResultsEntry(container) {
     const [booths, posts, finalList, allResults] = await Promise.all([
       api.adminGetBooths(pwd).catch(() => []),
       api.getPosts(),
-      api.getFinalList(),
+      api.getFinalNominations(),
       api.getResults().catch(() => [])
     ]);
     renderEntryUI(container.querySelector('#adminMain'), pwd, booths, posts, finalList, allResults);
