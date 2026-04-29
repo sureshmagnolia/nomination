@@ -78,14 +78,33 @@ label {
   display: block;
   width: 100%;
   padding: 0.75rem 1rem;
-  background: rgba(0, 0, 0, 0.2) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
   border-radius: 0.6rem;
   color: white !important;
   outline: none;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
 }
 .field:focus { border-color: #6366f1 !important; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
+select.field option {
+  background-color: #0f172a;
+  color: white;
+}
+
+/* Dropdowns */
+.dropdown-menu {
+  background: #1e293b !important; /* Darker, solid background for better contrast */
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+}
+.dropdown-menu button {
+  color: #f1f5f9 !important;
+  font-weight: 500;
+}
+.dropdown-menu button:hover {
+  background: #334155 !important;
+  color: #ffffff !important;
+}
 
 /* Data Tables */
 .data-table {
