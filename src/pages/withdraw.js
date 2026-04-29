@@ -71,10 +71,6 @@ function showDetails(area, nom, id) {
       </div>
       <div class="flex gap-3">
         <button id="withdrawBtn" class="btn btn-danger flex-1">Submit Withdrawal Request</button>
-        <button id="printFormBtn" class="btn btn-secondary">🖨️ Print Withdrawal Form</button>
-      </div>
-      <div id="printZone" class="print-zone hidden">
-        ${buildWithdrawalPaper(id, nom)}
       </div>
     </div>`;
 
@@ -99,10 +95,7 @@ function showDetails(area, nom, id) {
     }
   });
 
-  area.querySelector('#printFormBtn').addEventListener('click', () => {
-    area.querySelector('#printZone').classList.remove('hidden');
-    triggerPrint();
-  });
+
 }
 
 function buildWithdrawalPaper(id, nom) {
