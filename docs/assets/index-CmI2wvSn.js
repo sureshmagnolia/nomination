@@ -1724,7 +1724,8 @@ Are you absolutely sure?`))return;g(t,!0,`🗑️ Wiping...`);let i=n.querySelec
           <div class="space-y-4">
             <div>
               <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Serial Number (Draft)</label>
-              <input type="number" id="addSerial" class="field" placeholder="e.g. 1001">
+              <input type="text" id="addSerial" class="field" placeholder="e.g. 1001 or 1001a">
+              <p class="text-[10px] text-slate-500 mt-1">Use suffixes like 'a' to insert between numbers.</p>
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Full Name</label>
