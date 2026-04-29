@@ -105,10 +105,12 @@ export function renderAdminTesting(container) {
 
     try {
       const res = await api.adminInjectTestData(pwd);
+      const skippedMsg = res.skipped > 0
+        ? `<br><span class="text-amber-400 text-xs mt-1 block">⚠️ ${res.skipped} post(s) skipped — not enough eligible students in NominalRoll: <em>${res.skippedPosts.join(', ')}</em></span>`
+        : '';
       status.innerHTML = `
         <div class="alert mt-3" style="background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #6ee7b7;">
-          ✅ Successfully injected <strong>${res.injected}</strong> test nominations across all posts.
-          They are pre-approved and appear in Valid/Final lists.
+          ✅ Successfully injected <strong>${res.injected}</strong> test nominations across posts. All rules (gender, year, dept) were respected.${skippedMsg}
         </div>`;
       showToast(`Injected ${res.injected} test nominations!`, 'success');
     } catch (err) {
