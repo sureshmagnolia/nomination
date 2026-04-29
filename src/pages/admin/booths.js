@@ -13,12 +13,13 @@ export async function renderAdminBooths(container) {
   `);
 
   try {
-    const [nominalRoll, booths, locations] = await Promise.all([
+    const [nominalRoll, booths, locations, posts] = await Promise.all([
       api.getNominalRoll(),
       api.adminGetBooths(pwd).catch(() => []),
-      api.adminGetLocations(pwd).catch(() => [])
+      api.adminGetLocations(pwd).catch(() => []),
+      api.getPosts().catch(() => [])
     ]);
-    renderBoothsUI(container.querySelector('#adminMain'), pwd, nominalRoll, booths, locations);
+    renderBoothsUI(container.querySelector('#adminMain'), pwd, nominalRoll, booths, locations, posts);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
   }
@@ -62,10 +63,12 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations)
             <p class="text-slate-400 text-sm">Designate rooms and allot classes to polling booths.</p>
           </div>
           <div class="flex gap-2">
+            <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Electoral Rolls</button>
             <button id="btnAutoAllot" class="btn btn-secondary">⚡ Auto Allot</button>
             <button id="btnSaveBooths" class="btn btn-primary">💾 Save Configuration</button>
           </div>
         </div>
+        <div id="printArea" class="hidden"></div>
 
         <!-- Location Management -->
         <div class="glass rounded-xl p-5 border-l-4 border-l-purple-500">
@@ -164,6 +167,128 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations)
     `;
 
     // Attach Event Listeners
+    main.querySelector('#btnPrintRolls').addEventListener('click', () => {
+      const area = main.querySelector('#printArea');
+      area.innerHTML = buildElectoralRollHtml(booths, nominalRoll, posts, classStats);
+      
+      const printWin = window.open('', '_blank');
+      printWin.document.write(`
+        <html>
+          <head>
+            <title>Electoral Rolls - Booth Allotment</title>
+            <style>
+              body { font-family: sans-serif; color: #333; margin: 0; padding: 0; }
+              .page-break { page-break-after: always; }
+              .facing-sheet { padding: 40px; border: 2px solid #000; height: 92vh; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; }
+              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px; }
+              .college-name { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+              .title { font-size: 18px; font-weight: bold; text-transform: uppercase; }
+              .stats-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              .stats-table th, .stats-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+              .stats-table th { background: #f5f5f5; font-size: 12px; }
+              .roll-page { padding: 30px; }
+              .roll-header { display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 10px; margin-bottom: 15px; font-size: 12px; }
+              .roll-table { width: 100%; border-collapse: collapse; }
+              .roll-table th, .roll-table td { border: 1px solid #eee; padding: 6px 10px; text-align: left; font-size: 11px; }
+              .roll-table th { background: #fafafa; }
+              .footer { display: flex; justify-content: space-around; margin-top: 50px; font-size: 13px; font-weight: bold; }
+              @media print {
+                .no-print { display: none; }
+                .page-break { page-break-after: always; }
+              }
+            </style>
+          </head>
+          <body>
+            ${area.innerHTML}
+          </body>
+        </html>
+      `);
+      printWin.document.close();
+      printWin.focus();
+      setTimeout(() => { printWin.print(); printWin.close(); }, 500);
+    });
+
+    function buildElectoralRollHtml(booths, students, posts, classStats) {
+      let html = '';
+      booths.forEach((b) => {
+        if (!b.classes || b.classes.length === 0) return;
+        const boothClasses = b.classes.map(cn => classStats[cn]).filter(Boolean);
+        const totalVoters = boothClasses.reduce((sum, c) => sum + c.count, 0);
+        const boothDepts = [...new Set(boothClasses.map(c => c.dept.toUpperCase()))];
+        const assignedPosts = posts.filter(p => {
+          if (!p.deptRestriction) return true;
+          const prefix = 'Association Secretary ';
+          const reqDept = p.post.startsWith(prefix) ? p.post.replace(prefix, '').toUpperCase() : null;
+          return reqDept && boothDepts.includes(reqDept);
+        });
+
+        html += `
+        <div class="page-break">
+          <div class="facing-sheet">
+            <div class="header">
+              <div class="college-name">${esc(CONFIG.COLLEGE_NAME || 'COLLEGE UNION ELECTION')}</div>
+              <div class="title">Electoral Roll — Booth Facing Sheet</div>
+            </div>
+            <div style="font-size: 20px; margin-bottom: 30px;">
+              <p><strong>BOOTH NO:</strong> <span style="font-size: 32px; border: 2px solid #000; padding: 5px 20px; margin-left: 10px;">${b.boothNumber}</span></p>
+              <p><strong>LOCATION:</strong> ${esc(b.roomName || 'UNSPECIFIED')}</p>
+            </div>
+            <div style="flex-grow: 1;">
+              <h4 style="border-bottom: 1px solid #eee; padding-bottom: 5px;">Allocation Statistics</h4>
+              <table class="stats-table">
+                <thead><tr><th>#</th><th>Department</th><th>Class Name</th><th style="text-align:right">Voters</th></tr></thead>
+                <tbody>
+                  ${boothClasses.map((c, i) => `
+                    <tr><td>${i+1}</td><td>${esc(c.dept)}</td><td>${esc(c.name)}</td><td style="text-align:right">${c.count}</td></tr>
+                  `).join('')}
+                  <tr style="font-weight:bold; background:#f9f9f9"><td colspan="3">GRAND TOTAL VOTERS</td><td style="text-align:right">${totalVoters}</td></tr>
+                </tbody>
+              </table>
+              <h4 style="margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Ballots Assigned to this Booth</h4>
+              <div style="display:flex; flex-wrap:wrap; gap:10px; font-size: 11px;">
+                ${assignedPosts.map(p => `<span style="padding:4px 8px; border:1px solid #ccc; border-radius:4px;">${esc(p.post)}</span>`).join('')}
+              </div>
+            </div>
+            <div class="footer">
+              <div>Returning Officer Signature</div>
+              <div>Presiding Officer Signature</div>
+            </div>
+          </div>
+        </div>`;
+
+        boothClasses.forEach(cls => {
+          const classStudents = students.filter(s => String(s['CLASS']).trim() === cls.name);
+          classStudents.sort((a, b) => String(a['NAME']).localeCompare(String(b['NAME'])));
+          html += `
+          <div class="page-break">
+            <div class="roll-page">
+              <div class="roll-header">
+                <div><strong>BOOTH ${b.boothNumber}</strong> | ${esc(b.roomName || 'No Room')}</div>
+                <div style="text-align:center; flex-grow:1; font-weight:bold; font-size:14px;">ELECTORAL ROLL - ${esc(cls.name)}</div>
+                <div>Dept: ${esc(cls.dept)}</div>
+              </div>
+              <table class="roll-table">
+                <thead><tr><th style="width:40px">S.No</th><th style="width:100px">Adm. No</th><th>Student Name</th><th style="width:120px">Signature</th></tr></thead>
+                <tbody>
+                  ${classStudents.map((s, si) => `
+                    <tr>
+                      <td style="text-align:center; color:#888">${si+1}</td>
+                      <td style="font-family:monospace">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
+                      <td style="font-weight:bold">${esc(s['NAME'])}</td>
+                      <td></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+              <div style="margin-top:20px; text-align:right; font-size:10px; color:#999">Total Voters: ${classStudents.length}</div>
+            </div>
+          </div>`;
+        });
+      });
+      return html;
+    }
+
+    // Existing Listeners
     main.querySelector('#btnUpdateBoothCount').addEventListener('click', () => {
       const num = parseInt(main.querySelector('#numBoothsInput').value, 10);
       if (num > 0 && num <= 50) {
