@@ -135,11 +135,7 @@ const SHEET_RESULTS  = 'Results';       // Vote tally entries
 | `errOut(msg)` | Returns a standardized error JSON response. |
 
 ### Admin Password Algorithm
-The admin password changes daily. The format is `DDMMYYYYday` (all lowercase), where `day` is the full English day name.
-
-Example: If today is Wednesday, 29 April 2026 → password is `29042026wednesday`.
-
-This is computed and checked **server-side** in `checkAdmin()`.
+The admin password rotates automatically each day. The algorithm is implemented server-side in `checkAdmin()` in `Code.gs`. The authorized personnel receive the password through a secure internal channel. The format is **not documented here** intentionally.
 
 ---
 
@@ -301,7 +297,7 @@ All admin pages call `getAdminPassword()` from `layout.js` first. If the session
 
 | Concern | Implementation |
 |---|---|
-| Admin access | Dynamic date-based password: `DDMMYYYYday` (e.g., `29042026wednesday`). Checked server-side. |
+| Admin access | Rotating daily password verified server-side in `checkAdmin()`. Format is internal and not documented here. |
 | Session persistence | Admin password stored in `sessionStorage`. Cleared on logout or tab close. |
 | Data write protection | Students can only `submit` new rows. They cannot edit or delete. |
 | Admin mutations | All write operations require the admin password in the body. |

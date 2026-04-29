@@ -73,7 +73,7 @@ export function renderAdminTesting(container) {
           <!-- Password confirmation -->
           <div class="space-y-2 pt-2">
             <label class="block text-sm text-slate-300 font-medium">Confirm Admin Password</label>
-            <input type="password" id="wipePasswordInput" class="field max-w-xs" placeholder="Enter today's admin password to confirm...">
+            <input type="password" id="wipePasswordInput" class="field max-w-xs" placeholder="Enter admin password to confirm...">
           </div>
           
           <div>

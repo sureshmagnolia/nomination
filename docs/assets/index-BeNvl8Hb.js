@@ -1216,7 +1216,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <!-- Password confirmation -->
           <div class="space-y-2 pt-2">
             <label class="block text-sm text-slate-300 font-medium">Confirm Admin Password</label>
-            <input type="password" id="wipePasswordInput" class="field max-w-xs" placeholder="Enter today's admin password to confirm...">
+            <input type="password" id="wipePasswordInput" class="field max-w-xs" placeholder="Enter admin password to confirm...">
           </div>
           
           <div>
