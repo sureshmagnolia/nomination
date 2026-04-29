@@ -1678,7 +1678,101 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         <div class="scale-75 origin-top">
           ${await i(e)}
         </div>
-      `,r.classList.remove(`hidden`),r.querySelector(`#btnPrintNow`).onclick=()=>window.print()}catch(e){_(e.message,`error`)}};n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)}),n.querySelector(`#btnPrintBallots`).onclick=async e=>{try{g(e.target,!0,`Generating...`);let t=await i(`all`),n=document.getElementById(`printSection`);n&&n.remove(),document.body.insertAdjacentHTML(`beforeend`,t),window.print(),g(e.target,!1,`🖨️ Generate All Ballots`)}catch(t){_(t.message,`error`),g(e.target,!1,`🖨️ Generate All Ballots`)}}}var G=`election_results_cache`,K=`election_results_last_fetch`,q=300*1e3;async function Fe(e){e.innerHTML=`
+      `,r.classList.remove(`hidden`),r.querySelector(`#btnPrintNow`).onclick=()=>window.print()}catch(e){_(e.message,`error`)}};n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)}),n.querySelector(`#btnPrintBallots`).onclick=async e=>{try{g(e.target,!0,`Generating...`);let t=await i(`all`),n=document.getElementById(`printSection`);n&&n.remove(),document.body.insertAdjacentHTML(`beforeend`,t),window.print(),g(e.target,!1,`🖨️ Generate All Ballots`)}catch(t){_(t.message,`error`),g(e.target,!1,`🖨️ Generate All Ballots`)}}}function Fe(e){let t=L();if(!t)return;R(e,`testing`,`
+    <div class="page-enter space-y-8 max-w-3xl mx-auto">
+
+      <!-- Warning Banner -->
+      <div class="rounded-xl border border-amber-500/40 bg-amber-500/10 p-5 flex items-start gap-4">
+        <div class="text-3xl">⚠️</div>
+        <div>
+          <h4 class="font-bold text-amber-400 text-lg">Testing Environment Tools</h4>
+          <p class="text-amber-200/70 text-sm mt-1">
+            These tools are for <strong>testing and debugging only</strong>. 
+            Do not inject test data during or after the actual election process begins.
+            Wiping data is <strong>irreversible</strong> — always confirm before acting.
+          </p>
+        </div>
+      </div>
+
+      <!-- Inject Test Data -->
+      <div class="glass rounded-2xl overflow-hidden border border-indigo-500/20">
+        <div class="bg-indigo-500/10 p-5 border-b border-indigo-500/20 flex items-center gap-3">
+          <div class="text-2xl">🧪</div>
+          <div>
+            <h4 class="font-bold text-white text-lg">Inject Test Data</h4>
+            <p class="text-slate-400 text-sm">Creates 2 synthetic, pre-approved candidates for every configured post using real students from the Nominal Roll.</p>
+          </div>
+        </div>
+        <div class="p-6 space-y-4">
+          <ul class="text-sm text-slate-400 space-y-1 list-disc list-inside">
+            <li>Reads all posts from the <strong class="text-white">Posts</strong> sheet.</li>
+            <li>Picks real students from <strong class="text-white">NominalRoll</strong> as candidates, proposers, and seconders.</li>
+            <li>Sets status to <strong class="text-green-400">Valid</strong> and populates <strong class="text-white">Nominations, ValidList, and FinalList</strong>.</li>
+            <li>IDs are prefixed with <code class="text-indigo-300 bg-black/30 px-1 rounded">TEST</code> for easy identification.</li>
+          </ul>
+          <div class="pt-2">
+            <button id="btnInjectData" class="btn btn-primary gap-2">
+              🧪 Inject Test Nominations
+            </button>
+          </div>
+          <div id="injectStatus"></div>
+        </div>
+      </div>
+
+      <!-- Wipe All Data -->
+      <div class="glass rounded-2xl overflow-hidden border border-red-500/30">
+        <div class="bg-red-500/10 p-5 border-b border-red-500/30 flex items-center gap-3">
+          <div class="text-2xl">🗑️</div>
+          <div>
+            <h4 class="font-bold text-red-400 text-lg">Wipe All Transactional Data</h4>
+            <p class="text-slate-400 text-sm">Permanently deletes all nominations, results, and resets the publish flags. Leaves NominalRoll, Posts, and Booth configuration intact.</p>
+          </div>
+        </div>
+        <div class="p-6 space-y-4">
+          <div class="rounded-lg bg-red-900/20 border border-red-800/40 p-4 text-sm text-red-300 space-y-1">
+            <p>🗑️ <strong>Nominations</strong> sheet — will be cleared</p>
+            <p>🗑️ <strong>ValidList</strong> sheet — will be cleared</p>
+            <p>🗑️ <strong>FinalList</strong> sheet — will be cleared</p>
+            <p>🗑️ <strong>Results</strong> sheet — will be cleared</p>
+            <p>🔄 <strong>Publish flags</strong> — will be reset to false</p>
+            <p class="text-green-400 mt-2">✅ NominalRoll, Posts, Booths, Settings (locations) — <strong>preserved</strong></p>
+          </div>
+          
+          <!-- Password confirmation -->
+          <div class="space-y-2 pt-2">
+            <label class="block text-sm text-slate-300 font-medium">Confirm Admin Password</label>
+            <input type="password" id="wipePasswordInput" class="field max-w-xs" placeholder="Enter admin password to confirm...">
+          </div>
+          
+          <div>
+            <button id="btnWipeData" class="btn bg-red-600 hover:bg-red-500 text-white border-none gap-2 px-6">
+              🗑️ Permanently Wipe All Data
+            </button>
+          </div>
+          <div id="wipeStatus"></div>
+        </div>
+      </div>
+
+    </div>
+  `);let n=e.querySelector(`#adminMain`);n.querySelector(`#btnInjectData`).addEventListener(`click`,async e=>{let r=e.target;if(!confirm(`This will inject test nominations for ALL configured posts.
+
+Proceed?`))return;g(r,!0,`🧪 Inject Test Nominations`);let i=n.querySelector(`#injectStatus`);i.innerHTML=``;try{let e=await C.adminInjectTestData(t),n=e.skipped>0?`<br><span class="text-amber-400 text-xs mt-1 block">⚠️ ${e.skipped} post(s) skipped — not enough eligible students in NominalRoll: <em>${e.skippedPosts.join(`, `)}</em></span>`:``;i.innerHTML=`
+        <div class="alert mt-3" style="background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #6ee7b7;">
+          ✅ Successfully injected <strong>${e.injected}</strong> test nominations across posts. All rules (gender, year, dept) were respected.${n}
+        </div>`,_(`Injected ${e.injected} test nominations!`,`success`)}catch(e){i.innerHTML=`<div class="alert alert-error mt-3">❌ ${h(e.message)}</div>`,_(`Failed: ${e.message}`,`error`)}finally{g(r,!1,`🧪 Inject Test Nominations`)}}),n.querySelector(`#btnWipeData`).addEventListener(`click`,async e=>{let t=e.target,r=n.querySelector(`#wipePasswordInput`).value.trim();if(!r){_(`Please enter the admin password to confirm the wipe.`,`warning`),n.querySelector(`#wipePasswordInput`).focus();return}if(!confirm(`⚠️ DANGER ZONE ⚠️
+
+This will PERMANENTLY DELETE:
+• All Nominations
+• ValidList
+• FinalList
+• Results
+
+This action CANNOT be undone.
+
+Are you absolutely sure?`))return;g(t,!0,`🗑️ Wiping...`);let i=n.querySelector(`#wipeStatus`);i.innerHTML=``;try{await C.adminWipeData(r),n.querySelector(`#wipePasswordInput`).value=``,i.innerHTML=`
+        <div class="alert mt-3" style="background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #fca5a5;">
+          ✅ All transactional data has been wiped. Publish flags reset to false.
+        </div>`,_(`All data wiped successfully.`,`success`)}catch(e){i.innerHTML=`<div class="alert alert-error mt-3">❌ ${h(e.message)}</div>`,_(`Failed: ${e.message}`,`error`)}finally{g(t,!1,`🗑️ Permanently Wipe All Data`)}})}var G=`election_results_cache`,K=`election_results_last_fetch`,q=300*1e3;async function Ie(e){e.innerHTML=`
     <div class="page-enter min-h-screen">
       <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
         <div class="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
@@ -1749,9 +1843,9 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         </div>
       `}),s+=`</div>`,s===`<div class="space-y-12"></div>`?e.innerHTML=`
         <div class="alert alert-info text-center">Results backend is initialized, but no votes have been aggregated for the configured posts yet.</div>
-      `:e.innerHTML=s}catch(t){e.innerHTML=`<div class="alert alert-error">❌ Failed to load results: ${h(t.message)}</div>`}}async function Ie(e){e.innerHTML=`
+      `:e.innerHTML=s}catch(t){e.innerHTML=`<div class="alert alert-error">❌ Failed to load results: ${h(t.message)}</div>`}}async function Le(e){e.innerHTML=`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading nominal roll...</p></div>
-  `;try{let[t,n]=await Promise.all([C.getNominalRoll(),C.getSettings()]);Le(e,t,n)}catch(t){e.innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}function Le(e,t,n){let r=n.nominalRollFinalized===`true`,i=[...t],a=``,o=()=>{let t=i.filter(e=>[e.NAME,e.CLASS,e[`ADMISION NO`],e[`Nominal Roll Serial Number`]].some(e=>String(e||``).toLowerCase().includes(a.toLowerCase())));e.innerHTML=`
+  `;try{let[t,n]=await Promise.all([C.getNominalRoll(),C.getSettings()]);Re(e,t,n)}catch(t){e.innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}function Re(e,t,n){let r=n.nominalRollFinalized===`true`,i=[...t],a=``,o=()=>{let t=i.filter(e=>[e.NAME,e.CLASS,e[`ADMISION NO`],e[`Nominal Roll Serial Number`]].some(e=>String(e||``).toLowerCase().includes(a.toLowerCase())));e.innerHTML=`
       <div class="page-enter space-y-6">
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
@@ -1866,7 +1960,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     </html>
   `),c.document.close()}async function X(e){let t=L();if(t){R(e,`nominalRoll`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading nominal roll...</p></div>
-  `);try{let[n,r]=await Promise.all([C.getNominalRoll(),C.getSettings()]);Re(e.querySelector(`#adminMain`),t,n,r)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function Re(e,t,n,r){let i=r.nominalRollFinalized===`true`,a=[...n],o=``,s=[...new Set(n.map(e=>String(e.CLASS).trim()))].sort(),c=[...new Set(n.map(e=>String(e.Dept||`–`).trim()))].sort(),l=()=>{let n=a.filter(e=>[e.NAME,e.CLASS,e[`ADMISION NO`],e[`Nominal Roll Serial Number`]].some(e=>String(e||``).toLowerCase().includes(o.toLowerCase())));e.innerHTML=`
+  `);try{let[n,r]=await Promise.all([C.getNominalRoll(),C.getSettings()]);ze(e.querySelector(`#adminMain`),t,n,r)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function ze(e,t,n,r){let i=r.nominalRollFinalized===`true`,a=[...n],o=``,s=[...new Set(n.map(e=>String(e.CLASS).trim()))].sort(),c=[...new Set(n.map(e=>String(e.Dept||`–`).trim()))].sort(),l=()=>{let n=a.filter(e=>[e.NAME,e.CLASS,e[`ADMISION NO`],e[`Nominal Roll Serial Number`]].some(e=>String(e||``).toLowerCase().includes(o.toLowerCase())));e.innerHTML=`
       <div class="page-enter space-y-6">
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
@@ -2036,9 +2130,9 @@ Are you absolutely sure?`)){g(n.target,!0,`Finalizing...`);try{await C.adminFina
         <script>window.print();<\/script>
       </body>
     </html>
-  `),c.document.close()}async function ze(e){let t=L();if(t){R(e,`schedule`,`
+  `),c.document.close()}async function Be(e){let t=L();if(t){R(e,`schedule`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading schedule...</p></div>
-  `);try{let n=await C.getPublicSchedule();Be(e.querySelector(`#adminMain`),t,n)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function Be(e,t,n){let r=e=>e?new Date(e).toISOString().slice(0,16):``;e.innerHTML=`
+  `);try{let n=await C.getPublicSchedule();Ve(e.querySelector(`#adminMain`),t,n)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function Ve(e,t,n){let r=e=>e?new Date(e).toISOString().slice(0,16):``;e.innerHTML=`
     <div class="page-enter space-y-6 max-w-4xl">
       <div>
         <h3 class="text-xl font-bold text-white">Election Schedule</h3>
@@ -2098,7 +2192,7 @@ Are you absolutely sure?`)){g(n.target,!0,`Finalizing...`);try{await C.adminFina
         </div>
       </div>
     </div>
-  `;let i=()=>{let t=new Date,n=e.querySelector(`#nominationDeadline`).value,r=e.querySelector(`#withdrawalStart`).value,i=e.querySelector(`#withdrawalEnd`).value,a=n&&t>new Date(n)?`<span class="text-rose-400">CLOSED</span>`:`<span class="text-emerald-400">OPEN</span>`;e.querySelector(`#statusNom`).innerHTML=a;let o=`<span class="text-slate-500">Not Set</span>`;r&&i&&(o=t<new Date(r)?`<span class="text-amber-400">PENDING (Starts soon)</span>`:t>new Date(i)?`<span class="text-rose-400">CLOSED</span>`:`<span class="text-emerald-400">ACTIVE (Open now)</span>`),e.querySelector(`#statusWith`).innerHTML=o};i(),e.querySelectorAll(`input`).forEach(e=>e.onchange=i),e.querySelector(`#btnSaveSchedule`).onclick=async n=>{let r={notificationDate:e.querySelector(`#notificationDate`).value,nominationDeadline:e.querySelector(`#nominationDeadline`).value?new Date(e.querySelector(`#nominationDeadline`).value).toISOString():``,withdrawalStart:e.querySelector(`#withdrawalStart`).value?new Date(e.querySelector(`#withdrawalStart`).value).toISOString():``,withdrawalEnd:e.querySelector(`#withdrawalEnd`).value?new Date(e.querySelector(`#withdrawalEnd`).value).toISOString():``};g(n.target,!0,`Saving Schedule...`);try{await C.adminSaveSchedule(t,r),_(`Election schedule updated successfully!`,`success`),i()}catch(e){_(e.message,`error`)}finally{g(n.target,!1,`💾 Save Election Schedule`)}}}async function Ve(e){let t=L();t&&(window.ADMIN_BYPASS_PWD=t,R(e,`direct-nomination`,`
+  `;let i=()=>{let t=new Date,n=e.querySelector(`#nominationDeadline`).value,r=e.querySelector(`#withdrawalStart`).value,i=e.querySelector(`#withdrawalEnd`).value,a=n&&t>new Date(n)?`<span class="text-rose-400">CLOSED</span>`:`<span class="text-emerald-400">OPEN</span>`;e.querySelector(`#statusNom`).innerHTML=a;let o=`<span class="text-slate-500">Not Set</span>`;r&&i&&(o=t<new Date(r)?`<span class="text-amber-400">PENDING (Starts soon)</span>`:t>new Date(i)?`<span class="text-rose-400">CLOSED</span>`:`<span class="text-emerald-400">ACTIVE (Open now)</span>`),e.querySelector(`#statusWith`).innerHTML=o};i(),e.querySelectorAll(`input`).forEach(e=>e.onchange=i),e.querySelector(`#btnSaveSchedule`).onclick=async n=>{let r={notificationDate:e.querySelector(`#notificationDate`).value,nominationDeadline:e.querySelector(`#nominationDeadline`).value?new Date(e.querySelector(`#nominationDeadline`).value).toISOString():``,withdrawalStart:e.querySelector(`#withdrawalStart`).value?new Date(e.querySelector(`#withdrawalStart`).value).toISOString():``,withdrawalEnd:e.querySelector(`#withdrawalEnd`).value?new Date(e.querySelector(`#withdrawalEnd`).value).toISOString():``};g(n.target,!0,`Saving Schedule...`);try{await C.adminSaveSchedule(t,r),_(`Election schedule updated successfully!`,`success`),i()}catch(e){_(e.message,`error`)}finally{g(n.target,!1,`💾 Save Election Schedule`)}}}async function He(e){let t=L();t&&(window.ADMIN_BYPASS_PWD=t,R(e,`direct-nomination`,`
     <div id="adminFormContainer" class="p-6">
        <div class="alert alert-info mb-6">
          🛡️ <strong>Admin Direct Entry Mode:</strong> Deadlines and window restrictions are bypassed.
@@ -2120,4 +2214,4 @@ Are you absolutely sure?`)){g(n.target,!0,`Finalizing...`);try{await C.adminFina
       and replace <code style="background:rgba(0,0,0,0.3);padding:0.1rem 0.4rem;border-radius:4px;">YOUR_SCRIPT_ID</code>
       with your Google Apps Script Web App URL, then rebuild &amp; push.
     </div>
-  `),document.getElementById(`app`).style.marginTop=`48px`);var $=e=>t=>{Q.innerHTML=``,e(Q,t)};o.on(`/`,$(v)).on(`/submit`,$(k)).on(`/find`,$(re)).on(`/valid-list`,$(oe)).on(`/final-list`,$(le)).on(`/withdraw`,$(fe)).on(`/results`,$(Fe)).on(`/nominal-roll`,$(Ie)).on(`/admin`,$(I)).on(`/admin/dashboard`,$(ye)).on(`/admin/verify`,$(be)).on(`/admin/withdrawals`,$(Se)).on(`/admin/publish`,$(H)).on(`/admin/posts`,$(we)).on(`/admin/ballots`,$(Pe)).on(`/admin/booths`,$(De)).on(`/admin/counting`,$(ke)).on(`/admin/results-entry`,$(Me)).on(`/admin/nominal-roll`,$(X)).on(`/admin/schedule`,$(ze)).on(`/admin/direct-nomination`,$(Ve)).on(`/admin/testing`,$(renderAdminTesting)).setDefault(`/`),document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-nav]`);t&&(e.preventDefault(),o.navigate(t.dataset.nav))}),o.start();
+  `),document.getElementById(`app`).style.marginTop=`48px`);var $=e=>t=>{Q.innerHTML=``,e(Q,t)};o.on(`/`,$(v)).on(`/submit`,$(k)).on(`/find`,$(re)).on(`/valid-list`,$(oe)).on(`/final-list`,$(le)).on(`/withdraw`,$(fe)).on(`/results`,$(Ie)).on(`/nominal-roll`,$(Le)).on(`/admin`,$(I)).on(`/admin/dashboard`,$(ye)).on(`/admin/verify`,$(be)).on(`/admin/withdrawals`,$(Se)).on(`/admin/publish`,$(H)).on(`/admin/posts`,$(we)).on(`/admin/ballots`,$(Pe)).on(`/admin/booths`,$(De)).on(`/admin/counting`,$(ke)).on(`/admin/results-entry`,$(Me)).on(`/admin/nominal-roll`,$(X)).on(`/admin/schedule`,$(Be)).on(`/admin/direct-nomination`,$(He)).on(`/admin/testing`,$(Fe)).setDefault(`/`),document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-nav]`);t&&(e.preventDefault(),o.navigate(t.dataset.nav))}),o.start();

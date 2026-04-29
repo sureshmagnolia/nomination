@@ -21,6 +21,7 @@ import { renderAdminBooths }        from './pages/admin/booths.js';
 import { renderAdminCounting }      from './pages/admin/counting.js';
 import { renderAdminResultsEntry }  from './pages/admin/resultsEntry.js';
 import { renderAdminBallots }      from './pages/admin/ballots.js';
+import { renderAdminTesting }      from './pages/admin/testing.js';
 import { renderResults }            from './pages/results.js';
 import { renderNominalRoll }        from './pages/nominalRoll.js';
 import { renderAdminNominalRoll }   from './pages/admin/nominalRoll.js';
