@@ -57,7 +57,9 @@ function showNomResult(area, nom, id) {
         <button id="printBtn" class="btn btn-success flex-1">🖨️ Print</button>
       </div>
     </div>`;
-  area.querySelector('#printBtn').addEventListener('click', triggerPrint);
+  area.querySelector('#printBtn').addEventListener('click', () => {
+    triggerPrint(area.querySelector('#printZone').innerHTML);
+  });
 }
 
 function publicLayout(title, bodyHtml) {

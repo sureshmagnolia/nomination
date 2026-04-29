@@ -105,7 +105,89 @@ export function displayDob(day, month, year) {
 }
 
 // ─── Print helper ──────────────────────────────────────────────────────────────
-export function triggerPrint() { window.print(); }
+export function triggerPrint(htmlContent, title = 'Nomination Form') {
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          @page { size: A4; margin: 20mm; }
+          body {
+            font-family: Arial, sans-serif;
+            color: black !important;
+            background: white !important;
+            font-size: 11pt;
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+          }
+          /* Reset dark theme classes to clean B&W for printing */
+          * { color: black !important; background: transparent !important; border-color: #333 !important; }
+          .print-paper { width: 100%; max-width: 210mm; margin: 0 auto; }
+          .border { border: 1px solid #333; }
+          .border-b { border-bottom: 1px solid #333; }
+          .border-y { border-top: 1px solid #333; border-bottom: 1px solid #333; }
+          .border-t { border-top: 1px solid #333; }
+          .rounded-lg, .rounded-xl { border-radius: 4px; }
+          .p-8 { padding: 2rem; }
+          .p-4 { padding: 1rem; }
+          .p-3 { padding: 0.75rem; }
+          .pt-6 { padding-top: 1.5rem; }
+          .pb-1 { padding-bottom: 0.25rem; }
+          .pb-2 { padding-bottom: 0.5rem; }
+          .pb-3 { padding-bottom: 0.75rem; }
+          .mt-1 { margin-top: 0.25rem; }
+          .mt-4 { margin-top: 1rem; }
+          .mt-6 { margin-top: 1.5rem; }
+          .mb-1 { margin-bottom: 0.25rem; }
+          .mb-2 { margin-bottom: 0.5rem; }
+          .space-y-4 > * + * { margin-top: 1rem; }
+          .space-y-3 > * + * { margin-top: 0.75rem; }
+          .space-y-1 > * + * { margin-top: 0.25rem; }
+          .flex { display: flex; }
+          .justify-between { justify-content: space-between; }
+          .justify-around { justify-content: space-around; }
+          .items-start { align-items: flex-start; }
+          .text-center { text-align: center; }
+          .text-right { text-align: right; }
+          .text-xs { font-size: 0.8rem; }
+          .text-sm { font-size: 0.9rem; }
+          .text-base { font-size: 1rem; }
+          .text-lg { font-size: 1.125rem; }
+          .text-xl { font-size: 1.25rem; }
+          .text-3xl { font-size: 1.875rem; }
+          .font-bold { font-weight: bold; }
+          .font-semibold { font-weight: 600; }
+          .font-mono { font-family: monospace; }
+          .uppercase { text-transform: uppercase; }
+          .tracking-wide { letter-spacing: 0.025em; }
+          .tracking-widest { letter-spacing: 0.1em; }
+          .w-40 { width: 10rem; }
+          .inline-block { display: inline-block; }
+          .grid { display: grid; }
+          .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+          .col-span-2 { grid-column: span 2; }
+          .gap-x-4 { column-gap: 1rem; }
+          .gap-y-1 { row-gap: 0.25rem; }
+          .italic { font-style: italic; }
+          .badge { border: 1px solid #000; padding: 2px 6px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
+          h2, h3, p { margin: 0; }
+        </style>
+      </head>
+      <body>
+        ${htmlContent}
+        <script>
+          window.onload = function() {
+            setTimeout(function() { window.print(); }, 200);
+          };
+        </script>
+      </body>
+    </html>
+  `);
+  win.document.close();
+}
 
 // ─── HTML escape ──────────────────────────────────────────────────────────────
 export function esc(str) {

@@ -270,7 +270,9 @@ function showPreview(formArea, id, { post, gender, day, month, year, students })
 
   preview.classList.remove('hidden');
   preview.scrollIntoView({ behavior: 'smooth' });
-  preview.querySelector('#printBtn').addEventListener('click', triggerPrint);
+  preview.querySelector('#printBtn').addEventListener('click', () => {
+    triggerPrint(formArea.querySelector('#printZone').innerHTML);
+  });
   preview.querySelector('#newNomBtn').addEventListener('click', () => renderSubmitNomination(formArea.closest('#app')));
 }
 

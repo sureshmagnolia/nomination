@@ -85,6 +85,11 @@ label {
   outline: none;
 }
 
+select.field option {
+  background-color: #0f172a !important;
+  color: #f1f5f9 !important;
+}
+
 /* Animations and blobs */
 .bg-blob {
   position: fixed;
