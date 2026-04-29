@@ -6,6 +6,10 @@ import { api } from '../api.js';
 import { esc } from '../utils.js';
 import { router } from '../router.js';
 
+const CACHE_KEY = 'election_results_cache';
+const CACHE_TIME_KEY = 'election_results_last_fetch';
+const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
 export async function renderResults(container) {
   container.innerHTML = `
     <div class="page-enter min-h-screen">
@@ -16,7 +20,10 @@ export async function renderResults(container) {
             <span class="text-slate-600">|</span>
             <h1 class="font-bold text-white text-sm">Live Election Results</h1>
           </div>
-          <button id="btnRefresh" class="btn btn-secondary btn-sm">🔄 Refresh</button>
+          <div class="flex items-center gap-3">
+            <span id="cacheTimer" class="text-[10px] text-slate-500 font-mono"></span>
+            <button id="btnRefresh" class="btn btn-secondary btn-sm">🔄 Refresh</button>
+          </div>
         </div>
       </header>
       <main id="resultsMain" class="max-w-5xl mx-auto px-4 py-8">
@@ -25,18 +32,55 @@ export async function renderResults(container) {
     </div>
   `;
 
+  const timerEl = container.querySelector('#cacheTimer');
+  const updateTimer = () => {
+    const lastFetch = localStorage.getItem(CACHE_TIME_KEY);
+    if (!lastFetch) { timerEl.textContent = ''; return; }
+    const nextUpdate = parseInt(lastFetch, 10) + REFRESH_INTERVAL;
+    const remaining = Math.max(0, nextUpdate - Date.now());
+    if (remaining <= 0) {
+      timerEl.textContent = 'Live Update Available';
+      timerEl.classList.add('text-green-400');
+    } else {
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+      timerEl.textContent = `Update in ${mins}:${secs.toString().padStart(2, '0')}`;
+      timerEl.classList.remove('text-green-400');
+    }
+  };
+
+  setInterval(updateTimer, 1000);
+  updateTimer();
+
   container.querySelector('#backToHome').addEventListener('click', () => router.navigate('/'));
-  container.querySelector('#btnRefresh').addEventListener('click', () => fetchAndRender(container.querySelector('#resultsMain')));
+  container.querySelector('#btnRefresh').addEventListener('click', () => fetchAndRender(container.querySelector('#resultsMain'), true));
 
   await fetchAndRender(container.querySelector('#resultsMain'));
 }
 
-async function fetchAndRender(main) {
+async function fetchAndRender(main, force = false) {
   try {
-    const [posts, results] = await Promise.all([
-      api.getPosts(),
-      api.getResults().catch(() => [])
-    ]);
+    const lastFetch = localStorage.getItem(CACHE_TIME_KEY);
+    const cachedData = localStorage.getItem(CACHE_KEY);
+    
+    let posts, results;
+
+    if (!force && lastFetch && cachedData && (Date.now() - parseInt(lastFetch, 10) < REFRESH_INTERVAL)) {
+      // Use cache
+      const parsed = JSON.parse(cachedData);
+      posts = parsed.posts;
+      results = parsed.results;
+    } else {
+      // Fetch fresh
+      [posts, results] = await Promise.all([
+        api.getPosts(),
+        api.getResults().catch(() => [])
+      ]);
+      
+      // Save to cache
+      localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ posts, results }));
+    }
 
     if (results.length === 0) {
       main.innerHTML = `
@@ -49,10 +93,11 @@ async function fetchAndRender(main) {
       return;
     }
 
-    // Aggregate results
-    // Aggregation Structure: { "PostName": { "CandidateId": { name: "...", votes: 0 }, "INVALID": { name: "Invalid", votes: 0 } } }
     const agg = {};
-    posts.forEach(p => agg[p.name] = {});
+    posts.forEach(p => {
+      const name = p.post || p.name; // Robust naming check
+      agg[name] = {};
+    });
 
     results.forEach(r => {
       const pName = r.Post;
@@ -66,18 +111,18 @@ async function fetchAndRender(main) {
     let html = '<div class="space-y-12">';
     
     posts.forEach(post => {
-      const pAgg = agg[post.name];
+      const name = post.post || post.name;
+      const pAgg = agg[name];
+      if (!pAgg) return;
+      
       const candidateIds = Object.keys(pAgg);
-      if (candidateIds.length === 0) return; // No votes entered for this post yet
+      if (candidateIds.length === 0) return;
 
-      // Separate valid candidates, NOTA, and Invalid
       const valids = candidateIds.filter(id => id !== 'INVALID' && id !== 'NOTA').map(id => pAgg[id]);
       const invalid = pAgg['INVALID'];
       const nota = pAgg['NOTA'];
 
-      // Sort valids by votes descending
       valids.sort((a, b) => b.votes - a.votes);
-      
       const maxVotes = valids.length ? valids[0].votes : 0;
       const totalValidVotes = valids.reduce((sum, c) => sum + c.votes, 0) + (nota ? nota.votes : 0);
 
@@ -85,7 +130,7 @@ async function fetchAndRender(main) {
         <div class="glass rounded-2xl overflow-hidden border border-white/10 page-enter">
           <div class="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 p-5 border-b border-white/10 flex justify-between items-end">
             <div>
-              <h2 class="text-2xl font-bold text-white">${esc(post.name)}</h2>
+              <h2 class="text-2xl font-bold text-white">${esc(name)}</h2>
               <p class="text-sm text-indigo-300 mt-1">${totalValidVotes} Total Valid Votes Counted</p>
             </div>
           </div>
@@ -108,9 +153,7 @@ async function fetchAndRender(main) {
                       <span class="text-xs text-slate-400 ml-1">votes (${percentage}%)</span>
                     </div>
                   </div>
-                  <!-- Progress Bar Background -->
                   <div class="h-4 w-full bg-slate-800 rounded-full overflow-hidden relative">
-                    <!-- Progress Bar Fill -->
                     <div class="h-full rounded-full transition-all duration-1000 ease-out ${isWinner ? 'bg-gradient-to-r from-amber-400 to-amber-600' : 'bg-gradient-to-r from-indigo-500 to-purple-600'}" style="width: ${barWidth}%"></div>
                   </div>
                 </div>
@@ -119,14 +162,14 @@ async function fetchAndRender(main) {
             
             ${nota && nota.votes > 0 ? `
               <div class="border-t border-white/10 pt-4 mt-6 flex justify-between text-sm text-slate-400">
-                <span>NOTA (None Of The Above)</span>
+                <span>NOTA</span>
                 <span class="font-bold text-white">${nota.votes} <span class="text-xs text-slate-500 font-normal">votes (${((nota.votes / totalValidVotes) * 100).toFixed(1)}%)</span></span>
               </div>
             ` : ''}
 
             ${invalid && invalid.votes > 0 ? `
               <div class="${nota && nota.votes > 0 ? 'border-t border-white/10 pt-4 mt-4' : 'border-t border-white/10 pt-4 mt-6'} flex justify-between text-sm text-slate-500">
-                <span>Invalid / Blank Votes</span>
+                <span>INVALID</span>
                 <span class="font-bold text-red-400">${invalid.votes}</span>
               </div>
             ` : ''}
@@ -139,7 +182,7 @@ async function fetchAndRender(main) {
     
     if (html === '<div class="space-y-12"></div>') {
       main.innerHTML = `
-        <div class="alert alert-info text-center">Results backend is initialized, but no votes have been entered yet.</div>
+        <div class="alert alert-info text-center">Results backend is initialized, but no votes have been aggregated for the configured posts yet.</div>
       `;
     } else {
       main.innerHTML = html;
