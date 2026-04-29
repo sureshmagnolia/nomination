@@ -691,21 +691,27 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading nominations...</p></div>
   `);try{let n=await C.adminGetNominations(t);ge(e.querySelector(`#adminMain`),n,t)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function ge(e,t,n){e.innerHTML=`
     <div class="page-enter space-y-4">
-      <div class="flex items-center justify-between">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h3 class="text-xl font-bold text-white">Nomination Verification</h3>
           <p class="text-slate-400 text-sm">Review each submission and mark as Valid or Rejected.</p>
         </div>
-        <!-- Filter -->
-        <select id="statusFilter" class="field w-44">
-          <option value="all">All Statuses</option>
-          <option value="Pending">Pending</option>
-          <option value="Valid">Valid</option>
-          <option value="Rejected">Rejected</option>
-        </select>
+        
+        <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div class="relative flex-1 md:flex-none">
+            <input type="text" id="nomSearch" class="field w-full md:w-64 pl-10" placeholder="Search Name, ID, Post...">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
+          </div>
+          <select id="statusFilter" class="field w-full md:w-44">
+            <option value="all">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Valid">Valid</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
       </div>
 
-      <div class="glass rounded-xl overflow-hidden">
+      <div class="glass rounded-xl overflow-hidden shadow-2xl">
         <div class="overflow-x-auto">
           <table class="data-table" id="nomTable">
             <thead><tr>
@@ -722,63 +728,75 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </table>
         </div>
       </div>
-    </div>`;let r=t,i=t=>{let n=e.querySelector(`#nomTableBody`);n.innerHTML=t.length?t.map(e=>`
+    </div>`;let r=Array.isArray(t)?t:[],i=t=>{let n=e.querySelector(`#nomTableBody`);n.innerHTML=t.length?t.map(e=>`
       <tr id="row-${h(e.id)}">
         <td class="font-mono text-indigo-300 text-xs">${h(e.id)}</td>
-        <td class="text-xs max-w-[140px] leading-snug">${h(e.post)}</td>
-        <td class="font-medium">${h(e.candidateName||e.candidate?.NAME||`N/A`)}</td>
-        <td class="text-xs text-slate-400">${h(e.candidateClass||``)} / ${h(e.candidateDept||``)}</td>
+        <td class="text-xs max-w-[140px] leading-snug font-medium">${h(e.post)}</td>
+        <td class="font-bold text-white">${h(e.candidateName||e.candidate?.NAME||`N/A`)}</td>
+        <td class="text-xs text-slate-400">
+          <div>${h(e.candidateClass||``)}</div>
+          <div class="text-[10px] opacity-60">${h(e.candidateDept||``)}</div>
+        </td>
         <td class="text-xs">${h(e.proposerName||e.proposer?.NAME||`N/A`)}</td>
         <td class="text-xs">${h(e.seconderName||e.seconder?.NAME||`N/A`)}</td>
         <td><span class="badge badge-${(e.status||`pending`).toLowerCase()}">${h(e.status)}</span></td>
         <td>
           <div class="flex gap-2">
-            <button class="btn btn-success btn-sm verify-btn" data-id="${h(e.id)}" data-action="Valid"
-              ${e.status===`Valid`?`disabled`:``}>✅ Valid</button>
-            <button class="btn btn-danger btn-sm verify-btn" data-id="${h(e.id)}" data-action="Rejected"
-              ${e.status===`Rejected`?`disabled`:``}>❌ Reject</button>
+            <button class="btn btn-primary btn-sm verify-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white" data-id="${h(e.id)}" data-action="Valid"
+              ${e.status===`Valid`?`disabled`:``}>Valid</button>
+            <button class="btn btn-secondary btn-sm verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white" data-id="${h(e.id)}" data-action="Rejected"
+              ${e.status===`Rejected`?`disabled`:``}>Reject</button>
           </div>
         </td>
-      </tr>`).join(``):`<tr><td colspan="8" class="text-center text-slate-500 py-8">No nominations match the filter.</td></tr>`};i(r),e.querySelector(`#statusFilter`).addEventListener(`change`,e=>{let t=e.target.value;i(t===`all`?r:r.filter(e=>e.status===t))}),e.querySelector(`#nomTableBody`).addEventListener(`click`,async t=>{let i=t.target.closest(`.verify-btn`);if(!i)return;let a=i.dataset.id,o=i.dataset.action;i.disabled=!0,i.innerHTML=`<span class="spinner" style="width:1rem;height:1rem;border-width:2px;"></span>`;try{await C.adminVerifyNomination(n,a,o);let t=r.find(e=>e.id===a);t&&(t.status=o),_(`Nomination ${a} marked as ${o}.`,o===`Valid`?`success`:`error`);let i=e.querySelector(`#row-${a}`);i&&(i.querySelector(`.badge`).className=`badge badge-${o.toLowerCase()}`,i.querySelector(`.badge`).textContent=o,i.querySelectorAll(`.verify-btn`).forEach(e=>e.disabled=e.dataset.action===o))}catch(e){_(`Failed: ${e.message}`,`error`),i.disabled=!1,i.textContent=i.dataset.action===`Valid`?`✅ Valid`:`❌ Reject`}})}async function _e(e){let t=z();if(t){B(e,`withdrawals`,`
+      </tr>`).join(``):`<tr><td colspan="8" class="text-center text-slate-500 py-12">No nominations found matching those criteria.</td></tr>`},a=()=>{let t=e.querySelector(`#nomSearch`).value.toLowerCase(),n=e.querySelector(`#statusFilter`).value;i(r.filter(e=>{let r=n===`all`||e.status===n,i=!t||String(e.id).toLowerCase().includes(t)||String(e.candidateName||e.candidate?.NAME||``).toLowerCase().includes(t)||String(e.post).toLowerCase().includes(t);return r&&i}))};e.querySelector(`#nomSearch`).addEventListener(`input`,a),e.querySelector(`#statusFilter`).addEventListener(`change`,a),i(r),e.querySelector(`#nomTableBody`).addEventListener(`click`,async e=>{let t=e.target.closest(`.verify-btn`);if(!t)return;let i=t.dataset.id,o=t.dataset.action;t.disabled=!0;let s=t.textContent;t.innerHTML=`<span class="spinner" style="width:1rem;height:1rem;border-width:2px;"></span>`;try{await C.adminVerifyNomination(n,i,o);let e=r.find(e=>e.id===i);e&&(e.status=o),_(`Nomination ${i} marked as ${o}.`,`success`),a()}catch(e){_(`Failed: ${e.message}`,`error`),t.disabled=!1,t.textContent=s}})}async function _e(e){let t=z();if(t){B(e,`withdrawals`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading withdrawal requests...</p></div>
-  `);try{let n=(await C.adminGetNominations(t)).filter(e=>e.withdrawalStatus&&e.withdrawalStatus!==`None`);ve(e.querySelector(`#adminMain`),n,t)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function ve(e,t,n){e.innerHTML=`
+  `);try{let n=(await C.adminGetNominations(t)).filter(e=>e.withdrawalStatus&&e.withdrawalStatus!==`None`);ve(e.querySelector(`#adminMain`),n,t)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function ve(e,t,n){let r=Array.isArray(t)?t:[];e.innerHTML=`
     <div class="page-enter space-y-4">
-      <div>
-        <h3 class="text-xl font-bold text-white">Withdrawal Requests</h3>
-        <p class="text-slate-400 text-sm">Approve or view submitted withdrawal requests.</p>
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h3 class="text-xl font-bold text-white">Withdrawal Requests</h3>
+          <p class="text-slate-400 text-sm">Approve or view submitted withdrawal requests.</p>
+        </div>
+        
+        <div class="relative w-full md:w-80">
+          <input type="text" id="withSearch" class="field w-full pl-10" placeholder="Search Candidate, ID, or Post...">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
+        </div>
       </div>
-      ${t.length===0?`<div class="alert alert-info">No withdrawal requests found.</div>`:`
-      <div class="glass rounded-xl overflow-hidden">
+
+      <div class="glass rounded-xl overflow-hidden shadow-2xl">
         <div class="overflow-x-auto">
           <table class="data-table">
             <thead><tr>
-              <th>Nom. ID</th><th>Post</th><th>Candidate</th><th>Class/Dept</th>
-              <th>Withdrawal Status</th><th>Action</th>
+              <th>Nom. ID</th>
+              <th>Post</th>
+              <th>Candidate</th>
+              <th>Class/Dept</th>
+              <th>Withdrawal Status</th>
+              <th>Action</th>
             </tr></thead>
-            <tbody>
-              ${t.map(e=>`
-              <tr id="wrow-${h(e.id)}">
-                <td class="font-mono text-indigo-300 text-xs">${h(e.id)}</td>
-                <td class="text-xs">${h(e.post)}</td>
-                <td class="font-medium">${h(e.candidateName||`N/A`)}</td>
-                <td class="text-xs text-slate-400">${h(e.candidateClass||``)} / ${h(e.candidateDept||``)}</td>
-                <td>
-                  <span class="badge ${e.withdrawalStatus===`Approved`?`badge-valid`:`badge-pending`}">
-                    ${h(e.withdrawalStatus)}
-                  </span>
-                </td>
-                <td>
-                  <button class="btn btn-success btn-sm approve-btn" data-id="${h(e.id)}"
-                    ${e.withdrawalStatus===`Approved`?`disabled`:``}>
-                    ✅ Approve
-                  </button>
-                </td>
-              </tr>`).join(``)}
-            </tbody>
+            <tbody id="withdrawalTableBody"></tbody>
           </table>
         </div>
-      </div>`}
-    </div>`,e.addEventListener(`click`,async t=>{let r=t.target.closest(`.approve-btn`);if(!r)return;let i=r.dataset.id;r.disabled=!0,r.innerHTML=`<span class="spinner" style="width:1rem;height:1rem;border-width:2px;"></span>`;try{await C.adminApproveWithdrawal(n,i),_(`Withdrawal for ${i} approved.`,`success`);let t=e.querySelector(`#wrow-${i}`);if(t){let e=t.querySelector(`.badge`);e.textContent=`Approved`,e.className=`badge badge-valid`,r.textContent=`✅ Approve`,r.disabled=!0}}catch(e){_(`Failed: ${e.message}`,`error`),r.disabled=!1,r.textContent=`✅ Approve`}})}async function ye(e){let t=z();if(t){B(e,`publish`,`
+      </div>
+    </div>`;let i=t=>{let n=e.querySelector(`#withdrawalTableBody`);n.innerHTML=t.length?t.map(e=>`
+      <tr id="wrow-${h(e.id)}">
+        <td class="font-mono text-indigo-300 text-xs">${h(e.id)}</td>
+        <td class="text-xs font-medium text-slate-300">${h(e.post)}</td>
+        <td class="font-bold text-white">${h(e.candidateName||e.candidate?.NAME||`N/A`)}</td>
+        <td class="text-xs text-slate-400">${h(e.candidateClass||``)} / ${h(e.candidateDept||``)}</td>
+        <td>
+          <span class="badge ${e.withdrawalStatus===`Approved`?`badge-valid`:`badge-pending`}">
+            ${h(e.withdrawalStatus)}
+          </span>
+        </td>
+        <td>
+          <button class="btn btn-primary btn-sm approve-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white" data-id="${h(e.id)}"
+            ${e.withdrawalStatus===`Approved`?`disabled`:``}>
+            ✅ Approve
+          </button>
+        </td>
+      </tr>`).join(``):`<tr><td colspan="6" class="text-center text-slate-500 py-12">No withdrawal requests found matching those criteria.</td></tr>`},a=()=>{let t=e.querySelector(`#withSearch`).value.toLowerCase();i(r.filter(e=>!t||String(e.id).toLowerCase().includes(t)||String(e.candidateName||e.candidate?.NAME||``).toLowerCase().includes(t)||String(e.post).toLowerCase().includes(t)))};e.querySelector(`#withSearch`).addEventListener(`input`,a),i(r),e.addEventListener(`click`,async e=>{let t=e.target.closest(`.approve-btn`);if(!t)return;let i=t.dataset.id;t.disabled=!0;let o=t.innerHTML;t.innerHTML=`<span class="spinner" style="width:1rem;height:1rem;border-width:2px;"></span>`;try{await C.adminApproveWithdrawal(n,i),_(`Withdrawal for ${i} approved.`,`success`);let e=r.find(e=>e.id===i);e&&(e.withdrawalStatus=`Approved`),a()}catch(e){_(`Failed: ${e.message}`,`error`),t.disabled=!1,t.innerHTML=o}})}async function ye(e){let t=z();if(t){B(e,`publish`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading data...</p></div>
   `);try{let[n,r,i]=await Promise.all([C.adminGetSettings(t),C.adminGetNominations(t),C.getPosts()]);G(e.querySelector(`#adminMain`),n,r,i,t)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${h(t.message)}</div>`}}}function G(e,t,n,r,i){let a=t.validListPublished===`true`,o=t.finalListPublished===`true`;e.innerHTML=`
     <div class="page-enter space-y-6">
