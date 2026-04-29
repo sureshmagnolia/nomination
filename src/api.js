@@ -150,4 +150,21 @@ export const api = {
   /** Admin: save counting matrix */
   adminSaveCountingMatrix: (password, matrixData) =>
     post({ action: 'adminSaveCountingMatrix', password, matrixData }),
+
+  // ─── Nominal Roll Management ────────────────────────────────────────────────
+  
+  /** Get all settings (published status, finalized status) */
+  getSettings: () => get({ action: 'getSettings' }),
+
+  /** Admin: add student to nominal roll */
+  adminAddStudent: (password, studentData) =>
+    post({ action: 'adminAddStudent', password, ...studentData }),
+
+  /** Admin: delete student from nominal roll */
+  adminDeleteStudent: (password, serial) =>
+    post({ action: 'adminDeleteStudent', password, serial }),
+
+  /** Admin: finalize nominal roll (lock and re-serial) */
+  adminFinalizeRoll: (password) =>
+    post({ action: 'adminFinalizeRoll', password }),
 };

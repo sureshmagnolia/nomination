@@ -36,6 +36,7 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
         ${navItem('withdrawals', '↩️', 'Withdrawals',       activeSection)}
         ${navItem('publish',     '📢', 'Publish Lists',      activeSection)}
         ${navItem('posts',       '📋', 'Manage Posts',       activeSection)}
+        ${navItem('nominal-roll','📜', 'Nominal Roll',       activeSection)}
         ${navItem('booths',      '🏫', 'Polling Booths',     activeSection)}
         <div class="border-t border-white/10 my-2"></div>
         ${navItem('counting',    '🧮', 'Counting Setup',     activeSection)}

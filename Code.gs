@@ -298,6 +298,14 @@ function doGet(e) {
       }));
     }
 
+    if (action === 'getSettings') {
+      const s = getSheet(SHEET_SETTINGS);
+      const d = s.getDataRange().getValues();
+      const obj = {};
+      d.forEach(r => { if (r[0]) obj[r[0]] = r[1]; });
+      return jsonOut(obj);
+    }
+
     if (action === 'adminGetCountingMatrix') {
       checkAdmin(e.parameter.password);
       const s = getSheet(SHEET_MATRIX);
@@ -440,13 +448,61 @@ function doPost(e) {
       const d = s.getDataRange().getValues();
       for (let i = 1; i < d.length; i++) {
         if (d[i][0] === body.post) {
-          // Update the row
           s.getRange(i + 1, 1, 1, 5).setValues([[body.post, body.femaleOnly, body.finalYearIneligible, body.yearRestriction, body.deptRestriction]]);
           return jsonOut({ ok: true });
         }
       }
       return errOut('Post not found.');
     }
+
+    if (action === 'adminDeleteStudent') {
+      checkAdmin(body.password);
+      if (getSetting('nominalRollFinalized') === 'true') return errOut('Roll is finalized. No changes allowed.');
+      const s = getSheet(SHEET_ROLL);
+      const d = s.getDataRange().getValues();
+      for (let i = 1; i < d.length; i++) {
+        if (String(d[i][0]) === String(body.serial)) { s.deleteRow(i + 1); return jsonOut({ ok: true }); }
+      }
+      return errOut('Student not found.');
+    }
+
+    if (action === 'adminAddStudent') {
+      checkAdmin(body.password);
+      if (getSetting('nominalRollFinalized') === 'true') return errOut('Roll is finalized. No changes allowed.');
+      const s = getSheet(SHEET_ROLL);
+      s.appendRow([body.serial, body.name, body.class, body.admission, body.dept]);
+      return jsonOut({ ok: true });
+    }
+
+    if (action === 'adminFinalizeRoll') {
+      checkAdmin(body.password);
+      if (getSetting('nominalRollFinalized') === 'true') return errOut('Already finalized.');
+      
+      const s = getSheet(SHEET_ROLL);
+      const d = s.getDataRange().getValues();
+      const headers = d.shift();
+      
+      // Sort by Class then Name
+      d.sort((a, b) => {
+        const cA = String(a[2]).toUpperCase();
+        const cB = String(b[2]).toUpperCase();
+        if (cA !== cB) return cA.localeCompare(cB);
+        return String(a[1]).toUpperCase().localeCompare(String(b[1]).toUpperCase());
+      });
+
+      // Re-assign Serial Numbers sequentially in the sorted order
+      d.forEach((row, i) => {
+        row[0] = i + 1;
+      });
+
+      s.clear();
+      s.appendRow(headers);
+      if (d.length > 0) s.getRange(2, 1, d.length, headers.length).setValues(d);
+      
+      setSetting('nominalRollFinalized', 'true');
+      return jsonOut({ ok: true });
+    }
+
 
     if (action === 'adminReorderPosts') {
       checkAdmin(body.password);

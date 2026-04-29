@@ -22,6 +22,8 @@ import { renderAdminCounting }      from './pages/admin/counting.js';
 import { renderAdminResultsEntry }  from './pages/admin/resultsEntry.js';
 import { renderAdminTesting }       from './pages/admin/testing.js';
 import { renderResults }            from './pages/results.js';
+import { renderNominalRoll }        from './pages/nominalRoll.js';
+import { renderAdminNominalRoll }   from './pages/admin/nominalRoll.js';
 
 // ─── Background decoration ────────────────────────────────────────────────────
 const app = document.getElementById('app');
@@ -62,6 +64,7 @@ router
   .on('/final-list',        render(renderFinalList))
   .on('/withdraw',          render(renderWithdraw))
   .on('/results',           render(renderResults))
+  .on('/nominal-roll',      render(renderNominalRoll))
   .on('/admin',             render(renderAdminLogin))
   .on('/admin/dashboard',   render(renderAdminDashboard))
   .on('/admin/verify',      render(renderAdminVerify))
@@ -70,7 +73,8 @@ router
   .on('/admin/posts',       render(renderAdminPosts))
   .on('/admin/booths',      render(renderAdminBooths))
   .on('/admin/counting',    render(renderAdminCounting))
-  .on('/admin/results-entry',render(renderAdminResultsEntry))
+  .on('/admin/results-entry', render(renderAdminResultsEntry))
+  .on('/admin/nominal-roll', render(renderAdminNominalRoll))
   .on('/admin/testing',     render(renderAdminTesting))
   .setDefault('/');
 

@@ -37,6 +37,7 @@ export function renderHome(container) {
           ${card('/find',   '🔍', 'Find My Nomination', 'Retrieve and print your submitted nomination.')}
           ${card('/withdraw', '↩️', 'Withdraw Nomination', 'Request withdrawal of your candidacy.')}
           ${card('/valid-list', '✅', 'Valid Nominations', 'View the list of verified candidates.')}
+          ${card('/nominal-roll', '📜', 'Nominal Roll', 'View the official voter list (Draft/Final).')}
           ${card('/final-list', '🏆', 'Final Candidate List', 'View the final list post-withdrawals.')}
           ${card('/results', '📊', 'Live Results', 'View live vote counting and election results.')}
         </div>
