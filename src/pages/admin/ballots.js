@@ -24,46 +24,41 @@ export async function renderAdminBallots(container) {
         <div>
           <h2 class="text-2xl font-bold text-white flex items-center gap-3">
             <span class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">🗳️</span>
-            Print Ballots
+            Ballot Printing
           </h2>
-          <p class="text-slate-400 mt-1">Official ballots on A3 (General) and A5 (Others) paper sizes.</p>
-        </div>
-        <div class="flex gap-3">
-          <button id="btnPrintBallots" class="btn btn-primary px-8 shadow-lg shadow-indigo-500/20">
-            🖨️ Generate All Ballots
-          </button>
+          <p class="text-slate-400 mt-1">Generate official ballots by category. Each opens in a dedicated tab.</p>
         </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-indigo-500/50 transition-all">
           <div class="text-indigo-400 font-bold flex items-center gap-2">
-            <span>🏆</span> General Ballot (A3)
+            <span>🏆</span> General Union (A3)
           </div>
           <p class="text-xs text-slate-400 leading-relaxed">
             Main union posts in 2 columns. Designed for A3 paper. Chairman & Vice Chairman on top.
           </p>
-          <button data-type="general" class="btn btn-secondary w-full py-2 text-xs preview-btn">Preview General</button>
+          <button data-type="general" class="btn btn-primary w-full py-3 preview-btn">🖨️ Generate General Ballot</button>
         </div>
 
         <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-emerald-500/50 transition-all">
           <div class="text-emerald-400 font-bold flex items-center gap-2">
-            <span>📅</span> Year Rep Ballots (A5)
+            <span>📅</span> Year Representatives (A5)
           </div>
           <p class="text-xs text-slate-400 leading-relaxed">
-            Individual ballots for each year. Designed for A5 paper (one post per page).
+            1st, 2nd, 3rd Year & PG Reps. Designed for A5 paper (one post per page).
           </p>
-          <button data-type="year" class="btn btn-secondary w-full py-2 text-xs preview-btn">Preview Year Reps</button>
+          <button data-type="year" class="btn btn-primary w-full py-3 preview-btn">🖨️ Generate Year Reps</button>
         </div>
 
         <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-amber-500/50 transition-all">
           <div class="text-amber-400 font-bold flex items-center gap-2">
-            <span>🤝</span> Association Ballots (A5)
+            <span>🤝</span> Association Reps (A5)
           </div>
           <p class="text-xs text-slate-400 leading-relaxed">
-            Individual ballots for Department Association Secretaries. Designed for A5 paper.
+            Departmental Association Secretaries. Designed for A5 paper (one post per page).
           </p>
-          <button data-type="assoc" class="btn btn-secondary w-full py-2 text-xs preview-btn">Preview Associations</button>
+          <button data-type="assoc" class="btn btn-primary w-full py-3 preview-btn">🖨️ Generate Association Ballots</button>
         </div>
       </div>
     </div>
@@ -143,8 +138,14 @@ export async function renderAdminBallots(container) {
     const candidates = candidatesResponse.active || [];
     if (candidates.length === 0) throw new Error('No active candidates found.');
 
-    const isYear = (p) => p.post.toLowerCase().includes('year');
-    const isAssoc = (p) => p.post.toLowerCase().includes('assoc') || p.post.toLowerCase().includes('association');
+    const isYear = (p) => {
+      const name = p.post.toLowerCase();
+      return name.includes('representative') || name.includes('year');
+    };
+    const isAssoc = (p) => {
+      const name = p.post.toLowerCase();
+      return name.includes('association') || name.includes('assoc');
+    };
     const isGeneral = (p) => !isYear(p) && !isAssoc(p);
 
     let html = '';
@@ -253,16 +254,4 @@ export async function renderAdminBallots(container) {
   main.querySelectorAll('.preview-btn').forEach(btn => {
     btn.onclick = () => handlePreview(btn.dataset.type);
   });
-
-  main.querySelector('#btnPrintBallots').onclick = async (e) => {
-    try {
-      setLoading(e.target, true, 'Generating...');
-      const html = await generateBallotsHTML('all');
-      triggerPrint(html);
-      setLoading(e.target, false, '🖨️ Generate All Ballots');
-    } catch (err) {
-      showToast(err.message, 'error');
-      setLoading(e.target, false, '🖨️ Generate All Ballots');
-    }
-  };
 }

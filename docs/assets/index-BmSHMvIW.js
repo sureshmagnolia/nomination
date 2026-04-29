@@ -1451,46 +1451,41 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         <div>
           <h2 class="text-2xl font-bold text-white flex items-center gap-3">
             <span class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">🗳️</span>
-            Print Ballots
+            Ballot Printing
           </h2>
-          <p class="text-slate-400 mt-1">Official ballots on A3 (General) and A5 (Others) paper sizes.</p>
-        </div>
-        <div class="flex gap-3">
-          <button id="btnPrintBallots" class="btn btn-primary px-8 shadow-lg shadow-indigo-500/20">
-            🖨️ Generate All Ballots
-          </button>
+          <p class="text-slate-400 mt-1">Generate official ballots by category. Each opens in a dedicated tab.</p>
         </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-indigo-500/50 transition-all">
           <div class="text-indigo-400 font-bold flex items-center gap-2">
-            <span>🏆</span> General Ballot (A3)
+            <span>🏆</span> General Union (A3)
           </div>
           <p class="text-xs text-slate-400 leading-relaxed">
             Main union posts in 2 columns. Designed for A3 paper. Chairman & Vice Chairman on top.
           </p>
-          <button data-type="general" class="btn btn-secondary w-full py-2 text-xs preview-btn">Preview General</button>
+          <button data-type="general" class="btn btn-primary w-full py-3 preview-btn">🖨️ Generate General Ballot</button>
         </div>
 
         <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-emerald-500/50 transition-all">
           <div class="text-emerald-400 font-bold flex items-center gap-2">
-            <span>📅</span> Year Rep Ballots (A5)
+            <span>📅</span> Year Representatives (A5)
           </div>
           <p class="text-xs text-slate-400 leading-relaxed">
-            Individual ballots for each year. Designed for A5 paper (one post per page).
+            1st, 2nd, 3rd Year & PG Reps. Designed for A5 paper (one post per page).
           </p>
-          <button data-type="year" class="btn btn-secondary w-full py-2 text-xs preview-btn">Preview Year Reps</button>
+          <button data-type="year" class="btn btn-primary w-full py-3 preview-btn">🖨️ Generate Year Reps</button>
         </div>
 
         <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-amber-500/50 transition-all">
           <div class="text-amber-400 font-bold flex items-center gap-2">
-            <span>🤝</span> Association Ballots (A5)
+            <span>🤝</span> Association Reps (A5)
           </div>
           <p class="text-xs text-slate-400 leading-relaxed">
-            Individual ballots for Department Association Secretaries. Designed for A5 paper.
+            Departmental Association Secretaries. Designed for A5 paper (one post per page).
           </p>
-          <button data-type="assoc" class="btn btn-secondary w-full py-2 text-xs preview-btn">Preview Associations</button>
+          <button data-type="assoc" class="btn btn-primary w-full py-3 preview-btn">🖨️ Generate Association Ballots</button>
         </div>
       </div>
     </div>
@@ -1546,7 +1541,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           ${e}
         </body>
       </html>
-    `),t.document.close()},i=async(e=`all`)=>{let n,r;try{[n,r]=await Promise.all([C.adminGetPosts(t),C.getFinalNominations()])}catch(e){throw Error(e.message.includes(`not published`)?`Final List Not Published. Please finalize and publish the list first.`:e.message)}let i=r.active||[];if(i.length===0)throw Error(`No active candidates found.`);let a=e=>e.post.toLowerCase().includes(`year`),o=e=>e.post.toLowerCase().includes(`assoc`)||e.post.toLowerCase().includes(`association`),s=e=>!a(e)&&!o(e),c=``;if(e===`all`||e===`general`){let e=n.filter(s);e.length>0&&(c+=`
+    `),t.document.close()},i=async(e=`all`)=>{let n,r;try{[n,r]=await Promise.all([C.adminGetPosts(t),C.getFinalNominations()])}catch(e){throw Error(e.message.includes(`not published`)?`Final List Not Published. Please finalize and publish the list first.`:e.message)}let i=r.active||[];if(i.length===0)throw Error(`No active candidates found.`);let a=e=>{let t=e.post.toLowerCase();return t.includes(`representative`)||t.includes(`year`)},o=e=>{let t=e.post.toLowerCase();return t.includes(`association`)||t.includes(`assoc`)},s=e=>!a(e)&&!o(e),c=``;if(e===`all`||e===`general`){let e=n.filter(s);e.length>0&&(c+=`
           <div class="ballot-container a3 page-break">
             <div class="ballot-header">
               <h1>COLLEGE UNION ELECTION ${new Date().getFullYear()}</h1>
@@ -1593,7 +1588,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <div class="candidate-row"><div class="sl-no">${t.length+1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
             </div>
           </div>
-        `)}),c},a=async e=>{try{_(`Generating ballots...`,`info`),r(await i(e))}catch(e){_(e.message,`error`)}};n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)}),n.querySelector(`#btnPrintBallots`).onclick=async e=>{try{g(e.target,!0,`Generating...`),r(await i(`all`)),g(e.target,!1,`🖨️ Generate All Ballots`)}catch(t){_(t.message,`error`),g(e.target,!1,`🖨️ Generate All Ballots`)}}}function Fe(e){let t=L();if(!t)return;R(e,`testing`,`
+        `)}),c},a=async e=>{try{_(`Generating ballots...`,`info`),r(await i(e))}catch(e){_(e.message,`error`)}};n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)})}function Fe(e){let t=L();if(!t)return;R(e,`testing`,`
     <div class="page-enter space-y-8 max-w-3xl mx-auto">
 
       <!-- Warning Banner -->
