@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────
 //  CONFIGURATION — UPDATE THESE
 // ─────────────────────────────────────────────────────────────
-const SPREADSHEET_ID = 'YOUR_GOOGLE_SHEET_ID_HERE'; 
+const SPREADSHEET_ID = '10p-3qWklthNnDUp-MqOHEjJLmWRpgkvVX2QpmGreKxA'; 
 const ADMIN_PASSWORD = '678001alliswell$';
 
 const SHEET_NOMINAL  = 'NominalRoll';
