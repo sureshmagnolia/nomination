@@ -222,11 +222,6 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </div>
     </div>
     <h2 class="text-center font-bold text-xl text-white border-y border-white/10 py-3">NOMINATION PAPER</h2>
-    <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 text-center">
-      <p class="text-xs text-indigo-300 uppercase tracking-widest mb-1">Your Unique Nomination ID</p>
-      <p class="text-3xl font-mono font-bold text-indigo-300 tracking-widest">${h(e)}</p>
-      <p class="text-xs text-slate-500 mt-1">Keep this number safe — you will need it for future reference.</p>
-    </div>
     <p class="text-sm"><span class="font-semibold text-slate-400 w-40 inline-block">Post Applied For:</span> <strong class="text-white">${h(t)}</strong></p>
     <div class="space-y-3">
       ${P(`Candidate`,o,r,i,a)}
@@ -240,7 +235,10 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         <p>Signature: _______________________</p>
         <p>Date: ______ / ______ / ________</p>
       </div>
-      <p class="text-xs text-slate-500 italic">(To be signed in front of the Returning Officer)</p>
+      <p class="text-xs text-slate-500 italic mb-4">(To be signed in front of the Returning Officer)</p>
+    </div>
+    <div class="border-t border-white/10 pt-2 text-right">
+      <p class="text-[10px] text-slate-500 font-mono">Ref ID: ${h(e)}</p>
     </div>
   </div>`}function P(e,t,n=null,r=null,i=null){return t?`
   <div class="glass rounded-lg p-4 text-sm space-y-1">

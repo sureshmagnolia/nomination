@@ -291,11 +291,6 @@ export function buildNominationPaper(id, post, gender, dobDisplay, age, candidat
       </div>
     </div>
     <h2 class="text-center font-bold text-xl text-white border-y border-white/10 py-3">NOMINATION PAPER</h2>
-    <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 text-center">
-      <p class="text-xs text-indigo-300 uppercase tracking-widest mb-1">Your Unique Nomination ID</p>
-      <p class="text-3xl font-mono font-bold text-indigo-300 tracking-widest">${esc(id)}</p>
-      <p class="text-xs text-slate-500 mt-1">Keep this number safe — you will need it for future reference.</p>
-    </div>
     <p class="text-sm"><span class="font-semibold text-slate-400 w-40 inline-block">Post Applied For:</span> <strong class="text-white">${esc(post)}</strong></p>
     <div class="space-y-3">
       ${sectionBlock('Candidate', candidate, gender, dobDisplay, age)}
@@ -309,7 +304,10 @@ export function buildNominationPaper(id, post, gender, dobDisplay, age, candidat
         <p>Signature: _______________________</p>
         <p>Date: ______ / ______ / ________</p>
       </div>
-      <p class="text-xs text-slate-500 italic">(To be signed in front of the Returning Officer)</p>
+      <p class="text-xs text-slate-500 italic mb-4">(To be signed in front of the Returning Officer)</p>
+    </div>
+    <div class="border-t border-white/10 pt-2 text-right">
+      <p class="text-[10px] text-slate-500 font-mono">Ref ID: ${esc(id)}</p>
     </div>
   </div>`;
 }
