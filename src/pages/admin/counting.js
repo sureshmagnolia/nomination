@@ -53,7 +53,10 @@ function renderCountingUI(main, posts, finalList, booths, nominalRoll) {
   });
 
   // ── Classify posts ────────────────────────────────────────────────────────────
-  const uucPosts     = posts.filter(p => pName(p).toUpperCase().includes('UUC'));
+  const uucPosts     = posts.filter(p => {
+    const name = pName(p).toUpperCase();
+    return name.includes('UUC') || name.includes('UNIVERSITY UNION COUNCILLOR');
+  });
   const assocPosts   = posts.filter(p => !uucPosts.includes(p) && pName(p).toUpperCase().includes('ASSOCIATION'));
   const yearRepPosts = posts.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && p.yearRestriction && String(p.yearRestriction).trim() !== '');
   const generalPosts = posts.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && !yearRepPosts.includes(p));
