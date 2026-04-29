@@ -138,10 +138,14 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       const yrs = new Set();
       (b.classes || []).forEach(c => {
         const u = c.toUpperCase();
-        if (u.includes('1ST YEAR')) yrs.add('1');
-        if (u.includes('2ND YEAR') && !u.includes('M')) yrs.add('2');
-        if (u.includes('3RD YEAR') && !u.includes('M')) yrs.add('3');
-        if (['MA ','MSC ','MCOM','M.SC','M.COM','M.A '].some(pg => u.includes(pg.trim()))) yrs.add('PG');
+        const isPG = ['MA','MSC','MCOM','M.SC','M.COM','M.A'].some(pg => u.includes(pg));
+        if (isPG) {
+          yrs.add('PG');
+        } else {
+          if (u.includes('1ST YEAR')) yrs.add('1');
+          if (u.includes('2ND YEAR')) yrs.add('2');
+          if (u.includes('3RD YEAR')) yrs.add('3');
+        }
       });
       return yrs;
     });
