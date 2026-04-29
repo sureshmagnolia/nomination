@@ -19,7 +19,7 @@ export function renderAdminLogin(container) {
       <form id="loginForm" class="space-y-4 text-left">
         <div>
           <label class="block text-sm font-semibold text-slate-300 mb-1">Admin Password</label>
-          <input id="adminPassword" type="password" class="field" placeholder="Enter admin password" />
+          <input id="adminPassword" type="password" class="field" placeholder="Enter admin password" autocomplete="current-password" />
         </div>
         <button type="submit" id="loginBtn" class="btn btn-primary w-full text-base py-3">Login to Admin Panel →</button>
       </form>

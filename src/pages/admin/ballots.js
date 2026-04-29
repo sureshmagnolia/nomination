@@ -3,14 +3,19 @@
  * Professional ballot printing for General, Year Rep, and Association posts.
  */
 import { api } from '../../api.js';
-import { renderAdminLayout } from './layout.js';
+import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
 
-export function renderAdminBallots(container) {
-  const pwd = sessionStorage.getItem('adminPassword');
-  if (!pwd) { window.location.hash = '/admin'; return; }
+export async function renderAdminBallots(container) {
+  const pwd = getAdminPassword(); if (!pwd) return;
 
-  renderAdminLayout(container, 'Ballot Printing');
+  renderAdminLayout(container, 'Ballot Printing', `
+    <div class="text-center py-16">
+      <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
+      <p class="text-slate-400 mt-4 text-sm">Preparing ballot generator...</p>
+    </div>
+  `);
+
   const main = container.querySelector('#adminMain');
 
   main.innerHTML = `
