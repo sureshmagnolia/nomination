@@ -170,4 +170,13 @@ export const api = {
   /** Admin: finalize nominal roll (lock and re-serial) */
   adminFinalizeRoll: (password) =>
     post({ action: 'adminFinalizeRoll', password }),
+
+  // ─── Schedule Management ───────────────────────────────────────────────────
+
+  /** Fetch the official election schedule (deadlines, etc.) */
+  getPublicSchedule: () => get({ action: 'getPublicSchedule' }),
+
+  /** Admin: save election schedule dates */
+  adminSaveSchedule: (password, scheduleData) =>
+    post({ action: 'adminSaveSchedule', password, ...scheduleData }),
 };

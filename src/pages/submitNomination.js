@@ -15,6 +15,7 @@ import {
 let nominalRoll = [];
 let allPosts = [];      // [{post, femaleOnly, finalYearIneligible, yearRestriction, deptRestriction}]
 let existingNominations = [];
+let electionSchedule = {};
 let captchaAnswer = '';
 
 export async function renderSubmitNomination(container) {
@@ -29,15 +30,17 @@ export async function renderSubmitNomination(container) {
   container.querySelector('#backToHome').addEventListener('click', () => router.navigate('/'));
 
   try {
-    // Load nominal roll, posts, and existing nominations in parallel
-    const [rollData, postsData, nomsData] = await Promise.all([
+    // Load nominal roll, posts, existing nominations, and schedule in parallel
+    const [rollData, postsData, nomsData, scheduleData] = await Promise.all([
       api.getNominalRoll(),
       api.getPosts().catch(() => null),
       api.getPublicNominations().catch(() => []),
+      api.getPublicSchedule().catch(() => ({})),
     ]);
 
     nominalRoll = Array.isArray(rollData) ? rollData : [];
     existingNominations = Array.isArray(nomsData) ? nomsData : [];
+    electionSchedule = scheduleData || {};
 
     if (nominalRoll.length === 0) throw new Error('Nominal roll is empty. Please contact the admin.');
 
@@ -62,6 +65,22 @@ function renderForm(container) {
   container.querySelector('#loadingState').classList.add('hidden');
   const formArea = container.querySelector('#formArea');
   formArea.classList.remove('hidden');
+
+  const now = new Date();
+  const deadline = electionSchedule.nominationDeadline ? new Date(electionSchedule.nominationDeadline) : null;
+
+  if (deadline && now > deadline) {
+    formArea.innerHTML = `
+      <div class="glass p-12 text-center rounded-2xl border border-rose-500/20 max-w-2xl mx-auto page-enter">
+        <div class="text-6xl mb-6">⏳</div>
+        <h3 class="text-2xl font-bold text-white mb-3">Nomination Filing Ended</h3>
+        <p class="text-slate-400 mb-6">The official deadline for filing nominations was <strong>${new Date(deadline).toLocaleString()}</strong>.</p>
+        <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
+      </div>
+    `;
+    formArea.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
+    return;
+  }
 
   const postOptions = allPosts.map(p => `<option value="${esc(p.post)}">${esc(p.post)}</option>`).join('');
 
@@ -328,7 +347,7 @@ function sectionBlock(label, s, gender = null, dob = null, age = null) {
       <p><span class="text-slate-500">Electoral Roll No:</span> ${esc(s['Nominal Roll Serial Number'])}</p>
       ${gender ? `<p><span class="text-slate-500">Gender:</span> ${esc(gender)}</p>` : ''}
       ${dob ? `<p><span class="text-slate-500">Date of Birth:</span> ${esc(dob)}</p>` : ''}
-      ${age ? `<p class="col-span-2"><span class="text-slate-500">Age as on Election Date:</span> ${esc(age)}</p>` : ''}
+      ${age ? `<p class="col-span-2"><span class="text-slate-500">Age as on Notification Date:</span> ${esc(age)}</p>` : ''}
     </div>
     ${label !== 'Candidate' ? `
     <div class="flex justify-between mt-4 text-slate-500 text-xs">

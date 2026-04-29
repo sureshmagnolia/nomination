@@ -9,41 +9,88 @@ import { CONFIG } from '../config.js';
 
 export async function renderWithdraw(container) {
   container.innerHTML = publicLayout('Withdrawal Form', `
-    <div class="glass rounded-2xl p-8 max-w-2xl mx-auto">
-      <div class="text-center mb-8">
-        <div class="text-5xl mb-3">↩️</div>
-        <h2 class="text-xl font-bold text-white">Submit Withdrawal</h2>
-        <p class="text-slate-400 text-sm mt-2">Enter your 10-digit nomination ID to fetch your details and submit a withdrawal request.</p>
-      </div>
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-semibold text-slate-300 mb-1">Nomination ID (10 digits)</label>
-          <input id="withdrawId" type="text" maxlength="10" class="field text-center text-xl tracking-widest font-mono" placeholder="0000000000" />
-        </div>
-        <button id="fetchBtn" class="btn btn-primary w-full">Fetch Nomination Details</button>
-      </div>
-      <div id="nominationDetails" class="mt-8"></div>
+    <div id="loadingState" class="flex flex-col items-center justify-center py-24 gap-4">
+      <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
+      <p class="text-slate-400 text-sm">Checking schedule...</p>
     </div>
+    <div id="withdrawArea" class="hidden"></div>
   `);
 
   container.querySelector('#backToHome').addEventListener('click', () => router.navigate('/'));
 
-  const fetchBtn = container.querySelector('#fetchBtn');
-  fetchBtn.addEventListener('click', async () => {
-    const id = container.querySelector('#withdrawId').value.trim();
-    if (id.length !== 10 || !/^\d+$/.test(id)) {
-      showToast('Please enter a valid 10-digit numeric ID.', 'error'); return;
+  try {
+    const schedule = await api.getPublicSchedule().catch(() => ({}));
+    const now = new Date();
+    const start = schedule.withdrawalStart ? new Date(schedule.withdrawalStart) : null;
+    const end = schedule.withdrawalEnd ? new Date(schedule.withdrawalEnd) : null;
+
+    const area = container.querySelector('#withdrawArea');
+    container.querySelector('#loadingState').classList.add('hidden');
+    area.classList.remove('hidden');
+
+    if (start && now < start) {
+      area.innerHTML = `
+        <div class="glass p-12 text-center rounded-2xl border border-amber-500/20 max-w-2xl mx-auto page-enter">
+          <div class="text-6xl mb-6">📅</div>
+          <h3 class="text-2xl font-bold text-white mb-3">Withdrawal Window Pending</h3>
+          <p class="text-slate-400 mb-6">The withdrawal window is scheduled to open on <strong>${new Date(start).toLocaleString()}</strong>.</p>
+          <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
+        </div>
+      `;
+      area.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
+      return;
     }
-    setLoading(fetchBtn, true, 'Fetch Nomination Details');
-    try {
-      const nom = await api.getNomination(id);
-      showDetails(container.querySelector('#nominationDetails'), nom, id);
-    } catch (e) {
-      container.querySelector('#nominationDetails').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
-    } finally {
-      setLoading(fetchBtn, false, 'Fetch Nomination Details');
+    if (end && now > end) {
+      area.innerHTML = `
+        <div class="glass p-12 text-center rounded-2xl border border-rose-500/20 max-w-2xl mx-auto page-enter">
+          <div class="text-6xl mb-6">⏳</div>
+          <h3 class="text-2xl font-bold text-white mb-3">Withdrawal Window Closed</h3>
+          <p class="text-slate-400 mb-6">The official deadline for withdrawal requests was <strong>${new Date(end).toLocaleString()}</strong>.</p>
+          <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
+        </div>
+      `;
+      area.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
+      return;
     }
-  });
+
+    area.innerHTML = `
+      <div class="glass rounded-2xl p-8 max-w-2xl mx-auto">
+        <div class="text-center mb-8">
+          <div class="text-5xl mb-3">↩️</div>
+          <h2 class="text-xl font-bold text-white">Submit Withdrawal</h2>
+          <p class="text-slate-400 text-sm mt-2">Enter your 10-digit nomination ID to fetch your details and submit a withdrawal request.</p>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-slate-300 mb-1">Nomination ID (10 digits)</label>
+            <input id="withdrawId" type="text" maxlength="10" class="field text-center text-xl tracking-widest font-mono" placeholder="0000000000" />
+          </div>
+          <button id="fetchBtn" class="btn btn-primary w-full">Fetch Nomination Details</button>
+        </div>
+        <div id="nominationDetails" class="mt-8"></div>
+      </div>
+    `;
+
+    const fetchBtn = area.querySelector('#fetchBtn');
+    fetchBtn.addEventListener('click', async () => {
+      const id = area.querySelector('#withdrawId').value.trim();
+      if (id.length !== 10 || !/^\d+$/.test(id)) {
+        showToast('Please enter a valid 10-digit numeric ID.', 'error'); return;
+      }
+      setLoading(fetchBtn, true, 'Fetch Nomination Details');
+      try {
+        const nom = await api.getNomination(id);
+        showDetails(area.querySelector('#nominationDetails'), nom, id);
+      } catch (e) {
+        area.querySelector('#nominationDetails').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
+      } finally {
+        setLoading(fetchBtn, false, 'Fetch Nomination Details');
+      }
+    });
+
+  } catch (e) {
+    container.querySelector('#loadingState').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
+  }
 }
 
 function showDetails(area, nom, id) {

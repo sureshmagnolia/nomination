@@ -308,6 +308,15 @@ function doGet(e) {
       }));
     }
 
+    if (action === 'getPublicSchedule') {
+      return jsonOut({
+        nominationDeadline: getSetting('nominationDeadline'),
+        withdrawalStart: getSetting('withdrawalStart'),
+        withdrawalEnd: getSetting('withdrawalEnd'),
+        notificationDate: getSetting('notificationDate') || '2026-04-20'
+      });
+    }
+
     if (action === 'getSettings') {
       const s = getSheet(SHEET_SETTINGS);
       const d = s.getDataRange().getValues();
@@ -339,21 +348,33 @@ function doPost(e) {
     const body   = JSON.parse(e.postData.contents);
     const action = body.action;
 
+    if (action === 'adminSaveSchedule') {
+      checkAdmin(body.password);
+      setSetting('nominationDeadline', body.nominationDeadline);
+      setSetting('withdrawalStart', body.withdrawalStart);
+      setSetting('withdrawalEnd', body.withdrawalEnd);
+      setSetting('notificationDate', body.notificationDate);
+      return jsonOut({ ok: true });
+    }
+
     if (action === 'adminLogin') {
       checkAdmin(body.password);
       return jsonOut({ ok: true });
     }
 
     if (action === 'submitNomination') {
+      const deadline = getSetting('nominationDeadline');
+      if (deadline && new Date() > new Date(deadline)) return errOut('Nomination filing period has ended.');
+      
       const { post, gender, dob, candidateSerial, proposerSerial, seconderSerial } = body;
       const roll = getNominalRollData();
       const findS = (s) => roll.find(r => String(r['Nominal Roll Serial Number']) === String(s));
       
       const c = findS(candidateSerial);
       const p = findS(proposerSerial);
-      const s = findS(seconderSerial);
+      const st = findS(seconderSerial);
 
-      if (!c || !p || !s) return errOut('Candidate/Proposer/Seconder serial not found.');
+      if (!c || !p || !st) return errOut('Candidate/Proposer/Seconder serial not found.');
 
       const existingIds = new Set(getAllNominations().map(n => n.id));
       let id; do { id = String(Math.floor(1000000000 + Math.random() * 9000000000)); } while (existingIds.has(id));
