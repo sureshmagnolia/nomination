@@ -206,7 +206,7 @@ function updateHeader(main, year) {
               </div>
 
               <div class="flex justify-between items-center py-2 px-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
-                <span class="text-xs font-bold text-purple-300 uppercase tracking-widest">Grand Total Polled</span>
+                <span class="text-xs font-bold text-purple-300 uppercase tracking-widest">Grand Total</span>
                 <span class="text-lg font-black text-white">${grandTotal}</span>
               </div>
             </div>
