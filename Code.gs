@@ -9,7 +9,6 @@
 //  CONFIGURATION ΓÇö UPDATE THESE
 // ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const SPREADSHEET_ID = '10p-3qWklthNnDUp-MqOHEjJLmWRpgkvVX2QpmGreKxA'; 
-const ADMIN_PASSWORD = '678001alliswell$';
 
 const SHEET_NOMINAL  = 'NominalRoll';
 const SHEET_NOMS     = 'Nominations'; // All submissions
@@ -208,8 +207,7 @@ function checkAdmin(pwd) {
   const dayStr = Utilities.formatDate(now, "Asia/Kolkata", "EEEE").toLowerCase();
   const dynamicPassword = dateStr + dayStr;
 
-  // Allow either the dynamic password or the hardcoded fallback password
-  if (pwd !== dynamicPassword && pwd !== ADMIN_PASSWORD) {
+  if (pwd !== dynamicPassword) {
     throw new Error('Invalid admin password.');
   }
 }
