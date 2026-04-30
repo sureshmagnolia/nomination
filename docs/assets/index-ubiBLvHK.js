@@ -1913,7 +1913,7 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
                             ${e.type===`unanimous`?`—`:t.votes}
                           </td>
                           <td class="py-3 text-center">
-                            ${n?`<span class="text-emerald-400 text-[10px] font-black border border-emerald-400/30 px-2 py-0.5 rounded">WON</span>`:e.type===`election`?`<span class="text-slate-600 text-[10px]">LOST</span>`:``}
+                            ${n?`<span class="text-emerald-400 text-[10px] font-black border border-emerald-400/30 px-2 py-0.5 rounded">WON</span>`:``}
                           </td>
                         </tr>
                       `}).join(``)}
@@ -1927,52 +1927,57 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
     </div>
   `,e.querySelector(`#btnPrintOfficial`).addEventListener(`click`,()=>{let e=`
       <style>
-        @media print { .no-print { display: none; } }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
-        .official-sheet { max-w: 800px; margin: 40px auto; padding: 40px; border: 1px solid #ddd; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; padding: 20px; }
+        .official-sheet { max-w: 850px; margin: 0 auto; padding: 40px; border: 1px solid #ddd; background: white; }
         .header { text-align: center; border-bottom: 3px double #000; padding-bottom: 20px; margin-bottom: 30px; }
-        .header h1 { margin: 0; font-size: 24px; text-transform: uppercase; }
-        .header h2 { margin: 5px 0 0 0; font-size: 16px; color: #555; }
+        .header h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
+        .header h2 { margin: 5px 0 0 0; font-size: 16px; color: #444; font-weight: 600; }
         .result-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
-        .result-table th, .result-table td { border: 1px solid #000; padding: 10px; font-size: 13px; }
-        .result-table th { background: #f2f2f2; text-align: left; }
-        .post-header { background: #eee; font-weight: bold; font-size: 14px; text-transform: uppercase; }
-        .winner-row { background: #fafff9; font-weight: bold; }
-        .footer { margin-top: 80px; display: flex; justify-content: space-between; }
-        .sig-box { width: 200px; border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 12px; font-weight: bold; }
+        .result-table th, .result-table td { border: 1px solid #000; padding: 12px 10px; font-size: 13px; }
+        .result-table th { background: #f2f2f2; text-align: left; text-transform: uppercase; font-size: 11px; }
+        .post-header { background: #f9f9f9; font-weight: bold; font-size: 14px; text-transform: uppercase; color: #000; }
+        .winner-row { background: #fafff9 !important; font-weight: bold; }
+        .footer { margin-top: 80px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .sig-box { width: 250px; border-top: 1px solid #000; text-align: center; padding-top: 8px; font-size: 12px; font-weight: bold; margin-top: 40px; }
+        @media print {
+          body { padding: 0; }
+          .official-sheet { border: none; width: 100%; max-width: 100%; padding: 0; }
+          .post-header { background-color: #eee !important; -webkit-print-color-adjust: exact; }
+          .winner-row { background-color: #fafff9 !important; -webkit-print-color-adjust: exact; }
+        }
       </style>
       <div class="official-sheet">
         <div class="header">
           <h1>College Union Election ${o}</h1>
           <h2>GOVERNMENT VICTORIA COLLEGE PALAKKAD</h2>
-          <h1 style="font-size: 18px; margin-top: 15px;">Official Result Notification</h1>
+          <div style="font-size: 18px; margin-top: 15px; font-weight: 900; text-decoration: underline;">OFFICIAL RESULT NOTIFICATION</div>
         </div>
 
-        <p style="font-size: 13px; margin-bottom: 20px;">
-          The following candidates are hereby declared to have been duly elected to the respective posts of the College Union for the academic year ${o}, 
+        <p style="font-size: 14px; margin-bottom: 25px; text-align: justify;">
+          The following candidates are hereby declared to have been duly elected to the respective offices of the College Union for the academic year ${o}, 
           based on the counting of votes held on ${new Date().toLocaleDateString(`en-IN`,{day:`numeric`,month:`long`,year:`numeric`})}.
         </p>
 
         <table class="result-table">
           <thead>
             <tr>
-              <th>Office / Post</th>
-              <th>Name of Candidate</th>
-              <th style="text-align: center;">Votes</th>
-              <th>Status / Remarks</th>
+              <th style="width: 35%;">Office / Post</th>
+              <th style="width: 35%;">Name of Candidate</th>
+              <th style="text-align: center; width: 10%;">Votes</th>
+              <th style="width: 20%;">Remarks</th>
             </tr>
           </thead>
           <tbody>
             ${c.map(e=>e.type===`no-candidates`?``:`
                 <tr class="post-header">
-                  <td colspan="4">${y(e.post)}</td>
+                  <td colspan="4" style="background: #eee;">${y(e.post)}</td>
                 </tr>
                 ${e.candidates.map(t=>{let n=e.winner&&e.winner.id===t.id;return`
                     <tr class="${n?`winner-row`:``}">
-                      <td style="padding-left: 25px;">${y(e.post)}</td>
+                      <td style="padding-left: 20px; color: #555; font-size: 11px;">${y(e.post)}</td>
                       <td>${y(t.candidateName)}</td>
-                      <td style="text-align: center;">${e.type===`unanimous`?`—`:t.votes}</td>
-                      <td>${n?e.type===`unanimous`?`Elected Unanimously`:`WON`:``}</td>
+                      <td style="text-align: center;">${e.type===`unanimous`?`—`:t.votes||0}</td>
+                      <td style="font-size: 11px;">${n?e.type===`unanimous`?`Elected Unanimously`:`WON BY HIGHEST VOTE`:``}</td>
                     </tr>
                   `}).join(``)}
               `).join(``)}
@@ -1980,21 +1985,29 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
         </table>
 
         <div class="footer">
-          <div>
-            <p style="font-size: 12px;">Date: ${new Date().toLocaleDateString()}</p>
-            <p style="font-size: 12px;">Place: Palakkad</p>
+          <div style="font-size: 13px;">
+            <p><strong>Date:</strong> ${new Date().toLocaleDateString(`en-IN`)}</p>
+            <p><strong>Place:</strong> Palakkad</p>
           </div>
           <div class="sig-box">
             RETURNING OFFICER<br>
-            College Union Election ${o}
+            <span style="font-weight: normal; font-size: 11px;">College Union Election ${o}</span>
           </div>
         </div>
       </div>
-    `,t=window.open(``,`_blank`);t.document.write(`
+    `,t=window.open(``,`_blank`);if(!t){x(`Popup blocked! Please allow popups to print.`,`error`);return}t.document.write(`
       <html>
-        <head><title>Official Result Sheet - ${o}</title></head>
-        <body onload="window.print(); window.close();">
+        <head><title>Election Results ${o}</title></head>
+        <body>
           ${e}
+          <script>
+            window.addEventListener('load', () => {
+              setTimeout(() => {
+                window.print();
+                window.close();
+              }, 500);
+            });
+          <\/script>
         </body>
       </html>
     `),t.document.close()})}var G=`election_results_cache`,K=`election_results_last_fetch`,q=300*1e3;async function Re(e){e.innerHTML=`

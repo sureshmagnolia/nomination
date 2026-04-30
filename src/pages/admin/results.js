@@ -128,7 +128,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule) {
                           <td class="py-3 text-center">
                             ${isWinner ? 
                               `<span class="text-emerald-400 text-[10px] font-black border border-emerald-400/30 px-2 py-0.5 rounded">WON</span>` : 
-                              (res.type === 'election' ? `<span class="text-slate-600 text-[10px]">LOST</span>` : '')
+                              ''
                             }
                           </td>
                         </tr>
@@ -148,39 +148,44 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule) {
   main.querySelector('#btnPrintOfficial').addEventListener('click', () => {
     const printHtml = `
       <style>
-        @media print { .no-print { display: none; } }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
-        .official-sheet { max-w: 800px; margin: 40px auto; padding: 40px; border: 1px solid #ddd; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; padding: 20px; }
+        .official-sheet { max-w: 850px; margin: 0 auto; padding: 40px; border: 1px solid #ddd; background: white; }
         .header { text-align: center; border-bottom: 3px double #000; padding-bottom: 20px; margin-bottom: 30px; }
-        .header h1 { margin: 0; font-size: 24px; text-transform: uppercase; }
-        .header h2 { margin: 5px 0 0 0; font-size: 16px; color: #555; }
+        .header h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
+        .header h2 { margin: 5px 0 0 0; font-size: 16px; color: #444; font-weight: 600; }
         .result-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
-        .result-table th, .result-table td { border: 1px solid #000; padding: 10px; font-size: 13px; }
-        .result-table th { background: #f2f2f2; text-align: left; }
-        .post-header { background: #eee; font-weight: bold; font-size: 14px; text-transform: uppercase; }
-        .winner-row { background: #fafff9; font-weight: bold; }
-        .footer { margin-top: 80px; display: flex; justify-content: space-between; }
-        .sig-box { width: 200px; border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 12px; font-weight: bold; }
+        .result-table th, .result-table td { border: 1px solid #000; padding: 12px 10px; font-size: 13px; }
+        .result-table th { background: #f2f2f2; text-align: left; text-transform: uppercase; font-size: 11px; }
+        .post-header { background: #f9f9f9; font-weight: bold; font-size: 14px; text-transform: uppercase; color: #000; }
+        .winner-row { background: #fafff9 !important; font-weight: bold; }
+        .footer { margin-top: 80px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .sig-box { width: 250px; border-top: 1px solid #000; text-align: center; padding-top: 8px; font-size: 12px; font-weight: bold; margin-top: 40px; }
+        @media print {
+          body { padding: 0; }
+          .official-sheet { border: none; width: 100%; max-width: 100%; padding: 0; }
+          .post-header { background-color: #eee !important; -webkit-print-color-adjust: exact; }
+          .winner-row { background-color: #fafff9 !important; -webkit-print-color-adjust: exact; }
+        }
       </style>
       <div class="official-sheet">
         <div class="header">
           <h1>College Union Election ${year}</h1>
           <h2>GOVERNMENT VICTORIA COLLEGE PALAKKAD</h2>
-          <h1 style="font-size: 18px; margin-top: 15px;">Official Result Notification</h1>
+          <div style="font-size: 18px; margin-top: 15px; font-weight: 900; text-decoration: underline;">OFFICIAL RESULT NOTIFICATION</div>
         </div>
 
-        <p style="font-size: 13px; margin-bottom: 20px;">
-          The following candidates are hereby declared to have been duly elected to the respective posts of the College Union for the academic year ${year}, 
+        <p style="font-size: 14px; margin-bottom: 25px; text-align: justify;">
+          The following candidates are hereby declared to have been duly elected to the respective offices of the College Union for the academic year ${year}, 
           based on the counting of votes held on ${new Date().toLocaleDateString('en-IN', {day: 'numeric', month: 'long', year: 'numeric'})}.
         </p>
 
         <table class="result-table">
           <thead>
             <tr>
-              <th>Office / Post</th>
-              <th>Name of Candidate</th>
-              <th style="text-align: center;">Votes</th>
-              <th>Status / Remarks</th>
+              <th style="width: 35%;">Office / Post</th>
+              <th style="width: 35%;">Name of Candidate</th>
+              <th style="text-align: center; width: 10%;">Votes</th>
+              <th style="width: 20%;">Remarks</th>
             </tr>
           </thead>
           <tbody>
@@ -188,16 +193,16 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule) {
               if (res.type === 'no-candidates') return '';
               return `
                 <tr class="post-header">
-                  <td colspan="4">${esc(res.post)}</td>
+                  <td colspan="4" style="background: #eee;">${esc(res.post)}</td>
                 </tr>
                 ${res.candidates.map(c => {
                   const isWinner = res.winner && res.winner.id === c.id;
                   return `
                     <tr class="${isWinner ? 'winner-row' : ''}">
-                      <td style="padding-left: 25px;">${esc(res.post)}</td>
+                      <td style="padding-left: 20px; color: #555; font-size: 11px;">${esc(res.post)}</td>
                       <td>${esc(c.candidateName)}</td>
-                      <td style="text-align: center;">${res.type === 'unanimous' ? '—' : c.votes}</td>
-                      <td>${isWinner ? (res.type === 'unanimous' ? 'Elected Unanimously' : 'WON') : ''}</td>
+                      <td style="text-align: center;">${res.type === 'unanimous' ? '—' : (c.votes || 0)}</td>
+                      <td style="font-size: 11px;">${isWinner ? (res.type === 'unanimous' ? 'Elected Unanimously' : 'WON BY HIGHEST VOTE') : ''}</td>
                     </tr>
                   `;
                 }).join('')}
@@ -207,24 +212,36 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule) {
         </table>
 
         <div class="footer">
-          <div>
-            <p style="font-size: 12px;">Date: ${new Date().toLocaleDateString()}</p>
-            <p style="font-size: 12px;">Place: Palakkad</p>
+          <div style="font-size: 13px;">
+            <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-IN')}</p>
+            <p><strong>Place:</strong> Palakkad</p>
           </div>
           <div class="sig-box">
             RETURNING OFFICER<br>
-            College Union Election ${year}
+            <span style="font-weight: normal; font-size: 11px;">College Union Election ${year}</span>
           </div>
         </div>
       </div>
     `;
 
     const printWin = window.open('', '_blank');
+    if (!printWin) {
+      showToast('Popup blocked! Please allow popups to print.', 'error');
+      return;
+    }
     printWin.document.write(`
       <html>
-        <head><title>Official Result Sheet - ${year}</title></head>
-        <body onload="window.print(); window.close();">
+        <head><title>Election Results ${year}</title></head>
+        <body>
           ${printHtml}
+          <script>
+            window.addEventListener('load', () => {
+              setTimeout(() => {
+                window.print();
+                window.close();
+              }, 500);
+            });
+          </script>
         </body>
       </html>
     `);
