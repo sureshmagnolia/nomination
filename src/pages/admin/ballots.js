@@ -196,7 +196,7 @@ export async function renderAdminBallots(container) {
               <h1 style="font-size: 18px; margin: 5px 0;">GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
               <h2 style="font-size: 14px; margin: 0;">OFFICIAL BALLOT PAPER (GENERAL) - COUNTERFOIL</h2>
               <div style="margin-top: 15px; font-weight: bold; text-align: left; display: flex; justify-content: space-between;">
-                <span>SL.NO. ____________</span>
+                <span>SL.NO. G____________</span>
                 <span style="font-size: 10px; color: #666; font-style: italic;">(To be detached before voting)</span>
               </div>
             </div>
@@ -206,7 +206,7 @@ export async function renderAdminBallots(container) {
               <h1>GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
               <h2>OFFICIAL BALLOT PAPER (GENERAL)</h2>
             </div>
-            <div class="meta-row"><div>SL.NO. ____________</div><div>Signature of PRO</div></div>
+            <div class="meta-row"><div>SL.NO. G____________</div><div>Signature of PRO</div></div>
             <div class="instr-box">MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED</div>
             <div class="ballot-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: flex-start;">
               <div class="ballot-col" id="col1"></div>
@@ -264,13 +264,14 @@ export async function renderAdminBallots(container) {
 
       filteredOthers.forEach(p => {
         const pCands = candidates.filter(c => c.post === p.post);
+        const prefix = isYear(p) ? 'R' : 'A';
         html += `
           <div class="ballot-container a5 page-break">
             <div class="ballot-header">
               <h1>GVC ELECTION ${year}</h1>
               <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER</h2>
             </div>
-            <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ______</div><div>PRO Sign</div></div>
+            <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ${prefix}______</div><div>PRO Sign</div></div>
             <div class="post-box">
               <div class="post-title">${esc(p.post.toUpperCase())}</div>
               ${pCands.map((c, i) => `

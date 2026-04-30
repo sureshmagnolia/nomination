@@ -1616,7 +1616,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <h1 style="font-size: 18px; margin: 5px 0;">GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
               <h2 style="font-size: 14px; margin: 0;">OFFICIAL BALLOT PAPER (GENERAL) - COUNTERFOIL</h2>
               <div style="margin-top: 15px; font-weight: bold; text-align: left; display: flex; justify-content: space-between;">
-                <span>SL.NO. ____________</span>
+                <span>SL.NO. G____________</span>
                 <span style="font-size: 10px; color: #666; font-style: italic;">(To be detached before voting)</span>
               </div>
             </div>
@@ -1626,7 +1626,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <h1>GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
               <h2>OFFICIAL BALLOT PAPER (GENERAL)</h2>
             </div>
-            <div class="meta-row"><div>SL.NO. ____________</div><div>Signature of PRO</div></div>
+            <div class="meta-row"><div>SL.NO. G____________</div><div>Signature of PRO</div></div>
             <div class="instr-box">MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED</div>
             <div class="ballot-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: flex-start;">
               <div class="ballot-col" id="col1"></div>
@@ -1648,13 +1648,13 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               `).join(``)}
               <div class="candidate-row"><div class="sl-no">${i.length+1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
             </div>
-          `;t%2==0?n+=a:r+=a}),f=f.replace(`<div class="ballot-col" id="col1"></div>`,`<div class="ballot-col" id="col1">${n}</div>`),f=f.replace(`<div class="ballot-col" id="col2"></div>`,`<div class="ballot-col" id="col2">${r}</div>`)}}let p=d.filter(e=>s(e)||c(e));return(e===`all`||e===`year`||e===`assoc`)&&p.filter(t=>e===`all`||e===`year`&&s(t)||e===`assoc`&&c(t)).forEach(e=>{let t=o.filter(t=>t.post===e.post);f+=`
+          `;t%2==0?n+=a:r+=a}),f=f.replace(`<div class="ballot-col" id="col1"></div>`,`<div class="ballot-col" id="col1">${n}</div>`),f=f.replace(`<div class="ballot-col" id="col2"></div>`,`<div class="ballot-col" id="col2">${r}</div>`)}}let p=d.filter(e=>s(e)||c(e));return(e===`all`||e===`year`||e===`assoc`)&&p.filter(t=>e===`all`||e===`year`&&s(t)||e===`assoc`&&c(t)).forEach(e=>{let t=o.filter(t=>t.post===e.post),n=s(e)?`R`:`A`;f+=`
           <div class="ballot-container a5 page-break">
             <div class="ballot-header">
               <h1>GVC ELECTION ${a}</h1>
               <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER</h2>
             </div>
-            <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ______</div><div>PRO Sign</div></div>
+            <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ${n}______</div><div>PRO Sign</div></div>
             <div class="post-box">
               <div class="post-title">${y(e.post.toUpperCase())}</div>
               ${t.map((e,t)=>`
