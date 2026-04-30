@@ -1190,6 +1190,8 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               @media print {
                 .no-print { display: none; }
                 .page-break { page-break-after: always; }
+                body { counter-reset: page; }
+                .page-number:after { counter-increment: page; content: counter(page); }
               }
             </style>
           </head>
@@ -1272,6 +1274,9 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Returning Officer</div>
             <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Presiding Officer</div>
           </div>
+          <div style="text-align: center; font-size: 9px; color: #666; margin-top: 10px;">
+            Page <span class="page-number"></span>
+          </div>
         </div>
       </div>`,a.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),s+=`
         <div class="page-break">
@@ -1302,6 +1307,9 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               </tbody>
             </table>
             <div style="margin-top:20px; text-align:right; font-size:10px; color:#999">Total Voters: ${r.length}</div>
+            <div style="text-align: center; font-size: 9px; color: #666; margin-top: 15px;">
+              Page <span class="page-number"></span>
+            </div>
           </div>
         </div>`})}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`},_=()=>{f.forEach(e=>{e.classes=[],e.totalStudents=0});let e={};d.forEach(t=>{e[t.dept]||(e[t.dept]={name:t.dept,total:0,classes:[]}),e[t.dept].classes.push(t),e[t.dept].total+=t.count});let t=f.length,n=r.length/t*1.25;Object.values(e).sort((e,t)=>t.total-e.total).forEach(e=>{f.sort((e,t)=>e.totalStudents-t.totalStudents);let t=f[0];if(t.totalStudents+e.total>n&&e.classes.length>1){f.sort((e,t)=>e.totalStudents-t.totalStudents);let t=f[0],n=f.length>1?f[1]:f[0];[...e.classes].sort((e,t)=>t.count-e.count).forEach(e=>{let r=t.totalStudents<=n.totalStudents?t:n;r.classes.push(e.name),r.totalStudents+=e.count})}else e.classes.forEach(e=>t.classes.push(e.name)),t.totalStudents+=e.total}),f.sort((e,t)=>e.boothNumber-t.boothNumber)};h()}async function ke(e){let t=R();if(t){z(e,`counting`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Counting Setup...</p></div>

@@ -215,6 +215,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               @media print {
                 .no-print { display: none; }
                 .page-break { page-break-after: always; }
+                body { counter-reset: page; }
+                .page-number:after { counter-increment: page; content: counter(page); }
               }
             </style>
           </head>
@@ -402,6 +404,9 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Returning Officer</div>
             <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Presiding Officer</div>
           </div>
+          <div style="text-align: center; font-size: 9px; color: #666; margin-top: 10px;">
+            Page <span class="page-number"></span>
+          </div>
         </div>
       </div>`;
 
@@ -437,6 +442,9 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               </tbody>
             </table>
             <div style="margin-top:20px; text-align:right; font-size:10px; color:#999">Total Voters: ${classStudents.length}</div>
+            <div style="text-align: center; font-size: 9px; color: #666; margin-top: 15px;">
+              Page <span class="page-number"></span>
+            </div>
           </div>
         </div>`;
       });
