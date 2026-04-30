@@ -13,20 +13,23 @@ export async function renderAdminResults(container) {
   `);
 
   try {
-    const [posts, nominations, results, schedule] = await Promise.all([
+    const [posts, nominations, results, schedule, sets] = await Promise.all([
       api.getPosts(),
       api.getFinalNominations(),
       api.getResults().catch(() => []),
-      api.getPublicSchedule().catch(() => ({}))
+      api.getPublicSchedule().catch(() => ({})),
+      api.adminGetSettings(pwd).catch(() => ({}))
     ]);
-    renderResultsUI(container.querySelector('#adminMain'), pwd, posts, nominations.active || [], results, schedule);
+    renderResultsUI(container.querySelector('#adminMain'), pwd, posts, nominations.active || [], results, schedule, sets);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
   }
 }
 
-function renderResultsUI(main, pwd, posts, candidates, results, schedule) {
+function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets) {
   const year = schedule.electionYear || new Date().getFullYear();
+  const collegeName = sets.collegeName || 'GOVERNMENT VICTORIA COLLEGE PALAKKAD';
+  const shortName = sets.collegeShortName || 'GVC';
   
   // 1. Aggregate results
   const agg = {};
@@ -170,7 +173,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule) {
       <div class="official-sheet">
         <div class="header">
           <h1>College Union Election ${year}</h1>
-          <h2>GOVERNMENT VICTORIA COLLEGE PALAKKAD</h2>
+          <h2>${esc(collegeName)}</h2>
           <div style="font-size: 18px; margin-top: 15px; font-weight: 900; text-decoration: underline;">OFFICIAL RESULT NOTIFICATION</div>
         </div>
 

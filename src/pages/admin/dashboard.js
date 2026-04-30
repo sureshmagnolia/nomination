@@ -67,16 +67,17 @@ export async function renderAdminDashboard(container) {
           </div>
           
           <div class="glass rounded-2xl p-6 space-y-4">
-            <h4 class="font-bold text-white text-sm">Visibility Status</h4>
-            <div class="space-y-3">
-              <div class="flex justify-between items-center text-xs">
-                <span class="text-slate-400">Valid List</span>
-                <span class="badge ${settings.validListPublished === 'true' ? 'badge-valid' : 'badge-pending'}">${settings.validListPublished === 'true' ? 'Published' : 'Hidden'}</span>
+            <h4 class="font-bold text-white text-sm">College Information</h4>
+            <div class="space-y-4">
+              <div>
+                <label class="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Full College Name</label>
+                <input type="text" id="inputCollegeName" class="field text-xs py-1.5" value="${esc(settings.collegeName)}">
               </div>
-              <div class="flex justify-between items-center text-xs">
-                <span class="text-slate-400">Final List</span>
-                <span class="badge ${settings.finalListPublished === 'true' ? 'badge-valid' : 'badge-pending'}">${settings.finalListPublished === 'true' ? 'Published' : 'Hidden'}</span>
+              <div>
+                <label class="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Short Form (Abbreviation)</label>
+                <input type="text" id="inputCollegeShort" class="field text-xs py-1.5" value="${esc(settings.collegeShortName)}">
               </div>
+              <button id="btnUpdateBranding" class="btn btn-primary w-full text-xs py-2">Update Branding</button>
             </div>
           </div>
         </div>
@@ -125,6 +126,20 @@ export async function renderAdminDashboard(container) {
       btn.addEventListener('click', () => {
         import('../../router.js').then(({ router }) => router.navigate(`/admin/${btn.dataset.adminNav}`));
       });
+    });
+
+    // Handle branding update
+    container.querySelector('#btnUpdateBranding').addEventListener('click', async () => {
+      const collegeName = container.querySelector('#inputCollegeName').value.trim();
+      const collegeShortName = container.querySelector('#inputCollegeShort').value.trim();
+      if (!collegeName || !collegeShortName) return showToast('Please fill all branding fields.', 'error');
+
+      try {
+        await api.adminUpdateSettings(pwd, { collegeName, collegeShortName });
+        showToast('College branding updated successfully! Refresh to see changes system-wide.', 'success');
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
     });
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;

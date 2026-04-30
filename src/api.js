@@ -89,8 +89,14 @@ export const api = {
   adminPublishFinalList: (password) =>
     post({ action: 'adminPublishFinalList', password }),
 
-  /** Get current publish settings */
+  /** Get current publish and college settings */
   adminGetSettings: (password) => get({ action: 'adminGetSettings', password }),
+
+  /** Update system settings like college name */
+  adminUpdateSettings: (password, settings) => post({ action: 'adminUpdateSettings', password, ...settings }),
+
+  /** Public: get general settings */
+  getPublicSettings: () => get({ action: 'adminGetSettings', password: 'NONE' }), // Open for public info if needed, or just specific keys
 
   // ─── Posts Management ───────────────────────────────────────────────────────
 

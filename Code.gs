@@ -260,7 +260,17 @@ function doGet(e) {
       return jsonOut({
         validListPublished: getSetting('validListPublished'),
         finalListPublished: getSetting('finalListPublished'),
+        collegeName: getSetting('collegeName') || 'GOVERNMENT VICTORIA COLLEGE PALAKKAD',
+        collegeShortName: getSetting('collegeShortName') || 'GVC'
       });
+    }
+
+    if (action === 'adminUpdateSettings') {
+      const body = JSON.parse(e.postData.contents);
+      checkAdmin(body.password);
+      if (body.collegeName) setSetting('collegeName', body.collegeName);
+      if (body.collegeShortName) setSetting('collegeShortName', body.collegeShortName);
+      return jsonOut({ ok: true });
     }
 
     if (action === 'adminGetPosts') {

@@ -149,18 +149,22 @@ export async function renderAdminBallots(container) {
   };
 
   const generateBallotsHTML = async (filterType = 'all') => {
-    let posts, candidatesResponse, schedule;
+    let posts, candidatesResponse, schedule, settings;
     try {
-      [posts, candidatesResponse, schedule] = await Promise.all([
+      [posts, candidatesResponse, schedule, settings] = await Promise.all([
         api.adminGetPosts(pwd),
         api.getFinalNominations(),
-        api.getPublicSchedule()
+        api.getPublicSchedule(),
+        api.adminGetSettings(pwd).catch(() => ({}))
       ]);
     } catch (err) {
       throw new Error(err.message.includes('not published') 
         ? 'Final List Not Published. Please finalize and publish the list first.' 
         : err.message);
     }
+
+    const collegeName = settings.collegeName || 'GOVERNMENT VICTORIA COLLEGE PALAKKAD';
+    const shortName = settings.collegeShortName || 'GVC';
 
     const year = schedule.electionYear || new Date().getFullYear().toString();
     const candidates = candidatesResponse.active || [];
@@ -193,7 +197,7 @@ export async function renderAdminBallots(container) {
             <!-- Counterfoil -->
             <div style="border-bottom: 2px dotted #000; padding-bottom: 20px; margin-bottom: 30px; text-align: center;">
               <h1 style="font-size: 16px; margin: 0;">COLLEGE UNION ELECTION ${year}</h1>
-              <h1 style="font-size: 18px; margin: 5px 0;">GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
+              <h1 style="font-size: 18px; margin: 5px 0;">${esc(collegeName)}</h1>
               <h2 style="font-size: 14px; margin: 0;">OFFICIAL BALLOT PAPER (GENERAL) - COUNTERFOIL</h2>
               <div style="margin-top: 15px; font-weight: bold; text-align: left; display: flex; justify-content: space-between;">
                 <span>SL.NO. G____________</span>
@@ -203,7 +207,7 @@ export async function renderAdminBallots(container) {
 
             <div class="ballot-header">
               <h1>COLLEGE UNION ELECTION ${year}</h1>
-              <h1>GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
+              <h1>${esc(collegeName)}</h1>
               <h2>OFFICIAL BALLOT PAPER (GENERAL)</h2>
             </div>
             <div class="meta-row"><div>SL.NO. G____________</div><div>Signature of PRO</div></div>
@@ -268,7 +272,7 @@ export async function renderAdminBallots(container) {
         html += `
           <div class="ballot-container a5 page-break">
             <div class="ballot-header">
-              <h1>GVC ELECTION ${year}</h1>
+              <h1>${esc(shortName)} ELECTION ${year}</h1>
               <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER</h2>
             </div>
             <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ${prefix}______</div><div>PRO Sign</div></div>
@@ -307,16 +311,19 @@ export async function renderAdminBallots(container) {
   const handleSummaryReport = async () => {
     try {
       showToast('Calculating ranges...', 'info');
-      const [booths, nominalRoll, posts, candidatesResponse, schedule] = await Promise.all([
+      const [booths, nominalRoll, posts, candidatesResponse, schedule, settings] = await Promise.all([
         api.adminGetBooths(pwd),
         api.getNominalRoll(),
         api.adminGetPosts(pwd),
         api.getFinalNominations(),
-        api.getPublicSchedule()
+        api.getPublicSchedule(),
+        api.adminGetSettings(pwd).catch(() => ({}))
       ]);
 
       const candidates = candidatesResponse.active || [];
       const year = schedule.electionYear || new Date().getFullYear();
+      const collegeName = settings.collegeName || 'Government Victoria College Palakkad';
+      const shortName = settings.collegeShortName || 'GVC';
       
       const isYear = (p) => p.post.toLowerCase().includes('representative') || p.post.toLowerCase().includes('year');
       const isAssoc = (p) => p.post.toLowerCase().includes('association') || p.post.toLowerCase().includes('assoc');
@@ -395,7 +402,7 @@ export async function renderAdminBallots(container) {
         <div style="padding: 40px; font-family: sans-serif; color: #333;">
           <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
             <h1 style="margin: 0; font-size: 24px;">BALLOT PRINTING SUMMARY - ${year}</h1>
-            <h2 style="margin: 5px 0 0 0; font-size: 18px; color: #666;">Government Victoria College Palakkad</h2>
+            <h2 style="margin: 5px 0 0 0; font-size: 18px; color: #666;">${esc(collegeName)}</h2>
           </div>
 
           <p style="font-size: 14px; margin-bottom: 20px;">
