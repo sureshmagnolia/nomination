@@ -19,7 +19,7 @@ export async function renderAdminBooths(container) {
       api.getNominalRoll(),
       api.adminGetBooths(pwd).catch(() => []),
       api.adminGetLocations(pwd).catch(() => []),
-      api.getPosts().catch(() => []),
+      api.adminGetPosts(pwd).catch(() => []),
       api.getFinalNominations().catch(() => ({ active: [] }))
     ]);
     renderBoothsUI(container.querySelector('#adminMain'), pwd, nominalRoll, booths, locations, posts, nominations);

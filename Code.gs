@@ -550,7 +550,11 @@ function doPost(e) {
       const s = getSheet(SHEET_POSTS);
       const d = s.getDataRange().getValues();
       for (let i = 1; i < d.length; i++) {
-        if (d[i][0] === body.postName) { s.deleteRow(i + 1); return jsonOut({ ok: true }); }
+        if (d[i][0] === body.postName) { 
+          s.deleteRow(i + 1); 
+          CacheService.getScriptCache().remove('public_posts');
+          return jsonOut({ ok: true }); 
+        }
       }
       return errOut('Post not found.');
     }
@@ -559,6 +563,7 @@ function doPost(e) {
       checkAdmin(body.password);
       const s = getSheet(SHEET_POSTS);
       s.appendRow([body.post, body.femaleOnly, body.finalYearIneligible, body.yearRestriction, body.deptRestriction]);
+      CacheService.getScriptCache().remove('public_posts');
       return jsonOut({ ok: true });
     }
 
@@ -569,6 +574,7 @@ function doPost(e) {
       for (let i = 1; i < d.length; i++) {
         if (d[i][0] === body.post) {
           s.getRange(i + 1, 1, 1, 5).setValues([[body.post, body.femaleOnly, body.finalYearIneligible, body.yearRestriction, body.deptRestriction]]);
+          CacheService.getScriptCache().remove('public_posts');
           return jsonOut({ ok: true });
         }
       }
@@ -645,6 +651,7 @@ function doPost(e) {
         }
       });
       
+      CacheService.getScriptCache().remove('public_posts');
       return jsonOut({ ok: true });
     }
 
