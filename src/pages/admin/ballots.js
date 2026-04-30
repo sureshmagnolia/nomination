@@ -360,20 +360,23 @@ export async function renderAdminBallots(container) {
           const boothStudents = nominalRoll.filter(s => b.classes.includes(String(s.CLASS).trim()));
           const targetStudents = boothStudents.filter(s => {
             const cls = String(s.CLASS || '').toUpperCase();
-            // PhD scholars NEVER vote for reps
+            
+            // 1. PhD scholars NEVER vote for reps
             if (cls.includes('PH D') || cls.includes('PH.D')) return false; 
 
-            if (yr === 'PG') {
-              return /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A)\b/i.test(cls);
-            }
+            // 2. Define PG logic (Priority: PG students only vote for PG Rep)
+            const isPG = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A)\b/i.test(cls);
+
+            if (yr === 'PG') return isPG;
             
-            // Precise matching to avoid "I" matching "III"
-            // We look for the year prefix at the start or with a word boundary
-            if (yr === '1') return /\b(I|1ST)\b\s*YEAR/i.test(cls) && !/\b(II|III)\b/i.test(cls);
-            if (yr === '2') return /\b(II|2ND)\b\s*YEAR/i.test(cls) && !/\b(III)\b/i.test(cls);
-            if (yr === '3') return /\b(III|3RD)\b\s*YEAR/i.test(cls);
+            // 3. UG Rep logic (Mutually Exclusive: Must NOT be a PG student)
+            if (isPG) return false; 
+
+            if (yr === '1') return cls.startsWith('1ST YEAR');
+            if (yr === '2') return cls.startsWith('2ND YEAR');
+            if (yr === '3') return cls.startsWith('3RD YEAR');
             
-            return cls.includes(yr);
+            return false;
           });
           
           if (targetStudents.length > 0) {
@@ -393,14 +396,15 @@ export async function renderAdminBallots(container) {
       // 3. Association Series (Post-wise, then Booth-wise)
       const contestableAssocs = posts.filter(isAssoc).filter(p => candidates.filter(c => c.post === p.post).length > 1);
       contestableAssocs.forEach(p => {
-        const dept = p.post.replace('Association Secretary ', '').trim().toUpperCase();
+        // Normalize: "Association Secretary Computer Science" -> "COMPUTER SCIENCE"
+        const dept = p.post.replace('Association Secretary ', '').trim().toUpperCase().replace(/[-\s]/g, ' ');
         const postBooths = [];
         sortedBooths.forEach(b => {
           const boothStudents = nominalRoll.filter(s => b.classes.includes(String(s.CLASS).trim()));
           const targetStudents = boothStudents.filter(s => {
-            const sDept = String(s.Dept || '').trim().toUpperCase();
-            const sCls  = String(s.CLASS || '').trim().toUpperCase();
-            // Primary check on Dept field, fallback check if Dept is mentioned in CLASS name
+            const sDept = String(s.Dept || '').trim().toUpperCase().replace(/[-\s]/g, ' ');
+            const sCls  = String(s.CLASS || '').trim().toUpperCase().replace(/[-\s]/g, ' ');
+            // Check if normalized target dept is in student's Dept or CLASS string
             return sDept.includes(dept) || sCls.includes(dept);
           });
           if (targetStudents.length > 0) {
