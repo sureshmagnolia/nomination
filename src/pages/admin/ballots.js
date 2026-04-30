@@ -97,9 +97,11 @@ export async function renderAdminBallots(container) {
             .ballot-header h2 { font-size: 18px; margin: 5px 0 0 0; }
             
             .a3 .ballot-grid { 
-              column-count: 2; 
-              column-gap: 30px; 
+              display: grid; 
+              grid-template-columns: 1fr 1fr; 
+              gap: 30px; 
               width: 100%;
+              align-items: flex-start;
             }
             .a5 .ballot-grid { display: block; }
 
@@ -177,27 +179,29 @@ export async function renderAdminBallots(container) {
             </div>
             <div class="meta-row"><div>SL.NO. ____________</div><div>Signature of PRO</div></div>
             <div class="instr-box">MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED</div>
-            <div class="ballot-grid">
+            <div class="ballot-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: flex-start;">
+              <div class="ballot-col" id="col1"></div>
+              <div class="ballot-col" id="col2"></div>
+            </div>
+          </div>
         `;
 
         const sorted = [...gPosts].sort((a, b) => {
           const aL = a.post.toLowerCase(), bL = b.post.toLowerCase();
-          // Chairman first
           if (aL.includes('chairman') && !aL.includes('vice')) return -1;
           if (bL.includes('chairman') && !bL.includes('vice')) return 1;
-          // Vice Chairman second
           if (aL.includes('vice chairman')) return -1;
           if (bL.includes('vice chairman')) return 1;
-          // UUC last
           if (aL.includes('university union councillor') || aL.includes('uuc')) return 1;
           if (bL.includes('university union councillor') || bL.includes('uuc')) return -1;
           return 0;
         });
 
-        sorted.forEach(p => {
+        let col1Html = '', col2Html = '';
+        sorted.forEach((p, idx) => {
           const pCands = candidates.filter(c => c.post === p.post);
           if (pCands.length === 0) return;
-          html += `
+          const pContent = `
             <div class="post-box">
               <div class="post-title">${esc(p.post.toUpperCase())}</div>
               ${pCands.map((c, i) => `
@@ -213,8 +217,11 @@ export async function renderAdminBallots(container) {
               <div class="candidate-row"><div class="sl-no">${pCands.length + 1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
             </div>
           `;
+          if (idx % 2 === 0) col1Html += pContent;
+          else col2Html += pContent;
         });
-        html += `</div></div>`;
+        html = html.replace('<div class="ballot-col" id="col1"></div>', `<div class="ballot-col" id="col1">${col1Html}</div>`);
+        html = html.replace('<div class="ballot-col" id="col2"></div>', `<div class="ballot-col" id="col2">${col2Html}</div>`);
       }
     }
 

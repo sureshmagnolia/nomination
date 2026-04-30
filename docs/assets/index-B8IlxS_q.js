@@ -1521,9 +1521,11 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             .ballot-header h2 { font-size: 18px; margin: 5px 0 0 0; }
             
             .a3 .ballot-grid { 
-              column-count: 2; 
-              column-gap: 30px; 
+              display: grid; 
+              grid-template-columns: 1fr 1fr; 
+              gap: 30px; 
               width: 100%;
+              align-items: flex-start;
             }
             .a5 .ballot-grid { display: block; }
 
@@ -1556,7 +1558,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           ${e}
         </body>
       </html>
-    `),t.document.close()},i=async(e=`all`)=>{let n,r;try{[n,r]=await Promise.all([C.adminGetPosts(t),C.getFinalNominations()])}catch(e){throw Error(e.message.includes(`not published`)?`Final List Not Published. Please finalize and publish the list first.`:e.message)}let i=r.active||[];if(i.length===0)throw Error(`No active candidates found.`);let a=e=>{let t=e.post.toLowerCase();return t.includes(`representative`)||t.includes(`year`)},o=e=>{let t=e.post.toLowerCase();return t.includes(`association`)||t.includes(`assoc`)},s=e=>!a(e)&&!o(e),c=``;if(e===`all`||e===`general`){let e=n.filter(s);e.length>0&&(c+=`
+    `),t.document.close()},i=async(e=`all`)=>{let n,r;try{[n,r]=await Promise.all([C.adminGetPosts(t),C.getFinalNominations()])}catch(e){throw Error(e.message.includes(`not published`)?`Final List Not Published. Please finalize and publish the list first.`:e.message)}let i=r.active||[];if(i.length===0)throw Error(`No active candidates found.`);let a=e=>{let t=e.post.toLowerCase();return t.includes(`representative`)||t.includes(`year`)},o=e=>{let t=e.post.toLowerCase();return t.includes(`association`)||t.includes(`assoc`)},s=e=>!a(e)&&!o(e),c=``;if(e===`all`||e===`general`){let e=n.filter(s);if(e.length>0){c+=`
           <div class="ballot-container a3 page-break">
             <div class="ballot-header">
               <h1>COLLEGE UNION ELECTION ${new Date().getFullYear()}</h1>
@@ -1565,11 +1567,15 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             </div>
             <div class="meta-row"><div>SL.NO. ____________</div><div>Signature of PRO</div></div>
             <div class="instr-box">MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED</div>
-            <div class="ballot-grid">
-        `,[...e].sort((e,t)=>{let n=e.post.toLowerCase(),r=t.post.toLowerCase();return n.includes(`chairman`)&&!n.includes(`vice`)?-1:r.includes(`chairman`)&&!r.includes(`vice`)?1:n.includes(`vice chairman`)?-1:r.includes(`vice chairman`)||n.includes(`university union councillor`)||n.includes(`uuc`)?1:r.includes(`university union councillor`)||r.includes(`uuc`)?-1:0}).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(c+=`
+            <div class="ballot-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: flex-start;">
+              <div class="ballot-col" id="col1"></div>
+              <div class="ballot-col" id="col2"></div>
+            </div>
+          </div>
+        `;let t=[...e].sort((e,t)=>{let n=e.post.toLowerCase(),r=t.post.toLowerCase();return n.includes(`chairman`)&&!n.includes(`vice`)?-1:r.includes(`chairman`)&&!r.includes(`vice`)?1:n.includes(`vice chairman`)?-1:r.includes(`vice chairman`)||n.includes(`university union councillor`)||n.includes(`uuc`)?1:r.includes(`university union councillor`)||r.includes(`uuc`)?-1:0}),n=``,r=``;t.forEach((e,t)=>{let a=i.filter(t=>t.post===e.post);if(a.length===0)return;let o=`
             <div class="post-box">
               <div class="post-title">${h(e.post.toUpperCase())}</div>
-              ${t.map((e,t)=>`
+              ${a.map((e,t)=>`
                 <div class="candidate-row">
                   <div class="sl-no">${t+1}</div>
                   <div class="c-name">
@@ -1579,9 +1585,9 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                   <div class="stamp-box"></div>
                 </div>
               `).join(``)}
-              <div class="candidate-row"><div class="sl-no">${t.length+1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
+              <div class="candidate-row"><div class="sl-no">${a.length+1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
             </div>
-          `)}),c+=`</div></div>`)}let l=n.filter(e=>a(e)||o(e));return(e===`all`||e===`year`||e===`assoc`)&&l.filter(t=>e===`all`||e===`year`&&a(t)||e===`assoc`&&o(t)).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(c+=`
+          `;t%2==0?n+=o:r+=o}),c=c.replace(`<div class="ballot-col" id="col1"></div>`,`<div class="ballot-col" id="col1">${n}</div>`),c=c.replace(`<div class="ballot-col" id="col2"></div>`,`<div class="ballot-col" id="col2">${r}</div>`)}}let l=n.filter(e=>a(e)||o(e));return(e===`all`||e===`year`||e===`assoc`)&&l.filter(t=>e===`all`||e===`year`&&a(t)||e===`assoc`&&o(t)).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(c+=`
           <div class="ballot-container a5 page-break">
             <div class="ballot-header">
               <h1>GVC ELECTION ${new Date().getFullYear()}</h1>
