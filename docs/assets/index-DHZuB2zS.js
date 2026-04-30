@@ -1672,7 +1672,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <div class="candidate-row"><div class="sl-no">${t.length+1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
             </div>
           </div>
-        `}),h},a=async e=>{try{x(`Generating ballots...`,`info`),r(await i(e))}catch(e){x(e.message,`error`)}},o=async()=>{try{x(`Calculating ranges...`,`info`);let[e,n,i,a,o,s]=await Promise.all([u.adminGetBooths(t),u.getNominalRoll(),u.adminGetPosts(t),u.getFinalNominations(),u.getPublicSchedule(),u.adminGetSettings(t).catch(()=>({}))]);a.active;let c=o.electionYear||new Date().getFullYear(),l=s.collegeName||`Government Victoria College Palakkad`;s.collegeShortName;let d=e=>e.post.toLowerCase().includes(`representative`)||e.post.toLowerCase().includes(`year`),f=e=>e.post.toLowerCase().includes(`association`)||e.post.toLowerCase().includes(`assoc`),p=1,m=1,h=1,g=e=>{if(!e||e<=0)return`0`;if(e<=65)return`1 X ${e}`;let t=Math.floor(e/50),n=e%50;if(n===0)return`${t} X 50`;if(n<=15){let e=t-1,r=50+n;return`${e>0?e+` X 50, `:``}1 X ${r}`}else return`${t} X 50, 1 X ${n}`},_=[...e].sort((e,t)=>e.boothNumber-t.boothNumber),v=[],b=[],S=[];_.forEach(e=>{let t=n.filter(t=>e.classes.includes(String(t.CLASS).trim()));t.length!==0&&(v.push({booth:e.boothNumber,count:t.length,start:p,end:p+t.length-1}),p+=t.length)}),i.filter(d).forEach(e=>{let t=String(e.yearRestriction||``).trim().toUpperCase();if(!t)return;let r=[];_.forEach(i=>{let a=n.filter(e=>i.classes.includes(String(e.CLASS).trim())).filter(e=>{let n=String(e.CLASS||``).toUpperCase();if(n.includes(`PH D`)||n.includes(`PH.D`))return!1;let r=/\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A)\b/i.test(n);return t===`PG`?r:r?!1:t===`1`?n.startsWith(`1ST YEAR`):t===`2`?n.startsWith(`2ND YEAR`):t===`3`?n.startsWith(`3RD YEAR`):!1});a.length>0&&(r.push({booth:i.boothNumber,post:e.post,count:a.length,start:m,end:m+a.length-1}),m+=a.length)}),r.length>0&&b.push(...r)}),i.filter(f).forEach(e=>{let t=e.post.toUpperCase();t.includes(`ASSOCIATION SECRETARY`)&&(t=t.split(`ASSOCIATION SECRETARY`)[1].trim()),t=t.replace(/[-\s]/g,` `);let r=[];_.forEach(i=>{let a=n.filter(e=>i.classes.includes(String(e.CLASS).trim())).filter(e=>{let n=String(e.Dept||``).trim().toUpperCase().replace(/[-\s]/g,` `),r=String(e.CLASS||``).trim().toUpperCase().replace(/[-\s]/g,` `);return n===t||n.includes(t)||r.includes(t)});a.length>0&&(r.push({booth:i.boothNumber,post:e.post,count:a.length,start:h,end:h+a.length-1}),h+=a.length)}),r.length>0&&S.push(...r)}),r(`
+        `}),h},a=async e=>{try{x(`Generating ballots...`,`info`),r(await i(e))}catch(e){x(e.message,`error`)}},o=async()=>{try{x(`Calculating ranges...`,`info`);let[e,n,i,a,o,s]=await Promise.all([u.adminGetBooths(t),u.getNominalRoll(),u.adminGetPosts(t),u.getFinalNominations(),u.getPublicSchedule(),u.adminGetSettings(t).catch(()=>({}))]);a.active;let c=o.electionYear||new Date().getFullYear(),l=s.collegeName||`Government Victoria College Palakkad`;s.collegeShortName;let d=e=>e.post.toLowerCase().includes(`representative`)||e.post.toLowerCase().includes(`year`),f=e=>e.post.toLowerCase().includes(`association`)||e.post.toLowerCase().includes(`assoc`),p=1,m=1,h=1,g=(e,t,n)=>{if(!e||e<=0)return`-`;let r=t,i=[];if(e<=65)i.push({qty:1,size:e,ranges:[`${n}${r}-${r+e-1}`]});else{let t=Math.floor(e/50),a=e%50;if(a===0){let e=[];for(let i=0;i<t;i++)e.push(`${n}${r}-${r+50-1}`),r+=50;i.push({qty:t,size:50,ranges:e})}else if(a<=15){let e=[];for(let i=0;i<t-1;i++)e.push(`${n}${r}-${r+50-1}`),r+=50;e.length>0&&i.push({qty:t-1,size:50,ranges:e});let o=50+a;i.push({qty:1,size:o,ranges:[`${n}${r}-${r+o-1}`]})}else{let e=[];for(let i=0;i<t;i++)e.push(`${n}${r}-${r+50-1}`),r+=50;i.push({qty:t,size:50,ranges:e}),i.push({qty:1,size:a,ranges:[`${n}${r}-${r+a-1}`]})}}return i.map(e=>`<strong>${e.qty} X ${e.size}</strong><br><span style="font-size:10px; color:#666;">(${e.ranges.join(`, `)})</span>`).join(`<br>`)},_=[...e].sort((e,t)=>e.boothNumber-t.boothNumber),v=[],b=[],S=[];_.forEach(e=>{let t=n.filter(t=>e.classes.includes(String(t.CLASS).trim()));t.length!==0&&(v.push({booth:e.boothNumber,count:t.length,start:p,end:p+t.length-1}),p+=t.length)}),i.filter(d).forEach(e=>{let t=String(e.yearRestriction||``).trim().toUpperCase();if(!t)return;let r=[];_.forEach(i=>{let a=n.filter(e=>i.classes.includes(String(e.CLASS).trim())).filter(e=>{let n=String(e.CLASS||``).toUpperCase();if(n.includes(`PH D`)||n.includes(`PH.D`))return!1;let r=/\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A)\b/i.test(n);return t===`PG`?r:r?!1:t===`1`?n.startsWith(`1ST YEAR`):t===`2`?n.startsWith(`2ND YEAR`):t===`3`?n.startsWith(`3RD YEAR`):!1});a.length>0&&(r.push({booth:i.boothNumber,post:e.post,count:a.length,start:m,end:m+a.length-1}),m+=a.length)}),r.length>0&&b.push(...r)}),i.filter(f).forEach(e=>{let t=e.post.toUpperCase();t.includes(`ASSOCIATION SECRETARY`)&&(t=t.split(`ASSOCIATION SECRETARY`)[1].trim()),t=t.replace(/[-\s]/g,` `);let r=[];_.forEach(i=>{let a=n.filter(e=>i.classes.includes(String(e.CLASS).trim())).filter(e=>{let n=String(e.Dept||``).trim().toUpperCase().replace(/[-\s]/g,` `),r=String(e.CLASS||``).trim().toUpperCase().replace(/[-\s]/g,` `);return n===t||n.includes(t)||r.includes(t)});a.length>0&&(r.push({booth:i.boothNumber,post:e.post,count:a.length,start:h,end:h+a.length-1}),h+=a.length)}),r.length>0&&S.push(...r)}),r(`
         <div style="padding: 40px; font-family: sans-serif; color: #333;">
           <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
             <h1 style="margin: 0; font-size: 24px;">BALLOT PRINTING SUMMARY - ${c}</h1>
@@ -1692,7 +1692,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Total Voters</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Books Needed</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Book Breakdowns</th>
               </tr>
             </thead>
             <tbody>
@@ -1702,7 +1702,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${e.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${e.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${g(e.count)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${g(e.count,e.start,`G`)}</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -1710,7 +1710,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${p-1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G${p-1}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${g(p-1)}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${g(p-1,1,`G`)}</td>
               </tr>
             </tbody>
           </table>
@@ -1724,7 +1724,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Count</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Books Needed</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Book Breakdowns</th>
               </tr>
             </thead>
             <tbody>
@@ -1735,7 +1735,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${e.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${e.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${g(e.count)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${g(e.count,e.start,`R`)}</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -1743,7 +1743,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${m-1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${m-1}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${g(m-1)}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${g(m-1,1,`R`)}</td>
               </tr>
             </tbody>
           </table>
@@ -1757,18 +1757,18 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Voters</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Books Needed</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Book Breakdowns</th>
               </tr>
             </thead>
             <tbody>
               ${S.map(e=>`
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 10px;">${y(e.post)}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${e.booth}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">Booth ${e.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${e.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${e.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${g(e.count)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${g(e.count,e.start,`A`)}</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -1776,7 +1776,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${h-1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${h-1}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${g(h-1)}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${g(h-1,1,`A`)}</td>
               </tr>
             </tbody>
           </table>

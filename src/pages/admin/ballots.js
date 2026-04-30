@@ -331,21 +331,46 @@ export async function renderAdminBallots(container) {
       // Calculate Ranges
       let genSl = 1, repSl = 1, assocSl = 1;
       
-      const calcBooks = (count) => {
-        if (!count || count <= 0) return '0';
+      const calcBooks = (count, start, prefix) => {
+        if (!count || count <= 0) return '-';
         const standard = 50;
         const threshold = 15;
-        if (count <= (standard + threshold)) return `1 X ${count}`;
-        const fullBooks = Math.floor(count / standard);
-        const remainder = count % standard;
-        if (remainder === 0) return `${fullBooks} X ${standard}`;
-        if (remainder <= threshold) {
-          const mainBooks = fullBooks - 1;
-          const lastBook = standard + remainder;
-          return `${mainBooks > 0 ? mainBooks + ' X ' + standard + ', ' : ''}1 X ${lastBook}`;
+        let current = start;
+        let books = [];
+        
+        if (count <= (standard + threshold)) {
+          books.push({ qty: 1, size: count, ranges: [`${prefix}${current}-${current + count - 1}`] });
         } else {
-          return `${fullBooks} X ${standard}, 1 X ${remainder}`;
+          const fullBooks = Math.floor(count / standard);
+          const remainder = count % standard;
+          
+          if (remainder === 0) {
+            let r = [];
+            for (let i = 0; i < fullBooks; i++) {
+              r.push(`${prefix}${current}-${current + standard - 1}`);
+              current += standard;
+            }
+            books.push({ qty: fullBooks, size: standard, ranges: r });
+          } else if (remainder <= threshold) {
+            let r = [];
+            for (let i = 0; i < fullBooks - 1; i++) {
+              r.push(`${prefix}${current}-${current + standard - 1}`);
+              current += standard;
+            }
+            if (r.length > 0) books.push({ qty: fullBooks - 1, size: standard, ranges: r });
+            const lastSize = standard + remainder;
+            books.push({ qty: 1, size: lastSize, ranges: [`${prefix}${current}-${current + lastSize - 1}`] });
+          } else {
+            let r = [];
+            for (let i = 0; i < fullBooks; i++) {
+              r.push(`${prefix}${current}-${current + standard - 1}`);
+              current += standard;
+            }
+            books.push({ qty: fullBooks, size: standard, ranges: r });
+            books.push({ qty: 1, size: remainder, ranges: [`${prefix}${current}-${current + remainder - 1}`] });
+          }
         }
+        return books.map(b => `<strong>${b.qty} X ${b.size}</strong><br><span style="font-size:10px; color:#666;">(${b.ranges.join(', ')})</span>`).join('<br>');
       };
       const sortedBooths = [...booths].sort((a, b) => a.boothNumber - b.boothNumber);
       
@@ -466,7 +491,7 @@ export async function renderAdminBallots(container) {
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Total Voters</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Books Needed</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Book Breakdowns</th>
               </tr>
             </thead>
             <tbody>
@@ -476,7 +501,7 @@ export async function renderAdminBallots(container) {
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${s.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${s.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${calcBooks(s.count)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${calcBooks(s.count, s.start, 'G')}</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -484,7 +509,7 @@ export async function renderAdminBallots(container) {
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${genSl - 1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G${genSl - 1}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${calcBooks(genSl - 1)}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${calcBooks(genSl - 1, 1, 'G')}</td>
               </tr>
             </tbody>
           </table>
@@ -498,7 +523,7 @@ export async function renderAdminBallots(container) {
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Count</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Books Needed</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Book Breakdowns</th>
               </tr>
             </thead>
             <tbody>
@@ -509,7 +534,7 @@ export async function renderAdminBallots(container) {
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${s.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${s.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${calcBooks(s.count)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${calcBooks(s.count, s.start, 'R')}</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -517,7 +542,7 @@ export async function renderAdminBallots(container) {
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${repSl - 1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${repSl - 1}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${calcBooks(repSl - 1)}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${calcBooks(repSl - 1, 1, 'R')}</td>
               </tr>
             </tbody>
           </table>
@@ -531,18 +556,18 @@ export async function renderAdminBallots(container) {
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Voters</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Books Needed</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Book Breakdowns</th>
               </tr>
             </thead>
             <tbody>
               ${assocSummary.map(s => `
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 10px;">${esc(s.post)}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${s.booth}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">Booth ${s.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${s.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${s.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${calcBooks(s.count)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${calcBooks(s.count, s.start, 'A')}</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -550,7 +575,7 @@ export async function renderAdminBallots(container) {
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${assocSl - 1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${assocSl - 1}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${calcBooks(assocSl - 1)}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${calcBooks(assocSl - 1, 1, 'A')}</td>
               </tr>
             </tbody>
           </table>
