@@ -265,14 +265,6 @@ function doGet(e) {
       });
     }
 
-    if (action === 'adminUpdateSettings') {
-      const body = JSON.parse(e.postData.contents);
-      checkAdmin(body.password);
-      if (body.collegeName) setSetting('collegeName', body.collegeName);
-      if (body.collegeShortName) setSetting('collegeShortName', body.collegeShortName);
-      return jsonOut({ ok: true });
-    }
-
     if (action === 'adminGetPosts') {
       checkAdmin(e.parameter.password);
       return jsonOut(getPostsData());
@@ -367,6 +359,13 @@ function doPost(e) {
 
     if (action === 'adminLogin') {
       checkAdmin(body.password);
+      return jsonOut({ ok: true });
+    }
+
+    if (action === 'adminUpdateSettings') {
+      checkAdmin(body.password);
+      if (body.collegeName) setSetting('collegeName', body.collegeName);
+      if (body.collegeShortName) setSetting('collegeShortName', body.collegeShortName);
       return jsonOut({ ok: true });
     }
 
