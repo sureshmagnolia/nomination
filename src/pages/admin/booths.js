@@ -320,6 +320,48 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     const boothAllocations = {}; // boothNum -> { general: {}, reps: [], assocs: [] }
     
     let genSl = 1, repSl = 1, assocSl = 1;
+    let gbCount = 0, rbCount = 0, abCount = 0;
+    
+    // Logic Helper for Book IDs
+    const getBooksInfo = (count, start, prefix) => {
+      if (!count || count <= 0) return { text: '-', nextIndex: 0 };
+      const standard = 50;
+      const threshold = 15;
+      let current = start;
+      const idPrefix = prefix === 'G' ? 'GB' : (prefix === 'R' ? 'RB' : 'AB');
+      let counter = prefix === 'G' ? gbCount : (prefix === 'R' ? rbCount : abCount);
+      let ids = [];
+
+      const addBook = (size) => {
+        counter++;
+        ids.push(idPrefix + counter);
+        current += size;
+      };
+
+      if (count <= (standard + threshold)) {
+        addBook(count);
+      } else {
+        const fullBooks = Math.floor(count / standard);
+        const remainder = count % standard;
+        if (remainder === 0) {
+          for (let i = 0; i < fullBooks; i++) addBook(standard);
+        } else if (remainder <= threshold) {
+          for (let i = 0; i < fullBooks - 1; i++) addBook(standard);
+          addBook(standard + remainder);
+        } else {
+          for (let i = 0; i < fullBooks; i++) addBook(standard);
+          addBook(remainder);
+        }
+      }
+
+      // Update global
+      if (prefix === 'G') gbCount = counter;
+      else if (prefix === 'R') rbCount = counter;
+      else abCount = counter;
+
+      if (ids.length === 1) return ids[0];
+      return `${ids[0]} to ${ids[ids.length - 1]}`;
+    };
 
     // 1. General
     sortedBooths.forEach(b => {
@@ -398,6 +440,11 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       const ballotRanges = boothAllocations[b.boothNumber];
       const boothClasses = b.classes.map(cn => classStats[cn]).filter(Boolean);
 
+      // Calculate Book IDs for this booth (Note: MUST match order in Ballot Summary)
+      const genBooks = getBooksInfo(totalVoters, ballotRanges.general.start, 'G');
+      const repsWithBooks = ballotRanges.reps.map(r => ({ ...r, books: getBooksInfo(r.count, r.start, 'R') }));
+      const assocsWithBooks = ballotRanges.assocs.map(a => ({ ...a, books: getBooksInfo(a.count, a.start, 'A') }));
+
       html += `
       <div class="page-break">
         <div class="facing-sheet">
@@ -416,7 +463,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             </div>
           </div>
 
-          <div style="flex-grow: 1; display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px;">
+          <div style="flex-grow: 1; display: grid; grid-template-columns: 1fr 1.3fr; gap: 20px;">
             <!-- Left Column: Classes -->
             <div>
               <h4 style="border-bottom: 1px solid #eee; padding-bottom: 3px; font-size: 12px; margin: 0;">Allocation Statistics</h4>
@@ -433,40 +480,38 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
             <!-- Right Column: Ballots -->
             <div>
-              <h4 style="border-bottom: 1px solid #eee; padding-bottom: 3px; font-size: 12px; margin: 0;">Ballots Assigned</h4>
-              <table class="stats-table" style="font-size: 10px; margin-top: 5px; width: 100%;">
+              <h4 style="border-bottom: 1px solid #eee; padding-bottom: 3px; font-size: 12px; margin: 0;">Ballots & Books Assigned</h4>
+              <table class="stats-table" style="font-size: 9px; margin-top: 5px; width: 100%;">
                 <thead>
                   <tr style="background:#f0f7ff">
                     <th>Ballot Category</th>
-                    <th>Count</th>
-                    <th style="text-align:right">Serial Ranges</th>
+                    <th>Serial Ranges</th>
+                    <th style="text-align:right">Book IDs</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr style="font-weight:bold">
                     <td>General Union Posts</td>
-                    <td>${totalVoters}</td>
-                    <td style="text-align:right">G${ballotRanges.general.start} - G${ballotRanges.general.end}</td>
+                    <td>G${ballotRanges.general.start} - G${ballotRanges.general.end}</td>
+                    <td style="text-align:right; color:#4f46e5">${genBooks}</td>
                   </tr>
-                  ${ballotRanges.reps.map(r => `
+                  ${repsWithBooks.map(r => `
                     <tr>
-                      <td>${esc(r.name)}</td>
-                      <td>${r.count}</td>
-                      <td style="text-align:right">R${r.start} - R${r.end}</td>
+                      <td style="font-size:8.5px">${esc(r.name)}</td>
+                      <td>R${r.start} - R${r.end}</td>
+                      <td style="text-align:right; color:#10b981">${r.books}</td>
                     </tr>
                   `).join('')}
-                  ${ballotRanges.assocs.map(a => `
+                  ${assocsWithBooks.map(a => `
                     <tr>
-                      <td>${esc(a.name.replace('Association Secretary ', ''))} Assoc.</td>
-                      <td>${a.count}</td>
-                      <td style="text-align:right">A${a.start} - A${a.end}</td>
+                      <td style="font-size:8.5px">${esc(a.name)}</td>
+                      <td>A${a.start} - A${a.end}</td>
+                      <td style="text-align:right; color:#f59e0b">${a.books}</td>
                     </tr>
                   `).join('')}
                 </tbody>
               </table>
             </div>
-          </div>
-
           <div class="footer" style="margin-top: 20px;">
             <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Returning Officer</div>
             <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Presiding Officer</div>

@@ -347,6 +347,9 @@ export async function renderAdminBallots(container) {
       // Calculate Ranges
       let genSl = 1, repSl = 1, assocSl = 1;
       
+      // Track global book counters
+      let gbCount = 0, rbCount = 0, abCount = 0;
+
       const calcBooks = (count, start, prefix) => {
         if (!count || count <= 0) return '-';
         const standard = 50;
@@ -354,39 +357,58 @@ export async function renderAdminBallots(container) {
         let current = start;
         let books = [];
         
+        // Define ID prefix based on series
+        const idPrefix = prefix === 'G' ? 'GB' : (prefix === 'R' ? 'RB' : 'AB');
+        let counter = prefix === 'G' ? gbCount : (prefix === 'R' ? rbCount : abCount);
+
+        const createRange = (size) => {
+          counter++;
+          const range = `${prefix}${current}-${current + size - 1}`;
+          current += size;
+          return { id: idPrefix + counter, range };
+        };
+
         if (count <= (standard + threshold)) {
-          books.push({ qty: 1, size: count, ranges: [`${prefix}${current}-${current + count - 1}`] });
+          books.push({ qty: 1, size: count, items: [createRange(count)] });
         } else {
           const fullBooks = Math.floor(count / standard);
           const remainder = count % standard;
           
           if (remainder === 0) {
-            let r = [];
-            for (let i = 0; i < fullBooks; i++) {
-              r.push(`${prefix}${current}-${current + standard - 1}`);
-              current += standard;
-            }
-            books.push({ qty: fullBooks, size: standard, ranges: r });
+            let items = [];
+            for (let i = 0; i < fullBooks; i++) items.push(createRange(standard));
+            books.push({ qty: fullBooks, size: standard, items });
           } else if (remainder <= threshold) {
-            let r = [];
-            for (let i = 0; i < fullBooks - 1; i++) {
-              r.push(`${prefix}${current}-${current + standard - 1}`);
-              current += standard;
-            }
-            if (r.length > 0) books.push({ qty: fullBooks - 1, size: standard, ranges: r });
+            let items = [];
+            for (let i = 0; i < fullBooks - 1; i++) items.push(createRange(standard));
+            if (items.length > 0) books.push({ qty: fullBooks - 1, size: standard, items });
             const lastSize = standard + remainder;
-            books.push({ qty: 1, size: lastSize, ranges: [`${prefix}${current}-${current + lastSize - 1}`] });
+            books.push({ qty: 1, size: lastSize, items: [createRange(lastSize)] });
           } else {
-            let r = [];
-            for (let i = 0; i < fullBooks; i++) {
-              r.push(`${prefix}${current}-${current + standard - 1}`);
-              current += standard;
-            }
-            books.push({ qty: fullBooks, size: standard, ranges: r });
-            books.push({ qty: 1, size: remainder, ranges: [`${prefix}${current}-${current + remainder - 1}`] });
+            let items = [];
+            for (let i = 0; i < fullBooks; i++) items.push(createRange(standard));
+            books.push({ qty: fullBooks, size: standard, items });
+            books.push({ qty: 1, size: remainder, items: [createRange(remainder)] });
           }
         }
-        return books.map(b => `<strong>${b.qty} X ${b.size}</strong><br><span style="font-size:10px; color:#666;">(${b.ranges.join(', ')})</span>`).join('<br>');
+
+        // Update global counters
+        if (prefix === 'G') gbCount = counter;
+        else if (prefix === 'R') rbCount = counter;
+        else abCount = counter;
+
+        return `
+          <table style="width:100%; border-collapse:collapse; font-size:10px; background:rgba(0,0,0,0.02);">
+            ${books.map(b => `
+              <tr>
+                <td style="padding:4px; border:1px solid #eee; font-weight:bold; width:45px;">${b.qty} x ${b.size}</td>
+                <td style="padding:4px; border:1px solid #eee; line-height:1.4;">
+                  ${b.items.map(it => `<span style="display:inline-block; margin-right:8px;"><strong style="color:#4f46e5;">${it.id}:</strong> ${it.range}</span>`).join(' ')}
+                </td>
+              </tr>
+            `).join('')}
+          </table>
+        `;
       };
       const sortedBooths = [...booths].sort((a, b) => a.boothNumber - b.boothNumber);
       
@@ -500,14 +522,14 @@ export async function renderAdminBallots(container) {
           </p>
 
           <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #4f46e5;">1. General Union Ballots (Series: G1, G2, G3...)</h3>
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; border: 2px solid #000;">
             <thead>
               <tr style="background: #f8fafc;">
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Total Voters</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Book Breakdowns</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 15%;">Booth No</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">Voters</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 15%;">Sl No From</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 15%;">Sl No To</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 45%;">Book Breakdowns</th>
               </tr>
             </thead>
             <tbody>
@@ -517,7 +539,7 @@ export async function renderAdminBallots(container) {
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${s.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${s.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${calcBooks(s.count, s.start, 'G')}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${calcBooks(s.count, s.start, 'G')}</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -531,26 +553,26 @@ export async function renderAdminBallots(container) {
           </table>
 
           <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #10b981;">2. Year Representative Ballots (Series: R1, R2, R3...)</h3>
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; border: 2px solid #000;">
             <thead>
               <tr style="background: #f8fafc;">
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Post Name</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Count</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Book Breakdowns</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">Post Name</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 10%;">Booth</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">Voters</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">From</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">To</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 35%;">Book Breakdowns</th>
               </tr>
             </thead>
             <tbody>
               ${repSummary.map(s => `
                 <tr>
-                  <td style="border: 1px solid #ddd; padding: 10px;">${esc(s.post)}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">Booth ${s.booth}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${esc(s.post)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">B${s.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${s.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${s.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${calcBooks(s.count, s.start, 'R')}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${calcBooks(s.count, s.start, 'R')}</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -564,26 +586,26 @@ export async function renderAdminBallots(container) {
           </table>
 
           <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #f59e0b;">3. Association Secretary Ballots (Series: A1, A2, A3...)</h3>
-          <table style="width: 100%; border-collapse: collapse;">
+          <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
             <thead>
               <tr style="background: #f8fafc;">
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Post Name</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Voters</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Book Breakdowns</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">Post Name</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 10%;">Booth</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">Voters</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">From</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">To</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 35%;">Book Breakdowns</th>
               </tr>
             </thead>
             <tbody>
               ${assocSummary.map(s => `
                 <tr>
-                  <td style="border: 1px solid #ddd; padding: 10px;">${esc(s.post)}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">Booth ${s.booth}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${esc(s.post)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">B${s.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${s.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${s.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${calcBooks(s.count, s.start, 'A')}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${calcBooks(s.count, s.start, 'A')}</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">

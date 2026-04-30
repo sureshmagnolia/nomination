@@ -128,7 +128,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <div class="mt-6 flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition">
       Continue <span>→</span>
     </div>
-  </div>`}var w=[],T=[],E=[],D={},O=``;async function k(e){let t=new Date().getFullYear();try{let e=await u.getPublicSchedule();e.electionYear&&(t=e.electionYear)}catch{}e.innerHTML=re(`Submit Nomination`,`
+  </div>`}var w=[],T=[],E=[],D={},O=``;async function k(e){let t=new Date().getFullYear();try{let e=await u.getPublicSchedule();e.electionYear&&(t=e.electionYear)}catch{}e.innerHTML=P(`Submit Nomination`,`
     <div id="loadingState" class="flex flex-col items-center justify-center py-24 gap-4">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 text-sm">Loading data...</p>
@@ -219,7 +219,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
   </div>`}function te(e,t){let n=e.querySelector(`#serial-${t}`).value.trim(),r=e.querySelector(`#details-${t}`),i=w.find(e=>String(e[`Nominal Roll Serial Number`])===n);if(!i){r.innerHTML=n?`<span class="text-red-400">⚠ Student not found</span>`:``;return}r.innerHTML=`
     <p><span class="text-slate-500">Name:</span> <strong class="text-slate-200">${y(i.NAME)}</strong></p>
     <p><span class="text-slate-500">Class:</span> ${y(i.CLASS)}</p>
-    <p><span class="text-slate-500">Dept:</span> ${y(i.Dept||`N/A`)}</p>`,j(e)}function j(e){let t=[],n=e.querySelector(`#postSelect`).value,r=e.querySelector(`[name="gender"]:checked`)?.value||null,i=[`candidate`,`proposer`,`seconder`].map(t=>e.querySelector(`#serial-${t}`).value.trim()),a=i.map(e=>e?w.find(t=>String(t[`Nominal Roll Serial Number`])===e):null),[o,s,c]=i;o&&o===s&&t.push(`Candidate and Proposer cannot be the same person.`),o&&o===c&&t.push(`Candidate and Seconder cannot be the same person.`),s&&s===c&&t.push(`Proposer and Seconder cannot be the same person.`);let l=[`Candidate`,`Proposer`,`Seconder`];a.forEach((e,i)=>{e&&t.push(...f(e,n,l[i],i===0?r:null,T,E))});let u=e.querySelector(`#warningBox`);return t.length?(u.innerHTML=`<strong class="block mb-1">⚠ Eligibility Warnings</strong>`+t.map(e=>`<p class="text-sm">• ${y(e)}</p>`).join(``),u.classList.remove(`hidden`)):u.classList.add(`hidden`),t}async function ne(e,t,n){if(e.preventDefault(),j(t).length){x(`Please resolve all eligibility warnings first.`,`error`);return}if(t.querySelector(`#captchaInput`).value.trim()!==O){x(`Captcha answer is incorrect.`,`error`);return}let r=t.querySelector(`#postSelect`).value,i=t.querySelector(`[name="gender"]:checked`)?.value,a=t.querySelector(`#dob-day`).value,o=t.querySelector(`#dob-month`).value,s=t.querySelector(`#dob-year`).value;if(!i){x(`Please select a gender for the candidate.`,`error`);return}if(!a||!o||!s){x(`Please enter a complete date of birth.`,`error`);return}let c=[`candidate`,`proposer`,`seconder`].map(e=>t.querySelector(`#serial-${e}`).value.trim()),l=c.map(e=>w.find(t=>String(t[`Nominal Roll Serial Number`])===e));if(l.some(e=>!e)){x(`One or more serial numbers are invalid.`,`error`);return}let d=t.querySelector(`#submitBtn`);b(d,!0,`Generate &amp; Preview Nomination`);try{let e={post:r,gender:i,dob:g(a,o,s),candidateSerial:c[0],proposerSerial:c[1],seconderSerial:c[2]};window.ADMIN_BYPASS_PWD&&(e.password=window.ADMIN_BYPASS_PWD);let d=await u.submitNomination(e);M(t,d.id,{post:r,gender:i,day:a,month:o,year:s,students:l},n),x(`Nomination submitted! ID: ${d.id}`,`success`)}catch(e){x(`Submission failed: ${e.message}`,`error`)}finally{b(d,!1,`Generate &amp; Preview Nomination`)}}function M(e,t,{post:n,gender:r,day:i,month:a,year:o,students:s},c){let[l,u,f]=s,p=g(i,a,o),m=_(i,a,o),h=d(p),y=e.querySelector(`#previewSection`);e.querySelector(`#printZone`).innerHTML=N(t,n,r,m,h,l,u,f,``,c),y.classList.remove(`hidden`),y.scrollIntoView({behavior:`smooth`}),y.querySelector(`#printBtn`).addEventListener(`click`,()=>{v(e.querySelector(`#printZone`).innerHTML)}),y.querySelector(`#newNomBtn`).addEventListener(`click`,()=>k(e.closest(`#app`)))}function N(e,t,r,i,a,o,s,c,l=``,u=`2026`){let d=m();return`
+    <p><span class="text-slate-500">Dept:</span> ${y(i.Dept||`N/A`)}</p>`,j(e)}function j(e){let t=[],n=e.querySelector(`#postSelect`).value,r=e.querySelector(`[name="gender"]:checked`)?.value||null,i=[`candidate`,`proposer`,`seconder`].map(t=>e.querySelector(`#serial-${t}`).value.trim()),a=i.map(e=>e?w.find(t=>String(t[`Nominal Roll Serial Number`])===e):null),[o,s,c]=i;o&&o===s&&t.push(`Candidate and Proposer cannot be the same person.`),o&&o===c&&t.push(`Candidate and Seconder cannot be the same person.`),s&&s===c&&t.push(`Proposer and Seconder cannot be the same person.`);let l=[`Candidate`,`Proposer`,`Seconder`];a.forEach((e,i)=>{e&&t.push(...f(e,n,l[i],i===0?r:null,T,E))});let u=e.querySelector(`#warningBox`);return t.length?(u.innerHTML=`<strong class="block mb-1">⚠ Eligibility Warnings</strong>`+t.map(e=>`<p class="text-sm">• ${y(e)}</p>`).join(``),u.classList.remove(`hidden`)):u.classList.add(`hidden`),t}async function ne(e,t,n){if(e.preventDefault(),j(t).length){x(`Please resolve all eligibility warnings first.`,`error`);return}if(t.querySelector(`#captchaInput`).value.trim()!==O){x(`Captcha answer is incorrect.`,`error`);return}let r=t.querySelector(`#postSelect`).value,i=t.querySelector(`[name="gender"]:checked`)?.value,a=t.querySelector(`#dob-day`).value,o=t.querySelector(`#dob-month`).value,s=t.querySelector(`#dob-year`).value;if(!i){x(`Please select a gender for the candidate.`,`error`);return}if(!a||!o||!s){x(`Please enter a complete date of birth.`,`error`);return}let c=[`candidate`,`proposer`,`seconder`].map(e=>t.querySelector(`#serial-${e}`).value.trim()),l=c.map(e=>w.find(t=>String(t[`Nominal Roll Serial Number`])===e));if(l.some(e=>!e)){x(`One or more serial numbers are invalid.`,`error`);return}let d=t.querySelector(`#submitBtn`);b(d,!0,`Generate &amp; Preview Nomination`);try{let e={post:r,gender:i,dob:g(a,o,s),candidateSerial:c[0],proposerSerial:c[1],seconderSerial:c[2]};window.ADMIN_BYPASS_PWD&&(e.password=window.ADMIN_BYPASS_PWD);let d=await u.submitNomination(e);re(t,d.id,{post:r,gender:i,day:a,month:o,year:s,students:l},n),x(`Nomination submitted! ID: ${d.id}`,`success`)}catch(e){x(`Submission failed: ${e.message}`,`error`)}finally{b(d,!1,`Generate &amp; Preview Nomination`)}}function re(e,t,{post:n,gender:r,day:i,month:a,year:o,students:s},c){let[l,u,f]=s,p=g(i,a,o),m=_(i,a,o),h=d(p),y=e.querySelector(`#previewSection`);e.querySelector(`#printZone`).innerHTML=M(t,n,r,m,h,l,u,f,``,c),y.classList.remove(`hidden`),y.scrollIntoView({behavior:`smooth`}),y.querySelector(`#printBtn`).addEventListener(`click`,()=>{v(e.querySelector(`#printZone`).innerHTML)}),y.querySelector(`#newNomBtn`).addEventListener(`click`,()=>k(e.closest(`#app`)))}function M(e,t,r,i,a,o,s,c,l=``,u=`2026`){let d=m();return`
   <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-4">
     <div class="flex justify-between items-start text-sm">
       <div>
@@ -234,9 +234,9 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <h2 class="text-center font-bold text-xl text-white border-y border-white/10 py-3">NOMINATION PAPER</h2>
     <p class="text-sm"><span class="font-semibold text-slate-400 w-40 inline-block">Post Applied For:</span> <strong class="text-white">${y(t)}</strong></p>
     <div class="space-y-3">
-      ${P(`Candidate`,o,r,i,a)}
-      ${P(`Proposer`,s)}
-      ${P(`Seconder`,c)}
+      ${N(`Candidate`,o,r,i,a)}
+      ${N(`Proposer`,s)}
+      ${N(`Seconder`,c)}
     </div>
     <div class="border-t border-white/10 pt-6 text-center space-y-3">
       <h3 class="font-bold text-white">Consent of Candidate</h3>
@@ -250,7 +250,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <div class="border-t border-white/10 pt-2 text-right">
       <p class="text-[10px] text-slate-500 font-mono">Ref ID: ${y(e)}</p>
     </div>
-  </div>`}function P(e,t,n=null,r=null,i=null){return t?`
+  </div>`}function N(e,t,n=null,r=null,i=null){return t?`
   <div class="glass rounded-lg p-4 text-sm space-y-1">
     <h3 class="font-bold text-white uppercase text-xs tracking-widest mb-2 border-b border-white/10 pb-1">${e} Details</h3>
     <div class="grid grid-cols-2 gap-x-4 gap-y-1">
@@ -267,7 +267,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       <span>Date: ______ / ______ / ________</span>
       <span>Signature: _______________</span>
     </div>`}
-  </div>`:``}function re(e,t,n=`2026`){return`
+  </div>`:``}function P(e,t,n=`2026`){return`
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-50 border-b border-white/10 glass">
       <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
@@ -304,7 +304,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <div class="space-y-4">
       <div class="alert alert-success">✅ Nomination found! Status: <strong>${y(t.status)}</strong></div>
       <div id="printZone" class="print-zone">
-        ${N(n,t.post,t.gender,r,a,t.candidate,t.proposer,t.seconder,t.status)}
+        ${M(n,t.post,t.gender,r,a,t.candidate,t.proposer,t.seconder,t.status)}
       </div>
       <div class="flex gap-3 no-print">
         <button id="printBtn" class="btn btn-success flex-1">🖨️ Print</button>
@@ -1060,7 +1060,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </td>
     </tr>`).join(``):`<tr><td colspan="7" class="text-center text-slate-500 py-8">No posts configured.</td></tr>`,r.querySelectorAll(`.delete-post-btn`).forEach(t=>{t.addEventListener(`click`,async()=>{let r=t.dataset.name;if(confirm(`Delete post "${r}"? This cannot be undone.`)){t.disabled=!0;try{await u.adminDeletePost(n,r),x(`Post "${r}" deleted.`,`success`),U(e,await u.adminGetPosts(n),n)}catch(e){x(`Failed: ${e.message}`,`error`),t.disabled=!1}}})});let i=e.querySelector(`#postFormWrap`);r.querySelectorAll(`.edit-post-btn`).forEach(n=>{n.addEventListener(`click`,()=>{let r=t[parseInt(n.dataset.idx)];e.querySelector(`#postFormTitle`).textContent=`Edit Post`,e.querySelector(`#pfPost`).value=r.post,e.querySelector(`#pfYear`).value=r.yearRestriction||``,e.querySelector(`#pfFemale`).checked=!!r.femaleOnly,e.querySelector(`#pfFinalYear`).checked=!!r.finalYearIneligible,e.querySelector(`#pfDept`).checked=!!r.deptRestriction,e.querySelector(`#pfOriginalName`).value=r.post,i.classList.remove(`hidden`),i.scrollIntoView({behavior:`smooth`})})})}function De(e,t,n){let r=e.querySelector(`#postFormWrap`),i=e.querySelector(`#addPostBtn`),a=e.querySelector(`#cancelPostBtn`),o=e.querySelector(`#savePostBtn`);i.addEventListener(`click`,()=>{e.querySelector(`#postFormTitle`).textContent=`Add New Post`,e.querySelector(`#pfPost`).value=``,e.querySelector(`#pfYear`).value=``,e.querySelector(`#pfFemale`).checked=!1,e.querySelector(`#pfFinalYear`).checked=!1,e.querySelector(`#pfDept`).checked=!1,e.querySelector(`#pfOriginalName`).value=``,r.classList.remove(`hidden`),r.scrollIntoView({behavior:`smooth`})}),a.addEventListener(`click`,()=>r.classList.add(`hidden`)),o.addEventListener(`click`,async()=>{let t=e.querySelector(`#pfPost`).value.trim(),i=e.querySelector(`#pfYear`).value,a=e.querySelector(`#pfFemale`).checked,s=e.querySelector(`#pfFinalYear`).checked,c=e.querySelector(`#pfDept`).checked,l=e.querySelector(`#pfOriginalName`).value;if(!t){x(`Post name is required.`,`error`);return}let d={postName:t,yearRestriction:i,femaleOnly:a,finalYearIneligible:s,deptRestriction:c,originalName:l};b(o,!0,`💾 Save Post`);try{l?(await u.adminUpdatePost(n,d),x(`Post updated successfully!`,`success`)):(await u.adminAddPost(n,d),x(`Post added successfully!`,`success`)),r.classList.add(`hidden`),U(e,await u.adminGetPosts(n),n)}catch(e){x(`Failed: ${e.message}`,`error`)}finally{b(o,!1,`💾 Save Post`)}})}async function Oe(e){let t=R();if(t){z(e,`booths`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading booth data...</p></div>
-  `);try{let[n,r,i,a,o]=await Promise.all([u.getNominalRoll(),u.adminGetBooths(t).catch(()=>[]),u.adminGetLocations(t).catch(()=>[]),u.getPosts().catch(()=>[]),u.getFinalNominations().catch(()=>({active:[]}))]);ke(e.querySelector(`#adminMain`),t,n,r,i,a,o)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function ke(e,t,r,i,a,o,s){let c={};r.forEach(e=>{let t=String(e.CLASS||`Unknown`).trim(),n=String(e.Dept||`Unknown`).trim();c[t]||(c[t]={name:t,dept:n,count:0}),c[t].count++});let l=Object.values(c).sort((e,t)=>e.name.localeCompare(t.name)),d=i.length?[...i]:[{boothNumber:1,roomName:``,classes:[]}],f=[...a],p=!0,m=()=>{d.forEach(e=>e.totalStudents=0);let n=[];l.forEach(e=>{let t=d.find(t=>t.classes.includes(e.name));t?t.totalStudents+=e.count:n.push(e)});let i=window.scrollY;e.innerHTML=`
+  `);try{let[n,r,i,a,o]=await Promise.all([u.getNominalRoll(),u.adminGetBooths(t).catch(()=>[]),u.adminGetLocations(t).catch(()=>[]),u.getPosts().catch(()=>[]),u.getFinalNominations().catch(()=>({active:[]}))]);W(e.querySelector(`#adminMain`),t,n,r,i,a,o)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function W(e,t,r,i,a,o,s){let c={};r.forEach(e=>{let t=String(e.CLASS||`Unknown`).trim(),n=String(e.Dept||`Unknown`).trim();c[t]||(c[t]={name:t,dept:n,count:0}),c[t].count++});let l=Object.values(c).sort((e,t)=>e.name.localeCompare(t.name)),d=i.length?[...i]:[{boothNumber:1,roomName:``,classes:[]}],f=[...a],p=!0,m=()=>{d.forEach(e=>e.totalStudents=0);let n=[];l.forEach(e=>{let t=d.find(t=>t.classes.includes(e.name));t?t.totalStudents+=e.count:n.push(e)});let i=window.scrollY;e.innerHTML=`
       <div class="page-enter space-y-6">
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
@@ -1197,7 +1197,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             ${t.innerHTML}
           </body>
         </html>
-      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>d.length)for(let e=d.length;e<t;e++)d.push({boothNumber:e+1,roomName:``,classes:[]});else t<d.length&&(d=d.slice(0,t));m()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{d[e.target.dataset.idx].roomName=e.target.value,m()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!f.includes(t)&&(f.push(t),m())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=f[t];f.splice(t,1),d.forEach(e=>{e.roomName===n&&(e.roomName=``)}),m()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Locations`);try{await u.adminSaveLocations(t,f),x(`Locations saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;d.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&d[parseInt(n,10)].classes.push(t),m()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Configuration`);try{await u.adminSaveBooths(t,d),x(`Booth configuration saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{g(),m(),x(`Auto allotment complete. Please review and save.`,`info`)})},h=(e,t,r,i,a)=>{let o=``;a.active;let s=e=>e.post.toLowerCase().includes(`representative`)||e.post.toLowerCase().includes(`year`),c=e=>e.post.toLowerCase().includes(`association`)||e.post.toLowerCase().includes(`assoc`),l=[...e].sort((e,t)=>e.boothNumber-t.boothNumber),u={},d=1,f=1,p=1;return l.forEach(e=>{let n=t.filter(t=>e.classes.includes(String(t.CLASS).trim()));u[e.boothNumber]={general:{start:d,end:d+n.length-1},reps:[],assocs:[]},d+=n.length}),r.filter(s).forEach(e=>{let n=String(e.yearRestriction||``).trim().toUpperCase();n&&l.forEach(r=>{let i=t.filter(e=>r.classes.includes(String(e.CLASS).trim())).filter(e=>{let t=String(e.CLASS||``).toUpperCase();if(t.includes(`PH D`)||t.includes(`PH.D`))return!1;let r=/\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A)\b/i.test(t);return n===`PG`?r:r?!1:n===`1`?t.startsWith(`1ST YEAR`):n===`2`?t.startsWith(`2ND YEAR`):n===`3`?t.startsWith(`3RD YEAR`):!1});i.length>0&&(u[r.boothNumber].reps.push({name:e.post,start:f,end:f+i.length-1,count:i.length}),f+=i.length)})}),r.filter(c).forEach(e=>{let n=e.post.toUpperCase();n.includes(`ASSOCIATION SECRETARY`)&&(n=n.split(`ASSOCIATION SECRETARY`)[1].trim()),n=n.replace(/[-\s]/g,` `),l.forEach(r=>{let i=t.filter(e=>r.classes.includes(String(e.CLASS).trim())).filter(e=>{let t=String(e.Dept||``).trim().toUpperCase().replace(/[-\s]/g,` `),r=String(e.CLASS||``).trim().toUpperCase().replace(/[-\s]/g,` `);return t===n||t.includes(n)||r.includes(n)});i.length>0&&(u[r.boothNumber].assocs.push({name:e.post,start:p,end:p+i.length-1,count:i.length}),p+=i.length)})}),l.forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=t.filter(t=>e.classes.includes(String(t.CLASS).trim())).length,a=u[e.boothNumber],s=e.classes.map(e=>i[e]).filter(Boolean);o+=`
+      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>d.length)for(let e=d.length;e<t;e++)d.push({boothNumber:e+1,roomName:``,classes:[]});else t<d.length&&(d=d.slice(0,t));m()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{d[e.target.dataset.idx].roomName=e.target.value,m()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!f.includes(t)&&(f.push(t),m())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=f[t];f.splice(t,1),d.forEach(e=>{e.roomName===n&&(e.roomName=``)}),m()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Locations`);try{await u.adminSaveLocations(t,f),x(`Locations saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;d.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&d[parseInt(n,10)].classes.push(t),m()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Configuration`);try{await u.adminSaveBooths(t,d),x(`Booth configuration saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{g(),m(),x(`Auto allotment complete. Please review and save.`,`info`)})},h=(e,t,r,i,a)=>{let o=``;a.active;let s=e=>e.post.toLowerCase().includes(`representative`)||e.post.toLowerCase().includes(`year`),c=e=>e.post.toLowerCase().includes(`association`)||e.post.toLowerCase().includes(`assoc`),l=[...e].sort((e,t)=>e.boothNumber-t.boothNumber),u={},d=1,f=1,p=1,m=0,h=0,g=0,_=(e,t,n)=>{if(!e||e<=0)return{text:`-`,nextIndex:0};let r=t,i=n===`G`?`GB`:n===`R`?`RB`:`AB`,a=n===`G`?m:n===`R`?h:g,o=[],s=e=>{a++,o.push(i+a),r+=e};if(e<=65)s(e);else{let t=Math.floor(e/50),n=e%50;if(n===0)for(let e=0;e<t;e++)s(50);else if(n<=15){for(let e=0;e<t-1;e++)s(50);s(50+n)}else{for(let e=0;e<t;e++)s(50);s(n)}}return n===`G`?m=a:n===`R`?h=a:g=a,o.length===1?o[0]:`${o[0]} to ${o[o.length-1]}`};return l.forEach(e=>{let n=t.filter(t=>e.classes.includes(String(t.CLASS).trim()));u[e.boothNumber]={general:{start:d,end:d+n.length-1},reps:[],assocs:[]},d+=n.length}),r.filter(s).forEach(e=>{let n=String(e.yearRestriction||``).trim().toUpperCase();n&&l.forEach(r=>{let i=t.filter(e=>r.classes.includes(String(e.CLASS).trim())).filter(e=>{let t=String(e.CLASS||``).toUpperCase();if(t.includes(`PH D`)||t.includes(`PH.D`))return!1;let r=/\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A)\b/i.test(t);return n===`PG`?r:r?!1:n===`1`?t.startsWith(`1ST YEAR`):n===`2`?t.startsWith(`2ND YEAR`):n===`3`?t.startsWith(`3RD YEAR`):!1});i.length>0&&(u[r.boothNumber].reps.push({name:e.post,start:f,end:f+i.length-1,count:i.length}),f+=i.length)})}),r.filter(c).forEach(e=>{let n=e.post.toUpperCase();n.includes(`ASSOCIATION SECRETARY`)&&(n=n.split(`ASSOCIATION SECRETARY`)[1].trim()),n=n.replace(/[-\s]/g,` `),l.forEach(r=>{let i=t.filter(e=>r.classes.includes(String(e.CLASS).trim())).filter(e=>{let t=String(e.Dept||``).trim().toUpperCase().replace(/[-\s]/g,` `),r=String(e.CLASS||``).trim().toUpperCase().replace(/[-\s]/g,` `);return t===n||t.includes(n)||r.includes(n)});i.length>0&&(u[r.boothNumber].assocs.push({name:e.post,start:p,end:p+i.length-1,count:i.length}),p+=i.length)})}),l.forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=t.filter(t=>e.classes.includes(String(t.CLASS).trim())).length,a=u[e.boothNumber],s=e.classes.map(e=>i[e]).filter(Boolean),c=_(r,a.general.start,`G`),l=a.reps.map(e=>({...e,books:_(e.count,e.start,`R`)})),d=a.assocs.map(e=>({...e,books:_(e.count,e.start,`A`)}));o+=`
       <div class="page-break">
         <div class="facing-sheet">
           <div class="header">
@@ -1215,7 +1215,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             </div>
           </div>
 
-          <div style="flex-grow: 1; display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px;">
+          <div style="flex-grow: 1; display: grid; grid-template-columns: 1fr 1.3fr; gap: 20px;">
             <!-- Left Column: Classes -->
             <div>
               <h4 style="border-bottom: 1px solid #eee; padding-bottom: 3px; font-size: 12px; margin: 0;">Allocation Statistics</h4>
@@ -1232,40 +1232,38 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
 
             <!-- Right Column: Ballots -->
             <div>
-              <h4 style="border-bottom: 1px solid #eee; padding-bottom: 3px; font-size: 12px; margin: 0;">Ballots Assigned</h4>
-              <table class="stats-table" style="font-size: 10px; margin-top: 5px; width: 100%;">
+              <h4 style="border-bottom: 1px solid #eee; padding-bottom: 3px; font-size: 12px; margin: 0;">Ballots & Books Assigned</h4>
+              <table class="stats-table" style="font-size: 9px; margin-top: 5px; width: 100%;">
                 <thead>
                   <tr style="background:#f0f7ff">
                     <th>Ballot Category</th>
-                    <th>Count</th>
-                    <th style="text-align:right">Serial Ranges</th>
+                    <th>Serial Ranges</th>
+                    <th style="text-align:right">Book IDs</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr style="font-weight:bold">
                     <td>General Union Posts</td>
-                    <td>${r}</td>
-                    <td style="text-align:right">G${a.general.start} - G${a.general.end}</td>
+                    <td>G${a.general.start} - G${a.general.end}</td>
+                    <td style="text-align:right; color:#4f46e5">${c}</td>
                   </tr>
-                  ${a.reps.map(e=>`
+                  ${l.map(e=>`
                     <tr>
-                      <td>${y(e.name)}</td>
-                      <td>${e.count}</td>
-                      <td style="text-align:right">R${e.start} - R${e.end}</td>
+                      <td style="font-size:8.5px">${y(e.name)}</td>
+                      <td>R${e.start} - R${e.end}</td>
+                      <td style="text-align:right; color:#10b981">${e.books}</td>
                     </tr>
                   `).join(``)}
-                  ${a.assocs.map(e=>`
+                  ${d.map(e=>`
                     <tr>
-                      <td>${y(e.name.replace(`Association Secretary `,``))} Assoc.</td>
-                      <td>${e.count}</td>
-                      <td style="text-align:right">A${e.start} - A${e.end}</td>
+                      <td style="font-size:8.5px">${y(e.name)}</td>
+                      <td>A${e.start} - A${e.end}</td>
+                      <td style="text-align:right; color:#f59e0b">${e.books}</td>
                     </tr>
                   `).join(``)}
                 </tbody>
               </table>
             </div>
-          </div>
-
           <div class="footer" style="margin-top: 20px;">
             <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Returning Officer</div>
             <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Presiding Officer</div>
@@ -1301,9 +1299,9 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             </table>
             <div style="margin-top:20px; text-align:right; font-size:10px; color:#999">Total Voters: ${r.length}</div>
           </div>
-        </div>`})}),o},g=()=>{d.forEach(e=>{e.classes=[],e.totalStudents=0});let e={};l.forEach(t=>{e[t.dept]||(e[t.dept]={name:t.dept,total:0,classes:[]}),e[t.dept].classes.push(t),e[t.dept].total+=t.count});let t=d.length,n=r.length/t*1.25;Object.values(e).sort((e,t)=>t.total-e.total).forEach(e=>{d.sort((e,t)=>e.totalStudents-t.totalStudents);let t=d[0];if(t.totalStudents+e.total>n&&e.classes.length>1){d.sort((e,t)=>e.totalStudents-t.totalStudents);let t=d[0],n=d.length>1?d[1]:d[0];[...e.classes].sort((e,t)=>t.count-e.count).forEach(e=>{let r=t.totalStudents<=n.totalStudents?t:n;r.classes.push(e.name),r.totalStudents+=e.count})}else e.classes.forEach(e=>t.classes.push(e.name)),t.totalStudents+=e.total}),d.sort((e,t)=>e.boothNumber-t.boothNumber)};m()}async function Ae(e){let t=R();if(t){z(e,`counting`,`
+        </div>`})}),o},g=()=>{d.forEach(e=>{e.classes=[],e.totalStudents=0});let e={};l.forEach(t=>{e[t.dept]||(e[t.dept]={name:t.dept,total:0,classes:[]}),e[t.dept].classes.push(t),e[t.dept].total+=t.count});let t=d.length,n=r.length/t*1.25;Object.values(e).sort((e,t)=>t.total-e.total).forEach(e=>{d.sort((e,t)=>e.totalStudents-t.totalStudents);let t=d[0];if(t.totalStudents+e.total>n&&e.classes.length>1){d.sort((e,t)=>e.totalStudents-t.totalStudents);let t=d[0],n=d.length>1?d[1]:d[0];[...e.classes].sort((e,t)=>t.count-e.count).forEach(e=>{let r=t.totalStudents<=n.totalStudents?t:n;r.classes.push(e.name),r.totalStudents+=e.count})}else e.classes.forEach(e=>t.classes.push(e.name)),t.totalStudents+=e.total}),d.sort((e,t)=>e.boothNumber-t.boothNumber)};m()}async function ke(e){let t=R();if(t){z(e,`counting`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Counting Setup...</p></div>
-  `);try{let[n,r,i,a,o]=await Promise.all([u.adminGetCountingMatrix(t).catch(()=>null),u.getPosts(),u.adminGetNominations(t).catch(()=>[]),u.adminGetBooths(t),u.getNominalRoll()]),s=(Array.isArray(i)?i:[]).filter(e=>e.status===`Valid`&&e.withdrawalStatus!==`Approved`);je(e.querySelector(`#adminMain`),t,n,r,s,a,o)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function je(e,t,n,r,i,a,o){if(!a.length){e.innerHTML=`<div class="alert alert-error">❌ No booths configured.</div>`;return}if(!r.length){e.innerHTML=`<div class="alert alert-error">❌ No posts configured.</div>`;return}let s=e=>String(e.post||e.name||``),c=t=>{let{matrix:n,formSerials:o,totalRounds:c,roundLabels:u}=t,d=a.length;e.innerHTML=`
+  `);try{let[n,r,i,a,o]=await Promise.all([u.adminGetCountingMatrix(t).catch(()=>null),u.getPosts(),u.adminGetNominations(t).catch(()=>[]),u.adminGetBooths(t),u.getNominalRoll()]),s=(Array.isArray(i)?i:[]).filter(e=>e.status===`Valid`&&e.withdrawalStatus!==`Approved`);Ae(e.querySelector(`#adminMain`),t,n,r,s,a,o)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Ae(e,t,n,r,i,a,o){if(!a.length){e.innerHTML=`<div class="alert alert-error">❌ No booths configured.</div>`;return}if(!r.length){e.innerHTML=`<div class="alert alert-error">❌ No posts configured.</div>`;return}let s=e=>String(e.post||e.name||``),c=t=>{let{matrix:n,formSerials:o,totalRounds:c,roundLabels:u}=t,d=a.length;e.innerHTML=`
       <div class="page-enter space-y-6">
         <div class="flex items-center justify-between no-print">
           <div>
@@ -1340,7 +1338,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             </table>
           </div>
         </div>
-      </div>`,e.querySelector(`#btnRegenerate`).addEventListener(`click`,()=>{confirm(`Are you sure? This will discard the current matrix and generate a new one based on current Booths and Posts. Results entry serial numbers may change!`)&&l()}),e.querySelector(`#btnPrintForms`).addEventListener(`click`,()=>{let e=``,t=0;for(let r=0;r<c;r++)for(let c=0;c<d;c++){let l=n[c][r];if(!l)continue;let u=s(l),d=o[`${c}-${r}`],f=i.filter(e=>e.post===u);e+=Me(a[c].boothNumber,r+1,u,f,d),t++}if(!t){alert(`No forms generated.`);return}let r=window.open(``,`_blank`);if(!r){alert(`Pop-up blocked.`);return}r.document.write(`<!DOCTYPE html><html><head><title>Counting Forms</title><style>
+      </div>`,e.querySelector(`#btnRegenerate`).addEventListener(`click`,()=>{confirm(`Are you sure? This will discard the current matrix and generate a new one based on current Booths and Posts. Results entry serial numbers may change!`)&&l()}),e.querySelector(`#btnPrintForms`).addEventListener(`click`,()=>{let e=``,t=0;for(let r=0;r<c;r++)for(let c=0;c<d;c++){let l=n[c][r];if(!l)continue;let u=s(l),d=o[`${c}-${r}`],f=i.filter(e=>e.post===u);e+=je(a[c].boothNumber,r+1,u,f,d),t++}if(!t){alert(`No forms generated.`);return}let r=window.open(``,`_blank`);if(!r){alert(`Pop-up blocked.`);return}r.document.write(`<!DOCTYPE html><html><head><title>Counting Forms</title><style>
         @page{size:A4;margin:12mm}*{box-sizing:border-box}
         body{margin:0;font-family:Arial,sans-serif;background:#fff;color:#000}
         .pg{page-break-after:always;padding:10px;position:relative}.pg:last-child{page-break-after:avoid}
@@ -1354,7 +1352,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         <p class="text-slate-400 mb-6">The counting matrix has not been generated and saved yet.</p>
         <button id="btnInitialGenerate" class="btn btn-primary px-10">Generate Matrix Now</button>
       </div>
-    `,e.querySelector(`#btnInitialGenerate`).addEventListener(`click`,l))}function Me(e,t,n,r,i){let a=r.length?r.map((e,t)=>`<tr>
+    `,e.querySelector(`#btnInitialGenerate`).addEventListener(`click`,l))}function je(e,t,n,r,i){let a=r.length?r.map((e,t)=>`<tr>
         <td style="text-align:center;padding:18px 8px;font-weight:bold">${t+1}</td>
         <td style="padding:18px 8px;font-size:15px;font-weight:bold">
           ${y(e.candidateName||``)}
@@ -1387,9 +1385,9 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       <div><div style="border-top:1.5px solid #000;width:200px;margin-bottom:5px"></div><div style="font-size:11px">Signature of the Agents</div></div>
       <div><div style="border-top:1.5px solid #000;width:200px;margin-bottom:5px"></div><div style="font-size:11px">Counting Supervisor Signature</div></div>
     </div>
-  </div>`}async function Ne(e){let t=R();if(t){z(e,`results-entry`,`
+  </div>`}async function Me(e){let t=R();if(t){z(e,`results-entry`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading data...</p></div>
-  `);try{let[n,r,i,a,o]=await Promise.all([u.adminGetBooths(t).catch(()=>[]),u.getPosts(),u.adminGetNominations(t).catch(()=>[]),u.getResults().catch(()=>[]),u.adminGetCountingMatrix(t).catch(()=>null)]),s=(Array.isArray(i)?i:[]).filter(e=>e.status===`Valid`&&e.withdrawalStatus!==`Approved`);Pe(e.querySelector(`#adminMain`),t,n,r,s,a,o)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Pe(e,t,n,r,i,a,o){let s=e=>String(e.post||e.name||``);if(!o){e.innerHTML=`
+  `);try{let[n,r,i,a,o]=await Promise.all([u.adminGetBooths(t).catch(()=>[]),u.getPosts(),u.adminGetNominations(t).catch(()=>[]),u.getResults().catch(()=>[]),u.adminGetCountingMatrix(t).catch(()=>null)]),s=(Array.isArray(i)?i:[]).filter(e=>e.status===`Valid`&&e.withdrawalStatus!==`Approved`);Ne(e.querySelector(`#adminMain`),t,n,r,s,a,o)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Ne(e,t,n,r,i,a,o){let s=e=>String(e.post||e.name||``);if(!o){e.innerHTML=`
       <div class="text-center py-20 bg-white/5 rounded-2xl border border-white/10">
         <div class="text-5xl mb-4">⚠️</div>
         <h3 class="text-xl font-bold text-white mb-2">Matrix Not Set</h3>
@@ -1483,7 +1481,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <button id="btnSaveVotes" class="btn btn-success px-12">💾 Save Form Results</button>
         </div>
       </div>
-    `;let m=()=>{let e=0;c.querySelectorAll(`.vote-input`).forEach(t=>{e+=parseInt(t.value,10)||0});let t=c.querySelector(`#totalVotesDisplay`);t&&(t.textContent=e)};c.querySelectorAll(`.vote-input`).forEach(e=>{e.addEventListener(`input`,m)}),m(),c.querySelector(`#btnSaveVotes`).addEventListener(`click`,async e=>{let i=e.target,l=c.querySelectorAll(`.vote-input`),d=[];if(l.forEach(e=>{let t=e.value.trim();t!==``&&d.push({TableNumber:n,RoundNumber:s,Post:r,CandidateId:e.dataset.cid,CandidateName:e.dataset.cname,Votes:parseInt(t,10),FormSerial:o||`N/A`})}),d.length===0){x(`Enter votes`,`warning`);return}b(i,!0,`💾 Saving...`);try{await u.adminSaveResults(t,d),d.forEach(e=>{let t=a.findIndex(t=>String(t.TableNumber)===String(n)&&String(t.Post)===r&&t.CandidateId===e.CandidateId);t>=0?(a[t].Votes=e.Votes,a[t].RoundNumber=e.RoundNumber,a[t].FormSerial=e.FormSerial):a.push(e)}),x(`Form results saved!`,`success`),c.innerHTML=``,f.value=``,f.focus()}catch(e){x(`Failed: ${e.message}`,`error`)}finally{b(i,!1,`💾 Save Form Results`)}})}}async function Fe(e){let t=R();if(!t)return;z(e,`Ballot Printing`,`
+    `;let m=()=>{let e=0;c.querySelectorAll(`.vote-input`).forEach(t=>{e+=parseInt(t.value,10)||0});let t=c.querySelector(`#totalVotesDisplay`);t&&(t.textContent=e)};c.querySelectorAll(`.vote-input`).forEach(e=>{e.addEventListener(`input`,m)}),m(),c.querySelector(`#btnSaveVotes`).addEventListener(`click`,async e=>{let i=e.target,l=c.querySelectorAll(`.vote-input`),d=[];if(l.forEach(e=>{let t=e.value.trim();t!==``&&d.push({TableNumber:n,RoundNumber:s,Post:r,CandidateId:e.dataset.cid,CandidateName:e.dataset.cname,Votes:parseInt(t,10),FormSerial:o||`N/A`})}),d.length===0){x(`Enter votes`,`warning`);return}b(i,!0,`💾 Saving...`);try{await u.adminSaveResults(t,d),d.forEach(e=>{let t=a.findIndex(t=>String(t.TableNumber)===String(n)&&String(t.Post)===r&&t.CandidateId===e.CandidateId);t>=0?(a[t].Votes=e.Votes,a[t].RoundNumber=e.RoundNumber,a[t].FormSerial=e.FormSerial):a.push(e)}),x(`Form results saved!`,`success`),c.innerHTML=``,f.value=``,f.focus()}catch(e){x(`Failed: ${e.message}`,`error`)}finally{b(i,!1,`💾 Save Form Results`)}})}}async function Pe(e){let t=R();if(!t)return;z(e,`Ballot Printing`,`
     <div class="text-center py-16">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 mt-4 text-sm">Preparing ballot generator...</p>
@@ -1688,7 +1686,18 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <div class="candidate-row"><div class="sl-no">${t.length+1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
             </div>
           </div>
-        `}),h},a=async e=>{try{x(`Generating ballots...`,`info`),r(await i(e))}catch(e){x(e.message,`error`)}},o=async()=>{try{x(`Calculating ranges...`,`info`);let[e,n,i,a,o,s]=await Promise.all([u.adminGetBooths(t),u.getNominalRoll(),u.adminGetPosts(t),u.getFinalNominations(),u.getPublicSchedule(),u.adminGetSettings(t).catch(()=>({}))]);a.active;let c=o.electionYear||new Date().getFullYear(),l=s.collegeName||`Government Victoria College Palakkad`;s.collegeShortName;let d=e=>e.post.toLowerCase().includes(`representative`)||e.post.toLowerCase().includes(`year`),f=e=>e.post.toLowerCase().includes(`association`)||e.post.toLowerCase().includes(`assoc`),p=1,m=1,h=1,g=(e,t,n)=>{if(!e||e<=0)return`-`;let r=t,i=[];if(e<=65)i.push({qty:1,size:e,ranges:[`${n}${r}-${r+e-1}`]});else{let t=Math.floor(e/50),a=e%50;if(a===0){let e=[];for(let i=0;i<t;i++)e.push(`${n}${r}-${r+50-1}`),r+=50;i.push({qty:t,size:50,ranges:e})}else if(a<=15){let e=[];for(let i=0;i<t-1;i++)e.push(`${n}${r}-${r+50-1}`),r+=50;e.length>0&&i.push({qty:t-1,size:50,ranges:e});let o=50+a;i.push({qty:1,size:o,ranges:[`${n}${r}-${r+o-1}`]})}else{let e=[];for(let i=0;i<t;i++)e.push(`${n}${r}-${r+50-1}`),r+=50;i.push({qty:t,size:50,ranges:e}),i.push({qty:1,size:a,ranges:[`${n}${r}-${r+a-1}`]})}}return i.map(e=>`<strong>${e.qty} X ${e.size}</strong><br><span style="font-size:10px; color:#666;">(${e.ranges.join(`, `)})</span>`).join(`<br>`)},_=[...e].sort((e,t)=>e.boothNumber-t.boothNumber),v=[],b=[],S=[];_.forEach(e=>{let t=n.filter(t=>e.classes.includes(String(t.CLASS).trim()));t.length!==0&&(v.push({booth:e.boothNumber,count:t.length,start:p,end:p+t.length-1}),p+=t.length)}),i.filter(d).forEach(e=>{let t=String(e.yearRestriction||``).trim().toUpperCase();if(!t)return;let r=[];_.forEach(i=>{let a=n.filter(e=>i.classes.includes(String(e.CLASS).trim())).filter(e=>{let n=String(e.CLASS||``).toUpperCase();if(n.includes(`PH D`)||n.includes(`PH.D`))return!1;let r=/\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A)\b/i.test(n);return t===`PG`?r:r?!1:t===`1`?n.startsWith(`1ST YEAR`):t===`2`?n.startsWith(`2ND YEAR`):t===`3`?n.startsWith(`3RD YEAR`):!1});a.length>0&&(r.push({booth:i.boothNumber,post:e.post,count:a.length,start:m,end:m+a.length-1}),m+=a.length)}),r.length>0&&b.push(...r)}),i.filter(f).forEach(e=>{let t=e.post.toUpperCase();t.includes(`ASSOCIATION SECRETARY`)&&(t=t.split(`ASSOCIATION SECRETARY`)[1].trim()),t=t.replace(/[-\s]/g,` `);let r=[];_.forEach(i=>{let a=n.filter(e=>i.classes.includes(String(e.CLASS).trim())).filter(e=>{let n=String(e.Dept||``).trim().toUpperCase().replace(/[-\s]/g,` `),r=String(e.CLASS||``).trim().toUpperCase().replace(/[-\s]/g,` `);return n===t||n.includes(t)||r.includes(t)});a.length>0&&(r.push({booth:i.boothNumber,post:e.post,count:a.length,start:h,end:h+a.length-1}),h+=a.length)}),r.length>0&&S.push(...r)}),r(`
+        `}),h},a=async e=>{try{x(`Generating ballots...`,`info`),r(await i(e))}catch(e){x(e.message,`error`)}},o=async()=>{try{x(`Calculating ranges...`,`info`);let[e,n,i,a,o,s]=await Promise.all([u.adminGetBooths(t),u.getNominalRoll(),u.adminGetPosts(t),u.getFinalNominations(),u.getPublicSchedule(),u.adminGetSettings(t).catch(()=>({}))]);a.active;let c=o.electionYear||new Date().getFullYear(),l=s.collegeName||`Government Victoria College Palakkad`;s.collegeShortName;let d=e=>e.post.toLowerCase().includes(`representative`)||e.post.toLowerCase().includes(`year`),f=e=>e.post.toLowerCase().includes(`association`)||e.post.toLowerCase().includes(`assoc`),p=1,m=1,h=1,g=0,_=0,v=0,b=(e,t,n)=>{if(!e||e<=0)return`-`;let r=t,i=[],a=n===`G`?`GB`:n===`R`?`RB`:`AB`,o=n===`G`?g:n===`R`?_:v,s=e=>{o++;let t=`${n}${r}-${r+e-1}`;return r+=e,{id:a+o,range:t}};if(e<=65)i.push({qty:1,size:e,items:[s(e)]});else{let t=Math.floor(e/50),n=e%50;if(n===0){let e=[];for(let n=0;n<t;n++)e.push(s(50));i.push({qty:t,size:50,items:e})}else if(n<=15){let e=[];for(let n=0;n<t-1;n++)e.push(s(50));e.length>0&&i.push({qty:t-1,size:50,items:e});let r=50+n;i.push({qty:1,size:r,items:[s(r)]})}else{let e=[];for(let n=0;n<t;n++)e.push(s(50));i.push({qty:t,size:50,items:e}),i.push({qty:1,size:n,items:[s(n)]})}}return n===`G`?g=o:n===`R`?_=o:v=o,`
+          <table style="width:100%; border-collapse:collapse; font-size:10px; background:rgba(0,0,0,0.02);">
+            ${i.map(e=>`
+              <tr>
+                <td style="padding:4px; border:1px solid #eee; font-weight:bold; width:45px;">${e.qty} x ${e.size}</td>
+                <td style="padding:4px; border:1px solid #eee; line-height:1.4;">
+                  ${e.items.map(e=>`<span style="display:inline-block; margin-right:8px;"><strong style="color:#4f46e5;">${e.id}:</strong> ${e.range}</span>`).join(` `)}
+                </td>
+              </tr>
+            `).join(``)}
+          </table>
+        `},S=[...e].sort((e,t)=>e.boothNumber-t.boothNumber),C=[],w=[],T=[];S.forEach(e=>{let t=n.filter(t=>e.classes.includes(String(t.CLASS).trim()));t.length!==0&&(C.push({booth:e.boothNumber,count:t.length,start:p,end:p+t.length-1}),p+=t.length)}),i.filter(d).forEach(e=>{let t=String(e.yearRestriction||``).trim().toUpperCase();if(!t)return;let r=[];S.forEach(i=>{let a=n.filter(e=>i.classes.includes(String(e.CLASS).trim())).filter(e=>{let n=String(e.CLASS||``).toUpperCase();if(n.includes(`PH D`)||n.includes(`PH.D`))return!1;let r=/\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A)\b/i.test(n);return t===`PG`?r:r?!1:t===`1`?n.startsWith(`1ST YEAR`):t===`2`?n.startsWith(`2ND YEAR`):t===`3`?n.startsWith(`3RD YEAR`):!1});a.length>0&&(r.push({booth:i.boothNumber,post:e.post,count:a.length,start:m,end:m+a.length-1}),m+=a.length)}),r.length>0&&w.push(...r)}),i.filter(f).forEach(e=>{let t=e.post.toUpperCase();t.includes(`ASSOCIATION SECRETARY`)&&(t=t.split(`ASSOCIATION SECRETARY`)[1].trim()),t=t.replace(/[-\s]/g,` `);let r=[];S.forEach(i=>{let a=n.filter(e=>i.classes.includes(String(e.CLASS).trim())).filter(e=>{let n=String(e.Dept||``).trim().toUpperCase().replace(/[-\s]/g,` `),r=String(e.CLASS||``).trim().toUpperCase().replace(/[-\s]/g,` `);return n===t||n.includes(t)||r.includes(t)});a.length>0&&(r.push({booth:i.boothNumber,post:e.post,count:a.length,start:h,end:h+a.length-1}),h+=a.length)}),r.length>0&&T.push(...r)}),r(`
         <div style="padding: 40px; font-family: sans-serif; color: #333;">
           <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
             <h1 style="margin: 0; font-size: 24px;">BALLOT PRINTING SUMMARY - ${c}</h1>
@@ -1701,24 +1710,24 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </p>
 
           <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #4f46e5;">1. General Union Ballots (Series: G1, G2, G3...)</h3>
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; border: 2px solid #000;">
             <thead>
               <tr style="background: #f8fafc;">
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Total Voters</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Book Breakdowns</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 15%;">Booth No</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">Voters</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 15%;">Sl No From</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 15%;">Sl No To</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 45%;">Book Breakdowns</th>
               </tr>
             </thead>
             <tbody>
-              ${v.map(e=>`
+              ${C.map(e=>`
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 10px;">Booth ${e.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${e.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${e.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${g(e.count,e.start,`G`)}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${b(e.count,e.start,`G`)}</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -1732,26 +1741,26 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </table>
 
           <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #10b981;">2. Year Representative Ballots (Series: R1, R2, R3...)</h3>
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; border: 2px solid #000;">
             <thead>
               <tr style="background: #f8fafc;">
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Post Name</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Count</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Book Breakdowns</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">Post Name</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 10%;">Booth</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">Voters</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">From</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">To</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 35%;">Book Breakdowns</th>
               </tr>
             </thead>
             <tbody>
-              ${b.map(e=>`
+              ${w.map(e=>`
                 <tr>
-                  <td style="border: 1px solid #ddd; padding: 10px;">${y(e.post)}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">Booth ${e.booth}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${y(e.post)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">B${e.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${e.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${e.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${g(e.count,e.start,`R`)}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${b(e.count,e.start,`R`)}</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -1765,26 +1774,26 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </table>
 
           <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #f59e0b;">3. Association Secretary Ballots (Series: A1, A2, A3...)</h3>
-          <table style="width: 100%; border-collapse: collapse;">
+          <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
             <thead>
               <tr style="background: #f8fafc;">
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Post Name</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Voters</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Book Breakdowns</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">Post Name</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 10%;">Booth</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">Voters</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">From</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">To</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 35%;">Book Breakdowns</th>
               </tr>
             </thead>
             <tbody>
-              ${S.map(e=>`
+              ${T.map(e=>`
                 <tr>
-                  <td style="border: 1px solid #ddd; padding: 10px;">${y(e.post)}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">Booth ${e.booth}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${y(e.post)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">B${e.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${e.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${e.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${g(e.count,e.start,`A`)}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${b(e.count,e.start,`A`)}</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -1801,7 +1810,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             Generated on ${new Date().toLocaleString()} | Official GVC Election Portal
           </div>
         </div>
-      `)}catch(e){x(e.message,`error`)}};n.querySelector(`#btnGenSummary`).onclick=o,n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)})}function Ie(e){let t=R();if(!t)return;z(e,`testing`,`
+      `)}catch(e){x(e.message,`error`)}};n.querySelector(`#btnGenSummary`).onclick=o,n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)})}function Fe(e){let t=R();if(!t)return;z(e,`testing`,`
     <div class="page-enter space-y-8 max-w-3xl mx-auto">
 
       <!-- Warning Banner -->
@@ -1895,9 +1904,9 @@ This action CANNOT be undone.
 Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelector(`#wipeStatus`);i.innerHTML=``;try{await u.adminWipeData(r),n.querySelector(`#wipePasswordInput`).value=``,i.innerHTML=`
         <div class="alert mt-3" style="background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #fca5a5;">
           ✅ All transactional data has been wiped. Publish flags reset to false.
-        </div>`,x(`All data wiped successfully.`,`success`)}catch(e){i.innerHTML=`<div class="alert alert-error mt-3">❌ ${y(e.message)}</div>`,x(`Failed: ${e.message}`,`error`)}finally{b(t,!1,`🗑️ Permanently Wipe All Data`)}})}async function Le(e){let t=R();if(t){z(e,`results`,`
+        </div>`,x(`All data wiped successfully.`,`success`)}catch(e){i.innerHTML=`<div class="alert alert-error mt-3">❌ ${y(e.message)}</div>`,x(`Failed: ${e.message}`,`error`)}finally{b(t,!1,`🗑️ Permanently Wipe All Data`)}})}async function Ie(e){let t=R();if(t){z(e,`results`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Aggregating results...</p></div>
-  `);try{let[n,r,i,a,o]=await Promise.all([u.getPosts(),u.getFinalNominations(),u.getResults().catch(()=>[]),u.getPublicSchedule().catch(()=>({})),u.adminGetSettings(t).catch(()=>({}))]);Re(e.querySelector(`#adminMain`),t,n,r.active||[],i,a,o)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Re(e,t,n,r,i,a,o){let s=a.electionYear||new Date().getFullYear(),c=o.collegeName||`GOVERNMENT VICTORIA COLLEGE PALAKKAD`;o.collegeShortName;let l={};i.forEach(e=>{l[e.Post]||(l[e.Post]={}),l[e.Post][e.CandidateId]||(l[e.Post][e.CandidateId]=0),l[e.Post][e.CandidateId]+=Number(e.Votes)||0});let u=n.map(e=>{let t=r.filter(t=>t.post===e.post),n=l[e.post]||{};if(t.length===1)return{post:e.post,type:`unanimous`,winner:t[0],candidates:t};if(t.length===0)return{post:e.post,type:`no-candidates`};let i=t.map(e=>({...e,votes:n[e.id]||0}));i.sort((e,t)=>t.votes-e.votes);let a=i[0].votes,o=i.filter(e=>e.votes===a&&e.votes>0),s=o.length>1;return{post:e.post,type:`election`,candidates:i,winner:s?null:o[0],isTie:s,totalVotes:Object.values(n).reduce((e,t)=>e+t,0),nota:n.NOTA||0,invalid:n.INVALID||0}});e.innerHTML=`
+  `);try{let[n,r,i,a,o]=await Promise.all([u.getPosts(),u.getFinalNominations(),u.getResults().catch(()=>[]),u.getPublicSchedule().catch(()=>({})),u.adminGetSettings(t).catch(()=>({}))]);Le(e.querySelector(`#adminMain`),t,n,r.active||[],i,a,o)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Le(e,t,n,r,i,a,o){let s=a.electionYear||new Date().getFullYear(),c=o.collegeName||`GOVERNMENT VICTORIA COLLEGE PALAKKAD`;o.collegeShortName;let l={};i.forEach(e=>{l[e.Post]||(l[e.Post]={}),l[e.Post][e.CandidateId]||(l[e.Post][e.CandidateId]=0),l[e.Post][e.CandidateId]+=Number(e.Votes)||0});let u=n.map(e=>{let t=r.filter(t=>t.post===e.post),n=l[e.post]||{};if(t.length===1)return{post:e.post,type:`unanimous`,winner:t[0],candidates:t};if(t.length===0)return{post:e.post,type:`no-candidates`};let i=t.map(e=>({...e,votes:n[e.id]||0}));i.sort((e,t)=>t.votes-e.votes);let a=i[0].votes,o=i.filter(e=>e.votes===a&&e.votes>0),s=o.length>1;return{post:e.post,type:`election`,candidates:i,winner:s?null:o[0],isTie:s,totalVotes:Object.values(n).reduce((e,t)=>e+t,0),nota:n.NOTA||0,invalid:n.INVALID||0}});e.innerHTML=`
     <div class="page-enter space-y-6">
       <div class="flex justify-between items-center bg-white/5 p-6 rounded-2xl border border-white/10">
         <div>
@@ -2058,7 +2067,7 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
           <\/script>
         </body>
       </html>
-    `),t.document.close()})}var W=`election_results_cache`,G=`election_results_last_fetch`,K=300*1e3;async function ze(e){e.innerHTML=`
+    `),t.document.close()})}var G=`election_results_cache`,K=`election_results_last_fetch`,q=300*1e3;async function Re(e){e.innerHTML=`
     <div class="page-enter min-h-screen">
       <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
         <div class="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
@@ -2077,7 +2086,7 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
         <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Fetching Live Results...</p></div>
       </main>
     </div>
-  `;let t=e.querySelector(`#cacheTimer`),n=()=>{let e=localStorage.getItem(G);if(!e){t.textContent=``;return}let n=parseInt(e,10)+K,r=Math.max(0,n-Date.now());r<=0?(t.textContent=`Live Update Available`,t.classList.add(`text-green-400`)):(t.textContent=`Update in ${Math.floor(r/6e4)}:${Math.floor(r%6e4/1e3).toString().padStart(2,`0`)}`,t.classList.remove(`text-green-400`))};setInterval(n,1e3),n(),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`)),e.querySelector(`#btnRefresh`).addEventListener(`click`,()=>q(e.querySelector(`#resultsMain`),!0)),await q(e.querySelector(`#resultsMain`))}async function q(e,t=!1){try{let n=localStorage.getItem(G),r=localStorage.getItem(W),i,a;if(!t&&n&&r&&Date.now()-parseInt(n,10)<K){let t=JSON.parse(r);i=t.posts,a=t.results,o(e,(t.schedule||{}).electionYear||new Date().getFullYear())}else{let t;[i,a,t]=await Promise.all([u.getPosts(),u.getResults().catch(()=>[]),u.getPublicSchedule().catch(()=>({}))]),localStorage.setItem(G,Date.now().toString()),localStorage.setItem(W,JSON.stringify({posts:i,results:a,schedule:t})),o(e,t.electionYear||new Date().getFullYear())}function o(e,t){let n=e.closest(`.page-enter`)?.querySelector(`h1`);n&&(n.textContent=`Live Election Results ${t}`)}if(a.length===0){e.innerHTML=`
+  `;let t=e.querySelector(`#cacheTimer`),n=()=>{let e=localStorage.getItem(K);if(!e){t.textContent=``;return}let n=parseInt(e,10)+q,r=Math.max(0,n-Date.now());r<=0?(t.textContent=`Live Update Available`,t.classList.add(`text-green-400`)):(t.textContent=`Update in ${Math.floor(r/6e4)}:${Math.floor(r%6e4/1e3).toString().padStart(2,`0`)}`,t.classList.remove(`text-green-400`))};setInterval(n,1e3),n(),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`)),e.querySelector(`#btnRefresh`).addEventListener(`click`,()=>J(e.querySelector(`#resultsMain`),!0)),await J(e.querySelector(`#resultsMain`))}async function J(e,t=!1){try{let n=localStorage.getItem(K),r=localStorage.getItem(G),i,a;if(!t&&n&&r&&Date.now()-parseInt(n,10)<q){let t=JSON.parse(r);i=t.posts,a=t.results,o(e,(t.schedule||{}).electionYear||new Date().getFullYear())}else{let t;[i,a,t]=await Promise.all([u.getPosts(),u.getResults().catch(()=>[]),u.getPublicSchedule().catch(()=>({}))]),localStorage.setItem(K,Date.now().toString()),localStorage.setItem(G,JSON.stringify({posts:i,results:a,schedule:t})),o(e,t.electionYear||new Date().getFullYear())}function o(e,t){let n=e.closest(`.page-enter`)?.querySelector(`h1`);n&&(n.textContent=`Live Election Results ${t}`)}if(a.length===0){e.innerHTML=`
         <div class="text-center py-20 bg-white/5 rounded-2xl border border-white/10">
           <div class="text-5xl mb-4">📊</div>
           <h2 class="text-2xl font-bold text-white mb-2">Counting in Progress</h2>
@@ -2143,9 +2152,9 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
         </div>
       `}),c+=`</div>`,c===`<div class="space-y-12"></div>`?e.innerHTML=`
         <div class="alert alert-info text-center">Results backend is initialized, but no votes have been aggregated for the configured posts yet.</div>
-      `:e.innerHTML=c}catch(t){e.innerHTML=`<div class="alert alert-error">❌ Failed to load results: ${y(t.message)}</div>`}}async function Be(e){e.innerHTML=`
+      `:e.innerHTML=c}catch(t){e.innerHTML=`<div class="alert alert-error">❌ Failed to load results: ${y(t.message)}</div>`}}async function ze(e){e.innerHTML=`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading nominal roll...</p></div>
-  `;try{let[t,n]=await Promise.all([u.getNominalRoll(),u.getSettings()]);Ve(e,t,n)}catch(t){e.innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}function Ve(e,t,n){let r=n.nominalRollFinalized===`true`,i=[...t],a=``,o=()=>{let t=i.filter(e=>[e.NAME,e.CLASS,e[`ADMISION NO`],e[`Nominal Roll Serial Number`]].some(e=>String(e||``).toLowerCase().includes(a.toLowerCase())));e.innerHTML=`
+  `;try{let[t,n]=await Promise.all([u.getNominalRoll(),u.getSettings()]);Be(e,t,n)}catch(t){e.innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}function Be(e,t,n){let r=n.nominalRollFinalized===`true`,i=[...t],a=``,o=()=>{let t=i.filter(e=>[e.NAME,e.CLASS,e[`ADMISION NO`],e[`Nominal Roll Serial Number`]].some(e=>String(e||``).toLowerCase().includes(a.toLowerCase())));e.innerHTML=`
       <div class="page-enter space-y-6">
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
@@ -2195,7 +2204,7 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
           </div>
         </div>
       </div>
-    `;let n=e.querySelector(`.dropdown-toggle`),s=e.querySelector(`.dropdown-menu`);n&&(n.onclick=e=>{e.stopPropagation(),s.classList.toggle(`hidden`)}),window.onclick=()=>s?.classList.add(`hidden`),e.querySelector(`#searchInput`).oninput=t=>{a=t.target.value,o();let n=e.querySelector(`#searchInput`);n.focus();let r=n.value;n.value=``,n.value=r},e.querySelector(`#btnPrintSerial`).onclick=()=>J(i,r,`serial`),e.querySelector(`#btnPrintClass`).onclick=()=>J(i,r,`class`)};o()}function J(e,t,r){let i=[...e];r===`class`?i.sort((e,t)=>{let n=String(e.CLASS).toUpperCase(),r=String(t.CLASS).toUpperCase();return n===r?String(e.NAME).toUpperCase().localeCompare(String(t.NAME).toUpperCase()):n.localeCompare(r)}):i.sort((e,t)=>Number(e[`Nominal Roll Serial Number`])-Number(t[`Nominal Roll Serial Number`]));let a=n.COLLEGE_NAME||`GOVERNMENT VICTORIA COLLEGE, PALAKKAD`,o=t?`FINAL NOMINAL ROLL`:`DRAFT NOMINAL ROLL`,s=new Date().toLocaleString(),c=window.open(``,`_blank`);c.document.write(`
+    `;let n=e.querySelector(`.dropdown-toggle`),s=e.querySelector(`.dropdown-menu`);n&&(n.onclick=e=>{e.stopPropagation(),s.classList.toggle(`hidden`)}),window.onclick=()=>s?.classList.add(`hidden`),e.querySelector(`#searchInput`).oninput=t=>{a=t.target.value,o();let n=e.querySelector(`#searchInput`);n.focus();let r=n.value;n.value=``,n.value=r},e.querySelector(`#btnPrintSerial`).onclick=()=>Y(i,r,`serial`),e.querySelector(`#btnPrintClass`).onclick=()=>Y(i,r,`class`)};o()}function Y(e,t,r){let i=[...e];r===`class`?i.sort((e,t)=>{let n=String(e.CLASS).toUpperCase(),r=String(t.CLASS).toUpperCase();return n===r?String(e.NAME).toUpperCase().localeCompare(String(t.NAME).toUpperCase()):n.localeCompare(r)}):i.sort((e,t)=>Number(e[`Nominal Roll Serial Number`])-Number(t[`Nominal Roll Serial Number`]));let a=n.COLLEGE_NAME||`GOVERNMENT VICTORIA COLLEGE, PALAKKAD`,o=t?`FINAL NOMINAL ROLL`:`DRAFT NOMINAL ROLL`,s=new Date().toLocaleString(),c=window.open(``,`_blank`);c.document.write(`
     <html>
       <head>
         <title>${o}</title>
@@ -2258,9 +2267,9 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
         <script>window.print();<\/script>
       </body>
     </html>
-  `),c.document.close()}async function Y(e){let t=R();if(t){z(e,`nominalRoll`,`
+  `),c.document.close()}async function X(e){let t=R();if(t){z(e,`nominalRoll`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading nominal roll...</p></div>
-  `);try{let[n,r]=await Promise.all([u.getNominalRoll(),u.getSettings()]);He(e.querySelector(`#adminMain`),t,n,r)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function He(e,t,n,r){let i=r.nominalRollFinalized===`true`,a=[...n],o=``,s=[...new Set(n.map(e=>String(e.CLASS).trim()))].sort(),c=[...new Set(n.map(e=>String(e.Dept||`–`).trim()))].sort(),l=()=>{let n=a.filter(e=>[e.NAME,e.CLASS,e[`ADMISION NO`],e[`Nominal Roll Serial Number`]].some(e=>String(e||``).toLowerCase().includes(o.toLowerCase())));e.innerHTML=`
+  `);try{let[n,r]=await Promise.all([u.getNominalRoll(),u.getSettings()]);Ve(e.querySelector(`#adminMain`),t,n,r)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Ve(e,t,n,r){let i=r.nominalRollFinalized===`true`,a=[...n],o=``,s=[...new Set(n.map(e=>String(e.CLASS).trim()))].sort(),c=[...new Set(n.map(e=>String(e.Dept||`–`).trim()))].sort(),l=()=>{let n=a.filter(e=>[e.NAME,e.CLASS,e[`ADMISION NO`],e[`Nominal Roll Serial Number`]].some(e=>String(e||``).toLowerCase().includes(o.toLowerCase())));e.innerHTML=`
       <div class="page-enter space-y-6">
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
@@ -2360,13 +2369,13 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
           </div>
         </div>
       </div>
-    `;let r=e.querySelector(`.dropdown-toggle`),d=e.querySelector(`.dropdown-menu`);r&&(r.onclick=e=>{e.stopPropagation(),d.classList.toggle(`hidden`)}),window.onclick=()=>d?.classList.add(`hidden`),e.querySelector(`#searchInput`).oninput=t=>{o=t.target.value,l(),e.querySelector(`#searchInput`).focus();let n=e.querySelector(`#searchInput`).value;e.querySelector(`#searchInput`).value=``,e.querySelector(`#searchInput`).value=n},i||(e.querySelector(`#btnAddNew`).onclick=()=>e.querySelector(`#addModal`).classList.remove(`hidden`),e.querySelector(`#btnCancelAdd`).onclick=()=>e.querySelector(`#addModal`).classList.add(`hidden`),e.querySelector(`#btnConfirmAdd`).onclick=async n=>{let r={serial:e.querySelector(`#addSerial`).value,name:e.querySelector(`#addName`).value,class:e.querySelector(`#addClass`).value,admission:e.querySelector(`#addAdm`).value,dept:e.querySelector(`#addDept`).value};if(!r.serial||!r.name||!r.class)return x(`Please fill required fields.`,`warning`);b(n.target,!0,`Save Student`);try{await u.adminAddStudent(t,r),x(`Student added to roll.`,`success`),Y(e.closest(`#appContainer`)||e.parentElement)}catch(e){x(e.message,`error`),b(n.target,!1,`Save Student`)}},e.querySelectorAll(`.delete-student`).forEach(n=>{n.onclick=async()=>{if(confirm(`Delete student #${n.dataset.serial}?`))try{await u.adminDeleteStudent(t,n.dataset.serial),x(`Student removed.`,`success`),Y(e.closest(`#appContainer`)||e.parentElement)}catch(e){x(e.message,`error`)}}}),e.querySelector(`#btnFinalize`).onclick=async n=>{if(confirm(`FINALIZATION WARNING:
+    `;let r=e.querySelector(`.dropdown-toggle`),d=e.querySelector(`.dropdown-menu`);r&&(r.onclick=e=>{e.stopPropagation(),d.classList.toggle(`hidden`)}),window.onclick=()=>d?.classList.add(`hidden`),e.querySelector(`#searchInput`).oninput=t=>{o=t.target.value,l(),e.querySelector(`#searchInput`).focus();let n=e.querySelector(`#searchInput`).value;e.querySelector(`#searchInput`).value=``,e.querySelector(`#searchInput`).value=n},i||(e.querySelector(`#btnAddNew`).onclick=()=>e.querySelector(`#addModal`).classList.remove(`hidden`),e.querySelector(`#btnCancelAdd`).onclick=()=>e.querySelector(`#addModal`).classList.add(`hidden`),e.querySelector(`#btnConfirmAdd`).onclick=async n=>{let r={serial:e.querySelector(`#addSerial`).value,name:e.querySelector(`#addName`).value,class:e.querySelector(`#addClass`).value,admission:e.querySelector(`#addAdm`).value,dept:e.querySelector(`#addDept`).value};if(!r.serial||!r.name||!r.class)return x(`Please fill required fields.`,`warning`);b(n.target,!0,`Save Student`);try{await u.adminAddStudent(t,r),x(`Student added to roll.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){x(e.message,`error`),b(n.target,!1,`Save Student`)}},e.querySelectorAll(`.delete-student`).forEach(n=>{n.onclick=async()=>{if(confirm(`Delete student #${n.dataset.serial}?`))try{await u.adminDeleteStudent(t,n.dataset.serial),x(`Student removed.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){x(e.message,`error`)}}}),e.querySelector(`#btnFinalize`).onclick=async n=>{if(confirm(`FINALIZATION WARNING:
 
 1. All students will be sorted by Class and Name.
 2. NEW Serial Numbers will be generated sequentially (1, 2, 3...).
 3. The roll will be LOCKED for all future edits.
 
-Are you absolutely sure?`)){b(n.target,!0,`Finalizing...`);try{await u.adminFinalizeRoll(t),x(`Nominal Roll Finalized Successfully!`,`success`),Y(e.closest(`#appContainer`)||e.parentElement)}catch(e){x(e.message,`error`),b(n.target,!1,`Finalize & Lock Roll`)}}}),e.querySelector(`#btnPrintSerial`).onclick=()=>X(a,i,`serial`),e.querySelector(`#btnPrintClass`).onclick=()=>X(a,i,`class`)};l()}function X(e,t,r){let i=[...e];r===`class`?i.sort((e,t)=>{let n=String(e.CLASS).toUpperCase(),r=String(t.CLASS).toUpperCase();return n===r?String(e.NAME).toUpperCase().localeCompare(String(t.NAME).toUpperCase()):n.localeCompare(r)}):i.sort((e,t)=>Number(e[`Nominal Roll Serial Number`])-Number(t[`Nominal Roll Serial Number`]));let a=n.COLLEGE_NAME||`GOVERNMENT VICTORIA COLLEGE, PALAKKAD`,o=t?`FINAL NOMINAL ROLL`:`DRAFT NOMINAL ROLL`,s=new Date().toLocaleString(),c=window.open(``,`_blank`);c.document.write(`
+Are you absolutely sure?`)){b(n.target,!0,`Finalizing...`);try{await u.adminFinalizeRoll(t),x(`Nominal Roll Finalized Successfully!`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){x(e.message,`error`),b(n.target,!1,`Finalize & Lock Roll`)}}}),e.querySelector(`#btnPrintSerial`).onclick=()=>Z(a,i,`serial`),e.querySelector(`#btnPrintClass`).onclick=()=>Z(a,i,`class`)};l()}function Z(e,t,r){let i=[...e];r===`class`?i.sort((e,t)=>{let n=String(e.CLASS).toUpperCase(),r=String(t.CLASS).toUpperCase();return n===r?String(e.NAME).toUpperCase().localeCompare(String(t.NAME).toUpperCase()):n.localeCompare(r)}):i.sort((e,t)=>Number(e[`Nominal Roll Serial Number`])-Number(t[`Nominal Roll Serial Number`]));let a=n.COLLEGE_NAME||`GOVERNMENT VICTORIA COLLEGE, PALAKKAD`,o=t?`FINAL NOMINAL ROLL`:`DRAFT NOMINAL ROLL`,s=new Date().toLocaleString(),c=window.open(``,`_blank`);c.document.write(`
     <html>
       <head>
         <title>${o}</title>
@@ -2430,9 +2439,9 @@ Are you absolutely sure?`)){b(n.target,!0,`Finalizing...`);try{await u.adminFina
         <script>window.print();<\/script>
       </body>
     </html>
-  `),c.document.close()}async function Ue(e){let t=R();if(t){z(e,`schedule`,`
+  `),c.document.close()}async function He(e){let t=R();if(t){z(e,`schedule`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading schedule...</p></div>
-  `);try{let n=await u.getPublicSchedule();We(e.querySelector(`#adminMain`),t,n)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function We(e,t,n){let r=e=>e?new Date(e).toISOString().slice(0,16):``;e.innerHTML=`
+  `);try{let n=await u.getPublicSchedule();Ue(e.querySelector(`#adminMain`),t,n)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Ue(e,t,n){let r=e=>e?new Date(e).toISOString().slice(0,16):``;e.innerHTML=`
     <div class="page-enter space-y-6 max-w-4xl">
       <div>
         <h3 class="text-xl font-bold text-white">Election Schedule</h3>
@@ -2498,7 +2507,7 @@ Are you absolutely sure?`)){b(n.target,!0,`Finalizing...`);try{await u.adminFina
         </div>
       </div>
     </div>
-  `;let i=()=>{let t=new Date,n=e.querySelector(`#nominationDeadline`).value,r=e.querySelector(`#withdrawalStart`).value,i=e.querySelector(`#withdrawalEnd`).value,a=n&&t>new Date(n)?`<span class="text-rose-400">CLOSED</span>`:`<span class="text-emerald-400">OPEN</span>`;e.querySelector(`#statusNom`).innerHTML=a;let o=`<span class="text-slate-500">Not Set</span>`;r&&i&&(o=t<new Date(r)?`<span class="text-amber-400">PENDING (Starts soon)</span>`:t>new Date(i)?`<span class="text-rose-400">CLOSED</span>`:`<span class="text-emerald-400">ACTIVE (Open now)</span>`),e.querySelector(`#statusWith`).innerHTML=o};i(),e.querySelectorAll(`input`).forEach(e=>e.onchange=i),e.querySelector(`#btnSaveSchedule`).onclick=async n=>{let r={electionYear:e.querySelector(`#electionYear`).value,notificationDate:e.querySelector(`#notificationDate`).value,nominationDeadline:e.querySelector(`#nominationDeadline`).value?new Date(e.querySelector(`#nominationDeadline`).value).toISOString():``,withdrawalStart:e.querySelector(`#withdrawalStart`).value?new Date(e.querySelector(`#withdrawalStart`).value).toISOString():``,withdrawalEnd:e.querySelector(`#withdrawalEnd`).value?new Date(e.querySelector(`#withdrawalEnd`).value).toISOString():``};b(n.target,!0,`Saving Schedule...`);try{await u.adminSaveSchedule(t,r),x(`Election schedule updated successfully!`,`success`),i()}catch(e){x(e.message,`error`)}finally{b(n.target,!1,`💾 Save Election Schedule`)}}}async function Z(e){let t=R();t&&(window.ADMIN_BYPASS_PWD=t,z(e,`direct-nomination`,`
+  `;let i=()=>{let t=new Date,n=e.querySelector(`#nominationDeadline`).value,r=e.querySelector(`#withdrawalStart`).value,i=e.querySelector(`#withdrawalEnd`).value,a=n&&t>new Date(n)?`<span class="text-rose-400">CLOSED</span>`:`<span class="text-emerald-400">OPEN</span>`;e.querySelector(`#statusNom`).innerHTML=a;let o=`<span class="text-slate-500">Not Set</span>`;r&&i&&(o=t<new Date(r)?`<span class="text-amber-400">PENDING (Starts soon)</span>`:t>new Date(i)?`<span class="text-rose-400">CLOSED</span>`:`<span class="text-emerald-400">ACTIVE (Open now)</span>`),e.querySelector(`#statusWith`).innerHTML=o};i(),e.querySelectorAll(`input`).forEach(e=>e.onchange=i),e.querySelector(`#btnSaveSchedule`).onclick=async n=>{let r={electionYear:e.querySelector(`#electionYear`).value,notificationDate:e.querySelector(`#notificationDate`).value,nominationDeadline:e.querySelector(`#nominationDeadline`).value?new Date(e.querySelector(`#nominationDeadline`).value).toISOString():``,withdrawalStart:e.querySelector(`#withdrawalStart`).value?new Date(e.querySelector(`#withdrawalStart`).value).toISOString():``,withdrawalEnd:e.querySelector(`#withdrawalEnd`).value?new Date(e.querySelector(`#withdrawalEnd`).value).toISOString():``};b(n.target,!0,`Saving Schedule...`);try{await u.adminSaveSchedule(t,r),x(`Election schedule updated successfully!`,`success`),i()}catch(e){x(e.message,`error`)}finally{b(n.target,!1,`💾 Save Election Schedule`)}}}async function We(e){let t=R();t&&(window.ADMIN_BYPASS_PWD=t,z(e,`direct-nomination`,`
     <div id="adminFormContainer" class="p-6">
        <div class="alert alert-info mb-6">
          🛡️ <strong>Admin Direct Entry Mode:</strong> Deadlines and window restrictions are bypassed.
@@ -2520,4 +2529,4 @@ Are you absolutely sure?`)){b(n.target,!0,`Finalizing...`);try{await u.adminFina
       and replace <code style="background:rgba(0,0,0,0.3);padding:0.1rem 0.4rem;border-radius:4px;">YOUR_SCRIPT_ID</code>
       with your Google Apps Script Web App URL, then rebuild &amp; push.
     </div>
-  `),document.getElementById(`app`).style.marginTop=`48px`);var $=e=>t=>{Q.innerHTML=``,e(Q,t)};o.on(`/`,$(S)).on(`/submit`,$(k)).on(`/find`,$(ie)).on(`/valid-list`,$(se)).on(`/final-list`,$(ue)).on(`/withdraw`,$(pe)).on(`/results`,$(ze)).on(`/nominal-roll`,$(Be)).on(`/admin`,$(ve)).on(`/admin/dashboard`,$(ye)).on(`/admin/verify`,$(be)).on(`/admin/withdrawals`,$(Se)).on(`/admin/publish`,$(we)).on(`/admin/posts`,$(Te)).on(`/admin/ballots`,$(Fe)).on(`/admin/booths`,$(Oe)).on(`/admin/counting`,$(Ae)).on(`/admin/results-entry`,$(Ne)).on(`/admin/results`,$(Le)).on(`/admin/nominal-roll`,$(Y)).on(`/admin/schedule`,$(Ue)).on(`/admin/direct-nomination`,$(Z)).on(`/admin/testing`,$(Ie)).setDefault(`/`),document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-nav]`);t&&(e.preventDefault(),o.navigate(t.dataset.nav))}),o.start();
+  `),document.getElementById(`app`).style.marginTop=`48px`);var $=e=>t=>{Q.innerHTML=``,e(Q,t)};o.on(`/`,$(S)).on(`/submit`,$(k)).on(`/find`,$(ie)).on(`/valid-list`,$(se)).on(`/final-list`,$(ue)).on(`/withdraw`,$(pe)).on(`/results`,$(Re)).on(`/nominal-roll`,$(ze)).on(`/admin`,$(ve)).on(`/admin/dashboard`,$(ye)).on(`/admin/verify`,$(be)).on(`/admin/withdrawals`,$(Se)).on(`/admin/publish`,$(we)).on(`/admin/posts`,$(Te)).on(`/admin/ballots`,$(Pe)).on(`/admin/booths`,$(Oe)).on(`/admin/counting`,$(ke)).on(`/admin/results-entry`,$(Me)).on(`/admin/results`,$(Ie)).on(`/admin/nominal-roll`,$(X)).on(`/admin/schedule`,$(He)).on(`/admin/direct-nomination`,$(We)).on(`/admin/testing`,$(Fe)).setDefault(`/`),document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-nav]`);t&&(e.preventDefault(),o.navigate(t.dataset.nav))}),o.start();
