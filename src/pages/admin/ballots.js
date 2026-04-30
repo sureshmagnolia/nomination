@@ -5,7 +5,6 @@
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
-import { getBallotMasterPlan } from '../../utils/ballotMath.js';
 
 export async function renderAdminBallots(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -69,7 +68,10 @@ export async function renderAdminBallots(container) {
           <p class="text-xs text-slate-400 leading-relaxed">
             Detailed serial number ranges and book counts for the printing company.
           </p>
-          <button id="btnGenSummary" class="btn btn-secondary w-full py-3 border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📑 Generate Summary Report</button>
+          <button id="btnGenSummary" class="btn btn-secondary w-full py-3 border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📑 View Summary Report</button>
+          <button id="btnRegenPlan" class="w-full text-xs text-purple-400/50 hover:text-purple-400 mt-2 flex items-center justify-center gap-1 transition-colors">
+            <span>🔄</span> Regenerate Master Plan
+          </button>
         </div>
       </div>
     </div>
@@ -328,17 +330,21 @@ export async function renderAdminBallots(container) {
   const handleSummaryReport = async () => {
     try {
       showToast('Calculating Master Plan...', 'info');
-      const [booths, nominalRoll, posts, candidatesResponse, schedule, settings] = await Promise.all([
-        api.adminGetBooths(pwd),
-        api.getNominalRoll(),
-        api.adminGetPosts(pwd),
-        api.getFinalNominations(),
+      const [schedule, settings, planResponse] = await Promise.all([
         api.getPublicSchedule(),
-        api.adminGetSettings(pwd).catch(() => ({}))
+        api.adminGetSettings(pwd).catch(() => ({})),
+        api.adminGetBallotPlan(pwd).catch(() => null)
       ]);
+      
+      if (!planResponse) {
+        if (confirm('No Master Plan found. Generate it now based on current final list and booths?')) {
+          await handleRegenPlan();
+          return handleSummaryReport();
+        }
+        return;
+      }
 
-      const candidates = candidatesResponse.active || [];
-      const plan = getBallotMasterPlan(posts, candidates, booths, nominalRoll);
+      const plan = planResponse;
 
       const year = schedule.electionYear || new Date().getFullYear();
       const collegeName = settings.collegeName || 'Government Victoria College Palakkad';
@@ -463,7 +469,21 @@ export async function renderAdminBallots(container) {
     }
   };
 
+  const handleRegenPlan = async () => {
+    try {
+      setLoading(true);
+      showToast('Calculating and saving Master Plan on server...', 'info');
+      await api.adminGenerateBallotPlan(pwd);
+      showToast('Master Plan finalized successfully!', 'success');
+      setLoading(false);
+    } catch (err) {
+      setLoading(false);
+      showToast(err.message, 'error');
+    }
+  };
+
   main.querySelector('#btnGenSummary').onclick = handleSummaryReport;
+  main.querySelector('#btnRegenPlan').onclick = handleRegenPlan;
 
   main.querySelectorAll('.preview-btn').forEach(btn => {
     btn.onclick = () => handlePreview(btn.dataset.type);

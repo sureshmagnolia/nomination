@@ -6,7 +6,6 @@ import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
 import { CONFIG } from '../../config.js';
-import { getBallotMasterPlan } from '../../utils/ballotMath.js';
 
 export async function renderAdminBooths(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -15,20 +14,21 @@ export async function renderAdminBooths(container) {
   `);
 
   try {
-    const [nominalRoll, booths, locations, posts, nominations] = await Promise.all([
+    const [nominalRoll, booths, locations, posts, nominations, plan] = await Promise.all([
       api.getNominalRoll(),
       api.adminGetBooths(pwd).catch(() => []),
       api.adminGetLocations(pwd).catch(() => []),
       api.adminGetPosts(pwd).catch(() => []),
-      api.getFinalNominations().catch(() => ({ active: [] }))
+      api.getFinalNominations().catch(() => ({ active: [] })),
+      api.adminGetBallotPlan(pwd).catch(() => null)
     ]);
-    renderBoothsUI(container.querySelector('#adminMain'), pwd, nominalRoll, booths, locations, posts, nominations);
+    renderBoothsUI(container.querySelector('#adminMain'), pwd, nominalRoll, booths, locations, posts, nominations, plan);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
   }
 }
 
-function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations, posts, nominations) {
+function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations, posts, nominations, plan) {
   // 1. Process Nominal Roll to get classes and sizes
   const classStats = {};
   nominalRoll.forEach(student => {
@@ -189,7 +189,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
     main.querySelector('#btnPrintRolls').addEventListener('click', () => {
       const area = main.querySelector('#printArea');
-      area.innerHTML = buildElectoralRollHtml(booths, nominalRoll, posts, classStats, nominations);
+      area.innerHTML = buildElectoralRollHtml(booths, nominalRoll, posts, classStats, nominations, plan);
       
       const printWin = window.open('', '_blank');
       printWin.document.write(`
@@ -310,10 +310,12 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     });
   };
 
-  const buildElectoralRollHtml = (booths, students, posts, classStats, nominationsResponse) => {
+  const buildElectoralRollHtml = (booths, students, posts, classStats, nominationsResponse, plan) => {
     let html = '';
-    const candidates = nominationsResponse.active || [];
-    const plan = getBallotMasterPlan(posts, candidates, booths, students);
+    
+    if (!plan) {
+      return `<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`;
+    }
 
     const sortedBooths = [...booths].sort((a, b) => a.boothNumber - b.boothNumber);
 

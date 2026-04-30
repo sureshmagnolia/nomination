@@ -166,6 +166,14 @@ export const api = {
   adminSaveCountingMatrix: (password, matrixData) =>
     post({ action: 'adminSaveCountingMatrix', password, matrixData }),
 
+  /** Admin: generate and save the master ballot plan (serial ranges, books) */
+  adminGenerateBallotPlan: (password) =>
+    post({ action: 'adminGenerateBallotPlan', password }),
+
+  /** Admin: get the saved master ballot plan */
+  adminGetBallotPlan: (password) =>
+    get({ action: 'adminGetBallotPlan', password }),
+
   // ─── Nominal Roll Management ────────────────────────────────────────────────
   
   /** Get all settings (published status, finalized status) */
