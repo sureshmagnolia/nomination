@@ -1520,10 +1520,24 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             .ballot-header h1 { font-size: 22px; margin: 0; text-transform: uppercase; }
             .ballot-header h2 { font-size: 18px; margin: 5px 0 0 0; }
             
-            .a3 .ballot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+            .a3 .ballot-grid { 
+              column-count: 2; 
+              column-gap: 30px; 
+              width: 100%;
+            }
             .a5 .ballot-grid { display: block; }
 
-            .post-box { border: 2px solid #000; padding: 0; display: flex; flex-direction: column; margin-bottom: 15px; break-inside: avoid; }
+            .post-box { 
+              border: 2px solid #000; 
+              padding: 0; 
+              display: flex; 
+              flex-direction: column; 
+              margin-bottom: 25px; 
+              break-inside: avoid; 
+              -webkit-column-break-inside: avoid;
+              page-break-inside: avoid;
+              width: 100%;
+            }
             .post-title { background: #ccc; color: #000; text-align: center; padding: 8px; font-weight: bold; font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #000; }
             
             .candidate-row { display: flex; align-items: center; border-bottom: 1px solid #000; height: 55px; }
