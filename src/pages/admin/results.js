@@ -238,7 +238,6 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule) {
             window.addEventListener('load', () => {
               setTimeout(() => {
                 window.print();
-                window.close();
               }, 500);
             });
           </script>

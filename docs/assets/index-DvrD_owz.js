@@ -2004,7 +2004,6 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
             window.addEventListener('load', () => {
               setTimeout(() => {
                 window.print();
-                window.close();
               }, 500);
             });
           <\/script>
