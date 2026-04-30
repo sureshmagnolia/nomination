@@ -350,8 +350,8 @@ export async function renderAdminBallots(container) {
       });
 
       // 2. Year Rep Series (Post-wise, then Booth-wise)
-      const contestableReps = posts.filter(isYear).filter(p => candidates.filter(c => c.post === p.post).length > 1);
-      contestableReps.forEach(p => {
+      const yearReps = posts.filter(isYear);
+      yearReps.forEach(p => {
         const yr = String(p.yearRestriction || '').trim().toUpperCase();
         if (!yr) return;
 
@@ -394,8 +394,8 @@ export async function renderAdminBallots(container) {
       });
 
       // 3. Association Series (Post-wise, then Booth-wise)
-      const contestableAssocs = posts.filter(isAssoc).filter(p => candidates.filter(c => c.post === p.post).length > 1);
-      contestableAssocs.forEach(p => {
+      const assocPosts = posts.filter(isAssoc);
+      assocPosts.forEach(p => {
         // More robust prefix handling
         const prefix = 'Association Secretary';
         let dept = p.post.toUpperCase();
