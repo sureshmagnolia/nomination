@@ -610,12 +610,12 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       <nav class="flex-1 p-3 space-y-1">
         ${B(`dashboard`,`📊`,`Dashboard`,t)}
         ${B(`schedule`,`📅`,`Election Schedule`,t)}
+        ${B(`nominal-roll`,`📜`,`Nominal Roll`,t)}
+        ${B(`posts`,`📋`,`Manage Posts`,t)}
         ${B(`direct-nomination`,`📝`,`Direct Entry`,t)}
         ${B(`verify`,`✅`,`Verify Nominations`,t)}
         ${B(`withdrawals`,`↩️`,`Withdrawals`,t)}
         ${B(`publish`,`📢`,`Publish Lists`,t)}
-        ${B(`posts`,`📋`,`Manage Posts`,t)}
-        ${B(`nominal-roll`,`📜`,`Nominal Roll`,t)}
         ${B(`booths`,`🏫`,`Polling Booths`,t)}
         ${B(`ballots`,`🗳️`,`Ballot Printing`,t)}
         <div class="border-t border-white/10 my-2"></div>

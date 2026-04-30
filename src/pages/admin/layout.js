@@ -41,12 +41,12 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
       <nav class="flex-1 p-3 space-y-1">
         ${navItem('dashboard',   '📊', 'Dashboard',         activeSection)}
         ${navItem('schedule',    '📅', 'Election Schedule',  activeSection)}
+        ${navItem('nominal-roll','📜', 'Nominal Roll',       activeSection)}
+        ${navItem('posts',       '📋', 'Manage Posts',       activeSection)}
         ${navItem('direct-nomination', '📝', 'Direct Entry',  activeSection)}
         ${navItem('verify',      '✅', 'Verify Nominations', activeSection)}
         ${navItem('withdrawals', '↩️', 'Withdrawals',       activeSection)}
         ${navItem('publish',     '📢', 'Publish Lists',      activeSection)}
-        ${navItem('posts',       '📋', 'Manage Posts',       activeSection)}
-        ${navItem('nominal-roll','📜', 'Nominal Roll',       activeSection)}
         ${navItem('booths',      '🏫', 'Polling Booths',     activeSection)}
         ${navItem('ballots',     '🗳️', 'Ballot Printing',    activeSection)}
         <div class="border-t border-white/10 my-2"></div>
