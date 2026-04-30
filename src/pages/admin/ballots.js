@@ -330,6 +330,23 @@ export async function renderAdminBallots(container) {
       
       // Calculate Ranges
       let genSl = 1, repSl = 1, assocSl = 1;
+      
+      const calcBooks = (count) => {
+        if (!count || count <= 0) return '0';
+        const standard = 50;
+        const threshold = 15;
+        if (count <= (standard + threshold)) return `1 X ${count}`;
+        const fullBooks = Math.floor(count / standard);
+        const remainder = count % standard;
+        if (remainder === 0) return `${fullBooks} X ${standard}`;
+        if (remainder <= threshold) {
+          const mainBooks = fullBooks - 1;
+          const lastBook = standard + remainder;
+          return `${mainBooks > 0 ? mainBooks + ' X ' + standard + ', ' : ''}1 X ${lastBook}`;
+        } else {
+          return `${fullBooks} X ${standard}, 1 X ${remainder}`;
+        }
+      };
       const sortedBooths = [...booths].sort((a, b) => a.boothNumber - b.boothNumber);
       
       const genSummary = [];
@@ -459,7 +476,7 @@ export async function renderAdminBallots(container) {
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${s.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${s.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${Math.ceil(s.count / 50)} (of 50)</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${calcBooks(s.count)}</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -467,7 +484,7 @@ export async function renderAdminBallots(container) {
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${genSl - 1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G${genSl - 1}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${Math.ceil((genSl - 1) / 50)}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${calcBooks(genSl - 1)}</td>
               </tr>
             </tbody>
           </table>
@@ -481,16 +498,18 @@ export async function renderAdminBallots(container) {
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Count</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Books Needed</th>
               </tr>
             </thead>
             <tbody>
-              ${repSummary.map(r => `
+              ${repSummary.map(s => `
                 <tr>
-                  <td style="border: 1px solid #ddd; padding: 10px;">${esc(r.post)}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${r.booth}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${r.count}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${r.start}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${r.end}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">${esc(s.post)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">Booth ${s.booth}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${s.start}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${s.end}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${calcBooks(s.count)}</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -498,29 +517,32 @@ export async function renderAdminBallots(container) {
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${repSl - 1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${repSl - 1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${calcBooks(repSl - 1)}</td>
               </tr>
             </tbody>
           </table>
 
           <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #f59e0b;">3. Association Secretary Ballots (Series: A1, A2, A3...)</h3>
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+          <table style="width: 100%; border-collapse: collapse;">
             <thead>
               <tr style="background: #f8fafc;">
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Post Name</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Count</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Voters</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Books Needed</th>
               </tr>
             </thead>
             <tbody>
-              ${assocSummary.map(a => `
+              ${assocSummary.map(s => `
                 <tr>
-                  <td style="border: 1px solid #ddd; padding: 10px;">${esc(a.post)}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${a.booth}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${a.count}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${a.start}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${a.end}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">${esc(s.post)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${s.booth}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${s.start}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${s.end}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${calcBooks(s.count)}</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -528,6 +550,7 @@ export async function renderAdminBallots(container) {
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${assocSl - 1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${assocSl - 1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${calcBooks(assocSl - 1)}</td>
               </tr>
             </tbody>
           </table>
