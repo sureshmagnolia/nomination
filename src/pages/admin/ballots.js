@@ -322,78 +322,71 @@ export async function renderAdminBallots(container) {
       
       // Calculate Ranges
       let genSl = 1, repSl = 1, assocSl = 1;
-      const summary = [];
-
-      // Sort booths by number
       const sortedBooths = [...booths].sort((a, b) => a.boothNumber - b.boothNumber);
+      
+      const genSummary = [];
+      const repSummary = [];
+      const assocSummary = [];
 
+      // 1. General Series (Booth-wise)
       sortedBooths.forEach(b => {
         const boothStudents = nominalRoll.filter(s => b.classes.includes(String(s.CLASS).trim()));
-        const count = boothStudents.length;
-        if (count === 0) return;
-
-        const boothData = {
-          number: b.boothNumber,
-          voters: count,
-          general: { start: genSl, end: genSl + count - 1 },
-          reps: [],
-          assocs: []
-        };
-        genSl += count;
-
-        // Reps (All 4 types share the series)
-        const boothReps = posts.filter(isYear).filter(p => {
-          const pCands = candidates.filter(c => c.post === p.post);
-          if (pCands.length <= 1) return false; // Skip Unanimous
-          // Check if any student in this booth belongs to this rep's target class
-          // Note: Simplification - if a booth has students, we assume they might need the rep ballot
-          // if the rep's year restriction matches.
-          return true; 
+        if (boothStudents.length === 0) return;
+        genSummary.push({
+          booth: b.boothNumber,
+          count: boothStudents.length,
+          start: genSl,
+          end: genSl + boothStudents.length - 1
         });
+        genSl += boothStudents.length;
+      });
 
-        if (boothReps.length > 0) {
-          // In reality, only certain students in the booth get certain rep ballots.
-          // But usually, one booth contains whole classes, so we can calculate per rep post.
-          // The user said: "all 4 types of rep ballot can have same series of numbers without interruption"
-          // This implies one series for ALL rep ballots regardless of type.
-          // But wait, if Booth 1 needs 50 I UG and 50 II UG, they take R1-R100.
-          
-          let boothRepTotal = 0;
-          boothReps.forEach(p => {
-            // Find students in this booth who belong to this post's year
-            const yr = p.yearRestriction;
-            const targetStudents = boothStudents.filter(s => {
-              const u = String(s.CLASS).toUpperCase();
-              if (yr === 'PG') return ['MA','MSC','MCOM'].some(x => u.includes(x));
-              return u.includes(yr + 'ST YEAR') || u.includes(yr + 'ND YEAR') || u.includes(yr + 'RD YEAR') || u.includes(yr + ' YEAR');
-            });
-            if (targetStudents.length > 0) {
-              const start = repSl;
-              const end = repSl + targetStudents.length - 1;
-              boothData.reps.push({ name: p.post, start, end, count: targetStudents.length });
-              repSl += targetStudents.length;
-            }
+      // 2. Year Rep Series (Post-wise, then Booth-wise)
+      const contestableReps = posts.filter(isYear).filter(p => candidates.filter(c => c.post === p.post).length > 1);
+      contestableReps.forEach(p => {
+        const yr = p.yearRestriction;
+        const postBooths = [];
+        sortedBooths.forEach(b => {
+          const boothStudents = nominalRoll.filter(s => b.classes.includes(String(s.CLASS).trim()));
+          const targetStudents = boothStudents.filter(s => {
+            const u = String(s.CLASS).toUpperCase();
+            if (yr === 'PG') return ['MA','MSC','MCOM'].some(x => u.includes(x));
+            return u.includes(yr + 'ST YEAR') || u.includes(yr + 'ND YEAR') || u.includes(yr + 'RD YEAR') || u.includes(yr + ' YEAR');
           });
-        }
-
-        // Associations
-        const boothAssocs = posts.filter(isAssoc).filter(p => {
-          const pCands = candidates.filter(c => c.post === p.post);
-          return pCands.length > 1;
+          if (targetStudents.length > 0) {
+            postBooths.push({
+              booth: b.boothNumber,
+              post: p.post,
+              count: targetStudents.length,
+              start: repSl,
+              end: repSl + targetStudents.length - 1
+            });
+            repSl += targetStudents.length;
+          }
         });
+        if (postBooths.length > 0) repSummary.push(...postBooths);
+      });
 
-        boothAssocs.forEach(p => {
-          const dept = p.post.replace('Association Secretary ', '');
+      // 3. Association Series (Post-wise, then Booth-wise)
+      const contestableAssocs = posts.filter(isAssoc).filter(p => candidates.filter(c => c.post === p.post).length > 1);
+      contestableAssocs.forEach(p => {
+        const dept = p.post.replace('Association Secretary ', '');
+        const postBooths = [];
+        sortedBooths.forEach(b => {
+          const boothStudents = nominalRoll.filter(s => b.classes.includes(String(s.CLASS).trim()));
           const targetStudents = boothStudents.filter(s => String(s.Dept).trim() === dept);
           if (targetStudents.length > 0) {
-            const start = assocSl;
-            const end = assocSl + targetStudents.length - 1;
-            boothData.assocs.push({ name: p.post, start, end, count: targetStudents.length });
+            postBooths.push({
+              booth: b.boothNumber,
+              post: p.post,
+              count: targetStudents.length,
+              start: assocSl,
+              end: assocSl + targetStudents.length - 1
+            });
             assocSl += targetStudents.length;
           }
         });
-
-        summary.push(boothData);
+        if (postBooths.length > 0) assocSummary.push(...postBooths);
       });
 
       const reportHtml = `
@@ -404,8 +397,8 @@ export async function renderAdminBallots(container) {
           </div>
 
           <p style="font-size: 14px; margin-bottom: 20px;">
-            This document provides the specific serial number ranges for each ballot category assigned to polling booths. 
-            All ballots should be bundled in books (usually 50 or 100 per book) as per the ranges below.
+            This document provides the sequential serial number ranges for each ballot category. 
+            <strong>Note:</strong> Rep and Association ballots are numbered <strong>Post-wise</strong> (one post is completed across all assigned booths before starting the next).
           </p>
 
           <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #4f46e5;">1. General Union Ballots (Series: 1, 2, 3...)</h3>
@@ -420,17 +413,17 @@ export async function renderAdminBallots(container) {
               </tr>
             </thead>
             <tbody>
-              ${summary.map(s => `
+              ${genSummary.map(s => `
                 <tr>
-                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${s.number}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.voters}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${s.general.start}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${s.general.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${Math.ceil(s.voters / 50)} (of 50)</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${s.booth}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${s.start}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${s.end}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${Math.ceil(s.count / 50)} (of 50)</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
-                <td style="border: 1px solid #ddd; padding: 10px;">TOTAL</td>
+                <td style="border: 1px solid #ddd; padding: 10px;">TOTAL GENERAL</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${genSl - 1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${genSl - 1}</td>
@@ -443,25 +436,25 @@ export async function renderAdminBallots(container) {
           <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
             <thead>
               <tr style="background: #f8fafc;">
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Post Name</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Count</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
               </tr>
             </thead>
             <tbody>
-              ${summary.flatMap(s => s.reps.map(r => `
+              ${repSummary.map(r => `
                 <tr>
-                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${s.number}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px;">${r.name}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">${esc(r.post)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${r.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${r.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${r.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${r.end}</td>
                 </tr>
-              `)).join('')}
+              `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
-                <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL REPRESENTATIVE BALLOTS</td>
+                <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL REPRESENTATIVE</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${repSl - 1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${repSl - 1}</td>
@@ -473,25 +466,25 @@ export async function renderAdminBallots(container) {
           <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
             <thead>
               <tr style="background: #f8fafc;">
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Post Name</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Department</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Count</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
               </tr>
             </thead>
             <tbody>
-              ${summary.flatMap(s => s.assocs.map(a => `
+              ${assocSummary.map(a => `
                 <tr>
-                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${s.number}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px;">${a.name.replace('Association Secretary ', '')}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">${esc(a.post)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${a.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${a.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${a.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${a.end}</td>
                 </tr>
-              `)).join('')}
+              `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
-                <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL ASSOCIATION BALLOTS</td>
+                <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL ASSOCIATION</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${assocSl - 1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${assocSl - 1}</td>

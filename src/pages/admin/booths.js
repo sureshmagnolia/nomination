@@ -315,51 +315,56 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     const isYear = (p) => p.post.toLowerCase().includes('representative') || p.post.toLowerCase().includes('year');
     const isAssoc = (p) => p.post.toLowerCase().includes('association') || p.post.toLowerCase().includes('assoc');
 
-    // CUMULATIVE RANGES CALCULATION
-    let genSl = 1, repSl = 1, assocSl = 1;
+    // PRE-CALCULATE ALL RANGES (Post-wise logic)
     const sortedBooths = [...booths].sort((a, b) => a.boothNumber - b.boothNumber);
+    const boothAllocations = {}; // boothNum -> { general: {}, reps: [], assocs: [] }
+    
+    let genSl = 1, repSl = 1, assocSl = 1;
 
-    sortedBooths.forEach((b) => {
-      if (!b.classes || b.classes.length === 0) return;
-      const boothClasses = b.classes.map(cn => classStats[cn]).filter(Boolean);
+    // 1. General
+    sortedBooths.forEach(b => {
       const boothStudents = students.filter(s => b.classes.includes(String(s.CLASS).trim()));
-      const totalVoters = boothStudents.length;
+      boothAllocations[b.boothNumber] = { general: { start: genSl, end: genSl + boothStudents.length - 1 }, reps: [], assocs: [] };
+      genSl += boothStudents.length;
+    });
 
-      // Serialization Ranges for this specific booth
-      const ballotRanges = {
-        general: { start: genSl, end: genSl + totalVoters - 1 },
-        reps: [],
-        assocs: []
-      };
-      genSl += totalVoters;
-
-      // Reps
-      posts.filter(isYear).forEach(p => {
-        const pCands = candidates.filter(c => c.post === p.post);
-        if (pCands.length <= 1) return; // Skip Unanimous
-        const yr = p.yearRestriction;
+    // 2. Reps
+    const contestableReps = posts.filter(isYear).filter(p => candidates.filter(c => c.post === p.post).length > 1);
+    contestableReps.forEach(p => {
+      const yr = p.yearRestriction;
+      sortedBooths.forEach(b => {
+        const boothStudents = students.filter(s => b.classes.includes(String(s.CLASS).trim()));
         const targetStudents = boothStudents.filter(s => {
           const u = String(s.CLASS).toUpperCase();
           if (yr === 'PG') return ['MA','MSC','MCOM'].some(x => u.includes(x));
           return u.includes(yr + 'ST YEAR') || u.includes(yr + 'ND YEAR') || u.includes(yr + 'RD YEAR') || u.includes(yr + ' YEAR');
         });
         if (targetStudents.length > 0) {
-          ballotRanges.reps.push({ name: p.post, start: repSl, end: repSl + targetStudents.length - 1, count: targetStudents.length });
+          boothAllocations[b.boothNumber].reps.push({ name: p.post, start: repSl, end: repSl + targetStudents.length - 1, count: targetStudents.length });
           repSl += targetStudents.length;
         }
       });
+    });
 
-      // Assocs
-      posts.filter(isAssoc).forEach(p => {
-        const pCands = candidates.filter(c => c.post === p.post);
-        if (pCands.length <= 1) return;
-        const dept = p.post.replace('Association Secretary ', '');
+    // 3. Assocs
+    const contestableAssocs = posts.filter(isAssoc).filter(p => candidates.filter(c => c.post === p.post).length > 1);
+    contestableAssocs.forEach(p => {
+      const dept = p.post.replace('Association Secretary ', '');
+      sortedBooths.forEach(b => {
+        const boothStudents = students.filter(s => b.classes.includes(String(s.CLASS).trim()));
         const targetStudents = boothStudents.filter(s => String(s.Dept).trim() === dept);
         if (targetStudents.length > 0) {
-          ballotRanges.assocs.push({ name: p.post, start: assocSl, end: assocSl + targetStudents.length - 1, count: targetStudents.length });
+          boothAllocations[b.boothNumber].assocs.push({ name: p.post, start: assocSl, end: assocSl + targetStudents.length - 1, count: targetStudents.length });
           assocSl += targetStudents.length;
         }
       });
+    });
+
+    sortedBooths.forEach((b) => {
+      if (!b.classes || b.classes.length === 0) return;
+      const boothStudents = students.filter(s => b.classes.includes(String(s.CLASS).trim()));
+      const totalVoters = boothStudents.length;
+      const ballotRanges = boothAllocations[b.boothNumber];
 
       html += `
       <div class="page-break">

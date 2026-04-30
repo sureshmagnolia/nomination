@@ -1195,7 +1195,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             ${t.innerHTML}
           </body>
         </html>
-      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>d.length)for(let e=d.length;e<t;e++)d.push({boothNumber:e+1,roomName:``,classes:[]});else t<d.length&&(d=d.slice(0,t));m()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{d[e.target.dataset.idx].roomName=e.target.value,m()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!f.includes(t)&&(f.push(t),m())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=f[t];f.splice(t,1),d.forEach(e=>{e.roomName===n&&(e.roomName=``)}),m()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Locations`);try{await u.adminSaveLocations(t,f),x(`Locations saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;d.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&d[parseInt(n,10)].classes.push(t),m()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Configuration`);try{await u.adminSaveBooths(t,d),x(`Booth configuration saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{g(),m(),x(`Auto allotment complete. Please review and save.`,`info`)})},h=(e,t,r,i,a)=>{let o=``,s=a.active||[],c=e=>e.post.toLowerCase().includes(`representative`)||e.post.toLowerCase().includes(`year`),l=e=>e.post.toLowerCase().includes(`association`)||e.post.toLowerCase().includes(`assoc`),u=1,d=1,f=1;return[...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let a=e.classes.map(e=>i[e]).filter(Boolean),p=t.filter(t=>e.classes.includes(String(t.CLASS).trim())),m=p.length,h={general:{start:u,end:u+m-1},reps:[],assocs:[]};u+=m,r.filter(c).forEach(e=>{if(s.filter(t=>t.post===e.post).length<=1)return;let t=e.yearRestriction,n=p.filter(e=>{let n=String(e.CLASS).toUpperCase();return t===`PG`?[`MA`,`MSC`,`MCOM`].some(e=>n.includes(e)):n.includes(t+`ST YEAR`)||n.includes(t+`ND YEAR`)||n.includes(t+`RD YEAR`)||n.includes(t+` YEAR`)});n.length>0&&(h.reps.push({name:e.post,start:d,end:d+n.length-1,count:n.length}),d+=n.length)}),r.filter(l).forEach(e=>{if(s.filter(t=>t.post===e.post).length<=1)return;let t=e.post.replace(`Association Secretary `,``),n=p.filter(e=>String(e.Dept).trim()===t);n.length>0&&(h.assocs.push({name:e.post,start:f,end:f+n.length-1,count:n.length}),f+=n.length)}),o+=`
+      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>d.length)for(let e=d.length;e<t;e++)d.push({boothNumber:e+1,roomName:``,classes:[]});else t<d.length&&(d=d.slice(0,t));m()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{d[e.target.dataset.idx].roomName=e.target.value,m()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!f.includes(t)&&(f.push(t),m())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=f[t];f.splice(t,1),d.forEach(e=>{e.roomName===n&&(e.roomName=``)}),m()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Locations`);try{await u.adminSaveLocations(t,f),x(`Locations saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;d.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&d[parseInt(n,10)].classes.push(t),m()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Configuration`);try{await u.adminSaveBooths(t,d),x(`Booth configuration saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{g(),m(),x(`Auto allotment complete. Please review and save.`,`info`)})},h=(e,t,r,i,a)=>{let o=``,s=a.active||[],c=e=>e.post.toLowerCase().includes(`representative`)||e.post.toLowerCase().includes(`year`),l=e=>e.post.toLowerCase().includes(`association`)||e.post.toLowerCase().includes(`assoc`),u=[...e].sort((e,t)=>e.boothNumber-t.boothNumber),d={},f=1,p=1,m=1;return u.forEach(e=>{let n=t.filter(t=>e.classes.includes(String(t.CLASS).trim()));d[e.boothNumber]={general:{start:f,end:f+n.length-1},reps:[],assocs:[]},f+=n.length}),r.filter(c).filter(e=>s.filter(t=>t.post===e.post).length>1).forEach(e=>{let n=e.yearRestriction;u.forEach(r=>{let i=t.filter(e=>r.classes.includes(String(e.CLASS).trim())).filter(e=>{let t=String(e.CLASS).toUpperCase();return n===`PG`?[`MA`,`MSC`,`MCOM`].some(e=>t.includes(e)):t.includes(n+`ST YEAR`)||t.includes(n+`ND YEAR`)||t.includes(n+`RD YEAR`)||t.includes(n+` YEAR`)});i.length>0&&(d[r.boothNumber].reps.push({name:e.post,start:p,end:p+i.length-1,count:i.length}),p+=i.length)})}),r.filter(l).filter(e=>s.filter(t=>t.post===e.post).length>1).forEach(e=>{let n=e.post.replace(`Association Secretary `,``);u.forEach(r=>{let i=t.filter(e=>r.classes.includes(String(e.CLASS).trim())).filter(e=>String(e.Dept).trim()===n);i.length>0&&(d[r.boothNumber].assocs.push({name:e.post,start:m,end:m+i.length-1,count:i.length}),m+=i.length)})}),u.forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=t.filter(t=>e.classes.includes(String(t.CLASS).trim())).length,i=d[e.boothNumber];o+=`
       <div class="page-break">
         <div class="facing-sheet">
           <div class="header">
@@ -1220,10 +1220,10 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <table class="stats-table" style="font-size: 10px; margin-top: 5px;">
                 <thead><tr><th>Dept</th><th>Class Name</th><th style="text-align:right">Voters</th></tr></thead>
                 <tbody>
-                  ${a.map(e=>`
+                  ${boothClasses.map(e=>`
                     <tr><td>${y(e.dept)}</td><td>${y(e.name)}</td><td style="text-align:right">${e.count}</td></tr>
                   `).join(``)}
-                  <tr style="font-weight:bold; background:#f9f9f9"><td colspan="2">TOTAL VOTERS</td><td style="text-align:right">${m}</td></tr>
+                  <tr style="font-weight:bold; background:#f9f9f9"><td colspan="2">TOTAL VOTERS</td><td style="text-align:right">${r}</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1242,17 +1242,17 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 <tbody>
                   <tr style="font-weight:bold">
                     <td>General Union Posts</td>
-                    <td>${m}</td>
-                    <td style="text-align:right">${h.general.start} - ${h.general.end}</td>
+                    <td>${r}</td>
+                    <td style="text-align:right">${i.general.start} - ${i.general.end}</td>
                   </tr>
-                  ${h.reps.map(e=>`
+                  ${i.reps.map(e=>`
                     <tr>
                       <td>${y(e.name)}</td>
                       <td>${e.count}</td>
                       <td style="text-align:right">R${e.start} - R${e.end}</td>
                     </tr>
                   `).join(``)}
-                  ${h.assocs.map(e=>`
+                  ${i.assocs.map(e=>`
                     <tr>
                       <td>${y(e.name.replace(`Association Secretary `,``))} Assoc.</td>
                       <td>${e.count}</td>
@@ -1269,7 +1269,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Presiding Officer</div>
           </div>
         </div>
-      </div>`,a.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),o+=`
+      </div>`,boothClasses.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),o+=`
         <div class="page-break">
           <div class="roll-page">
             <div class="roll-header">
@@ -1670,7 +1670,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <div class="candidate-row"><div class="sl-no">${t.length+1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
             </div>
           </div>
-        `}),f},a=async e=>{try{x(`Generating ballots...`,`info`),r(await i(e))}catch(e){x(e.message,`error`)}},o=async()=>{try{x(`Calculating ranges...`,`info`);let[e,n,i,a,o]=await Promise.all([u.adminGetBooths(t),u.getNominalRoll(),u.adminGetPosts(t),u.getFinalNominations(),u.getPublicSchedule()]),s=a.active||[],c=o.electionYear||new Date().getFullYear(),l=e=>e.post.toLowerCase().includes(`representative`)||e.post.toLowerCase().includes(`year`),d=e=>e.post.toLowerCase().includes(`association`)||e.post.toLowerCase().includes(`assoc`),f=1,p=1,m=1,h=[];[...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{let t=n.filter(t=>e.classes.includes(String(t.CLASS).trim())),r=t.length;if(r===0)return;let a={number:e.boothNumber,voters:r,general:{start:f,end:f+r-1},reps:[],assocs:[]};f+=r;let o=i.filter(l).filter(e=>!(s.filter(t=>t.post===e.post).length<=1));o.length>0&&o.forEach(e=>{let n=e.yearRestriction,r=t.filter(e=>{let t=String(e.CLASS).toUpperCase();return n===`PG`?[`MA`,`MSC`,`MCOM`].some(e=>t.includes(e)):t.includes(n+`ST YEAR`)||t.includes(n+`ND YEAR`)||t.includes(n+`RD YEAR`)||t.includes(n+` YEAR`)});if(r.length>0){let t=p,n=p+r.length-1;a.reps.push({name:e.post,start:t,end:n,count:r.length}),p+=r.length}}),i.filter(d).filter(e=>s.filter(t=>t.post===e.post).length>1).forEach(e=>{let n=e.post.replace(`Association Secretary `,``),r=t.filter(e=>String(e.Dept).trim()===n);if(r.length>0){let t=m,n=m+r.length-1;a.assocs.push({name:e.post,start:t,end:n,count:r.length}),m+=r.length}}),h.push(a)}),r(`
+        `}),f},a=async e=>{try{x(`Generating ballots...`,`info`),r(await i(e))}catch(e){x(e.message,`error`)}},o=async()=>{try{x(`Calculating ranges...`,`info`);let[e,n,i,a,o]=await Promise.all([u.adminGetBooths(t),u.getNominalRoll(),u.adminGetPosts(t),u.getFinalNominations(),u.getPublicSchedule()]),s=a.active||[],c=o.electionYear||new Date().getFullYear(),l=e=>e.post.toLowerCase().includes(`representative`)||e.post.toLowerCase().includes(`year`),d=e=>e.post.toLowerCase().includes(`association`)||e.post.toLowerCase().includes(`assoc`),f=1,p=1,m=1,h=[...e].sort((e,t)=>e.boothNumber-t.boothNumber),g=[],_=[],v=[];h.forEach(e=>{let t=n.filter(t=>e.classes.includes(String(t.CLASS).trim()));t.length!==0&&(g.push({booth:e.boothNumber,count:t.length,start:f,end:f+t.length-1}),f+=t.length)}),i.filter(l).filter(e=>s.filter(t=>t.post===e.post).length>1).forEach(e=>{let t=e.yearRestriction,r=[];h.forEach(i=>{let a=n.filter(e=>i.classes.includes(String(e.CLASS).trim())).filter(e=>{let n=String(e.CLASS).toUpperCase();return t===`PG`?[`MA`,`MSC`,`MCOM`].some(e=>n.includes(e)):n.includes(t+`ST YEAR`)||n.includes(t+`ND YEAR`)||n.includes(t+`RD YEAR`)||n.includes(t+` YEAR`)});a.length>0&&(r.push({booth:i.boothNumber,post:e.post,count:a.length,start:p,end:p+a.length-1}),p+=a.length)}),r.length>0&&_.push(...r)}),i.filter(d).filter(e=>s.filter(t=>t.post===e.post).length>1).forEach(e=>{let t=e.post.replace(`Association Secretary `,``),r=[];h.forEach(i=>{let a=n.filter(e=>i.classes.includes(String(e.CLASS).trim())).filter(e=>String(e.Dept).trim()===t);a.length>0&&(r.push({booth:i.boothNumber,post:e.post,count:a.length,start:m,end:m+a.length-1}),m+=a.length)}),r.length>0&&v.push(...r)}),r(`
         <div style="padding: 40px; font-family: sans-serif; color: #333;">
           <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
             <h1 style="margin: 0; font-size: 24px;">BALLOT PRINTING SUMMARY - ${c}</h1>
@@ -1678,8 +1678,8 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </div>
 
           <p style="font-size: 14px; margin-bottom: 20px;">
-            This document provides the specific serial number ranges for each ballot category assigned to polling booths. 
-            All ballots should be bundled in books (usually 50 or 100 per book) as per the ranges below.
+            This document provides the sequential serial number ranges for each ballot category. 
+            <strong>Note:</strong> Rep and Association ballots are numbered <strong>Post-wise</strong> (one post is completed across all assigned booths before starting the next).
           </p>
 
           <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #4f46e5;">1. General Union Ballots (Series: 1, 2, 3...)</h3>
@@ -1694,17 +1694,17 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               </tr>
             </thead>
             <tbody>
-              ${h.map(e=>`
+              ${g.map(e=>`
                 <tr>
-                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${e.number}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.voters}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${e.general.start}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${e.general.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${Math.ceil(e.voters/50)} (of 50)</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${e.booth}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${e.start}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${e.end}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${Math.ceil(e.count/50)} (of 50)</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
-                <td style="border: 1px solid #ddd; padding: 10px;">TOTAL</td>
+                <td style="border: 1px solid #ddd; padding: 10px;">TOTAL GENERAL</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${f-1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${f-1}</td>
@@ -1717,25 +1717,25 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
             <thead>
               <tr style="background: #f8fafc;">
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Post Name</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Count</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
               </tr>
             </thead>
             <tbody>
-              ${h.flatMap(e=>e.reps.map(t=>`
+              ${_.map(e=>`
                 <tr>
-                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${e.number}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px;">${t.name}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${t.count}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${t.start}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${t.end}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">${y(e.post)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${e.booth}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${e.start}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${e.end}</td>
                 </tr>
-              `)).join(``)}
+              `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
-                <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL REPRESENTATIVE BALLOTS</td>
+                <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL REPRESENTATIVE</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${p-1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${p-1}</td>
@@ -1747,25 +1747,25 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
             <thead>
               <tr style="background: #f8fafc;">
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Post Name</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Department</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Count</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
                 <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
               </tr>
             </thead>
             <tbody>
-              ${h.flatMap(e=>e.assocs.map(t=>`
+              ${v.map(e=>`
                 <tr>
-                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${e.number}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px;">${t.name.replace(`Association Secretary `,``)}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${t.count}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${t.start}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${t.end}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">${y(e.post)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${e.booth}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${e.start}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${e.end}</td>
                 </tr>
-              `)).join(``)}
+              `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
-                <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL ASSOCIATION BALLOTS</td>
+                <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL ASSOCIATION</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${m-1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${m-1}</td>
