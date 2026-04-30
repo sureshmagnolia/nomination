@@ -396,17 +396,25 @@ export async function renderAdminBallots(container) {
       // 3. Association Series (Post-wise, then Booth-wise)
       const contestableAssocs = posts.filter(isAssoc).filter(p => candidates.filter(c => c.post === p.post).length > 1);
       contestableAssocs.forEach(p => {
-        // Normalize: "Association Secretary Computer Science" -> "COMPUTER SCIENCE"
-        const dept = p.post.replace('Association Secretary ', '').trim().toUpperCase().replace(/[-\s]/g, ' ');
+        // More robust prefix handling
+        const prefix = 'Association Secretary';
+        let dept = p.post.toUpperCase();
+        if (dept.includes(prefix.toUpperCase())) {
+          dept = dept.split(prefix.toUpperCase())[1].trim();
+        }
+        dept = dept.replace(/[-\s]/g, ' ');
+
         const postBooths = [];
         sortedBooths.forEach(b => {
           const boothStudents = nominalRoll.filter(s => b.classes.includes(String(s.CLASS).trim()));
           const targetStudents = boothStudents.filter(s => {
             const sDept = String(s.Dept || '').trim().toUpperCase().replace(/[-\s]/g, ' ');
             const sCls  = String(s.CLASS || '').trim().toUpperCase().replace(/[-\s]/g, ' ');
-            // Check if normalized target dept is in student's Dept or CLASS string
-            return sDept.includes(dept) || sCls.includes(dept);
+            
+            // Check if normalized dept (e.g. BOTANY) is in Dept field or CLASS string
+            return sDept === dept || sDept.includes(dept) || sCls.includes(dept);
           });
+          
           if (targetStudents.length > 0) {
             postBooths.push({
               booth: b.boothNumber,
