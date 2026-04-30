@@ -1195,7 +1195,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             ${t.innerHTML}
           </body>
         </html>
-      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>d.length)for(let e=d.length;e<t;e++)d.push({boothNumber:e+1,roomName:``,classes:[]});else t<d.length&&(d=d.slice(0,t));m()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{d[e.target.dataset.idx].roomName=e.target.value,m()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!f.includes(t)&&(f.push(t),m())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=f[t];f.splice(t,1),d.forEach(e=>{e.roomName===n&&(e.roomName=``)}),m()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Locations`);try{await u.adminSaveLocations(t,f),x(`Locations saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;d.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&d[parseInt(n,10)].classes.push(t),m()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Configuration`);try{await u.adminSaveBooths(t,d),x(`Booth configuration saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{g(),m(),x(`Auto allotment complete. Please review and save.`,`info`)})},h=(e,t,r,i,a)=>{let o=``,s=a.active||[],c=e=>e.post.toLowerCase().includes(`representative`)||e.post.toLowerCase().includes(`year`),l=e=>e.post.toLowerCase().includes(`association`)||e.post.toLowerCase().includes(`assoc`),u=[...e].sort((e,t)=>e.boothNumber-t.boothNumber),d={},f=1,p=1,m=1;return u.forEach(e=>{let n=t.filter(t=>e.classes.includes(String(t.CLASS).trim()));d[e.boothNumber]={general:{start:f,end:f+n.length-1},reps:[],assocs:[]},f+=n.length}),r.filter(c).filter(e=>s.filter(t=>t.post===e.post).length>1).forEach(e=>{let n=e.yearRestriction;u.forEach(r=>{let i=t.filter(e=>r.classes.includes(String(e.CLASS).trim())).filter(e=>{let t=String(e.CLASS).toUpperCase();return n===`PG`?[`MA`,`MSC`,`MCOM`].some(e=>t.includes(e)):t.includes(n+`ST YEAR`)||t.includes(n+`ND YEAR`)||t.includes(n+`RD YEAR`)||t.includes(n+` YEAR`)});i.length>0&&(d[r.boothNumber].reps.push({name:e.post,start:p,end:p+i.length-1,count:i.length}),p+=i.length)})}),r.filter(l).filter(e=>s.filter(t=>t.post===e.post).length>1).forEach(e=>{let n=e.post.replace(`Association Secretary `,``);u.forEach(r=>{let i=t.filter(e=>r.classes.includes(String(e.CLASS).trim())).filter(e=>String(e.Dept).trim()===n);i.length>0&&(d[r.boothNumber].assocs.push({name:e.post,start:m,end:m+i.length-1,count:i.length}),m+=i.length)})}),u.forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=t.filter(t=>e.classes.includes(String(t.CLASS).trim())).length,i=d[e.boothNumber];o+=`
+      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>d.length)for(let e=d.length;e<t;e++)d.push({boothNumber:e+1,roomName:``,classes:[]});else t<d.length&&(d=d.slice(0,t));m()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{d[e.target.dataset.idx].roomName=e.target.value,m()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!f.includes(t)&&(f.push(t),m())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=f[t];f.splice(t,1),d.forEach(e=>{e.roomName===n&&(e.roomName=``)}),m()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Locations`);try{await u.adminSaveLocations(t,f),x(`Locations saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;d.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&d[parseInt(n,10)].classes.push(t),m()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Configuration`);try{await u.adminSaveBooths(t,d),x(`Booth configuration saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{g(),m(),x(`Auto allotment complete. Please review and save.`,`info`)})},h=(e,t,r,i,a)=>{let o=``,s=a.active||[],c=e=>e.post.toLowerCase().includes(`representative`)||e.post.toLowerCase().includes(`year`),l=e=>e.post.toLowerCase().includes(`association`)||e.post.toLowerCase().includes(`assoc`),u=[...e].sort((e,t)=>e.boothNumber-t.boothNumber),d={},f=1,p=1,m=1;return u.forEach(e=>{let n=t.filter(t=>e.classes.includes(String(t.CLASS).trim()));d[e.boothNumber]={general:{start:f,end:f+n.length-1},reps:[],assocs:[]},f+=n.length}),r.filter(c).filter(e=>s.filter(t=>t.post===e.post).length>1).forEach(e=>{let n=e.yearRestriction;u.forEach(r=>{let i=t.filter(e=>r.classes.includes(String(e.CLASS).trim())).filter(e=>{let t=String(e.CLASS).toUpperCase();return n===`PG`?[`MA`,`MSC`,`MCOM`].some(e=>t.includes(e)):t.includes(n+`ST YEAR`)||t.includes(n+`ND YEAR`)||t.includes(n+`RD YEAR`)||t.includes(n+` YEAR`)});i.length>0&&(d[r.boothNumber].reps.push({name:e.post,start:p,end:p+i.length-1,count:i.length}),p+=i.length)})}),r.filter(l).filter(e=>s.filter(t=>t.post===e.post).length>1).forEach(e=>{let n=e.post.replace(`Association Secretary `,``);u.forEach(r=>{let i=t.filter(e=>r.classes.includes(String(e.CLASS).trim())).filter(e=>String(e.Dept).trim()===n);i.length>0&&(d[r.boothNumber].assocs.push({name:e.post,start:m,end:m+i.length-1,count:i.length}),m+=i.length)})}),u.forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=t.filter(t=>e.classes.includes(String(t.CLASS).trim())).length,a=d[e.boothNumber],s=e.classes.map(e=>i[e]).filter(Boolean);o+=`
       <div class="page-break">
         <div class="facing-sheet">
           <div class="header">
@@ -1220,7 +1220,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <table class="stats-table" style="font-size: 10px; margin-top: 5px;">
                 <thead><tr><th>Dept</th><th>Class Name</th><th style="text-align:right">Voters</th></tr></thead>
                 <tbody>
-                  ${boothClasses.map(e=>`
+                  ${s.map(e=>`
                     <tr><td>${y(e.dept)}</td><td>${y(e.name)}</td><td style="text-align:right">${e.count}</td></tr>
                   `).join(``)}
                   <tr style="font-weight:bold; background:#f9f9f9"><td colspan="2">TOTAL VOTERS</td><td style="text-align:right">${r}</td></tr>
@@ -1243,16 +1243,16 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                   <tr style="font-weight:bold">
                     <td>General Union Posts</td>
                     <td>${r}</td>
-                    <td style="text-align:right">${i.general.start} - ${i.general.end}</td>
+                    <td style="text-align:right">${a.general.start} - ${a.general.end}</td>
                   </tr>
-                  ${i.reps.map(e=>`
+                  ${a.reps.map(e=>`
                     <tr>
                       <td>${y(e.name)}</td>
                       <td>${e.count}</td>
                       <td style="text-align:right">R${e.start} - R${e.end}</td>
                     </tr>
                   `).join(``)}
-                  ${i.assocs.map(e=>`
+                  ${a.assocs.map(e=>`
                     <tr>
                       <td>${y(e.name.replace(`Association Secretary `,``))} Assoc.</td>
                       <td>${e.count}</td>
@@ -1269,7 +1269,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Presiding Officer</div>
           </div>
         </div>
-      </div>`,boothClasses.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),o+=`
+      </div>`,s.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),o+=`
         <div class="page-break">
           <div class="roll-page">
             <div class="roll-header">

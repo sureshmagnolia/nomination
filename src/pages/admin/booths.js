@@ -365,6 +365,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       const boothStudents = students.filter(s => b.classes.includes(String(s.CLASS).trim()));
       const totalVoters = boothStudents.length;
       const ballotRanges = boothAllocations[b.boothNumber];
+      const boothClasses = b.classes.map(cn => classStats[cn]).filter(Boolean);
 
       html += `
       <div class="page-break">
