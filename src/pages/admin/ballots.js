@@ -172,6 +172,17 @@ export async function renderAdminBallots(container) {
       if (gPosts.length > 0) {
         html += `
           <div class="ballot-container a3 page-break">
+            <!-- Counterfoil -->
+            <div style="border-bottom: 2px dotted #000; padding-bottom: 20px; margin-bottom: 30px; text-align: center;">
+              <h1 style="font-size: 16px; margin: 0;">COLLEGE UNION ELECTION ${new Date().getFullYear()}</h1>
+              <h1 style="font-size: 18px; margin: 5px 0;">GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
+              <h2 style="font-size: 14px; margin: 0;">OFFICIAL BALLOT PAPER (GENERAL) - COUNTERFOIL</h2>
+              <div style="margin-top: 15px; font-weight: bold; text-align: left; display: flex; justify-content: space-between;">
+                <span>SL.NO. ____________</span>
+                <span style="font-size: 10px; color: #666; font-style: italic;">(To be detached before voting)</span>
+              </div>
+            </div>
+
             <div class="ballot-header">
               <h1>COLLEGE UNION ELECTION ${new Date().getFullYear()}</h1>
               <h1>GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>

@@ -1560,6 +1560,17 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </html>
     `),t.document.close()},i=async(e=`all`)=>{let n,r;try{[n,r]=await Promise.all([C.adminGetPosts(t),C.getFinalNominations()])}catch(e){throw Error(e.message.includes(`not published`)?`Final List Not Published. Please finalize and publish the list first.`:e.message)}let i=r.active||[];if(i.length===0)throw Error(`No active candidates found.`);let a=e=>{let t=e.post.toLowerCase();return t.includes(`representative`)||t.includes(`year`)},o=e=>{let t=e.post.toLowerCase();return t.includes(`association`)||t.includes(`assoc`)},s=e=>!a(e)&&!o(e),c=``;if(e===`all`||e===`general`){let e=n.filter(s);if(e.length>0){c+=`
           <div class="ballot-container a3 page-break">
+            <!-- Counterfoil -->
+            <div style="border-bottom: 2px dotted #000; padding-bottom: 20px; margin-bottom: 30px; text-align: center;">
+              <h1 style="font-size: 16px; margin: 0;">COLLEGE UNION ELECTION ${new Date().getFullYear()}</h1>
+              <h1 style="font-size: 18px; margin: 5px 0;">GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
+              <h2 style="font-size: 14px; margin: 0;">OFFICIAL BALLOT PAPER (GENERAL) - COUNTERFOIL</h2>
+              <div style="margin-top: 15px; font-weight: bold; text-align: left; display: flex; justify-content: space-between;">
+                <span>SL.NO. ____________</span>
+                <span style="font-size: 10px; color: #666; font-style: italic;">(To be detached before voting)</span>
+              </div>
+            </div>
+
             <div class="ballot-header">
               <h1>COLLEGE UNION ELECTION ${new Date().getFullYear()}</h1>
               <h1>GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
