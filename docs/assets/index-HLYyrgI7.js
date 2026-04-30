@@ -2035,30 +2035,25 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
           <h2 class="text-2xl font-bold text-white mb-2">Counting in Progress</h2>
           <p class="text-slate-400">No results have been published yet. Please check back later.</p>
         </div>
-      `;return}let s={};i.forEach(e=>{let t=e.post||e.name;s[t]={}}),a.forEach(e=>{let t=e.Post;s[t]||(s[t]={}),s[t][e.CandidateId]||(s[t][e.CandidateId]={name:e.CandidateName,votes:0}),s[t][e.CandidateId].votes+=Number(e.Votes)||0});let c=`<div class="space-y-12">`;i.forEach(e=>{let t=e.post||e.name,n=s[t];if(!n)return;let r=Object.keys(n);if(r.length===0)return;let i=r.filter(e=>e!==`INVALID`&&e!==`NOTA`).map(e=>n[e]),a=n.INVALID,o=n.NOTA;i.sort((e,t)=>t.votes-e.votes);let l=i.length?i[0].votes:0,u=i.reduce((e,t)=>e+t.votes,0)+(o?o.votes:0),d=u+(a?a.votes:0);c+=`
+      `;return}let s={};i.forEach(e=>{let t=e.post||e.name;s[t]={}}),a.forEach(e=>{let t=e.Post;s[t]||(s[t]={}),s[t][e.CandidateId]||(s[t][e.CandidateId]={name:e.CandidateName,votes:0}),s[t][e.CandidateId].votes+=Number(e.Votes)||0});let c=`<div class="space-y-12">`;i.forEach(e=>{let t=e.post||e.name,n=s[t];if(!n||Object.keys(n).length===0)return;let r=t.toUpperCase().includes(`UUC`)||t.toUpperCase().includes(`UNIVERSITY`)?2:1;valids.sort((e,t)=>t.votes-e.votes);let i=valids.length?valids[0].votes:0,a=valids.reduce((e,t)=>e+t.votes,0)+(nota?nota.votes:0),o=a+(invalid?invalid.votes:0),l=0;valids.length>r?l=valids[r].votes:valids.length>0&&(l=0),c+=`
         <div class="glass rounded-2xl overflow-hidden border border-white/10 page-enter shadow-2xl">
           <div class="bg-gradient-to-r from-slate-900/80 to-indigo-900/80 p-6 border-b border-white/10">
             <h2 class="text-2xl font-bold text-white tracking-tight">${y(t)}</h2>
-            <div class="flex flex-wrap gap-3 mt-3">
-              <div class="bg-indigo-500/20 border border-indigo-400/30 px-3 py-1 rounded-full flex items-center gap-2">
-                <span class="text-[10px] uppercase tracking-wider text-indigo-300 font-bold">Valid</span>
-                <span class="text-sm text-white font-black">${u}</span>
-              </div>
-              <div class="bg-purple-500/20 border border-purple-400/30 px-3 py-1 rounded-full flex items-center gap-2">
-                <span class="text-[10px] uppercase tracking-wider text-purple-300 font-bold">Total Polled</span>
-                <span class="text-sm text-white font-black">${d}</span>
-              </div>
-            </div>
           </div>
           <div class="p-6 space-y-6 bg-slate-900/20">
-            ${i.map((e,t)=>{let n=u>0?(e.votes/u*100).toFixed(1):0,r=l>0?e.votes/l*100:0,i=t===0&&e.votes>0;return`
+            ${valids.map((e,t)=>{let n=a>0?(e.votes/a*100).toFixed(1):0,o=i>0?e.votes/i*100:0,s=t<r&&e.votes>0,c=s?e.votes-l:0;return`
                 <div class="relative">
                   <div class="flex justify-between items-end mb-2 relative z-10">
                     <div class="flex items-center gap-3">
-                      <div class="w-8 h-8 rounded-full ${i?`bg-amber-500 text-amber-950`:`bg-white/10 text-white`} flex items-center justify-center font-bold text-sm shadow-lg">
-                        ${i?`🏆`:t+1}
+                      <div class="w-8 h-8 rounded-full ${s?`bg-amber-500 text-amber-950`:`bg-white/10 text-white`} flex items-center justify-center font-bold text-sm shadow-lg">
+                        ${s?`🏆`:t+1}
                       </div>
-                      <span class="font-bold text-white text-lg">${y(e.name)}</span>
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <span class="font-bold text-white text-lg">${y(e.name)}</span>
+                          ${c>0?`<span class="bg-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold border border-green-500/30">LEAD: ${c}</span>`:``}
+                        </div>
+                      </div>
                     </div>
                     <div class="text-right">
                       <span class="text-2xl font-black text-white">${e.votes}</span>
@@ -2066,24 +2061,36 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
                     </div>
                   </div>
                   <div class="h-4 w-full bg-slate-800 rounded-full overflow-hidden relative">
-                    <div class="h-full rounded-full transition-all duration-1000 ease-out ${i?`bg-gradient-to-r from-amber-400 to-amber-600`:`bg-gradient-to-r from-indigo-500 to-purple-600`}" style="width: ${r}%"></div>
+                    <div class="h-full rounded-full transition-all duration-1000 ease-out ${s?`bg-gradient-to-r from-amber-400 to-amber-600`:`bg-gradient-to-r from-indigo-500 to-purple-600`}" style="width: ${o}%"></div>
                   </div>
                 </div>
               `}).join(``)}
             
-            ${o&&o.votes>0?`
-              <div class="border-t border-white/10 pt-4 mt-6 flex justify-between text-sm text-slate-400">
-                <span>NOTA</span>
-                <span class="font-bold text-white">${o.votes} <span class="text-xs text-slate-500 font-normal">votes (${(o.votes/u*100).toFixed(1)}%)</span></span>
-              </div>
-            `:``}
+            <div class="mt-8 pt-6 border-t border-white/10 space-y-3">
+              ${nota&&nota.votes>0?`
+                <div class="flex justify-between text-sm text-slate-400">
+                  <span>None of the Above (NOTA)</span>
+                  <span class="font-bold text-white">${nota.votes} <span class="text-xs text-slate-500 font-normal ml-1">(${(nota.votes/a*100).toFixed(1)}%)</span></span>
+                </div>
+              `:``}
 
-            ${a&&a.votes>0?`
-              <div class="${o&&o.votes>0?`border-t border-white/10 pt-4 mt-4`:`border-t border-white/10 pt-4 mt-6`} flex justify-between text-sm text-slate-500">
-                <span>INVALID</span>
-                <span class="font-bold text-red-400">${a.votes}</span>
+              ${invalid&&invalid.votes>0?`
+                <div class="flex justify-between text-sm text-slate-500">
+                  <span>Invalid / Rejected</span>
+                  <span class="font-bold text-red-400">${invalid.votes}</span>
+                </div>
+              `:``}
+
+              <div class="flex justify-between items-center py-2 px-3 bg-indigo-500/10 rounded-lg border border-indigo-500/20 mt-4">
+                <span class="text-xs font-bold text-indigo-300 uppercase tracking-widest">Total Valid Votes</span>
+                <span class="text-lg font-black text-white">${a}</span>
               </div>
-            `:``}
+
+              <div class="flex justify-between items-center py-2 px-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                <span class="text-xs font-bold text-purple-300 uppercase tracking-widest">Grand Total Polled</span>
+                <span class="text-lg font-black text-white">${o}</span>
+              </div>
+            </div>
           </div>
         </div>
       `}),c+=`</div>`,c===`<div class="space-y-12"></div>`?e.innerHTML=`

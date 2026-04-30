@@ -131,43 +131,47 @@ function updateHeader(main, year) {
       const candidateIds = Object.keys(pAgg);
       if (candidateIds.length === 0) return;
 
-      const valids = candidateIds.filter(id => id !== 'INVALID' && id !== 'NOTA').map(id => pAgg[id]);
-      const invalid = pAgg['INVALID'];
-      const nota = pAgg['NOTA'];
+      const isUUC = name.toUpperCase().includes('UUC') || name.toUpperCase().includes('UNIVERSITY');
+      const seats = isUUC ? 2 : 1;
 
       valids.sort((a, b) => b.votes - a.votes);
       const maxVotes = valids.length ? valids[0].votes : 0;
       const totalValidVotes = valids.reduce((sum, c) => sum + c.votes, 0) + (nota ? nota.votes : 0);
       const grandTotal = totalValidVotes + (invalid ? invalid.votes : 0);
 
+      // Lead calculation
+      let leadThreshold = 0;
+      if (valids.length > seats) {
+        leadThreshold = valids[seats].votes; // Margin over the first person to lose
+      } else if (valids.length > 0) {
+        leadThreshold = 0; // If fewer candidates than seats, they just win
+      }
+
       html += `
         <div class="glass rounded-2xl overflow-hidden border border-white/10 page-enter shadow-2xl">
           <div class="bg-gradient-to-r from-slate-900/80 to-indigo-900/80 p-6 border-b border-white/10">
             <h2 class="text-2xl font-bold text-white tracking-tight">${esc(name)}</h2>
-            <div class="flex flex-wrap gap-3 mt-3">
-              <div class="bg-indigo-500/20 border border-indigo-400/30 px-3 py-1 rounded-full flex items-center gap-2">
-                <span class="text-[10px] uppercase tracking-wider text-indigo-300 font-bold">Valid</span>
-                <span class="text-sm text-white font-black">${totalValidVotes}</span>
-              </div>
-              <div class="bg-purple-500/20 border border-purple-400/30 px-3 py-1 rounded-full flex items-center gap-2">
-                <span class="text-[10px] uppercase tracking-wider text-purple-300 font-bold">Total Polled</span>
-                <span class="text-sm text-white font-black">${grandTotal}</span>
-              </div>
-            </div>
           </div>
           <div class="p-6 space-y-6 bg-slate-900/20">
             ${valids.map((c, i) => {
               const percentage = totalValidVotes > 0 ? ((c.votes / totalValidVotes) * 100).toFixed(1) : 0;
               const barWidth = maxVotes > 0 ? (c.votes / maxVotes) * 100 : 0;
-              const isWinner = i === 0 && c.votes > 0;
+              const isWinning = i < seats && c.votes > 0;
+              const lead = isWinning ? (c.votes - leadThreshold) : 0;
+
               return `
                 <div class="relative">
                   <div class="flex justify-between items-end mb-2 relative z-10">
                     <div class="flex items-center gap-3">
-                      <div class="w-8 h-8 rounded-full ${isWinner ? 'bg-amber-500 text-amber-950' : 'bg-white/10 text-white'} flex items-center justify-center font-bold text-sm shadow-lg">
-                        ${isWinner ? '🏆' : i + 1}
+                      <div class="w-8 h-8 rounded-full ${isWinning ? 'bg-amber-500 text-amber-950' : 'bg-white/10 text-white'} flex items-center justify-center font-bold text-sm shadow-lg">
+                        ${isWinning ? '🏆' : i + 1}
                       </div>
-                      <span class="font-bold text-white text-lg">${esc(c.name)}</span>
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <span class="font-bold text-white text-lg">${esc(c.name)}</span>
+                          ${lead > 0 ? `<span class="bg-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold border border-green-500/30">LEAD: ${lead}</span>` : ''}
+                        </div>
+                      </div>
                     </div>
                     <div class="text-right">
                       <span class="text-2xl font-black text-white">${c.votes}</span>
@@ -175,25 +179,37 @@ function updateHeader(main, year) {
                     </div>
                   </div>
                   <div class="h-4 w-full bg-slate-800 rounded-full overflow-hidden relative">
-                    <div class="h-full rounded-full transition-all duration-1000 ease-out ${isWinner ? 'bg-gradient-to-r from-amber-400 to-amber-600' : 'bg-gradient-to-r from-indigo-500 to-purple-600'}" style="width: ${barWidth}%"></div>
+                    <div class="h-full rounded-full transition-all duration-1000 ease-out ${isWinning ? 'bg-gradient-to-r from-amber-400 to-amber-600' : 'bg-gradient-to-r from-indigo-500 to-purple-600'}" style="width: ${barWidth}%"></div>
                   </div>
                 </div>
               `;
             }).join('')}
             
-            ${nota && nota.votes > 0 ? `
-              <div class="border-t border-white/10 pt-4 mt-6 flex justify-between text-sm text-slate-400">
-                <span>NOTA</span>
-                <span class="font-bold text-white">${nota.votes} <span class="text-xs text-slate-500 font-normal">votes (${((nota.votes / totalValidVotes) * 100).toFixed(1)}%)</span></span>
-              </div>
-            ` : ''}
+            <div class="mt-8 pt-6 border-t border-white/10 space-y-3">
+              ${nota && nota.votes > 0 ? `
+                <div class="flex justify-between text-sm text-slate-400">
+                  <span>None of the Above (NOTA)</span>
+                  <span class="font-bold text-white">${nota.votes} <span class="text-xs text-slate-500 font-normal ml-1">(${((nota.votes / totalValidVotes) * 100).toFixed(1)}%)</span></span>
+                </div>
+              ` : ''}
 
-            ${invalid && invalid.votes > 0 ? `
-              <div class="${nota && nota.votes > 0 ? 'border-t border-white/10 pt-4 mt-4' : 'border-t border-white/10 pt-4 mt-6'} flex justify-between text-sm text-slate-500">
-                <span>INVALID</span>
-                <span class="font-bold text-red-400">${invalid.votes}</span>
+              ${invalid && invalid.votes > 0 ? `
+                <div class="flex justify-between text-sm text-slate-500">
+                  <span>Invalid / Rejected</span>
+                  <span class="font-bold text-red-400">${invalid.votes}</span>
+                </div>
+              ` : ''}
+
+              <div class="flex justify-between items-center py-2 px-3 bg-indigo-500/10 rounded-lg border border-indigo-500/20 mt-4">
+                <span class="text-xs font-bold text-indigo-300 uppercase tracking-widest">Total Valid Votes</span>
+                <span class="text-lg font-black text-white">${totalValidVotes}</span>
               </div>
-            ` : ''}
+
+              <div class="flex justify-between items-center py-2 px-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                <span class="text-xs font-bold text-purple-300 uppercase tracking-widest">Grand Total Polled</span>
+                <span class="text-lg font-black text-white">${grandTotal}</span>
+              </div>
+            </div>
           </div>
         </div>
       `;
