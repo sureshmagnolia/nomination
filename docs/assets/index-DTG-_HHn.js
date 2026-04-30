@@ -1566,7 +1566,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <div class="meta-row"><div>SL.NO. ____________</div><div>Signature of PRO</div></div>
             <div class="instr-box">MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED</div>
             <div class="ballot-grid">
-        `,[...e].sort((e,t)=>{let n=e.post.toLowerCase(),r=t.post.toLowerCase();return n.includes(`chairman`)&&!n.includes(`vice`)?-1:r.includes(`chairman`)&&!r.includes(`vice`)?1:n.includes(`vice chairman`)?-1:+!!r.includes(`vice chairman`)}).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(c+=`
+        `,[...e].sort((e,t)=>{let n=e.post.toLowerCase(),r=t.post.toLowerCase();return n.includes(`chairman`)&&!n.includes(`vice`)?-1:r.includes(`chairman`)&&!r.includes(`vice`)?1:n.includes(`vice chairman`)?-1:r.includes(`vice chairman`)||n.includes(`university union councillor`)||n.includes(`uuc`)?1:r.includes(`university union councillor`)||r.includes(`uuc`)?-1:0}).forEach(e=>{let t=i.filter(t=>t.post===e.post);t.length!==0&&(c+=`
             <div class="post-box">
               <div class="post-title">${h(e.post.toUpperCase())}</div>
               ${t.map((e,t)=>`

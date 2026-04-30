@@ -182,10 +182,15 @@ export async function renderAdminBallots(container) {
 
         const sorted = [...gPosts].sort((a, b) => {
           const aL = a.post.toLowerCase(), bL = b.post.toLowerCase();
+          // Chairman first
           if (aL.includes('chairman') && !aL.includes('vice')) return -1;
           if (bL.includes('chairman') && !bL.includes('vice')) return 1;
+          // Vice Chairman second
           if (aL.includes('vice chairman')) return -1;
           if (bL.includes('vice chairman')) return 1;
+          // UUC last
+          if (aL.includes('university union councillor') || aL.includes('uuc')) return 1;
+          if (bL.includes('university union councillor') || bL.includes('uuc')) return -1;
           return 0;
         });
 
