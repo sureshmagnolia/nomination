@@ -1888,42 +1888,68 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
       </div>
 
       <div class="grid grid-cols-1 gap-6">
-        ${u.map(e=>`
-          <div class="glass rounded-2xl overflow-hidden border border-white/5">
-            <div class="px-6 py-4 bg-white/5 border-b border-white/10 flex justify-between items-center">
-              <h4 class="font-bold text-indigo-400 uppercase tracking-wider text-sm">${y(e.post)}</h4>
-              ${e.type===`unanimous`?`<span class="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">UNANIMOUS</span>`:`<span class="text-xs text-slate-500">${e.type===`election`?e.totalVotes+` total votes`:`No contestants`}</span>`}
+        ${u.map(e=>{let t=e.post.toUpperCase().includes(`UUC`)||e.post.toUpperCase().includes(`UNIVERSITY`)?2:1,n=0;return e.type===`election`&&e.candidates.length>t&&(n=e.candidates[t].votes),`
+            <div class="glass rounded-2xl overflow-hidden border border-white/5 page-enter shadow-lg">
+              <div class="px-6 py-4 bg-white/5 border-b border-white/10 flex justify-between items-center">
+                <h4 class="font-bold text-indigo-400 uppercase tracking-wider text-sm">${y(e.post)}</h4>
+                ${e.type===`unanimous`?`<span class="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ELECTED UNANIMOUSLY</span>`:`<span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${e.isTie?`⚖️ TIE DETECTED`:`CONTESTED ELECTION`}</span>`}
+              </div>
+              <div class="p-6">
+                ${e.type===`no-candidates`?`<p class="text-slate-500 italic text-sm text-center py-4">No valid nominations received for this post.</p>`:`
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="text-slate-500 text-[10px] uppercase tracking-widest text-left border-b border-white/5">
+                        <th class="pb-3 font-bold">Candidate Name</th>
+                        <th class="pb-3 font-bold text-center">Class</th>
+                        <th class="pb-3 font-bold text-right">Votes</th>
+                        <th class="pb-3 font-bold text-center w-24">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                      ${e.candidates.map((r,i)=>{let a=i<t&&r.votes>0,o=a?r.votes-n:0;return`
+                          <tr class="${a?`bg-white/[0.02]`:``}">
+                            <td class="py-4">
+                              <div class="flex items-center gap-2">
+                                <span class="font-bold text-white">${y(r.candidateName)}</span>
+                                ${o>0?`<span class="bg-green-500/20 text-green-400 text-[9px] px-1.5 py-0.5 rounded font-black border border-green-500/30">LEAD: ${o}</span>`:``}
+                              </div>
+                            </td>
+                            <td class="py-4 text-slate-400 text-center text-[11px]">${y(r.candidateClass)}</td>
+                            <td class="py-4 text-right font-mono text-lg ${a?`text-emerald-400`:`text-slate-300`}">
+                              ${e.type===`unanimous`?`—`:r.votes}
+                            </td>
+                            <td class="py-4 text-center">
+                              ${a?`<span class="text-emerald-400 text-[10px] font-black border border-emerald-400/30 px-2 py-0.5 rounded bg-emerald-500/10">WINNING</span>`:``}
+                            </td>
+                          </tr>
+                        `}).join(``)}
+                    </tbody>
+                  </table>
+
+                  ${e.type===`election`?`
+                    <div class="mt-6 pt-4 border-t border-white/10 grid grid-cols-2 gap-3">
+                      <div class="flex justify-between items-center py-2 px-3 bg-white/5 rounded border border-white/5 text-[11px]">
+                        <span class="text-slate-500 uppercase tracking-widest font-bold">NOTA</span>
+                        <span class="text-white font-bold">${e.nota}</span>
+                      </div>
+                      <div class="flex justify-between items-center py-2 px-3 bg-white/5 rounded border border-white/5 text-[11px]">
+                        <span class="text-slate-500 uppercase tracking-widest font-bold">Invalid</span>
+                        <span class="text-red-400/70 font-bold">${e.invalid}</span>
+                      </div>
+                      <div class="flex justify-between items-center py-2 px-3 bg-indigo-500/10 rounded border border-indigo-500/20 text-[11px]">
+                        <span class="text-indigo-300 uppercase tracking-widest font-bold">Valid Votes</span>
+                        <span class="text-white font-black text-sm">${e.totalVotes-e.invalid}</span>
+                      </div>
+                      <div class="flex justify-between items-center py-2 px-3 bg-purple-500/10 rounded border border-purple-500/20 text-[11px]">
+                        <span class="text-purple-300 uppercase tracking-widest font-bold">Grand Total</span>
+                        <span class="text-white font-black text-sm">${e.totalVotes}</span>
+                      </div>
+                    </div>
+                  `:``}
+                  `}
+              </div>
             </div>
-            <div class="p-6">
-              ${e.type===`no-candidates`?`<p class="text-slate-500 italic text-sm text-center">No valid nominations received for this post.</p>`:`
-                <table class="w-full text-sm">
-                  <thead>
-                    <tr class="text-slate-500 text-xs text-left border-b border-white/5">
-                      <th class="pb-2 font-medium">Candidate Name</th>
-                      <th class="pb-2 font-medium text-center">Class</th>
-                      <th class="pb-2 font-medium text-right">Votes</th>
-                      <th class="pb-2 font-medium text-center w-24">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-white/5">
-                    ${e.candidates.map(t=>{let n=e.winner&&e.winner.id===t.id;return`
-                        <tr>
-                          <td class="py-3 font-bold text-white">${y(t.candidateName)}</td>
-                          <td class="py-3 text-slate-400 text-center text-xs">${y(t.candidateClass)}</td>
-                          <td class="py-3 text-right font-mono text-lg ${n?`text-emerald-400`:`text-slate-300`}">
-                            ${e.type===`unanimous`?`—`:t.votes}
-                          </td>
-                          <td class="py-3 text-center">
-                            ${n?`<span class="text-emerald-400 text-[10px] font-black border border-emerald-400/30 px-2 py-0.5 rounded">WON</span>`:``}
-                          </td>
-                        </tr>
-                      `}).join(``)}
-                  </tbody>
-                </table>
-                `}
-            </div>
-          </div>
-        `).join(``)}
+          `}).join(``)}
       </div>
     </div>
   `,e.querySelector(`#btnPrintOfficial`).addEventListener(`click`,()=>{let e=`
