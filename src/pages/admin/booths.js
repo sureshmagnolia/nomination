@@ -336,6 +336,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         const boothStudents = students.filter(s => b.classes.includes(String(s.CLASS).trim()));
         const targetStudents = boothStudents.filter(s => {
           const u = String(s.CLASS).toUpperCase();
+          if (u.includes('PH D') || u.includes('PH.D')) return false; // PH D Scholars don't vote for Reps
           if (yr === 'PG') return ['MA','MSC','MCOM'].some(x => u.includes(x));
           return u.includes(yr + 'ST YEAR') || u.includes(yr + 'ND YEAR') || u.includes(yr + 'RD YEAR') || u.includes(yr + ' YEAR');
         });
