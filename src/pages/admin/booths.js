@@ -328,18 +328,35 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       genSl += boothStudents.length;
     });
 
-    // 2. Reps
-    const contestableReps = posts.filter(isYear).filter(p => candidates.filter(c => c.post === p.post).length > 1);
-    contestableReps.forEach(p => {
-      const yr = p.yearRestriction;
+    // 2. Reps (All posts, matching Ballot Summary logic)
+    const yearReps = posts.filter(isYear);
+    yearReps.forEach(p => {
+      const yr = String(p.yearRestriction || '').trim().toUpperCase();
+      if (!yr) return;
+
       sortedBooths.forEach(b => {
         const boothStudents = students.filter(s => b.classes.includes(String(s.CLASS).trim()));
         const targetStudents = boothStudents.filter(s => {
-          const u = String(s.CLASS).toUpperCase();
-          if (u.includes('PH D') || u.includes('PH.D')) return false; // PH D Scholars don't vote for Reps
-          if (yr === 'PG') return ['MA','MSC','MCOM'].some(x => u.includes(x));
-          return u.includes(yr + 'ST YEAR') || u.includes(yr + 'ND YEAR') || u.includes(yr + 'RD YEAR') || u.includes(yr + ' YEAR');
+          const cls = String(s.CLASS || '').toUpperCase();
+          
+          // 1. PhD scholars NEVER vote for reps
+          if (cls.includes('PH D') || cls.includes('PH.D')) return false; 
+
+          // 2. Define PG logic (Priority: PG students only vote for PG Rep)
+          const isPG = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A)\b/i.test(cls);
+
+          if (yr === 'PG') return isPG;
+          
+          // 3. UG Rep logic (Mutually Exclusive: Must NOT be a PG student)
+          if (isPG) return false; 
+
+          if (yr === '1') return cls.startsWith('1ST YEAR');
+          if (yr === '2') return cls.startsWith('2ND YEAR');
+          if (yr === '3') return cls.startsWith('3RD YEAR');
+          
+          return false;
         });
+
         if (targetStudents.length > 0) {
           boothAllocations[b.boothNumber].reps.push({ name: p.post, start: repSl, end: repSl + targetStudents.length - 1, count: targetStudents.length });
           repSl += targetStudents.length;
@@ -347,13 +364,26 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       });
     });
 
-    // 3. Assocs
-    const contestableAssocs = posts.filter(isAssoc).filter(p => candidates.filter(c => c.post === p.post).length > 1);
-    contestableAssocs.forEach(p => {
-      const dept = p.post.replace('Association Secretary ', '').trim().toUpperCase();
+    // 3. Assocs (All posts, matching Ballot Summary logic)
+    const assocPosts = posts.filter(isAssoc);
+    assocPosts.forEach(p => {
+      // Normalize: "Association Secretary Computer Science" -> "COMPUTER SCIENCE"
+      const prefix = 'Association Secretary';
+      let dept = p.post.toUpperCase();
+      if (dept.includes(prefix.toUpperCase())) {
+        dept = dept.split(prefix.toUpperCase())[1].trim();
+      }
+      dept = dept.replace(/[-\s]/g, ' ');
+
       sortedBooths.forEach(b => {
         const boothStudents = students.filter(s => b.classes.includes(String(s.CLASS).trim()));
-        const targetStudents = boothStudents.filter(s => String(s.Dept || '').trim().toUpperCase() === dept);
+        const targetStudents = boothStudents.filter(s => {
+          const sDept = String(s.Dept || '').trim().toUpperCase().replace(/[-\s]/g, ' ');
+          const sCls  = String(s.CLASS || '').trim().toUpperCase().replace(/[-\s]/g, ' ');
+          // Check if normalized dept (e.g. BOTANY) is in Dept field or CLASS string
+          return sDept === dept || sDept.includes(dept) || sCls.includes(dept);
+        });
+
         if (targetStudents.length > 0) {
           boothAllocations[b.boothNumber].assocs.push({ name: p.post, start: assocSl, end: assocSl + targetStudents.length - 1, count: targetStudents.length });
           assocSl += targetStudents.length;
