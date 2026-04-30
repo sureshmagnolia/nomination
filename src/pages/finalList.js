@@ -58,7 +58,14 @@ function renderList(main, nominations, year) {
           <div class="glass rounded-2xl overflow-hidden shadow-2xl border border-white/5">
             <div class="px-6 py-4 bg-gradient-to-r from-emerald-500/10 to-indigo-500/5 border-b border-white/10 flex justify-between items-center">
               <h3 class="font-bold text-emerald-400 text-sm uppercase tracking-widest">${esc(post)}</h3>
-              <span class="text-[10px] text-slate-500 font-mono">${noms.length} Approved</span>
+              <div class="flex items-center gap-3">
+                ${noms.length === 1 ? `
+                  <span class="badge badge-valid bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 text-[10px] animate-pulse">
+                    🏆 ELECTED UNANIMOUSLY
+                  </span>
+                ` : ''}
+                <span class="text-[10px] text-slate-500 font-mono">${noms.length} Approved</span>
+              </div>
             </div>
             <div class="overflow-x-auto">
               <table class="data-table">

@@ -30,7 +30,7 @@ export async function renderAdminBallots(container) {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-indigo-500/50 transition-all">
           <div class="text-indigo-400 font-bold flex items-center gap-2">
             <span>🏆</span> General Union (A3)
@@ -59,6 +59,16 @@ export async function renderAdminBallots(container) {
             Departmental Association Secretaries. Designed for A5 paper (one post per page).
           </p>
           <button data-type="assoc" class="btn btn-primary w-full py-3 preview-btn">🖨️ Generate Association Ballots</button>
+        </div>
+
+        <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-purple-500/50 transition-all bg-purple-500/5">
+          <div class="text-purple-400 font-bold flex items-center gap-2">
+            <span>📊</span> Printing Summary
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Detailed serial number ranges and book counts for the printing company.
+          </p>
+          <button id="btnGenSummary" class="btn btn-secondary w-full py-3 border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📑 Generate Summary Report</button>
         </div>
       </div>
     </div>
@@ -166,11 +176,17 @@ export async function renderAdminBallots(container) {
     };
     const isGeneral = (p) => !isYear(p) && !isAssoc(p);
 
+    // Filter out Unanimous Winners (Posts with only 1 candidate)
+    const contestablePosts = posts.filter(p => {
+      const pCands = candidates.filter(c => c.post === p.post);
+      return pCands.length > 1; // More than 1 candidate = Election needed
+    });
+
     let html = '';
 
     // 1. General Ballot (A3)
     if (filterType === 'all' || filterType === 'general') {
-      const gPosts = posts.filter(isGeneral);
+      const gPosts = contestablePosts.filter(isGeneral);
       if (gPosts.length > 0) {
         html += `
           <div class="ballot-container a3 page-break">
@@ -213,7 +229,6 @@ export async function renderAdminBallots(container) {
         let col1Html = '', col2Html = '';
         sorted.forEach((p, idx) => {
           const pCands = candidates.filter(c => c.post === p.post);
-          if (pCands.length === 0) return;
           const pContent = `
             <div class="post-box">
               <div class="post-title">${esc(p.post.toUpperCase())}</div>
@@ -239,7 +254,7 @@ export async function renderAdminBallots(container) {
     }
 
     // 2. Year Rep & Association Ballots (A5, One post per page)
-    const otherPosts = posts.filter(p => isYear(p) || isAssoc(p));
+    const otherPosts = contestablePosts.filter(p => isYear(p) || isAssoc(p));
     if (filterType === 'all' || filterType === 'year' || filterType === 'assoc') {
       const filteredOthers = otherPosts.filter(p => 
         (filterType === 'all') || 
@@ -249,8 +264,6 @@ export async function renderAdminBallots(container) {
 
       filteredOthers.forEach(p => {
         const pCands = candidates.filter(c => c.post === p.post);
-        if (pCands.length === 0) return;
-
         html += `
           <div class="ballot-container a5 page-break">
             <div class="ballot-header">
@@ -290,7 +303,217 @@ export async function renderAdminBallots(container) {
     }
   };
 
+  const handleSummaryReport = async () => {
+    try {
+      showToast('Calculating ranges...', 'info');
+      const [booths, nominalRoll, posts, candidatesResponse, schedule] = await Promise.all([
+        api.adminGetBooths(pwd),
+        api.getNominalRoll(),
+        api.adminGetPosts(pwd),
+        api.getFinalNominations(),
+        api.getPublicSchedule()
+      ]);
+
+      const candidates = candidatesResponse.active || [];
+      const year = schedule.electionYear || new Date().getFullYear();
+      
+      const isYear = (p) => p.post.toLowerCase().includes('representative') || p.post.toLowerCase().includes('year');
+      const isAssoc = (p) => p.post.toLowerCase().includes('association') || p.post.toLowerCase().includes('assoc');
+      
+      // Calculate Ranges
+      let genSl = 1, repSl = 1, assocSl = 1;
+      const summary = [];
+
+      // Sort booths by number
+      const sortedBooths = [...booths].sort((a, b) => a.boothNumber - b.boothNumber);
+
+      sortedBooths.forEach(b => {
+        const boothStudents = nominalRoll.filter(s => b.classes.includes(String(s.CLASS).trim()));
+        const count = boothStudents.length;
+        if (count === 0) return;
+
+        const boothData = {
+          number: b.boothNumber,
+          voters: count,
+          general: { start: genSl, end: genSl + count - 1 },
+          reps: [],
+          assocs: []
+        };
+        genSl += count;
+
+        // Reps (All 4 types share the series)
+        const boothReps = posts.filter(isYear).filter(p => {
+          const pCands = candidates.filter(c => c.post === p.post);
+          if (pCands.length <= 1) return false; // Skip Unanimous
+          // Check if any student in this booth belongs to this rep's target class
+          // Note: Simplification - if a booth has students, we assume they might need the rep ballot
+          // if the rep's year restriction matches.
+          return true; 
+        });
+
+        if (boothReps.length > 0) {
+          // In reality, only certain students in the booth get certain rep ballots.
+          // But usually, one booth contains whole classes, so we can calculate per rep post.
+          // The user said: "all 4 types of rep ballot can have same series of numbers without interruption"
+          // This implies one series for ALL rep ballots regardless of type.
+          // But wait, if Booth 1 needs 50 I UG and 50 II UG, they take R1-R100.
+          
+          let boothRepTotal = 0;
+          boothReps.forEach(p => {
+            // Find students in this booth who belong to this post's year
+            const yr = p.yearRestriction;
+            const targetStudents = boothStudents.filter(s => {
+              const u = String(s.CLASS).toUpperCase();
+              if (yr === 'PG') return ['MA','MSC','MCOM'].some(x => u.includes(x));
+              return u.includes(yr + 'ST YEAR') || u.includes(yr + 'ND YEAR') || u.includes(yr + 'RD YEAR') || u.includes(yr + ' YEAR');
+            });
+            if (targetStudents.length > 0) {
+              const start = repSl;
+              const end = repSl + targetStudents.length - 1;
+              boothData.reps.push({ name: p.post, start, end, count: targetStudents.length });
+              repSl += targetStudents.length;
+            }
+          });
+        }
+
+        // Associations
+        const boothAssocs = posts.filter(isAssoc).filter(p => {
+          const pCands = candidates.filter(c => c.post === p.post);
+          return pCands.length > 1;
+        });
+
+        boothAssocs.forEach(p => {
+          const dept = p.post.replace('Association Secretary ', '');
+          const targetStudents = boothStudents.filter(s => String(s.Dept).trim() === dept);
+          if (targetStudents.length > 0) {
+            const start = assocSl;
+            const end = assocSl + targetStudents.length - 1;
+            boothData.assocs.push({ name: p.post, start, end, count: targetStudents.length });
+            assocSl += targetStudents.length;
+          }
+        });
+
+        summary.push(boothData);
+      });
+
+      const reportHtml = `
+        <div style="padding: 40px; font-family: sans-serif; color: #333;">
+          <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
+            <h1 style="margin: 0; font-size: 24px;">BALLOT PRINTING SUMMARY - ${year}</h1>
+            <h2 style="margin: 5px 0 0 0; font-size: 18px; color: #666;">Government Victoria College Palakkad</h2>
+          </div>
+
+          <p style="font-size: 14px; margin-bottom: 20px;">
+            This document provides the specific serial number ranges for each ballot category assigned to polling booths. 
+            All ballots should be bundled in books (usually 50 or 100 per book) as per the ranges below.
+          </p>
+
+          <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #4f46e5;">1. General Union Ballots (Series: 1, 2, 3...)</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Total Voters</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Books Needed</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${summary.map(s => `
+                <tr>
+                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${s.number}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.voters}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${s.general.start}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${s.general.end}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${Math.ceil(s.voters / 50)} (of 50)</td>
+                </tr>
+              `).join('')}
+              <tr style="background: #f1f5f9; font-weight: bold;">
+                <td style="border: 1px solid #ddd; padding: 10px;">TOTAL</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${genSl - 1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">1</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${genSl - 1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${Math.ceil((genSl - 1) / 50)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #10b981;">2. Year Representative Ballots (Series: R1, R2, R3...)</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Post Name</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Count</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${summary.flatMap(s => s.reps.map(r => `
+                <tr>
+                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${s.number}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">${r.name}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${r.count}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${r.start}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${r.end}</td>
+                </tr>
+              `)).join('')}
+              <tr style="background: #f1f5f9; font-weight: bold;">
+                <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL REPRESENTATIVE BALLOTS</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${repSl - 1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R1</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${repSl - 1}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #f59e0b;">3. Association Secretary Ballots (Series: A1, A2, A3...)</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Department</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Count</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${summary.flatMap(s => s.assocs.map(a => `
+                <tr>
+                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${s.number}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">${a.name.replace('Association Secretary ', '')}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${a.count}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${a.start}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${a.end}</td>
+                </tr>
+              `)).join('')}
+              <tr style="background: #f1f5f9; font-weight: bold;">
+                <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL ASSOCIATION BALLOTS</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${assocSl - 1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A1</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${assocSl - 1}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px; font-size: 12px; color: #666; text-align: center;">
+            Generated on ${new Date().toLocaleString()} | Official GVC Election Portal
+          </div>
+        </div>
+      `;
+      triggerPrint(reportHtml);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  main.querySelector('#btnGenSummary').onclick = handleSummaryReport;
+
   main.querySelectorAll('.preview-btn').forEach(btn => {
     btn.onclick = () => handlePreview(btn.dataset.type);
   });
+}
 }

@@ -14,19 +14,20 @@ export async function renderAdminBooths(container) {
   `);
 
   try {
-    const [nominalRoll, booths, locations, posts] = await Promise.all([
+    const [nominalRoll, booths, locations, posts, nominations] = await Promise.all([
       api.getNominalRoll(),
       api.adminGetBooths(pwd).catch(() => []),
       api.adminGetLocations(pwd).catch(() => []),
-      api.getPosts().catch(() => [])
+      api.getPosts().catch(() => []),
+      api.getFinalNominations().catch(() => ({ active: [] }))
     ]);
-    renderBoothsUI(container.querySelector('#adminMain'), pwd, nominalRoll, booths, locations, posts);
+    renderBoothsUI(container.querySelector('#adminMain'), pwd, nominalRoll, booths, locations, posts, nominations);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
   }
 }
 
-function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations, posts) {
+function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations, posts, nominations) {
   // 1. Process Nominal Roll to get classes and sizes
   const classStats = {};
   nominalRoll.forEach(student => {
@@ -187,7 +188,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
     main.querySelector('#btnPrintRolls').addEventListener('click', () => {
       const area = main.querySelector('#printArea');
-      area.innerHTML = buildElectoralRollHtml(booths, nominalRoll, posts, classStats);
+      area.innerHTML = buildElectoralRollHtml(booths, nominalRoll, posts, classStats, nominations);
       
       const printWin = window.open('', '_blank');
       printWin.document.write(`
@@ -308,47 +309,55 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     });
   };
 
-  const buildElectoralRollHtml = (booths, students, posts, classStats) => {
+  const buildElectoralRollHtml = (booths, students, posts, classStats, nominationsResponse) => {
     let html = '';
-    booths.forEach((b) => {
+    const candidates = nominationsResponse.active || [];
+    const isYear = (p) => p.post.toLowerCase().includes('representative') || p.post.toLowerCase().includes('year');
+    const isAssoc = (p) => p.post.toLowerCase().includes('association') || p.post.toLowerCase().includes('assoc');
+
+    // CUMULATIVE RANGES CALCULATION
+    let genSl = 1, repSl = 1, assocSl = 1;
+    const sortedBooths = [...booths].sort((a, b) => a.boothNumber - b.boothNumber);
+
+    sortedBooths.forEach((b) => {
       if (!b.classes || b.classes.length === 0) return;
       const boothClasses = b.classes.map(cn => classStats[cn]).filter(Boolean);
-      const totalVoters = boothClasses.reduce((sum, c) => sum + c.count, 0);
-      const boothDepts = [...new Set(boothClasses.map(c => c.dept.toUpperCase()))];
-      const boothYears = boothClasses.reduce((set, c) => {
-        const u = c.name.toUpperCase();
-        const isPG = ['MA','MSC','MCOM','M.SC','M.COM','M.A'].some(pg => u.includes(pg));
-        if (isPG) set.add('PG');
-        else {
-          if (u.includes('1ST YEAR')) set.add('1');
-          if (u.includes('2ND YEAR')) set.add('2');
-          if (u.includes('3RD YEAR')) set.add('3');
-        }
-        return set;
-      }, new Set());
+      const boothStudents = students.filter(s => b.classes.includes(String(s.CLASS).trim()));
+      const totalVoters = boothStudents.length;
 
-      // Ballot Type Calculations
-      const ballotCounts = {
-        general: totalVoters,
-        association: {}, // Dept Name -> Count
-        yearRep: {}      // Year Label -> Count
+      // Serialization Ranges for this specific booth
+      const ballotRanges = {
+        general: { start: genSl, end: genSl + totalVoters - 1 },
+        reps: [],
+        assocs: []
       };
+      genSl += totalVoters;
 
-      boothClasses.forEach(c => {
-        // Association Ballot (one per Dept)
-        const d = String(c.dept || 'N/A').trim();
-        ballotCounts.association[d] = (ballotCounts.association[d] || 0) + c.count;
+      // Reps
+      posts.filter(isYear).forEach(p => {
+        const pCands = candidates.filter(c => c.post === p.post);
+        if (pCands.length <= 1) return; // Skip Unanimous
+        const yr = p.yearRestriction;
+        const targetStudents = boothStudents.filter(s => {
+          const u = String(s.CLASS).toUpperCase();
+          if (yr === 'PG') return ['MA','MSC','MCOM'].some(x => u.includes(x));
+          return u.includes(yr + 'ST YEAR') || u.includes(yr + 'ND YEAR') || u.includes(yr + 'RD YEAR') || u.includes(yr + ' YEAR');
+        });
+        if (targetStudents.length > 0) {
+          ballotRanges.reps.push({ name: p.post, start: repSl, end: repSl + targetStudents.length - 1, count: targetStudents.length });
+          repSl += targetStudents.length;
+        }
+      });
 
-        // Year Rep Ballot
-        const u = c.name.toUpperCase();
-        let yr = '';
-        if (['MA','MSC','MCOM','M.SC','M.COM','M.A'].some(pg => u.includes(pg))) yr = 'PG Representative';
-        else if (u.includes('1ST YEAR')) yr = '1st Year Representative';
-        else if (u.includes('2ND YEAR')) yr = '2nd Year Representative';
-        else if (u.includes('3RD YEAR')) yr = '3rd Year Representative';
-        
-        if (yr) {
-          ballotCounts.yearRep[yr] = (ballotCounts.yearRep[yr] || 0) + c.count;
+      // Assocs
+      posts.filter(isAssoc).forEach(p => {
+        const pCands = candidates.filter(c => c.post === p.post);
+        if (pCands.length <= 1) return;
+        const dept = p.post.replace('Association Secretary ', '');
+        const targetStudents = boothStudents.filter(s => String(s.Dept).trim() === dept);
+        if (targetStudents.length > 0) {
+          ballotRanges.assocs.push({ name: p.post, start: assocSl, end: assocSl + targetStudents.length - 1, count: targetStudents.length });
+          assocSl += targetStudents.length;
         }
       });
 
@@ -392,24 +401,28 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                 <thead>
                   <tr style="background:#f0f7ff">
                     <th>Ballot Category</th>
-                    <th style="text-align:right">Count</th>
+                    <th>Count</th>
+                    <th style="text-align:right">Serial Ranges</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr style="font-weight:bold">
                     <td>General Union Posts</td>
-                    <td style="text-align:right">${totalVoters}</td>
+                    <td>${totalVoters}</td>
+                    <td style="text-align:right">${ballotRanges.general.start} - ${ballotRanges.general.end}</td>
                   </tr>
-                  ${Object.entries(ballotCounts.yearRep).map(([yr, count]) => `
+                  ${ballotRanges.reps.map(r => `
                     <tr>
-                      <td>${esc(yr)}</td>
-                      <td style="text-align:right">${count}</td>
+                      <td>${esc(r.name)}</td>
+                      <td>${r.count}</td>
+                      <td style="text-align:right">R${r.start} - R${r.end}</td>
                     </tr>
                   `).join('')}
-                  ${Object.entries(ballotCounts.association).map(([dept, count]) => `
+                  ${ballotRanges.assocs.map(a => `
                     <tr>
-                      <td>${esc(dept)} Assoc. Sec.</td>
-                      <td style="text-align:right">${count}</td>
+                      <td>${esc(a.name.replace('Association Secretary ', ''))} Assoc.</td>
+                      <td>${a.count}</td>
+                      <td style="text-align:right">A${a.start} - A${a.end}</td>
                     </tr>
                   `).join('')}
                 </tbody>
