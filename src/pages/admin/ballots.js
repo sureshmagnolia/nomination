@@ -271,11 +271,21 @@ export async function renderAdminBallots(container) {
         const prefix = isYear(p) ? 'R' : 'A';
         html += `
           <div class="ballot-container a5 page-break">
+            <!-- Counterfoil -->
+            <div style="border-bottom: 2px dotted #000; padding-bottom: 15px; margin-bottom: 20px; text-align: center;">
+              <h1 style="font-size: 14px; margin: 0;">${esc(shortName)} ELECTION ${year}</h1>
+              <h2 style="font-size: 12px; margin: 2px 0;">OFFICIAL BALLOT (${prefix}) - COUNTERFOIL</h2>
+              <div style="margin-top: 10px; font-weight: bold; text-align: left; display: flex; justify-content: space-between; font-size: 11px;">
+                <span>SL.NO. ${prefix}____________</span>
+                <span style="font-size: 9px; color: #666; font-style: italic;">(To be detached)</span>
+              </div>
+            </div>
+
             <div class="ballot-header">
               <h1>${esc(shortName)} ELECTION ${year}</h1>
-              <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER</h2>
+              <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER (${prefix})</h2>
             </div>
-            <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ${prefix}______</div><div>PRO Sign</div></div>
+            <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ${prefix}____________</div><div>PRO Sign</div></div>
             <div class="post-box">
               <div class="post-title">${esc(p.post.toUpperCase())}</div>
               ${pCands.map((c, i) => `

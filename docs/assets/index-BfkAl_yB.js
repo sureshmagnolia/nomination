@@ -1652,11 +1652,21 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             </div>
           `;t%2==0?n+=a:r+=a}),h=h.replace(`<div class="ballot-col" id="col1"></div>`,`<div class="ballot-col" id="col1">${n}</div>`),h=h.replace(`<div class="ballot-col" id="col2"></div>`,`<div class="ballot-col" id="col2">${r}</div>`)}}let g=m.filter(e=>d(e)||f(e));return(e===`all`||e===`year`||e===`assoc`)&&g.filter(t=>e===`all`||e===`year`&&d(t)||e===`assoc`&&f(t)).forEach(e=>{let t=l.filter(t=>t.post===e.post),n=d(e)?`R`:`A`;h+=`
           <div class="ballot-container a5 page-break">
+            <!-- Counterfoil -->
+            <div style="border-bottom: 2px dotted #000; padding-bottom: 15px; margin-bottom: 20px; text-align: center;">
+              <h1 style="font-size: 14px; margin: 0;">${y(s)} ELECTION ${c}</h1>
+              <h2 style="font-size: 12px; margin: 2px 0;">OFFICIAL BALLOT (${n}) - COUNTERFOIL</h2>
+              <div style="margin-top: 10px; font-weight: bold; text-align: left; display: flex; justify-content: space-between; font-size: 11px;">
+                <span>SL.NO. ${n}____________</span>
+                <span style="font-size: 9px; color: #666; font-style: italic;">(To be detached)</span>
+              </div>
+            </div>
+
             <div class="ballot-header">
               <h1>${y(s)} ELECTION ${c}</h1>
-              <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER</h2>
+              <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER (${n})</h2>
             </div>
-            <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ${n}______</div><div>PRO Sign</div></div>
+            <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ${n}____________</div><div>PRO Sign</div></div>
             <div class="post-box">
               <div class="post-title">${y(e.post.toUpperCase())}</div>
               ${t.map((e,t)=>`
