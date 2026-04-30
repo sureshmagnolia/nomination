@@ -367,10 +367,18 @@ function doPost(e) {
     if (action === 'adminSendOTP') {
       checkAdmin(body.password);
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      let email = "";
+      try {
+        email = Session.getEffectiveUser().getEmail();
+        if (!email) throw new Error("Email is empty");
+      } catch (e) {
+        return errOut("AUTHORIZATION_REQUIRED: The script needs permission to send emails. Please open the Apps Script editor, run the 'getPublicSchedule' function manually once, grant permissions, and then re-deploy the web app as a new version.");
+      }
+
       setSetting('lastOTP', otp);
       setSetting('lastOTPTime', new Date().toISOString());
       
-      const email = Session.getEffectiveUser().getEmail();
       const subject = `Admin Login OTP - GVC Election Portal`;
       const message = `Your administrative One-Time Password (OTP) is: ${otp}\n\nThis code will expire in 5 minutes.\n\nIf you did not request this, please change your admin password immediately.`;
       
