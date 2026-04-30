@@ -203,14 +203,14 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
               .college-name { font-size: 20px; font-weight: bold; margin-bottom: 2px; }
               .title { font-size: 18px; font-weight: bold; text-transform: uppercase; }
-              .stats-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-              .stats-table th, .stats-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-              .stats-table th { background: #f5f5f5; font-size: 12px; }
+              .stats-table { width: 100%; border-collapse: collapse; border: 1px solid #000; }
+              .stats-table th, .stats-table td { border: 1px solid #000; padding: 8px 10px; text-align: left; }
+              .stats-table th { background: #f2f2f2; font-size: 11px; text-transform: uppercase; }
               .roll-page { padding: 30px; }
               .roll-header { display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 10px; margin-bottom: 15px; font-size: 12px; }
               .roll-table { width: 100%; border-collapse: collapse; }
-              .roll-table th, .roll-table td { border: 1.2px solid #000; padding: 6px 10px; text-align: left; font-size: 11px; }
-              .roll-table th { background: #eee; font-weight: bold; }
+              .roll-table th, .roll-table td { border: 1px solid #000; padding: 6px 10px; text-align: left; font-size: 11px; }
+              .roll-table th { background: #f2f2f2; font-weight: bold; text-transform: uppercase; }
               .footer { display: flex; justify-content: space-around; margin-top: 50px; font-size: 13px; font-weight: bold; }
               @media print {
                 .no-print { display: none; }
@@ -372,12 +372,12 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             <!-- Bottom Section: Ballots (Full Width) -->
             <div>
               <h4 style="border-bottom: 2px solid #000; padding-bottom: 3px; font-size: 13px; margin: 0 0 8px 0; text-transform: uppercase;">2. Ballots & Books Account (To be filled by PO)</h4>
-              <table class="stats-table" style="font-size: 10px; width: 100%; border: 1.5px solid #000;">
+              <table class="stats-table" style="font-size: 10px; width: 100%;">
                 <thead>
-                  <tr style="background:#f0f0f0">
+                  <tr>
                     <th style="width:20%">Ballot Category</th>
                     <th style="width:15%">Serial Range</th>
-                    <th style="width:8%; text-align:center">Total Qty</th>
+                    <th style="width:10%; text-align:center">Total Qty</th>
                     <th style="width:18%">Book IDs</th>
                     <th style="width:10%; text-align:center">Used</th>
                     <th style="width:10%; text-align:center">Returned</th>
@@ -390,10 +390,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                       <td>General Union Posts</td>
                       <td>G${assignments.general.start} - G${assignments.general.end}</td>
                       <td style="text-align:center">${assignments.general.count}</td>
-                      <td style="color:#4f46e5">${assignments.general.bookIds}</td>
-                      <td style="border: 1px solid #000;"></td>
-                      <td style="border: 1px solid #000;"></td>
-                      <td style="border: 1px solid #000;"></td>
+                      <td>${assignments.general.bookIds}</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
                     </tr>
                   ` : ''}
                   ${assignments.reps.map(r => `
@@ -401,10 +401,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                       <td>${esc(r.post)}</td>
                       <td>R${r.start} - R${r.end}</td>
                       <td style="text-align:center">${r.count}</td>
-                      <td style="color:#10b981">${r.bookIds}</td>
-                      <td style="border: 1px solid #000;"></td>
-                      <td style="border: 1px solid #000;"></td>
-                      <td style="border: 1px solid #000;"></td>
+                      <td>${r.bookIds}</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
                     </tr>
                   `).join('')}
                   ${assignments.assocs.map(a => `
@@ -412,10 +412,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                       <td>${esc(a.post)}</td>
                       <td>A${a.start} - A${a.end}</td>
                       <td style="text-align:center">${a.count}</td>
-                      <td style="color:#f59e0b">${a.bookIds}</td>
-                      <td style="border: 1px solid #000;"></td>
-                      <td style="border: 1px solid #000;"></td>
-                      <td style="border: 1px solid #000;"></td>
+                      <td>${a.bookIds}</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
                     </tr>
                   `).join('')}
                 </tbody>

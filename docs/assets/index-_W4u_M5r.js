@@ -1178,14 +1178,14 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
               .college-name { font-size: 20px; font-weight: bold; margin-bottom: 2px; }
               .title { font-size: 18px; font-weight: bold; text-transform: uppercase; }
-              .stats-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-              .stats-table th, .stats-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-              .stats-table th { background: #f5f5f5; font-size: 12px; }
+              .stats-table { width: 100%; border-collapse: collapse; border: 1px solid #000; }
+              .stats-table th, .stats-table td { border: 1px solid #000; padding: 8px 10px; text-align: left; }
+              .stats-table th { background: #f2f2f2; font-size: 11px; text-transform: uppercase; }
               .roll-page { padding: 30px; }
               .roll-header { display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 10px; margin-bottom: 15px; font-size: 12px; }
               .roll-table { width: 100%; border-collapse: collapse; }
-              .roll-table th, .roll-table td { border: 1.2px solid #000; padding: 6px 10px; text-align: left; font-size: 11px; }
-              .roll-table th { background: #eee; font-weight: bold; }
+              .roll-table th, .roll-table td { border: 1px solid #000; padding: 6px 10px; text-align: left; font-size: 11px; }
+              .roll-table th { background: #f2f2f2; font-weight: bold; text-transform: uppercase; }
               .footer { display: flex; justify-content: space-around; margin-top: 50px; font-size: 13px; font-weight: bold; }
               @media print {
                 .no-print { display: none; }
@@ -1242,12 +1242,12 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <!-- Bottom Section: Ballots (Full Width) -->
             <div>
               <h4 style="border-bottom: 2px solid #000; padding-bottom: 3px; font-size: 13px; margin: 0 0 8px 0; text-transform: uppercase;">2. Ballots & Books Account (To be filled by PO)</h4>
-              <table class="stats-table" style="font-size: 10px; width: 100%; border: 1.5px solid #000;">
+              <table class="stats-table" style="font-size: 10px; width: 100%;">
                 <thead>
-                  <tr style="background:#f0f0f0">
+                  <tr>
                     <th style="width:20%">Ballot Category</th>
                     <th style="width:15%">Serial Range</th>
-                    <th style="width:8%; text-align:center">Total Qty</th>
+                    <th style="width:10%; text-align:center">Total Qty</th>
                     <th style="width:18%">Book IDs</th>
                     <th style="width:10%; text-align:center">Used</th>
                     <th style="width:10%; text-align:center">Returned</th>
@@ -1260,10 +1260,10 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                       <td>General Union Posts</td>
                       <td>G${c.general.start} - G${c.general.end}</td>
                       <td style="text-align:center">${c.general.count}</td>
-                      <td style="color:#4f46e5">${c.general.bookIds}</td>
-                      <td style="border: 1px solid #000;"></td>
-                      <td style="border: 1px solid #000;"></td>
-                      <td style="border: 1px solid #000;"></td>
+                      <td>${c.general.bookIds}</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
                     </tr>
                   `:``}
                   ${c.reps.map(e=>`
@@ -1271,10 +1271,10 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                       <td>${y(e.post)}</td>
                       <td>R${e.start} - R${e.end}</td>
                       <td style="text-align:center">${e.count}</td>
-                      <td style="color:#10b981">${e.bookIds}</td>
-                      <td style="border: 1px solid #000;"></td>
-                      <td style="border: 1px solid #000;"></td>
-                      <td style="border: 1px solid #000;"></td>
+                      <td>${e.bookIds}</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
                     </tr>
                   `).join(``)}
                   ${c.assocs.map(e=>`
@@ -1282,10 +1282,10 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                       <td>${y(e.post)}</td>
                       <td>A${e.start} - A${e.end}</td>
                       <td style="text-align:center">${e.count}</td>
-                      <td style="color:#f59e0b">${e.bookIds}</td>
-                      <td style="border: 1px solid #000;"></td>
-                      <td style="border: 1px solid #000;"></td>
-                      <td style="border: 1px solid #000;"></td>
+                      <td>${e.bookIds}</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
                     </tr>
                   `).join(``)}
                 </tbody>
