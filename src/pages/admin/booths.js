@@ -319,6 +319,12 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     const sortedBooths = [...booths].sort((a, b) => a.boothNumber - b.boothNumber);
     const boothAllocations = {}; // boothNum -> { general: {}, reps: [], assocs: [] }
     
+    // Filter out Unanimous Winners (Posts with only 1 candidate) to match Ballots Summary
+    const contestablePosts = posts.filter(p => {
+      const pCands = candidates.filter(c => c.post === p.post);
+      return pCands.length > 1; 
+    });
+
     let genSl = 1, repSl = 1, assocSl = 1;
     let gbCount = 0, rbCount = 0, abCount = 0;
     
@@ -371,7 +377,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     });
 
     // 2. Reps (All posts, matching Ballot Summary logic)
-    const yearReps = posts.filter(isYear);
+    const yearReps = contestablePosts.filter(isYear);
     yearReps.forEach(p => {
       const yr = String(p.yearRestriction || '').trim().toUpperCase();
       if (!yr) return;
@@ -407,7 +413,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     });
 
     // 3. Assocs (All posts, matching Ballot Summary logic)
-    const assocPosts = posts.filter(isAssoc);
+    const assocPosts = contestablePosts.filter(isAssoc);
     assocPosts.forEach(p => {
       // Normalize: "Association Secretary Computer Science" -> "COMPUTER SCIENCE"
       const prefix = 'Association Secretary';
