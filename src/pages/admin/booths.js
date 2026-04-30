@@ -6,6 +6,7 @@ import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
 import { CONFIG } from '../../config.js';
+import { getBallotMasterPlan } from '../../utils/ballotMath.js';
 
 export async function renderAdminBooths(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -312,144 +313,17 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
   const buildElectoralRollHtml = (booths, students, posts, classStats, nominationsResponse) => {
     let html = '';
     const candidates = nominationsResponse.active || [];
-    const isYear = (p) => p.post.toLowerCase().includes('representative') || p.post.toLowerCase().includes('year');
-    const isAssoc = (p) => p.post.toLowerCase().includes('association') || p.post.toLowerCase().includes('assoc');
+    const plan = getBallotMasterPlan(posts, candidates, booths, students);
 
-    // PRE-CALCULATE ALL RANGES (Post-wise logic)
     const sortedBooths = [...booths].sort((a, b) => a.boothNumber - b.boothNumber);
-    const boothAllocations = {}; // boothNum -> { general: {}, reps: [], assocs: [] }
-    
-    // Filter out Unanimous Winners (Posts with only 1 candidate) to match Ballots Summary
-    const contestablePosts = posts.filter(p => {
-      const pCands = candidates.filter(c => c.post === p.post);
-      return pCands.length > 1; 
-    });
-
-    let genSl = 1, repSl = 1, assocSl = 1;
-    let gbCount = 0, rbCount = 0, abCount = 0;
-    
-    // Logic Helper for Book IDs
-    const getBooksInfo = (count, start, prefix) => {
-      if (!count || count <= 0) return { text: '-', nextIndex: 0 };
-      const standard = 50;
-      const threshold = 15;
-      let current = start;
-      const idPrefix = prefix === 'G' ? 'GB' : (prefix === 'R' ? 'RB' : 'AB');
-      let counter = prefix === 'G' ? gbCount : (prefix === 'R' ? rbCount : abCount);
-      let ids = [];
-
-      const addBook = (size) => {
-        counter++;
-        ids.push(idPrefix + counter);
-        current += size;
-      };
-
-      if (count <= (standard + threshold)) {
-        addBook(count);
-      } else {
-        const fullBooks = Math.floor(count / standard);
-        const remainder = count % standard;
-        if (remainder === 0) {
-          for (let i = 0; i < fullBooks; i++) addBook(standard);
-        } else if (remainder <= threshold) {
-          for (let i = 0; i < fullBooks - 1; i++) addBook(standard);
-          addBook(standard + remainder);
-        } else {
-          for (let i = 0; i < fullBooks; i++) addBook(standard);
-          addBook(remainder);
-        }
-      }
-
-      // Update global
-      if (prefix === 'G') gbCount = counter;
-      else if (prefix === 'R') rbCount = counter;
-      else abCount = counter;
-
-      if (ids.length === 1) return ids[0];
-      return `${ids[0]} to ${ids[ids.length - 1]}`;
-    };
-
-    // 1. General
-    sortedBooths.forEach(b => {
-      const boothStudents = students.filter(s => b.classes.includes(String(s.CLASS).trim()));
-      boothAllocations[b.boothNumber] = { general: { start: genSl, end: genSl + boothStudents.length - 1 }, reps: [], assocs: [] };
-      genSl += boothStudents.length;
-    });
-
-    // 2. Reps (All posts, matching Ballot Summary logic)
-    const yearReps = contestablePosts.filter(isYear);
-    yearReps.forEach(p => {
-      const yr = String(p.yearRestriction || '').trim().toUpperCase();
-      if (!yr) return;
-
-      sortedBooths.forEach(b => {
-        const boothStudents = students.filter(s => b.classes.includes(String(s.CLASS).trim()));
-        const targetStudents = boothStudents.filter(s => {
-          const cls = String(s.CLASS || '').toUpperCase();
-          
-          // 1. PhD scholars NEVER vote for reps
-          if (cls.includes('PH D') || cls.includes('PH.D')) return false; 
-
-          // 2. Define PG logic (Priority: PG students only vote for PG Rep)
-          const isPG = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A)\b/i.test(cls);
-
-          if (yr === 'PG') return isPG;
-          
-          // 3. UG Rep logic (Mutually Exclusive: Must NOT be a PG student)
-          if (isPG) return false; 
-
-          if (yr === '1') return cls.startsWith('1ST YEAR');
-          if (yr === '2') return cls.startsWith('2ND YEAR');
-          if (yr === '3') return cls.startsWith('3RD YEAR');
-          
-          return false;
-        });
-
-        if (targetStudents.length > 0) {
-          boothAllocations[b.boothNumber].reps.push({ name: p.post, start: repSl, end: repSl + targetStudents.length - 1, count: targetStudents.length });
-          repSl += targetStudents.length;
-        }
-      });
-    });
-
-    // 3. Assocs (All posts, matching Ballot Summary logic)
-    const assocPosts = contestablePosts.filter(isAssoc);
-    assocPosts.forEach(p => {
-      // Normalize: "Association Secretary Computer Science" -> "COMPUTER SCIENCE"
-      const prefix = 'Association Secretary';
-      let dept = p.post.toUpperCase();
-      if (dept.includes(prefix.toUpperCase())) {
-        dept = dept.split(prefix.toUpperCase())[1].trim();
-      }
-      dept = dept.replace(/[-\s]/g, ' ');
-
-      sortedBooths.forEach(b => {
-        const boothStudents = students.filter(s => b.classes.includes(String(s.CLASS).trim()));
-        const targetStudents = boothStudents.filter(s => {
-          const sDept = String(s.Dept || '').trim().toUpperCase().replace(/[-\s]/g, ' ');
-          const sCls  = String(s.CLASS || '').trim().toUpperCase().replace(/[-\s]/g, ' ');
-          // Check if normalized dept (e.g. BOTANY) is in Dept field or CLASS string
-          return sDept === dept || sDept.includes(dept) || sCls.includes(dept);
-        });
-
-        if (targetStudents.length > 0) {
-          boothAllocations[b.boothNumber].assocs.push({ name: p.post, start: assocSl, end: assocSl + targetStudents.length - 1, count: targetStudents.length });
-          assocSl += targetStudents.length;
-        }
-      });
-    });
 
     sortedBooths.forEach((b) => {
       if (!b.classes || b.classes.length === 0) return;
       const boothStudents = students.filter(s => b.classes.includes(String(s.CLASS).trim()));
       const totalVoters = boothStudents.length;
-      const ballotRanges = boothAllocations[b.boothNumber];
       const boothClasses = b.classes.map(cn => classStats[cn]).filter(Boolean);
-
-      // Calculate Book IDs for this booth (Note: MUST match order in Ballot Summary)
-      const genBooks = getBooksInfo(totalVoters, ballotRanges.general.start, 'G');
-      const repsWithBooks = ballotRanges.reps.map(r => ({ ...r, books: getBooksInfo(r.count, r.start, 'R') }));
-      const assocsWithBooks = ballotRanges.assocs.map(a => ({ ...a, books: getBooksInfo(a.count, a.start, 'A') }));
+      
+      const assignments = plan.boothAssignments[b.boothNumber] || { general: null, reps: [], assocs: [] };
 
       html += `
       <div class="page-break">
@@ -496,28 +370,32 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                   </tr>
                 </thead>
                 <tbody>
-                  <tr style="font-weight:bold">
-                    <td>General Union Posts</td>
-                    <td>G${ballotRanges.general.start} - G${ballotRanges.general.end}</td>
-                    <td style="text-align:right; color:#4f46e5">${genBooks}</td>
-                  </tr>
-                  ${repsWithBooks.map(r => `
+                  ${assignments.general ? `
+                    <tr style="font-weight:bold">
+                      <td>General Union Posts</td>
+                      <td>G${assignments.general.start} - G${assignments.general.end}</td>
+                      <td style="text-align:right; color:#4f46e5">${assignments.general.bookIds}</td>
+                    </tr>
+                  ` : ''}
+                  ${assignments.reps.map(r => `
                     <tr>
-                      <td style="font-size:8.5px">${esc(r.name)}</td>
+                      <td style="font-size:8.5px">${esc(r.post)}</td>
                       <td>R${r.start} - R${r.end}</td>
-                      <td style="text-align:right; color:#10b981">${r.books}</td>
+                      <td style="text-align:right; color:#10b981">${r.bookIds}</td>
                     </tr>
                   `).join('')}
-                  ${assocsWithBooks.map(a => `
+                  ${assignments.assocs.map(a => `
                     <tr>
-                      <td style="font-size:8.5px">${esc(a.name)}</td>
+                      <td style="font-size:8.5px">${esc(a.post)}</td>
                       <td>A${a.start} - A${a.end}</td>
-                      <td style="text-align:right; color:#f59e0b">${a.books}</td>
+                      <td style="text-align:right; color:#f59e0b">${a.bookIds}</td>
                     </tr>
                   `).join('')}
                 </tbody>
               </table>
             </div>
+          </div>
+
           <div class="footer" style="margin-top: 20px;">
             <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Returning Officer</div>
             <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Presiding Officer</div>

@@ -5,6 +5,7 @@
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
+import { getBallotMasterPlan } from '../../utils/ballotMath.js';
 
 export async function renderAdminBallots(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -326,7 +327,7 @@ export async function renderAdminBallots(container) {
 
   const handleSummaryReport = async () => {
     try {
-      showToast('Calculating ranges...', 'info');
+      showToast('Calculating Master Plan...', 'info');
       const [booths, nominalRoll, posts, candidatesResponse, schedule, settings] = await Promise.all([
         api.adminGetBooths(pwd),
         api.getNominalRoll(),
@@ -337,177 +338,10 @@ export async function renderAdminBallots(container) {
       ]);
 
       const candidates = candidatesResponse.active || [];
+      const plan = getBallotMasterPlan(posts, candidates, booths, nominalRoll);
+
       const year = schedule.electionYear || new Date().getFullYear();
       const collegeName = settings.collegeName || 'Government Victoria College Palakkad';
-      const shortName = settings.collegeShortName || 'GVC';
-      
-      const isYear = (p) => p.post.toLowerCase().includes('representative') || p.post.toLowerCase().includes('year');
-      const isAssoc = (p) => p.post.toLowerCase().includes('association') || p.post.toLowerCase().includes('assoc');
-      
-      // Calculate Ranges
-      let genSl = 1, repSl = 1, assocSl = 1;
-      
-      // Track global book counters
-      let gbCount = 0, rbCount = 0, abCount = 0;
-
-      const calcBooks = (count, start, prefix) => {
-        if (!count || count <= 0) return '-';
-        const standard = 50;
-        const threshold = 15;
-        let current = start;
-        let books = [];
-        
-        // Define ID prefix based on series
-        const idPrefix = prefix === 'G' ? 'GB' : (prefix === 'R' ? 'RB' : 'AB');
-        let counter = prefix === 'G' ? gbCount : (prefix === 'R' ? rbCount : abCount);
-
-        const createRange = (size) => {
-          counter++;
-          const range = `${prefix}${current}-${current + size - 1}`;
-          current += size;
-          return { id: idPrefix + counter, range };
-        };
-
-        if (count <= (standard + threshold)) {
-          books.push({ qty: 1, size: count, items: [createRange(count)] });
-        } else {
-          const fullBooks = Math.floor(count / standard);
-          const remainder = count % standard;
-          
-          if (remainder === 0) {
-            let items = [];
-            for (let i = 0; i < fullBooks; i++) items.push(createRange(standard));
-            books.push({ qty: fullBooks, size: standard, items });
-          } else if (remainder <= threshold) {
-            let items = [];
-            for (let i = 0; i < fullBooks - 1; i++) items.push(createRange(standard));
-            if (items.length > 0) books.push({ qty: fullBooks - 1, size: standard, items });
-            const lastSize = standard + remainder;
-            books.push({ qty: 1, size: lastSize, items: [createRange(lastSize)] });
-          } else {
-            let items = [];
-            for (let i = 0; i < fullBooks; i++) items.push(createRange(standard));
-            books.push({ qty: fullBooks, size: standard, items });
-            books.push({ qty: 1, size: remainder, items: [createRange(remainder)] });
-          }
-        }
-
-        // Update global counters
-        if (prefix === 'G') gbCount = counter;
-        else if (prefix === 'R') rbCount = counter;
-        else abCount = counter;
-
-        return `
-          <table style="width:100%; border-collapse:collapse; font-size:10px; background:rgba(0,0,0,0.02);">
-            ${books.map(b => `
-              <tr>
-                <td style="padding:4px; border:1px solid #eee; font-weight:bold; width:45px;">${b.qty} x ${b.size}</td>
-                <td style="padding:4px; border:1px solid #eee; line-height:1.4;">
-                  ${b.items.map(it => `<span style="display:inline-block; margin-right:8px;"><strong style="color:#4f46e5;">${it.id}:</strong> ${it.range}</span>`).join(' ')}
-                </td>
-              </tr>
-            `).join('')}
-          </table>
-        `;
-      };
-      const sortedBooths = [...booths].sort((a, b) => a.boothNumber - b.boothNumber);
-      
-      const genSummary = [];
-      const repSummary = [];
-      const assocSummary = [];
-
-      // 1. General Series (Booth-wise)
-      sortedBooths.forEach(b => {
-        const boothStudents = nominalRoll.filter(s => b.classes.includes(String(s.CLASS).trim()));
-        if (boothStudents.length === 0) return;
-        genSummary.push({
-          booth: b.boothNumber,
-          count: boothStudents.length,
-          start: genSl,
-          end: genSl + boothStudents.length - 1
-        });
-        genSl += boothStudents.length;
-      });
-
-      // 2. Year Rep Series (Post-wise, then Booth-wise)
-      const yearReps = posts.filter(isYear);
-      yearReps.forEach(p => {
-        const yr = String(p.yearRestriction || '').trim().toUpperCase();
-        if (!yr) return;
-
-        const postBooths = [];
-        sortedBooths.forEach(b => {
-          const boothStudents = nominalRoll.filter(s => b.classes.includes(String(s.CLASS).trim()));
-          const targetStudents = boothStudents.filter(s => {
-            const cls = String(s.CLASS || '').toUpperCase();
-            
-            // 1. PhD scholars NEVER vote for reps
-            if (cls.includes('PH D') || cls.includes('PH.D')) return false; 
-
-            // 2. Define PG logic (Priority: PG students only vote for PG Rep)
-            const isPG = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A)\b/i.test(cls);
-
-            if (yr === 'PG') return isPG;
-            
-            // 3. UG Rep logic (Mutually Exclusive: Must NOT be a PG student)
-            if (isPG) return false; 
-
-            if (yr === '1') return cls.startsWith('1ST YEAR');
-            if (yr === '2') return cls.startsWith('2ND YEAR');
-            if (yr === '3') return cls.startsWith('3RD YEAR');
-            
-            return false;
-          });
-          
-          if (targetStudents.length > 0) {
-            postBooths.push({
-              booth: b.boothNumber,
-              post: p.post,
-              count: targetStudents.length,
-              start: repSl,
-              end: repSl + targetStudents.length - 1
-            });
-            repSl += targetStudents.length;
-          }
-        });
-        if (postBooths.length > 0) repSummary.push(...postBooths);
-      });
-
-      // 3. Association Series (Post-wise, then Booth-wise)
-      const assocPosts = posts.filter(isAssoc);
-      assocPosts.forEach(p => {
-        // More robust prefix handling
-        const prefix = 'Association Secretary';
-        let dept = p.post.toUpperCase();
-        if (dept.includes(prefix.toUpperCase())) {
-          dept = dept.split(prefix.toUpperCase())[1].trim();
-        }
-        dept = dept.replace(/[-\s]/g, ' ');
-
-        const postBooths = [];
-        sortedBooths.forEach(b => {
-          const boothStudents = nominalRoll.filter(s => b.classes.includes(String(s.CLASS).trim()));
-          const targetStudents = boothStudents.filter(s => {
-            const sDept = String(s.Dept || '').trim().toUpperCase().replace(/[-\s]/g, ' ');
-            const sCls  = String(s.CLASS || '').trim().toUpperCase().replace(/[-\s]/g, ' ');
-            
-            // Check if normalized dept (e.g. BOTANY) is in Dept field or CLASS string
-            return sDept === dept || sDept.includes(dept) || sCls.includes(dept);
-          });
-          
-          if (targetStudents.length > 0) {
-            postBooths.push({
-              booth: b.boothNumber,
-              post: p.post,
-              count: targetStudents.length,
-              start: assocSl,
-              end: assocSl + targetStudents.length - 1
-            });
-            assocSl += targetStudents.length;
-          }
-        });
-        if (postBooths.length > 0) assocSummary.push(...postBooths);
-      });
 
       const reportHtml = `
         <div style="padding: 40px; font-family: sans-serif; color: #333;">
@@ -533,20 +367,20 @@ export async function renderAdminBallots(container) {
               </tr>
             </thead>
             <tbody>
-              ${genSummary.map(s => `
+              ${plan.general.results.map(s => `
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 10px;">Booth ${s.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${s.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${s.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${calcBooks(s.count, s.start, 'G')}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${s.bookHtml}</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
                 <td style="border: 1px solid #ddd; padding: 10px;">TOTAL GENERAL</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${genSl - 1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${plan.general.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G1</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G${genSl - 1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G${plan.general.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
               </tr>
             </tbody>
@@ -565,21 +399,21 @@ export async function renderAdminBallots(container) {
               </tr>
             </thead>
             <tbody>
-              ${repSummary.map(s => `
+              ${plan.reps.results.map(s => `
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${esc(s.post)}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">B${s.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${s.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${s.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${calcBooks(s.count, s.start, 'R')}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${s.bookHtml}</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
                 <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL REPRESENTATIVE</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${repSl - 1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${plan.reps.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R1</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${repSl - 1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${plan.reps.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
               </tr>
             </tbody>
@@ -598,21 +432,21 @@ export async function renderAdminBallots(container) {
               </tr>
             </thead>
             <tbody>
-              ${assocSummary.map(s => `
+              ${plan.assocs.results.map(s => `
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${esc(s.post)}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">B${s.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${s.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${s.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${calcBooks(s.count, s.start, 'A')}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${s.bookHtml}</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
                 <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL ASSOCIATION</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${assocSl - 1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${plan.assocs.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A1</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${assocSl - 1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${plan.assocs.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
               </tr>
             </tbody>
