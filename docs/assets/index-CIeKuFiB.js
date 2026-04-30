@@ -1,4 +1,4 @@
-var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],enumerable:!0});return n||e(r,Symbol.toStringTag,{value:`Module`}),r};(function(){let e=document.createElement(`link`).relList;if(e&&e.supports&&e.supports(`modulepreload`))return;for(let e of document.querySelectorAll(`link[rel="modulepreload"]`))n(e);new MutationObserver(e=>{for(let t of e)if(t.type===`childList`)for(let e of t.addedNodes)e.tagName===`LINK`&&e.rel===`modulepreload`&&n(e)}).observe(document,{childList:!0,subtree:!0});function t(e){let t={};return e.integrity&&(t.integrity=e.integrity),e.referrerPolicy&&(t.referrerPolicy=e.referrerPolicy),e.crossOrigin===`use-credentials`?t.credentials=`include`:e.crossOrigin===`anonymous`?t.credentials=`omit`:t.credentials=`same-origin`,t}function n(e){if(e.ep)return;e.ep=!0;let n=t(e);fetch(e.href,n)}})();var n={APPS_SCRIPT_URL:`https://script.google.com/macros/s/AKfycbw29XuhvNI4cV-tlAWz5IaRrWPY1T9P7ZiQJbu-7za9226PyEqlhuLOrOMTG2QulzzOog/exec`,ELECTION_DATE:`2026-10-12`,COLLEGE_NAME:`Government Victoria College, Palakkad`,DEFAULT_POSTS:[{post:`The Chairman`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The Vice Chairman`,femaleOnly:!0,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The Secretary`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The Joint Secretary`,femaleOnly:!0,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The Chief Student Editor`,femaleOnly:!1,finalYearIneligible:!0,yearRestriction:``,deptRestriction:!1},{post:`The Secretary Fine Arts`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The General Captain For Sports And Games`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The University Union Councillor`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`I UG Representative`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:`1`,deptRestriction:!1},{post:`II UG Representative`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:`2`,deptRestriction:!1},{post:`III UG Representative`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:`3`,deptRestriction:!1},{post:`PG Representative`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:`PG`,deptRestriction:!1},{post:`Association Secretary Botany`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Chemistry`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Commerce`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Computer Science`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Economics`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary English`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Hindi`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary History`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Malayalam`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Mathematics`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Physics`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Psychology`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Sanskrit`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Tamil`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Zoology`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0}]},r=t({router:()=>o}),i={},a=`/`,o={on(e,t){return i[e]=t,this},setDefault(e){return a=e,this},navigate(e,t={}){window.history.pushState({path:e,params:t},``,`#${e}`),this._resolve(e,t)},start(){window.addEventListener(`popstate`,e=>{let{path:t,params:n}=e.state||{path:a,params:{}};this._resolve(t,n)});let e=window.location.hash.replace(`#`,``)||a;this._resolve(e,{})},_resolve(e,t){let n=i[e]||i[a];n&&n(t)}},s=n.APPS_SCRIPT_URL;async function c(e){let t=new URL(s);Object.entries(e).forEach(([e,n])=>t.searchParams.append(e,n)),t.searchParams.append(`_t`,Date.now());let n=await fetch(t.toString());if(!n.ok)throw Error(`Network error: ${n.status}`);let r=await n.json();if(r.error)throw Error(r.error);return r}async function l(e){let t=await fetch(s,{method:`POST`,headers:{"Content-Type":`text/plain;charset=utf-8`},body:JSON.stringify(e)});if(!t.ok)throw Error(`Network error: ${t.status}`);let n=await t.json();if(n.error)throw Error(n.error);return n}var u={getNominalRoll:()=>c({action:`getNominalRoll`}),getPosts:()=>c({action:`getPosts`}),getPublicNominations:()=>c({action:`getPublicNominations`}),getNomination:e=>c({action:`getNomination`,id:e}),getValidNominations:()=>c({action:`getValidNominations`}),getFinalNominations:()=>c({action:`getFinalNominations`}),submitNomination:e=>l({action:`submitNomination`,...e}),submitWithdrawal:e=>l({action:`submitWithdrawal`,id:e}),adminLogin:e=>l({action:`adminLogin`,password:e}),adminSendOTP:e=>l({action:`adminSendOTP`,password:e}),adminVerifyOTP:(e,t)=>l({action:`adminVerifyOTP`,password:e,otp:t}),adminGetNominations:e=>c({action:`adminGetNominations`,password:e}),adminVerifyNomination:(e,t,n)=>l({action:`adminVerifyNomination`,password:e,id:t,status:n}),adminApproveWithdrawal:(e,t)=>l({action:`adminApproveWithdrawal`,password:e,id:t}),adminPublishValidList:e=>l({action:`adminPublishValidList`,password:e}),adminPublishFinalList:e=>l({action:`adminPublishFinalList`,password:e}),adminGetSettings:e=>c({action:`adminGetSettings`,password:e}),adminUpdateSettings:(e,t)=>l({action:`adminUpdateSettings`,password:e,...t}),getPublicSettings:()=>c({action:`adminGetSettings`,password:`NONE`}),adminGetPosts:e=>c({action:`adminGetPosts`,password:e}),adminAddPost:(e,t)=>l({action:`adminAddPost`,password:e,...t}),adminUpdatePost:(e,t)=>l({action:`adminUpdatePost`,password:e,...t}),adminDeletePost:(e,t)=>l({action:`adminDeletePost`,password:e,postName:t}),adminReorderPosts:(e,t)=>l({action:`adminReorderPosts`,password:e,posts:t}),adminGetBooths:e=>c({action:`adminGetBooths`,password:e}),adminSaveBooths:(e,t)=>l({action:`adminSaveBooths`,password:e,booths:t}),adminGetLocations:e=>c({action:`adminGetLocations`,password:e}),adminSaveLocations:(e,t)=>l({action:`adminSaveLocations`,password:e,locations:t}),getResults:()=>c({action:`getResults`}),adminSaveResults:(e,t)=>l({action:`adminSaveResults`,password:e,results:t}),adminInjectTestData:e=>l({action:`adminInjectTestData`,password:e}),adminWipeData:e=>l({action:`adminWipeData`,password:e}),adminGetCountingMatrix:e=>c({action:`adminGetCountingMatrix`,password:e}),adminSaveCountingMatrix:(e,t)=>l({action:`adminSaveCountingMatrix`,password:e,matrixData:t}),getSettings:()=>c({action:`getSettings`}),adminAddStudent:(e,t)=>l({action:`adminAddStudent`,password:e,...t}),adminDeleteStudent:(e,t)=>l({action:`adminDeleteStudent`,password:e,serial:t}),adminFinalizeRoll:e=>l({action:`adminFinalizeRoll`,password:e}),_scheduleCache:null,getPublicSchedule:async function(){if(this._scheduleCache)return this._scheduleCache;let e=await c({action:`getPublicSchedule`});return this._scheduleCache=e,e},adminSaveSchedule:async function(e,t){let n=await l({action:`adminSaveSchedule`,password:e,...t});return this._scheduleCache=null,n}};function d(e,t=n.ELECTION_DATE){if(!e)return`N/A`;let r=new Date(t),i=new Date(e),a=r.getFullYear()-i.getFullYear(),o=r.getMonth()-i.getMonth(),s=r.getDate()-i.getDate();return s<0&&(o--,s+=new Date(r.getFullYear(),r.getMonth(),0).getDate()),o<0&&(a--,o+=12),`${a} Years, ${o} Months, ${s} Days`}function f(e,t,n,r=null,i=[],a=[]){if(!e)return[];let o=[],s=String(e.CLASS||``).toUpperCase(),c=String(e.Dept||``).toUpperCase(),l=String(e[`Nominal Roll Serial Number`]),u=i.find(e=>e.post===t)||{};if((n===`Proposer`||n===`Seconder`)&&a.some(e=>e.post===t&&e.status!==`Rejected`&&(String(e.proposerSerial)===l||String(e.seconderSerial)===l))&&o.push(`Student #${l} has already proposed or seconded a candidate for "${t}". They cannot endorse multiple candidates for the same post.`),u.deptRestriction){let r=`Association Secretary `,i=t.startsWith(r)?t.replace(r,``).toUpperCase():null;i&&c!==i&&o.push(`${n} for "${t}" must be from the ${i} dept (current: ${e.Dept||`N/A`}).`)}let d=String(u.yearRestriction||``);return d===`1`&&!s.includes(`1ST YEAR`)&&o.push(`${n} must be a 1st Year student for this post.`),d===`2`&&!s.includes(`2ND YEAR`)&&o.push(`${n} must be a 2nd Year student for this post.`),d===`3`&&!s.includes(`3RD YEAR`)&&o.push(`${n} must be a 3rd Year student for this post.`),d===`PG`&&(s.includes(`MA`)||s.includes(`MSC`)||s.includes(`MCOM`)||s.includes(`M.SC`)||s.includes(`M.COM`)||s.includes(`M.A`)||o.push(`${n} for PG Representative must be a PG student (MA/MSc/MCom).`)),n===`Candidate`&&r&&(u.femaleOnly&&r===`Male`&&o.push(`The post of "${t}" is reserved for female candidates only.`),u.finalYearIneligible&&(s.includes(`3RD YEAR`)||s.includes(`2ND YEAR M`))&&o.push(`Final year students are not eligible for "${t}".`)),o}function p(){let e=Math.floor(Math.random()*10)+1,t=Math.floor(Math.random()*10)+1;return{question:`${e} + ${t}`,answer:String(e+t)}}function m(){return new Date().toLocaleDateString(`en-GB`)}function h(e,t,n){let r=[`January`,`February`,`March`,`April`,`May`,`June`,`July`,`August`,`September`,`October`,`November`,`December`];for(let t=1;t<=31;t++)e.innerHTML+=`<option value="${t}">${t}</option>`;r.forEach((e,n)=>t.innerHTML+=`<option value="${n+1}">${e}</option>`);for(let e=2015;e>=1950;e--)n.innerHTML+=`<option value="${e}">${e}</option>`}function g(e,t,n){return`${n}-${String(t).padStart(2,`0`)}-${String(e).padStart(2,`0`)}`}function _(e,t,n){return`${String(e).padStart(2,`0`)}/${String(t).padStart(2,`0`)}/${n}`}function v(e,t=`Nomination Form`){let n=window.open(``,`_blank`);n.document.write(`
+var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],enumerable:!0});return n||e(r,Symbol.toStringTag,{value:`Module`}),r};(function(){let e=document.createElement(`link`).relList;if(e&&e.supports&&e.supports(`modulepreload`))return;for(let e of document.querySelectorAll(`link[rel="modulepreload"]`))n(e);new MutationObserver(e=>{for(let t of e)if(t.type===`childList`)for(let e of t.addedNodes)e.tagName===`LINK`&&e.rel===`modulepreload`&&n(e)}).observe(document,{childList:!0,subtree:!0});function t(e){let t={};return e.integrity&&(t.integrity=e.integrity),e.referrerPolicy&&(t.referrerPolicy=e.referrerPolicy),e.crossOrigin===`use-credentials`?t.credentials=`include`:e.crossOrigin===`anonymous`?t.credentials=`omit`:t.credentials=`same-origin`,t}function n(e){if(e.ep)return;e.ep=!0;let n=t(e);fetch(e.href,n)}})();var n={APPS_SCRIPT_URL:`https://script.google.com/macros/s/AKfycbw29XuhvNI4cV-tlAWz5IaRrWPY1T9P7ZiQJbu-7za9226PyEqlhuLOrOMTG2QulzzOog/exec`,ELECTION_DATE:`2026-10-12`,COLLEGE_NAME:`Government Victoria College, Palakkad`,DEFAULT_POSTS:[{post:`The Chairman`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The Vice Chairman`,femaleOnly:!0,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The Secretary`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The Joint Secretary`,femaleOnly:!0,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The Chief Student Editor`,femaleOnly:!1,finalYearIneligible:!0,yearRestriction:``,deptRestriction:!1},{post:`The Secretary Fine Arts`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The General Captain For Sports And Games`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The University Union Councillor`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`I UG Representative`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:`1`,deptRestriction:!1},{post:`II UG Representative`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:`2`,deptRestriction:!1},{post:`III UG Representative`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:`3`,deptRestriction:!1},{post:`PG Representative`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:`PG`,deptRestriction:!1},{post:`Association Secretary Botany`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Chemistry`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Commerce`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Computer Science`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Economics`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary English`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Hindi`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary History`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Malayalam`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Mathematics`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Physics`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Psychology`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Sanskrit`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Tamil`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Zoology`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0}]},r=t({router:()=>o}),i={},a=`/`,o={on(e,t){return i[e]=t,this},setDefault(e){return a=e,this},navigate(e,t={}){window.history.pushState({path:e,params:t},``,`#${e}`),this._resolve(e,t)},start(){window.addEventListener(`popstate`,e=>{let{path:t,params:n}=e.state||{path:a,params:{}};this._resolve(t,n)});let e=window.location.hash.replace(`#`,``)||a;this._resolve(e,{})},_resolve(e,t){let n=i[e]||i[a];n&&n(t)}},s=n.APPS_SCRIPT_URL;async function c(e){let t=new URL(s);Object.entries(e).forEach(([e,n])=>t.searchParams.append(e,n)),t.searchParams.append(`_t`,Date.now());let n=await fetch(t.toString());if(!n.ok)throw Error(`Network error: ${n.status}`);let r=await n.json();if(r.error)throw Error(r.error);return r}async function l(e){let t=await fetch(s,{method:`POST`,headers:{"Content-Type":`text/plain;charset=utf-8`},body:JSON.stringify(e)});if(!t.ok)throw Error(`Network error: ${t.status}`);let n=await t.json();if(n.error)throw Error(n.error);return n}var u={getNominalRoll:()=>c({action:`getNominalRoll`}),getPosts:()=>c({action:`getPosts`}),getPublicNominations:()=>c({action:`getPublicNominations`}),getNomination:e=>c({action:`getNomination`,id:e}),getValidNominations:()=>c({action:`getValidNominations`}),getFinalNominations:()=>c({action:`getFinalNominations`}),submitNomination:e=>l({action:`submitNomination`,...e}),submitWithdrawal:e=>l({action:`submitWithdrawal`,id:e}),adminLogin:e=>l({action:`adminLogin`,password:e}),adminSendOTP:e=>l({action:`adminSendOTP`,password:e}),adminVerifyOTP:(e,t)=>l({action:`adminVerifyOTP`,password:e,otp:t}),adminGetNominations:e=>c({action:`adminGetNominations`,password:e}),adminVerifyNomination:(e,t,n)=>l({action:`adminVerifyNomination`,password:e,id:t,status:n}),adminApproveWithdrawal:(e,t)=>l({action:`adminApproveWithdrawal`,password:e,id:t}),adminPublishValidList:e=>l({action:`adminPublishValidList`,password:e}),adminPublishFinalList:e=>l({action:`adminPublishFinalList`,password:e}),adminGetSettings:e=>c({action:`adminGetSettings`,password:e}),adminUpdateSettings:(e,t)=>l({action:`adminUpdateSettings`,password:e,...t}),getPublicSettings:()=>c({action:`adminGetSettings`,password:`NONE`}),adminGetPosts:e=>c({action:`adminGetPosts`,password:e}),adminAddPost:(e,t)=>l({action:`adminAddPost`,password:e,...t}),adminUpdatePost:(e,t)=>l({action:`adminUpdatePost`,password:e,...t}),adminDeletePost:(e,t)=>l({action:`adminDeletePost`,password:e,postName:t}),adminReorderPosts:(e,t)=>l({action:`adminReorderPosts`,password:e,posts:t}),adminGetBooths:e=>c({action:`adminGetBooths`,password:e}),adminSaveBooths:(e,t)=>l({action:`adminSaveBooths`,password:e,booths:t}),adminGetLocations:e=>c({action:`adminGetLocations`,password:e}),adminSaveLocations:(e,t)=>l({action:`adminSaveLocations`,password:e,locations:t}),getResults:()=>c({action:`getResults`}),adminSaveResults:(e,t)=>l({action:`adminSaveResults`,password:e,results:t}),adminInjectTestData:e=>l({action:`adminInjectTestData`,password:e}),adminWipeData:e=>l({action:`adminWipeData`,password:e}),adminGetCountingMatrix:e=>c({action:`adminGetCountingMatrix`,password:e}),adminSaveCountingMatrix:(e,t)=>l({action:`adminSaveCountingMatrix`,password:e,matrixData:t}),adminGenerateBallotPlan:e=>l({action:`adminGenerateBallotPlan`,password:e}),adminGetBallotPlan:e=>c({action:`adminGetBallotPlan`,password:e}),getSettings:()=>c({action:`getSettings`}),adminAddStudent:(e,t)=>l({action:`adminAddStudent`,password:e,...t}),adminDeleteStudent:(e,t)=>l({action:`adminDeleteStudent`,password:e,serial:t}),adminFinalizeRoll:e=>l({action:`adminFinalizeRoll`,password:e}),_scheduleCache:null,getPublicSchedule:async function(){if(this._scheduleCache)return this._scheduleCache;let e=await c({action:`getPublicSchedule`});return this._scheduleCache=e,e},adminSaveSchedule:async function(e,t){let n=await l({action:`adminSaveSchedule`,password:e,...t});return this._scheduleCache=null,n}};function d(e,t=n.ELECTION_DATE){if(!e)return`N/A`;let r=new Date(t),i=new Date(e),a=r.getFullYear()-i.getFullYear(),o=r.getMonth()-i.getMonth(),s=r.getDate()-i.getDate();return s<0&&(o--,s+=new Date(r.getFullYear(),r.getMonth(),0).getDate()),o<0&&(a--,o+=12),`${a} Years, ${o} Months, ${s} Days`}function f(e,t,n,r=null,i=[],a=[]){if(!e)return[];let o=[],s=String(e.CLASS||``).toUpperCase(),c=String(e.Dept||``).toUpperCase(),l=String(e[`Nominal Roll Serial Number`]),u=i.find(e=>e.post===t)||{};if((n===`Proposer`||n===`Seconder`)&&a.some(e=>e.post===t&&e.status!==`Rejected`&&(String(e.proposerSerial)===l||String(e.seconderSerial)===l))&&o.push(`Student #${l} has already proposed or seconded a candidate for "${t}". They cannot endorse multiple candidates for the same post.`),u.deptRestriction){let r=`Association Secretary `,i=t.startsWith(r)?t.replace(r,``).toUpperCase():null;i&&c!==i&&o.push(`${n} for "${t}" must be from the ${i} dept (current: ${e.Dept||`N/A`}).`)}let d=String(u.yearRestriction||``);return d===`1`&&!s.includes(`1ST YEAR`)&&o.push(`${n} must be a 1st Year student for this post.`),d===`2`&&!s.includes(`2ND YEAR`)&&o.push(`${n} must be a 2nd Year student for this post.`),d===`3`&&!s.includes(`3RD YEAR`)&&o.push(`${n} must be a 3rd Year student for this post.`),d===`PG`&&(s.includes(`MA`)||s.includes(`MSC`)||s.includes(`MCOM`)||s.includes(`M.SC`)||s.includes(`M.COM`)||s.includes(`M.A`)||o.push(`${n} for PG Representative must be a PG student (MA/MSc/MCom).`)),n===`Candidate`&&r&&(u.femaleOnly&&r===`Male`&&o.push(`The post of "${t}" is reserved for female candidates only.`),u.finalYearIneligible&&(s.includes(`3RD YEAR`)||s.includes(`2ND YEAR M`))&&o.push(`Final year students are not eligible for "${t}".`)),o}function p(){let e=Math.floor(Math.random()*10)+1,t=Math.floor(Math.random()*10)+1;return{question:`${e} + ${t}`,answer:String(e+t)}}function m(){return new Date().toLocaleDateString(`en-GB`)}function h(e,t,n){let r=[`January`,`February`,`March`,`April`,`May`,`June`,`July`,`August`,`September`,`October`,`November`,`December`];for(let t=1;t<=31;t++)e.innerHTML+=`<option value="${t}">${t}</option>`;r.forEach((e,n)=>t.innerHTML+=`<option value="${n+1}">${e}</option>`);for(let e=2015;e>=1950;e--)n.innerHTML+=`<option value="${e}">${e}</option>`}function g(e,t,n){return`${n}-${String(t).padStart(2,`0`)}-${String(e).padStart(2,`0`)}`}function _(e,t,n){return`${String(e).padStart(2,`0`)}/${String(t).padStart(2,`0`)}/${n}`}function v(e,t=`Nomination Form`){let n=window.open(``,`_blank`);n.document.write(`
     <!DOCTYPE html>
     <html>
       <head>
@@ -128,7 +128,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <div class="mt-6 flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition">
       Continue <span>→</span>
     </div>
-  </div>`}var w=[],T=[],E=[],D={},O=``;async function k(e){let t=new Date().getFullYear();try{let e=await u.getPublicSchedule();e.electionYear&&(t=e.electionYear)}catch{}e.innerHTML=P(`Submit Nomination`,`
+  </div>`}var w=[],T=[],E=[],D={},O=``;async function k(e){let t=new Date().getFullYear();try{let e=await u.getPublicSchedule();e.electionYear&&(t=e.electionYear)}catch{}e.innerHTML=re(`Submit Nomination`,`
     <div id="loadingState" class="flex flex-col items-center justify-center py-24 gap-4">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 text-sm">Loading data...</p>
@@ -188,7 +188,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </div>
       <div id="printZone" class="print-zone"></div>
     </div>
-  `,h(r.querySelector(`#dob-day`),r.querySelector(`#dob-month`),r.querySelector(`#dob-year`)),[`candidate`,`proposer`,`seconder`].forEach(e=>{r.querySelector(`#serial-${e}`).addEventListener(`change`,()=>te(r,e))}),r.querySelector(`#postSelect`).addEventListener(`change`,()=>j(r)),r.querySelectorAll(`[name="gender"]`).forEach(e=>e.addEventListener(`change`,()=>j(r))),r.querySelectorAll(`.dob-sel`).forEach(e=>e.addEventListener(`change`,()=>j(r))),r.querySelector(`#refreshCaptcha`).addEventListener(`click`,()=>{let e=p();O=e.answer,r.querySelector(`#captchaInput`).value=``,r.querySelector(`#captchaQuestion`).textContent=e.question}),r.querySelector(`#backHomeBtn`).addEventListener(`click`,()=>o.navigate(`/`)),r.querySelector(`#nomForm`).addEventListener(`submit`,e=>ne(e,r,t))}function A(e,t,n){return`
+  `,h(r.querySelector(`#dob-day`),r.querySelector(`#dob-month`),r.querySelector(`#dob-year`)),[`candidate`,`proposer`,`seconder`].forEach(e=>{r.querySelector(`#serial-${e}`).addEventListener(`change`,()=>te(r,e))}),r.querySelector(`#postSelect`).addEventListener(`change`,()=>j(r)),r.querySelectorAll(`[name="gender"]`).forEach(e=>e.addEventListener(`change`,()=>j(r))),r.querySelectorAll(`.dob-sel`).forEach(e=>e.addEventListener(`change`,()=>j(r))),r.querySelector(`#refreshCaptcha`).addEventListener(`click`,()=>{let e=p();O=e.answer,r.querySelector(`#captchaInput`).value=``,r.querySelector(`#captchaQuestion`).textContent=e.question}),r.querySelector(`#backHomeBtn`).addEventListener(`click`,()=>o.navigate(`/`)),r.querySelector(`#nomForm`).addEventListener(`submit`,e=>M(e,r,t))}function A(e,t,n){return`
   <div class="glass rounded-xl p-4 space-y-3">
     <h3 class="font-bold text-white text-sm uppercase tracking-wide border-b border-white/10 pb-2">${t}</h3>
     <div>
@@ -219,7 +219,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
   </div>`}function te(e,t){let n=e.querySelector(`#serial-${t}`).value.trim(),r=e.querySelector(`#details-${t}`),i=w.find(e=>String(e[`Nominal Roll Serial Number`])===n);if(!i){r.innerHTML=n?`<span class="text-red-400">⚠ Student not found</span>`:``;return}r.innerHTML=`
     <p><span class="text-slate-500">Name:</span> <strong class="text-slate-200">${y(i.NAME)}</strong></p>
     <p><span class="text-slate-500">Class:</span> ${y(i.CLASS)}</p>
-    <p><span class="text-slate-500">Dept:</span> ${y(i.Dept||`N/A`)}</p>`,j(e)}function j(e){let t=[],n=e.querySelector(`#postSelect`).value,r=e.querySelector(`[name="gender"]:checked`)?.value||null,i=[`candidate`,`proposer`,`seconder`].map(t=>e.querySelector(`#serial-${t}`).value.trim()),a=i.map(e=>e?w.find(t=>String(t[`Nominal Roll Serial Number`])===e):null),[o,s,c]=i;o&&o===s&&t.push(`Candidate and Proposer cannot be the same person.`),o&&o===c&&t.push(`Candidate and Seconder cannot be the same person.`),s&&s===c&&t.push(`Proposer and Seconder cannot be the same person.`);let l=[`Candidate`,`Proposer`,`Seconder`];a.forEach((e,i)=>{e&&t.push(...f(e,n,l[i],i===0?r:null,T,E))});let u=e.querySelector(`#warningBox`);return t.length?(u.innerHTML=`<strong class="block mb-1">⚠ Eligibility Warnings</strong>`+t.map(e=>`<p class="text-sm">• ${y(e)}</p>`).join(``),u.classList.remove(`hidden`)):u.classList.add(`hidden`),t}async function ne(e,t,n){if(e.preventDefault(),j(t).length){x(`Please resolve all eligibility warnings first.`,`error`);return}if(t.querySelector(`#captchaInput`).value.trim()!==O){x(`Captcha answer is incorrect.`,`error`);return}let r=t.querySelector(`#postSelect`).value,i=t.querySelector(`[name="gender"]:checked`)?.value,a=t.querySelector(`#dob-day`).value,o=t.querySelector(`#dob-month`).value,s=t.querySelector(`#dob-year`).value;if(!i){x(`Please select a gender for the candidate.`,`error`);return}if(!a||!o||!s){x(`Please enter a complete date of birth.`,`error`);return}let c=[`candidate`,`proposer`,`seconder`].map(e=>t.querySelector(`#serial-${e}`).value.trim()),l=c.map(e=>w.find(t=>String(t[`Nominal Roll Serial Number`])===e));if(l.some(e=>!e)){x(`One or more serial numbers are invalid.`,`error`);return}let d=t.querySelector(`#submitBtn`);b(d,!0,`Generate &amp; Preview Nomination`);try{let e={post:r,gender:i,dob:g(a,o,s),candidateSerial:c[0],proposerSerial:c[1],seconderSerial:c[2]};window.ADMIN_BYPASS_PWD&&(e.password=window.ADMIN_BYPASS_PWD);let d=await u.submitNomination(e);re(t,d.id,{post:r,gender:i,day:a,month:o,year:s,students:l},n),x(`Nomination submitted! ID: ${d.id}`,`success`)}catch(e){x(`Submission failed: ${e.message}`,`error`)}finally{b(d,!1,`Generate &amp; Preview Nomination`)}}function re(e,t,{post:n,gender:r,day:i,month:a,year:o,students:s},c){let[l,u,f]=s,p=g(i,a,o),m=_(i,a,o),h=d(p),y=e.querySelector(`#previewSection`);e.querySelector(`#printZone`).innerHTML=M(t,n,r,m,h,l,u,f,``,c),y.classList.remove(`hidden`),y.scrollIntoView({behavior:`smooth`}),y.querySelector(`#printBtn`).addEventListener(`click`,()=>{v(e.querySelector(`#printZone`).innerHTML)}),y.querySelector(`#newNomBtn`).addEventListener(`click`,()=>k(e.closest(`#app`)))}function M(e,t,r,i,a,o,s,c,l=``,u=`2026`){let d=m();return`
+    <p><span class="text-slate-500">Dept:</span> ${y(i.Dept||`N/A`)}</p>`,j(e)}function j(e){let t=[],n=e.querySelector(`#postSelect`).value,r=e.querySelector(`[name="gender"]:checked`)?.value||null,i=[`candidate`,`proposer`,`seconder`].map(t=>e.querySelector(`#serial-${t}`).value.trim()),a=i.map(e=>e?w.find(t=>String(t[`Nominal Roll Serial Number`])===e):null),[o,s,c]=i;o&&o===s&&t.push(`Candidate and Proposer cannot be the same person.`),o&&o===c&&t.push(`Candidate and Seconder cannot be the same person.`),s&&s===c&&t.push(`Proposer and Seconder cannot be the same person.`);let l=[`Candidate`,`Proposer`,`Seconder`];a.forEach((e,i)=>{e&&t.push(...f(e,n,l[i],i===0?r:null,T,E))});let u=e.querySelector(`#warningBox`);return t.length?(u.innerHTML=`<strong class="block mb-1">⚠ Eligibility Warnings</strong>`+t.map(e=>`<p class="text-sm">• ${y(e)}</p>`).join(``),u.classList.remove(`hidden`)):u.classList.add(`hidden`),t}async function M(e,t,n){if(e.preventDefault(),j(t).length){x(`Please resolve all eligibility warnings first.`,`error`);return}if(t.querySelector(`#captchaInput`).value.trim()!==O){x(`Captcha answer is incorrect.`,`error`);return}let r=t.querySelector(`#postSelect`).value,i=t.querySelector(`[name="gender"]:checked`)?.value,a=t.querySelector(`#dob-day`).value,o=t.querySelector(`#dob-month`).value,s=t.querySelector(`#dob-year`).value;if(!i){x(`Please select a gender for the candidate.`,`error`);return}if(!a||!o||!s){x(`Please enter a complete date of birth.`,`error`);return}let c=[`candidate`,`proposer`,`seconder`].map(e=>t.querySelector(`#serial-${e}`).value.trim()),l=c.map(e=>w.find(t=>String(t[`Nominal Roll Serial Number`])===e));if(l.some(e=>!e)){x(`One or more serial numbers are invalid.`,`error`);return}let d=t.querySelector(`#submitBtn`);b(d,!0,`Generate &amp; Preview Nomination`);try{let e={post:r,gender:i,dob:g(a,o,s),candidateSerial:c[0],proposerSerial:c[1],seconderSerial:c[2]};window.ADMIN_BYPASS_PWD&&(e.password=window.ADMIN_BYPASS_PWD);let d=await u.submitNomination(e);ne(t,d.id,{post:r,gender:i,day:a,month:o,year:s,students:l},n),x(`Nomination submitted! ID: ${d.id}`,`success`)}catch(e){x(`Submission failed: ${e.message}`,`error`)}finally{b(d,!1,`Generate &amp; Preview Nomination`)}}function ne(e,t,{post:n,gender:r,day:i,month:a,year:o,students:s},c){let[l,u,f]=s,p=g(i,a,o),m=_(i,a,o),h=d(p),y=e.querySelector(`#previewSection`);e.querySelector(`#printZone`).innerHTML=N(t,n,r,m,h,l,u,f,``,c),y.classList.remove(`hidden`),y.scrollIntoView({behavior:`smooth`}),y.querySelector(`#printBtn`).addEventListener(`click`,()=>{v(e.querySelector(`#printZone`).innerHTML)}),y.querySelector(`#newNomBtn`).addEventListener(`click`,()=>k(e.closest(`#app`)))}function N(e,t,r,i,a,o,s,c,l=``,u=`2026`){let d=m();return`
   <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-4">
     <div class="flex justify-between items-start text-sm">
       <div>
@@ -234,9 +234,9 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <h2 class="text-center font-bold text-xl text-white border-y border-white/10 py-3">NOMINATION PAPER</h2>
     <p class="text-sm"><span class="font-semibold text-slate-400 w-40 inline-block">Post Applied For:</span> <strong class="text-white">${y(t)}</strong></p>
     <div class="space-y-3">
-      ${N(`Candidate`,o,r,i,a)}
-      ${N(`Proposer`,s)}
-      ${N(`Seconder`,c)}
+      ${P(`Candidate`,o,r,i,a)}
+      ${P(`Proposer`,s)}
+      ${P(`Seconder`,c)}
     </div>
     <div class="border-t border-white/10 pt-6 text-center space-y-3">
       <h3 class="font-bold text-white">Consent of Candidate</h3>
@@ -250,7 +250,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <div class="border-t border-white/10 pt-2 text-right">
       <p class="text-[10px] text-slate-500 font-mono">Ref ID: ${y(e)}</p>
     </div>
-  </div>`}function N(e,t,n=null,r=null,i=null){return t?`
+  </div>`}function P(e,t,n=null,r=null,i=null){return t?`
   <div class="glass rounded-lg p-4 text-sm space-y-1">
     <h3 class="font-bold text-white uppercase text-xs tracking-widest mb-2 border-b border-white/10 pb-1">${e} Details</h3>
     <div class="grid grid-cols-2 gap-x-4 gap-y-1">
@@ -267,7 +267,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       <span>Date: ______ / ______ / ________</span>
       <span>Signature: _______________</span>
     </div>`}
-  </div>`:``}function P(e,t,n=`2026`){return`
+  </div>`:``}function re(e,t,n=`2026`){return`
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-50 border-b border-white/10 glass">
       <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
@@ -304,7 +304,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <div class="space-y-4">
       <div class="alert alert-success">✅ Nomination found! Status: <strong>${y(t.status)}</strong></div>
       <div id="printZone" class="print-zone">
-        ${M(n,t.post,t.gender,r,a,t.candidate,t.proposer,t.seconder,t.status)}
+        ${N(n,t.post,t.gender,r,a,t.candidate,t.proposer,t.seconder,t.status)}
       </div>
       <div class="flex gap-3 no-print">
         <button id="printBtn" class="btn btn-success flex-1">🖨️ Print</button>
@@ -960,12 +960,12 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     `;let c=window.open(``,`_blank`);c.document.write(`<!DOCTYPE html><html><head><title>Print List</title><style>
       @page{size:A4;margin:20mm}
       body{font-family:Arial,sans-serif;line-height:1.4}
-    </style></head><body>${s}<script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`),c.document.close()};e.querySelector(`#btnPrintValid`).addEventListener(`click`,()=>s(`valid`)),e.querySelector(`#btnPrintFinal`).addEventListener(`click`,()=>s(`final`)),e.querySelector(`#publishValidBtn`)?.addEventListener(`click`,async t=>{let a=t.currentTarget;if(confirm(`Are you sure you want to publish the valid nominations list? This will be visible to all students.`)){b(a,!0,`📢 Publish Valid Nominations List`);try{await u.adminPublishValidList(i),x(`Valid nominations list published successfully!`,`success`),H(e,{validListPublished:`true`,finalListPublished:o?`true`:`false`},n,r,i)}catch(e){x(`Failed: ${e.message}`,`error`),b(a,!1,`📢 Publish Valid Nominations List`)}}}),e.querySelector(`#publishFinalBtn`)?.addEventListener(`click`,async t=>{let a=t.currentTarget;if(confirm(`Are you sure you want to publish the final nominations list?`)){b(a,!0,`📢 Publish Final Nominations List`);try{await u.adminPublishFinalList(i),x(`Final nominations list published successfully!`,`success`),H(e,{validListPublished:`true`,finalListPublished:`true`},n,r,i)}catch(e){x(`Failed: ${e.message}`,`error`),b(a,!1,`📢 Publish Final Nominations List`)}}})}async function Te(e){let t=R();if(t){z(e,`posts`,`
+    </style></head><body>${s}<script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`),c.document.close()};e.querySelector(`#btnPrintValid`).addEventListener(`click`,()=>s(`valid`)),e.querySelector(`#btnPrintFinal`).addEventListener(`click`,()=>s(`final`)),e.querySelector(`#publishValidBtn`)?.addEventListener(`click`,async t=>{let a=t.currentTarget;if(confirm(`Are you sure you want to publish the valid nominations list? This will be visible to all students.`)){b(a,!0,`📢 Publish Valid Nominations List`);try{await u.adminPublishValidList(i),x(`Valid nominations list published successfully!`,`success`),H(e,{validListPublished:`true`,finalListPublished:o?`true`:`false`},n,r,i)}catch(e){x(`Failed: ${e.message}`,`error`),b(a,!1,`📢 Publish Valid Nominations List`)}}}),e.querySelector(`#publishFinalBtn`)?.addEventListener(`click`,async t=>{let a=t.currentTarget;if(confirm(`Are you sure you want to publish the final nominations list?`)){b(a,!0,`📢 Publish Final Nominations List`);try{await u.adminPublishFinalList(i),x(`Final nominations list published successfully!`,`success`),H(e,{validListPublished:`true`,finalListPublished:`true`},n,r,i)}catch(e){x(`Failed: ${e.message}`,`error`),b(a,!1,`📢 Publish Final Nominations List`)}}})}async function U(e){let t=R();if(t){z(e,`posts`,`
     <div class="text-center py-16">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 mt-4 text-sm">Loading posts...</p>
     </div>
-  `);try{let r=await u.adminGetPosts(t).catch(()=>null);(!Array.isArray(r)||r.length===0)&&(r=n.DEFAULT_POSTS),Ee(e.querySelector(`#adminMain`),r,t)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Ee(e,t,n){e.innerHTML=`
+  `);try{let r=await u.adminGetPosts(t).catch(()=>null);(!Array.isArray(r)||r.length===0)&&(r=n.DEFAULT_POSTS),Te(e.querySelector(`#adminMain`),r,t)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Te(e,t,n){e.innerHTML=`
     <div class="page-enter space-y-6">
       <div class="flex items-center justify-between">
         <div>
@@ -1044,7 +1044,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       <p class="text-xs text-slate-500">
         ℹ Changes are saved to the Google Sheet. The nomination form will reflect these immediately after saving.
       </p>
-    </div>`,U(e,t,n),De(e,t,n)}function U(e,t,n){let r=e.querySelector(`#postsBody`);r.innerHTML=t.length?t.map((e,t)=>`
+    </div>`,W(e,t,n),Ee(e,t,n)}function W(e,t,n){let r=e.querySelector(`#postsBody`);r.innerHTML=t.length?t.map((e,t)=>`
     <tr id="post-row-${t}">
       <td class="text-slate-500 text-xs">${t+1}</td>
       <td class="font-medium text-white">${y(e.post)}</td>
@@ -1058,9 +1058,9 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <button class="btn btn-danger btn-sm delete-post-btn" data-idx="${t}" data-name="${y(e.post)}">🗑️</button>
         </div>
       </td>
-    </tr>`).join(``):`<tr><td colspan="7" class="text-center text-slate-500 py-8">No posts configured.</td></tr>`,r.querySelectorAll(`.delete-post-btn`).forEach(t=>{t.addEventListener(`click`,async()=>{let r=t.dataset.name;if(confirm(`Delete post "${r}"? This cannot be undone.`)){t.disabled=!0;try{await u.adminDeletePost(n,r),x(`Post "${r}" deleted.`,`success`),U(e,await u.adminGetPosts(n),n)}catch(e){x(`Failed: ${e.message}`,`error`),t.disabled=!1}}})});let i=e.querySelector(`#postFormWrap`);r.querySelectorAll(`.edit-post-btn`).forEach(n=>{n.addEventListener(`click`,()=>{let r=t[parseInt(n.dataset.idx)];e.querySelector(`#postFormTitle`).textContent=`Edit Post`,e.querySelector(`#pfPost`).value=r.post,e.querySelector(`#pfYear`).value=r.yearRestriction||``,e.querySelector(`#pfFemale`).checked=!!r.femaleOnly,e.querySelector(`#pfFinalYear`).checked=!!r.finalYearIneligible,e.querySelector(`#pfDept`).checked=!!r.deptRestriction,e.querySelector(`#pfOriginalName`).value=r.post,i.classList.remove(`hidden`),i.scrollIntoView({behavior:`smooth`})})})}function De(e,t,n){let r=e.querySelector(`#postFormWrap`),i=e.querySelector(`#addPostBtn`),a=e.querySelector(`#cancelPostBtn`),o=e.querySelector(`#savePostBtn`);i.addEventListener(`click`,()=>{e.querySelector(`#postFormTitle`).textContent=`Add New Post`,e.querySelector(`#pfPost`).value=``,e.querySelector(`#pfYear`).value=``,e.querySelector(`#pfFemale`).checked=!1,e.querySelector(`#pfFinalYear`).checked=!1,e.querySelector(`#pfDept`).checked=!1,e.querySelector(`#pfOriginalName`).value=``,r.classList.remove(`hidden`),r.scrollIntoView({behavior:`smooth`})}),a.addEventListener(`click`,()=>r.classList.add(`hidden`)),o.addEventListener(`click`,async()=>{let t=e.querySelector(`#pfPost`).value.trim(),i=e.querySelector(`#pfYear`).value,a=e.querySelector(`#pfFemale`).checked,s=e.querySelector(`#pfFinalYear`).checked,c=e.querySelector(`#pfDept`).checked,l=e.querySelector(`#pfOriginalName`).value;if(!t){x(`Post name is required.`,`error`);return}let d={postName:t,yearRestriction:i,femaleOnly:a,finalYearIneligible:s,deptRestriction:c,originalName:l};b(o,!0,`💾 Save Post`);try{l?(await u.adminUpdatePost(n,d),x(`Post updated successfully!`,`success`)):(await u.adminAddPost(n,d),x(`Post added successfully!`,`success`)),r.classList.add(`hidden`),U(e,await u.adminGetPosts(n),n)}catch(e){x(`Failed: ${e.message}`,`error`)}finally{b(o,!1,`💾 Save Post`)}})}async function Oe(e){let t=R();if(t){z(e,`booths`,`
+    </tr>`).join(``):`<tr><td colspan="7" class="text-center text-slate-500 py-8">No posts configured.</td></tr>`,r.querySelectorAll(`.delete-post-btn`).forEach(t=>{t.addEventListener(`click`,async()=>{let r=t.dataset.name;if(confirm(`Delete post "${r}"? This cannot be undone.`)){t.disabled=!0;try{await u.adminDeletePost(n,r),x(`Post "${r}" deleted.`,`success`),W(e,await u.adminGetPosts(n),n)}catch(e){x(`Failed: ${e.message}`,`error`),t.disabled=!1}}})});let i=e.querySelector(`#postFormWrap`);r.querySelectorAll(`.edit-post-btn`).forEach(n=>{n.addEventListener(`click`,()=>{let r=t[parseInt(n.dataset.idx)];e.querySelector(`#postFormTitle`).textContent=`Edit Post`,e.querySelector(`#pfPost`).value=r.post,e.querySelector(`#pfYear`).value=r.yearRestriction||``,e.querySelector(`#pfFemale`).checked=!!r.femaleOnly,e.querySelector(`#pfFinalYear`).checked=!!r.finalYearIneligible,e.querySelector(`#pfDept`).checked=!!r.deptRestriction,e.querySelector(`#pfOriginalName`).value=r.post,i.classList.remove(`hidden`),i.scrollIntoView({behavior:`smooth`})})})}function Ee(e,t,n){let r=e.querySelector(`#postFormWrap`),i=e.querySelector(`#addPostBtn`),a=e.querySelector(`#cancelPostBtn`),o=e.querySelector(`#savePostBtn`);i.addEventListener(`click`,()=>{e.querySelector(`#postFormTitle`).textContent=`Add New Post`,e.querySelector(`#pfPost`).value=``,e.querySelector(`#pfYear`).value=``,e.querySelector(`#pfFemale`).checked=!1,e.querySelector(`#pfFinalYear`).checked=!1,e.querySelector(`#pfDept`).checked=!1,e.querySelector(`#pfOriginalName`).value=``,r.classList.remove(`hidden`),r.scrollIntoView({behavior:`smooth`})}),a.addEventListener(`click`,()=>r.classList.add(`hidden`)),o.addEventListener(`click`,async()=>{let t=e.querySelector(`#pfPost`).value.trim(),i=e.querySelector(`#pfYear`).value,a=e.querySelector(`#pfFemale`).checked,s=e.querySelector(`#pfFinalYear`).checked,c=e.querySelector(`#pfDept`).checked,l=e.querySelector(`#pfOriginalName`).value;if(!t){x(`Post name is required.`,`error`);return}let d={postName:t,yearRestriction:i,femaleOnly:a,finalYearIneligible:s,deptRestriction:c,originalName:l};b(o,!0,`💾 Save Post`);try{l?(await u.adminUpdatePost(n,d),x(`Post updated successfully!`,`success`)):(await u.adminAddPost(n,d),x(`Post added successfully!`,`success`)),r.classList.add(`hidden`),W(e,await u.adminGetPosts(n),n)}catch(e){x(`Failed: ${e.message}`,`error`)}finally{b(o,!1,`💾 Save Post`)}})}async function De(e){let t=R();if(t){z(e,`booths`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading booth data...</p></div>
-  `);try{let[n,r,i,a,o]=await Promise.all([u.getNominalRoll(),u.adminGetBooths(t).catch(()=>[]),u.adminGetLocations(t).catch(()=>[]),u.getPosts().catch(()=>[]),u.getFinalNominations().catch(()=>({active:[]}))]);W(e.querySelector(`#adminMain`),t,n,r,i,a,o)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function W(e,t,r,i,a,o,s){let c={};r.forEach(e=>{let t=String(e.CLASS||`Unknown`).trim(),n=String(e.Dept||`Unknown`).trim();c[t]||(c[t]={name:t,dept:n,count:0}),c[t].count++});let l=Object.values(c).sort((e,t)=>e.name.localeCompare(t.name)),d=i.length?[...i]:[{boothNumber:1,roomName:``,classes:[]}],f=[...a],p=!0,m=()=>{d.forEach(e=>e.totalStudents=0);let n=[];l.forEach(e=>{let t=d.find(t=>t.classes.includes(e.name));t?t.totalStudents+=e.count:n.push(e)});let i=window.scrollY;e.innerHTML=`
+  `);try{let[n,r,i,a,o,s]=await Promise.all([u.getNominalRoll(),u.adminGetBooths(t).catch(()=>[]),u.adminGetLocations(t).catch(()=>[]),u.adminGetPosts(t).catch(()=>[]),u.getFinalNominations().catch(()=>({active:[]})),u.adminGetBallotPlan(t).catch(()=>null)]);Oe(e.querySelector(`#adminMain`),t,n,r,i,a,o,s)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Oe(e,t,r,i,a,o,s,c){let l={};r.forEach(e=>{let t=String(e.CLASS||`Unknown`).trim(),n=String(e.Dept||`Unknown`).trim();l[t]||(l[t]={name:t,dept:n,count:0}),l[t].count++});let d=Object.values(l).sort((e,t)=>e.name.localeCompare(t.name)),f=i.length?[...i]:[{boothNumber:1,roomName:``,classes:[]}],p=[...a],m=!0,h=()=>{f.forEach(e=>e.totalStudents=0);let n=[];d.forEach(e=>{let t=f.find(t=>t.classes.includes(e.name));t?t.totalStudents+=e.count:n.push(e)});let i=window.scrollY;e.innerHTML=`
       <div class="page-enter space-y-6">
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
@@ -1085,7 +1085,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <button id="btnSaveLocations" class="btn btn-primary">💾 Save Locations</button>
           </div>
           <div class="flex flex-wrap gap-2">
-            ${f.length?f.map((e,t)=>`
+            ${p.length?p.map((e,t)=>`
               <span class="badge badge-valid bg-white/10 text-white border border-white/20 px-3 py-1 flex items-center gap-2">
                 ${y(e)}
                 <button class="text-red-400 hover:text-red-300 font-bold delete-location" data-idx="${t}">×</button>
@@ -1100,13 +1100,13 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <h4 class="font-bold text-white">Booth Setup</h4>
             <div class="flex gap-2 items-center">
               <label class="text-sm text-slate-300 mb-0">Total Booths:</label>
-              <input type="number" id="numBoothsInput" class="field w-20 py-1" min="1" max="20" value="${d.length}">
+              <input type="number" id="numBoothsInput" class="field w-20 py-1" min="1" max="20" value="${f.length}">
               <button id="btnUpdateBoothCount" class="btn btn-secondary btn-sm">Update</button>
             </div>
           </div>
           
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="boothsContainer">
-            ${d.map((e,t)=>`
+            ${f.map((e,t)=>`
               <div class="border border-white/10 rounded-lg p-3 bg-white/5 shadow-inner">
                 <div class="text-[10px] text-slate-500 font-bold uppercase mb-1 flex justify-between">
                   <span>Booth ${t+1}</span>
@@ -1114,15 +1114,15 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 </div>
                 <select class="field text-sm py-1 mb-2 room-name-select" data-idx="${t}">
                   <option value="">-- Assign Location --</option>
-                  ${f.map(n=>`
+                  ${p.map(n=>`
                     <option value="${y(n)}" 
                       ${e.roomName===n?`selected`:``}
-                      ${d.some((e,r)=>r!==t&&e.roomName===n)?`disabled`:``}
+                      ${f.some((e,r)=>r!==t&&e.roomName===n)?`disabled`:``}
                     >${y(n)}</option>
                   `).join(``)}
                 </select>
                 <div class="text-xs text-slate-500 h-16 overflow-y-auto bg-black/20 rounded p-1">
-                  ${e.classes.length?e.classes.map(e=>`<div class="whitespace-nowrap overflow-hidden text-ellipsis">• ${y(e)} (${c[e]?.count||0})</div>`).join(``):`<em class="opacity-30">No classes assigned</em>`}
+                  ${e.classes.length?e.classes.map(e=>`<div class="whitespace-nowrap overflow-hidden text-ellipsis">• ${y(e)} (${l[e]?.count||0})</div>`).join(``):`<em class="opacity-30">No classes assigned</em>`}
                 </div>
               </div>
             `).join(``)}
@@ -1147,7 +1147,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 <th>Assigned Booth</th>
               </tr></thead>
               <tbody>
-                ${l.map(e=>{let t=d.find(t=>t.classes.includes(e.name));return`
+                ${d.map(e=>{let t=f.find(t=>t.classes.includes(e.name));return`
                     <tr>
                       <td class="text-xs text-slate-400">${y(e.dept)}</td>
                       <td class="font-medium text-sm text-white">${y(e.name)}</td>
@@ -1155,7 +1155,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                       <td>
                         <select class="field w-full md:w-44 py-1 text-xs class-booth-select" data-class="${y(e.name)}">
                           <option value="">-- Unassigned --</option>
-                          ${d.map((e,n)=>`
+                          ${f.map((e,n)=>`
                             <option value="${n}" ${t===e?`selected`:``}>Booth ${n+1}</option>
                           `).join(``)}
                         </select>
@@ -1167,7 +1167,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </div>
         </div>
       </div>
-    `,p||window.scrollTo(0,i),p=!1,e.querySelector(`#btnClearAll`).addEventListener(`click`,()=>{confirm(`Clear all class allotments? Room locations will be kept.`)&&(d.forEach(e=>e.classes=[]),m())}),e.querySelector(`#btnPrintRolls`).addEventListener(`click`,()=>{let t=e.querySelector(`#printArea`);t.innerHTML=h(d,r,o,c,s);let n=window.open(``,`_blank`);n.document.write(`
+    `,m||window.scrollTo(0,i),m=!1,e.querySelector(`#btnClearAll`).addEventListener(`click`,()=>{confirm(`Clear all class allotments? Room locations will be kept.`)&&(f.forEach(e=>e.classes=[]),h())}),e.querySelector(`#btnPrintRolls`).addEventListener(`click`,()=>{let t=e.querySelector(`#printArea`);t.innerHTML=g(f,r,o,l,s,c);let n=window.open(``,`_blank`);n.document.write(`
         <html>
           <head>
             <title>Electoral Rolls - Booth Allotment</title>
@@ -1197,7 +1197,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             ${t.innerHTML}
           </body>
         </html>
-      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>d.length)for(let e=d.length;e<t;e++)d.push({boothNumber:e+1,roomName:``,classes:[]});else t<d.length&&(d=d.slice(0,t));m()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{d[e.target.dataset.idx].roomName=e.target.value,m()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!f.includes(t)&&(f.push(t),m())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=f[t];f.splice(t,1),d.forEach(e=>{e.roomName===n&&(e.roomName=``)}),m()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Locations`);try{await u.adminSaveLocations(t,f),x(`Locations saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;d.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&d[parseInt(n,10)].classes.push(t),m()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Configuration`);try{await u.adminSaveBooths(t,d),x(`Booth configuration saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{g(),m(),x(`Auto allotment complete. Please review and save.`,`info`)})},h=(e,t,r,i,a)=>{let o=``,s=a.active||[],c=e=>e.post.toLowerCase().includes(`representative`)||e.post.toLowerCase().includes(`year`),l=e=>e.post.toLowerCase().includes(`association`)||e.post.toLowerCase().includes(`assoc`),u=[...e].sort((e,t)=>e.boothNumber-t.boothNumber),d={},f=r.filter(e=>s.filter(t=>t.post===e.post).length>1),p=1,m=1,h=1,g=0,_=0,v=0,b=(e,t,n)=>{if(!e||e<=0)return{text:`-`,nextIndex:0};let r=t,i=n===`G`?`GB`:n===`R`?`RB`:`AB`,a=n===`G`?g:n===`R`?_:v,o=[],s=e=>{a++,o.push(i+a),r+=e};if(e<=65)s(e);else{let t=Math.floor(e/50),n=e%50;if(n===0)for(let e=0;e<t;e++)s(50);else if(n<=15){for(let e=0;e<t-1;e++)s(50);s(50+n)}else{for(let e=0;e<t;e++)s(50);s(n)}}return n===`G`?g=a:n===`R`?_=a:v=a,o.length===1?o[0]:`${o[0]} to ${o[o.length-1]}`};return u.forEach(e=>{let n=t.filter(t=>e.classes.includes(String(t.CLASS).trim()));d[e.boothNumber]={general:{start:p,end:p+n.length-1},reps:[],assocs:[]},p+=n.length}),f.filter(c).forEach(e=>{let n=String(e.yearRestriction||``).trim().toUpperCase();n&&u.forEach(r=>{let i=t.filter(e=>r.classes.includes(String(e.CLASS).trim())).filter(e=>{let t=String(e.CLASS||``).toUpperCase();if(t.includes(`PH D`)||t.includes(`PH.D`))return!1;let r=/\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A)\b/i.test(t);return n===`PG`?r:r?!1:n===`1`?t.startsWith(`1ST YEAR`):n===`2`?t.startsWith(`2ND YEAR`):n===`3`?t.startsWith(`3RD YEAR`):!1});i.length>0&&(d[r.boothNumber].reps.push({name:e.post,start:m,end:m+i.length-1,count:i.length}),m+=i.length)})}),f.filter(l).forEach(e=>{let n=e.post.toUpperCase();n.includes(`ASSOCIATION SECRETARY`)&&(n=n.split(`ASSOCIATION SECRETARY`)[1].trim()),n=n.replace(/[-\s]/g,` `),u.forEach(r=>{let i=t.filter(e=>r.classes.includes(String(e.CLASS).trim())).filter(e=>{let t=String(e.Dept||``).trim().toUpperCase().replace(/[-\s]/g,` `),r=String(e.CLASS||``).trim().toUpperCase().replace(/[-\s]/g,` `);return t===n||t.includes(n)||r.includes(n)});i.length>0&&(d[r.boothNumber].assocs.push({name:e.post,start:h,end:h+i.length-1,count:i.length}),h+=i.length)})}),u.forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=t.filter(t=>e.classes.includes(String(t.CLASS).trim())).length,a=d[e.boothNumber],s=e.classes.map(e=>i[e]).filter(Boolean),c=b(r,a.general.start,`G`),l=a.reps.map(e=>({...e,books:b(e.count,e.start,`R`)})),u=a.assocs.map(e=>({...e,books:b(e.count,e.start,`A`)}));o+=`
+      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>f.length)for(let e=f.length;e<t;e++)f.push({boothNumber:e+1,roomName:``,classes:[]});else t<f.length&&(f=f.slice(0,t));h()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{f[e.target.dataset.idx].roomName=e.target.value,h()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!p.includes(t)&&(p.push(t),h())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=p[t];p.splice(t,1),f.forEach(e=>{e.roomName===n&&(e.roomName=``)}),h()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Locations`);try{await u.adminSaveLocations(t,p),x(`Locations saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;f.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&f[parseInt(n,10)].classes.push(t),h()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Configuration`);try{await u.adminSaveBooths(t,f),x(`Booth configuration saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{_(),h(),x(`Auto allotment complete. Please review and save.`,`info`)})},g=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=t.filter(t=>e.classes.includes(String(t.CLASS).trim())).length,a=e.classes.map(e=>i[e]).filter(Boolean),c=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]};s+=`
       <div class="page-break">
         <div class="facing-sheet">
           <div class="header">
@@ -1222,7 +1222,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <table class="stats-table" style="font-size: 10px; margin-top: 5px;">
                 <thead><tr><th>Dept</th><th>Class Name</th><th style="text-align:right">Voters</th></tr></thead>
                 <tbody>
-                  ${s.map(e=>`
+                  ${a.map(e=>`
                     <tr><td>${y(e.dept)}</td><td>${y(e.name)}</td><td style="text-align:right">${e.count}</td></tr>
                   `).join(``)}
                   <tr style="font-weight:bold; background:#f9f9f9"><td colspan="2">TOTAL VOTERS</td><td style="text-align:right">${r}</td></tr>
@@ -1242,34 +1242,38 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                   </tr>
                 </thead>
                 <tbody>
-                  <tr style="font-weight:bold">
-                    <td>General Union Posts</td>
-                    <td>G${a.general.start} - G${a.general.end}</td>
-                    <td style="text-align:right; color:#4f46e5">${c}</td>
-                  </tr>
-                  ${l.map(e=>`
+                  ${c.general?`
+                    <tr style="font-weight:bold">
+                      <td>General Union Posts</td>
+                      <td>G${c.general.start} - G${c.general.end}</td>
+                      <td style="text-align:right; color:#4f46e5">${c.general.bookIds}</td>
+                    </tr>
+                  `:``}
+                  ${c.reps.map(e=>`
                     <tr>
-                      <td style="font-size:8.5px">${y(e.name)}</td>
+                      <td style="font-size:8.5px">${y(e.post)}</td>
                       <td>R${e.start} - R${e.end}</td>
-                      <td style="text-align:right; color:#10b981">${e.books}</td>
+                      <td style="text-align:right; color:#10b981">${e.bookIds}</td>
                     </tr>
                   `).join(``)}
-                  ${u.map(e=>`
+                  ${c.assocs.map(e=>`
                     <tr>
-                      <td style="font-size:8.5px">${y(e.name)}</td>
+                      <td style="font-size:8.5px">${y(e.post)}</td>
                       <td>A${e.start} - A${e.end}</td>
-                      <td style="text-align:right; color:#f59e0b">${e.books}</td>
+                      <td style="text-align:right; color:#f59e0b">${e.bookIds}</td>
                     </tr>
                   `).join(``)}
                 </tbody>
               </table>
             </div>
+          </div>
+
           <div class="footer" style="margin-top: 20px;">
             <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Returning Officer</div>
             <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Presiding Officer</div>
           </div>
         </div>
-      </div>`,s.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),o+=`
+      </div>`,a.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),s+=`
         <div class="page-break">
           <div class="roll-page">
             <div class="roll-header">
@@ -1299,7 +1303,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             </table>
             <div style="margin-top:20px; text-align:right; font-size:10px; color:#999">Total Voters: ${r.length}</div>
           </div>
-        </div>`})}),o},g=()=>{d.forEach(e=>{e.classes=[],e.totalStudents=0});let e={};l.forEach(t=>{e[t.dept]||(e[t.dept]={name:t.dept,total:0,classes:[]}),e[t.dept].classes.push(t),e[t.dept].total+=t.count});let t=d.length,n=r.length/t*1.25;Object.values(e).sort((e,t)=>t.total-e.total).forEach(e=>{d.sort((e,t)=>e.totalStudents-t.totalStudents);let t=d[0];if(t.totalStudents+e.total>n&&e.classes.length>1){d.sort((e,t)=>e.totalStudents-t.totalStudents);let t=d[0],n=d.length>1?d[1]:d[0];[...e.classes].sort((e,t)=>t.count-e.count).forEach(e=>{let r=t.totalStudents<=n.totalStudents?t:n;r.classes.push(e.name),r.totalStudents+=e.count})}else e.classes.forEach(e=>t.classes.push(e.name)),t.totalStudents+=e.total}),d.sort((e,t)=>e.boothNumber-t.boothNumber)};m()}async function ke(e){let t=R();if(t){z(e,`counting`,`
+        </div>`})}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`},_=()=>{f.forEach(e=>{e.classes=[],e.totalStudents=0});let e={};d.forEach(t=>{e[t.dept]||(e[t.dept]={name:t.dept,total:0,classes:[]}),e[t.dept].classes.push(t),e[t.dept].total+=t.count});let t=f.length,n=r.length/t*1.25;Object.values(e).sort((e,t)=>t.total-e.total).forEach(e=>{f.sort((e,t)=>e.totalStudents-t.totalStudents);let t=f[0];if(t.totalStudents+e.total>n&&e.classes.length>1){f.sort((e,t)=>e.totalStudents-t.totalStudents);let t=f[0],n=f.length>1?f[1]:f[0];[...e.classes].sort((e,t)=>t.count-e.count).forEach(e=>{let r=t.totalStudents<=n.totalStudents?t:n;r.classes.push(e.name),r.totalStudents+=e.count})}else e.classes.forEach(e=>t.classes.push(e.name)),t.totalStudents+=e.total}),f.sort((e,t)=>e.boothNumber-t.boothNumber)};h()}async function ke(e){let t=R();if(t){z(e,`counting`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Counting Setup...</p></div>
   `);try{let[n,r,i,a,o]=await Promise.all([u.adminGetCountingMatrix(t).catch(()=>null),u.getPosts(),u.adminGetNominations(t).catch(()=>[]),u.adminGetBooths(t),u.getNominalRoll()]),s=(Array.isArray(i)?i:[]).filter(e=>e.status===`Valid`&&e.withdrawalStatus!==`Approved`);Ae(e.querySelector(`#adminMain`),t,n,r,s,a,o)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Ae(e,t,n,r,i,a,o){if(!a.length){e.innerHTML=`<div class="alert alert-error">❌ No booths configured.</div>`;return}if(!r.length){e.innerHTML=`<div class="alert alert-error">❌ No posts configured.</div>`;return}let s=e=>String(e.post||e.name||``),c=t=>{let{matrix:n,formSerials:o,totalRounds:c,roundLabels:u}=t,d=a.length;e.innerHTML=`
       <div class="page-enter space-y-6">
@@ -1536,7 +1540,13 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <p class="text-xs text-slate-400 leading-relaxed">
             Detailed serial number ranges and book counts for the printing company.
           </p>
-          <button id="btnGenSummary" class="btn btn-secondary w-full py-3 border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📑 Generate Summary Report</button>
+          <button id="btnGenSummary" class="btn btn-secondary w-full py-3 border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📑 View Summary Report</button>
+          <div class="pt-2 border-t border-white/5 mt-2">
+            <button id="btnRegenPlan" class="btn btn-secondary w-full py-2 text-xs border-indigo-500/20 text-indigo-300 hover:bg-indigo-500 hover:text-white flex items-center justify-center gap-2">
+              <span>🔄</span> Finalize Master Plan
+            </button>
+            <p class="text-[10px] text-slate-500 mt-2 text-center italic">Must be run after any nomination or booth changes.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -1686,22 +1696,11 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <div class="candidate-row"><div class="sl-no">${t.length+1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
             </div>
           </div>
-        `}),h},a=async e=>{try{x(`Generating ballots...`,`info`),r(await i(e))}catch(e){x(e.message,`error`)}},o=async()=>{try{x(`Calculating ranges...`,`info`);let[e,n,i,a,o,s]=await Promise.all([u.adminGetBooths(t),u.getNominalRoll(),u.adminGetPosts(t),u.getFinalNominations(),u.getPublicSchedule(),u.adminGetSettings(t).catch(()=>({}))]);a.active;let c=o.electionYear||new Date().getFullYear(),l=s.collegeName||`Government Victoria College Palakkad`;s.collegeShortName;let d=e=>e.post.toLowerCase().includes(`representative`)||e.post.toLowerCase().includes(`year`),f=e=>e.post.toLowerCase().includes(`association`)||e.post.toLowerCase().includes(`assoc`),p=1,m=1,h=1,g=0,_=0,v=0,b=(e,t,n)=>{if(!e||e<=0)return`-`;let r=t,i=[],a=n===`G`?`GB`:n===`R`?`RB`:`AB`,o=n===`G`?g:n===`R`?_:v,s=e=>{o++;let t=`${n}${r}-${r+e-1}`;return r+=e,{id:a+o,range:t}};if(e<=65)i.push({qty:1,size:e,items:[s(e)]});else{let t=Math.floor(e/50),n=e%50;if(n===0){let e=[];for(let n=0;n<t;n++)e.push(s(50));i.push({qty:t,size:50,items:e})}else if(n<=15){let e=[];for(let n=0;n<t-1;n++)e.push(s(50));e.length>0&&i.push({qty:t-1,size:50,items:e});let r=50+n;i.push({qty:1,size:r,items:[s(r)]})}else{let e=[];for(let n=0;n<t;n++)e.push(s(50));i.push({qty:t,size:50,items:e}),i.push({qty:1,size:n,items:[s(n)]})}}return n===`G`?g=o:n===`R`?_=o:v=o,`
-          <table style="width:100%; border-collapse:collapse; font-size:10px; background:rgba(0,0,0,0.02);">
-            ${i.map(e=>`
-              <tr>
-                <td style="padding:4px; border:1px solid #eee; font-weight:bold; width:45px;">${e.qty} x ${e.size}</td>
-                <td style="padding:4px; border:1px solid #eee; line-height:1.4;">
-                  ${e.items.map(e=>`<span style="display:inline-block; margin-right:8px;"><strong style="color:#4f46e5;">${e.id}:</strong> ${e.range}</span>`).join(` `)}
-                </td>
-              </tr>
-            `).join(``)}
-          </table>
-        `},S=[...e].sort((e,t)=>e.boothNumber-t.boothNumber),C=[],w=[],T=[];S.forEach(e=>{let t=n.filter(t=>e.classes.includes(String(t.CLASS).trim()));t.length!==0&&(C.push({booth:e.boothNumber,count:t.length,start:p,end:p+t.length-1}),p+=t.length)}),i.filter(d).forEach(e=>{let t=String(e.yearRestriction||``).trim().toUpperCase();if(!t)return;let r=[];S.forEach(i=>{let a=n.filter(e=>i.classes.includes(String(e.CLASS).trim())).filter(e=>{let n=String(e.CLASS||``).toUpperCase();if(n.includes(`PH D`)||n.includes(`PH.D`))return!1;let r=/\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A)\b/i.test(n);return t===`PG`?r:r?!1:t===`1`?n.startsWith(`1ST YEAR`):t===`2`?n.startsWith(`2ND YEAR`):t===`3`?n.startsWith(`3RD YEAR`):!1});a.length>0&&(r.push({booth:i.boothNumber,post:e.post,count:a.length,start:m,end:m+a.length-1}),m+=a.length)}),r.length>0&&w.push(...r)}),i.filter(f).forEach(e=>{let t=e.post.toUpperCase();t.includes(`ASSOCIATION SECRETARY`)&&(t=t.split(`ASSOCIATION SECRETARY`)[1].trim()),t=t.replace(/[-\s]/g,` `);let r=[];S.forEach(i=>{let a=n.filter(e=>i.classes.includes(String(e.CLASS).trim())).filter(e=>{let n=String(e.Dept||``).trim().toUpperCase().replace(/[-\s]/g,` `),r=String(e.CLASS||``).trim().toUpperCase().replace(/[-\s]/g,` `);return n===t||n.includes(t)||r.includes(t)});a.length>0&&(r.push({booth:i.boothNumber,post:e.post,count:a.length,start:h,end:h+a.length-1}),h+=a.length)}),r.length>0&&T.push(...r)}),r(`
+        `}),h},a=async e=>{try{x(`Generating ballots...`,`info`),r(await i(e))}catch(e){x(e.message,`error`)}},o=async()=>{try{x(`Calculating Master Plan...`,`info`);let[e,n,i]=await Promise.all([u.getPublicSchedule(),u.adminGetSettings(t).catch(()=>({})),u.adminGetBallotPlan(t).catch(()=>null)]);if(!i)return confirm(`No Master Plan found. Generate it now based on current final list and booths?`)?(await s(),o()):void 0;let a=i;r(`
         <div style="padding: 40px; font-family: sans-serif; color: #333;">
           <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
-            <h1 style="margin: 0; font-size: 24px;">BALLOT PRINTING SUMMARY - ${c}</h1>
-            <h2 style="margin: 5px 0 0 0; font-size: 18px; color: #666;">${y(l)}</h2>
+            <h1 style="margin: 0; font-size: 24px;">BALLOT PRINTING SUMMARY - ${e.electionYear||new Date().getFullYear()}</h1>
+            <h2 style="margin: 5px 0 0 0; font-size: 18px; color: #666;">${y(n.collegeName||`Government Victoria College Palakkad`)}</h2>
           </div>
 
           <p style="font-size: 14px; margin-bottom: 20px;">
@@ -1721,20 +1720,20 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               </tr>
             </thead>
             <tbody>
-              ${C.map(e=>`
+              ${a.general.results.map(e=>`
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 10px;">Booth ${e.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${e.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${e.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${b(e.count,e.start,`G`)}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${e.bookHtml}</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
                 <td style="border: 1px solid #ddd; padding: 10px;">TOTAL GENERAL</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${p-1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${a.general.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G1</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G${p-1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G${a.general.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
               </tr>
             </tbody>
@@ -1753,21 +1752,21 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               </tr>
             </thead>
             <tbody>
-              ${w.map(e=>`
+              ${a.reps.results.map(e=>`
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${y(e.post)}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">B${e.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${e.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${e.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${b(e.count,e.start,`R`)}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${e.bookHtml}</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
                 <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL REPRESENTATIVE</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${m-1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${a.reps.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R1</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${m-1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${a.reps.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
               </tr>
             </tbody>
@@ -1786,21 +1785,21 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               </tr>
             </thead>
             <tbody>
-              ${T.map(e=>`
+              ${a.assocs.results.map(e=>`
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${y(e.post)}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">B${e.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${e.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${e.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${b(e.count,e.start,`A`)}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${e.bookHtml}</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
                 <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL ASSOCIATION</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${h-1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${a.assocs.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A1</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${h-1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${a.assocs.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
               </tr>
             </tbody>
@@ -1810,7 +1809,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             Generated on ${new Date().toLocaleString()} | Official GVC Election Portal
           </div>
         </div>
-      `)}catch(e){x(e.message,`error`)}};n.querySelector(`#btnGenSummary`).onclick=o,n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)})}function Fe(e){let t=R();if(!t)return;z(e,`testing`,`
+      `)}catch(e){x(e.message,`error`)}},s=async()=>{try{b(!0),x(`Calculating and saving Master Plan on server...`,`info`),await u.adminGenerateBallotPlan(t),x(`Master Plan finalized successfully!`,`success`),b(!1)}catch(e){b(!1),x(e.message,`error`)}};n.querySelector(`#btnGenSummary`).onclick=o,n.querySelector(`#btnRegenPlan`).onclick=s,n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)})}function Fe(e){let t=R();if(!t)return;z(e,`testing`,`
     <div class="page-enter space-y-8 max-w-3xl mx-auto">
 
       <!-- Warning Banner -->
@@ -2529,4 +2528,4 @@ Are you absolutely sure?`)){b(n.target,!0,`Finalizing...`);try{await u.adminFina
       and replace <code style="background:rgba(0,0,0,0.3);padding:0.1rem 0.4rem;border-radius:4px;">YOUR_SCRIPT_ID</code>
       with your Google Apps Script Web App URL, then rebuild &amp; push.
     </div>
-  `),document.getElementById(`app`).style.marginTop=`48px`);var $=e=>t=>{Q.innerHTML=``,e(Q,t)};o.on(`/`,$(S)).on(`/submit`,$(k)).on(`/find`,$(ie)).on(`/valid-list`,$(se)).on(`/final-list`,$(ue)).on(`/withdraw`,$(pe)).on(`/results`,$(Re)).on(`/nominal-roll`,$(ze)).on(`/admin`,$(ve)).on(`/admin/dashboard`,$(ye)).on(`/admin/verify`,$(be)).on(`/admin/withdrawals`,$(Se)).on(`/admin/publish`,$(we)).on(`/admin/posts`,$(Te)).on(`/admin/ballots`,$(Pe)).on(`/admin/booths`,$(Oe)).on(`/admin/counting`,$(ke)).on(`/admin/results-entry`,$(Me)).on(`/admin/results`,$(Ie)).on(`/admin/nominal-roll`,$(X)).on(`/admin/schedule`,$(He)).on(`/admin/direct-nomination`,$(We)).on(`/admin/testing`,$(Fe)).setDefault(`/`),document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-nav]`);t&&(e.preventDefault(),o.navigate(t.dataset.nav))}),o.start();
+  `),document.getElementById(`app`).style.marginTop=`48px`);var $=e=>t=>{Q.innerHTML=``,e(Q,t)};o.on(`/`,$(S)).on(`/submit`,$(k)).on(`/find`,$(ie)).on(`/valid-list`,$(se)).on(`/final-list`,$(ue)).on(`/withdraw`,$(pe)).on(`/results`,$(Re)).on(`/nominal-roll`,$(ze)).on(`/admin`,$(ve)).on(`/admin/dashboard`,$(ye)).on(`/admin/verify`,$(be)).on(`/admin/withdrawals`,$(Se)).on(`/admin/publish`,$(we)).on(`/admin/posts`,$(U)).on(`/admin/ballots`,$(Pe)).on(`/admin/booths`,$(De)).on(`/admin/counting`,$(ke)).on(`/admin/results-entry`,$(Me)).on(`/admin/results`,$(Ie)).on(`/admin/nominal-roll`,$(X)).on(`/admin/schedule`,$(He)).on(`/admin/direct-nomination`,$(We)).on(`/admin/testing`,$(Fe)).setDefault(`/`),document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-nav]`);t&&(e.preventDefault(),o.navigate(t.dataset.nav))}),o.start();
