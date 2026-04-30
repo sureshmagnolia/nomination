@@ -70,17 +70,30 @@ async function fetchAndRender(main, force = false) {
       const parsed = JSON.parse(cachedData);
       posts = parsed.posts;
       results = parsed.results;
+      const schedule = parsed.schedule || {};
+      const year = schedule.electionYear || new Date().getFullYear();
+      updateHeader(main, year);
     } else {
       // Fetch fresh
-      [posts, results] = await Promise.all([
+      let schedule;
+      [posts, results, schedule] = await Promise.all([
         api.getPosts(),
-        api.getResults().catch(() => [])
+        api.getResults().catch(() => []),
+        api.getPublicSchedule().catch(() => ({}))
       ]);
       
       // Save to cache
       localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ posts, results }));
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ posts, results, schedule }));
+      
+      const year = schedule.electionYear || new Date().getFullYear();
+      updateHeader(main, year);
     }
+
+function updateHeader(main, year) {
+  const header = main.closest('.page-enter')?.querySelector('h1');
+  if (header) header.textContent = `Live Election Results ${year}`;
+}
 
     if (results.length === 0) {
       main.innerHTML = `

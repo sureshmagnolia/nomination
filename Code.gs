@@ -313,7 +313,8 @@ function doGet(e) {
         nominationDeadline: getSetting('nominationDeadline'),
         withdrawalStart: getSetting('withdrawalStart'),
         withdrawalEnd: getSetting('withdrawalEnd'),
-        notificationDate: getSetting('notificationDate') || '2026-04-20'
+        notificationDate: getSetting('notificationDate') || '2026-04-20',
+        electionYear: getSetting('electionYear') || new Date().getFullYear().toString()
       });
     }
 
@@ -354,6 +355,7 @@ function doPost(e) {
       setSetting('withdrawalStart', body.withdrawalStart);
       setSetting('withdrawalEnd', body.withdrawalEnd);
       setSetting('notificationDate', body.notificationDate);
+      setSetting('electionYear', body.electionYear || new Date().getFullYear().toString());
       return jsonOut({ ok: true });
     }
 

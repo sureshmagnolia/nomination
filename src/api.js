@@ -172,11 +172,20 @@ export const api = {
     post({ action: 'adminFinalizeRoll', password }),
 
   // ─── Schedule Management ───────────────────────────────────────────────────
+  _scheduleCache: null,
 
-  /** Fetch the official election schedule (deadlines, etc.) */
-  getPublicSchedule: () => get({ action: 'getPublicSchedule' }),
+  /** Fetch the official election schedule (deadlines, etc.) with local caching */
+  getPublicSchedule: async function() {
+    if (this._scheduleCache) return this._scheduleCache;
+    const data = await get({ action: 'getPublicSchedule' });
+    this._scheduleCache = data;
+    return data;
+  },
 
-  /** Admin: save election schedule dates */
-  adminSaveSchedule: (password, scheduleData) =>
-    post({ action: 'adminSaveSchedule', password, ...scheduleData }),
+  /** Admin: save election schedule dates and clear cache */
+  adminSaveSchedule: async function(password, scheduleData) {
+    const res = await post({ action: 'adminSaveSchedule', password, ...scheduleData });
+    this._scheduleCache = null; // Invalidate cache
+    return res;
+  },
 };

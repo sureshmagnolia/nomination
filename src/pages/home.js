@@ -1,17 +1,23 @@
-/**
- * pages/home.js
- * The public landing page.
- */
+import { api } from '../api.js';
 import { esc } from '../utils.js';
 
-export function renderHome(container) {
+export async function renderHome(container) {
+  // Show loading state for year fetch
+  container.innerHTML = `<div class="min-h-screen flex items-center justify-center"><span class="spinner"></span></div>`;
+  
+  let year = new Date().getFullYear();
+  try {
+    const schedule = await api.getPublicSchedule();
+    if (schedule.electionYear) year = schedule.electionYear;
+  } catch(e) {}
+
   container.innerHTML = `
     <div class="page-enter min-h-screen flex flex-col">
       <header class="glass sticky top-0 z-50 border-b border-white/10">
         <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div class="flex items-center gap-3">
             <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">V</div>
-            <h1 class="text-xl font-bold text-white tracking-tight">GVC Election Portal</h1>
+            <h1 class="text-xl font-bold text-white tracking-tight">GVC Election Portal ${year}</h1>
           </div>
           <button data-nav="/admin" class="btn btn-secondary btn-sm flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
@@ -24,11 +30,11 @@ export function renderHome(container) {
         <div class="text-center mb-16 space-y-4">
           <h2 class="text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-tight">
             College Union <br/>
-            <span class="gradient-text">Election Management</span>
+            <span class="gradient-text">Election Management ${year}</span>
           </h2>
           <p class="text-slate-400 text-lg max-w-2xl mx-auto">
             Welcome to the official election portal of Government Victoria College. 
-            Submit your nominations, track status, and view the finalized candidate lists.
+            Submit your nominations, track status, and view the finalized candidate lists for the year ${year}.
           </p>
         </div>
 
@@ -44,7 +50,7 @@ export function renderHome(container) {
       </main>
 
       <footer class="py-12 border-t border-white/5 text-center text-slate-500 text-sm">
-        <p>&copy; ${new Date().getFullYear()} Government Victoria College, Palakkad</p>
+        <p>&copy; ${year} Government Victoria College, Palakkad</p>
         <p class="mt-1 font-medium text-slate-400">Developed by Exam Wing GVC</p>
       </footer>
     </div>

@@ -139,11 +139,12 @@ export async function renderAdminBallots(container) {
   };
 
   const generateBallotsHTML = async (filterType = 'all') => {
-    let posts, candidatesResponse;
+    let posts, candidatesResponse, schedule;
     try {
-      [posts, candidatesResponse] = await Promise.all([
+      [posts, candidatesResponse, schedule] = await Promise.all([
         api.adminGetPosts(pwd),
-        api.getFinalNominations()
+        api.getFinalNominations(),
+        api.getPublicSchedule()
       ]);
     } catch (err) {
       throw new Error(err.message.includes('not published') 
@@ -151,6 +152,7 @@ export async function renderAdminBallots(container) {
         : err.message);
     }
 
+    const year = schedule.electionYear || new Date().getFullYear().toString();
     const candidates = candidatesResponse.active || [];
     if (candidates.length === 0) throw new Error('No active candidates found.');
 
@@ -174,7 +176,7 @@ export async function renderAdminBallots(container) {
           <div class="ballot-container a3 page-break">
             <!-- Counterfoil -->
             <div style="border-bottom: 2px dotted #000; padding-bottom: 20px; margin-bottom: 30px; text-align: center;">
-              <h1 style="font-size: 16px; margin: 0;">COLLEGE UNION ELECTION ${new Date().getFullYear()}</h1>
+              <h1 style="font-size: 16px; margin: 0;">COLLEGE UNION ELECTION ${year}</h1>
               <h1 style="font-size: 18px; margin: 5px 0;">GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
               <h2 style="font-size: 14px; margin: 0;">OFFICIAL BALLOT PAPER (GENERAL) - COUNTERFOIL</h2>
               <div style="margin-top: 15px; font-weight: bold; text-align: left; display: flex; justify-content: space-between;">
@@ -184,7 +186,7 @@ export async function renderAdminBallots(container) {
             </div>
 
             <div class="ballot-header">
-              <h1>COLLEGE UNION ELECTION ${new Date().getFullYear()}</h1>
+              <h1>COLLEGE UNION ELECTION ${year}</h1>
               <h1>GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
               <h2>OFFICIAL BALLOT PAPER (GENERAL)</h2>
             </div>
@@ -252,7 +254,7 @@ export async function renderAdminBallots(container) {
         html += `
           <div class="ballot-container a5 page-break">
             <div class="ballot-header">
-              <h1>GVC ELECTION ${new Date().getFullYear()}</h1>
+              <h1>GVC ELECTION ${year}</h1>
               <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER</h2>
             </div>
             <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ______</div><div>PRO Sign</div></div>

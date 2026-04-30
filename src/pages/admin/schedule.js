@@ -33,33 +33,39 @@ function renderScheduleUI(main, pwd, schedule) {
 
       <div class="glass rounded-xl p-6 border-l-4 border-l-indigo-500 space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Election Year -->
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Election Year</label>
+            <input type="number" id="electionYear" class="field" value="${schedule.electionYear || new Date().getFullYear()}">
+            <p class="text-[10px] text-slate-500 mt-1">Used in all ballot headers and titles (e.g., 2026).</p>
+          </div>
+
           <!-- Notification Date -->
           <div>
             <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Notification Date (For Age Calculation)</label>
             <input type="date" id="notificationDate" class="field" value="${schedule.notificationDate || ''}">
             <p class="text-[10px] text-slate-500 mt-1">Student age will be calculated as of this date.</p>
           </div>
-
-          <!-- Nomination Deadline -->
-          <div>
-            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Nomination Filing Deadline</label>
-            <input type="datetime-local" id="nominationDeadline" class="field" value="${toLocal(schedule.nominationDeadline)}">
-            <p class="text-[10px] text-slate-500 mt-1">Filing form will be blocked after this time.</p>
-          </div>
         </div>
 
         <hr class="border-white/10" />
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Nomination Deadline -->
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Nomination Deadline</label>
+            <input type="datetime-local" id="nominationDeadline" class="field" value="${toLocal(schedule.nominationDeadline)}">
+          </div>
+
           <!-- Withdrawal Window Start -->
           <div>
-            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Withdrawal Window Start</label>
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Withdrawal Start</label>
             <input type="datetime-local" id="withdrawalStart" class="field" value="${toLocal(schedule.withdrawalStart)}">
           </div>
 
           <!-- Withdrawal Window End -->
           <div>
-            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Withdrawal Window End</label>
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Withdrawal End</label>
             <input type="datetime-local" id="withdrawalEnd" class="field" value="${toLocal(schedule.withdrawalEnd)}">
           </div>
         </div>
@@ -107,13 +113,14 @@ function renderScheduleUI(main, pwd, schedule) {
   updateStatus();
   main.querySelectorAll('input').forEach(i => i.onchange = updateStatus);
 
-  main.querySelector('#btnSaveSchedule').onclick = async (e) => {
-    const payload = {
-      notificationDate: main.querySelector('#notificationDate').value,
-      nominationDeadline: main.querySelector('#nominationDeadline').value ? new Date(main.querySelector('#nominationDeadline').value).toISOString() : '',
-      withdrawalStart: main.querySelector('#withdrawalStart').value ? new Date(main.querySelector('#withdrawalStart').value).toISOString() : '',
-      withdrawalEnd: main.querySelector('#withdrawalEnd').value ? new Date(main.querySelector('#withdrawalEnd').value).toISOString() : '',
-    };
+    main.querySelector('#btnSaveSchedule').onclick = async (e) => {
+      const payload = {
+        electionYear: main.querySelector('#electionYear').value,
+        notificationDate: main.querySelector('#notificationDate').value,
+        nominationDeadline: main.querySelector('#nominationDeadline').value ? new Date(main.querySelector('#nominationDeadline').value).toISOString() : '',
+        withdrawalStart: main.querySelector('#withdrawalStart').value ? new Date(main.querySelector('#withdrawalStart').value).toISOString() : '',
+        withdrawalEnd: main.querySelector('#withdrawalEnd').value ? new Date(main.querySelector('#withdrawalEnd').value).toISOString() : '',
+      };
 
     setLoading(e.target, true, 'Saving Schedule...');
     try {

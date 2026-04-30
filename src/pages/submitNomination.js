@@ -19,13 +19,19 @@ let electionSchedule = {};
 let captchaAnswer = '';
 
 export async function renderSubmitNomination(container) {
+  let year = new Date().getFullYear();
+  try {
+    const s = await api.getPublicSchedule();
+    if (s.electionYear) year = s.electionYear;
+  } catch(e) {}
+
   container.innerHTML = publicLayout('Submit Nomination', `
     <div id="loadingState" class="flex flex-col items-center justify-center py-24 gap-4">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 text-sm">Loading data...</p>
     </div>
     <div id="formArea" class="hidden"></div>
-  `);
+  `, year);
 
   container.querySelector('#backToHome').addEventListener('click', () => router.navigate('/'));
 
@@ -49,7 +55,7 @@ export async function renderSubmitNomination(container) {
       ? postsData
       : CONFIG.DEFAULT_POSTS;
 
-    renderForm(container);
+    renderForm(container, year);
   } catch (e) {
     container.querySelector('#loadingState').innerHTML = `
       <div class="alert alert-error">${esc(e.message)}</div>
@@ -58,7 +64,7 @@ export async function renderSubmitNomination(container) {
   }
 }
 
-function renderForm(container) {
+function renderForm(container, year) {
   const captcha = generateCaptcha();
   captchaAnswer = captcha.answer;
 
@@ -158,7 +164,7 @@ function renderForm(container) {
   });
 
   formArea.querySelector('#backHomeBtn').addEventListener('click', () => router.navigate('/'));
-  formArea.querySelector('#nomForm').addEventListener('submit', (e) => handleSubmit(e, formArea));
+  formArea.querySelector('#nomForm').addEventListener('submit', (e) => handleSubmit(e, formArea, year));
 }
 
 function personBlock(role, label, isCandidate) {
@@ -239,7 +245,7 @@ function runValidation(formArea) {
   return warnings;
 }
 
-async function handleSubmit(e, formArea) {
+async function handleSubmit(e, formArea, yearValue) {
   e.preventDefault();
   const warnings = runValidation(formArea);
   if (warnings.length) { showToast('Please resolve all eligibility warnings first.', 'error'); return; }
@@ -280,7 +286,7 @@ async function handleSubmit(e, formArea) {
 
     const result = await api.submitNomination(payload);
 
-    showPreview(formArea, result.id, { post, gender, day, month, year, students });
+    showPreview(formArea, result.id, { post, gender, day, month, year, students }, yearValue);
     showToast(`Nomination submitted! ID: ${result.id}`, 'success');
   } catch (err) {
     showToast(`Submission failed: ${err.message}`, 'error');
@@ -289,7 +295,7 @@ async function handleSubmit(e, formArea) {
   }
 }
 
-function showPreview(formArea, id, { post, gender, day, month, year, students }) {
+function showPreview(formArea, id, { post, gender, day, month, year, students }, yearValue) {
   const [candidate, proposer, seconder] = students;
   const dob = buildDobString(day, month, year);
   const dobDisplay = displayDob(day, month, year);
@@ -297,7 +303,7 @@ function showPreview(formArea, id, { post, gender, day, month, year, students })
 
   const preview = formArea.querySelector('#previewSection');
   formArea.querySelector('#printZone').innerHTML =
-    buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder);
+    buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, '', yearValue);
 
   preview.classList.remove('hidden');
   preview.scrollIntoView({ behavior: 'smooth' });
@@ -307,14 +313,14 @@ function showPreview(formArea, id, { post, gender, day, month, year, students })
   preview.querySelector('#newNomBtn').addEventListener('click', () => renderSubmitNomination(formArea.closest('#app')));
 }
 
-export function buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, status = '') {
+export function buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, status = '', yearValue = '2026') {
   const today = todayFormatted();
   return `
   <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-4">
     <div class="flex justify-between items-start text-sm">
       <div>
         <p class="font-bold text-white text-base">${CONFIG.COLLEGE_NAME}</p>
-        <p class="text-slate-400">College Union Election</p>
+        <p class="text-slate-400">College Union Election ${yearValue}</p>
       </div>
       <div class="text-right">
         <p class="text-slate-400 text-xs">Generated: ${today}</p>
@@ -365,7 +371,7 @@ function sectionBlock(label, s, gender = null, dob = null, age = null) {
   </div>`;
 }
 
-function publicLayout(title, bodyHtml) {
+function publicLayout(title, bodyHtml, yearValue = '2026') {
   return `
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-50 border-b border-white/10 glass">
@@ -378,7 +384,7 @@ function publicLayout(title, bodyHtml) {
           <h1 class="font-bold text-white text-lg tracking-tight">${esc(title)}</h1>
         </div>
         <div class="text-xs text-slate-500 font-medium hidden md:block uppercase tracking-widest">
-          GVC Election Portal
+          GVC Election Portal ${yearValue}
         </div>
       </div>
     </header>
