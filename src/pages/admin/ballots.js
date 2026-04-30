@@ -353,24 +353,27 @@ export async function renderAdminBallots(container) {
       const contestableReps = posts.filter(isYear).filter(p => candidates.filter(c => c.post === p.post).length > 1);
       contestableReps.forEach(p => {
         const yr = String(p.yearRestriction || '').trim().toUpperCase();
-        if (!yr) return; // Skip if no restriction defined
+        if (!yr) return;
 
         const postBooths = [];
         sortedBooths.forEach(b => {
           const boothStudents = nominalRoll.filter(s => b.classes.includes(String(s.CLASS).trim()));
           const targetStudents = boothStudents.filter(s => {
             const cls = String(s.CLASS || '').toUpperCase();
+            // PhD scholars NEVER vote for reps
             if (cls.includes('PH D') || cls.includes('PH.D')) return false; 
 
             if (yr === 'PG') {
-              return cls.includes('MA') || cls.includes('MSC') || cls.includes('MCOM') ||
-                     cls.includes('M.SC') || cls.includes('M.COM') || cls.includes('M.A');
+              return /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A)\b/i.test(cls);
             }
             
-            // Match "1", "2", "3" or "I", "II", "III"
-            const yrMap = { '1': ['1ST','I '], '2': ['2ND','II '], '3': ['3RD','III '] };
-            const patterns = yrMap[yr] || [yr];
-            return patterns.some(pat => cls.includes(pat + ' YEAR') || cls.includes(pat + 'YEAR'));
+            // Precise matching to avoid "I" matching "III"
+            // We look for the year prefix at the start or with a word boundary
+            if (yr === '1') return /\b(I|1ST)\b\s*YEAR/i.test(cls) && !/\b(II|III)\b/i.test(cls);
+            if (yr === '2') return /\b(II|2ND)\b\s*YEAR/i.test(cls) && !/\b(III)\b/i.test(cls);
+            if (yr === '3') return /\b(III|3RD)\b\s*YEAR/i.test(cls);
+            
+            return cls.includes(yr);
           });
           
           if (targetStudents.length > 0) {
@@ -396,8 +399,9 @@ export async function renderAdminBallots(container) {
           const boothStudents = nominalRoll.filter(s => b.classes.includes(String(s.CLASS).trim()));
           const targetStudents = boothStudents.filter(s => {
             const sDept = String(s.Dept || '').trim().toUpperCase();
-            // Match if student dept equals target, or if student dept contains target (e.g. "Physics (A)" matches "Physics")
-            return sDept === dept || sDept.includes(dept);
+            const sCls  = String(s.CLASS || '').trim().toUpperCase();
+            // Primary check on Dept field, fallback check if Dept is mentioned in CLASS name
+            return sDept.includes(dept) || sCls.includes(dept);
           });
           if (targetStudents.length > 0) {
             postBooths.push({
