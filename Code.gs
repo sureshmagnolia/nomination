@@ -436,6 +436,10 @@ function doPost(e) {
       const nom = getAllNominations().find(n => n.id === body.id);
       if (!nom) return errOut(`Not found.`);
       getSheet(SHEET_NOMS).getRange(nom._row, 21).setValue(body.status);
+      
+      // Auto-sync to published lists
+      syncNominationToPublished(body.id);
+      
       return jsonOut({ ok: true });
     }
 
@@ -444,6 +448,10 @@ function doPost(e) {
       const nom = getAllNominations().find(n => n.id === body.id);
       if (!nom) return errOut(`Not found.`);
       getSheet(SHEET_NOMS).getRange(nom._row, 22).setValue('Approved');
+      
+      // Auto-sync to published lists
+      syncNominationToPublished(body.id);
+      
       return jsonOut({ ok: true });
     }
 
@@ -829,3 +837,4 @@ function doPost(e) {
     return errOut(err.message);
   }
 }
+$newCode
