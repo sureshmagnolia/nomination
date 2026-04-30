@@ -138,13 +138,17 @@ function updateHeader(main, year) {
       valids.sort((a, b) => b.votes - a.votes);
       const maxVotes = valids.length ? valids[0].votes : 0;
       const totalValidVotes = valids.reduce((sum, c) => sum + c.votes, 0) + (nota ? nota.votes : 0);
+      const grandTotal = totalValidVotes + (invalid ? invalid.votes : 0);
 
       html += `
         <div class="glass rounded-2xl overflow-hidden border border-white/10 page-enter">
-          <div class="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 p-5 border-b border-white/10 flex justify-between items-end">
+          <div class="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 p-5 border-b border-white/10 flex justify-between items-center">
             <div>
               <h2 class="text-2xl font-bold text-white">${esc(name)}</h2>
-              <p class="text-sm text-indigo-300 mt-1">${totalValidVotes} Total Valid Votes Counted</p>
+              <div class="flex gap-4 mt-1">
+                <span class="text-xs text-indigo-300">✅ Valid: <strong>${totalValidVotes}</strong></span>
+                <span class="text-xs text-purple-300">📊 Total Polled: <strong>${grandTotal}</strong></span>
+              </div>
             </div>
           </div>
           <div class="p-6 space-y-6">
