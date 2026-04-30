@@ -128,7 +128,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <div class="mt-6 flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition">
       Continue <span>→</span>
     </div>
-  </div>`}var w=[],T=[],E=[],D={},O=``;async function k(e){let t=new Date().getFullYear();try{let e=await u.getPublicSchedule();e.electionYear&&(t=e.electionYear)}catch{}e.innerHTML=ie(`Submit Nomination`,`
+  </div>`}var w=[],T=[],E=[],D={},O=``;async function k(e){let t=new Date().getFullYear();try{let e=await u.getPublicSchedule();e.electionYear&&(t=e.electionYear)}catch{}e.innerHTML=re(`Submit Nomination`,`
     <div id="loadingState" class="flex flex-col items-center justify-center py-24 gap-4">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 text-sm">Loading data...</p>
@@ -188,7 +188,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </div>
       <div id="printZone" class="print-zone"></div>
     </div>
-  `,h(r.querySelector(`#dob-day`),r.querySelector(`#dob-month`),r.querySelector(`#dob-year`)),[`candidate`,`proposer`,`seconder`].forEach(e=>{r.querySelector(`#serial-${e}`).addEventListener(`change`,()=>te(r,e))}),r.querySelector(`#postSelect`).addEventListener(`change`,()=>j(r)),r.querySelectorAll(`[name="gender"]`).forEach(e=>e.addEventListener(`change`,()=>j(r))),r.querySelectorAll(`.dob-sel`).forEach(e=>e.addEventListener(`change`,()=>j(r))),r.querySelector(`#refreshCaptcha`).addEventListener(`click`,()=>{let e=p();O=e.answer,r.querySelector(`#captchaInput`).value=``,r.querySelector(`#captchaQuestion`).textContent=e.question}),r.querySelector(`#backHomeBtn`).addEventListener(`click`,()=>o.navigate(`/`)),r.querySelector(`#nomForm`).addEventListener(`submit`,e=>ne(e,r,t))}function A(e,t,n){return`
+  `,h(r.querySelector(`#dob-day`),r.querySelector(`#dob-month`),r.querySelector(`#dob-year`)),[`candidate`,`proposer`,`seconder`].forEach(e=>{r.querySelector(`#serial-${e}`).addEventListener(`change`,()=>te(r,e))}),r.querySelector(`#postSelect`).addEventListener(`change`,()=>j(r)),r.querySelectorAll(`[name="gender"]`).forEach(e=>e.addEventListener(`change`,()=>j(r))),r.querySelectorAll(`.dob-sel`).forEach(e=>e.addEventListener(`change`,()=>j(r))),r.querySelector(`#refreshCaptcha`).addEventListener(`click`,()=>{let e=p();O=e.answer,r.querySelector(`#captchaInput`).value=``,r.querySelector(`#captchaQuestion`).textContent=e.question}),r.querySelector(`#backHomeBtn`).addEventListener(`click`,()=>o.navigate(`/`)),r.querySelector(`#nomForm`).addEventListener(`submit`,e=>M(e,r,t))}function A(e,t,n){return`
   <div class="glass rounded-xl p-4 space-y-3">
     <h3 class="font-bold text-white text-sm uppercase tracking-wide border-b border-white/10 pb-2">${t}</h3>
     <div>
@@ -219,7 +219,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
   </div>`}function te(e,t){let n=e.querySelector(`#serial-${t}`).value.trim(),r=e.querySelector(`#details-${t}`),i=w.find(e=>String(e[`Nominal Roll Serial Number`])===n);if(!i){r.innerHTML=n?`<span class="text-red-400">⚠ Student not found</span>`:``;return}r.innerHTML=`
     <p><span class="text-slate-500">Name:</span> <strong class="text-slate-200">${y(i.NAME)}</strong></p>
     <p><span class="text-slate-500">Class:</span> ${y(i.CLASS)}</p>
-    <p><span class="text-slate-500">Dept:</span> ${y(i.Dept||`N/A`)}</p>`,j(e)}function j(e){let t=[],n=e.querySelector(`#postSelect`).value,r=e.querySelector(`[name="gender"]:checked`)?.value||null,i=[`candidate`,`proposer`,`seconder`].map(t=>e.querySelector(`#serial-${t}`).value.trim()),a=i.map(e=>e?w.find(t=>String(t[`Nominal Roll Serial Number`])===e):null),[o,s,c]=i;o&&o===s&&t.push(`Candidate and Proposer cannot be the same person.`),o&&o===c&&t.push(`Candidate and Seconder cannot be the same person.`),s&&s===c&&t.push(`Proposer and Seconder cannot be the same person.`);let l=[`Candidate`,`Proposer`,`Seconder`];a.forEach((e,i)=>{e&&t.push(...f(e,n,l[i],i===0?r:null,T,E))});let u=e.querySelector(`#warningBox`);return t.length?(u.innerHTML=`<strong class="block mb-1">⚠ Eligibility Warnings</strong>`+t.map(e=>`<p class="text-sm">• ${y(e)}</p>`).join(``),u.classList.remove(`hidden`)):u.classList.add(`hidden`),t}async function ne(e,t,n){if(e.preventDefault(),j(t).length){x(`Please resolve all eligibility warnings first.`,`error`);return}if(t.querySelector(`#captchaInput`).value.trim()!==O){x(`Captcha answer is incorrect.`,`error`);return}let r=t.querySelector(`#postSelect`).value,i=t.querySelector(`[name="gender"]:checked`)?.value,a=t.querySelector(`#dob-day`).value,o=t.querySelector(`#dob-month`).value,s=t.querySelector(`#dob-year`).value;if(!i){x(`Please select a gender for the candidate.`,`error`);return}if(!a||!o||!s){x(`Please enter a complete date of birth.`,`error`);return}let c=[`candidate`,`proposer`,`seconder`].map(e=>t.querySelector(`#serial-${e}`).value.trim()),l=c.map(e=>w.find(t=>String(t[`Nominal Roll Serial Number`])===e));if(l.some(e=>!e)){x(`One or more serial numbers are invalid.`,`error`);return}let d=t.querySelector(`#submitBtn`);b(d,!0,`Generate &amp; Preview Nomination`);try{let e={post:r,gender:i,dob:g(a,o,s),candidateSerial:c[0],proposerSerial:c[1],seconderSerial:c[2]};window.ADMIN_BYPASS_PWD&&(e.password=window.ADMIN_BYPASS_PWD);let d=await u.submitNomination(e);re(t,d.id,{post:r,gender:i,day:a,month:o,year:s,students:l},n),x(`Nomination submitted! ID: ${d.id}`,`success`)}catch(e){x(`Submission failed: ${e.message}`,`error`)}finally{b(d,!1,`Generate &amp; Preview Nomination`)}}function re(e,t,{post:n,gender:r,day:i,month:a,year:o,students:s},c){let[l,u,f]=s,p=g(i,a,o),m=_(i,a,o),h=d(p),y=e.querySelector(`#previewSection`);e.querySelector(`#printZone`).innerHTML=M(t,n,r,m,h,l,u,f,``,c),y.classList.remove(`hidden`),y.scrollIntoView({behavior:`smooth`}),y.querySelector(`#printBtn`).addEventListener(`click`,()=>{v(e.querySelector(`#printZone`).innerHTML)}),y.querySelector(`#newNomBtn`).addEventListener(`click`,()=>k(e.closest(`#app`)))}function M(e,t,r,i,a,o,s,c,l=``,u=`2026`){let d=m();return`
+    <p><span class="text-slate-500">Dept:</span> ${y(i.Dept||`N/A`)}</p>`,j(e)}function j(e){let t=[],n=e.querySelector(`#postSelect`).value,r=e.querySelector(`[name="gender"]:checked`)?.value||null,i=[`candidate`,`proposer`,`seconder`].map(t=>e.querySelector(`#serial-${t}`).value.trim()),a=i.map(e=>e?w.find(t=>String(t[`Nominal Roll Serial Number`])===e):null),[o,s,c]=i;o&&o===s&&t.push(`Candidate and Proposer cannot be the same person.`),o&&o===c&&t.push(`Candidate and Seconder cannot be the same person.`),s&&s===c&&t.push(`Proposer and Seconder cannot be the same person.`);let l=[`Candidate`,`Proposer`,`Seconder`];a.forEach((e,i)=>{e&&t.push(...f(e,n,l[i],i===0?r:null,T,E))});let u=e.querySelector(`#warningBox`);return t.length?(u.innerHTML=`<strong class="block mb-1">⚠ Eligibility Warnings</strong>`+t.map(e=>`<p class="text-sm">• ${y(e)}</p>`).join(``),u.classList.remove(`hidden`)):u.classList.add(`hidden`),t}async function M(e,t,n){if(e.preventDefault(),j(t).length){x(`Please resolve all eligibility warnings first.`,`error`);return}if(t.querySelector(`#captchaInput`).value.trim()!==O){x(`Captcha answer is incorrect.`,`error`);return}let r=t.querySelector(`#postSelect`).value,i=t.querySelector(`[name="gender"]:checked`)?.value,a=t.querySelector(`#dob-day`).value,o=t.querySelector(`#dob-month`).value,s=t.querySelector(`#dob-year`).value;if(!i){x(`Please select a gender for the candidate.`,`error`);return}if(!a||!o||!s){x(`Please enter a complete date of birth.`,`error`);return}let c=[`candidate`,`proposer`,`seconder`].map(e=>t.querySelector(`#serial-${e}`).value.trim()),l=c.map(e=>w.find(t=>String(t[`Nominal Roll Serial Number`])===e));if(l.some(e=>!e)){x(`One or more serial numbers are invalid.`,`error`);return}let d=t.querySelector(`#submitBtn`);b(d,!0,`Generate &amp; Preview Nomination`);try{let e={post:r,gender:i,dob:g(a,o,s),candidateSerial:c[0],proposerSerial:c[1],seconderSerial:c[2]};window.ADMIN_BYPASS_PWD&&(e.password=window.ADMIN_BYPASS_PWD);let d=await u.submitNomination(e);ne(t,d.id,{post:r,gender:i,day:a,month:o,year:s,students:l},n),x(`Nomination submitted! ID: ${d.id}`,`success`)}catch(e){x(`Submission failed: ${e.message}`,`error`)}finally{b(d,!1,`Generate &amp; Preview Nomination`)}}function ne(e,t,{post:n,gender:r,day:i,month:a,year:o,students:s},c){let[l,u,f]=s,p=g(i,a,o),m=_(i,a,o),h=d(p),y=e.querySelector(`#previewSection`);e.querySelector(`#printZone`).innerHTML=N(t,n,r,m,h,l,u,f,``,c),y.classList.remove(`hidden`),y.scrollIntoView({behavior:`smooth`}),y.querySelector(`#printBtn`).addEventListener(`click`,()=>{v(e.querySelector(`#printZone`).innerHTML)}),y.querySelector(`#newNomBtn`).addEventListener(`click`,()=>k(e.closest(`#app`)))}function N(e,t,r,i,a,o,s,c,l=``,u=`2026`){let d=m();return`
   <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-4">
     <div class="flex justify-between items-start text-sm">
       <div>
@@ -234,9 +234,9 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <h2 class="text-center font-bold text-xl text-white border-y border-white/10 py-3">NOMINATION PAPER</h2>
     <p class="text-sm"><span class="font-semibold text-slate-400 w-40 inline-block">Post Applied For:</span> <strong class="text-white">${y(t)}</strong></p>
     <div class="space-y-3">
-      ${N(`Candidate`,o,r,i,a)}
-      ${N(`Proposer`,s)}
-      ${N(`Seconder`,c)}
+      ${P(`Candidate`,o,r,i,a)}
+      ${P(`Proposer`,s)}
+      ${P(`Seconder`,c)}
     </div>
     <div class="border-t border-white/10 pt-6 text-center space-y-3">
       <h3 class="font-bold text-white">Consent of Candidate</h3>
@@ -250,7 +250,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <div class="border-t border-white/10 pt-2 text-right">
       <p class="text-[10px] text-slate-500 font-mono">Ref ID: ${y(e)}</p>
     </div>
-  </div>`}function N(e,t,n=null,r=null,i=null){return t?`
+  </div>`}function P(e,t,n=null,r=null,i=null){return t?`
   <div class="glass rounded-lg p-4 text-sm space-y-1">
     <h3 class="font-bold text-white uppercase text-xs tracking-widest mb-2 border-b border-white/10 pb-1">${e} Details</h3>
     <div class="grid grid-cols-2 gap-x-4 gap-y-1">
@@ -267,7 +267,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       <span>Date: ______ / ______ / ________</span>
       <span>Signature: _______________</span>
     </div>`}
-  </div>`:``}function ie(e,t,n=`2026`){return`
+  </div>`:``}function re(e,t,n=`2026`){return`
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-50 border-b border-white/10 glass">
       <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
@@ -284,7 +284,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </div>
     </header>
     <main class="max-w-4xl mx-auto px-4 py-8">${t}</main>
-  </div>`}async function ae(e){e.innerHTML=se(`Find My Nomination`,`
+  </div>`}async function ie(e){e.innerHTML=oe(`Find My Nomination`,`
     <div class="glass rounded-2xl p-8 max-w-lg mx-auto">
       <div class="text-center mb-8">
         <div class="text-5xl mb-3">🔍</div>
@@ -300,16 +300,16 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </div>
       <div id="resultArea" class="mt-8"></div>
     </div>
-  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));let t=e.querySelector(`#searchBtn`);t.addEventListener(`click`,async()=>{let n=e.querySelector(`#searchId`).value.trim();if(n.length!==10||!/^\d+$/.test(n)){x(`Please enter a valid 10-digit numeric ID.`,`error`);return}b(t,!0,`🔍 Find Nomination`);try{let t=await u.getNomination(n);oe(e.querySelector(`#resultArea`),t,n)}catch(t){e.querySelector(`#resultArea`).innerHTML=`<div class="alert alert-error mt-4">❌ ${y(t.message)}</div>`}finally{b(t,!1,`🔍 Find Nomination`)}})}function oe(e,t,n){let r=t.dob||`N/A`,i=new Date(t.dob);isNaN(i.getTime())||(r=`${String(i.getDate()).padStart(2,`0`)}/${String(i.getMonth()+1).padStart(2,`0`)}/${i.getFullYear()}`);let a=d(t.dob);e.innerHTML=`
+  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));let t=e.querySelector(`#searchBtn`);t.addEventListener(`click`,async()=>{let n=e.querySelector(`#searchId`).value.trim();if(n.length!==10||!/^\d+$/.test(n)){x(`Please enter a valid 10-digit numeric ID.`,`error`);return}b(t,!0,`🔍 Find Nomination`);try{let t=await u.getNomination(n);ae(e.querySelector(`#resultArea`),t,n)}catch(t){e.querySelector(`#resultArea`).innerHTML=`<div class="alert alert-error mt-4">❌ ${y(t.message)}</div>`}finally{b(t,!1,`🔍 Find Nomination`)}})}function ae(e,t,n){let r=t.dob||`N/A`,i=new Date(t.dob);isNaN(i.getTime())||(r=`${String(i.getDate()).padStart(2,`0`)}/${String(i.getMonth()+1).padStart(2,`0`)}/${i.getFullYear()}`);let a=d(t.dob);e.innerHTML=`
     <div class="space-y-4">
       <div class="alert alert-success">✅ Nomination found! Status: <strong>${y(t.status)}</strong></div>
       <div id="printZone" class="print-zone">
-        ${M(n,t.post,t.gender,r,a,t.candidate,t.proposer,t.seconder,t.status)}
+        ${N(n,t.post,t.gender,r,a,t.candidate,t.proposer,t.seconder,t.status)}
       </div>
       <div class="flex gap-3 no-print">
         <button id="printBtn" class="btn btn-success flex-1">🖨️ Print</button>
       </div>
-    </div>`,e.querySelector(`#printBtn`).addEventListener(`click`,()=>{v(e.querySelector(`#printZone`).innerHTML)})}function se(e,t){return`
+    </div>`,e.querySelector(`#printBtn`).addEventListener(`click`,()=>{v(e.querySelector(`#printZone`).innerHTML)})}function oe(e,t){return`
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
       <div class="max-w-4xl mx-auto px-6 py-3 flex items-center gap-4">
@@ -319,9 +319,9 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </div>
     </header>
     <main class="max-w-4xl mx-auto px-4 py-8">${t}</main>
-  </div>`}async function ce(e){e.innerHTML=le(`Valid Nominations List`,`
+  </div>`}async function se(e){e.innerHTML=le(`Valid Nominations List`,`
     <div class="text-center py-20"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Valid Nominations...</p></div>
-  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));try{let t=await u.getValidNominations();P(e.querySelector(`main`),t)}catch(t){e.querySelector(`main`).innerHTML=`<div class="alert alert-warning text-center py-10 shadow-xl">${y(t.message)}</div>`}}function P(e,t){if(!t||t.length===0){e.innerHTML=`
+  `),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));try{let t=await u.getValidNominations();ce(e.querySelector(`main`),t)}catch(t){e.querySelector(`main`).innerHTML=`<div class="alert alert-warning text-center py-10 shadow-xl">${y(t.message)}</div>`}}function ce(e,t){if(!t||t.length===0){e.innerHTML=`
       <div class="glass rounded-3xl p-20 text-center border-dashed border-white/10">
         <div class="text-6xl mb-6">📋</div>
         <h2 class="text-2xl font-bold text-white mb-2">List Not Published</h2>
@@ -628,6 +628,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         <div class="border-t border-white/10 my-2"></div>
         ${B(`counting`,`🧮`,`Counting Setup`,t)}
         ${B(`results-entry`,`📥`,`Results Entry`,t)}
+        ${B(`results`,`🏆`,`Election Results`,t)}
         <div class="border-t border-white/10 my-2"></div>
         ${B(`public`,`🌐`,`Public Portal`,t)}
         <div class="border-t border-white/10 my-2"></div>
@@ -958,12 +959,12 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     `;let c=window.open(``,`_blank`);c.document.write(`<!DOCTYPE html><html><head><title>Print List</title><style>
       @page{size:A4;margin:20mm}
       body{font-family:Arial,sans-serif;line-height:1.4}
-    </style></head><body>${s}<script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`),c.document.close()};e.querySelector(`#btnPrintValid`).addEventListener(`click`,()=>s(`valid`)),e.querySelector(`#btnPrintFinal`).addEventListener(`click`,()=>s(`final`)),e.querySelector(`#publishValidBtn`)?.addEventListener(`click`,async t=>{let a=t.currentTarget;if(confirm(`Are you sure you want to publish the valid nominations list? This will be visible to all students.`)){b(a,!0,`📢 Publish Valid Nominations List`);try{await u.adminPublishValidList(i),x(`Valid nominations list published successfully!`,`success`),H(e,{validListPublished:`true`,finalListPublished:o?`true`:`false`},n,r,i)}catch(e){x(`Failed: ${e.message}`,`error`),b(a,!1,`📢 Publish Valid Nominations List`)}}}),e.querySelector(`#publishFinalBtn`)?.addEventListener(`click`,async t=>{let a=t.currentTarget;if(confirm(`Are you sure you want to publish the final nominations list?`)){b(a,!0,`📢 Publish Final Nominations List`);try{await u.adminPublishFinalList(i),x(`Final nominations list published successfully!`,`success`),H(e,{validListPublished:`true`,finalListPublished:`true`},n,r,i)}catch(e){x(`Failed: ${e.message}`,`error`),b(a,!1,`📢 Publish Final Nominations List`)}}})}async function Te(e){let t=R();if(t){z(e,`posts`,`
+    </style></head><body>${s}<script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`),c.document.close()};e.querySelector(`#btnPrintValid`).addEventListener(`click`,()=>s(`valid`)),e.querySelector(`#btnPrintFinal`).addEventListener(`click`,()=>s(`final`)),e.querySelector(`#publishValidBtn`)?.addEventListener(`click`,async t=>{let a=t.currentTarget;if(confirm(`Are you sure you want to publish the valid nominations list? This will be visible to all students.`)){b(a,!0,`📢 Publish Valid Nominations List`);try{await u.adminPublishValidList(i),x(`Valid nominations list published successfully!`,`success`),H(e,{validListPublished:`true`,finalListPublished:o?`true`:`false`},n,r,i)}catch(e){x(`Failed: ${e.message}`,`error`),b(a,!1,`📢 Publish Valid Nominations List`)}}}),e.querySelector(`#publishFinalBtn`)?.addEventListener(`click`,async t=>{let a=t.currentTarget;if(confirm(`Are you sure you want to publish the final nominations list?`)){b(a,!0,`📢 Publish Final Nominations List`);try{await u.adminPublishFinalList(i),x(`Final nominations list published successfully!`,`success`),H(e,{validListPublished:`true`,finalListPublished:`true`},n,r,i)}catch(e){x(`Failed: ${e.message}`,`error`),b(a,!1,`📢 Publish Final Nominations List`)}}})}async function U(e){let t=R();if(t){z(e,`posts`,`
     <div class="text-center py-16">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 mt-4 text-sm">Loading posts...</p>
     </div>
-  `);try{let r=await u.adminGetPosts(t).catch(()=>null);(!Array.isArray(r)||r.length===0)&&(r=n.DEFAULT_POSTS),U(e.querySelector(`#adminMain`),r,t)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function U(e,t,n){e.innerHTML=`
+  `);try{let r=await u.adminGetPosts(t).catch(()=>null);(!Array.isArray(r)||r.length===0)&&(r=n.DEFAULT_POSTS),Te(e.querySelector(`#adminMain`),r,t)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Te(e,t,n){e.innerHTML=`
     <div class="page-enter space-y-6">
       <div class="flex items-center justify-between">
         <div>
@@ -1871,7 +1872,132 @@ This action CANNOT be undone.
 Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelector(`#wipeStatus`);i.innerHTML=``;try{await u.adminWipeData(r),n.querySelector(`#wipePasswordInput`).value=``,i.innerHTML=`
         <div class="alert mt-3" style="background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #fca5a5;">
           ✅ All transactional data has been wiped. Publish flags reset to false.
-        </div>`,x(`All data wiped successfully.`,`success`)}catch(e){i.innerHTML=`<div class="alert alert-error mt-3">❌ ${y(e.message)}</div>`,x(`Failed: ${e.message}`,`error`)}finally{b(t,!1,`🗑️ Permanently Wipe All Data`)}})}var G=`election_results_cache`,K=`election_results_last_fetch`,q=300*1e3;async function Ie(e){e.innerHTML=`
+        </div>`,x(`All data wiped successfully.`,`success`)}catch(e){i.innerHTML=`<div class="alert alert-error mt-3">❌ ${y(e.message)}</div>`,x(`Failed: ${e.message}`,`error`)}finally{b(t,!1,`🗑️ Permanently Wipe All Data`)}})}async function Ie(e){let t=R();if(t){z(e,`results`,`
+    <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Aggregating results...</p></div>
+  `);try{let[n,r,i,a]=await Promise.all([u.getPosts(),u.getFinalNominations(),u.getResults().catch(()=>[]),u.getPublicSchedule().catch(()=>({}))]);Le(e.querySelector(`#adminMain`),t,n,r.active||[],i,a)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Le(e,t,n,r,i,a){let o=a.electionYear||new Date().getFullYear(),s={};i.forEach(e=>{s[e.Post]||(s[e.Post]={}),s[e.Post][e.CandidateId]||(s[e.Post][e.CandidateId]=0),s[e.Post][e.CandidateId]+=Number(e.Votes)||0});let c=n.map(e=>{let t=r.filter(t=>t.post===e.post),n=s[e.post]||{};if(t.length===1)return{post:e.post,type:`unanimous`,winner:t[0],candidates:t};if(t.length===0)return{post:e.post,type:`no-candidates`};let i=t.map(e=>({...e,votes:n[e.id]||0}));i.sort((e,t)=>t.votes-e.votes);let a=i[0].votes,o=i.filter(e=>e.votes===a&&e.votes>0),c=o.length>1;return{post:e.post,type:`election`,candidates:i,winner:c?null:o[0],isTie:c,totalVotes:Object.values(n).reduce((e,t)=>e+t,0),nota:n.NOTA||0,invalid:n.INVALID||0}});e.innerHTML=`
+    <div class="page-enter space-y-6">
+      <div class="flex justify-between items-center bg-white/5 p-6 rounded-2xl border border-white/10">
+        <div>
+          <h3 class="text-2xl font-bold text-white">Election Results Summary</h3>
+          <p class="text-slate-400 text-sm">Post-wise breakdown of votes and winning candidates.</p>
+        </div>
+        <button id="btnPrintOfficial" class="btn btn-primary px-8 flex items-center gap-2">
+          <span>🖨️</span> Print Official Result Sheet
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 gap-6">
+        ${c.map(e=>`
+          <div class="glass rounded-2xl overflow-hidden border border-white/5">
+            <div class="px-6 py-4 bg-white/5 border-b border-white/10 flex justify-between items-center">
+              <h4 class="font-bold text-indigo-400 uppercase tracking-wider text-sm">${y(e.post)}</h4>
+              ${e.type===`unanimous`?`<span class="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">UNANIMOUS</span>`:`<span class="text-xs text-slate-500">${e.type===`election`?e.totalVotes+` total votes`:`No contestants`}</span>`}
+            </div>
+            <div class="p-6">
+              ${e.type===`no-candidates`?`<p class="text-slate-500 italic text-sm text-center">No valid nominations received for this post.</p>`:`
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="text-slate-500 text-xs text-left border-b border-white/5">
+                      <th class="pb-2 font-medium">Candidate Name</th>
+                      <th class="pb-2 font-medium text-center">Class</th>
+                      <th class="pb-2 font-medium text-right">Votes</th>
+                      <th class="pb-2 font-medium text-center w-24">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-white/5">
+                    ${e.candidates.map(t=>{let n=e.winner&&e.winner.id===t.id;return`
+                        <tr>
+                          <td class="py-3 font-bold text-white">${y(t.candidateName)}</td>
+                          <td class="py-3 text-slate-400 text-center text-xs">${y(t.candidateClass)}</td>
+                          <td class="py-3 text-right font-mono text-lg ${n?`text-emerald-400`:`text-slate-300`}">
+                            ${e.type===`unanimous`?`—`:t.votes}
+                          </td>
+                          <td class="py-3 text-center">
+                            ${n?`<span class="text-emerald-400 text-[10px] font-black border border-emerald-400/30 px-2 py-0.5 rounded">WON</span>`:e.type===`election`?`<span class="text-slate-600 text-[10px]">LOST</span>`:``}
+                          </td>
+                        </tr>
+                      `}).join(``)}
+                  </tbody>
+                </table>
+                `}
+            </div>
+          </div>
+        `).join(``)}
+      </div>
+    </div>
+  `,e.querySelector(`#btnPrintOfficial`).addEventListener(`click`,()=>{let e=`
+      <style>
+        @media print { .no-print { display: none; } }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
+        .official-sheet { max-w: 800px; margin: 40px auto; padding: 40px; border: 1px solid #ddd; }
+        .header { text-align: center; border-bottom: 3px double #000; padding-bottom: 20px; margin-bottom: 30px; }
+        .header h1 { margin: 0; font-size: 24px; text-transform: uppercase; }
+        .header h2 { margin: 5px 0 0 0; font-size: 16px; color: #555; }
+        .result-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+        .result-table th, .result-table td { border: 1px solid #000; padding: 10px; font-size: 13px; }
+        .result-table th { background: #f2f2f2; text-align: left; }
+        .post-header { background: #eee; font-weight: bold; font-size: 14px; text-transform: uppercase; }
+        .winner-row { background: #fafff9; font-weight: bold; }
+        .footer { margin-top: 80px; display: flex; justify-content: space-between; }
+        .sig-box { width: 200px; border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 12px; font-weight: bold; }
+      </style>
+      <div class="official-sheet">
+        <div class="header">
+          <h1>College Union Election ${o}</h1>
+          <h2>GOVERNMENT VICTORIA COLLEGE PALAKKAD</h2>
+          <h1 style="font-size: 18px; margin-top: 15px;">Official Result Notification</h1>
+        </div>
+
+        <p style="font-size: 13px; margin-bottom: 20px;">
+          The following candidates are hereby declared to have been duly elected to the respective posts of the College Union for the academic year ${o}, 
+          based on the counting of votes held on ${new Date().toLocaleDateString(`en-IN`,{day:`numeric`,month:`long`,year:`numeric`})}.
+        </p>
+
+        <table class="result-table">
+          <thead>
+            <tr>
+              <th>Office / Post</th>
+              <th>Name of Candidate</th>
+              <th style="text-align: center;">Votes</th>
+              <th>Status / Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${c.map(e=>e.type===`no-candidates`?``:`
+                <tr class="post-header">
+                  <td colspan="4">${y(e.post)}</td>
+                </tr>
+                ${e.candidates.map(t=>{let n=e.winner&&e.winner.id===t.id;return`
+                    <tr class="${n?`winner-row`:``}">
+                      <td style="padding-left: 25px;">${y(e.post)}</td>
+                      <td>${y(t.candidateName)}</td>
+                      <td style="text-align: center;">${e.type===`unanimous`?`—`:t.votes}</td>
+                      <td>${n?e.type===`unanimous`?`Elected Unanimously`:`WON`:``}</td>
+                    </tr>
+                  `}).join(``)}
+              `).join(``)}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          <div>
+            <p style="font-size: 12px;">Date: ${new Date().toLocaleDateString()}</p>
+            <p style="font-size: 12px;">Place: Palakkad</p>
+          </div>
+          <div class="sig-box">
+            RETURNING OFFICER<br>
+            College Union Election ${o}
+          </div>
+        </div>
+      </div>
+    `,t=window.open(``,`_blank`);t.document.write(`
+      <html>
+        <head><title>Official Result Sheet - ${o}</title></head>
+        <body onload="window.print(); window.close();">
+          ${e}
+        </body>
+      </html>
+    `),t.document.close()})}var G=`election_results_cache`,K=`election_results_last_fetch`,q=300*1e3;async function Re(e){e.innerHTML=`
     <div class="page-enter min-h-screen">
       <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
         <div class="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
@@ -1942,9 +2068,9 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
         </div>
       `}),c+=`</div>`,c===`<div class="space-y-12"></div>`?e.innerHTML=`
         <div class="alert alert-info text-center">Results backend is initialized, but no votes have been aggregated for the configured posts yet.</div>
-      `:e.innerHTML=c}catch(t){e.innerHTML=`<div class="alert alert-error">❌ Failed to load results: ${y(t.message)}</div>`}}async function Le(e){e.innerHTML=`
+      `:e.innerHTML=c}catch(t){e.innerHTML=`<div class="alert alert-error">❌ Failed to load results: ${y(t.message)}</div>`}}async function ze(e){e.innerHTML=`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading nominal roll...</p></div>
-  `;try{let[t,n]=await Promise.all([u.getNominalRoll(),u.getSettings()]);Re(e,t,n)}catch(t){e.innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}function Re(e,t,n){let r=n.nominalRollFinalized===`true`,i=[...t],a=``,o=()=>{let t=i.filter(e=>[e.NAME,e.CLASS,e[`ADMISION NO`],e[`Nominal Roll Serial Number`]].some(e=>String(e||``).toLowerCase().includes(a.toLowerCase())));e.innerHTML=`
+  `;try{let[t,n]=await Promise.all([u.getNominalRoll(),u.getSettings()]);Be(e,t,n)}catch(t){e.innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}function Be(e,t,n){let r=n.nominalRollFinalized===`true`,i=[...t],a=``,o=()=>{let t=i.filter(e=>[e.NAME,e.CLASS,e[`ADMISION NO`],e[`Nominal Roll Serial Number`]].some(e=>String(e||``).toLowerCase().includes(a.toLowerCase())));e.innerHTML=`
       <div class="page-enter space-y-6">
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
@@ -2059,7 +2185,7 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
     </html>
   `),c.document.close()}async function X(e){let t=R();if(t){z(e,`nominalRoll`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading nominal roll...</p></div>
-  `);try{let[n,r]=await Promise.all([u.getNominalRoll(),u.getSettings()]);ze(e.querySelector(`#adminMain`),t,n,r)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function ze(e,t,n,r){let i=r.nominalRollFinalized===`true`,a=[...n],o=``,s=[...new Set(n.map(e=>String(e.CLASS).trim()))].sort(),c=[...new Set(n.map(e=>String(e.Dept||`–`).trim()))].sort(),l=()=>{let n=a.filter(e=>[e.NAME,e.CLASS,e[`ADMISION NO`],e[`Nominal Roll Serial Number`]].some(e=>String(e||``).toLowerCase().includes(o.toLowerCase())));e.innerHTML=`
+  `);try{let[n,r]=await Promise.all([u.getNominalRoll(),u.getSettings()]);Ve(e.querySelector(`#adminMain`),t,n,r)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Ve(e,t,n,r){let i=r.nominalRollFinalized===`true`,a=[...n],o=``,s=[...new Set(n.map(e=>String(e.CLASS).trim()))].sort(),c=[...new Set(n.map(e=>String(e.Dept||`–`).trim()))].sort(),l=()=>{let n=a.filter(e=>[e.NAME,e.CLASS,e[`ADMISION NO`],e[`Nominal Roll Serial Number`]].some(e=>String(e||``).toLowerCase().includes(o.toLowerCase())));e.innerHTML=`
       <div class="page-enter space-y-6">
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
@@ -2229,9 +2355,9 @@ Are you absolutely sure?`)){b(n.target,!0,`Finalizing...`);try{await u.adminFina
         <script>window.print();<\/script>
       </body>
     </html>
-  `),c.document.close()}async function Be(e){let t=R();if(t){z(e,`schedule`,`
+  `),c.document.close()}async function He(e){let t=R();if(t){z(e,`schedule`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading schedule...</p></div>
-  `);try{let n=await u.getPublicSchedule();Ve(e.querySelector(`#adminMain`),t,n)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Ve(e,t,n){let r=e=>e?new Date(e).toISOString().slice(0,16):``;e.innerHTML=`
+  `);try{let n=await u.getPublicSchedule();Ue(e.querySelector(`#adminMain`),t,n)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Ue(e,t,n){let r=e=>e?new Date(e).toISOString().slice(0,16):``;e.innerHTML=`
     <div class="page-enter space-y-6 max-w-4xl">
       <div>
         <h3 class="text-xl font-bold text-white">Election Schedule</h3>
@@ -2297,7 +2423,7 @@ Are you absolutely sure?`)){b(n.target,!0,`Finalizing...`);try{await u.adminFina
         </div>
       </div>
     </div>
-  `;let i=()=>{let t=new Date,n=e.querySelector(`#nominationDeadline`).value,r=e.querySelector(`#withdrawalStart`).value,i=e.querySelector(`#withdrawalEnd`).value,a=n&&t>new Date(n)?`<span class="text-rose-400">CLOSED</span>`:`<span class="text-emerald-400">OPEN</span>`;e.querySelector(`#statusNom`).innerHTML=a;let o=`<span class="text-slate-500">Not Set</span>`;r&&i&&(o=t<new Date(r)?`<span class="text-amber-400">PENDING (Starts soon)</span>`:t>new Date(i)?`<span class="text-rose-400">CLOSED</span>`:`<span class="text-emerald-400">ACTIVE (Open now)</span>`),e.querySelector(`#statusWith`).innerHTML=o};i(),e.querySelectorAll(`input`).forEach(e=>e.onchange=i),e.querySelector(`#btnSaveSchedule`).onclick=async n=>{let r={electionYear:e.querySelector(`#electionYear`).value,notificationDate:e.querySelector(`#notificationDate`).value,nominationDeadline:e.querySelector(`#nominationDeadline`).value?new Date(e.querySelector(`#nominationDeadline`).value).toISOString():``,withdrawalStart:e.querySelector(`#withdrawalStart`).value?new Date(e.querySelector(`#withdrawalStart`).value).toISOString():``,withdrawalEnd:e.querySelector(`#withdrawalEnd`).value?new Date(e.querySelector(`#withdrawalEnd`).value).toISOString():``};b(n.target,!0,`Saving Schedule...`);try{await u.adminSaveSchedule(t,r),x(`Election schedule updated successfully!`,`success`),i()}catch(e){x(e.message,`error`)}finally{b(n.target,!1,`💾 Save Election Schedule`)}}}async function He(e){let t=R();t&&(window.ADMIN_BYPASS_PWD=t,z(e,`direct-nomination`,`
+  `;let i=()=>{let t=new Date,n=e.querySelector(`#nominationDeadline`).value,r=e.querySelector(`#withdrawalStart`).value,i=e.querySelector(`#withdrawalEnd`).value,a=n&&t>new Date(n)?`<span class="text-rose-400">CLOSED</span>`:`<span class="text-emerald-400">OPEN</span>`;e.querySelector(`#statusNom`).innerHTML=a;let o=`<span class="text-slate-500">Not Set</span>`;r&&i&&(o=t<new Date(r)?`<span class="text-amber-400">PENDING (Starts soon)</span>`:t>new Date(i)?`<span class="text-rose-400">CLOSED</span>`:`<span class="text-emerald-400">ACTIVE (Open now)</span>`),e.querySelector(`#statusWith`).innerHTML=o};i(),e.querySelectorAll(`input`).forEach(e=>e.onchange=i),e.querySelector(`#btnSaveSchedule`).onclick=async n=>{let r={electionYear:e.querySelector(`#electionYear`).value,notificationDate:e.querySelector(`#notificationDate`).value,nominationDeadline:e.querySelector(`#nominationDeadline`).value?new Date(e.querySelector(`#nominationDeadline`).value).toISOString():``,withdrawalStart:e.querySelector(`#withdrawalStart`).value?new Date(e.querySelector(`#withdrawalStart`).value).toISOString():``,withdrawalEnd:e.querySelector(`#withdrawalEnd`).value?new Date(e.querySelector(`#withdrawalEnd`).value).toISOString():``};b(n.target,!0,`Saving Schedule...`);try{await u.adminSaveSchedule(t,r),x(`Election schedule updated successfully!`,`success`),i()}catch(e){x(e.message,`error`)}finally{b(n.target,!1,`💾 Save Election Schedule`)}}}async function We(e){let t=R();t&&(window.ADMIN_BYPASS_PWD=t,z(e,`direct-nomination`,`
     <div id="adminFormContainer" class="p-6">
        <div class="alert alert-info mb-6">
          🛡️ <strong>Admin Direct Entry Mode:</strong> Deadlines and window restrictions are bypassed.
@@ -2319,4 +2445,4 @@ Are you absolutely sure?`)){b(n.target,!0,`Finalizing...`);try{await u.adminFina
       and replace <code style="background:rgba(0,0,0,0.3);padding:0.1rem 0.4rem;border-radius:4px;">YOUR_SCRIPT_ID</code>
       with your Google Apps Script Web App URL, then rebuild &amp; push.
     </div>
-  `),document.getElementById(`app`).style.marginTop=`48px`);var $=e=>t=>{Q.innerHTML=``,e(Q,t)};o.on(`/`,$(S)).on(`/submit`,$(k)).on(`/find`,$(ae)).on(`/valid-list`,$(ce)).on(`/final-list`,$(ue)).on(`/withdraw`,$(pe)).on(`/results`,$(Ie)).on(`/nominal-roll`,$(Le)).on(`/admin`,$(ve)).on(`/admin/dashboard`,$(ye)).on(`/admin/verify`,$(be)).on(`/admin/withdrawals`,$(Se)).on(`/admin/publish`,$(we)).on(`/admin/posts`,$(Te)).on(`/admin/ballots`,$(Pe)).on(`/admin/booths`,$(De)).on(`/admin/counting`,$(ke)).on(`/admin/results-entry`,$(Me)).on(`/admin/nominal-roll`,$(X)).on(`/admin/schedule`,$(Be)).on(`/admin/direct-nomination`,$(He)).on(`/admin/testing`,$(Fe)).setDefault(`/`),document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-nav]`);t&&(e.preventDefault(),o.navigate(t.dataset.nav))}),o.start();
+  `),document.getElementById(`app`).style.marginTop=`48px`);var $=e=>t=>{Q.innerHTML=``,e(Q,t)};o.on(`/`,$(S)).on(`/submit`,$(k)).on(`/find`,$(ie)).on(`/valid-list`,$(se)).on(`/final-list`,$(ue)).on(`/withdraw`,$(pe)).on(`/results`,$(Re)).on(`/nominal-roll`,$(ze)).on(`/admin`,$(ve)).on(`/admin/dashboard`,$(ye)).on(`/admin/verify`,$(be)).on(`/admin/withdrawals`,$(Se)).on(`/admin/publish`,$(we)).on(`/admin/posts`,$(U)).on(`/admin/ballots`,$(Pe)).on(`/admin/booths`,$(De)).on(`/admin/counting`,$(ke)).on(`/admin/results-entry`,$(Me)).on(`/admin/results`,$(Ie)).on(`/admin/nominal-roll`,$(X)).on(`/admin/schedule`,$(He)).on(`/admin/direct-nomination`,$(We)).on(`/admin/testing`,$(Fe)).setDefault(`/`),document.addEventListener(`click`,e=>{let t=e.target.closest(`[data-nav]`);t&&(e.preventDefault(),o.navigate(t.dataset.nav))}),o.start();

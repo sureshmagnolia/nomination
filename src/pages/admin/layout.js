@@ -52,6 +52,7 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
         <div class="border-t border-white/10 my-2"></div>
         ${navItem('counting',    '🧮', 'Counting Setup',     activeSection)}
         ${navItem('results-entry','📥', 'Results Entry',      activeSection)}
+        ${navItem('results',     '🏆', 'Election Results',    activeSection)}
         <div class="border-t border-white/10 my-2"></div>
         ${navItem('public',      '🌐', 'Public Portal',      activeSection)}
         <div class="border-t border-white/10 my-2"></div>
