@@ -402,7 +402,7 @@ export async function renderAdminBallots(container) {
             <strong>Note:</strong> Rep and Association ballots are numbered <strong>Post-wise</strong> (one post is completed across all assigned booths before starting the next).
           </p>
 
-          <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #4f46e5;">1. General Union Ballots (Series: 1, 2, 3...)</h3>
+          <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #4f46e5;">1. General Union Ballots (Series: G1, G2, G3...)</h3>
           <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
             <thead>
               <tr style="background: #f8fafc;">
@@ -418,16 +418,16 @@ export async function renderAdminBallots(container) {
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 10px;">Booth ${s.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${s.start}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${s.end}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${s.start}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${s.end}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${Math.ceil(s.count / 50)} (of 50)</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
                 <td style="border: 1px solid #ddd; padding: 10px;">TOTAL GENERAL</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${genSl - 1}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">1</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${genSl - 1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G1</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G${genSl - 1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${Math.ceil((genSl - 1) / 50)}</td>
               </tr>
             </tbody>

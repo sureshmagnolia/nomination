@@ -1243,7 +1243,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                   <tr style="font-weight:bold">
                     <td>General Union Posts</td>
                     <td>${r}</td>
-                    <td style="text-align:right">${a.general.start} - ${a.general.end}</td>
+                    <td style="text-align:right">G${a.general.start} - G${a.general.end}</td>
                   </tr>
                   ${a.reps.map(e=>`
                     <tr>
@@ -1682,7 +1682,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <strong>Note:</strong> Rep and Association ballots are numbered <strong>Post-wise</strong> (one post is completed across all assigned booths before starting the next).
           </p>
 
-          <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #4f46e5;">1. General Union Ballots (Series: 1, 2, 3...)</h3>
+          <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #4f46e5;">1. General Union Ballots (Series: G1, G2, G3...)</h3>
           <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
             <thead>
               <tr style="background: #f8fafc;">
@@ -1698,16 +1698,16 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 10px;">Booth ${e.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${e.start}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${e.end}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${e.start}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${e.end}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${Math.ceil(e.count/50)} (of 50)</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
                 <td style="border: 1px solid #ddd; padding: 10px;">TOTAL GENERAL</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${f-1}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">1</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${f-1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G1</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G${f-1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${Math.ceil((f-1)/50)}</td>
               </tr>
             </tbody>

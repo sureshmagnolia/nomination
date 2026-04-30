@@ -416,7 +416,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                   <tr style="font-weight:bold">
                     <td>General Union Posts</td>
                     <td>${totalVoters}</td>
-                    <td style="text-align:right">${ballotRanges.general.start} - ${ballotRanges.general.end}</td>
+                    <td style="text-align:right">G${ballotRanges.general.start} - G${ballotRanges.general.end}</td>
                   </tr>
                   ${ballotRanges.reps.map(r => `
                     <tr>
