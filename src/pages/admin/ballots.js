@@ -516,4 +516,3 @@ export async function renderAdminBallots(container) {
     btn.onclick = () => handlePreview(btn.dataset.type);
   });
 }
-}

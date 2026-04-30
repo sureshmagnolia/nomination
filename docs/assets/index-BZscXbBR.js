@@ -402,7 +402,14 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <div class="glass rounded-2xl overflow-hidden shadow-2xl border border-white/5">
             <div class="px-6 py-4 bg-gradient-to-r from-emerald-500/10 to-indigo-500/5 border-b border-white/10 flex justify-between items-center">
               <h3 class="font-bold text-emerald-400 text-sm uppercase tracking-widest">${y(e)}</h3>
-              <span class="text-[10px] text-slate-500 font-mono">${t.length} Approved</span>
+              <div class="flex items-center gap-3">
+                ${t.length===1?`
+                  <span class="badge badge-valid bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 text-[10px] animate-pulse">
+                    🏆 ELECTED UNANIMOUSLY
+                  </span>
+                `:``}
+                <span class="text-[10px] text-slate-500 font-mono">${t.length} Approved</span>
+              </div>
             </div>
             <div class="overflow-x-auto">
               <table class="data-table">
@@ -1051,7 +1058,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </td>
     </tr>`).join(``):`<tr><td colspan="7" class="text-center text-slate-500 py-8">No posts configured.</td></tr>`,r.querySelectorAll(`.delete-post-btn`).forEach(t=>{t.addEventListener(`click`,async()=>{let r=t.dataset.name;if(confirm(`Delete post "${r}"? This cannot be undone.`)){t.disabled=!0;try{await u.adminDeletePost(n,r),x(`Post "${r}" deleted.`,`success`),W(e,await u.adminGetPosts(n),n)}catch(e){x(`Failed: ${e.message}`,`error`),t.disabled=!1}}})});let i=e.querySelector(`#postFormWrap`);r.querySelectorAll(`.edit-post-btn`).forEach(n=>{n.addEventListener(`click`,()=>{let r=t[parseInt(n.dataset.idx)];e.querySelector(`#postFormTitle`).textContent=`Edit Post`,e.querySelector(`#pfPost`).value=r.post,e.querySelector(`#pfYear`).value=r.yearRestriction||``,e.querySelector(`#pfFemale`).checked=!!r.femaleOnly,e.querySelector(`#pfFinalYear`).checked=!!r.finalYearIneligible,e.querySelector(`#pfDept`).checked=!!r.deptRestriction,e.querySelector(`#pfOriginalName`).value=r.post,i.classList.remove(`hidden`),i.scrollIntoView({behavior:`smooth`})})})}function Ee(e,t,n){let r=e.querySelector(`#postFormWrap`),i=e.querySelector(`#addPostBtn`),a=e.querySelector(`#cancelPostBtn`),o=e.querySelector(`#savePostBtn`);i.addEventListener(`click`,()=>{e.querySelector(`#postFormTitle`).textContent=`Add New Post`,e.querySelector(`#pfPost`).value=``,e.querySelector(`#pfYear`).value=``,e.querySelector(`#pfFemale`).checked=!1,e.querySelector(`#pfFinalYear`).checked=!1,e.querySelector(`#pfDept`).checked=!1,e.querySelector(`#pfOriginalName`).value=``,r.classList.remove(`hidden`),r.scrollIntoView({behavior:`smooth`})}),a.addEventListener(`click`,()=>r.classList.add(`hidden`)),o.addEventListener(`click`,async()=>{let t=e.querySelector(`#pfPost`).value.trim(),i=e.querySelector(`#pfYear`).value,a=e.querySelector(`#pfFemale`).checked,s=e.querySelector(`#pfFinalYear`).checked,c=e.querySelector(`#pfDept`).checked,l=e.querySelector(`#pfOriginalName`).value;if(!t){x(`Post name is required.`,`error`);return}let d={postName:t,yearRestriction:i,femaleOnly:a,finalYearIneligible:s,deptRestriction:c,originalName:l};b(o,!0,`💾 Save Post`);try{l?(await u.adminUpdatePost(n,d),x(`Post updated successfully!`,`success`)):(await u.adminAddPost(n,d),x(`Post added successfully!`,`success`)),r.classList.add(`hidden`),W(e,await u.adminGetPosts(n),n)}catch(e){x(`Failed: ${e.message}`,`error`)}finally{b(o,!1,`💾 Save Post`)}})}async function De(e){let t=R();if(t){z(e,`booths`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading booth data...</p></div>
-  `);try{let[n,r,i,a]=await Promise.all([u.getNominalRoll(),u.adminGetBooths(t).catch(()=>[]),u.adminGetLocations(t).catch(()=>[]),u.getPosts().catch(()=>[])]);Oe(e.querySelector(`#adminMain`),t,n,r,i,a)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Oe(e,t,r,i,a,o){let s={};r.forEach(e=>{let t=String(e.CLASS||`Unknown`).trim(),n=String(e.Dept||`Unknown`).trim();s[t]||(s[t]={name:t,dept:n,count:0}),s[t].count++});let c=Object.values(s).sort((e,t)=>e.name.localeCompare(t.name)),l=i.length?[...i]:[{boothNumber:1,roomName:``,classes:[]}],d=[...a],f=!0,p=()=>{l.forEach(e=>e.totalStudents=0);let n=[];c.forEach(e=>{let t=l.find(t=>t.classes.includes(e.name));t?t.totalStudents+=e.count:n.push(e)});let i=window.scrollY;e.innerHTML=`
+  `);try{let[n,r,i,a,o]=await Promise.all([u.getNominalRoll(),u.adminGetBooths(t).catch(()=>[]),u.adminGetLocations(t).catch(()=>[]),u.getPosts().catch(()=>[]),u.getFinalNominations().catch(()=>({active:[]}))]);Oe(e.querySelector(`#adminMain`),t,n,r,i,a,o)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Oe(e,t,r,i,a,o,s){let c={};r.forEach(e=>{let t=String(e.CLASS||`Unknown`).trim(),n=String(e.Dept||`Unknown`).trim();c[t]||(c[t]={name:t,dept:n,count:0}),c[t].count++});let l=Object.values(c).sort((e,t)=>e.name.localeCompare(t.name)),d=i.length?[...i]:[{boothNumber:1,roomName:``,classes:[]}],f=[...a],p=!0,m=()=>{d.forEach(e=>e.totalStudents=0);let n=[];l.forEach(e=>{let t=d.find(t=>t.classes.includes(e.name));t?t.totalStudents+=e.count:n.push(e)});let i=window.scrollY;e.innerHTML=`
       <div class="page-enter space-y-6">
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
@@ -1076,7 +1083,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <button id="btnSaveLocations" class="btn btn-primary">💾 Save Locations</button>
           </div>
           <div class="flex flex-wrap gap-2">
-            ${d.length?d.map((e,t)=>`
+            ${f.length?f.map((e,t)=>`
               <span class="badge badge-valid bg-white/10 text-white border border-white/20 px-3 py-1 flex items-center gap-2">
                 ${y(e)}
                 <button class="text-red-400 hover:text-red-300 font-bold delete-location" data-idx="${t}">×</button>
@@ -1091,13 +1098,13 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <h4 class="font-bold text-white">Booth Setup</h4>
             <div class="flex gap-2 items-center">
               <label class="text-sm text-slate-300 mb-0">Total Booths:</label>
-              <input type="number" id="numBoothsInput" class="field w-20 py-1" min="1" max="20" value="${l.length}">
+              <input type="number" id="numBoothsInput" class="field w-20 py-1" min="1" max="20" value="${d.length}">
               <button id="btnUpdateBoothCount" class="btn btn-secondary btn-sm">Update</button>
             </div>
           </div>
           
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="boothsContainer">
-            ${l.map((e,t)=>`
+            ${d.map((e,t)=>`
               <div class="border border-white/10 rounded-lg p-3 bg-white/5 shadow-inner">
                 <div class="text-[10px] text-slate-500 font-bold uppercase mb-1 flex justify-between">
                   <span>Booth ${t+1}</span>
@@ -1105,15 +1112,15 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 </div>
                 <select class="field text-sm py-1 mb-2 room-name-select" data-idx="${t}">
                   <option value="">-- Assign Location --</option>
-                  ${d.map(n=>`
+                  ${f.map(n=>`
                     <option value="${y(n)}" 
                       ${e.roomName===n?`selected`:``}
-                      ${l.some((e,r)=>r!==t&&e.roomName===n)?`disabled`:``}
+                      ${d.some((e,r)=>r!==t&&e.roomName===n)?`disabled`:``}
                     >${y(n)}</option>
                   `).join(``)}
                 </select>
                 <div class="text-xs text-slate-500 h-16 overflow-y-auto bg-black/20 rounded p-1">
-                  ${e.classes.length?e.classes.map(e=>`<div class="whitespace-nowrap overflow-hidden text-ellipsis">• ${y(e)} (${s[e]?.count||0})</div>`).join(``):`<em class="opacity-30">No classes assigned</em>`}
+                  ${e.classes.length?e.classes.map(e=>`<div class="whitespace-nowrap overflow-hidden text-ellipsis">• ${y(e)} (${c[e]?.count||0})</div>`).join(``):`<em class="opacity-30">No classes assigned</em>`}
                 </div>
               </div>
             `).join(``)}
@@ -1138,7 +1145,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 <th>Assigned Booth</th>
               </tr></thead>
               <tbody>
-                ${c.map(e=>{let t=l.find(t=>t.classes.includes(e.name));return`
+                ${l.map(e=>{let t=d.find(t=>t.classes.includes(e.name));return`
                     <tr>
                       <td class="text-xs text-slate-400">${y(e.dept)}</td>
                       <td class="font-medium text-sm text-white">${y(e.name)}</td>
@@ -1146,7 +1153,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                       <td>
                         <select class="field w-full md:w-44 py-1 text-xs class-booth-select" data-class="${y(e.name)}">
                           <option value="">-- Unassigned --</option>
-                          ${l.map((e,n)=>`
+                          ${d.map((e,n)=>`
                             <option value="${n}" ${t===e?`selected`:``}>Booth ${n+1}</option>
                           `).join(``)}
                         </select>
@@ -1158,7 +1165,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </div>
         </div>
       </div>
-    `,f||window.scrollTo(0,i),f=!1,e.querySelector(`#btnClearAll`).addEventListener(`click`,()=>{confirm(`Clear all class allotments? Room locations will be kept.`)&&(l.forEach(e=>e.classes=[]),p())}),e.querySelector(`#btnPrintRolls`).addEventListener(`click`,()=>{let t=e.querySelector(`#printArea`);t.innerHTML=m(l,r,o,s);let n=window.open(``,`_blank`);n.document.write(`
+    `,p||window.scrollTo(0,i),p=!1,e.querySelector(`#btnClearAll`).addEventListener(`click`,()=>{confirm(`Clear all class allotments? Room locations will be kept.`)&&(d.forEach(e=>e.classes=[]),m())}),e.querySelector(`#btnPrintRolls`).addEventListener(`click`,()=>{let t=e.querySelector(`#printArea`);t.innerHTML=h(d,r,o,c,s);let n=window.open(``,`_blank`);n.document.write(`
         <html>
           <head>
             <title>Electoral Rolls - Booth Allotment</title>
@@ -1188,7 +1195,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             ${t.innerHTML}
           </body>
         </html>
-      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>l.length)for(let e=l.length;e<t;e++)l.push({boothNumber:e+1,roomName:``,classes:[]});else t<l.length&&(l=l.slice(0,t));p()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{l[e.target.dataset.idx].roomName=e.target.value,p()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!d.includes(t)&&(d.push(t),p())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=d[t];d.splice(t,1),l.forEach(e=>{e.roomName===n&&(e.roomName=``)}),p()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Locations`);try{await u.adminSaveLocations(t,d),x(`Locations saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;l.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&l[parseInt(n,10)].classes.push(t),p()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Configuration`);try{await u.adminSaveBooths(t,l),x(`Booth configuration saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{h(),p(),x(`Auto allotment complete. Please review and save.`,`info`)})},m=(e,t,r,i)=>{let a=``;return e.forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=e.classes.map(e=>i[e]).filter(Boolean),o=r.reduce((e,t)=>e+t.count,0);[...new Set(r.map(e=>e.dept.toUpperCase()))],r.reduce((e,t)=>{let n=t.name.toUpperCase();return[`MA`,`MSC`,`MCOM`,`M.SC`,`M.COM`,`M.A`].some(e=>n.includes(e))?e.add(`PG`):(n.includes(`1ST YEAR`)&&e.add(`1`),n.includes(`2ND YEAR`)&&e.add(`2`),n.includes(`3RD YEAR`)&&e.add(`3`)),e},new Set);let s={general:o,association:{},yearRep:{}};r.forEach(e=>{let t=String(e.dept||`N/A`).trim();s.association[t]=(s.association[t]||0)+e.count;let n=e.name.toUpperCase(),r=``;[`MA`,`MSC`,`MCOM`,`M.SC`,`M.COM`,`M.A`].some(e=>n.includes(e))?r=`PG Representative`:n.includes(`1ST YEAR`)?r=`1st Year Representative`:n.includes(`2ND YEAR`)?r=`2nd Year Representative`:n.includes(`3RD YEAR`)&&(r=`3rd Year Representative`),r&&(s.yearRep[r]=(s.yearRep[r]||0)+e.count)}),a+=`
+      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>d.length)for(let e=d.length;e<t;e++)d.push({boothNumber:e+1,roomName:``,classes:[]});else t<d.length&&(d=d.slice(0,t));m()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{d[e.target.dataset.idx].roomName=e.target.value,m()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!f.includes(t)&&(f.push(t),m())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=f[t];f.splice(t,1),d.forEach(e=>{e.roomName===n&&(e.roomName=``)}),m()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Locations`);try{await u.adminSaveLocations(t,f),x(`Locations saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;d.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&d[parseInt(n,10)].classes.push(t),m()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Configuration`);try{await u.adminSaveBooths(t,d),x(`Booth configuration saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{g(),m(),x(`Auto allotment complete. Please review and save.`,`info`)})},h=(e,t,r,i,a)=>{let o=``,s=a.active||[],c=e=>e.post.toLowerCase().includes(`representative`)||e.post.toLowerCase().includes(`year`),l=e=>e.post.toLowerCase().includes(`association`)||e.post.toLowerCase().includes(`assoc`),u=1,d=1,f=1;return[...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let a=e.classes.map(e=>i[e]).filter(Boolean),p=t.filter(t=>e.classes.includes(String(t.CLASS).trim())),m=p.length,h={general:{start:u,end:u+m-1},reps:[],assocs:[]};u+=m,r.filter(c).forEach(e=>{if(s.filter(t=>t.post===e.post).length<=1)return;let t=e.yearRestriction,n=p.filter(e=>{let n=String(e.CLASS).toUpperCase();return t===`PG`?[`MA`,`MSC`,`MCOM`].some(e=>n.includes(e)):n.includes(t+`ST YEAR`)||n.includes(t+`ND YEAR`)||n.includes(t+`RD YEAR`)||n.includes(t+` YEAR`)});n.length>0&&(h.reps.push({name:e.post,start:d,end:d+n.length-1,count:n.length}),d+=n.length)}),r.filter(l).forEach(e=>{if(s.filter(t=>t.post===e.post).length<=1)return;let t=e.post.replace(`Association Secretary `,``),n=p.filter(e=>String(e.Dept).trim()===t);n.length>0&&(h.assocs.push({name:e.post,start:f,end:f+n.length-1,count:n.length}),f+=n.length)}),o+=`
       <div class="page-break">
         <div class="facing-sheet">
           <div class="header">
@@ -1213,10 +1220,10 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <table class="stats-table" style="font-size: 10px; margin-top: 5px;">
                 <thead><tr><th>Dept</th><th>Class Name</th><th style="text-align:right">Voters</th></tr></thead>
                 <tbody>
-                  ${r.map(e=>`
+                  ${a.map(e=>`
                     <tr><td>${y(e.dept)}</td><td>${y(e.name)}</td><td style="text-align:right">${e.count}</td></tr>
                   `).join(``)}
-                  <tr style="font-weight:bold; background:#f9f9f9"><td colspan="2">TOTAL VOTERS</td><td style="text-align:right">${o}</td></tr>
+                  <tr style="font-weight:bold; background:#f9f9f9"><td colspan="2">TOTAL VOTERS</td><td style="text-align:right">${m}</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1228,24 +1235,28 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 <thead>
                   <tr style="background:#f0f7ff">
                     <th>Ballot Category</th>
-                    <th style="text-align:right">Count</th>
+                    <th>Count</th>
+                    <th style="text-align:right">Serial Ranges</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr style="font-weight:bold">
                     <td>General Union Posts</td>
-                    <td style="text-align:right">${o}</td>
+                    <td>${m}</td>
+                    <td style="text-align:right">${h.general.start} - ${h.general.end}</td>
                   </tr>
-                  ${Object.entries(s.yearRep).map(([e,t])=>`
+                  ${h.reps.map(e=>`
                     <tr>
-                      <td>${y(e)}</td>
-                      <td style="text-align:right">${t}</td>
+                      <td>${y(e.name)}</td>
+                      <td>${e.count}</td>
+                      <td style="text-align:right">R${e.start} - R${e.end}</td>
                     </tr>
                   `).join(``)}
-                  ${Object.entries(s.association).map(([e,t])=>`
+                  ${h.assocs.map(e=>`
                     <tr>
-                      <td>${y(e)} Assoc. Sec.</td>
-                      <td style="text-align:right">${t}</td>
+                      <td>${y(e.name.replace(`Association Secretary `,``))} Assoc.</td>
+                      <td>${e.count}</td>
+                      <td style="text-align:right">A${e.start} - A${e.end}</td>
                     </tr>
                   `).join(``)}
                 </tbody>
@@ -1258,7 +1269,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Presiding Officer</div>
           </div>
         </div>
-      </div>`,r.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),a+=`
+      </div>`,a.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),o+=`
         <div class="page-break">
           <div class="roll-page">
             <div class="roll-header">
@@ -1288,7 +1299,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             </table>
             <div style="margin-top:20px; text-align:right; font-size:10px; color:#999">Total Voters: ${r.length}</div>
           </div>
-        </div>`})}),a},h=()=>{l.forEach(e=>{e.classes=[],e.totalStudents=0});let e={};c.forEach(t=>{e[t.dept]||(e[t.dept]={name:t.dept,total:0,classes:[]}),e[t.dept].classes.push(t),e[t.dept].total+=t.count});let t=l.length,n=r.length/t*1.25;Object.values(e).sort((e,t)=>t.total-e.total).forEach(e=>{l.sort((e,t)=>e.totalStudents-t.totalStudents);let t=l[0];if(t.totalStudents+e.total>n&&e.classes.length>1){l.sort((e,t)=>e.totalStudents-t.totalStudents);let t=l[0],n=l.length>1?l[1]:l[0];[...e.classes].sort((e,t)=>t.count-e.count).forEach(e=>{let r=t.totalStudents<=n.totalStudents?t:n;r.classes.push(e.name),r.totalStudents+=e.count})}else e.classes.forEach(e=>t.classes.push(e.name)),t.totalStudents+=e.total}),l.sort((e,t)=>e.boothNumber-t.boothNumber)};p()}async function ke(e){let t=R();if(t){z(e,`counting`,`
+        </div>`})}),o},g=()=>{d.forEach(e=>{e.classes=[],e.totalStudents=0});let e={};l.forEach(t=>{e[t.dept]||(e[t.dept]={name:t.dept,total:0,classes:[]}),e[t.dept].classes.push(t),e[t.dept].total+=t.count});let t=d.length,n=r.length/t*1.25;Object.values(e).sort((e,t)=>t.total-e.total).forEach(e=>{d.sort((e,t)=>e.totalStudents-t.totalStudents);let t=d[0];if(t.totalStudents+e.total>n&&e.classes.length>1){d.sort((e,t)=>e.totalStudents-t.totalStudents);let t=d[0],n=d.length>1?d[1]:d[0];[...e.classes].sort((e,t)=>t.count-e.count).forEach(e=>{let r=t.totalStudents<=n.totalStudents?t:n;r.classes.push(e.name),r.totalStudents+=e.count})}else e.classes.forEach(e=>t.classes.push(e.name)),t.totalStudents+=e.total}),d.sort((e,t)=>e.boothNumber-t.boothNumber)};m()}async function ke(e){let t=R();if(t){z(e,`counting`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Counting Setup...</p></div>
   `);try{let[n,r,i,a,o]=await Promise.all([u.adminGetCountingMatrix(t).catch(()=>null),u.getPosts(),u.adminGetNominations(t).catch(()=>[]),u.adminGetBooths(t),u.getNominalRoll()]),s=(Array.isArray(i)?i:[]).filter(e=>e.status===`Valid`&&e.withdrawalStatus!==`Approved`);Ae(e.querySelector(`#adminMain`),t,n,r,s,a,o)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Ae(e,t,n,r,i,a,o){if(!a.length){e.innerHTML=`<div class="alert alert-error">❌ No booths configured.</div>`;return}if(!r.length){e.innerHTML=`<div class="alert alert-error">❌ No posts configured.</div>`;return}let s=e=>String(e.post||e.name||``),c=t=>{let{matrix:n,formSerials:o,totalRounds:c,roundLabels:u}=t,d=a.length;e.innerHTML=`
       <div class="page-enter space-y-6">
@@ -1487,7 +1498,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-indigo-500/50 transition-all">
           <div class="text-indigo-400 font-bold flex items-center gap-2">
             <span>🏆</span> General Union (A3)
@@ -1516,6 +1527,16 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             Departmental Association Secretaries. Designed for A5 paper (one post per page).
           </p>
           <button data-type="assoc" class="btn btn-primary w-full py-3 preview-btn">🖨️ Generate Association Ballots</button>
+        </div>
+
+        <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-purple-500/50 transition-all bg-purple-500/5">
+          <div class="text-purple-400 font-bold flex items-center gap-2">
+            <span>📊</span> Printing Summary
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Detailed serial number ranges and book counts for the printing company.
+          </p>
+          <button id="btnGenSummary" class="btn btn-secondary w-full py-3 border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📑 Generate Summary Report</button>
         </div>
       </div>
     </div>
@@ -1587,7 +1608,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           ${e}
         </body>
       </html>
-    `),t.document.close()},i=async(e=`all`)=>{let n,r,i;try{[n,r,i]=await Promise.all([u.adminGetPosts(t),u.getFinalNominations(),u.getPublicSchedule()])}catch(e){throw Error(e.message.includes(`not published`)?`Final List Not Published. Please finalize and publish the list first.`:e.message)}let a=i.electionYear||new Date().getFullYear().toString(),o=r.active||[];if(o.length===0)throw Error(`No active candidates found.`);let s=e=>{let t=e.post.toLowerCase();return t.includes(`representative`)||t.includes(`year`)},c=e=>{let t=e.post.toLowerCase();return t.includes(`association`)||t.includes(`assoc`)},l=e=>!s(e)&&!c(e),d=``;if(e===`all`||e===`general`){let e=n.filter(l);if(e.length>0){d+=`
+    `),t.document.close()},i=async(e=`all`)=>{let n,r,i;try{[n,r,i]=await Promise.all([u.adminGetPosts(t),u.getFinalNominations(),u.getPublicSchedule()])}catch(e){throw Error(e.message.includes(`not published`)?`Final List Not Published. Please finalize and publish the list first.`:e.message)}let a=i.electionYear||new Date().getFullYear().toString(),o=r.active||[];if(o.length===0)throw Error(`No active candidates found.`);let s=e=>{let t=e.post.toLowerCase();return t.includes(`representative`)||t.includes(`year`)},c=e=>{let t=e.post.toLowerCase();return t.includes(`association`)||t.includes(`assoc`)},l=e=>!s(e)&&!c(e),d=n.filter(e=>o.filter(t=>t.post===e.post).length>1),f=``;if(e===`all`||e===`general`){let e=d.filter(l);if(e.length>0){f+=`
           <div class="ballot-container a3 page-break">
             <!-- Counterfoil -->
             <div style="border-bottom: 2px dotted #000; padding-bottom: 20px; margin-bottom: 30px; text-align: center;">
@@ -1612,7 +1633,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <div class="ballot-col" id="col2"></div>
             </div>
           </div>
-        `;let t=[...e].sort((e,t)=>{let n=e.post.toLowerCase(),r=t.post.toLowerCase();return n.includes(`chairman`)&&!n.includes(`vice`)?-1:r.includes(`chairman`)&&!r.includes(`vice`)?1:n.includes(`vice chairman`)?-1:r.includes(`vice chairman`)||n.includes(`university union councillor`)||n.includes(`uuc`)?1:r.includes(`university union councillor`)||r.includes(`uuc`)?-1:0}),n=``,r=``;t.forEach((e,t)=>{let i=o.filter(t=>t.post===e.post);if(i.length===0)return;let a=`
+        `;let t=[...e].sort((e,t)=>{let n=e.post.toLowerCase(),r=t.post.toLowerCase();return n.includes(`chairman`)&&!n.includes(`vice`)?-1:r.includes(`chairman`)&&!r.includes(`vice`)?1:n.includes(`vice chairman`)?-1:r.includes(`vice chairman`)||n.includes(`university union councillor`)||n.includes(`uuc`)?1:r.includes(`university union councillor`)||r.includes(`uuc`)?-1:0}),n=``,r=``;t.forEach((e,t)=>{let i=o.filter(t=>t.post===e.post),a=`
             <div class="post-box">
               <div class="post-title">${y(e.post.toUpperCase())}</div>
               ${i.map((e,t)=>`
@@ -1627,7 +1648,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               `).join(``)}
               <div class="candidate-row"><div class="sl-no">${i.length+1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
             </div>
-          `;t%2==0?n+=a:r+=a}),d=d.replace(`<div class="ballot-col" id="col1"></div>`,`<div class="ballot-col" id="col1">${n}</div>`),d=d.replace(`<div class="ballot-col" id="col2"></div>`,`<div class="ballot-col" id="col2">${r}</div>`)}}let f=n.filter(e=>s(e)||c(e));return(e===`all`||e===`year`||e===`assoc`)&&f.filter(t=>e===`all`||e===`year`&&s(t)||e===`assoc`&&c(t)).forEach(e=>{let t=o.filter(t=>t.post===e.post);t.length!==0&&(d+=`
+          `;t%2==0?n+=a:r+=a}),f=f.replace(`<div class="ballot-col" id="col1"></div>`,`<div class="ballot-col" id="col1">${n}</div>`),f=f.replace(`<div class="ballot-col" id="col2"></div>`,`<div class="ballot-col" id="col2">${r}</div>`)}}let p=d.filter(e=>s(e)||c(e));return(e===`all`||e===`year`||e===`assoc`)&&p.filter(t=>e===`all`||e===`year`&&s(t)||e===`assoc`&&c(t)).forEach(e=>{let t=o.filter(t=>t.post===e.post);f+=`
           <div class="ballot-container a5 page-break">
             <div class="ballot-header">
               <h1>GVC ELECTION ${a}</h1>
@@ -1649,7 +1670,114 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <div class="candidate-row"><div class="sl-no">${t.length+1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
             </div>
           </div>
-        `)}),d},a=async e=>{try{x(`Generating ballots...`,`info`),r(await i(e))}catch(e){x(e.message,`error`)}};n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)})}function Fe(e){let t=R();if(!t)return;z(e,`testing`,`
+        `}),f},a=async e=>{try{x(`Generating ballots...`,`info`),r(await i(e))}catch(e){x(e.message,`error`)}},o=async()=>{try{x(`Calculating ranges...`,`info`);let[e,n,i,a,o]=await Promise.all([u.adminGetBooths(t),u.getNominalRoll(),u.adminGetPosts(t),u.getFinalNominations(),u.getPublicSchedule()]),s=a.active||[],c=o.electionYear||new Date().getFullYear(),l=e=>e.post.toLowerCase().includes(`representative`)||e.post.toLowerCase().includes(`year`),d=e=>e.post.toLowerCase().includes(`association`)||e.post.toLowerCase().includes(`assoc`),f=1,p=1,m=1,h=[];[...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{let t=n.filter(t=>e.classes.includes(String(t.CLASS).trim())),r=t.length;if(r===0)return;let a={number:e.boothNumber,voters:r,general:{start:f,end:f+r-1},reps:[],assocs:[]};f+=r;let o=i.filter(l).filter(e=>!(s.filter(t=>t.post===e.post).length<=1));o.length>0&&o.forEach(e=>{let n=e.yearRestriction,r=t.filter(e=>{let t=String(e.CLASS).toUpperCase();return n===`PG`?[`MA`,`MSC`,`MCOM`].some(e=>t.includes(e)):t.includes(n+`ST YEAR`)||t.includes(n+`ND YEAR`)||t.includes(n+`RD YEAR`)||t.includes(n+` YEAR`)});if(r.length>0){let t=p,n=p+r.length-1;a.reps.push({name:e.post,start:t,end:n,count:r.length}),p+=r.length}}),i.filter(d).filter(e=>s.filter(t=>t.post===e.post).length>1).forEach(e=>{let n=e.post.replace(`Association Secretary `,``),r=t.filter(e=>String(e.Dept).trim()===n);if(r.length>0){let t=m,n=m+r.length-1;a.assocs.push({name:e.post,start:t,end:n,count:r.length}),m+=r.length}}),h.push(a)}),r(`
+        <div style="padding: 40px; font-family: sans-serif; color: #333;">
+          <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
+            <h1 style="margin: 0; font-size: 24px;">BALLOT PRINTING SUMMARY - ${c}</h1>
+            <h2 style="margin: 5px 0 0 0; font-size: 18px; color: #666;">Government Victoria College Palakkad</h2>
+          </div>
+
+          <p style="font-size: 14px; margin-bottom: 20px;">
+            This document provides the specific serial number ranges for each ballot category assigned to polling booths. 
+            All ballots should be bundled in books (usually 50 or 100 per book) as per the ranges below.
+          </p>
+
+          <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #4f46e5;">1. General Union Ballots (Series: 1, 2, 3...)</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Total Voters</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Books Needed</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${h.map(e=>`
+                <tr>
+                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${e.number}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.voters}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${e.general.start}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${e.general.end}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${Math.ceil(e.voters/50)} (of 50)</td>
+                </tr>
+              `).join(``)}
+              <tr style="background: #f1f5f9; font-weight: bold;">
+                <td style="border: 1px solid #ddd; padding: 10px;">TOTAL</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${f-1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">1</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${f-1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${Math.ceil((f-1)/50)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #10b981;">2. Year Representative Ballots (Series: R1, R2, R3...)</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Post Name</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Count</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${h.flatMap(e=>e.reps.map(t=>`
+                <tr>
+                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${e.number}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">${t.name}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${t.count}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${t.start}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${t.end}</td>
+                </tr>
+              `)).join(``)}
+              <tr style="background: #f1f5f9; font-weight: bold;">
+                <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL REPRESENTATIVE BALLOTS</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${p-1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R1</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${p-1}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #f59e0b;">3. Association Secretary Ballots (Series: A1, A2, A3...)</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Booth No</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Department</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Count</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No From</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Sl No To</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${h.flatMap(e=>e.assocs.map(t=>`
+                <tr>
+                  <td style="border: 1px solid #ddd; padding: 10px;">Booth ${e.number}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px;">${t.name.replace(`Association Secretary `,``)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${t.count}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${t.start}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${t.end}</td>
+                </tr>
+              `)).join(``)}
+              <tr style="background: #f1f5f9; font-weight: bold;">
+                <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL ASSOCIATION BALLOTS</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${m-1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A1</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${m-1}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px; font-size: 12px; color: #666; text-align: center;">
+            Generated on ${new Date().toLocaleString()} | Official GVC Election Portal
+          </div>
+        </div>
+      `)}catch(e){x(e.message,`error`)}};n.querySelector(`#btnGenSummary`).onclick=o,n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)})}function Fe(e){let t=R();if(!t)return;z(e,`testing`,`
     <div class="page-enter space-y-8 max-w-3xl mx-auto">
 
       <!-- Warning Banner -->
