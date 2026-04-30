@@ -131,6 +131,10 @@ function updateHeader(main, year) {
       const candidateIds = Object.keys(pAgg);
       if (candidateIds.length === 0) return;
 
+      const valids = candidateIds.filter(id => id !== 'INVALID' && id !== 'NOTA').map(id => pAgg[id]);
+      const invalid = pAgg['INVALID'];
+      const nota = pAgg['NOTA'];
+
       const isUUC = name.toUpperCase().includes('UUC') || name.toUpperCase().includes('UNIVERSITY');
       const seats = isUUC ? 2 : 1;
 

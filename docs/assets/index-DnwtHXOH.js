@@ -2035,23 +2035,23 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
           <h2 class="text-2xl font-bold text-white mb-2">Counting in Progress</h2>
           <p class="text-slate-400">No results have been published yet. Please check back later.</p>
         </div>
-      `;return}let s={};i.forEach(e=>{let t=e.post||e.name;s[t]={}}),a.forEach(e=>{let t=e.Post;s[t]||(s[t]={}),s[t][e.CandidateId]||(s[t][e.CandidateId]={name:e.CandidateName,votes:0}),s[t][e.CandidateId].votes+=Number(e.Votes)||0});let c=`<div class="space-y-12">`;i.forEach(e=>{let t=e.post||e.name,n=s[t];if(!n||Object.keys(n).length===0)return;let r=t.toUpperCase().includes(`UUC`)||t.toUpperCase().includes(`UNIVERSITY`)?2:1;valids.sort((e,t)=>t.votes-e.votes);let i=valids.length?valids[0].votes:0,a=valids.reduce((e,t)=>e+t.votes,0)+(nota?nota.votes:0),o=a+(invalid?invalid.votes:0),l=0;valids.length>r?l=valids[r].votes:valids.length>0&&(l=0),c+=`
+      `;return}let s={};i.forEach(e=>{let t=e.post||e.name;s[t]={}}),a.forEach(e=>{let t=e.Post;s[t]||(s[t]={}),s[t][e.CandidateId]||(s[t][e.CandidateId]={name:e.CandidateName,votes:0}),s[t][e.CandidateId].votes+=Number(e.Votes)||0});let c=`<div class="space-y-12">`;i.forEach(e=>{let t=e.post||e.name,n=s[t];if(!n)return;let r=Object.keys(n);if(r.length===0)return;let i=r.filter(e=>e!==`INVALID`&&e!==`NOTA`).map(e=>n[e]),a=n.INVALID,o=n.NOTA,l=t.toUpperCase().includes(`UUC`)||t.toUpperCase().includes(`UNIVERSITY`)?2:1;i.sort((e,t)=>t.votes-e.votes);let u=i.length?i[0].votes:0,d=i.reduce((e,t)=>e+t.votes,0)+(o?o.votes:0),f=d+(a?a.votes:0),p=0;i.length>l?p=i[l].votes:i.length>0&&(p=0),c+=`
         <div class="glass rounded-2xl overflow-hidden border border-white/10 page-enter shadow-2xl">
           <div class="bg-gradient-to-r from-slate-900/80 to-indigo-900/80 p-6 border-b border-white/10">
             <h2 class="text-2xl font-bold text-white tracking-tight">${y(t)}</h2>
           </div>
           <div class="p-6 space-y-6 bg-slate-900/20">
-            ${valids.map((e,t)=>{let n=a>0?(e.votes/a*100).toFixed(1):0,o=i>0?e.votes/i*100:0,s=t<r&&e.votes>0,c=s?e.votes-l:0;return`
+            ${i.map((e,t)=>{let n=d>0?(e.votes/d*100).toFixed(1):0,r=u>0?e.votes/u*100:0,i=t<l&&e.votes>0,a=i?e.votes-p:0;return`
                 <div class="relative">
                   <div class="flex justify-between items-end mb-2 relative z-10">
                     <div class="flex items-center gap-3">
-                      <div class="w-8 h-8 rounded-full ${s?`bg-amber-500 text-amber-950`:`bg-white/10 text-white`} flex items-center justify-center font-bold text-sm shadow-lg">
-                        ${s?`🏆`:t+1}
+                      <div class="w-8 h-8 rounded-full ${i?`bg-amber-500 text-amber-950`:`bg-white/10 text-white`} flex items-center justify-center font-bold text-sm shadow-lg">
+                        ${i?`🏆`:t+1}
                       </div>
                       <div>
                         <div class="flex items-center gap-2">
                           <span class="font-bold text-white text-lg">${y(e.name)}</span>
-                          ${c>0?`<span class="bg-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold border border-green-500/30">LEAD: ${c}</span>`:``}
+                          ${a>0?`<span class="bg-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold border border-green-500/30">LEAD: ${a}</span>`:``}
                         </div>
                       </div>
                     </div>
@@ -2061,34 +2061,34 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
                     </div>
                   </div>
                   <div class="h-4 w-full bg-slate-800 rounded-full overflow-hidden relative">
-                    <div class="h-full rounded-full transition-all duration-1000 ease-out ${s?`bg-gradient-to-r from-amber-400 to-amber-600`:`bg-gradient-to-r from-indigo-500 to-purple-600`}" style="width: ${o}%"></div>
+                    <div class="h-full rounded-full transition-all duration-1000 ease-out ${i?`bg-gradient-to-r from-amber-400 to-amber-600`:`bg-gradient-to-r from-indigo-500 to-purple-600`}" style="width: ${r}%"></div>
                   </div>
                 </div>
               `}).join(``)}
             
             <div class="mt-8 pt-6 border-t border-white/10 space-y-3">
-              ${nota&&nota.votes>0?`
+              ${o&&o.votes>0?`
                 <div class="flex justify-between text-sm text-slate-400">
                   <span>None of the Above (NOTA)</span>
-                  <span class="font-bold text-white">${nota.votes} <span class="text-xs text-slate-500 font-normal ml-1">(${(nota.votes/a*100).toFixed(1)}%)</span></span>
+                  <span class="font-bold text-white">${o.votes} <span class="text-xs text-slate-500 font-normal ml-1">(${(o.votes/d*100).toFixed(1)}%)</span></span>
                 </div>
               `:``}
 
-              ${invalid&&invalid.votes>0?`
+              ${a&&a.votes>0?`
                 <div class="flex justify-between text-sm text-slate-500">
                   <span>Invalid / Rejected</span>
-                  <span class="font-bold text-red-400">${invalid.votes}</span>
+                  <span class="font-bold text-red-400">${a.votes}</span>
                 </div>
               `:``}
 
               <div class="flex justify-between items-center py-2 px-3 bg-indigo-500/10 rounded-lg border border-indigo-500/20 mt-4">
                 <span class="text-xs font-bold text-indigo-300 uppercase tracking-widest">Total Valid Votes</span>
-                <span class="text-lg font-black text-white">${a}</span>
+                <span class="text-lg font-black text-white">${d}</span>
               </div>
 
               <div class="flex justify-between items-center py-2 px-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
                 <span class="text-xs font-bold text-purple-300 uppercase tracking-widest">Grand Total</span>
-                <span class="text-lg font-black text-white">${o}</span>
+                <span class="text-lg font-black text-white">${f}</span>
               </div>
             </div>
           </div>
