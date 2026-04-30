@@ -847,6 +847,33 @@ function doPost(e) {
         globalSupporterOffset += 7;
       });
 
+      // ─── Inject Random Votes for Contested Posts ───────────────────────────
+      const resSheet = getSheet(SHEET_RESULTS);
+      const resHeaders = ['TableNumber', 'RoundNumber', 'Post', 'CandidateId', 'CandidateName', 'Votes', 'FormSerial'];
+      if (resSheet.getLastRow() === 0) {
+        resSheet.appendRow(resHeaders);
+        resSheet.getRange(1, 1, 1, resHeaders.length).setFontWeight('bold');
+      }
+
+      posts.forEach(p => {
+        const pNoms = injected.filter(id => {
+          // Find the post name for this injected nomination
+          const nData = nomSheet.getDataRange().getValues().find(r => r[0] === id);
+          return nData && nData[1] === p.post;
+        });
+        
+        if (pNoms.length > 1) {
+          // Contested - Inject votes for Table 1, Round 1
+          pNoms.forEach(id => {
+            const nData = nomSheet.getDataRange().getValues().find(r => r[0] === id);
+            resSheet.appendRow([1, 1, p.post, id, nData[6], Math.floor(Math.random() * 100) + 50, 'TEST-AUTO']);
+          });
+          // Inject NOTA & INVALID
+          resSheet.appendRow([1, 1, p.post, 'NOTA', 'NOTA', Math.floor(Math.random() * 20), 'TEST-AUTO']);
+          resSheet.appendRow([1, 1, p.post, 'INVALID', 'Invalid', Math.floor(Math.random() * 10), 'TEST-AUTO']);
+        }
+      });
+
       return jsonOut({ ok: true, injected: injected.length, skipped: skipped.length, skippedPosts: skipped });
     }
 

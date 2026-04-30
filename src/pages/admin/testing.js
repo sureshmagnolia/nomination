@@ -32,7 +32,7 @@ export function renderAdminTesting(container) {
           <div class="text-2xl">🧪</div>
           <div>
             <h4 class="font-bold text-white text-lg">Inject Test Data</h4>
-            <p class="text-slate-400 text-sm">Creates 2 synthetic, pre-approved candidates for every configured post using real students from the Nominal Roll.</p>
+            <p class="text-slate-400 text-sm">Creates 2 synthetic candidates for every post and <strong>automatically injects random vote counts</strong> for immediate results testing.</p>
           </div>
         </div>
         <div class="p-6 space-y-4">
