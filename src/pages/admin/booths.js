@@ -441,21 +441,21 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               <div style="text-align:center; flex-grow:1; font-weight:bold; font-size:14px;">ELECTORAL ROLL - ${esc(cls.name)}</div>
               <div>Dept: ${esc(cls.dept)}</div>
             </div>
-            <table class="roll-table">
+            <table class="roll-table" style="table-layout: fixed;">
               <thead><tr>
-                <th style="width:40px">Sl.No</th>
-                <th style="width:90px">Adm. No</th>
+                <th style="width:35px">Sl.No</th>
+                <th style="width:65px">Adm. No</th>
                 <th>Student Name</th>
-                <th style="width:140px">Class</th>
-                <th style="width:100px">Signature</th>
+                <th style="width:200px">Class</th>
+                <th style="width:90px">Signature</th>
               </tr></thead>
               <tbody>
                 ${classStudents.map((s) => `
-                  <tr>
-                    <td style="text-align:center; font-weight:bold">${esc(s['Nominal Roll Serial Number'] || '–')}</td>
-                    <td style="font-family:monospace">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
-                    <td style="font-weight:bold">${esc(s['NAME'])}</td>
-                    <td style="font-size:10px">${esc(s['CLASS'])}</td>
+                  <tr style="height: 25px;">
+                    <td style="text-align:center; font-weight:bold; overflow:hidden;">${esc(s['Nominal Roll Serial Number'] || '–')}</td>
+                    <td style="font-family:monospace; font-size:10px; overflow:hidden; white-space:nowrap;">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
+                    <td style="font-weight:bold; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${esc(s['NAME'])}</td>
+                    <td style="font-size:10px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${esc(s['CLASS'])}</td>
                     <td></td>
                   </tr>
                 `).join('')}

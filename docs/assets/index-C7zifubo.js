@@ -1306,21 +1306,21 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <div style="text-align:center; flex-grow:1; font-weight:bold; font-size:14px;">ELECTORAL ROLL - ${y(n.name)}</div>
               <div>Dept: ${y(n.dept)}</div>
             </div>
-            <table class="roll-table">
+            <table class="roll-table" style="table-layout: fixed;">
               <thead><tr>
-                <th style="width:40px">Sl.No</th>
-                <th style="width:90px">Adm. No</th>
+                <th style="width:35px">Sl.No</th>
+                <th style="width:65px">Adm. No</th>
                 <th>Student Name</th>
-                <th style="width:140px">Class</th>
-                <th style="width:100px">Signature</th>
+                <th style="width:200px">Class</th>
+                <th style="width:90px">Signature</th>
               </tr></thead>
               <tbody>
                 ${r.map(e=>`
-                  <tr>
-                    <td style="text-align:center; font-weight:bold">${y(e[`Nominal Roll Serial Number`]||`–`)}</td>
-                    <td style="font-family:monospace">${y(e[`ADMISION NO`]||e[`ADMISSION NO`]||`–`)}</td>
-                    <td style="font-weight:bold">${y(e.NAME)}</td>
-                    <td style="font-size:10px">${y(e.CLASS)}</td>
+                  <tr style="height: 25px;">
+                    <td style="text-align:center; font-weight:bold; overflow:hidden;">${y(e[`Nominal Roll Serial Number`]||`–`)}</td>
+                    <td style="font-family:monospace; font-size:10px; overflow:hidden; white-space:nowrap;">${y(e[`ADMISION NO`]||e[`ADMISSION NO`]||`–`)}</td>
+                    <td style="font-weight:bold; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${y(e.NAME)}</td>
+                    <td style="font-size:10px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${y(e.CLASS)}</td>
                     <td></td>
                   </tr>
                 `).join(``)}
