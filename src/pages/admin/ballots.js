@@ -509,7 +509,7 @@ export async function renderAdminBallots(container) {
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${genSl - 1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G${genSl - 1}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${calcBooks(genSl - 1, 1, 'G')}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
               </tr>
             </tbody>
           </table>
@@ -542,7 +542,7 @@ export async function renderAdminBallots(container) {
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${repSl - 1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${repSl - 1}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${calcBooks(repSl - 1, 1, 'R')}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
               </tr>
             </tbody>
           </table>
@@ -575,7 +575,7 @@ export async function renderAdminBallots(container) {
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${assocSl - 1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${assocSl - 1}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${calcBooks(assocSl - 1, 1, 'A')}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
               </tr>
             </tbody>
           </table>

@@ -1710,7 +1710,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${p-1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G${p-1}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${g(p-1,1,`G`)}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
               </tr>
             </tbody>
           </table>
@@ -1743,7 +1743,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${m-1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${m-1}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${g(m-1,1,`R`)}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
               </tr>
             </tbody>
           </table>
@@ -1776,7 +1776,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${h-1}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A1</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${h-1}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${g(h-1,1,`A`)}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
               </tr>
             </tbody>
           </table>
