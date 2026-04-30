@@ -556,6 +556,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </div>
       <div id="errorMsg" class="hidden alert alert-error text-left"></div>
       <form id="loginForm" class="space-y-4 text-left">
+        <input type="text" name="username" value="admin" style="display:none;" autocomplete="username" />
         <div>
           <label class="block text-sm font-semibold text-slate-300 mb-1">Admin Password</label>
           <input id="adminPassword" type="password" class="field" placeholder="Enter admin password" autocomplete="current-password" />

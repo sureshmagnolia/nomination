@@ -837,4 +837,49 @@ function doPost(e) {
     return errOut(err.message);
   }
 }
-$newCode
+
+/**
+ * Syncs a single nomination to SHEET_VALID and SHEET_FINAL if they are published.
+ */
+function syncNominationToPublished(id) {
+  const nom = getAllNominations().find(n => n.id === id);
+  if (!nom) return;
+
+  const validPub = getSetting('validListPublished') === 'true';
+  const finalPub = getSetting('finalListPublished') === 'true';
+
+  const row = [
+    nom.id, nom.post, nom.gender, nom.dob, nom.timestamp,
+    nom.candidateSerial, nom.candidateName, nom.candidateClass, nom.candidateAdmission, nom.candidateDept,
+    nom.proposerSerial,  nom.proposerName,  nom.proposerClass,  nom.proposerAdmission,  nom.proposerDept,
+    nom.seconderSerial,  nom.seconderName,  nom.seconderClass,  nom.seconderAdmission,  nom.seconderDept,
+    nom.status, nom.withdrawalStatus
+  ];
+
+  if (validPub) syncToSheet(SHEET_VALID, id, row, nom.status === 'Valid');
+  if (finalPub) syncToSheet(SHEET_FINAL, id, row, nom.status === 'Valid');
+}
+
+function syncToSheet(sheetName, id, rowData, shouldExist) {
+  const s = getSheet(sheetName);
+  const d = s.getDataRange().getValues();
+  let foundRow = -1;
+  for (let i = 1; i < d.length; i++) {
+    if (String(d[i][0]) === String(id)) {
+      foundRow = i + 1;
+      break;
+    }
+  }
+
+  if (shouldExist) {
+    if (foundRow > 0) {
+      s.getRange(foundRow, 1, 1, rowData.length).setValues([rowData]);
+    } else {
+      s.appendRow(rowData);
+    }
+  } else {
+    if (foundRow > 0) {
+      s.deleteRow(foundRow);
+    }
+  }
+}
