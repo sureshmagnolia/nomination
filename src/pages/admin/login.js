@@ -108,8 +108,11 @@ export function renderAdminLogin(container) {
     try {
       await api.adminVerifyOTP(password, otp);
       
-      // Success! Store session and navigate
-      sessionStorage.setItem('adminPwd', password);
+      // Success! Store persistent session and navigate
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem('adminPwd', password);
+      localStorage.setItem('adminLoginDate', today);
+      
       showToast('Authentication successful!', 'success');
       import('../../router.js').then(({ router }) => router.navigate('/admin/dashboard'));
     } catch (err) {

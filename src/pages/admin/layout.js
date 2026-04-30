@@ -7,9 +7,17 @@ import { router } from '../../router.js';
 import { showToast } from '../../utils.js';
 
 export function getAdminPassword() {
-  const pwd = sessionStorage.getItem('adminPwd');
-  if (!pwd) {
-    showToast('Session expired. Please log in again.', 'warning');
+  const pwd = localStorage.getItem('adminPwd');
+  const loginDate = localStorage.getItem('adminLoginDate');
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+  if (!pwd || loginDate !== today) {
+    if (pwd) {
+      // Clean up expired session
+      localStorage.removeItem('adminPwd');
+      localStorage.removeItem('adminLoginDate');
+      showToast('Daily session expired. Please log in again.', 'warning');
+    }
     router.navigate('/admin');
     return null;
   }
@@ -78,7 +86,8 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
   });
 
   container.querySelector('#logoutBtn').addEventListener('click', () => {
-    sessionStorage.removeItem('adminPwd');
+    localStorage.removeItem('adminPwd');
+    localStorage.removeItem('adminLoginDate');
     showToast('Logged out.', 'info');
     router.navigate('/');
   });
