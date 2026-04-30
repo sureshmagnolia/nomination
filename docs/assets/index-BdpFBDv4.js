@@ -1215,30 +1215,43 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             </div>
           </div>
 
-          <div style="flex-grow: 1; display: grid; grid-template-columns: 1fr 1.3fr; gap: 20px;">
-            <!-- Left Column: Classes -->
-            <div>
-              <h4 style="border-bottom: 1px solid #eee; padding-bottom: 3px; font-size: 12px; margin: 0;">Allocation Statistics</h4>
-              <table class="stats-table" style="font-size: 10px; margin-top: 5px;">
-                <thead><tr><th>Dept</th><th>Class Name</th><th style="text-align:right">Voters</th></tr></thead>
+          <div style="flex-grow: 1; space-y-4">
+            <!-- Top Section: Allocation Statistics -->
+            <div style="margin-bottom: 25px;">
+              <h4 style="border-bottom: 2px solid #000; padding-bottom: 3px; font-size: 13px; margin: 0 0 8px 0; text-transform: uppercase;">1. Allocation Statistics</h4>
+              <table class="stats-table" style="font-size: 11px; width: 100%;">
+                <thead>
+                  <tr style="background:#f5f5f5">
+                    <th style="width:25%">Department</th>
+                    <th>Class Name</th>
+                    <th style="text-align:right; width:15%">Voters</th>
+                  </tr>
+                </thead>
                 <tbody>
                   ${a.map(e=>`
                     <tr><td>${y(e.dept)}</td><td>${y(e.name)}</td><td style="text-align:right">${e.count}</td></tr>
                   `).join(``)}
-                  <tr style="font-weight:bold; background:#f9f9f9"><td colspan="2">TOTAL VOTERS</td><td style="text-align:right">${r}</td></tr>
+                  <tr style="font-weight:bold; background:#eee">
+                    <td colspan="2">TOTAL VOTERS ALLOTTED TO THIS BOOTH</td>
+                    <td style="text-align:right">${r}</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
 
-            <!-- Right Column: Ballots -->
+            <!-- Bottom Section: Ballots (Full Width) -->
             <div>
-              <h4 style="border-bottom: 1px solid #eee; padding-bottom: 3px; font-size: 12px; margin: 0;">Ballots & Books Assigned</h4>
-              <table class="stats-table" style="font-size: 9px; margin-top: 5px; width: 100%;">
+              <h4 style="border-bottom: 2px solid #000; padding-bottom: 3px; font-size: 13px; margin: 0 0 8px 0; text-transform: uppercase;">2. Ballots & Books Account (To be filled by PO)</h4>
+              <table class="stats-table" style="font-size: 10px; width: 100%; border: 1.5px solid #000;">
                 <thead>
-                  <tr style="background:#f0f7ff">
-                    <th>Ballot Category</th>
-                    <th>Serial Ranges</th>
-                    <th style="text-align:right">Book IDs</th>
+                  <tr style="background:#f0f0f0">
+                    <th style="width:20%">Ballot Category</th>
+                    <th style="width:15%">Serial Range</th>
+                    <th style="width:8%; text-align:center">Total Qty</th>
+                    <th style="width:18%">Book IDs</th>
+                    <th style="width:10%; text-align:center">Used</th>
+                    <th style="width:10%; text-align:center">Returned</th>
+                    <th>Remarks</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1246,21 +1259,33 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                     <tr style="font-weight:bold">
                       <td>General Union Posts</td>
                       <td>G${c.general.start} - G${c.general.end}</td>
-                      <td style="text-align:right; color:#4f46e5">${c.general.bookIds}</td>
+                      <td style="text-align:center">${c.general.count}</td>
+                      <td style="color:#4f46e5">${c.general.bookIds}</td>
+                      <td style="border: 1px solid #000;"></td>
+                      <td style="border: 1px solid #000;"></td>
+                      <td style="border: 1px solid #000;"></td>
                     </tr>
                   `:``}
                   ${c.reps.map(e=>`
                     <tr>
-                      <td style="font-size:8.5px">${y(e.post)}</td>
+                      <td>${y(e.post)}</td>
                       <td>R${e.start} - R${e.end}</td>
-                      <td style="text-align:right; color:#10b981">${e.bookIds}</td>
+                      <td style="text-align:center">${e.count}</td>
+                      <td style="color:#10b981">${e.bookIds}</td>
+                      <td style="border: 1px solid #000;"></td>
+                      <td style="border: 1px solid #000;"></td>
+                      <td style="border: 1px solid #000;"></td>
                     </tr>
                   `).join(``)}
                   ${c.assocs.map(e=>`
                     <tr>
-                      <td style="font-size:8.5px">${y(e.post)}</td>
+                      <td>${y(e.post)}</td>
                       <td>A${e.start} - A${e.end}</td>
-                      <td style="text-align:right; color:#f59e0b">${e.bookIds}</td>
+                      <td style="text-align:center">${e.count}</td>
+                      <td style="color:#f59e0b">${e.bookIds}</td>
+                      <td style="border: 1px solid #000;"></td>
+                      <td style="border: 1px solid #000;"></td>
+                      <td style="border: 1px solid #000;"></td>
                     </tr>
                   `).join(``)}
                 </tbody>
