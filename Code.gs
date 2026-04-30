@@ -924,3 +924,13 @@ function syncToSheet(sheetName, id, rowData, shouldExist) {
     }
   }
 }
+
+/** 
+ * MANUALLY RUN THIS ONCE from the Apps Script editor to trigger 
+ * the authorization dialog for OTP emails.
+ */
+function triggerAuthorization() {
+  const email = Session.getEffectiveUser().getEmail();
+  MailApp.sendEmail(email, "Authorization Trigger", "If you received this, the election portal is now authorized to send OTPs.");
+  Logger.log("Authorized for: " + email);
+}
