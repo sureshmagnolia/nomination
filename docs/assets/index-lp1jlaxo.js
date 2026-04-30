@@ -1809,7 +1809,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             Generated on ${new Date().toLocaleString()} | Official GVC Election Portal
           </div>
         </div>
-      `)}catch(e){x(e.message,`error`)}},s=async()=>{try{b(!0),x(`Calculating and saving Master Plan on server...`,`info`),await u.adminGenerateBallotPlan(t),x(`Master Plan finalized successfully!`,`success`),b(!1)}catch(e){b(!1),x(e.message,`error`)}};n.querySelector(`#btnGenSummary`).onclick=o,n.querySelector(`#btnRegenPlan`).onclick=s,n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)})}function Fe(e){let t=R();if(!t)return;z(e,`testing`,`
+      `)}catch(e){x(e.message,`error`)}},s=async e=>{let n=e?.target,r=`🔄 Finalize Master Plan`;try{n&&b(n,!0,r),x(`Calculating and saving Master Plan on server...`,`info`),await u.adminGenerateBallotPlan(t),x(`Master Plan finalized successfully!`,`success`),n&&b(n,!1,r)}catch(e){n&&b(n,!1,r),x(e.message,`error`)}};n.querySelector(`#btnGenSummary`).onclick=o,n.querySelector(`#btnRegenPlan`).onclick=s,n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)})}function Fe(e){let t=R();if(!t)return;z(e,`testing`,`
     <div class="page-enter space-y-8 max-w-3xl mx-auto">
 
       <!-- Warning Banner -->

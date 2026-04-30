@@ -472,15 +472,17 @@ export async function renderAdminBallots(container) {
     }
   };
 
-  const handleRegenPlan = async () => {
+  const handleRegenPlan = async (e) => {
+    const btn = e?.target;
+    const defaultText = '🔄 Finalize Master Plan';
     try {
-      setLoading(true);
+      if (btn) setLoading(btn, true, defaultText);
       showToast('Calculating and saving Master Plan on server...', 'info');
       await api.adminGenerateBallotPlan(pwd);
       showToast('Master Plan finalized successfully!', 'success');
-      setLoading(false);
+      if (btn) setLoading(btn, false, defaultText);
     } catch (err) {
-      setLoading(false);
+      if (btn) setLoading(btn, false, defaultText);
       showToast(err.message, 'error');
     }
   };
