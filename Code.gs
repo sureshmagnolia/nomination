@@ -896,7 +896,10 @@ function syncNominationToPublished(id) {
   ];
 
   if (validPub) syncToSheet(SHEET_VALID, id, row, nom.status === 'Valid');
-  if (finalPub) syncToSheet(SHEET_FINAL, id, row, nom.status === 'Valid');
+  if (finalPub) {
+    const isFinalValid = nom.status === 'Valid' && nom.withdrawalStatus !== 'Approved';
+    syncToSheet(SHEET_FINAL, id, row, isFinalValid);
+  }
 }
 
 function syncToSheet(sheetName, id, rowData, shouldExist) {
