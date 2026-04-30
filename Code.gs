@@ -228,7 +228,9 @@ function doGet(e) {
     }
 
     if (action === 'getNominalRoll') return jsonOut(getNominalRollData());
-    if (action === 'getPosts') return jsonOut(getPostsData());
+    if (action === 'getPosts') {
+      return cachedJsonOut('public_posts', () => getPostsData(), 30);
+    }
 
     if (action === 'getNomination') {
       const id  = e.parameter.id;
@@ -293,26 +295,27 @@ function doGet(e) {
     }
 
     if (action === 'getResults') {
-      // Public endpoint
-      const s = getSheet(SHEET_RESULTS);
-      const d = s.getDataRange().getValues();
-      if (d.length < 2) return jsonOut([]);
-      const headers = d[0];
-      return jsonOut(d.slice(1).map(r => {
-        let obj = {};
-        headers.forEach((h, i) => obj[h] = r[i]);
-        return obj;
-      }));
+      return cachedJsonOut('public_results', () => {
+        const s = getSheet(SHEET_RESULTS);
+        const d = s.getDataRange().getValues();
+        if (d.length < 2) return [];
+        const headers = d[0];
+        return d.slice(1).map(r => {
+          let obj = {};
+          headers.forEach((h, i) => obj[h] = r[i]);
+          return obj;
+        });
+      }, 30);
     }
 
     if (action === 'getPublicSchedule') {
-      return jsonOut({
+      return cachedJsonOut('public_schedule', () => ({
         nominationDeadline: getSetting('nominationDeadline'),
         withdrawalStart: getSetting('withdrawalStart'),
         withdrawalEnd: getSetting('withdrawalEnd'),
         notificationDate: getSetting('notificationDate') || '2026-04-20',
         electionYear: getSetting('electionYear') || new Date().getFullYear().toString()
-      });
+      }), 30);
     }
 
     if (action === 'getSettings') {
@@ -978,4 +981,21 @@ function setupSecureSpreadsheet() {
   const id = '10p-3qWklthNnDUp-MqOHEjJLmWRpgkvVX2QpmGreKxA';
   PropertiesService.getScriptProperties().setProperty('SS_ID', id);
   Logger.log("Successfully linked Spreadsheet ID securely.");
+}
+
+/**
+ * High-performance JSON output with server-side caching.
+ * Prevents multiple spreadsheet reads during high traffic.
+ */
+function cachedJsonOut(key, dataFetcher, seconds = 30) {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get(key);
+  if (cached) {
+    return ContentService.createTextOutput(cached).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const data = dataFetcher();
+  const json = JSON.stringify(data);
+  cache.put(key, json, seconds);
+  return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
 }
