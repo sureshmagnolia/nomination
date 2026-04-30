@@ -71,6 +71,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           <div class="flex flex-wrap gap-2">
             <button id="btnClearAll" class="btn btn-secondary border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white">🗑️ Clear All</button>
             <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Electoral Rolls</button>
+            <button id="btnPrintBallotAccounts" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white">📑 Print Ballot Accounts</button>
             <button id="btnAutoAllot" class="btn btn-secondary">⚡ Auto Allot</button>
             <button id="btnSaveBooths" class="btn btn-primary">💾 Save Configuration</button>
           </div>
@@ -221,6 +222,38 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           <body>
             ${area.innerHTML}
           </body>
+        </html>
+      `);
+      printWin.document.close();
+      printWin.focus();
+      setTimeout(() => { printWin.print(); }, 500);
+    });
+    
+    main.querySelector('#btnPrintBallotAccounts').addEventListener('click', () => {
+      const area = main.querySelector('#printArea');
+      area.innerHTML = buildBallotAccountHtml(booths, nominalRoll, posts, classStats, nominations, plan);
+      
+      const printWin = window.open('', '_blank');
+      printWin.document.write(`
+        <html>
+          <head>
+            <title>Ballot Accounts - Booth Wise</title>
+            <style>
+              body { font-family: sans-serif; color: #333; margin: 0; padding: 0; }
+              .page-break { page-break-after: always; }
+              .account-page { padding: 40px; height: 95vh; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; border: 1px solid #ccc; margin: 10px; }
+              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 25px; }
+              .college-name { font-size: 22px; font-weight: bold; margin-bottom: 5px; }
+              .title { font-size: 16px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+              .stats-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; }
+              .stats-table th, .stats-table td { border: 1px solid #000; padding: 12px 15px; text-align: left; }
+              .stats-table th { background: #f2f2f2; font-size: 12px; text-transform: uppercase; font-weight: bold; }
+              .footer { display: flex; justify-content: flex-end; margin-top: 60px; padding-right: 50px; }
+              .sig-line { border-top: 1.5px solid #000; padding-top: 8px; width: 220px; text-align: center; font-size: 13px; font-weight: bold; }
+              @media print { .no-print { display: none; } .page-break { page-break-after: always; } }
+            </style>
+          </head>
+          <body>${area.innerHTML}</body>
         </html>
       `);
       printWin.document.close();
@@ -465,6 +498,83 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           </div>
         </div>`;
       });
+    });
+    return html;
+  };
+
+  const buildBallotAccountHtml = (booths, students, posts, classStats, nominationsResponse, plan) => {
+    let html = '';
+    if (!plan) return `<div class="alert alert-error">❌ Master Ballot Plan not generated.</div>`;
+
+    const sortedBooths = [...booths].sort((a, b) => a.boothNumber - b.boothNumber);
+
+    sortedBooths.forEach((b) => {
+      if (!b.classes || b.classes.length === 0) return;
+      const assignments = plan.boothAssignments[b.boothNumber] || { general: null, reps: [], assocs: [] };
+
+      html += `
+      <div class="page-break">
+        <div class="account-page">
+          <div>
+            <div class="header">
+              <div class="college-name">${esc(CONFIG.COLLEGE_NAME || 'COLLEGE UNION ELECTION')}</div>
+              <div class="title">Ballots & Books Account (To be filled by PO)</div>
+            </div>
+            
+            <div style="font-size: 18px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; background: #f9f9f9; padding: 15px; border: 1px solid #ddd;">
+              <div><strong>BOOTH NUMBER:</strong> <span style="font-size: 28px; font-weight: bold; margin-left: 10px;">${b.boothNumber}</span></div>
+              <div style="text-align: right;"><strong>LOCATION:</strong> ${esc(b.roomName || 'UNSPECIFIED')}</div>
+            </div>
+
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th style="width:25%">Ballot Category</th>
+                  <th style="width:20%">Serial Range</th>
+                  <th style="width:10%; text-align:center">Total Qty</th>
+                  <th style="width:15%; text-align:center">No. Used</th>
+                  <th style="width:15%; text-align:center">No. Returned</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${assignments.general ? `
+                  <tr style="height: 50px; font-weight:bold">
+                    <td>General Union Posts</td>
+                    <td>G${assignments.general.start} - G${assignments.general.end}</td>
+                    <td style="text-align:center">${assignments.general.count}</td>
+                    <td></td><td></td><td></td>
+                  </tr>
+                ` : ''}
+                ${assignments.reps.map(r => `
+                  <tr style="height: 45px;">
+                    <td>${esc(r.post)}</td>
+                    <td>R${r.start} - R${r.end}</td>
+                    <td style="text-align:center">${r.count}</td>
+                    <td></td><td></td><td></td>
+                  </tr>
+                `).join('')}
+                ${assignments.assocs.map(a => `
+                  <tr style="height: 45px;">
+                    <td>${esc(a.post)}</td>
+                    <td>A${a.start} - A${a.end}</td>
+                    <td style="text-align:center">${a.count}</td>
+                    <td></td><td></td><td></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            
+            <div style="margin-top: 30px; font-size: 11px; color: #555; background: #fffde7; padding: 10px; border: 1px dashed #fbc02d;">
+              <strong>Note:</strong> Total Qty should be equal to (Number of Ballots Used + Number of Ballots Returned). Please record any discrepancies in the Remarks column.
+            </div>
+          </div>
+
+          <div class="footer">
+            <div class="sig-line">Presiding Officer</div>
+          </div>
+        </div>
+      </div>`;
     });
     return html;
   };

@@ -1070,6 +1070,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <div class="flex flex-wrap gap-2">
             <button id="btnClearAll" class="btn btn-secondary border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white">🗑️ Clear All</button>
             <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Electoral Rolls</button>
+            <button id="btnPrintBallotAccounts" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white">📑 Print Ballot Accounts</button>
             <button id="btnAutoAllot" class="btn btn-secondary">⚡ Auto Allot</button>
             <button id="btnSaveBooths" class="btn btn-primary">💾 Save Configuration</button>
           </div>
@@ -1197,7 +1198,28 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             ${t.innerHTML}
           </body>
         </html>
-      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>f.length)for(let e=f.length;e<t;e++)f.push({boothNumber:e+1,roomName:``,classes:[]});else t<f.length&&(f=f.slice(0,t));h()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{f[e.target.dataset.idx].roomName=e.target.value,h()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!p.includes(t)&&(p.push(t),h())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=p[t];p.splice(t,1),f.forEach(e=>{e.roomName===n&&(e.roomName=``)}),h()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Locations`);try{await u.adminSaveLocations(t,p),x(`Locations saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;f.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&f[parseInt(n,10)].classes.push(t),h()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Configuration`);try{await u.adminSaveBooths(t,f),x(`Booth configuration saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{_(),h(),x(`Auto allotment complete. Please review and save.`,`info`)})},g=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=t.filter(t=>e.classes.includes(String(t.CLASS).trim())).length,a=e.classes.map(e=>i[e]).filter(Boolean),c=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]};s+=`
+      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnPrintBallotAccounts`).addEventListener(`click`,()=>{let t=e.querySelector(`#printArea`);t.innerHTML=_(f,r,o,l,s,c);let n=window.open(``,`_blank`);n.document.write(`
+        <html>
+          <head>
+            <title>Ballot Accounts - Booth Wise</title>
+            <style>
+              body { font-family: sans-serif; color: #333; margin: 0; padding: 0; }
+              .page-break { page-break-after: always; }
+              .account-page { padding: 40px; height: 95vh; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; border: 1px solid #ccc; margin: 10px; }
+              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 25px; }
+              .college-name { font-size: 22px; font-weight: bold; margin-bottom: 5px; }
+              .title { font-size: 16px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+              .stats-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; }
+              .stats-table th, .stats-table td { border: 1px solid #000; padding: 12px 15px; text-align: left; }
+              .stats-table th { background: #f2f2f2; font-size: 12px; text-transform: uppercase; font-weight: bold; }
+              .footer { display: flex; justify-content: flex-end; margin-top: 60px; padding-right: 50px; }
+              .sig-line { border-top: 1.5px solid #000; padding-top: 8px; width: 220px; text-align: center; font-size: 13px; font-weight: bold; }
+              @media print { .no-print { display: none; } .page-break { page-break-after: always; } }
+            </style>
+          </head>
+          <body>${t.innerHTML}</body>
+        </html>
+      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>f.length)for(let e=f.length;e<t;e++)f.push({boothNumber:e+1,roomName:``,classes:[]});else t<f.length&&(f=f.slice(0,t));h()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{f[e.target.dataset.idx].roomName=e.target.value,h()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!p.includes(t)&&(p.push(t),h())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=p[t];p.splice(t,1),f.forEach(e=>{e.roomName===n&&(e.roomName=``)}),h()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Locations`);try{await u.adminSaveLocations(t,p),x(`Locations saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;f.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&f[parseInt(n,10)].classes.push(t),h()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Configuration`);try{await u.adminSaveBooths(t,f),x(`Booth configuration saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{v(),h(),x(`Auto allotment complete. Please review and save.`,`info`)})},g=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=t.filter(t=>e.classes.includes(String(t.CLASS).trim())).length,a=e.classes.map(e=>i[e]).filter(Boolean),c=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]};s+=`
       <div class="page-break">
         <div class="facing-sheet">
           <div class="header">
@@ -1328,7 +1350,69 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             </table>
             <div style="margin-top:20px; text-align:right; font-size:10px; color:#999">Total Voters: ${r.length}</div>
           </div>
-        </div>`})}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`},_=()=>{f.forEach(e=>{e.classes=[],e.totalStudents=0});let e={};d.forEach(t=>{e[t.dept]||(e[t.dept]={name:t.dept,total:0,classes:[]}),e[t.dept].classes.push(t),e[t.dept].total+=t.count});let t=f.length,n=r.length/t*1.25;Object.values(e).sort((e,t)=>t.total-e.total).forEach(e=>{f.sort((e,t)=>e.totalStudents-t.totalStudents);let t=f[0];if(t.totalStudents+e.total>n&&e.classes.length>1){f.sort((e,t)=>e.totalStudents-t.totalStudents);let t=f[0],n=f.length>1?f[1]:f[0];[...e.classes].sort((e,t)=>t.count-e.count).forEach(e=>{let r=t.totalStudents<=n.totalStudents?t:n;r.classes.push(e.name),r.totalStudents+=e.count})}else e.classes.forEach(e=>t.classes.push(e.name)),t.totalStudents+=e.total}),f.sort((e,t)=>e.boothNumber-t.boothNumber)};h()}async function ke(e){let t=R();if(t){z(e,`counting`,`
+        </div>`})}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`},_=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let t=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]};s+=`
+      <div class="page-break">
+        <div class="account-page">
+          <div>
+            <div class="header">
+              <div class="college-name">${y(n.COLLEGE_NAME||`COLLEGE UNION ELECTION`)}</div>
+              <div class="title">Ballots & Books Account (To be filled by PO)</div>
+            </div>
+            
+            <div style="font-size: 18px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; background: #f9f9f9; padding: 15px; border: 1px solid #ddd;">
+              <div><strong>BOOTH NUMBER:</strong> <span style="font-size: 28px; font-weight: bold; margin-left: 10px;">${e.boothNumber}</span></div>
+              <div style="text-align: right;"><strong>LOCATION:</strong> ${y(e.roomName||`UNSPECIFIED`)}</div>
+            </div>
+
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th style="width:25%">Ballot Category</th>
+                  <th style="width:20%">Serial Range</th>
+                  <th style="width:10%; text-align:center">Total Qty</th>
+                  <th style="width:15%; text-align:center">No. Used</th>
+                  <th style="width:15%; text-align:center">No. Returned</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${t.general?`
+                  <tr style="height: 50px; font-weight:bold">
+                    <td>General Union Posts</td>
+                    <td>G${t.general.start} - G${t.general.end}</td>
+                    <td style="text-align:center">${t.general.count}</td>
+                    <td></td><td></td><td></td>
+                  </tr>
+                `:``}
+                ${t.reps.map(e=>`
+                  <tr style="height: 45px;">
+                    <td>${y(e.post)}</td>
+                    <td>R${e.start} - R${e.end}</td>
+                    <td style="text-align:center">${e.count}</td>
+                    <td></td><td></td><td></td>
+                  </tr>
+                `).join(``)}
+                ${t.assocs.map(e=>`
+                  <tr style="height: 45px;">
+                    <td>${y(e.post)}</td>
+                    <td>A${e.start} - A${e.end}</td>
+                    <td style="text-align:center">${e.count}</td>
+                    <td></td><td></td><td></td>
+                  </tr>
+                `).join(``)}
+              </tbody>
+            </table>
+            
+            <div style="margin-top: 30px; font-size: 11px; color: #555; background: #fffde7; padding: 10px; border: 1px dashed #fbc02d;">
+              <strong>Note:</strong> Total Qty should be equal to (Number of Ballots Used + Number of Ballots Returned). Please record any discrepancies in the Remarks column.
+            </div>
+          </div>
+
+          <div class="footer">
+            <div class="sig-line">Presiding Officer</div>
+          </div>
+        </div>
+      </div>`}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated.</div>`},v=()=>{f.forEach(e=>{e.classes=[],e.totalStudents=0});let e={};d.forEach(t=>{e[t.dept]||(e[t.dept]={name:t.dept,total:0,classes:[]}),e[t.dept].classes.push(t),e[t.dept].total+=t.count});let t=f.length,n=r.length/t*1.25;Object.values(e).sort((e,t)=>t.total-e.total).forEach(e=>{f.sort((e,t)=>e.totalStudents-t.totalStudents);let t=f[0];if(t.totalStudents+e.total>n&&e.classes.length>1){f.sort((e,t)=>e.totalStudents-t.totalStudents);let t=f[0],n=f.length>1?f[1]:f[0];[...e.classes].sort((e,t)=>t.count-e.count).forEach(e=>{let r=t.totalStudents<=n.totalStudents?t:n;r.classes.push(e.name),r.totalStudents+=e.count})}else e.classes.forEach(e=>t.classes.push(e.name)),t.totalStudents+=e.total}),f.sort((e,t)=>e.boothNumber-t.boothNumber)};h()}async function ke(e){let t=R();if(t){z(e,`counting`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Counting Setup...</p></div>
   `);try{let[n,r,i,a,o]=await Promise.all([u.adminGetCountingMatrix(t).catch(()=>null),u.getPosts(),u.adminGetNominations(t).catch(()=>[]),u.adminGetBooths(t),u.getNominalRoll()]),s=(Array.isArray(i)?i:[]).filter(e=>e.status===`Valid`&&e.withdrawalStatus!==`Approved`);Ae(e.querySelector(`#adminMain`),t,n,r,s,a,o)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${y(t.message)}</div>`}}}function Ae(e,t,n,r,i,a,o){if(!a.length){e.innerHTML=`<div class="alert alert-error">❌ No booths configured.</div>`;return}if(!r.length){e.innerHTML=`<div class="alert alert-error">❌ No posts configured.</div>`;return}let s=e=>String(e.post||e.name||``),c=t=>{let{matrix:n,formSerials:o,totalRounds:c,roundLabels:u}=t,d=a.length;e.innerHTML=`
       <div class="page-enter space-y-6">
