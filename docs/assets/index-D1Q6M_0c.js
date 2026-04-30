@@ -1249,8 +1249,8 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                     <th style="width:15%">Serial Range</th>
                     <th style="width:10%; text-align:center">Total Qty</th>
                     <th style="width:18%">Book IDs</th>
-                    <th style="width:10%; text-align:center">Used</th>
-                    <th style="width:10%; text-align:center">Returned</th>
+                    <th style="width:10%; text-align:center">Number of Ballots Used</th>
+                    <th style="width:10%; text-align:center">Number of Ballots Returned</th>
                     <th>Remarks</th>
                   </tr>
                 </thead>

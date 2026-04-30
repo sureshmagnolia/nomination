@@ -379,8 +379,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                     <th style="width:15%">Serial Range</th>
                     <th style="width:10%; text-align:center">Total Qty</th>
                     <th style="width:18%">Book IDs</th>
-                    <th style="width:10%; text-align:center">Used</th>
-                    <th style="width:10%; text-align:center">Returned</th>
+                    <th style="width:10%; text-align:center">Number of Ballots Used</th>
+                    <th style="width:10%; text-align:center">Number of Ballots Returned</th>
                     <th>Remarks</th>
                   </tr>
                 </thead>
