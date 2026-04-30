@@ -352,16 +352,27 @@ export async function renderAdminBallots(container) {
       // 2. Year Rep Series (Post-wise, then Booth-wise)
       const contestableReps = posts.filter(isYear).filter(p => candidates.filter(c => c.post === p.post).length > 1);
       contestableReps.forEach(p => {
-        const yr = p.yearRestriction;
+        const yr = String(p.yearRestriction || '').trim().toUpperCase();
+        if (!yr) return; // Skip if no restriction defined
+
         const postBooths = [];
         sortedBooths.forEach(b => {
           const boothStudents = nominalRoll.filter(s => b.classes.includes(String(s.CLASS).trim()));
           const targetStudents = boothStudents.filter(s => {
-            const u = String(s.CLASS).toUpperCase();
-            if (u.includes('PH D') || u.includes('PH.D')) return false; // PH D Scholars don't vote for Reps
-            if (yr === 'PG') return ['MA','MSC','MCOM'].some(x => u.includes(x));
-            return u.includes(yr + 'ST YEAR') || u.includes(yr + 'ND YEAR') || u.includes(yr + 'RD YEAR') || u.includes(yr + ' YEAR');
+            const cls = String(s.CLASS || '').toUpperCase();
+            if (cls.includes('PH D') || cls.includes('PH.D')) return false; 
+
+            if (yr === 'PG') {
+              return cls.includes('MA') || cls.includes('MSC') || cls.includes('MCOM') ||
+                     cls.includes('M.SC') || cls.includes('M.COM') || cls.includes('M.A');
+            }
+            
+            // Match "1", "2", "3" or "I", "II", "III"
+            const yrMap = { '1': ['1ST','I '], '2': ['2ND','II '], '3': ['3RD','III '] };
+            const patterns = yrMap[yr] || [yr];
+            return patterns.some(pat => cls.includes(pat + ' YEAR') || cls.includes(pat + 'YEAR'));
           });
+          
           if (targetStudents.length > 0) {
             postBooths.push({
               booth: b.boothNumber,
@@ -383,7 +394,11 @@ export async function renderAdminBallots(container) {
         const postBooths = [];
         sortedBooths.forEach(b => {
           const boothStudents = nominalRoll.filter(s => b.classes.includes(String(s.CLASS).trim()));
-          const targetStudents = boothStudents.filter(s => String(s.Dept || '').trim().toUpperCase() === dept);
+          const targetStudents = boothStudents.filter(s => {
+            const sDept = String(s.Dept || '').trim().toUpperCase();
+            // Match if student dept equals target, or if student dept contains target (e.g. "Physics (A)" matches "Physics")
+            return sDept === dept || sDept.includes(dept);
+          });
           if (targetStudents.length > 0) {
             postBooths.push({
               booth: b.boothNumber,
