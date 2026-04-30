@@ -1617,9 +1617,12 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
               <h1 style="font-size: 16px; margin: 0;">COLLEGE UNION ELECTION ${c}</h1>
               <h1 style="font-size: 18px; margin: 5px 0;">${y(o)}</h1>
               <h2 style="font-size: 14px; margin: 0;">OFFICIAL BALLOT PAPER (GENERAL) - COUNTERFOIL</h2>
-              <div style="margin-top: 15px; font-weight: bold; text-align: left; display: flex; justify-content: space-between;">
-                <span>SL.NO. G____________</span>
-                <span style="font-size: 10px; color: #666; font-style: italic;">(To be detached before voting)</span>
+              <div style="margin-top: 15px; font-weight: bold; text-align: left; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span>SL.NO. G____________</span>
+                  <span style="font-size: 10px; color: #666; font-style: italic;">(To be detached before voting)</span>
+                </div>
+                <div style="font-size: 13px;">Voter Sl. No: ____________</div>
               </div>
             </div>
 
@@ -1656,9 +1659,12 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             <div style="border-bottom: 2px dotted #000; padding-bottom: 15px; margin-bottom: 20px; text-align: center;">
               <h1 style="font-size: 14px; margin: 0;">${y(s)} ELECTION ${c}</h1>
               <h2 style="font-size: 12px; margin: 2px 0;">OFFICIAL BALLOT (${n}) - COUNTERFOIL</h2>
-              <div style="margin-top: 10px; font-weight: bold; text-align: left; display: flex; justify-content: space-between; font-size: 11px;">
-                <span>SL.NO. ${n}____________</span>
-                <span style="font-size: 9px; color: #666; font-style: italic;">(To be detached)</span>
+              <div style="margin-top: 10px; font-weight: bold; text-align: left; display: flex; flex-direction: column; gap: 5px; font-size: 11px;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span>SL.NO. ${n}____________</span>
+                  <span style="font-size: 9px; color: #666; font-style: italic;">(To be detached)</span>
+                </div>
+                <div>Voter Sl. No: ____________</div>
               </div>
             </div>
 
