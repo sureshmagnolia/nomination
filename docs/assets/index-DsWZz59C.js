@@ -2036,17 +2036,21 @@ Are you absolutely sure?`))return;b(t,!0,`🗑️ Wiping...`);let i=n.querySelec
           <p class="text-slate-400">No results have been published yet. Please check back later.</p>
         </div>
       `;return}let s={};i.forEach(e=>{let t=e.post||e.name;s[t]={}}),a.forEach(e=>{let t=e.Post;s[t]||(s[t]={}),s[t][e.CandidateId]||(s[t][e.CandidateId]={name:e.CandidateName,votes:0}),s[t][e.CandidateId].votes+=Number(e.Votes)||0});let c=`<div class="space-y-12">`;i.forEach(e=>{let t=e.post||e.name,n=s[t];if(!n)return;let r=Object.keys(n);if(r.length===0)return;let i=r.filter(e=>e!==`INVALID`&&e!==`NOTA`).map(e=>n[e]),a=n.INVALID,o=n.NOTA;i.sort((e,t)=>t.votes-e.votes);let l=i.length?i[0].votes:0,u=i.reduce((e,t)=>e+t.votes,0)+(o?o.votes:0),d=u+(a?a.votes:0);c+=`
-        <div class="glass rounded-2xl overflow-hidden border border-white/10 page-enter">
-          <div class="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 p-5 border-b border-white/10 flex justify-between items-center">
-            <div>
-              <h2 class="text-2xl font-bold text-white">${y(t)}</h2>
-              <div class="flex gap-4 mt-1">
-                <span class="text-xs text-indigo-300">✅ Valid: <strong>${u}</strong></span>
-                <span class="text-xs text-purple-300">📊 Total Polled: <strong>${d}</strong></span>
+        <div class="glass rounded-2xl overflow-hidden border border-white/10 page-enter shadow-2xl">
+          <div class="bg-gradient-to-r from-slate-900/80 to-indigo-900/80 p-6 border-b border-white/10">
+            <h2 class="text-2xl font-bold text-white tracking-tight">${y(t)}</h2>
+            <div class="flex flex-wrap gap-3 mt-3">
+              <div class="bg-indigo-500/20 border border-indigo-400/30 px-3 py-1 rounded-full flex items-center gap-2">
+                <span class="text-[10px] uppercase tracking-wider text-indigo-300 font-bold">Valid</span>
+                <span class="text-sm text-white font-black">${u}</span>
+              </div>
+              <div class="bg-purple-500/20 border border-purple-400/30 px-3 py-1 rounded-full flex items-center gap-2">
+                <span class="text-[10px] uppercase tracking-wider text-purple-300 font-bold">Total Polled</span>
+                <span class="text-sm text-white font-black">${d}</span>
               </div>
             </div>
           </div>
-          <div class="p-6 space-y-6">
+          <div class="p-6 space-y-6 bg-slate-900/20">
             ${i.map((e,t)=>{let n=u>0?(e.votes/u*100).toFixed(1):0,r=l>0?e.votes/l*100:0,i=t===0&&e.votes>0;return`
                 <div class="relative">
                   <div class="flex justify-between items-end mb-2 relative z-10">

@@ -141,17 +141,21 @@ function updateHeader(main, year) {
       const grandTotal = totalValidVotes + (invalid ? invalid.votes : 0);
 
       html += `
-        <div class="glass rounded-2xl overflow-hidden border border-white/10 page-enter">
-          <div class="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 p-5 border-b border-white/10 flex justify-between items-center">
-            <div>
-              <h2 class="text-2xl font-bold text-white">${esc(name)}</h2>
-              <div class="flex gap-4 mt-1">
-                <span class="text-xs text-indigo-300">✅ Valid: <strong>${totalValidVotes}</strong></span>
-                <span class="text-xs text-purple-300">📊 Total Polled: <strong>${grandTotal}</strong></span>
+        <div class="glass rounded-2xl overflow-hidden border border-white/10 page-enter shadow-2xl">
+          <div class="bg-gradient-to-r from-slate-900/80 to-indigo-900/80 p-6 border-b border-white/10">
+            <h2 class="text-2xl font-bold text-white tracking-tight">${esc(name)}</h2>
+            <div class="flex flex-wrap gap-3 mt-3">
+              <div class="bg-indigo-500/20 border border-indigo-400/30 px-3 py-1 rounded-full flex items-center gap-2">
+                <span class="text-[10px] uppercase tracking-wider text-indigo-300 font-bold">Valid</span>
+                <span class="text-sm text-white font-black">${totalValidVotes}</span>
+              </div>
+              <div class="bg-purple-500/20 border border-purple-400/30 px-3 py-1 rounded-full flex items-center gap-2">
+                <span class="text-[10px] uppercase tracking-wider text-purple-300 font-bold">Total Polled</span>
+                <span class="text-sm text-white font-black">${grandTotal}</span>
               </div>
             </div>
           </div>
-          <div class="p-6 space-y-6">
+          <div class="p-6 space-y-6 bg-slate-900/20">
             ${valids.map((c, i) => {
               const percentage = totalValidVotes > 0 ? ((c.votes / totalValidVotes) * 100).toFixed(1) : 0;
               const barWidth = maxVotes > 0 ? (c.votes / maxVotes) * 100 : 0;
