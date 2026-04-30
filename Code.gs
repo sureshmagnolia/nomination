@@ -364,6 +364,37 @@ function doPost(e) {
       return jsonOut({ ok: true });
     }
 
+    if (action === 'adminSendOTP') {
+      checkAdmin(body.password);
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      setSetting('lastOTP', otp);
+      setSetting('lastOTPTime', new Date().toISOString());
+      
+      const email = Session.getEffectiveUser().getEmail();
+      const subject = `Admin Login OTP - GVC Election Portal`;
+      const message = `Your administrative One-Time Password (OTP) is: ${otp}\n\nThis code will expire in 5 minutes.\n\nIf you did not request this, please change your admin password immediately.`;
+      
+      MailApp.sendEmail(email, subject, message);
+      return jsonOut({ ok: true, email: email.replace(/(.{2})(.*)(@.*)/, "$1***$3") });
+    }
+
+    if (action === 'adminVerifyOTP') {
+      checkAdmin(body.password);
+      const savedOTP = getSetting('lastOTP');
+      const savedTime = getSetting('lastOTPTime');
+      
+      if (!savedOTP || !savedTime) return errOut('OTP not found. Please request a new one.');
+      
+      const diff = (new Date() - new Date(savedTime)) / 1000 / 60;
+      if (diff > 5) return errOut('OTP has expired. Please request a new one.');
+      
+      if (body.otp !== savedOTP) return errOut('Invalid OTP code.');
+      
+      // Clear OTP after successful use
+      setSetting('lastOTP', '');
+      return jsonOut({ ok: true });
+    }
+
     if (action === 'submitNomination') {
       let isAdmin = false;
       if (body.password) { try { checkAdmin(body.password); isAdmin = true; } catch(e) {} }

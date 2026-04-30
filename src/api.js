@@ -64,6 +64,12 @@ export const api = {
   /** Verify admin password; returns { ok: true } or throws */
   adminLogin: (password) => post({ action: 'adminLogin', password }),
 
+  /** Request an email OTP after password verification */
+  adminSendOTP: (password) => post({ action: 'adminSendOTP', password }),
+
+  /** Verify the 6-digit OTP code */
+  adminVerifyOTP: (password, otp) => post({ action: 'adminVerifyOTP', password, otp }),
+
   /** Fetch all nominations for admin review */
   adminGetNominations: (password) => get({ action: 'adminGetNominations', password }),
 
