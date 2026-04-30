@@ -792,6 +792,10 @@ function doPost(e) {
       let globalCandidateOffset = 0;
       let globalSupporterOffset = 0;
 
+      const nomRows = [];
+      const resRows = [];
+      const resHeaders = ['TableNumber', 'RoundNumber', 'Post', 'CandidateId', 'CandidateName', 'Votes', 'FormSerial'];
+
       posts.forEach((p) => {
         // Shuffle eligible lists for this post
         const eligibleCandidates = shuffle(students.filter(s => isEligibleCandidate(s, p)));
@@ -836,43 +840,35 @@ function doPost(e) {
             'Valid', 'None'
           ];
           
-          nomSheet.appendRow(row);
-          validSheet.appendRow(row);
-          finalSheet.appendRow(row);
+          nomRows.push(row);
           injected.push(id);
+          
+          // Prepare random votes
+          resRows.push([1, 1, p.post, id, candidate['NAME'], Math.floor(Math.random() * 100) + 50, 'TEST-AUTO']);
         }
 
-        // Advance global offsets by prime-ish steps to avoid clustering
+        // Prepare NOTA & INVALID
+        resRows.push([1, 1, p.post, 'NOTA', 'NOTA', Math.floor(Math.random() * 20), 'TEST-AUTO']);
+        resRows.push([1, 1, p.post, 'INVALID', 'Invalid', Math.floor(Math.random() * 10), 'TEST-AUTO']);
+
         globalCandidateOffset += 5;
         globalSupporterOffset += 7;
       });
 
-      // ─── Inject Random Votes for Contested Posts ───────────────────────────
-      const resSheet = getSheet(SHEET_RESULTS);
-      const resHeaders = ['TableNumber', 'RoundNumber', 'Post', 'CandidateId', 'CandidateName', 'Votes', 'FormSerial'];
-      if (resSheet.getLastRow() === 0) {
-        resSheet.appendRow(resHeaders);
-        resSheet.getRange(1, 1, 1, resHeaders.length).setFontWeight('bold');
+      // Batch write to sheets
+      if (nomRows.length > 0) {
+        nomSheet.getRange(nomSheet.getLastRow() + 1, 1, nomRows.length, nomRows[0].length).setValues(nomRows);
+        validSheet.getRange(validSheet.getLastRow() + 1, 1, nomRows.length, nomRows[0].length).setValues(nomRows);
+        finalSheet.getRange(finalSheet.getLastRow() + 1, 1, nomRows.length, nomRows[0].length).setValues(nomRows);
       }
-
-      posts.forEach(p => {
-        const pNoms = injected.filter(id => {
-          // Find the post name for this injected nomination
-          const nData = nomSheet.getDataRange().getValues().find(r => r[0] === id);
-          return nData && nData[1] === p.post;
-        });
-        
-        if (pNoms.length > 1) {
-          // Contested - Inject votes for Table 1, Round 1
-          pNoms.forEach(id => {
-            const nData = nomSheet.getDataRange().getValues().find(r => r[0] === id);
-            resSheet.appendRow([1, 1, p.post, id, nData[6], Math.floor(Math.random() * 100) + 50, 'TEST-AUTO']);
-          });
-          // Inject NOTA & INVALID
-          resSheet.appendRow([1, 1, p.post, 'NOTA', 'NOTA', Math.floor(Math.random() * 20), 'TEST-AUTO']);
-          resSheet.appendRow([1, 1, p.post, 'INVALID', 'Invalid', Math.floor(Math.random() * 10), 'TEST-AUTO']);
+      if (resRows.length > 0) {
+        const resSheet = getSheet(SHEET_RESULTS);
+        if (resSheet.getLastRow() === 0) {
+          resSheet.appendRow(resHeaders);
+          resSheet.getRange(1, 1, 1, resHeaders.length).setFontWeight('bold');
         }
-      });
+        resSheet.getRange(resSheet.getLastRow() + 1, 1, resRows.length, resRows[0].length).setValues(resRows);
+      }
 
       return jsonOut({ ok: true, injected: injected.length, skipped: skipped.length, skippedPosts: skipped });
     }
