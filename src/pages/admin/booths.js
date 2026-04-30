@@ -349,10 +349,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     // 3. Assocs
     const contestableAssocs = posts.filter(isAssoc).filter(p => candidates.filter(c => c.post === p.post).length > 1);
     contestableAssocs.forEach(p => {
-      const dept = p.post.replace('Association Secretary ', '');
+      const dept = p.post.replace('Association Secretary ', '').trim().toUpperCase();
       sortedBooths.forEach(b => {
         const boothStudents = students.filter(s => b.classes.includes(String(s.CLASS).trim()));
-        const targetStudents = boothStudents.filter(s => String(s.Dept).trim() === dept);
+        const targetStudents = boothStudents.filter(s => String(s.Dept || '').trim().toUpperCase() === dept);
         if (targetStudents.length > 0) {
           boothAllocations[b.boothNumber].assocs.push({ name: p.post, start: assocSl, end: assocSl + targetStudents.length - 1, count: targetStudents.length });
           assocSl += targetStudents.length;

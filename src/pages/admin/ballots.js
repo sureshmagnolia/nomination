@@ -370,11 +370,11 @@ export async function renderAdminBallots(container) {
       // 3. Association Series (Post-wise, then Booth-wise)
       const contestableAssocs = posts.filter(isAssoc).filter(p => candidates.filter(c => c.post === p.post).length > 1);
       contestableAssocs.forEach(p => {
-        const dept = p.post.replace('Association Secretary ', '');
+        const dept = p.post.replace('Association Secretary ', '').trim().toUpperCase();
         const postBooths = [];
         sortedBooths.forEach(b => {
           const boothStudents = nominalRoll.filter(s => b.classes.includes(String(s.CLASS).trim()));
-          const targetStudents = boothStudents.filter(s => String(s.Dept).trim() === dept);
+          const targetStudents = boothStudents.filter(s => String(s.Dept || '').trim().toUpperCase() === dept);
           if (targetStudents.length > 0) {
             postBooths.push({
               booth: b.boothNumber,
