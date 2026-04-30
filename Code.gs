@@ -5,11 +5,7 @@
  * ============================================================
  */
 
-// ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-//  CONFIGURATION ΓÇö UPDATE THESE
-// ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-const SPREADSHEET_ID = '10p-3qWklthNnDUp-MqOHEjJLmWRpgkvVX2QpmGreKxA'; 
-
+// CONFIGURATION ΓÇö NO SECRETS HERE (Stored in Script Properties)
 const SHEET_NOMINAL  = 'NominalRoll';
 const SHEET_NOMS     = 'Nominations'; // All submissions
 const SHEET_VALID    = 'ValidList';   // Verified by admin
@@ -77,10 +73,11 @@ function errOut(msg) { return jsonOut({ error: msg }); }
 //  SHEET HELPERS
 // ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function getSheet(name) {
-  if (SPREADSHEET_ID === 'YOUR_GOOGLE_SHEET_ID_HERE') {
-    throw new Error('SPREADSHEET_ID is not configured in Code.gs. Please put your Google Sheet ID.');
+  const ssId = PropertiesService.getScriptProperties().getProperty('SS_ID');
+  if (!ssId) {
+    throw new Error('SPREADSHEET_ID (SS_ID) is not configured in Script Properties. Please run setSpreadsheetId() once.');
   }
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const ss = SpreadsheetApp.openById(ssId);
   return ss.getSheetByName(name) || ss.insertSheet(name);
 }
 
@@ -317,11 +314,12 @@ function doGet(e) {
     }
 
     if (action === 'getSettings') {
-      const s = getSheet(SHEET_SETTINGS);
-      const d = s.getDataRange().getValues();
-      const obj = {};
-      d.forEach(r => { if (r[0]) obj[r[0]] = r[1]; });
-      return jsonOut(obj);
+      // Only return non-sensitive public flags by default
+      return jsonOut({
+        validListPublished: getSetting('validListPublished'),
+        finalListPublished: getSetting('finalListPublished'),
+        isRollFinalized: getSetting('isRollFinalized')
+      });
     }
 
     if (action === 'adminGetCountingMatrix') {
@@ -371,11 +369,12 @@ function doPost(e) {
         email = Session.getEffectiveUser().getEmail();
         if (!email) throw new Error("Email is empty");
       } catch (e) {
-        return errOut("AUTHORIZATION_REQUIRED: The script needs permission to send emails. Please open the Apps Script editor, run the 'getPublicSchedule' function manually once, grant permissions, and then re-deploy the web app as a new version.");
+        return errOut("AUTHORIZATION_REQUIRED: The script needs permission to send emails. Please open the Apps Script editor, run 'triggerAuthorization' once, grant permissions, and then re-deploy.");
       }
 
-      setSetting('lastOTP', otp);
-      setSetting('lastOTPTime', new Date().toISOString());
+      // SECURE: Store OTP in Script Properties (Not in Spreadsheet)
+      PropertiesService.getScriptProperties().setProperty('lastOTP', otp);
+      PropertiesService.getScriptProperties().setProperty('lastOTPTime', new Date().toISOString());
       
       const subject = `Admin Login OTP - GVC Election Portal`;
       const message = `Your administrative One-Time Password (OTP) is: ${otp}\n\nThis code will expire in 5 minutes.\n\nIf you did not request this, please change your admin password immediately.`;
@@ -386,8 +385,8 @@ function doPost(e) {
 
     if (action === 'adminVerifyOTP') {
       checkAdmin(body.password);
-      const savedOTP = getSetting('lastOTP');
-      const savedTime = getSetting('lastOTPTime');
+      const savedOTP = PropertiesService.getScriptProperties().getProperty('lastOTP');
+      const savedTime = PropertiesService.getScriptProperties().getProperty('lastOTPTime');
       
       if (!savedOTP || !savedTime) return errOut('OTP not found. Please request a new one.');
       
@@ -397,7 +396,7 @@ function doPost(e) {
       if (body.otp !== savedOTP) return errOut('Invalid OTP code.');
       
       // Clear OTP after successful use
-      setSetting('lastOTP', '');
+      PropertiesService.getScriptProperties().deleteProperty('lastOTP');
       return jsonOut({ ok: true });
     }
 
@@ -931,7 +930,20 @@ function syncToSheet(sheetName, id, rowData, shouldExist) {
  * the authorization dialog for OTP emails.
  */
 function triggerAuthorization() {
+  // SET YOUR SPREADSHEET ID HERE ONCE, then clear it or delete this function.
+  // PropertiesService.getScriptProperties().setProperty('SS_ID', 'YOUR_ACTUAL_ID_HERE');
+  
   const email = Session.getEffectiveUser().getEmail();
   MailApp.sendEmail(email, "Authorization Trigger", "If you received this, the election portal is now authorized to send OTPs.");
   Logger.log("Authorized for: " + email);
+}
+
+/**
+ * Run this ONCE to link your Spreadsheet ID securely.
+ * This way, the ID never stays in your public GitHub code.
+ */
+function setupSecureSpreadsheet() {
+  const id = '10p-3qWklthNnDUp-MqOHEjJLmWRpgkvVX2QpmGreKxA';
+  PropertiesService.getScriptProperties().setProperty('SS_ID', id);
+  Logger.log("Successfully linked Spreadsheet ID securely.");
 }
