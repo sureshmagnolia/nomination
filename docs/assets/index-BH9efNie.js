@@ -1622,7 +1622,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                   <span>SL.NO. G____________</span>
                   <span style="font-size: 10px; color: #666; font-style: italic;">(To be detached before voting)</span>
                 </div>
-                <div style="font-size: 13px;">Voter Sl. No: ____________</div>
+                <div style="font-size: 13px;">Sl. No of Voter in Marked Copy: ____________</div>
               </div>
             </div>
 
@@ -1664,7 +1664,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
                   <span>SL.NO. ${n}____________</span>
                   <span style="font-size: 9px; color: #666; font-style: italic;">(To be detached)</span>
                 </div>
-                <div>Voter Sl. No: ____________</div>
+                <div>Sl. No of Voter in Marked Copy: ____________</div>
               </div>
             </div>
 
