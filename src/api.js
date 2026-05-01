@@ -141,7 +141,8 @@ export const api = {
       api.adminGetPosts(password).catch(()=>null),
       api.adminGetBooths(password).catch(()=>null),
       api.adminGetLocations(password).catch(()=>null),
-      api.adminGetBallotPlan(password).catch(()=>null)
+      api.adminGetBallotPlan(password).catch(()=>null),
+      api.adminGetCountingMatrix(password).catch(()=>null)
     ];
     await Promise.all(promises);
   },
