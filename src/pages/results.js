@@ -48,14 +48,14 @@ export async function renderResults(container) {
       timerEl.textContent = 'Live Update Available';
       timerEl.classList.add('text-green-400');
       btnRefresh.disabled = false;
-      btnRefresh.classList.remove('opacity-50', 'cursor-not-allowed');
+      btnRefresh.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
     } else {
       const mins = Math.floor(remaining / 60000);
       const secs = Math.floor((remaining % 60000) / 1000);
       timerEl.textContent = `Update in ${mins}:${secs.toString().padStart(2, '0')}`;
       timerEl.classList.remove('text-green-400');
       btnRefresh.disabled = true;
-      btnRefresh.classList.add('opacity-50', 'cursor-not-allowed');
+      btnRefresh.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
     }
   };
 
@@ -63,7 +63,14 @@ export async function renderResults(container) {
   updateTimer();
 
   container.querySelector('#backToHome').addEventListener('click', () => router.navigate('/'));
-  container.querySelector('#btnRefresh').addEventListener('click', () => fetchAndRender(container.querySelector('#resultsMain'), true));
+  
+  btnRefresh.addEventListener('click', (e) => {
+    if (btnRefresh.disabled || btnRefresh.classList.contains('pointer-events-none')) {
+      e.preventDefault();
+      return;
+    }
+    fetchAndRender(container.querySelector('#resultsMain'), true);
+  });
 
   await fetchAndRender(container.querySelector('#resultsMain'));
 }
