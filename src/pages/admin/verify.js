@@ -35,12 +35,14 @@ function renderVerifyTable(main, noms, pwd) {
           <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
           <input type="text" id="nomSearch" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors" placeholder="Search by Candidate Name, ID, or Post...">
         </div>
-        <select id="statusFilter" class="field w-full md:w-56 bg-black/20 focus:bg-black/40 transition-colors">
-          <option value="all">All Statuses</option>
-          <option value="Pending">Pending</option>
-          <option value="Valid">Valid</option>
-          <option value="Rejected">Rejected</option>
-        </select>
+        <div class="w-full md:w-56 shrink-0">
+          <select id="statusFilter" class="field w-full bg-black/20 focus:bg-black/40 transition-colors">
+            <option value="all">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Valid">Valid</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
       </div>
 
       <div class="glass rounded-xl overflow-hidden shadow-2xl">
