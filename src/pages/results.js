@@ -75,6 +75,14 @@ async function fetchAndRender(main, force = false) {
       updateHeader(main, year);
     } else {
       // Fetch fresh
+      if (force) {
+        // If the user manually clicked refresh, we must bypass the api.js in-memory cache
+        // to guarantee a true network request to the backend.
+        api.invalidateCache('getResults');
+        api.invalidateCache('getPosts');
+        api.invalidateCache('getPublicSchedule');
+      }
+
       let schedule;
       [posts, results, schedule] = await Promise.all([
         api.getPosts(),

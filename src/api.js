@@ -154,6 +154,8 @@ function invalidateCache(actionSubstring) {
 // ─── Public API ────────────────────────────────────────────────────────────────
 
 export const api = {
+  invalidateCache,
+  
   // Pre-fetchers
   initPublicData: async () => {
     const promises = [

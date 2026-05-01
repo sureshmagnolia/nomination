@@ -837,6 +837,7 @@ function doPost(e) {
         ]);
       });
       
+      CacheService.getScriptCache().remove('public_results');
       return jsonOut({ ok: true });
     }
 
