@@ -299,21 +299,18 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       const resultsToSave = [];
       
       inputs.forEach(inp => {
-        const votes = inp.value.trim();
-        if (votes !== '') {
-          resultsToSave.push({
-            TableNumber: tableNum,
-            RoundNumber: roundNum,
-            Post: postName,
-            CandidateId: inp.dataset.cid,
-            CandidateName: inp.dataset.cname,
-            Votes: parseInt(votes, 10),
-            FormSerial: serial || 'N/A'
-          });
-        }
+        resultsToSave.push({
+          TableNumber: tableNum,
+          RoundNumber: roundNum,
+          Post: postName,
+          CandidateId: inp.dataset.cid,
+          CandidateName: inp.dataset.cname,
+          Votes: parseInt(inp.value.trim(), 10) || 0,
+          FormSerial: serial || 'N/A'
+        });
       });
 
-      if (resultsToSave.length === 0) { showToast('Enter votes', 'warning'); return; }
+      if (resultsToSave.every(r => r.Votes === 0) && !confirm('All votes are 0. Are you sure you want to save?')) return;
 
       // Optimistically update allResults
       resultsToSave.forEach(ns => {
