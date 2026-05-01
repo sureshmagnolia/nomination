@@ -13,6 +13,20 @@ const _syncQueue = [];
 let _isSyncing = false;
 let _statusCallback = null;
 
+// ─── Session Helpers ──────────────────────────────────────────────────────────
+function getSessionToken() {
+  // sessionStorage is kept in sync with localStorage by layout.js on every admin page load
+  return sessionStorage.getItem('adminSessionToken') || localStorage.getItem('adminSessionToken');
+}
+
+function handleSessionExpired() {
+  sessionStorage.removeItem('adminPassword');
+  sessionStorage.removeItem('adminSessionToken');
+  _cache = {};
+  alert('⚠️ Another admin has logged in from a different device. You have been logged out.');
+  window.location.hash = '/admin';
+}
+
 export function setSyncStatusCallback(cb) {
   _statusCallback = cb;
 }
@@ -48,6 +62,7 @@ async function processQueue() {
       });
       if (!res.ok) throw new Error(`Network error: ${res.status}`);
       const data = await res.json();
+      if (data.error === 'SESSION_EXPIRED') { handleSessionExpired(); _syncQueue.length = 0; break; }
       if (data.error) throw new Error(data.error);
       if (task.resolve) task.resolve(data);
     } catch (err) {
@@ -67,23 +82,32 @@ async function processQueue() {
 }
 
 async function get(params) {
+  // Inject session token for admin requests
+  const token = getSessionToken();
+  if (token && params.password) params = { ...params, sessionToken: token };
+
   const cacheKey = JSON.stringify(params);
   if (_cache[cacheKey] !== undefined) return _cache[cacheKey];
 
   const url = new URL(BASE_URL);
   Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
-  url.searchParams.append('_t', Date.now()); 
+  url.searchParams.append('_t', Date.now());
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`Network error: ${res.status}`);
   const data = await res.json();
+  if (data.error === 'SESSION_EXPIRED') { handleSessionExpired(); throw new Error('SESSION_EXPIRED'); }
   if (data.error) throw new Error(data.error);
-  
+
   _cache[cacheKey] = data;
   return data;
 }
 
 // Direct synchronous post (blocks UI until server responds)
 async function post(body) {
+  // Inject session token for admin requests
+  const token = getSessionToken();
+  if (token && body.password) body = { ...body, sessionToken: token };
+
   const res = await fetch(BASE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -91,12 +115,17 @@ async function post(body) {
   });
   if (!res.ok) throw new Error(`Network error: ${res.status}`);
   const data = await res.json();
+  if (data.error === 'SESSION_EXPIRED') { handleSessionExpired(); throw new Error('SESSION_EXPIRED'); }
   if (data.error) throw new Error(data.error);
   return data;
 }
 
 // Background queued post (resolves when server finishes)
 function bgPost(body) {
+  // Inject session token for admin requests
+  const token = getSessionToken();
+  if (token && body.password) body = { ...body, sessionToken: token };
+
   return new Promise((resolve, reject) => {
     _syncQueue.push({ body, resolve, reject });
     processQueue();
@@ -162,7 +191,21 @@ export const api = {
 
   // ─── Admin API ──────────────────────────────────────────────────────────────
 
-  adminLogin: (password) => post({ action: 'adminLogin', password }),
+  adminLogin: async (password) => {
+    // Login does NOT send a sessionToken — it creates a new one
+    const res = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'adminLogin', password }),
+    });
+    if (!res.ok) throw new Error(`Network error: ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    if (data.sessionToken) {
+      sessionStorage.setItem('adminSessionToken', data.sessionToken);
+    }
+    return data;
+  },
   adminSendOTP: (password) => post({ action: 'adminSendOTP', password }),
   adminVerifyOTP: (password, otp) => post({ action: 'adminVerifyOTP', password, otp }),
   adminGetNominations: (password) => get({ action: 'adminGetNominations', password }),

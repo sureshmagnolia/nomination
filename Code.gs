@@ -198,7 +198,13 @@ function getPostsData() {
   }));
 }
 
-function checkAdmin(pwd) {
+/**
+ * Validates admin credentials and (optionally) the active session token.
+ * @param {string} pwd         - The daily password.
+ * @param {string} sessionToken - The UUID session token from the client.
+ * @param {boolean} isLogin    - Set true during adminLogin so we skip token check.
+ */
+function checkAdmin(pwd, sessionToken, isLogin = false) {
   // Generate dynamic password based on current date in India (Asia/Kolkata)
   // Format: ddmmyyyyday (e.g., 29042026wednesday)
   const now = new Date();
@@ -208,6 +214,13 @@ function checkAdmin(pwd) {
 
   if (pwd !== dynamicPassword) {
     throw new Error('Invalid admin password.');
+  }
+
+  if (!isLogin) {
+    const activeToken = PropertiesService.getScriptProperties().getProperty('activeAdminSession');
+    if (activeToken && activeToken !== sessionToken) {
+      throw new Error('SESSION_EXPIRED');
+    }
   }
 }
 
@@ -255,12 +268,12 @@ function doGet(e) {
     }
 
     if (action === 'adminGetNominations') {
-      checkAdmin(e.parameter.password);
+      checkAdmin(e.parameter.password, e.parameter.sessionToken);
       return jsonOut(getAllNominations());
     }
 
     if (action === 'adminGetSettings') {
-      checkAdmin(e.parameter.password);
+      checkAdmin(e.parameter.password, e.parameter.sessionToken);
       return jsonOut({
         validListPublished: getSetting('validListPublished'),
         finalListPublished: getSetting('finalListPublished'),
@@ -270,12 +283,12 @@ function doGet(e) {
     }
 
     if (action === 'adminGetPosts') {
-      checkAdmin(e.parameter.password);
+      checkAdmin(e.parameter.password, e.parameter.sessionToken);
       return jsonOut(getPostsData());
     }
 
     if (action === 'adminGetBooths') {
-      checkAdmin(e.parameter.password);
+      checkAdmin(e.parameter.password, e.parameter.sessionToken);
       const s = getSheet(SHEET_BOOTHS);
       const d = s.getDataRange().getValues();
       if (d.length < 2) return jsonOut([]);
@@ -287,7 +300,7 @@ function doGet(e) {
     }
 
     if (action === 'adminGetLocations') {
-      checkAdmin(e.parameter.password);
+      checkAdmin(e.parameter.password, e.parameter.sessionToken);
       const locStr = getSetting('availableLocations');
       try {
         return jsonOut(locStr ? JSON.parse(locStr) : []);
@@ -330,7 +343,7 @@ function doGet(e) {
     }
 
     if (action === 'adminGetCountingMatrix') {
-      checkAdmin(e.parameter.password);
+      checkAdmin(e.parameter.password, e.parameter.sessionToken);
       const s = getSheet(SHEET_MATRIX);
       const d = s.getDataRange().getValues();
       if (d.length < 2) return jsonOut(null);
@@ -338,7 +351,7 @@ function doGet(e) {
     }
 
     if (action === 'adminGetBallotPlan') {
-      checkAdmin(e.parameter.password);
+      checkAdmin(e.parameter.password, e.parameter.sessionToken);
       const s = getSheet(SHEET_BALLOT_PLAN);
       const d = s.getDataRange().getValues();
       if (d.length < 2) return errOut('No ballot plan generated yet. Please generate it from the Ballot Printing page.');
@@ -361,7 +374,7 @@ function doPost(e) {
     const action = body.action;
 
     if (action === 'adminSaveSchedule') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       setSetting('nominationDeadline', body.nominationDeadline);
       setSetting('withdrawalStart', body.withdrawalStart);
       setSetting('withdrawalEnd', body.withdrawalEnd);
@@ -371,19 +384,21 @@ function doPost(e) {
     }
 
     if (action === 'adminLogin') {
-      checkAdmin(body.password);
-      return jsonOut({ ok: true });
+      checkAdmin(body.password, null, true);
+      const sessionToken = Utilities.getUuid();
+      PropertiesService.getScriptProperties().setProperty('activeAdminSession', sessionToken);
+      return jsonOut({ ok: true, sessionToken });
     }
 
     if (action === 'adminUpdateSettings') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       if (body.collegeName) setSetting('collegeName', body.collegeName);
       if (body.collegeShortName) setSetting('collegeShortName', body.collegeShortName);
       return jsonOut({ ok: true });
     }
 
     if (action === 'adminSendOTP') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       
       let email = "";
@@ -406,7 +421,7 @@ function doPost(e) {
     }
 
     if (action === 'adminVerifyOTP') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       const savedOTP = PropertiesService.getScriptProperties().getProperty('lastOTP');
       const savedTime = PropertiesService.getScriptProperties().getProperty('lastOTPTime');
       
@@ -424,7 +439,7 @@ function doPost(e) {
 
     if (action === 'submitNomination') {
       let isAdmin = false;
-      if (body.password) { try { checkAdmin(body.password); isAdmin = true; } catch(e) {} }
+      if (body.password) { try { checkAdmin(body); isAdmin = true; } catch(e) {} }
 
       const deadline = getSetting('nominationDeadline');
       const deadlineDate = (deadline && deadline.trim()) ? new Date(deadline) : null;
@@ -474,7 +489,7 @@ function doPost(e) {
 
     if (action === 'submitWithdrawal') {
       let isAdmin = false;
-      if (body.password) { try { checkAdmin(body.password); isAdmin = true; } catch(e) {} }
+      if (body.password) { try { checkAdmin(body); isAdmin = true; } catch(e) {} }
       
       const start = getSetting('withdrawalStart'), end = getSetting('withdrawalEnd'), now = new Date();
       const startDate = (start && start.trim()) ? new Date(start) : null;
@@ -492,7 +507,7 @@ function doPost(e) {
     }
 
     if (action === 'adminVerifyNomination') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       const nom = getAllNominations().find(n => n.id === body.id);
       if (!nom) return errOut(`Not found.`);
       getSheet(SHEET_NOMS).getRange(nom._row, 21).setValue(body.status);
@@ -504,7 +519,7 @@ function doPost(e) {
     }
 
     if (action === 'adminApproveWithdrawal') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       const nom = getAllNominations().find(n => n.id === body.id);
       if (!nom) return errOut(`Not found.`);
       getSheet(SHEET_NOMS).getRange(nom._row, 22).setValue('Approved');
@@ -516,7 +531,7 @@ function doPost(e) {
     }
 
     if (action === 'adminPublishValidList') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       const validNoms = getAllNominations().filter(n => n.status === 'Valid');
       const sValid = getSheet(SHEET_VALID);
       sValid.clear();
@@ -536,7 +551,7 @@ function doPost(e) {
     }
 
     if (action === 'adminPublishFinalList') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       const finalNoms = getAllNominations().filter(n => n.status === 'Valid');
       const sFinal = getSheet(SHEET_FINAL);
       sFinal.clear();
@@ -556,7 +571,7 @@ function doPost(e) {
     }
 
     if (action === 'adminDeletePost') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       const s = getSheet(SHEET_POSTS);
       const d = s.getDataRange().getValues();
       for (let i = 1; i < d.length; i++) {
@@ -570,7 +585,7 @@ function doPost(e) {
     }
 
     if (action === 'adminAddPost') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       const s = getSheet(SHEET_POSTS);
       s.appendRow([body.post, body.femaleOnly, body.finalYearIneligible, body.yearRestriction, body.deptRestriction]);
       CacheService.getScriptCache().remove('public_posts');
@@ -578,7 +593,7 @@ function doPost(e) {
     }
 
     if (action === 'adminUpdatePost') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       const s = getSheet(SHEET_POSTS);
       const d = s.getDataRange().getValues();
       for (let i = 1; i < d.length; i++) {
@@ -592,7 +607,7 @@ function doPost(e) {
     }
 
     if (action === 'adminDeleteStudent') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       if (getSetting('nominalRollFinalized') === 'true') return errOut('Roll is finalized. No changes allowed.');
       const s = getSheet(SHEET_ROLL);
       const d = s.getDataRange().getValues();
@@ -603,7 +618,7 @@ function doPost(e) {
     }
 
     if (action === 'adminAddStudent') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       if (getSetting('nominalRollFinalized') === 'true') return errOut('Roll is finalized. No changes allowed.');
       const s = getSheet(SHEET_ROLL);
       s.appendRow([body.serial, body.name, body.class, body.admission, body.dept]);
@@ -611,7 +626,7 @@ function doPost(e) {
     }
 
     if (action === 'adminFinalizeRoll') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       if (getSetting('nominalRollFinalized') === 'true') return errOut('Already finalized.');
       
       const s = getSheet(SHEET_ROLL);
@@ -641,7 +656,7 @@ function doPost(e) {
 
 
     if (action === 'adminReorderPosts') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       const s = getSheet(SHEET_POSTS);
       const d = s.getDataRange().getValues();
       if (d.length <= 1) return jsonOut({ ok: true });
@@ -666,7 +681,7 @@ function doPost(e) {
     }
 
     if (action === 'adminSaveBooths') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       const s = getSheet(SHEET_BOOTHS);
       s.clear();
       s.appendRow(['BoothNumber', 'RoomName', 'AllocatedClasses']);
@@ -679,7 +694,7 @@ function doPost(e) {
     }
 
     if (action === 'adminSaveLocations') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       if (Array.isArray(body.locations)) {
         setSetting('availableLocations', JSON.stringify(body.locations));
         return jsonOut({ ok: true });
@@ -688,7 +703,7 @@ function doPost(e) {
     }
 
     if (action === 'adminSaveResults') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       // body.results = [{ TableNumber, Post, CandidateId, CandidateName, Votes }]
       const s = getSheet(SHEET_RESULTS);
       const d = s.getDataRange().getValues();
@@ -726,7 +741,7 @@ function doPost(e) {
     }
 
     if (action === 'adminSaveCountingMatrix') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       const s = getSheet(SHEET_MATRIX);
       s.clear();
       s.appendRow(['MatrixDataJSON']);
@@ -735,7 +750,7 @@ function doPost(e) {
     }
 
     if (action === 'adminGenerateBallotPlan') {
-      checkAdmin(body.password);
+      checkAdmin(body.password, body.sessionToken);
       const plan = calculateBallotPlanServer();
       const s = getSheet(SHEET_BALLOT_PLAN);
       s.clear();
@@ -745,7 +760,7 @@ function doPost(e) {
     }
 
     if (action === 'adminInjectTestData') {
-      checkAdmin(body.password);
+      checkAdmin(body);
 
       const nomSheet   = getSheet(SHEET_NOMS);
       const validSheet = getSheet(SHEET_VALID);
@@ -913,7 +928,7 @@ function doPost(e) {
     }
 
     if (action === 'adminWipeData') {
-      checkAdmin(body.password);
+      checkAdmin(body);
       
       // Wipe transactional data only ΓÇö never wipe NominalRoll, Posts, or Booths
       const sheetsToWipe = [SHEET_NOMS, SHEET_VALID, SHEET_FINAL, SHEET_RESULTS, SHEET_MATRIX];

@@ -17,11 +17,18 @@ export function getAdminPassword() {
       // Clean up expired session
       localStorage.removeItem('adminPwd');
       localStorage.removeItem('adminLoginDate');
+      localStorage.removeItem('adminSessionToken');
+      sessionStorage.removeItem('adminSessionToken');
       showToast('Daily session expired. Please log in again.', 'warning');
     }
     router.navigate('/admin');
     return null;
   }
+
+  // Sync the session token from localStorage into sessionStorage for api.js to read
+  const token = localStorage.getItem('adminSessionToken');
+  if (token) sessionStorage.setItem('adminSessionToken', token);
+
   return pwd;
 }
 
@@ -93,6 +100,8 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
   container.querySelector('#logoutBtn').addEventListener('click', () => {
     localStorage.removeItem('adminPwd');
     localStorage.removeItem('adminLoginDate');
+    localStorage.removeItem('adminSessionToken');
+    sessionStorage.removeItem('adminSessionToken');
     showToast('Logged out.', 'info');
     router.navigate('/');
   });
