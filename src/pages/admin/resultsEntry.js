@@ -458,48 +458,50 @@ function renderLedger(main, allResults, allFormSerialsMeta) {
     `;
   }
 
-  const chipClass = (st, serial, id) => {
-    const base = 'w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold cursor-default select-none transition-all border';
+  const chipClass = (st) => {
+    const base = 'w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold select-none transition-all border cursor-pointer';
     switch (st) {
       case 'server':
       case 'success':
-        return `${base} bg-green-500/20 text-green-400 border-green-500/40` ;
+        return `${base} bg-green-500/20 text-green-400 border-green-500/40 hover:bg-green-500/40`;
       case 'syncing':
-        return `${base} bg-blue-500/20 text-blue-300 border-blue-500/40 animate-pulse`;
+        return `${base} bg-blue-500/20 text-blue-300 border-blue-500/40 animate-pulse cursor-default`;
       case 'pending':
       case 'retry':
-        return `${base} bg-amber-500/20 text-amber-300 border-amber-500/40`;
+        return `${base} bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/40`;
       case 'error':
-        return `${base} bg-red-500/20 text-red-400 border-red-500/40 cursor-pointer retry-btn hover:bg-red-500/40` ;
+        return `${base} bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/40 retry-btn`;
       default: // not entered yet
-        return `${base} bg-slate-800/80 text-slate-500 border-slate-700`;
+        return `${base} bg-slate-800/80 text-slate-500 border-slate-700 hover:bg-slate-700/80`;
     }
   };
 
   const chipTitle = (s, st, meta) => {
     const info = meta[String(s)] || {};
-    const base = `Form #${s} | Table ${info.tableNum || '?'} | ${info.postName || '?'}`;
+    const base = `Form #${s} | T-${info.tableNum || '?'} | ${info.postName || '?'}`;
+    const action = st === 'syncing' ? '' : ' | Dbl-click to load';
     if (st === 'error') {
       const item = syncQueue.find(i => String(i.serial) === String(s));
-      return `${base} | ❌ Failed - Click to retry (${item?.errorMsg || ''})`;
+      return `${base} | ❌ Failed${action} (${item?.errorMsg || ''})`;
     }
-    if (st === 'pending') return `${base} | ⏳ Not entered yet`;
-    if (st === 'server') return `${base} | ☁️ Saved in Google Sheet`;
-    if (st === 'success') return `${base} | ✅ Saved this session`;
-    if (st === 'syncing') return `${base} | 🔵 Syncing to server...`;
-    return base;
+    if (st === 'pending') return `${base} | ⏳ Not entered yet${action}`;
+    if (st === 'server') return `${base} | ☁️ In Sheet${action}`;
+    if (st === 'success') return `${base} | ✅ Saved${action}`;
+    if (st === 'syncing') return `${base} | 🔵 Syncing...`;
+    return base + action;
   };
 
   grid.innerHTML = allSerials.map(s => {
     const st = statusMap[String(s)] || 'not-entered';
     const qItem = syncQueue.find(i => String(i.serial) === String(s));
-    return `<div class="${chipClass(st, s, qItem?.id)}"
+    return `<button class="${chipClass(st)}"
       title="${chipTitle(s, st, allFormSerialsMeta)}"
+      data-serial="${s}"
       ${st === 'error' && qItem ? `data-id="${qItem.id}"` : ''}
-    >${s}</div>`;
+    >${s}</button>`;
   }).join('');
 
-  // Retry on click for failed chips
+  // Single-click: retry failed chips only
   grid.querySelectorAll('.retry-btn').forEach(chip => {
     chip.addEventListener('click', () => {
       const id = chip.dataset.id;
@@ -508,6 +510,20 @@ function renderLedger(main, allResults, allFormSerialsMeta) {
         item.status = 'retry';
         renderLedger(main, allResults, allFormSerialsMeta);
         processQueue(main, allResults, allFormSerialsMeta);
+      }
+    });
+  });
+
+  // Double-click any chip: load that form into the serial input
+  grid.querySelectorAll('button[data-serial]').forEach(chip => {
+    chip.addEventListener('dblclick', () => {
+      const serial = chip.dataset.serial;
+      const txtSerial = main.querySelector('#txtSerial');
+      if (txtSerial) {
+        txtSerial.value = serial;
+        // Scroll to top of left panel so user sees the form load
+        main.querySelector('#entryFormArea')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        txtSerial.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
       }
     });
   });
