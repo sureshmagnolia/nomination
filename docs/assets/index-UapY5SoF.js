@@ -2126,23 +2126,27 @@ Are you absolutely sure?`))return;D(t,!0,`🗑️ Wiping...`);let i=n.querySelec
         <table class="result-table">
           <thead>
             <tr>
-              <th style="width: 35%;">Office / Post</th>
-              <th style="width: 35%;">Name of Candidate</th>
-              <th style="text-align: center; width: 10%;">Votes</th>
-              <th style="width: 20%;">Remarks</th>
+              <th style="width: 10%; text-align: center;">Sl. No.</th>
+              <th style="width: 45%;">Name of Candidate</th>
+              <th style="text-align: center; width: 15%;">Votes Secured</th>
+              <th style="width: 30%;">Remarks</th>
             </tr>
           </thead>
           <tbody>
             ${u.map(e=>e.type===`no-candidates`?``:`
                 <tr class="post-header">
-                  <td colspan="4" style="background: #eee;">${E(e.post)}</td>
+                  <td colspan="4" style="background: #eaeaea; padding: 15px 10px; border-bottom: 2px solid #000;">
+                    ${E(e.post)}
+                  </td>
                 </tr>
-                ${e.candidates.map(t=>{let n=e.winner&&e.winner.id===t.id;return`
-                    <tr class="${n?`winner-row`:``}">
-                      <td style="padding-left: 20px; color: #555; font-size: 11px;">${E(e.post)}</td>
-                      <td>${E(t.candidateName)}</td>
-                      <td style="text-align: center;">${e.type===`unanimous`?`—`:t.votes||0}</td>
-                      <td style="font-size: 11px;">${n?e.type===`unanimous`?`Elected Unanimously`:`WON BY HIGHEST VOTE`:``}</td>
+                ${e.candidates.map((t,n)=>{let r=e.winner&&e.winner.id===t.id;return`
+                    <tr class="${r?`winner-row`:``}">
+                      <td style="text-align: center; color: #555; font-size: 12px;">${n+1}</td>
+                      <td style="font-weight: ${r?`bold`:`normal`}; font-size: 14px;">${E(t.candidateName)}</td>
+                      <td style="text-align: center; font-weight: bold; font-size: 14px;">${e.type===`unanimous`?`—`:t.votes||0}</td>
+                      <td style="font-size: 12px; font-weight: bold;">
+                        ${r?e.type===`unanimous`?`ELECTED UNANIMOUSLY`:`✓ ELECTED`:``}
+                      </td>
                     </tr>
                   `}).join(``)}
               `).join(``)}

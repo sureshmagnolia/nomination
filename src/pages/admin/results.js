@@ -224,10 +224,10 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets) 
         <table class="result-table">
           <thead>
             <tr>
-              <th style="width: 35%;">Office / Post</th>
-              <th style="width: 35%;">Name of Candidate</th>
-              <th style="text-align: center; width: 10%;">Votes</th>
-              <th style="width: 20%;">Remarks</th>
+              <th style="width: 10%; text-align: center;">Sl. No.</th>
+              <th style="width: 45%;">Name of Candidate</th>
+              <th style="text-align: center; width: 15%;">Votes Secured</th>
+              <th style="width: 30%;">Remarks</th>
             </tr>
           </thead>
           <tbody>
@@ -235,16 +235,20 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets) 
               if (res.type === 'no-candidates') return '';
               return `
                 <tr class="post-header">
-                  <td colspan="4" style="background: #eee;">${esc(res.post)}</td>
+                  <td colspan="4" style="background: #eaeaea; padding: 15px 10px; border-bottom: 2px solid #000;">
+                    ${esc(res.post)}
+                  </td>
                 </tr>
-                ${res.candidates.map(c => {
+                ${res.candidates.map((c, idx) => {
                   const isWinner = res.winner && res.winner.id === c.id;
                   return `
                     <tr class="${isWinner ? 'winner-row' : ''}">
-                      <td style="padding-left: 20px; color: #555; font-size: 11px;">${esc(res.post)}</td>
-                      <td>${esc(c.candidateName)}</td>
-                      <td style="text-align: center;">${res.type === 'unanimous' ? '—' : (c.votes || 0)}</td>
-                      <td style="font-size: 11px;">${isWinner ? (res.type === 'unanimous' ? 'Elected Unanimously' : 'WON BY HIGHEST VOTE') : ''}</td>
+                      <td style="text-align: center; color: #555; font-size: 12px;">${idx + 1}</td>
+                      <td style="font-weight: ${isWinner ? 'bold' : 'normal'}; font-size: 14px;">${esc(c.candidateName)}</td>
+                      <td style="text-align: center; font-weight: bold; font-size: 14px;">${res.type === 'unanimous' ? '—' : (c.votes || 0)}</td>
+                      <td style="font-size: 12px; font-weight: bold;">
+                        ${isWinner ? (res.type === 'unanimous' ? 'ELECTED UNANIMOUSLY' : '✓ ELECTED') : ''}
+                      </td>
                     </tr>
                   `;
                 }).join('')}
