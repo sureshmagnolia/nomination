@@ -804,39 +804,56 @@ function doPost(e) {
 
     if (action === 'adminSaveResults') {
       checkAdmin(body.password, body.sessionToken);
-      // body.results = [{ TableNumber, Post, CandidateId, CandidateName, Votes }]
+      // body.results = [{ TableNumber, RoundNumber, Post, CandidateId, CandidateName, Votes, FormSerial }]
       const s = getSheet(SHEET_RESULTS);
-      const d = s.getDataRange().getValues();
       const headers = ['TableNumber', 'RoundNumber', 'Post', 'CandidateId', 'CandidateName', 'Votes', 'FormSerial'];
-      
+
       if (!Array.isArray(body.results) || body.results.length === 0) return jsonOut({ ok: true });
-      
-      const targetTable = String(body.results[0].TableNumber);
-      const targetPost = String(body.results[0].Post);
-      
-      // Filter out existing rows that match the target table and post
-      const rowsToKeep = d.slice(1).filter(r => String(r[0]) !== targetTable || String(r[2]) !== targetPost);
-      
-      s.clear();
-      s.appendRow(headers);
-      rowsToKeep.forEach(r => {
-        const row = [...r];
-        while (row.length < headers.length) row.push('');
-        s.appendRow(row);
-      });
-      
+
+      // Ensure header row exists
+      if (s.getLastRow() === 0) {
+        s.appendRow(headers);
+        s.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+      }
+
+      // Read all existing data once
+      const d = s.getDataRange().getValues();
+
+      // Build a lookup: "TableNumber|Post|CandidateId" -> row index (1-based, skipping header)
+      const rowIndexMap = {};
+      for (let i = 1; i < d.length; i++) {
+        const key = `${d[i][0]}|${d[i][2]}|${d[i][3]}`;
+        rowIndexMap[key] = i + 1; // 1-based sheet row
+      }
+
+      const rowsToAppend = [];
+
       body.results.forEach(res => {
-        s.appendRow([
-          res.TableNumber, 
+        const key = `${res.TableNumber}|${res.Post}|${res.CandidateId}`;
+        const newRow = [
+          res.TableNumber,
           res.RoundNumber || 'N/A',
-          res.Post, 
-          res.CandidateId, 
-          res.CandidateName, 
-          Number(res.Votes) || 0, 
+          res.Post,
+          res.CandidateId,
+          res.CandidateName,
+          Number(res.Votes) || 0,
           res.FormSerial || 'N/A'
-        ]);
+        ];
+
+        if (rowIndexMap[key]) {
+          // Update existing row in-place
+          s.getRange(rowIndexMap[key], 1, 1, headers.length).setValues([newRow]);
+        } else {
+          // Queue for append
+          rowsToAppend.push(newRow);
+        }
       });
-      
+
+      // Batch append new rows
+      if (rowsToAppend.length > 0) {
+        s.getRange(s.getLastRow() + 1, 1, rowsToAppend.length, headers.length).setValues(rowsToAppend);
+      }
+
       CacheService.getScriptCache().remove('public_results');
       return jsonOut({ ok: true });
     }
