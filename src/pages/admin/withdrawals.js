@@ -26,15 +26,17 @@ function renderWithdrawalList(main, noms, pwd) {
 
   main.innerHTML = `
     <div class="page-enter space-y-4">
-      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-2">
         <div>
           <h3 class="text-xl font-bold text-white">Withdrawal Requests</h3>
           <p class="text-slate-400 text-sm">Approve or view submitted withdrawal requests.</p>
         </div>
-        
-        <div class="relative w-full md:w-80">
-          <input type="text" id="withSearch" class="field w-full pl-10" placeholder="Search Candidate, ID, or Post...">
+      </div>
+
+      <div class="glass rounded-xl p-4 flex items-center w-full shadow-lg mb-2">
+        <div class="relative flex-1 w-full">
           <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
+          <input type="text" id="withSearch" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors" placeholder="Search by Candidate Name, ID, or Post...">
         </div>
       </div>
 

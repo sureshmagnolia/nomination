@@ -23,24 +23,24 @@ export async function renderAdminVerify(container) {
 function renderVerifyTable(main, noms, pwd) {
   main.innerHTML = `
     <div class="page-enter space-y-4">
-      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-2">
         <div>
           <h3 class="text-xl font-bold text-white">Nomination Verification</h3>
           <p class="text-slate-400 text-sm">Review each submission and mark as Valid or Rejected.</p>
         </div>
-        
-        <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <div class="relative flex-1 md:flex-none">
-            <input type="text" id="nomSearch" class="field w-full md:w-64 pl-10" placeholder="Search Name, ID, Post...">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
-          </div>
-          <select id="statusFilter" class="field w-full md:w-44">
-            <option value="all">All Statuses</option>
-            <option value="Pending">Pending</option>
-            <option value="Valid">Valid</option>
-            <option value="Rejected">Rejected</option>
-          </select>
+      </div>
+
+      <div class="glass rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center w-full shadow-lg">
+        <div class="relative flex-1 w-full">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
+          <input type="text" id="nomSearch" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors" placeholder="Search by Candidate Name, ID, or Post...">
         </div>
+        <select id="statusFilter" class="field w-full md:w-56 bg-black/20 focus:bg-black/40 transition-colors">
+          <option value="all">All Statuses</option>
+          <option value="Pending">Pending</option>
+          <option value="Valid">Valid</option>
+          <option value="Rejected">Rejected</option>
+        </select>
       </div>
 
       <div class="glass rounded-xl overflow-hidden shadow-2xl">

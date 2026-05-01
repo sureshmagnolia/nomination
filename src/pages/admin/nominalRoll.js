@@ -60,12 +60,14 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
           </div>
         </div>
 
-        <div class="glass rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center">
-          <div class="relative flex-1">
+        <div class="glass rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center w-full shadow-lg mb-2">
+          <div class="relative flex-1 w-full">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
-            <input type="text" id="searchInput" class="field pl-10" placeholder="Search by name, class, adm. no, or serial..." value="${esc(filterText)}">
+            <input type="text" id="searchInput" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors" placeholder="Search by student name, class, admission no, or serial..." value="${esc(filterText)}">
           </div>
-          <div class="text-slate-400 text-sm">Showing <strong>${filtered.length}</strong> of ${students.length} students</div>
+          <div class="text-slate-400 text-sm md:w-auto w-full text-right shrink-0">
+            Showing <strong class="text-white">${filtered.length}</strong> / ${students.length} students
+          </div>
         </div>
 
         <div class="glass rounded-xl overflow-hidden shadow-2xl">
