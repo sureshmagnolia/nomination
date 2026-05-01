@@ -1563,26 +1563,44 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
         <!-- RIGHT: Entered Forms Ledger -->
         <div class="xl:col-span-5">
           <div class="glass rounded-xl overflow-hidden border border-white/10 xl:sticky xl:top-20">
+            <!-- Header -->
             <div class="bg-gradient-to-r from-slate-900/80 to-indigo-900/60 p-4 border-b border-white/10 flex items-center justify-between">
               <div>
-                <h4 class="font-bold text-white text-sm">Entered Forms Ledger</h4>
-                <p class="text-[10px] text-slate-400 mt-0.5">Hover a chip to see form details</p>
+                <h4 class="font-bold text-white text-sm">Forms Ledger</h4>
+                <div id="ledgerSummary" class="flex flex-wrap gap-3 text-[11px] text-slate-400 mt-0.5"></div>
               </div>
-              <span id="ledgerCount" class="text-xs font-bold bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded border border-indigo-500/30">0/0 done</span>
+              <span id="ledgerCount" class="text-xs font-bold bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded border border-indigo-500/30 whitespace-nowrap">0/0 done</span>
             </div>
-            <!-- Summary counts -->
-            <div id="ledgerSummary" class="flex flex-wrap gap-3 px-4 py-2 border-b border-white/5 text-[11px] text-slate-400 bg-slate-900/40"></div>
-            <!-- Legend -->
-            <div class="flex flex-wrap gap-3 px-4 py-2 border-b border-white/10 bg-slate-900/60 text-[10px] text-slate-500">
-              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-green-500/20 border border-green-500/40 inline-block"></span>Done</span>
-              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-slate-800/80 border border-slate-700 inline-block"></span>Pending</span>
-              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-500/20 border border-amber-500/40 inline-block"></span>Queued</span>
-              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-500/20 border border-blue-500/40 inline-block"></span>Syncing</span>
-              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-500/20 border border-red-500/40 inline-block"></span>Failed</span>
+            <!-- Tabs -->
+            <div class="flex border-b border-white/10 bg-slate-900/50">
+              <button id="tabChips" class="ledger-tab active-tab px-4 py-2 text-xs font-semibold text-white border-b-2 border-indigo-400">All Forms</button>
+              <button id="tabPending" class="ledger-tab px-4 py-2 text-xs font-semibold text-slate-400 border-b-2 border-transparent hover:text-white">⏳ Pending <span id="pendingTabCount" class="ml-1 bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full text-[10px]">0</span></button>
             </div>
-            <!-- Chip Grid -->
-            <div class="overflow-y-auto p-3" style="max-height: 60vh;">
-              <div id="ledgerGrid" class="flex flex-wrap gap-1.5"></div>
+            <!-- Legend (chips tab) -->
+            <div id="panelChips" class="">
+              <div class="flex flex-wrap gap-3 px-4 py-2 border-b border-white/10 bg-slate-900/60 text-[10px] text-slate-500">
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-green-500/20 border border-green-500/40 inline-block"></span>Done</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-slate-800/80 border border-slate-700 inline-block"></span>Pending</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-500/20 border border-amber-500/40 inline-block"></span>Queued</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-500/20 border border-blue-500/40 inline-block"></span>Syncing</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-500/20 border border-red-500/40 inline-block"></span>Failed</span>
+              </div>
+              <div class="overflow-y-auto p-3" style="max-height: 55vh;">
+                <div id="ledgerGrid" class="flex flex-wrap gap-1.5"></div>
+              </div>
+            </div>
+            <!-- Pending list tab -->
+            <div id="panelPending" class="hidden overflow-y-auto" style="max-height: 62vh;">
+              <table class="w-full text-left">
+                <thead class="sticky top-0 bg-slate-900/95 border-b border-white/10">
+                  <tr>
+                    <th class="px-3 py-2 text-[11px] text-slate-400 font-semibold w-14">Form #</th>
+                    <th class="px-3 py-2 text-[11px] text-slate-400 font-semibold w-16">Table</th>
+                    <th class="px-3 py-2 text-[11px] text-slate-400 font-semibold">Post</th>
+                  </tr>
+                </thead>
+                <tbody id="pendingList"></tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -1648,7 +1666,13 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
     `);let p=(e,t,n)=>{let r=`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold cursor-default select-none transition-all border`;switch(e){case`server`:case`success`:return`${r} bg-green-500/20 text-green-400 border-green-500/40`;case`syncing`:return`${r} bg-blue-500/20 text-blue-300 border-blue-500/40 animate-pulse`;case`pending`:case`retry`:return`${r} bg-amber-500/20 text-amber-300 border-amber-500/40`;case`error`:return`${r} bg-red-500/20 text-red-400 border-red-500/40 cursor-pointer retry-btn hover:bg-red-500/40`;default:return`${r} bg-slate-800/80 text-slate-500 border-slate-700`}},m=(e,t,n)=>{let r=n[String(e)]||{},i=`Form #${e} | Table ${r.tableNum||`?`} | ${r.postName||`?`}`;return t===`error`?`${i} | ❌ Failed - Click to retry (${U.find(t=>String(t.serial)===String(e))?.errorMsg||``})`:t===`pending`?`${i} | ⏳ Not entered yet`:t===`server`?`${i} | ☁️ Saved in Google Sheet`:t===`success`?`${i} | ✅ Saved this session`:t===`syncing`?`${i} | 🔵 Syncing to server...`:i};r.innerHTML=s.map(e=>{let t=o[String(e)]||`not-entered`,r=U.find(t=>String(t.serial)===String(e));return`<div class="${p(t,e,r?.id)}"
       title="${m(e,t,n)}"
       ${t===`error`&&r?`data-id="${r.id}"`:``}
-    >${e}</div>`}).join(``),r.querySelectorAll(`.retry-btn`).forEach(r=>{r.addEventListener(`click`,()=>{let i=r.dataset.id,a=U.find(e=>e.id===i);a&&(a.status=`retry`,K(e,t,n),G(e,t,n))})})}async function Xe(e){let t=L();if(!t)return;R(e,`Ballot Printing`,`
+    >${e}</div>`}).join(``),r.querySelectorAll(`.retry-btn`).forEach(r=>{r.addEventListener(`click`,()=>{let i=r.dataset.id,a=U.find(e=>e.id===i);a&&(a.status=`retry`,K(e,t,n),G(e,t,n))})});let h=e.querySelector(`#pendingList`),g=e.querySelector(`#pendingTabCount`),_=s.filter(e=>(o[String(e)]||`pending`)===`pending`);if(g&&(g.textContent=_.length),h&&(_.length===0?h.innerHTML=`<tr><td colspan="3" class="px-3 py-8 text-center text-slate-500 italic text-sm">🎉 All forms entered!</td></tr>`:(h.innerHTML=_.map(e=>{let t=n[String(e)]||{};return`
+          <tr class="border-b border-white/5 hover:bg-white/5 transition cursor-pointer pending-row" data-serial="${e}">
+            <td class="px-3 py-2 font-bold text-slate-300 text-xs">#${e}</td>
+            <td class="px-3 py-2 text-slate-400 text-xs">T-${t.tableNum||`?`}</td>
+            <td class="px-3 py-2 text-slate-300 text-xs leading-tight">${T(t.postName||`?`)}</td>
+          </tr>
+        `}).join(``),h.querySelectorAll(`.pending-row`).forEach(t=>{t.addEventListener(`click`,()=>{let n=t.dataset.serial,r=e.querySelector(`#txtSerial`);r&&(r.value=n,r.dispatchEvent(new KeyboardEvent(`keypress`,{key:`Enter`,bubbles:!0})))})}))),!e.dataset.tabsInit){e.dataset.tabsInit=`1`;let t=e.querySelector(`#tabChips`),n=e.querySelector(`#tabPending`),r=e.querySelector(`#panelChips`),i=e.querySelector(`#panelPending`);t?.addEventListener(`click`,()=>{t.classList.add(`text-white`,`border-indigo-400`),t.classList.remove(`text-slate-400`,`border-transparent`),n.classList.remove(`text-white`,`border-indigo-400`),n.classList.add(`text-slate-400`,`border-transparent`),r.classList.remove(`hidden`),i.classList.add(`hidden`)}),n?.addEventListener(`click`,()=>{n.classList.add(`text-white`,`border-indigo-400`),n.classList.remove(`text-slate-400`,`border-transparent`),t.classList.remove(`text-white`,`border-indigo-400`),t.classList.add(`text-slate-400`,`border-transparent`),i.classList.remove(`hidden`),r.classList.add(`hidden`)})}}async function Xe(e){let t=L();if(!t)return;R(e,`Ballot Printing`,`
     <div class="text-center py-16">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 mt-4 text-sm">Preparing ballot generator...</p>

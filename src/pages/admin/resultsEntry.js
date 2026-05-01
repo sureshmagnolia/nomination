@@ -114,26 +114,44 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
         <!-- RIGHT: Entered Forms Ledger -->
         <div class="xl:col-span-5">
           <div class="glass rounded-xl overflow-hidden border border-white/10 xl:sticky xl:top-20">
+            <!-- Header -->
             <div class="bg-gradient-to-r from-slate-900/80 to-indigo-900/60 p-4 border-b border-white/10 flex items-center justify-between">
               <div>
-                <h4 class="font-bold text-white text-sm">Entered Forms Ledger</h4>
-                <p class="text-[10px] text-slate-400 mt-0.5">Hover a chip to see form details</p>
+                <h4 class="font-bold text-white text-sm">Forms Ledger</h4>
+                <div id="ledgerSummary" class="flex flex-wrap gap-3 text-[11px] text-slate-400 mt-0.5"></div>
               </div>
-              <span id="ledgerCount" class="text-xs font-bold bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded border border-indigo-500/30">0/0 done</span>
+              <span id="ledgerCount" class="text-xs font-bold bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded border border-indigo-500/30 whitespace-nowrap">0/0 done</span>
             </div>
-            <!-- Summary counts -->
-            <div id="ledgerSummary" class="flex flex-wrap gap-3 px-4 py-2 border-b border-white/5 text-[11px] text-slate-400 bg-slate-900/40"></div>
-            <!-- Legend -->
-            <div class="flex flex-wrap gap-3 px-4 py-2 border-b border-white/10 bg-slate-900/60 text-[10px] text-slate-500">
-              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-green-500/20 border border-green-500/40 inline-block"></span>Done</span>
-              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-slate-800/80 border border-slate-700 inline-block"></span>Pending</span>
-              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-500/20 border border-amber-500/40 inline-block"></span>Queued</span>
-              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-500/20 border border-blue-500/40 inline-block"></span>Syncing</span>
-              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-500/20 border border-red-500/40 inline-block"></span>Failed</span>
+            <!-- Tabs -->
+            <div class="flex border-b border-white/10 bg-slate-900/50">
+              <button id="tabChips" class="ledger-tab active-tab px-4 py-2 text-xs font-semibold text-white border-b-2 border-indigo-400">All Forms</button>
+              <button id="tabPending" class="ledger-tab px-4 py-2 text-xs font-semibold text-slate-400 border-b-2 border-transparent hover:text-white">⏳ Pending <span id="pendingTabCount" class="ml-1 bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full text-[10px]">0</span></button>
             </div>
-            <!-- Chip Grid -->
-            <div class="overflow-y-auto p-3" style="max-height: 60vh;">
-              <div id="ledgerGrid" class="flex flex-wrap gap-1.5"></div>
+            <!-- Legend (chips tab) -->
+            <div id="panelChips" class="">
+              <div class="flex flex-wrap gap-3 px-4 py-2 border-b border-white/10 bg-slate-900/60 text-[10px] text-slate-500">
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-green-500/20 border border-green-500/40 inline-block"></span>Done</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-slate-800/80 border border-slate-700 inline-block"></span>Pending</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-500/20 border border-amber-500/40 inline-block"></span>Queued</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-500/20 border border-blue-500/40 inline-block"></span>Syncing</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-500/20 border border-red-500/40 inline-block"></span>Failed</span>
+              </div>
+              <div class="overflow-y-auto p-3" style="max-height: 55vh;">
+                <div id="ledgerGrid" class="flex flex-wrap gap-1.5"></div>
+              </div>
+            </div>
+            <!-- Pending list tab -->
+            <div id="panelPending" class="hidden overflow-y-auto" style="max-height: 62vh;">
+              <table class="w-full text-left">
+                <thead class="sticky top-0 bg-slate-900/95 border-b border-white/10">
+                  <tr>
+                    <th class="px-3 py-2 text-[11px] text-slate-400 font-semibold w-14">Form #</th>
+                    <th class="px-3 py-2 text-[11px] text-slate-400 font-semibold w-16">Table</th>
+                    <th class="px-3 py-2 text-[11px] text-slate-400 font-semibold">Post</th>
+                  </tr>
+                </thead>
+                <tbody id="pendingList"></tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -464,4 +482,60 @@ function renderLedger(main, allResults, allFormSerialsMeta) {
       }
     });
   });
+
+  // Pending forms list
+  const pendingList = main.querySelector('#pendingList');
+  const pendingTabCount = main.querySelector('#pendingTabCount');
+  const pendingSerials = allSerials.filter(s => {
+    const st = statusMap[String(s)] || 'pending';
+    return st === 'pending';
+  });
+  if (pendingTabCount) pendingTabCount.textContent = pendingSerials.length;
+  if (pendingList) {
+    if (pendingSerials.length === 0) {
+      pendingList.innerHTML = `<tr><td colspan="3" class="px-3 py-8 text-center text-slate-500 italic text-sm">🎉 All forms entered!</td></tr>`;
+    } else {
+      pendingList.innerHTML = pendingSerials.map(s => {
+        const info = allFormSerialsMeta[String(s)] || {};
+        return `
+          <tr class="border-b border-white/5 hover:bg-white/5 transition cursor-pointer pending-row" data-serial="${s}">
+            <td class="px-3 py-2 font-bold text-slate-300 text-xs">#${s}</td>
+            <td class="px-3 py-2 text-slate-400 text-xs">T-${info.tableNum || '?'}</td>
+            <td class="px-3 py-2 text-slate-300 text-xs leading-tight">${esc(info.postName || '?')}</td>
+          </tr>
+        `;
+      }).join('');
+
+      // Click a pending row to pre-fill the serial input
+      pendingList.querySelectorAll('.pending-row').forEach(row => {
+        row.addEventListener('click', () => {
+          const serial = row.dataset.serial;
+          const txtSerial = main.querySelector('#txtSerial');
+          if (txtSerial) {
+            txtSerial.value = serial;
+            txtSerial.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
+          }
+        });
+      });
+    }
+  }
+
+  // Tab switching (only attach once)
+  if (!main.dataset.tabsInit) {
+    main.dataset.tabsInit = '1';
+    const tabChips = main.querySelector('#tabChips');
+    const tabPending = main.querySelector('#tabPending');
+    const panelChips = main.querySelector('#panelChips');
+    const panelPending = main.querySelector('#panelPending');
+    tabChips?.addEventListener('click', () => {
+      tabChips.classList.add('text-white','border-indigo-400'); tabChips.classList.remove('text-slate-400','border-transparent');
+      tabPending.classList.remove('text-white','border-indigo-400'); tabPending.classList.add('text-slate-400','border-transparent');
+      panelChips.classList.remove('hidden'); panelPending.classList.add('hidden');
+    });
+    tabPending?.addEventListener('click', () => {
+      tabPending.classList.add('text-white','border-indigo-400'); tabPending.classList.remove('text-slate-400','border-transparent');
+      tabChips.classList.remove('text-white','border-indigo-400'); tabChips.classList.add('text-slate-400','border-transparent');
+      panelPending.classList.remove('hidden'); panelChips.classList.add('hidden');
+    });
+  }
 }
