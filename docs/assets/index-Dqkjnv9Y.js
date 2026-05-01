@@ -1521,49 +1521,75 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
         <h3 class="text-xl font-bold text-white mb-2">Matrix Not Set</h3>
         <p class="text-slate-400 mb-6">The Counting Matrix must be generated and saved in the "Counting Setup" page before you can enter results.</p>
       </div>
-    `;return}let{matrix:c,formSerials:l}=o,u={};Object.entries(l).forEach(([e,t])=>{let[n,r]=e.split(`-`).map(Number),i=c[n][r];u[t]={t:n,r,postName:s(i)}}),e.innerHTML=`
-    <div class="page-enter space-y-6 max-w-4xl mx-auto">
-      <div>
-        <h3 class="text-xl font-bold text-white">Enter Vote Counts</h3>
-        <p class="text-slate-400 text-sm">Enter the Form Serial Number from the counting form to load the entry sheet.</p>
-      </div>
+    `;return}let{matrix:c,formSerials:l}=o,u={};Object.entries(l).forEach(([e,t])=>{let[n,r]=e.split(`-`).map(Number),i=c[n][r];u[t]={t:n,r,postName:s(i)}});let d={};Object.entries(l).forEach(([e,t])=>{let[r,i]=e.split(`-`).map(Number),a=c[r][i];d[t]={serial:t,tableNum:n[r]?.boothNumber,postName:s(a),roundNum:i+1}}),e.innerHTML=`
+    <div class="page-enter w-full max-w-[1500px] mx-auto">
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
 
-      <div id="syncStatusContainer" class="hidden glass rounded-xl p-4 border border-slate-700/50 bg-slate-900/50">
-        <h4 class="text-sm font-bold text-slate-300 mb-2 flex justify-between items-center">
-          <span>Background Sync Queue</span>
-          <span id="syncCounts" class="text-xs font-normal text-slate-400"></span>
-        </h4>
-        <div id="syncBadges" class="flex flex-wrap gap-2 max-h-32 overflow-y-auto"></div>
-      </div>
+        <!-- LEFT: Entry Panel -->
+        <div class="xl:col-span-7 space-y-4">
+          <div>
+            <h3 class="text-xl font-bold text-white">Enter Vote Counts</h3>
+            <p class="text-slate-400 text-sm">Enter the Form Serial Number from the counting form to load the entry sheet.</p>
+          </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="glass rounded-xl p-6">
-          <label class="block text-sm text-slate-300 mb-1">Form Serial Number</label>
-          <div class="flex gap-2">
-            <input type="number" id="txtSerial" class="field" placeholder="e.g. 15" autofocus>
-            <button id="btnLoadBySerial" class="btn btn-primary px-6">Load Form</button>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="glass rounded-xl p-5">
+              <label class="block text-sm text-slate-300 mb-1">Form Serial Number</label>
+              <div class="flex gap-2">
+                <input type="number" id="txtSerial" class="field" placeholder="e.g. 15" autofocus>
+                <button id="btnLoadBySerial" class="btn btn-primary px-6">Load Form</button>
+              </div>
+            </div>
+
+            <div class="glass rounded-xl p-5 opacity-60">
+              <label class="block text-sm text-slate-300 mb-1">Manual Selection (Fallback)</label>
+              <div class="flex gap-2">
+                <select id="selTable" class="field text-xs">
+                  <option value="">Table...</option>
+                  ${n.map(e=>`<option value="${e.boothNumber}">Table ${e.boothNumber}</option>`).join(``)}
+                </select>
+                <select id="selPost" class="field text-xs">
+                  <option value="">Post...</option>
+                  ${r.map(e=>`<option value="${T(e.post||e.name)}">${T(e.post||e.name)}</option>`).join(``)}
+                </select>
+                <button id="btnLoadForm" class="btn btn-secondary px-4 text-xs">Load</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="entryFormArea"></div>
+        </div>
+
+        <!-- RIGHT: Entered Forms Ledger -->
+        <div class="xl:col-span-5">
+          <div class="glass rounded-xl overflow-hidden border border-white/10 xl:sticky xl:top-20">
+            <div class="bg-gradient-to-r from-slate-900/80 to-indigo-900/60 p-4 border-b border-white/10 flex items-center justify-between">
+              <div>
+                <h4 class="font-bold text-white text-sm">Entered Forms Ledger</h4>
+                <p class="text-[10px] text-slate-400 mt-0.5">Live sync status vs Google Sheet</p>
+              </div>
+              <span id="ledgerCount" class="text-xs font-bold bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded border border-indigo-500/30">0 forms</span>
+            </div>
+            <div class="overflow-y-auto" style="max-height: 70vh;">
+              <table class="w-full text-left text-xs">
+                <thead class="sticky top-0 bg-slate-900/95 border-b border-white/10">
+                  <tr>
+                    <th class="px-3 py-2 text-slate-400 font-semibold w-16">Form #</th>
+                    <th class="px-3 py-2 text-slate-400 font-semibold">Table / Post</th>
+                    <th class="px-3 py-2 text-slate-400 font-semibold text-right w-24">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="ledgerBody">
+                  <tr><td colspan="3" class="px-3 py-8 text-center text-slate-500 italic">No forms entered yet this session.</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        <div class="glass rounded-xl p-6 opacity-60">
-          <label class="block text-sm text-slate-300 mb-1">Manual Selection (Fallback)</label>
-          <div class="flex gap-2">
-            <select id="selTable" class="field text-xs">
-              <option value="">Table...</option>
-              ${n.map(e=>`<option value="${e.boothNumber}">Table ${e.boothNumber}</option>`).join(``)}
-            </select>
-            <select id="selPost" class="field text-xs">
-              <option value="">Post...</option>
-              ${r.map(e=>`<option value="${T(e.post||e.name)}">${T(e.post||e.name)}</option>`).join(``)}
-            </select>
-            <button id="btnLoadForm" class="btn btn-secondary px-4 text-xs">Load</button>
-          </div>
-        </div>
       </div>
-
-      <div id="entryFormArea"></div>
     </div>
-  `;let d=e.querySelector(`#txtSerial`),f=e.querySelector(`#btnLoadBySerial`),p=async()=>{let e=d.value.trim();if(!e)return;let t=u[e];if(!t){D(`Invalid Serial Number: ${e}`,`error`);return}try{E(f,!0,`Loading...`);let r=await C.getResults().catch(()=>[]);a.length=0,a.push(...r),m(n[t.t].boothNumber,t.postName,e,t.r+1)}catch{m(n[t.t].boothNumber,t.postName,e,t.r+1)}finally{E(f,!1,`Load Form`)}};f.addEventListener(`click`,p),d.addEventListener(`keypress`,e=>{e.key===`Enter`&&p()}),e.querySelector(`#btnLoadForm`).addEventListener(`click`,async()=>{let t=e.querySelector(`#selTable`).value,r=e.querySelector(`#selPost`).value;if(!t||!r){D(`Select Table and Post`,`warning`);return}let i=n.findIndex(e=>String(e.boothNumber)===String(t)),o=null,u=null;if(i>=0){for(let e=0;e<c[i].length;e++)if(s(c[i][e])===r){u=e+1,o=l[`${i}-${e}`];break}}try{E(e.querySelector(`#btnLoadForm`),!0,`...`);let n=await C.getResults().catch(()=>[]);a.length=0,a.push(...n),m(t,r,o,u)}catch{m(t,r,o,u)}finally{E(e.querySelector(`#btnLoadForm`),!1,`Load`)}});let m=(n,r,o,s)=>{let c=e.querySelector(`#entryFormArea`),l=i.filter(e=>e.post===r);if(l.length===0){c.innerHTML=`<div class="alert alert-warning">No candidates found for ${T(r)}.</div>`;return}let u=a.filter(e=>String(e.TableNumber)===String(n)&&String(e.Post)===r),f=e=>u.find(t=>t.CandidateId===e)?.Votes||``;c.innerHTML=`
+  `;let f=e.querySelector(`#txtSerial`),p=e.querySelector(`#btnLoadBySerial`),m=async()=>{let e=f.value.trim();if(!e)return;let t=u[e];if(!t){D(`Invalid Serial Number: ${e}`,`error`);return}try{E(p,!0,`Loading...`);let r=await C.getResults().catch(()=>[]);a.length=0,a.push(...r),h(n[t.t].boothNumber,t.postName,e,t.r+1)}catch{h(n[t.t].boothNumber,t.postName,e,t.r+1)}finally{E(p,!1,`Load Form`)}};p.addEventListener(`click`,m),f.addEventListener(`keypress`,e=>{e.key===`Enter`&&m()}),e.querySelector(`#btnLoadForm`).addEventListener(`click`,async()=>{let t=e.querySelector(`#selTable`).value,r=e.querySelector(`#selPost`).value;if(!t||!r){D(`Select Table and Post`,`warning`);return}let i=n.findIndex(e=>String(e.boothNumber)===String(t)),o=null,u=null;if(i>=0){for(let e=0;e<c[i].length;e++)if(s(c[i][e])===r){u=e+1,o=l[`${i}-${e}`];break}}try{E(e.querySelector(`#btnLoadForm`),!0,`...`);let n=await C.getResults().catch(()=>[]);a.length=0,a.push(...n),h(t,r,o,u)}catch{h(t,r,o,u)}finally{E(e.querySelector(`#btnLoadForm`),!1,`Load`)}});let h=(n,r,o,s)=>{let c=e.querySelector(`#entryFormArea`),l=i.filter(e=>e.post===r);if(l.length===0){c.innerHTML=`<div class="alert alert-warning">No candidates found for ${T(r)}.</div>`;return}let u=a.filter(e=>String(e.TableNumber)===String(n)&&String(e.Post)===r),p=e=>u.find(t=>t.CandidateId===e)?.Votes||``;c.innerHTML=`
       <div class="glass rounded-xl overflow-hidden page-enter">
         <div class="bg-indigo-500/10 p-4 border-b border-indigo-500/20 flex justify-between items-center">
           <div>
@@ -1583,7 +1609,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
                 </div>
               </div>
               <div class="w-32">
-                <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="${T(e.id)}" data-cname="${T(e.candidateName)}" placeholder="0" value="${f(e.id)}" min="0">
+                <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="${T(e.id)}" data-cname="${T(e.candidateName)}" placeholder="0" value="${p(e.id)}" min="0">
               </div>
             </div>
           `).join(``)}
@@ -1591,22 +1617,19 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
           <div class="border-t border-white/10 my-4"></div>
 
           <div class="flex items-center justify-between bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-            <div>
-              <div class="font-bold text-slate-300">NOTA</div>
-            </div>
+            <div><div class="font-bold text-slate-300">NOTA</div></div>
             <div class="w-32">
-              <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="NOTA" data-cname="NOTA" placeholder="0" value="${f(`NOTA`)}" min="0">
+              <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="NOTA" data-cname="NOTA" placeholder="0" value="${p(`NOTA`)}" min="0">
             </div>
           </div>
           
           <div class="flex items-center justify-between bg-red-500/5 p-4 rounded-lg border border-red-500/20">
-            <div>
-              <div class="font-bold text-red-400">INVALID</div>
-            </div>
+            <div><div class="font-bold text-red-400">INVALID</div></div>
             <div class="w-32">
-              <input type="number" class="field text-center text-lg font-bold border-red-500/30 vote-input" data-cid="INVALID" data-cname="Invalid" placeholder="0" value="${f(`INVALID`)}" min="0">
+              <input type="number" class="field text-center text-lg font-bold border-red-500/30 vote-input" data-cid="INVALID" data-cname="Invalid" placeholder="0" value="${p(`INVALID`)}" min="0">
             </div>
           </div>
+
           <div class="flex items-center justify-between bg-indigo-500/20 p-4 rounded-lg border border-indigo-500/40 mt-4">
             <div class="font-black text-indigo-300 text-xl tracking-wider">TOTAL</div>
             <div class="w-32 text-center text-2xl font-black text-white" id="totalVotesDisplay">0</div>
@@ -1617,7 +1640,16 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
           <button id="btnSaveVotes" class="btn btn-success px-12">💾 Save Form Results</button>
         </div>
       </div>
-    `;let p=()=>{let e=0;c.querySelectorAll(`.vote-input`).forEach(t=>{e+=parseInt(t.value,10)||0});let t=c.querySelector(`#totalVotesDisplay`);t&&(t.textContent=e)};c.querySelectorAll(`.vote-input`).forEach(e=>{e.addEventListener(`input`,p)}),p(),c.querySelector(`#btnSaveVotes`).addEventListener(`click`,async i=>{i.target;let l=c.querySelectorAll(`.vote-input`),u=[];if(l.forEach(e=>{let t=e.value.trim();t!==``&&u.push({TableNumber:n,RoundNumber:s,Post:r,CandidateId:e.dataset.cid,CandidateName:e.dataset.cname,Votes:parseInt(t,10),FormSerial:o||`N/A`})}),u.length===0){D(`Enter votes`,`warning`);return}let f=Date.now().toString()+Math.random().toString(36).substr(2,5);U.push({id:f,serial:o||`Manual`,tableNum:n,postName:r,payload:u,status:`pending`}),u.forEach(e=>{let t=a.findIndex(t=>String(t.TableNumber)===String(n)&&String(t.Post)===r&&t.CandidateId===e.CandidateId);t>=0?(a[t].Votes=e.Votes,a[t].RoundNumber=e.RoundNumber,a[t].FormSerial=e.FormSerial):a.push(e)}),D(`Form #${o||`Manual`} queued for saving!`,`info`),c.innerHTML=``,d.value=``,d.focus(),qe=t,K(e),G(e)})};K(e),U.some(e=>e.status===`pending`||e.status===`retry`)&&G(e)}async function G(e){if(!W){for(W=!0;U.some(e=>e.status===`pending`||e.status===`retry`);){let t=U.find(e=>e.status===`pending`||e.status===`retry`);t.status=`syncing`,K(e);try{await C.adminSaveResults(qe,t.payload),t.status=`success`}catch(e){t.status=`error`,t.errorMsg=e.message}K(e)}W=!1}}function K(e){let t=e.querySelector(`#syncStatusContainer`),n=e.querySelector(`#syncBadges`),r=e.querySelector(`#syncCounts`);if(!t||!n)return;if(U.length===0){t.classList.add(`hidden`);return}t.classList.remove(`hidden`);let i=0,a=0,o=0;n.innerHTML=U.map(e=>e.status===`pending`||e.status===`retry`?(i++,`<span class="px-2 py-1 bg-amber-500/20 text-amber-300 text-[11px] rounded border border-amber-500/30">Form #${e.serial} (Queued)</span>`):e.status===`syncing`?(i++,`<span class="px-2 py-1 bg-blue-500/20 text-blue-300 text-[11px] rounded border border-blue-500/30 flex items-center gap-1"><span class="spinner" style="width:10px;height:10px;border-width:2px"></span>Form #${e.serial} (Syncing)</span>`):e.status===`success`?(a++,`<span class="px-2 py-1 bg-green-500/20 text-green-400 text-[11px] rounded border border-green-500/30">Form #${e.serial} (Saved)</span>`):e.status===`error`?(o++,`<button class="px-2 py-1 bg-red-500/20 text-red-400 text-[11px] rounded border border-red-500/30 hover:bg-red-500/40 transition retry-btn" data-id="${e.id}" title="${T(e.errorMsg)}">Form #${e.serial} (Failed - Retry)</button>`):``).join(``),r.textContent=`${a} Saved | ${i} Pending${o>0?` | ${o} Failed`:``}`,n.querySelectorAll(`.retry-btn`).forEach(t=>{t.addEventListener(`click`,t=>{let n=t.target.dataset.id,r=U.find(e=>e.id===n);r&&(r.status=`retry`,K(e),G(e))})})}async function Xe(e){let t=L();if(!t)return;R(e,`Ballot Printing`,`
+    `;let m=()=>{let e=0;c.querySelectorAll(`.vote-input`).forEach(t=>{e+=parseInt(t.value,10)||0});let t=c.querySelector(`#totalVotesDisplay`);t&&(t.textContent=e)};c.querySelectorAll(`.vote-input`).forEach(e=>{e.addEventListener(`input`,m)}),m(),c.querySelector(`#btnSaveVotes`).addEventListener(`click`,async()=>{let i=c.querySelectorAll(`.vote-input`),l=[];if(i.forEach(e=>{let t=e.value.trim();t!==``&&l.push({TableNumber:n,RoundNumber:s,Post:r,CandidateId:e.dataset.cid,CandidateName:e.dataset.cname,Votes:parseInt(t,10),FormSerial:o||`N/A`})}),l.length===0){D(`Enter votes`,`warning`);return}l.forEach(e=>{let t=a.findIndex(t=>String(t.TableNumber)===String(n)&&String(t.Post)===r&&t.CandidateId===e.CandidateId);t>=0?(a[t].Votes=e.Votes,a[t].RoundNumber=e.RoundNumber,a[t].FormSerial=e.FormSerial):a.push(e)});let u=Date.now().toString()+Math.random().toString(36).substr(2,5);U.push({id:u,serial:o||`Manual`,tableNum:n,postName:r,roundNum:s,payload:l,status:`pending`}),D(`Form #${o||`Manual`} queued!`,`info`),c.innerHTML=``,f.value=``,f.focus(),qe=t,K(e,a,d),G(e,a,d)})};K(e,a,d),U.some(e=>e.status===`pending`||e.status===`retry`)&&G(e,a,d)}async function G(e,t,n){if(!W){for(W=!0;U.some(e=>e.status===`pending`||e.status===`retry`);){let r=U.find(e=>e.status===`pending`||e.status===`retry`);r.status=`syncing`,K(e,t,n);try{await C.adminSaveResults(qe,r.payload),r.status=`success`}catch(e){r.status=`error`,r.errorMsg=e.message}K(e,t,n)}W=!1}}function K(e,t,n){let r=e.querySelector(`#ledgerBody`),i=e.querySelector(`#ledgerCount`);if(!r)return;let a=new Set;t.forEach(e=>{e.FormSerial&&e.FormSerial!==`N/A`&&a.add(String(e.FormSerial))});let o=[];U.forEach(e=>{o.push({serial:e.serial,tableNum:e.tableNum,postName:e.postName,roundNum:e.roundNum,status:e.status,id:e.id,errorMsg:e.errorMsg||``})});let s=new Set(U.map(e=>String(e.serial)));if(a.forEach(e=>{if(!s.has(e)){let t=n[e]||{};o.push({serial:e,tableNum:t.tableNum||`—`,postName:t.postName||`—`,roundNum:t.roundNum||`—`,status:`server`})}}),o.length===0){r.innerHTML=`<tr><td colspan="3" class="px-3 py-8 text-center text-slate-500 italic">No forms entered yet this session.</td></tr>`,i&&(i.textContent=`0 forms`);return}o.sort((e,t)=>{let n={syncing:0,pending:1,retry:2,error:3,success:4,server:5};return n[e.status]===n[t.status]?Number(t.serial)-Number(e.serial):n[e.status]-n[t.status]});let c=e=>{switch(e.status){case`syncing`:return`<span class="flex items-center justify-end gap-1 text-blue-300"><span class="spinner" style="width:9px;height:9px;border-width:2px;"></span> Syncing</span>`;case`pending`:case`retry`:return`<span class="text-amber-400">⏳ Queued</span>`;case`success`:return`<span class="text-green-400">✅ Saved</span>`;case`error`:return`<button class="text-red-400 hover:text-red-300 underline retry-btn text-right" data-id="${e.id}" title="${T(e.errorMsg)}">❌ Failed</button>`;case`server`:return`<span class="text-slate-400">☁️ In Sheet</span>`;default:return`—`}};r.innerHTML=o.map(e=>`
+    <tr class="border-b border-white/5 hover:bg-white/5 transition ${e.status===`syncing`?`bg-blue-500/5`:e.status===`error`?`bg-red-500/5`:``}">
+      <td class="px-3 py-2.5 font-bold text-white">#${e.serial}</td>
+      <td class="px-3 py-2.5">
+        <div class="text-slate-300 leading-tight truncate max-w-[160px]" title="${T(e.postName)}">${T(e.postName)}</div>
+        <div class="text-[10px] text-slate-500">Table ${e.tableNum} · Rnd ${e.roundNum}</div>
+      </td>
+      <td class="px-3 py-2.5 text-right text-[11px] font-semibold">${c(e)}</td>
+    </tr>
+  `).join(``),i&&(i.textContent=`${o.length} form${o.length===1?``:`s`}`),r.querySelectorAll(`.retry-btn`).forEach(r=>{r.addEventListener(`click`,()=>{let i=r.dataset.id,a=U.find(e=>e.id===i);a&&(a.status=`retry`,K(e,t,n),G(e,t,n))})})}async function Xe(e){let t=L();if(!t)return;R(e,`Ballot Printing`,`
     <div class="text-center py-16">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 mt-4 text-sm">Preparing ballot generator...</p>
