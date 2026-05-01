@@ -18,6 +18,31 @@ window.addEventListener('beforeunload', (e) => {
   }
 });
 
+/**
+ * After fetching fresh server results, re-apply any optimistic updates
+ * from the sync queue so that in-flight or just-saved forms still show
+ * their correct vote counts when the form is reloaded.
+ */
+function mergeQueueIntoResults(allResults) {
+  syncQueue.forEach(item => {
+    if (!item.payload) return;
+    item.payload.forEach(ns => {
+      const idx = allResults.findIndex(r =>
+        String(r.TableNumber) === String(ns.TableNumber) &&
+        String(r.Post) === ns.Post &&
+        r.CandidateId === ns.CandidateId
+      );
+      if (idx >= 0) {
+        allResults[idx].Votes = ns.Votes;
+        allResults[idx].RoundNumber = ns.RoundNumber;
+        allResults[idx].FormSerial = ns.FormSerial;
+      } else {
+        allResults.push({ ...ns });
+      }
+    });
+  });
+}
+
 export async function renderAdminResultsEntry(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
   renderAdminLayout(container, 'results-entry', `
@@ -171,11 +196,15 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
     
     try {
       setLoading(btnSerial, true, 'Loading...');
+      api.invalidateCache('getResults');
       const freshResults = await api.getResults().catch(() => []);
       allResults.length = 0;
       allResults.push(...freshResults);
+      // Re-apply any optimistic updates from the sync queue on top of server data
+      mergeQueueIntoResults(allResults);
       renderFormGrid(booths[info.t].boothNumber, info.postName, s, info.r + 1);
     } catch (e) {
+      mergeQueueIntoResults(allResults);
       renderFormGrid(booths[info.t].boothNumber, info.postName, s, info.r + 1);
     } finally {
       setLoading(btnSerial, false, 'Load Form');
@@ -205,11 +234,14 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
 
     try {
       setLoading(main.querySelector('#btnLoadForm'), true, '...');
+      api.invalidateCache('getResults');
       const freshResults = await api.getResults().catch(() => []);
       allResults.length = 0;
       allResults.push(...freshResults);
+      mergeQueueIntoResults(allResults);
       renderFormGrid(tableNum, postName, foundSerial, foundRound);
     } catch (e) {
+      mergeQueueIntoResults(allResults);
       renderFormGrid(tableNum, postName, foundSerial, foundRound);
     } finally {
       setLoading(main.querySelector('#btnLoadForm'), false, 'Load');
