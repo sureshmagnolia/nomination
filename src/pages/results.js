@@ -92,6 +92,9 @@ async function fetchAndRender(main, force = false) {
       updateHeader(main, year);
     } else {
       // Fetch fresh
+      main.innerHTML = `
+        <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Fetching Live Results...</p></div>
+      `;
       if (force) {
         // If the user manually clicked refresh, we must bypass the api.js in-memory cache
         // to guarantee a true network request to the backend.
