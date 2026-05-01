@@ -129,7 +129,10 @@ export const api = {
       api.getSettings().catch(()=>null),
       api.getPosts().catch(()=>null),
       api.getResults().catch(()=>null),
-      api.getNominalRoll().catch(()=>null)
+      api.getNominalRoll().catch(()=>null),
+      api.getPublicNominations().catch(()=>null),
+      api.getValidNominations().catch(()=>null),
+      api.getFinalNominations().catch(()=>null)
     ];
     await Promise.all(promises);
   },
