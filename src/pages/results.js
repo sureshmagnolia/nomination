@@ -144,9 +144,21 @@ function updateHeader(main, year) {
         const isUUC = name.toUpperCase().includes('UUC') || name.toUpperCase().includes('UNIVERSITY');
         const seats = isUUC ? 2 : 1;
         
+        let leadThreshold = 0;
+        if (valids.length > seats) {
+          leadThreshold = valids[seats].votes;
+        }
+        
         const leadingCandidates = valids.filter((c, i) => i < seats && c.votes > 0);
         const leadingText = leadingCandidates.length > 0 
-          ? leadingCandidates.map(c => esc(c.name)).join('<br>') 
+          ? leadingCandidates.map(c => {
+              const lead = c.votes - leadThreshold;
+              return `<div class="flex flex-wrap items-center gap-1.5 mb-1.5 last:mb-0">
+                        <span class="whitespace-nowrap">${esc(c.name)}</span>
+                        <span class="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap">${c.votes} votes</span>
+                        ${lead > 0 ? `<span class="bg-green-500/20 text-green-400 text-[10px] px-1.5 py-0.5 rounded font-bold border border-green-500/30 whitespace-nowrap">Lead: ${lead}</span>` : ''}
+                      </div>`;
+            }).join('') 
           : '<span class="text-slate-500 italic text-xs font-normal">Awaiting Results</span>';
         
         leaderboardRows += `

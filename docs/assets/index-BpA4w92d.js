@@ -2213,10 +2213,14 @@ Are you absolutely sure?`))return;k(t,!0,`🗑️ Wiping...`);let i=n.querySelec
           <h2 class="text-2xl font-bold text-white mb-2">Counting in Progress</h2>
           <p class="text-slate-400">No results have been published yet. Please check back later.</p>
         </div>
-      `;return}let s={};i.forEach(e=>{let t=e.post||e.name;s[t]={}}),a.forEach(e=>{let t=e.Post;s[t]||(s[t]={}),s[t][e.CandidateId]||(s[t][e.CandidateId]={name:e.CandidateName,votes:0}),s[t][e.CandidateId].votes+=Number(e.Votes)||0});let c=``,l=i.filter(e=>{let t=e.post||e.name;return!e.deptRestriction&&!t.toUpperCase().includes(`ASSOCIATION`)});if(l.length>0){let e=``;l.forEach(t=>{let n=t.post||t.name,r=s[n];if(!r)return;let i=Object.keys(r).filter(e=>e!==`INVALID`&&e!==`NOTA`);if(i.length===0)return;let a=i.map(e=>r[e]);a.sort((e,t)=>t.votes-e.votes);let o=n.toUpperCase().includes(`UUC`)||n.toUpperCase().includes(`UNIVERSITY`)?2:1,c=a.filter((e,t)=>t<o&&e.votes>0),l=c.length>0?c.map(e=>O(e.name)).join(`<br>`):`<span class="text-slate-500 italic text-xs font-normal">Awaiting Results</span>`;e+=`
+      `;return}let s={};i.forEach(e=>{let t=e.post||e.name;s[t]={}}),a.forEach(e=>{let t=e.Post;s[t]||(s[t]={}),s[t][e.CandidateId]||(s[t][e.CandidateId]={name:e.CandidateName,votes:0}),s[t][e.CandidateId].votes+=Number(e.Votes)||0});let c=``,l=i.filter(e=>{let t=e.post||e.name;return!e.deptRestriction&&!t.toUpperCase().includes(`ASSOCIATION`)});if(l.length>0){let e=``;l.forEach(t=>{let n=t.post||t.name,r=s[n];if(!r)return;let i=Object.keys(r).filter(e=>e!==`INVALID`&&e!==`NOTA`);if(i.length===0)return;let a=i.map(e=>r[e]);a.sort((e,t)=>t.votes-e.votes);let o=n.toUpperCase().includes(`UUC`)||n.toUpperCase().includes(`UNIVERSITY`)?2:1,c=0;a.length>o&&(c=a[o].votes);let l=a.filter((e,t)=>t<o&&e.votes>0),u=l.length>0?l.map(e=>{let t=e.votes-c;return`<div class="flex flex-wrap items-center gap-1.5 mb-1.5 last:mb-0">
+                        <span class="whitespace-nowrap">${O(e.name)}</span>
+                        <span class="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap">${e.votes} votes</span>
+                        ${t>0?`<span class="bg-green-500/20 text-green-400 text-[10px] px-1.5 py-0.5 rounded font-bold border border-green-500/30 whitespace-nowrap">Lead: ${t}</span>`:``}
+                      </div>`}).join(``):`<span class="text-slate-500 italic text-xs font-normal">Awaiting Results</span>`;e+=`
           <tr class="border-b border-white/5 hover:bg-white/5 transition">
             <td class="py-3 px-4 font-bold text-slate-300 text-xs sm:text-sm leading-tight w-1/2">${O(n)}</td>
-            <td class="py-3 px-4 text-amber-400 font-bold text-sm leading-tight w-1/2">${l}</td>
+            <td class="py-3 px-4 text-amber-400 font-bold text-sm leading-tight w-1/2">${u}</td>
           </tr>
         `}),e&&(c+=`
           <div class="glass rounded-2xl overflow-hidden border border-amber-500/20 shadow-2xl mb-12 page-enter">
