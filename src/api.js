@@ -20,7 +20,10 @@ function getSessionToken() {
 }
 
 function handleSessionExpired() {
-  sessionStorage.removeItem('adminPassword');
+  // Clear ALL admin session data from both storage locations
+  localStorage.removeItem('adminPwd');
+  localStorage.removeItem('adminLoginDate');
+  localStorage.removeItem('adminSessionToken');
   sessionStorage.removeItem('adminSessionToken');
   _cache = {};
   alert('⚠️ Another admin has logged in from a different device. You have been logged out.');

@@ -398,7 +398,8 @@ function doPost(e) {
     }
 
     if (action === 'adminSendOTP') {
-      checkAdmin(body.password, body.sessionToken);
+      // Pre-login: skip session token check (user doesn't have a valid token yet)
+      checkAdmin(body.password, null, true);
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       
       let email = "";
@@ -421,7 +422,8 @@ function doPost(e) {
     }
 
     if (action === 'adminVerifyOTP') {
-      checkAdmin(body.password, body.sessionToken);
+      // Pre-login: skip session token check
+      checkAdmin(body.password, null, true);
       const savedOTP = PropertiesService.getScriptProperties().getProperty('lastOTP');
       const savedTime = PropertiesService.getScriptProperties().getProperty('lastOTPTime');
       
