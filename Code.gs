@@ -617,36 +617,38 @@ function doPost(e) {
       const sValid = getSheet(SHEET_VALID);
       sValid.clear();
       sValid.appendRow(NOM_COLS);
-      validNoms.forEach(n => {
-        const row = [
+      sValid.getRange(1, 1, 1, NOM_COLS.length).setFontWeight('bold');
+      if (validNoms.length > 0) {
+        const rows = validNoms.map(n => [
           n.id, n.post, n.gender, n.dob, n.timestamp,
           n.candidateSerial, n.candidateName, n.candidateClass, n.candidateAdmission, n.candidateDept,
           n.proposerSerial,  n.proposerName,  n.proposerClass,  n.proposerAdmission,  n.proposerDept,
           n.seconderSerial,  n.seconderName,  n.seconderClass,  n.seconderAdmission,  n.seconderDept,
           n.status, n.withdrawalStatus
-        ];
-        sValid.appendRow(row);
-      });
+        ]);
+        sValid.getRange(2, 1, rows.length, NOM_COLS.length).setValues(rows);
+      }
       setSetting('validListPublished', 'true');
       return jsonOut({ ok: true });
     }
 
     if (action === 'adminPublishFinalList') {
       checkAdmin(body.password, body.sessionToken);
-      const finalNoms = getAllNominations().filter(n => n.status === 'Valid');
+      const finalNoms = getAllNominations().filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved');
       const sFinal = getSheet(SHEET_FINAL);
       sFinal.clear();
       sFinal.appendRow(NOM_COLS);
-      finalNoms.forEach(n => {
-        const row = [
+      sFinal.getRange(1, 1, 1, NOM_COLS.length).setFontWeight('bold');
+      if (finalNoms.length > 0) {
+        const rows = finalNoms.map(n => [
           n.id, n.post, n.gender, n.dob, n.timestamp,
           n.candidateSerial, n.candidateName, n.candidateClass, n.candidateAdmission, n.candidateDept,
           n.proposerSerial,  n.proposerName,  n.proposerClass,  n.proposerAdmission,  n.proposerDept,
           n.seconderSerial,  n.seconderName,  n.seconderClass,  n.seconderAdmission,  n.seconderDept,
           n.status, n.withdrawalStatus
-        ];
-        sFinal.appendRow(row);
-      });
+        ]);
+        sFinal.getRange(2, 1, rows.length, NOM_COLS.length).setValues(rows);
+      }
       setSetting('finalListPublished', 'true');
       return jsonOut({ ok: true });
     }
@@ -760,35 +762,36 @@ function doPost(e) {
       const s = getSheet(SHEET_POSTS);
       const d = s.getDataRange().getValues();
       if (d.length <= 1) return jsonOut({ ok: true });
-      
+
       const headers = d[0];
       const postsMap = new Map();
       for (let i = 1; i < d.length; i++) {
         postsMap.set(String(d[i][0]), d[i]);
       }
-      
+
+      const orderedRows = body.posts.map(p => postsMap.get(p)).filter(Boolean);
+
       s.clear();
       s.appendRow(headers);
-      
-      body.posts.forEach(postName => {
-        if (postsMap.has(postName)) {
-          s.appendRow(postsMap.get(postName));
-        }
-      });
-      
+      s.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+      if (orderedRows.length > 0) {
+        s.getRange(2, 1, orderedRows.length, headers.length).setValues(orderedRows);
+      }
+
       CacheService.getScriptCache().remove('public_posts');
       return jsonOut({ ok: true });
     }
 
     if (action === 'adminSaveBooths') {
       checkAdmin(body.password, body.sessionToken);
+      const boothHeaders = ['BoothNumber', 'RoomName', 'AllocatedClasses'];
       const s = getSheet(SHEET_BOOTHS);
       s.clear();
-      s.appendRow(['BoothNumber', 'RoomName', 'AllocatedClasses']);
-      if (Array.isArray(body.booths)) {
-        body.booths.forEach(b => {
-          s.appendRow([b.boothNumber, b.roomName, JSON.stringify(b.classes || [])]);
-        });
+      s.appendRow(boothHeaders);
+      s.getRange(1, 1, 1, boothHeaders.length).setFontWeight('bold');
+      if (Array.isArray(body.booths) && body.booths.length > 0) {
+        const rows = body.booths.map(b => [b.boothNumber, b.roomName, JSON.stringify(b.classes || [])]);
+        s.getRange(2, 1, rows.length, boothHeaders.length).setValues(rows);
       }
       return jsonOut({ ok: true });
     }
