@@ -2213,7 +2213,26 @@ Are you absolutely sure?`))return;k(t,!0,`🗑️ Wiping...`);let i=n.querySelec
           <h2 class="text-2xl font-bold text-white mb-2">Counting in Progress</h2>
           <p class="text-slate-400">No results have been published yet. Please check back later.</p>
         </div>
-      `;return}let s={};i.forEach(e=>{let t=e.post||e.name;s[t]={}}),a.forEach(e=>{let t=e.Post;s[t]||(s[t]={}),s[t][e.CandidateId]||(s[t][e.CandidateId]={name:e.CandidateName,votes:0}),s[t][e.CandidateId].votes+=Number(e.Votes)||0});let c=`<div class="space-y-12">`;i.forEach(e=>{let t=e.post||e.name,n=s[t];if(!n)return;let r=Object.keys(n);if(r.length===0)return;let i=r.filter(e=>e!==`INVALID`&&e!==`NOTA`).map(e=>n[e]),a=n.INVALID,o=n.NOTA,l=t.toUpperCase().includes(`UUC`)||t.toUpperCase().includes(`UNIVERSITY`)?2:1;i.sort((e,t)=>t.votes-e.votes);let u=i.length?i[0].votes:0,d=i.reduce((e,t)=>e+t.votes,0)+(o?o.votes:0),f=d+(a?a.votes:0),p=0;i.length>l?p=i[l].votes:i.length>0&&(p=0),c+=`
+      `;return}let s={};i.forEach(e=>{let t=e.post||e.name;s[t]={}}),a.forEach(e=>{let t=e.Post;s[t]||(s[t]={}),s[t][e.CandidateId]||(s[t][e.CandidateId]={name:e.CandidateName,votes:0}),s[t][e.CandidateId].votes+=Number(e.Votes)||0});let c=``,l=i.filter(e=>{let t=e.post||e.name;return!e.deptRestriction&&!t.toUpperCase().includes(`ASSOCIATION`)});if(l.length>0){let e=``;l.forEach(t=>{let n=t.post||t.name,r=s[n];if(!r)return;let i=Object.keys(r).filter(e=>e!==`INVALID`&&e!==`NOTA`);if(i.length===0)return;let a=i.map(e=>r[e]);a.sort((e,t)=>t.votes-e.votes);let o=n.toUpperCase().includes(`UUC`)||n.toUpperCase().includes(`UNIVERSITY`)?2:1,c=a.filter((e,t)=>t<o&&e.votes>0),l=c.length>0?c.map(e=>O(e.name)).join(`<br>`):`<span class="text-slate-500 italic text-xs font-normal">Awaiting Results</span>`;e+=`
+          <tr class="border-b border-white/5 hover:bg-white/5 transition">
+            <td class="py-3 px-4 font-bold text-slate-300 text-xs sm:text-sm leading-tight w-1/2">${O(n)}</td>
+            <td class="py-3 px-4 text-amber-400 font-bold text-sm leading-tight w-1/2">${l}</td>
+          </tr>
+        `}),e&&(c+=`
+          <div class="glass rounded-2xl overflow-hidden border border-amber-500/20 shadow-2xl mb-12 page-enter">
+            <div class="bg-gradient-to-r from-slate-900/90 to-amber-900/40 p-4 border-b border-amber-500/20 flex items-center justify-center gap-2">
+              <span class="text-2xl">🏆</span>
+              <h2 class="text-lg font-black text-amber-400 uppercase tracking-widest m-0">Leading Candidates</h2>
+            </div>
+            <div class="overflow-x-auto bg-slate-900/40">
+              <table class="w-full text-left">
+                <tbody>
+                  ${e}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `)}c+=`<div class="space-y-12">`,i.forEach(e=>{let t=e.post||e.name,n=s[t];if(!n)return;let r=Object.keys(n);if(r.length===0)return;let i=r.filter(e=>e!==`INVALID`&&e!==`NOTA`).map(e=>n[e]),a=n.INVALID,o=n.NOTA,l=t.toUpperCase().includes(`UUC`)||t.toUpperCase().includes(`UNIVERSITY`)?2:1;i.sort((e,t)=>t.votes-e.votes);let u=i.length?i[0].votes:0,d=i.reduce((e,t)=>e+t.votes,0)+(o?o.votes:0),f=d+(a?a.votes:0),p=0;i.length>l?p=i[l].votes:i.length>0&&(p=0),c+=`
         <div class="glass rounded-2xl overflow-hidden border border-white/10 page-enter shadow-2xl">
           <div class="bg-gradient-to-r from-slate-900/80 to-indigo-900/80 p-6 border-b border-white/10">
             <h2 class="text-2xl font-bold text-white tracking-tight">${O(t)}</h2>

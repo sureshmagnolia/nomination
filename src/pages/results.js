@@ -121,7 +121,62 @@ function updateHeader(main, year) {
       agg[pName][r.CandidateId].votes += Number(r.Votes) || 0;
     });
 
-    let html = '<div class="space-y-12">';
+    let html = '';
+
+    // ── Leaderboard (General & Reps only) ──────────────────────────────────
+    const leaderboardPosts = posts.filter(p => {
+      const name = p.post || p.name;
+      return !p.deptRestriction && !name.toUpperCase().includes('ASSOCIATION');
+    });
+
+    if (leaderboardPosts.length > 0) {
+      let leaderboardRows = '';
+      leaderboardPosts.forEach(p => {
+        const name = p.post || p.name;
+        const pAgg = agg[name];
+        if (!pAgg) return;
+        const candidateIds = Object.keys(pAgg).filter(id => id !== 'INVALID' && id !== 'NOTA');
+        if (candidateIds.length === 0) return;
+        
+        const valids = candidateIds.map(id => pAgg[id]);
+        valids.sort((a, b) => b.votes - a.votes);
+        
+        const isUUC = name.toUpperCase().includes('UUC') || name.toUpperCase().includes('UNIVERSITY');
+        const seats = isUUC ? 2 : 1;
+        
+        const leadingCandidates = valids.filter((c, i) => i < seats && c.votes > 0);
+        const leadingText = leadingCandidates.length > 0 
+          ? leadingCandidates.map(c => esc(c.name)).join('<br>') 
+          : '<span class="text-slate-500 italic text-xs font-normal">Awaiting Results</span>';
+        
+        leaderboardRows += `
+          <tr class="border-b border-white/5 hover:bg-white/5 transition">
+            <td class="py-3 px-4 font-bold text-slate-300 text-xs sm:text-sm leading-tight w-1/2">${esc(name)}</td>
+            <td class="py-3 px-4 text-amber-400 font-bold text-sm leading-tight w-1/2">${leadingText}</td>
+          </tr>
+        `;
+      });
+      
+      if (leaderboardRows) {
+        html += `
+          <div class="glass rounded-2xl overflow-hidden border border-amber-500/20 shadow-2xl mb-12 page-enter">
+            <div class="bg-gradient-to-r from-slate-900/90 to-amber-900/40 p-4 border-b border-amber-500/20 flex items-center justify-center gap-2">
+              <span class="text-2xl">🏆</span>
+              <h2 class="text-lg font-black text-amber-400 uppercase tracking-widest m-0">Leading Candidates</h2>
+            </div>
+            <div class="overflow-x-auto bg-slate-900/40">
+              <table class="w-full text-left">
+                <tbody>
+                  ${leaderboardRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    html += '<div class="space-y-12">';
     
     posts.forEach(post => {
       const name = post.post || post.name;
