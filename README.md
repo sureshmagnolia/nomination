@@ -11,7 +11,7 @@
 3. [Repository Structure](#3-repository-structure)
 4. [Deployment Model](#4-deployment-model)
 5. [Backend — Google Apps Script (`Code.gs`)](#5-backend--google-apps-script-codegs)
-6. [Frontend Architecture](#6-frontend-architecture)
+6. [Frontend Architecture & Caching](#6-frontend-architecture--caching)
 7. [Page-by-Page Reference (Public)](#7-page-by-page-reference-public)
 8. [Page-by-Page Reference (Admin)](#8-page-by-page-reference-admin)
 9. [Complete API Reference](#9-complete-api-reference)
@@ -64,9 +64,9 @@ election-app/
 │       ├── index-XXXX.js
 │       └── index-XXXX.css
 └── src/
-    ├── main.js               # App entry point: imports all pages, configures router
+    ├── main.js               # App entry point: imports all pages, configures router, runs init
     ├── router.js             # Lightweight hash-based SPA router
-    ├── api.js                # All fetch() calls to the GAS backend, organized by feature
+    ├── api.js                # Background sync queue, global cache, and all fetch() calls to GAS
     ├── config.js             # Single source of truth for APPS_SCRIPT_URL
     ├── style.css             # Global design tokens, glass effects, spinner, alerts
     ├── utils.js              # Shared helpers: showToast, setLoading, esc, calculateAge, triggerPrint
@@ -87,8 +87,8 @@ election-app/
             ├── publish.js    # Publish Valid/Final lists
             ├── posts.js      # Manage election posts and their eligibility rules
             ├── booths.js     # Manage polling booths, locations, and student allotment
-            ├── counting.js   # Generate counting matrix and printable A4 counting forms
-            └── resultsEntry.js # Enter vote counts per table and post
+            ├── counting.js   # Generate counting matrix and printable A4 forms
+            └── resultsEntry.js # Enter physical vote counts by table and post
 ```
 
 ---
@@ -97,8 +97,8 @@ election-app/
 
 ### Frontend Deployment
 1. Run `npm run build` in the project root. Vite builds to `/dist`.
-2. **Manually** copy (`Remove-Item docs; Copy-Item dist docs -Recurse`) or use the `docs` output dir pattern.
-3. Commit & push to the `V1` branch on GitHub. GitHub Pages serves from the `docs/` folder automatically.
+2. **Manually** copy the output to `/docs` to serve via GitHub Pages (e.g. `Remove-Item docs -Recurse -Force; Copy-Item dist docs -Recurse`).
+3. Commit & push the updated `docs/` folder along with source files to the `V1` branch.
 
 ### Backend Deployment (Google Apps Script)
 1. Open the linked Google Apps Script project from the Google Sheet.
@@ -135,52 +135,31 @@ const SHEET_RESULTS  = 'Results';       // Vote tally entries
 | `jsonOut(data)` | Wraps a JSON object in a CORS-friendly `ContentService` response. |
 | `errOut(msg)` | Returns a standardized error JSON response. |
 
-### Admin Password Algorithm
-The admin password rotates automatically each day. The algorithm is implemented server-side in `checkAdmin()` in `Code.gs`. The authorized personnel receive the password through a secure internal channel. The format is **not documented here** intentionally.
-
 ---
 
-## 6. Frontend Architecture
+## 6. Frontend Architecture & Caching
 
-### `src/config.js`
-```javascript
-export const CONFIG = {
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec',
-  SHEET_ID: '10p-3qWklthNnDUp-MqOHEjJLmWRpgkvVX2QpmGreKxA'
-};
-```
-> The `SHEET_ID` is the ID of the linked Google Spreadsheet. It's stored here for reference but the frontend uses only `APPS_SCRIPT_URL`.
-
-### `src/router.js`
-A minimal hash-based SPA router. Routes are registered with `.on('/path', handlerFn)`. The router listens to the `hashchange` event. It does **not** support URL parameters (no dynamic routes like `/post/:id`).
+### Background Sync & Optimistic UI
+To ensure a zero-lag experience despite the slow Google Apps Script backend, the application implements a robust **Background Sync Architecture** in `src/api.js`:
+- **Global Cache**: `_cache` holds all data (Nominations, Posts, Settings, etc.) fetched at application startup (`initPublicData()`) or upon admin login (`initAdminData()`).
+- **Optimistic Updates**: When the user performs a write action (e.g., verifying a nomination), the local `_cache` is updated synchronously, allowing the UI to re-render instantly without waiting for the network.
+- **Sequential Sync Queue**: The actual HTTP POST request is pushed to `syncQueue` and processed asynchronously in the background in strict order. A global UI indicator in `src/main.js` (`sync-status-indicator`) provides real-time feedback ("Saving changes..." vs "All changes saved").
+- **Safety Guards**: A `beforeunload` event listener prevents the user from closing the tab if background syncs are still pending to prevent data loss.
 
 ### `src/api.js`
 All backend communication is centralized here. Pattern:
-- **GET**: Parameters are appended to the URL as query strings. Uses `cache: 'no-store'`.
-- **POST**: Body is `JSON.stringify(payload)`. Sets the CORS-compatible headers.
-
-All calls are async and reject on non-OK responses.
-
-### `src/utils.js`
-Key helpers:
-- `esc(str)` — HTML-encodes a string for safe injection into template literals.
-- `showToast(message, type)` — Shows a dismissible notification. `type` is `'success'|'error'|'warning'|'info'`.
-- `setLoading(btn, isLoading, originalText)` — Toggles a button's loading spinner state.
-- `calculateAge(dobISO, referenceDateISO)` — Returns `{ years, months, days }` from two ISO date strings.
-- `triggerPrint(htmlContent)` — Opens a new blank tab, writes the provided HTML into it with full A4 print styles, and triggers `window.print()`.
+- **GET**: Reads from `_cache` first. If cache miss, it fetches from GAS and caches the result.
+- **POST**: Utilizes the `bgPost(action, body, cacheUpdater)` wrapper to push the request to the sync queue while instantly executing the `cacheUpdater` to modify local state.
 
 ### `src/style.css`
 Uses Tailwind utility classes as well as custom classes:
 - `.glass` — The glassmorphism card background (used everywhere).
-- `.field` — Standardized dark-theme form input/select styling.
+- `.field` — Standardized dark-theme form input/select styling. **Note**: If using `.field` alongside Tailwind layout classes, ensure it's wrapped in a sizing container (e.g., `w-full md:w-56 shrink-0`) to prevent `.field`'s inherent `width: 100%` from hijacking flex rows.
 - `.btn` / `.btn-primary` / `.btn-secondary` / `.btn-success` — Button variants.
 - `.alert` / `.alert-warning` / `.alert-error` / `.alert-info` — Notification banners.
 - `.badge` / `.badge-valid` / `.badge-pending` / `.badge-withdrawn` — Status chips.
 - `.spinner` — CSS loading spinner animation.
-- `.page-enter` — Subtle fade-in animation applied to page containers.
-- `.sidebar-item` / `.sidebar-item.active` — Admin sidebar navigation buttons.
 - `.data-table` — Pre-styled HTML table for data grids.
-- `.no-print` — Elements hidden when the page is printed.
 
 ---
 
@@ -240,6 +219,7 @@ All admin pages call `getAdminPassword()` from `layout.js` first. If the session
 | `adminGetLocations` | `password` | Array of location strings from Settings |
 
 ### Admin POST Endpoints (require `password` in body)
+All admin POST requests are handled via the `bgPost` sync queue to prevent UI blocking.
 | Action | Key Body Fields | Effect |
 |---|---|---|
 | `submitNomination` | `nomination {}` | Append new nomination row to `ValidList` |
@@ -285,13 +265,6 @@ All admin pages call `getAdminPassword()` from `layout.js` first. If the session
    - **Final Round**: Every table counts UUC.
 6. The matrix is rendered as a visual grid and can be printed as one A4 form per Table+Round+Post.
 
-### Results Aggregation (`results.js`)
-1. Fetches all raw result rows and all posts (in order).
-2. Aggregates by: `agg[PostName][CandidateId].votes += votes`.
-3. Special IDs `'NOTA'` and `'INVALID'` are excluded from candidate rankings but displayed separately.
-4. `totalValidVotes` for a post = sum of all candidate votes + NOTA votes (INVALID is excluded from totals).
-5. Results displayed in the exact order posts are defined in the `Posts` sheet.
-
 ---
 
 ## 11. Security Model
@@ -310,7 +283,6 @@ All admin pages call `getAdminPassword()` from `layout.js` first. If the session
 ## 12. Data Structures
 
 ### Nomination Object (Row in `ValidList` / `FinalList`)
-Key columns in the sheet (as stored by `adminVerifyNomination` and read back):
 - `id` — 10-char unique alphanumeric string
 - `post` — Name of the post being contested
 - `timestamp` — ISO date string
@@ -320,59 +292,17 @@ Key columns in the sheet (as stored by `adminVerifyNomination` and read back):
 - `proposerName`, `proposerRoll`, `proposerClass`
 - `seconderName`, `seconderRoll`, `seconderClass`
 
-### Booth Object (Row in `Booths`)
-```json
-{
-  "boothNumber": 1,
-  "roomName": "Main Hall",
-  "classes": ["1st Year Physics", "2nd Year Physics"]
-}
-```
-Note: `classes` is stored as a JSON string in the sheet and parsed on load.
-
-### Result Row Object (Row in `Results`)
-```json
-{
-  "TableNumber": "1",
-  "Post": "Chairman",
-  "CandidateId": "NOM1234567",
-  "CandidateName": "John Doe",
-  "Votes": 45
-}
-```
-Special `CandidateId` values: `'NOTA'` (None Of The Above), `'INVALID'` (blank/rejected ballots).
-
-### Post Object (Row in `Posts`)
-```json
-{
-  "name": "Chairman",
-  "femaleOnly": false,
-  "finalYearIneligible": false,
-  "yearRestriction": "2",
-  "deptRestriction": ""
-}
-```
-
 ---
 
 ## 13. Known Conventions and Gotchas
 
-1. **Template Literals in `counting.js`**: The `generateCountingFormHtml()` and `triggerMatrixPrint()` functions use regular template literals (not nested escaped ones). Do not add backslash-escaping to `\`` or `\${}` — this will cause a Vite parse error.
-
-2. **`esc()` is mandatory**: Always wrap any user-generated or database-fetched string in `esc()` before injecting into HTML templates to prevent XSS.
-
-3. **`refreshUI()` pattern**: Admin pages that have interactive state (like `booths.js`) use a `refreshUI()` inner function that completely re-renders the section and re-attaches all event listeners. This is intentional — do not try to do partial DOM updates.
-
-4. **`setDefault('/')` in router**: The router's `setDefault` must be the final `.on()` chain call in `main.js`. It catches all unmatched routes.
-
-5. **Google Apps Script CORS**: GAS does not support standard CORS preflight. All requests must be simple requests (no custom headers on GET, `application/json` body on POST which GAS handles fine).
-
-6. **Build → Docs pipeline**: There is no automated script to copy `dist` → `docs`. It is a manual `Remove-Item docs -Recurse -Force ; Copy-Item dist docs -Recurse` PowerShell command run before every `git commit`.
-
-7. **Tailwind v4 CDN**: The Tailwind utility classes are loaded from a CDN link in `index.html`. This means build-time purging does not happen for Tailwind — all utility classes are available but the CSS bundle is larger.
-
-8. **NominalRoll headers**: The auto-allotment and counting logic depends on `NominalRoll` having columns named exactly `CLASS` and `Dept`. Any rename will break class grouping.
-
-9. **Election Post Order**: Posts are always displayed and processed in the exact order they appear in the `Posts` sheet. Use the "Reorder Posts" drag-and-drop UI in `posts.js` to change the display order.
-
+1. **Background Caching**: If creating a new admin page that relies on data, ensure the data is prefetched in `initAdminData()` inside `api.js` to prevent loading spinners. All GET requests rely on `_cache` first.
+2. **UI Layout Standards**: All admin data tables (Nominal Roll, Verify, Withdrawals) must use the professional full-width `.glass` filter bar that spans the entire screen beneath the page title, cleanly separating controls from the data grid.
+3. **Template Literals in `counting.js`**: The `generateCountingFormHtml()` and `triggerMatrixPrint()` functions use regular template literals. Do not add backslash-escaping to `\`` or `\${}` — this will cause a Vite parse error.
+4. **`esc()` is mandatory**: Always wrap any user-generated or database-fetched string in `esc()` before injecting into HTML templates to prevent XSS.
+5. **`refreshUI()` pattern**: Admin pages that have interactive state use a `refreshUI()` inner function that completely re-renders the section and re-attaches all event listeners. This is intentional — do not try to do partial DOM updates.
+6. **`setDefault('/')` in router**: The router's `setDefault` must be the final `.on()` chain call in `main.js`. It catches all unmatched routes.
+7. **Google Apps Script CORS**: GAS does not support standard CORS preflight. All requests must be simple requests (no custom headers on GET, `application/json` body on POST which GAS handles fine).
+8. **Build → Docs pipeline**: There is no automated script to copy `dist` → `docs`. It is a manual process requiring you to delete the old `docs/` folder, copy `dist` over to it, and commit the changes before pushing.
+9. **Print Layouts**: All print layouts (Nominations, Counting Forms, Official Results) use strict inline CSS and table formatting within `window.open` templates to ensure they render perfectly on A4 paper across different browsers. Avoid external stylesheets for printed components.
 10. **NOTA Counting**: NOTA votes count toward `totalValidVotes` for the purpose of percentage calculation. INVALID votes do not.
