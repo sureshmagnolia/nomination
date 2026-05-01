@@ -1069,10 +1069,11 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </div>
           <div class="flex flex-wrap gap-2">
             <button id="btnClearAll" class="btn btn-secondary border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white">🗑️ Clear All</button>
-            <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Electoral Rolls</button>
-            <button id="btnPrintBallotAccounts" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white">📑 Print Ballot Accounts</button>
             <button id="btnAutoAllot" class="btn btn-secondary">⚡ Auto Allot</button>
             <button id="btnSaveBooths" class="btn btn-primary">💾 Save Configuration</button>
+            <button id="btnRegenPlan" class="btn btn-primary border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 px-4">🔄 Finalize Master Plan</button>
+            <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Electoral Rolls</button>
+            <button id="btnPrintBallotAccounts" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white">📑 Print Ballot Accounts</button>
           </div>
         </div>
         <div id="printArea" class="hidden"></div>
@@ -1219,7 +1220,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </head>
           <body>${t.innerHTML}</body>
         </html>
-      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>f.length)for(let e=f.length;e<t;e++)f.push({boothNumber:e+1,roomName:``,classes:[]});else t<f.length&&(f=f.slice(0,t));h()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{f[e.target.dataset.idx].roomName=e.target.value,h()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!p.includes(t)&&(p.push(t),h())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=p[t];p.splice(t,1),f.forEach(e=>{e.roomName===n&&(e.roomName=``)}),h()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Locations`);try{await u.adminSaveLocations(t,p),x(`Locations saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;f.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&f[parseInt(n,10)].classes.push(t),h()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Configuration`);try{await u.adminSaveBooths(t,f),x(`Booth configuration saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{v(),h(),x(`Auto allotment complete. Please review and save.`,`info`)})},g=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=t.filter(t=>e.classes.includes(String(t.CLASS).trim())).length,a=e.classes.map(e=>i[e]).filter(Boolean),c=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]};s+=`
+      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>f.length)for(let e=f.length;e<t;e++)f.push({boothNumber:e+1,roomName:``,classes:[]});else t<f.length&&(f=f.slice(0,t));h()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{f[e.target.dataset.idx].roomName=e.target.value,h()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!p.includes(t)&&(p.push(t),h())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=p[t];p.splice(t,1),f.forEach(e=>{e.roomName===n&&(e.roomName=``)}),h()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Locations`);try{await u.adminSaveLocations(t,p),x(`Locations saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;f.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&f[parseInt(n,10)].classes.push(t),h()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;b(n,!0,`💾 Save Configuration`);try{await u.adminSaveBooths(t,f),x(`Booth configuration saved successfully!`,`success`)}catch(e){x(`Failed to save: ${e.message}`,`error`)}finally{b(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnRegenPlan`).addEventListener(`click`,async e=>{let n=e.target,r=`🔄 Finalize Master Plan`;try{b(n,!0,r),x(`Calculating and saving Master Plan on server...`,`info`),await u.adminGenerateBallotPlan(t),x(`Master Plan finalized successfully! You can now print documents.`,`success`),c=await u.adminGetBallotPlan(t).catch(()=>null)}catch(e){x(e.message,`error`)}finally{b(n,!1,r)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{v(),h(),x(`Auto allotment complete. Please review and save.`,`info`)})},g=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=t.filter(t=>e.classes.includes(String(t.CLASS).trim())).length,a=e.classes.map(e=>i[e]).filter(Boolean),c=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]};s+=`
       <div class="page-break">
         <div class="facing-sheet">
           <div class="header">
@@ -1650,12 +1651,6 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             Detailed serial number ranges and book counts for the printing company.
           </p>
           <button id="btnGenSummary" class="btn btn-secondary w-full py-3 border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📑 View Summary Report</button>
-          <div class="pt-2 border-t border-white/5 mt-2">
-            <button id="btnRegenPlan" class="btn btn-secondary w-full py-2 text-xs border-indigo-500/20 text-indigo-300 hover:bg-indigo-500 hover:text-white flex items-center justify-center gap-2">
-              <span>🔄</span> Finalize Master Plan
-            </button>
-            <p class="text-[10px] text-slate-500 mt-2 text-center italic">Must be run after any nomination or booth changes.</p>
-          </div>
         </div>
       </div>
     </div>
@@ -1918,7 +1913,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
             Generated on ${new Date().toLocaleString()} | Official GVC Election Portal
           </div>
         </div>
-      `)}catch(e){x(e.message,`error`)}},s=async e=>{let n=e?.target,r=`🔄 Finalize Master Plan`;try{n&&b(n,!0,r),x(`Calculating and saving Master Plan on server...`,`info`),await u.adminGenerateBallotPlan(t),x(`Master Plan finalized successfully!`,`success`),n&&b(n,!1,r)}catch(e){n&&b(n,!1,r),x(e.message,`error`)}};n.querySelector(`#btnGenSummary`).onclick=o,n.querySelector(`#btnRegenPlan`).onclick=s,n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)})}function Fe(e){let t=R();if(!t)return;z(e,`testing`,`
+      `)}catch(e){x(e.message,`error`)}},s=async e=>{let n=e?.target,r=`🔄 Finalize Master Plan`;try{n&&b(n,!0,r),x(`Calculating and saving Master Plan on server...`,`info`),await u.adminGenerateBallotPlan(t),x(`Master Plan finalized successfully!`,`success`),n&&b(n,!1,r)}catch(e){n&&b(n,!1,r),x(e.message,`error`)}};n.querySelector(`#btnGenSummary`).onclick=o,n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)})}function Fe(e){let t=R();if(!t)return;z(e,`testing`,`
     <div class="page-enter space-y-8 max-w-3xl mx-auto">
 
       <!-- Warning Banner -->

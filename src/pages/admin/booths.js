@@ -70,10 +70,11 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           </div>
           <div class="flex flex-wrap gap-2">
             <button id="btnClearAll" class="btn btn-secondary border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white">🗑️ Clear All</button>
-            <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Electoral Rolls</button>
-            <button id="btnPrintBallotAccounts" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white">📑 Print Ballot Accounts</button>
             <button id="btnAutoAllot" class="btn btn-secondary">⚡ Auto Allot</button>
             <button id="btnSaveBooths" class="btn btn-primary">💾 Save Configuration</button>
+            <button id="btnRegenPlan" class="btn btn-primary border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 px-4">🔄 Finalize Master Plan</button>
+            <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Electoral Rolls</button>
+            <button id="btnPrintBallotAccounts" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white">📑 Print Ballot Accounts</button>
           </div>
         </div>
         <div id="printArea" class="hidden"></div>
@@ -333,6 +334,22 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         showToast(`Failed to save: ${err.message}`, 'error');
       } finally {
         setLoading(btn, false, '💾 Save Configuration');
+      }
+    });
+
+    main.querySelector('#btnRegenPlan').addEventListener('click', async (e) => {
+      const btn = e.target;
+      const defaultText = '🔄 Finalize Master Plan';
+      try {
+        setLoading(btn, true, defaultText);
+        showToast('Calculating and saving Master Plan on server...', 'info');
+        await api.adminGenerateBallotPlan(pwd);
+        showToast('Master Plan finalized successfully! You can now print documents.', 'success');
+        plan = await api.adminGetBallotPlan(pwd).catch(() => null);
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        setLoading(btn, false, defaultText);
       }
     });
 

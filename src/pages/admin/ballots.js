@@ -69,12 +69,6 @@ export async function renderAdminBallots(container) {
             Detailed serial number ranges and book counts for the printing company.
           </p>
           <button id="btnGenSummary" class="btn btn-secondary w-full py-3 border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📑 View Summary Report</button>
-          <div class="pt-2 border-t border-white/5 mt-2">
-            <button id="btnRegenPlan" class="btn btn-secondary w-full py-2 text-xs border-indigo-500/20 text-indigo-300 hover:bg-indigo-500 hover:text-white flex items-center justify-center gap-2">
-              <span>🔄</span> Finalize Master Plan
-            </button>
-            <p class="text-[10px] text-slate-500 mt-2 text-center italic">Must be run after any nomination or booth changes.</p>
-          </div>
         </div>
       </div>
     </div>
@@ -488,7 +482,6 @@ export async function renderAdminBallots(container) {
   };
 
   main.querySelector('#btnGenSummary').onclick = handleSummaryReport;
-  main.querySelector('#btnRegenPlan').onclick = handleRegenPlan;
 
   main.querySelectorAll('.preview-btn').forEach(btn => {
     btn.onclick = () => handlePreview(btn.dataset.type);
