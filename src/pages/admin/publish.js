@@ -56,7 +56,10 @@ function renderPublishPage(main, settings, nominations, postsData, pwd) {
           ⚠ Ensure all nominations have been reviewed before publishing.
         </div>
         <button id="publishValidBtn" class="btn btn-primary">📢 Publish Valid Nominations List</button>` : `
-        <div class="alert alert-success text-sm">✅ This list is currently visible to the public.</div>`}
+        <div class="alert alert-success text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <span>✅ This list is currently visible to the public.</span>
+          <button id="unpublishValidBtn" class="btn btn-sm" style="background:#dc2626;color:white;border:none;">🚫 Unpublish</button>
+        </div>`}
       </div>
 
       <!-- Final list publish -->
@@ -78,7 +81,10 @@ function renderPublishPage(main, settings, nominations, postsData, pwd) {
           ⚠ Ensure all withdrawal requests have been processed before publishing.
         </div>
         <button id="publishFinalBtn" class="btn btn-primary" ${!validPublished ? 'disabled title="Publish the valid list first"' : ''}>📢 Publish Final Nominations List</button>` : `
-        <div class="alert alert-success text-sm">✅ The final list is currently visible to the public.</div>`}
+        <div class="alert alert-success text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <span>✅ The final list is currently visible to the public.</span>
+          <button id="unpublishFinalBtn" class="btn btn-sm" style="background:#dc2626;color:white;border:none;">🚫 Unpublish</button>
+        </div>`}
       </div>
     </div>`;
 
@@ -187,6 +193,34 @@ function renderPublishPage(main, settings, nominations, postsData, pwd) {
     } catch (err) {
       showToast(`Failed: ${err.message}`, 'error');
       setLoading(btn, false, '📢 Publish Final Nominations List');
+    }
+  });
+
+  main.querySelector('#unpublishValidBtn')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    if (!confirm('Unpublish Valid List?\n\nThis will remove it from public view. The Final List will also be unpublished.')) return;
+    setLoading(btn, true, '🚫 Unpublish');
+    try {
+      await api.adminUnpublishValidList(pwd);
+      showToast('Valid list unpublished.', 'success');
+      renderPublishPage(main, { validListPublished: 'false', finalListPublished: 'false' }, nominations, postsData, pwd);
+    } catch (err) {
+      showToast(`Failed: ${err.message}`, 'error');
+      setLoading(btn, false, '🚫 Unpublish');
+    }
+  });
+
+  main.querySelector('#unpublishFinalBtn')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    if (!confirm('Unpublish Final List?\n\nThis will remove the final candidate list from public view.')) return;
+    setLoading(btn, true, '🚫 Unpublish');
+    try {
+      await api.adminUnpublishFinalList(pwd);
+      showToast('Final list unpublished.', 'success');
+      renderPublishPage(main, { validListPublished: 'true', finalListPublished: 'false' }, nominations, postsData, pwd);
+    } catch (err) {
+      showToast(`Failed: ${err.message}`, 'error');
+      setLoading(btn, false, '🚫 Unpublish');
     }
   });
 }

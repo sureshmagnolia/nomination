@@ -651,6 +651,25 @@ function doPost(e) {
       return jsonOut({ ok: true });
     }
 
+    if (action === 'adminUnpublishValidList') {
+      checkAdmin(body.password, body.sessionToken);
+      getSheet(SHEET_VALID).clear().appendRow(NOM_COLS);
+      setSetting('validListPublished', 'false');
+      
+      // Cascading effect: Unpublishing valid list must unpublish final list
+      getSheet(SHEET_FINAL).clear().appendRow(NOM_COLS);
+      setSetting('finalListPublished', 'false');
+      
+      return jsonOut({ ok: true });
+    }
+
+    if (action === 'adminUnpublishFinalList') {
+      checkAdmin(body.password, body.sessionToken);
+      getSheet(SHEET_FINAL).clear().appendRow(NOM_COLS);
+      setSetting('finalListPublished', 'false');
+      return jsonOut({ ok: true });
+    }
+
     if (action === 'adminDeletePost') {
       checkAdmin(body.password, body.sessionToken);
       const s = getSheet(SHEET_POSTS);

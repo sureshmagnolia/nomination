@@ -247,6 +247,21 @@ export const api = {
     return Promise.resolve({ ok: true });
   },
 
+  adminUnpublishValidList: async (password) => {
+    updateCache({ action: 'adminGetSettings', password }, old => ({...old, validListPublished: 'false', finalListPublished: 'false'}));
+    await bgPost({ action: 'adminUnpublishValidList', password });
+    invalidateCache('getValidNominations');
+    invalidateCache('getFinalNominations');
+    return { ok: true };
+  },
+
+  adminUnpublishFinalList: async (password) => {
+    updateCache({ action: 'adminGetSettings', password }, old => ({...old, finalListPublished: 'false'}));
+    await bgPost({ action: 'adminUnpublishFinalList', password });
+    invalidateCache('getFinalNominations');
+    return { ok: true };
+  },
+
   adminGetSettings: (password) => get({ action: 'adminGetSettings', password }),
   
   adminUpdateSettings: (password, settings) => {
