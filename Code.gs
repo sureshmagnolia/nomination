@@ -30,6 +30,13 @@ const POST_COLS = [
   'Post', 'FemaleOnly', 'FinalYearIneligible', 'YearRestriction', 'DeptRestriction',
 ];
 
+// Exact 5-column header for the Nominal Roll sheet
+const NOMINAL_ROLL_HEADERS = [
+  'Nominal Roll Serial Number', 'NAME', 'CLASS', 'ADMISION NO', 'Dept'
+];
+
+const SHEET_TEMPLATE = 'NominalRoll_Template';
+
 const DEFAULT_POSTS = [
   ['The Chairman',                          false, false, '',   false],
   ['The Vice Chairman',                     true,  false, '',   false],
@@ -110,7 +117,71 @@ function ensureAll() {
   if (ps.getLastRow() <= 1) {
     DEFAULT_POSTS.forEach(row => ps.appendRow(row));
   }
+  ensureTemplateSheet();
 }
+
+/**
+ * Creates the NominalRoll_Template sheet with sample rows covering all
+ * class types (UG 1st/2nd/3rd year, PG MSC/MCOM, PhD) for admin reference.
+ * Runs only once — skips if the sheet already has data.
+ */
+function ensureTemplateSheet() {
+  const ssId = PropertiesService.getScriptProperties().getProperty('SS_ID');
+  const ss = SpreadsheetApp.openById(ssId);
+  let s = ss.getSheetByName(SHEET_TEMPLATE);
+  if (!s) {
+    s = ss.insertSheet(SHEET_TEMPLATE);
+  } else if (s.getLastRow() > 1) {
+    return; // Already populated — don't overwrite
+  }
+
+  s.clear();
+  s.appendRow(NOMINAL_ROLL_HEADERS);
+  s.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#4f46e5').setFontColor('#ffffff');
+
+  const samples = [
+    // 1ST YEAR UG — different departments
+    [1,  'SAMPLE STUDENT A',  '1ST YEAR BSC BOTANY',           'BOT001', 'BOTANY'],
+    [2,  'SAMPLE STUDENT B',  '1ST YEAR BSC CHEMISTRY',        'CHE001', 'CHEMISTRY'],
+    [3,  'SAMPLE STUDENT C',  '1ST YEAR BCOM',                 'COM001', 'COMMERCE'],
+    [4,  'SAMPLE STUDENT D',  '1ST YEAR BSC COMPUTER-SCIENCE', 'CSC001', 'COMPUTER-SCIENCE'],
+    [5,  'SAMPLE STUDENT E',  '1ST YEAR BA ECONOMICS',         'ECO001', 'ECONOMICS'],
+    [6,  'SAMPLE STUDENT F',  '1ST YEAR BSC MATHEMATICS',      'MAT001', 'MATHEMATICS'],
+    // 2ND YEAR UG
+    [7,  'SAMPLE STUDENT G',  '2ND YEAR BSC BOTANY',           'BOT002', 'BOTANY'],
+    [8,  'SAMPLE STUDENT H',  '2ND YEAR BSC CHEMISTRY',        'CHE002', 'CHEMISTRY'],
+    [9,  'SAMPLE STUDENT I',  '2ND YEAR BCOM',                 'COM002', 'COMMERCE'],
+    [10, 'SAMPLE STUDENT J',  '2ND YEAR BSC PHYSICS',          'PHY002', 'PHYSICS'],
+    // 3RD YEAR UG
+    [11, 'SAMPLE STUDENT K',  '3RD YEAR BSC BOTANY',           'BOT003', 'BOTANY'],
+    [12, 'SAMPLE STUDENT L',  '3RD YEAR BCOM',                 'COM003', 'COMMERCE'],
+    [13, 'SAMPLE STUDENT M',  '3RD YEAR BA ENGLISH',           'ENG003', 'ENGLISH'],
+    // PG — MSC / MCOM
+    [14, 'SAMPLE STUDENT N',  '1ST YEAR MSC BOTANY',           'BOT501', 'BOTANY'],
+    [15, 'SAMPLE STUDENT O',  '2ND YEAR MSC CHEMISTRY',        'CHE502', 'CHEMISTRY'],
+    [16, 'SAMPLE STUDENT P',  '1ST YEAR MCOM',                 'COM501', 'COMMERCE'],
+    [17, 'SAMPLE STUDENT Q',  '2ND YEAR MCOM',                 'COM502', 'COMMERCE'],
+    // PhD — Admission No is BLANK for PhD students
+    [18, 'SAMPLE STUDENT R',  'PH D IN BOTANY',                '',       'BOTANY'],
+    [19, 'SAMPLE STUDENT S',  'PH D IN CHEMISTRY',             '',       'CHEMISTRY'],
+    [20, 'SAMPLE STUDENT T',  'PH D IN COMMERCE',              '',       'COMMERCE'],
+  ];
+
+  samples.forEach(row => s.appendRow(row));
+  s.getRange(2, 1, samples.length, 5).setBackground('#f0f4ff');
+
+  s.getRange('A1').setNote(
+    'TEMPLATE REFERENCE SHEET\n\n' +
+    'Headers (must match exactly):\n' +
+    '  Nominal Roll Serial Number | NAME | CLASS | ADMISION NO | Dept\n\n' +
+    'Class format examples:\n' +
+    '  1ST YEAR BSC BOTANY\n  2ND YEAR BCOM\n  3RD YEAR BA ECONOMICS\n' +
+    '  1ST YEAR MSC CHEMISTRY\n  1ST YEAR MCOM\n  PH D IN BOTANY\n\n' +
+    'NOTE: Admission No can be left blank for PhD students.\n' +
+    'NOTE: "ADMISION NO" has one S (preserved for compatibility).'
+  );
+}
+
 
 function getSetting(key) {
   const data = getSheet(SHEET_SETTINGS).getDataRange().getValues();
@@ -356,6 +427,14 @@ function doGet(e) {
       const d = s.getDataRange().getValues();
       if (d.length < 2) return errOut('No ballot plan generated yet. Please generate it from the Ballot Printing page.');
       return jsonOut(JSON.parse(d[1][0]));
+    }
+
+    if (action === 'adminGetNominalRollTemplate') {
+      checkAdmin(e.parameter.password, e.parameter.sessionToken);
+      const s = getSheet(SHEET_TEMPLATE);
+      const d = s.getDataRange().getValues();
+      if (d.length < 2) return errOut('Template sheet not initialized. Please run ensureAll() once.');
+      return jsonOut({ headers: d[0], rows: d.slice(1) });
     }
 
     return errOut(`Unknown action: ${action}`);
@@ -927,6 +1006,54 @@ function doPost(e) {
       }
 
       return jsonOut({ ok: true, injected: injected.length, skipped: skipped.length, skippedPosts: skipped });
+    }
+
+    if (action === 'adminUploadNominalRoll') {
+      checkAdmin(body.password, body.sessionToken);
+
+      const rows = body.rows; // Array of arrays: [[serial, name, class, admission, dept], ...]
+      if (!Array.isArray(rows) || rows.length === 0) return errOut('No data rows provided.');
+
+      // Validate that each row has exactly 5 columns
+      for (let i = 0; i < rows.length; i++) {
+        if (!Array.isArray(rows[i]) || rows[i].length !== 5) {
+          return errOut(`Row ${i + 2} has ${rows[i] ? rows[i].length : 0} columns. Expected 5.`);
+        }
+      }
+
+      // 1. Clear and rewrite NominalRoll sheet
+      const nomSheet = getSheet(SHEET_NOMINAL);
+      nomSheet.clear();
+      nomSheet.appendRow(NOMINAL_ROLL_HEADERS);
+      nomSheet.getRange(1, 1, 1, 5).setFontWeight('bold');
+      nomSheet.getRange(2, 1, rows.length, 5).setValues(rows);
+
+      // 2. Wipe ALL transactional sheets
+      const sheetsToWipe = [SHEET_NOMS, SHEET_VALID, SHEET_FINAL, SHEET_RESULTS, SHEET_MATRIX];
+      sheetsToWipe.forEach(name => {
+        const s = getSheet(name);
+        s.clear();
+        const headers = name === SHEET_RESULTS
+          ? ['TableNumber', 'RoundNumber', 'Post', 'CandidateId', 'CandidateName', 'Votes', 'FormSerial']
+          : name === SHEET_MATRIX
+          ? ['MatrixDataJSON']
+          : NOM_COLS;
+        s.appendRow(headers);
+        s.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+      });
+
+      // Also clear BallotPlan
+      const bpSheet = getSheet(SHEET_BALLOT_PLAN);
+      bpSheet.clear();
+      bpSheet.appendRow(['PlanJSON']);
+      bpSheet.getRange(1, 1, 1, 1).setFontWeight('bold');
+
+      // 3. Reset all election flags
+      setSetting('validListPublished', 'false');
+      setSetting('finalListPublished', 'false');
+      setSetting('nominalRollFinalized', 'false');
+
+      return jsonOut({ ok: true, count: rows.length });
     }
 
     if (action === 'adminWipeData') {

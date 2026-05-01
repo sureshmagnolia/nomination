@@ -32,6 +32,90 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
   const allClasses = [...new Set(nominalRoll.map(s => String(s['CLASS']).trim()))].sort();
   const allDepts = [...new Set(nominalRoll.map(s => String(s['Dept'] || '–').trim()))].sort();
 
+  // ── Upload Panel (injected above the table) ───────────────────────────────
+  const uploadPanelHtml = `
+    <div id="uploadPanel" class="glass rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
+      <button id="toggleUploadPanel" class="w-full flex items-center justify-between px-6 py-4 hover:bg-white/5 transition-colors">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">📤</span>
+          <div class="text-left">
+            <div class="text-white font-bold text-sm">Upload New Nominal Roll</div>
+            <div class="text-slate-400 text-xs">Replace entire roll from CSV — resets all nominations & results</div>
+          </div>
+        </div>
+        <span id="uploadChevron" class="text-slate-400 text-lg transition-transform duration-200">▼</span>
+      </button>
+
+      <div id="uploadPanelBody" class="hidden border-t border-white/10">
+        <div class="p-6 space-y-6">
+
+          <!-- Step 1: Download Template -->
+          <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4">
+            <div>
+              <div class="text-white font-bold text-sm mb-1">📥 Step 1 — Download the CSV Template</div>
+              <div class="text-slate-400 text-xs">The template has the exact 5 columns and sample data showing all class types.<br>Delete the sample rows, fill in your data, and save as CSV.</div>
+            </div>
+            <button id="btnDownloadTemplate" class="btn btn-secondary shrink-0">
+              <span id="templateBtnText">⬇️ Download Template</span>
+            </button>
+          </div>
+
+          <!-- Step 2: Pick CSV File -->
+          <div>
+            <div class="text-white font-bold text-sm mb-3">📂 Step 2 — Select Your CSV File</div>
+            <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-white/20 rounded-xl cursor-pointer hover:border-indigo-400/50 hover:bg-indigo-500/5 transition-all group">
+              <div class="text-center">
+                <div class="text-3xl mb-2 group-hover:scale-110 transition-transform">📁</div>
+                <div class="text-slate-400 text-sm" id="filePickerLabel">Click to select a .csv file</div>
+              </div>
+              <input type="file" id="csvFileInput" accept=".csv" class="hidden">
+            </label>
+          </div>
+
+          <!-- Preview (hidden until file selected) -->
+          <div id="csvPreview" class="hidden space-y-4">
+            <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-sm">
+              <div class="text-emerald-300 font-bold mb-2">✅ File Parsed Successfully</div>
+              <div id="csvSummary" class="text-slate-300 space-y-1 text-xs"></div>
+            </div>
+
+            <!-- Danger Warning -->
+            <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+              <div class="text-red-300 font-bold text-sm mb-2">⚠️ DESTRUCTIVE OPERATION — Read Before Proceeding</div>
+              <ul class="text-red-200/80 text-xs space-y-1 list-disc list-inside">
+                <li>The entire current Nominal Roll will be <strong>permanently replaced</strong></li>
+                <li>All submitted <strong>Nominations</strong> will be deleted</li>
+                <li>The <strong>Valid List</strong> and <strong>Final List</strong> will be cleared</li>
+                <li>All <strong>Results</strong> and <strong>Ballot Plans</strong> will be wiped</li>
+                <li>Election flags (finalized, published) will be <strong>reset to false</strong></li>
+              </ul>
+            </div>
+
+            <!-- Confirmation -->
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+                  Type <span class="text-red-400 font-mono">RESET</span> to confirm
+                </label>
+                <input type="text" id="confirmResetText" class="field font-mono tracking-widest uppercase" placeholder="RESET" autocomplete="off">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Re-enter Admin Password</label>
+                <input type="password" id="confirmPwd" class="field" placeholder="Admin password" autocomplete="current-password">
+              </div>
+              <button id="btnUploadRoll" class="btn w-full py-3 text-sm font-bold opacity-50 cursor-not-allowed" disabled
+                style="background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; border: none;">
+                🚨 Upload & Reset Entire System
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  `;
+
+
   const refreshTable = () => {
     const filtered = students.filter(s => 
       [s['NAME'], s['CLASS'], s['ADMISION NO'], s['Nominal Roll Serial Number']].some(v => 
@@ -41,6 +125,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
 
     main.innerHTML = `
       <div class="page-enter space-y-6">
+        ${uploadPanelHtml}
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h3 class="text-xl font-bold text-white">Nominal Roll Management</h3>
@@ -219,10 +304,137 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
     // Printing
     main.querySelector('#btnPrintSerial').onclick = () => triggerRollPrint(students, isFinal, 'serial');
     main.querySelector('#btnPrintClass').onclick = () => triggerRollPrint(students, isFinal, 'class');
-  };
+
+    // ── Upload Panel Handlers ────────────────────────────────────────────────
+
+    // Toggle collapse
+    main.querySelector('#toggleUploadPanel').onclick = () => {
+      const body = main.querySelector('#uploadPanelBody');
+      const chevron = main.querySelector('#uploadChevron');
+      body.classList.toggle('hidden');
+      chevron.style.transform = body.classList.contains('hidden') ? '' : 'rotate(180deg)';
+    };
+
+    // Download Template
+    main.querySelector('#btnDownloadTemplate').onclick = async (e) => {
+      const btn = e.currentTarget;
+      setLoading(btn, true, 'Downloading...');
+      try {
+        const data = await api.adminGetNominalRollTemplate(pwd);
+        // Build CSV string
+        const csvRows = [data.headers.join(',')];
+        data.rows.forEach(row => {
+          csvRows.push(row.map(cell => {
+            const s = String(cell ?? '');
+            return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
+          }).join(','));
+        });
+        const blob = new Blob([csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'NominalRoll_Template.csv'; a.click();
+        URL.revokeObjectURL(url);
+        showToast('Template downloaded!', 'success');
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        setLoading(btn, false, '⬇️ Download Template');
+      }
+    };
+
+    // CSV File Parsing
+    let parsedRows = null;
+    const REQUIRED_HEADERS = ['Nominal Roll Serial Number', 'NAME', 'CLASS', 'ADMISION NO', 'Dept'];
+
+    main.querySelector('#csvFileInput').onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      main.querySelector('#filePickerLabel').textContent = `📄 ${file.name}`;
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const text = ev.target.result;
+        const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim());
+        if (lines.length < 2) {
+          showToast('CSV file appears empty.', 'error'); return;
+        }
+
+        // Parse header
+        const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+        const missing = REQUIRED_HEADERS.filter(h => !headers.includes(h));
+        if (missing.length > 0) {
+          showToast(`Missing columns: ${missing.join(', ')}`, 'error');
+          main.querySelector('#csvPreview').classList.add('hidden');
+          return;
+        }
+
+        // Parse rows into ordered 5-column arrays
+        const idxMap = REQUIRED_HEADERS.map(h => headers.indexOf(h));
+        parsedRows = lines.slice(1).map(line => {
+          // Simple CSV parse (handles quoted commas)
+          const cells = [];
+          let cur = '', inQ = false;
+          for (const ch of line + ',') {
+            if (ch === '"') { inQ = !inQ; }
+            else if (ch === ',' && !inQ) { cells.push(cur.trim()); cur = ''; }
+            else cur += ch;
+          }
+          return idxMap.map(i => cells[i] ?? '');
+        }).filter(r => r[1]); // filter blank name rows
+
+        // Summary
+        const classes = [...new Set(parsedRows.map(r => r[2]))].sort();
+        const depts = [...new Set(parsedRows.map(r => r[4]))].sort();
+        main.querySelector('#csvSummary').innerHTML = `
+          <div>👥 <strong class="text-white">${parsedRows.length}</strong> students detected</div>
+          <div>🏛️ <strong class="text-white">${depts.length}</strong> departments: ${depts.map(d => `<span class="text-indigo-300">${esc(d)}</span>`).join(', ')}</div>
+          <div>📚 <strong class="text-white">${classes.length}</strong> unique classes found</div>
+        `;
+        main.querySelector('#csvPreview').classList.remove('hidden');
+        checkUploadReady();
+      };
+      reader.readAsText(file);
+    };
+
+    // Enable/disable upload button based on RESET text + password
+    const checkUploadReady = () => {
+      const resetOk = main.querySelector('#confirmResetText')?.value.trim().toUpperCase() === 'RESET';
+      const pwdOk = (main.querySelector('#confirmPwd')?.value.trim() || '') !== '';
+      const btn = main.querySelector('#btnUploadRoll');
+      if (!btn) return;
+      const ready = resetOk && pwdOk && parsedRows && parsedRows.length > 0;
+      btn.disabled = !ready;
+      btn.classList.toggle('opacity-50', !ready);
+      btn.classList.toggle('cursor-not-allowed', !ready);
+    };
+
+    main.querySelector('#confirmResetText').addEventListener('input', checkUploadReady);
+    main.querySelector('#confirmPwd').addEventListener('input', checkUploadReady);
+
+    // Upload action
+    main.querySelector('#btnUploadRoll').onclick = async (e) => {
+      const confirmPwd = main.querySelector('#confirmPwd').value.trim();
+      if (!parsedRows || parsedRows.length === 0) return showToast('No data to upload.', 'error');
+      if (!confirm(`FINAL CONFIRMATION\n\nYou are about to replace the Nominal Roll with ${parsedRows.length} students.\nAll nominations, results, and election data will be permanently deleted.\n\nThis CANNOT be undone. Proceed?`)) return;
+
+      setLoading(e.target, true, 'Uploading & Resetting...');
+      try {
+        const res = await api.adminUploadNominalRoll(confirmPwd, parsedRows);
+        showToast(`✅ Nominal Roll updated with ${res.count} students. All election data has been reset.`, 'success');
+        // Reload the whole page to reflect fresh data
+        const appContainer = main.closest('#appContainer') || main.parentElement;
+        renderAdminNominalRoll(appContainer);
+      } catch (err) {
+        showToast(err.message, 'error');
+        setLoading(e.target, false, '🚨 Upload & Reset Entire System');
+      }
+    };
+
+  }; // end refreshTable
 
   refreshTable();
 }
+
 
 function triggerRollPrint(students, isFinal, sortBy) {
   const data = [...students];
