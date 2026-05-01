@@ -1566,23 +1566,23 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
             <div class="bg-gradient-to-r from-slate-900/80 to-indigo-900/60 p-4 border-b border-white/10 flex items-center justify-between">
               <div>
                 <h4 class="font-bold text-white text-sm">Entered Forms Ledger</h4>
-                <p class="text-[10px] text-slate-400 mt-0.5">Live sync status vs Google Sheet</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">Hover a chip to see form details</p>
               </div>
-              <span id="ledgerCount" class="text-xs font-bold bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded border border-indigo-500/30">0 forms</span>
+              <span id="ledgerCount" class="text-xs font-bold bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded border border-indigo-500/30">0/0 done</span>
             </div>
-            <div class="overflow-y-auto" style="max-height: 70vh;">
-              <table class="w-full text-left text-xs">
-                <thead class="sticky top-0 bg-slate-900/95 border-b border-white/10">
-                  <tr>
-                    <th class="px-3 py-2 text-slate-400 font-semibold w-16">Form #</th>
-                    <th class="px-3 py-2 text-slate-400 font-semibold">Table / Post</th>
-                    <th class="px-3 py-2 text-slate-400 font-semibold text-right w-24">Status</th>
-                  </tr>
-                </thead>
-                <tbody id="ledgerBody">
-                  <tr><td colspan="3" class="px-3 py-8 text-center text-slate-500 italic">No forms entered yet this session.</td></tr>
-                </tbody>
-              </table>
+            <!-- Summary counts -->
+            <div id="ledgerSummary" class="flex flex-wrap gap-3 px-4 py-2 border-b border-white/5 text-[11px] text-slate-400 bg-slate-900/40"></div>
+            <!-- Legend -->
+            <div class="flex flex-wrap gap-3 px-4 py-2 border-b border-white/10 bg-slate-900/60 text-[10px] text-slate-500">
+              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-green-500/20 border border-green-500/40 inline-block"></span>Done</span>
+              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-slate-800/80 border border-slate-700 inline-block"></span>Pending</span>
+              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-500/20 border border-amber-500/40 inline-block"></span>Queued</span>
+              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-500/20 border border-blue-500/40 inline-block"></span>Syncing</span>
+              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-500/20 border border-red-500/40 inline-block"></span>Failed</span>
+            </div>
+            <!-- Chip Grid -->
+            <div class="overflow-y-auto p-3" style="max-height: 60vh;">
+              <div id="ledgerGrid" class="flex flex-wrap gap-1.5"></div>
             </div>
           </div>
         </div>
@@ -1640,16 +1640,15 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
           <button id="btnSaveVotes" class="btn btn-success px-12">💾 Save Form Results</button>
         </div>
       </div>
-    `;let m=()=>{let e=0;c.querySelectorAll(`.vote-input`).forEach(t=>{e+=parseInt(t.value,10)||0});let t=c.querySelector(`#totalVotesDisplay`);t&&(t.textContent=e)};c.querySelectorAll(`.vote-input`).forEach(e=>{e.addEventListener(`input`,m)}),m(),c.querySelector(`#btnSaveVotes`).addEventListener(`click`,async()=>{let i=c.querySelectorAll(`.vote-input`),l=[];if(i.forEach(e=>{let t=e.value.trim();t!==``&&l.push({TableNumber:n,RoundNumber:s,Post:r,CandidateId:e.dataset.cid,CandidateName:e.dataset.cname,Votes:parseInt(t,10),FormSerial:o||`N/A`})}),l.length===0){D(`Enter votes`,`warning`);return}l.forEach(e=>{let t=a.findIndex(t=>String(t.TableNumber)===String(n)&&String(t.Post)===r&&t.CandidateId===e.CandidateId);t>=0?(a[t].Votes=e.Votes,a[t].RoundNumber=e.RoundNumber,a[t].FormSerial=e.FormSerial):a.push(e)});let u=Date.now().toString()+Math.random().toString(36).substr(2,5);U.push({id:u,serial:o||`Manual`,tableNum:n,postName:r,roundNum:s,payload:l,status:`pending`}),D(`Form #${o||`Manual`} queued!`,`info`),c.innerHTML=``,f.value=``,f.focus(),qe=t,K(e,a,d),G(e,a,d)})};K(e,a,d),U.some(e=>e.status===`pending`||e.status===`retry`)&&G(e,a,d)}async function G(e,t,n){if(!W){for(W=!0;U.some(e=>e.status===`pending`||e.status===`retry`);){let r=U.find(e=>e.status===`pending`||e.status===`retry`);r.status=`syncing`,K(e,t,n);try{await C.adminSaveResults(qe,r.payload),r.status=`success`}catch(e){r.status=`error`,r.errorMsg=e.message}K(e,t,n)}W=!1}}function K(e,t,n){let r=e.querySelector(`#ledgerBody`),i=e.querySelector(`#ledgerCount`);if(!r)return;let a=new Set;t.forEach(e=>{e.FormSerial&&e.FormSerial!==`N/A`&&a.add(String(e.FormSerial))});let o=[];U.forEach(e=>{o.push({serial:e.serial,tableNum:e.tableNum,postName:e.postName,roundNum:e.roundNum,status:e.status,id:e.id,errorMsg:e.errorMsg||``})});let s=new Set(U.map(e=>String(e.serial)));if(a.forEach(e=>{if(!s.has(e)){let t=n[e]||{};o.push({serial:e,tableNum:t.tableNum||`—`,postName:t.postName||`—`,roundNum:t.roundNum||`—`,status:`server`})}}),o.length===0){r.innerHTML=`<tr><td colspan="3" class="px-3 py-8 text-center text-slate-500 italic">No forms entered yet this session.</td></tr>`,i&&(i.textContent=`0 forms`);return}o.sort((e,t)=>{let n={syncing:0,pending:1,retry:2,error:3,success:4,server:5};return n[e.status]===n[t.status]?Number(t.serial)-Number(e.serial):n[e.status]-n[t.status]});let c=e=>{switch(e.status){case`syncing`:return`<span class="flex items-center justify-end gap-1 text-blue-300"><span class="spinner" style="width:9px;height:9px;border-width:2px;"></span> Syncing</span>`;case`pending`:case`retry`:return`<span class="text-amber-400">⏳ Queued</span>`;case`success`:return`<span class="text-green-400">✅ Saved</span>`;case`error`:return`<button class="text-red-400 hover:text-red-300 underline retry-btn text-right" data-id="${e.id}" title="${T(e.errorMsg)}">❌ Failed</button>`;case`server`:return`<span class="text-slate-400">☁️ In Sheet</span>`;default:return`—`}};r.innerHTML=o.map(e=>`
-    <tr class="border-b border-white/5 hover:bg-white/5 transition ${e.status===`syncing`?`bg-blue-500/5`:e.status===`error`?`bg-red-500/5`:``}">
-      <td class="px-3 py-2.5 font-bold text-white">#${e.serial}</td>
-      <td class="px-3 py-2.5">
-        <div class="text-slate-300 leading-tight truncate max-w-[160px]" title="${T(e.postName)}">${T(e.postName)}</div>
-        <div class="text-[10px] text-slate-500">Table ${e.tableNum} · Rnd ${e.roundNum}</div>
-      </td>
-      <td class="px-3 py-2.5 text-right text-[11px] font-semibold">${c(e)}</td>
-    </tr>
-  `).join(``),i&&(i.textContent=`${o.length} form${o.length===1?``:`s`}`),r.querySelectorAll(`.retry-btn`).forEach(r=>{r.addEventListener(`click`,()=>{let i=r.dataset.id,a=U.find(e=>e.id===i);a&&(a.status=`retry`,K(e,t,n),G(e,t,n))})})}async function Xe(e){let t=L();if(!t)return;R(e,`Ballot Printing`,`
+    `;let m=()=>{let e=0;c.querySelectorAll(`.vote-input`).forEach(t=>{e+=parseInt(t.value,10)||0});let t=c.querySelector(`#totalVotesDisplay`);t&&(t.textContent=e)};c.querySelectorAll(`.vote-input`).forEach(e=>{e.addEventListener(`input`,m)}),m(),c.querySelector(`#btnSaveVotes`).addEventListener(`click`,async()=>{let i=c.querySelectorAll(`.vote-input`),l=[];if(i.forEach(e=>{let t=e.value.trim();t!==``&&l.push({TableNumber:n,RoundNumber:s,Post:r,CandidateId:e.dataset.cid,CandidateName:e.dataset.cname,Votes:parseInt(t,10),FormSerial:o||`N/A`})}),l.length===0){D(`Enter votes`,`warning`);return}l.forEach(e=>{let t=a.findIndex(t=>String(t.TableNumber)===String(n)&&String(t.Post)===r&&t.CandidateId===e.CandidateId);t>=0?(a[t].Votes=e.Votes,a[t].RoundNumber=e.RoundNumber,a[t].FormSerial=e.FormSerial):a.push(e)});let u=Date.now().toString()+Math.random().toString(36).substr(2,5);U.push({id:u,serial:o||`Manual`,tableNum:n,postName:r,roundNum:s,payload:l,status:`pending`}),D(`Form #${o||`Manual`} queued!`,`info`),c.innerHTML=``,f.value=``,f.focus(),qe=t,K(e,a,d),G(e,a,d)})};K(e,a,d),U.some(e=>e.status===`pending`||e.status===`retry`)&&G(e,a,d)}async function G(e,t,n){if(!W){for(W=!0;U.some(e=>e.status===`pending`||e.status===`retry`);){let r=U.find(e=>e.status===`pending`||e.status===`retry`);r.status=`syncing`,K(e,t,n);try{await C.adminSaveResults(qe,r.payload),r.status=`success`}catch(e){r.status=`error`,r.errorMsg=e.message}K(e,t,n)}W=!1}}function K(e,t,n){let r=e.querySelector(`#ledgerGrid`),i=e.querySelector(`#ledgerCount`),a=e.querySelector(`#ledgerSummary`);if(!r)return;let o={};Object.keys(n).forEach(e=>{o[String(e)]=`pending`}),t.forEach(e=>{e.FormSerial&&e.FormSerial!==`N/A`&&(o[String(e.FormSerial)]=`server`)}),U.forEach(e=>{o[String(e.serial)]=e.status});let s=Object.keys(n).map(Number).sort((e,t)=>e-t),c=s.length,l=0,u=0,d=0,f=0;s.forEach(e=>{let t=o[String(e)]||`pending`;t===`server`||t===`success`?l++:t===`pending`?f++:t===`error`?d++:u++}),i&&(i.textContent=`${l}/${c} done`),a&&(a.innerHTML=`
+      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>${l} Done</span>
+      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-slate-500 inline-block"></span>${f} Pending</span>
+      ${u>0?`<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>${u} Queued</span>`:``}
+      ${d>0?`<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>${d} Failed</span>`:``}
+    `);let p=(e,t,n)=>{let r=`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold cursor-default select-none transition-all border`;switch(e){case`server`:case`success`:return`${r} bg-green-500/20 text-green-400 border-green-500/40`;case`syncing`:return`${r} bg-blue-500/20 text-blue-300 border-blue-500/40 animate-pulse`;case`pending`:case`retry`:return`${r} bg-amber-500/20 text-amber-300 border-amber-500/40`;case`error`:return`${r} bg-red-500/20 text-red-400 border-red-500/40 cursor-pointer retry-btn hover:bg-red-500/40`;default:return`${r} bg-slate-800/80 text-slate-500 border-slate-700`}},m=(e,t,n)=>{let r=n[String(e)]||{},i=`Form #${e} | Table ${r.tableNum||`?`} | ${r.postName||`?`}`;return t===`error`?`${i} | ❌ Failed - Click to retry (${U.find(t=>String(t.serial)===String(e))?.errorMsg||``})`:t===`pending`?`${i} | ⏳ Not entered yet`:t===`server`?`${i} | ☁️ Saved in Google Sheet`:t===`success`?`${i} | ✅ Saved this session`:t===`syncing`?`${i} | 🔵 Syncing to server...`:i};r.innerHTML=s.map(e=>{let t=o[String(e)]||`not-entered`,r=U.find(t=>String(t.serial)===String(e));return`<div class="${p(t,e,r?.id)}"
+      title="${m(e,t,n)}"
+      ${t===`error`&&r?`data-id="${r.id}"`:``}
+    >${e}</div>`}).join(``),r.querySelectorAll(`.retry-btn`).forEach(r=>{r.addEventListener(`click`,()=>{let i=r.dataset.id,a=U.find(e=>e.id===i);a&&(a.status=`retry`,K(e,t,n),G(e,t,n))})})}async function Xe(e){let t=L();if(!t)return;R(e,`Ballot Printing`,`
     <div class="text-center py-16">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 mt-4 text-sm">Preparing ballot generator...</p>

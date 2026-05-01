@@ -117,23 +117,23 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
             <div class="bg-gradient-to-r from-slate-900/80 to-indigo-900/60 p-4 border-b border-white/10 flex items-center justify-between">
               <div>
                 <h4 class="font-bold text-white text-sm">Entered Forms Ledger</h4>
-                <p class="text-[10px] text-slate-400 mt-0.5">Live sync status vs Google Sheet</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">Hover a chip to see form details</p>
               </div>
-              <span id="ledgerCount" class="text-xs font-bold bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded border border-indigo-500/30">0 forms</span>
+              <span id="ledgerCount" class="text-xs font-bold bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded border border-indigo-500/30">0/0 done</span>
             </div>
-            <div class="overflow-y-auto" style="max-height: 70vh;">
-              <table class="w-full text-left text-xs">
-                <thead class="sticky top-0 bg-slate-900/95 border-b border-white/10">
-                  <tr>
-                    <th class="px-3 py-2 text-slate-400 font-semibold w-16">Form #</th>
-                    <th class="px-3 py-2 text-slate-400 font-semibold">Table / Post</th>
-                    <th class="px-3 py-2 text-slate-400 font-semibold text-right w-24">Status</th>
-                  </tr>
-                </thead>
-                <tbody id="ledgerBody">
-                  <tr><td colspan="3" class="px-3 py-8 text-center text-slate-500 italic">No forms entered yet this session.</td></tr>
-                </tbody>
-              </table>
+            <!-- Summary counts -->
+            <div id="ledgerSummary" class="flex flex-wrap gap-3 px-4 py-2 border-b border-white/5 text-[11px] text-slate-400 bg-slate-900/40"></div>
+            <!-- Legend -->
+            <div class="flex flex-wrap gap-3 px-4 py-2 border-b border-white/10 bg-slate-900/60 text-[10px] text-slate-500">
+              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-green-500/20 border border-green-500/40 inline-block"></span>Done</span>
+              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-slate-800/80 border border-slate-700 inline-block"></span>Pending</span>
+              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-500/20 border border-amber-500/40 inline-block"></span>Queued</span>
+              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-500/20 border border-blue-500/40 inline-block"></span>Syncing</span>
+              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-500/20 border border-red-500/40 inline-block"></span>Failed</span>
+            </div>
+            <!-- Chip Grid -->
+            <div class="overflow-y-auto p-3" style="max-height: 60vh;">
+              <div id="ledgerGrid" class="flex flex-wrap gap-1.5"></div>
             </div>
           </div>
         </div>
@@ -364,95 +364,98 @@ async function processQueue(main, allResults, allFormSerialsMeta) {
 }
 
 function renderLedger(main, allResults, allFormSerialsMeta) {
-  const body = main.querySelector('#ledgerBody');
+  const grid = main.querySelector('#ledgerGrid');
   const countEl = main.querySelector('#ledgerCount');
-  if (!body) return;
+  const summaryEl = main.querySelector('#ledgerSummary');
+  if (!grid) return;
 
-  // Build a map of serials that have data in allResults (server-confirmed)
-  const serverSerials = new Set();
+  // Build status map: serial -> status
+  const statusMap = {};
+
+  // 1. Pre-populate all known form serials as 'pending'
+  Object.keys(allFormSerialsMeta).forEach(serial => {
+    statusMap[String(serial)] = 'pending';
+  });
+
+  // 2. Mark server-confirmed forms
   allResults.forEach(r => {
-    if (r.FormSerial && r.FormSerial !== 'N/A') serverSerials.add(String(r.FormSerial));
-  });
-
-  // Build rows: start from allFormSerialsMeta, determine status from queue or server
-  const rows = [];
-
-  // 1. Add all forms in the sync queue (most recent activity)
-  syncQueue.forEach(item => {
-    rows.push({
-      serial: item.serial,
-      tableNum: item.tableNum,
-      postName: item.postName,
-      roundNum: item.roundNum,
-      status: item.status,
-      id: item.id,
-      errorMsg: item.errorMsg || ''
-    });
-  });
-
-  // 2. Add forms from server that are NOT already in the queue
-  const queueSerials = new Set(syncQueue.map(q => String(q.serial)));
-  serverSerials.forEach(serial => {
-    if (!queueSerials.has(serial)) {
-      const meta = allFormSerialsMeta[serial] || {};
-      rows.push({
-        serial,
-        tableNum: meta.tableNum || '—',
-        postName: meta.postName || '—',
-        roundNum: meta.roundNum || '—',
-        status: 'server'
-      });
+    if (r.FormSerial && r.FormSerial !== 'N/A') {
+      statusMap[String(r.FormSerial)] = 'server';
     }
   });
 
-  if (rows.length === 0) {
-    body.innerHTML = `<tr><td colspan="3" class="px-3 py-8 text-center text-slate-500 italic">No forms entered yet this session.</td></tr>`;
-    if (countEl) countEl.textContent = '0 forms';
-    return;
-  }
-
-  // Sort: queue items first (newest first), then server items (by serial desc)
-  rows.sort((a, b) => {
-    const order = { syncing: 0, pending: 1, retry: 2, error: 3, success: 4, server: 5 };
-    if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
-    return Number(b.serial) - Number(a.serial);
+  // 3. Overlay sync queue statuses (highest priority)
+  syncQueue.forEach(item => {
+    statusMap[String(item.serial)] = item.status;
   });
 
-  const statusBadge = (item) => {
-    switch (item.status) {
+  const allSerials = Object.keys(allFormSerialsMeta).map(Number).sort((a, b) => a - b);
+  const total = allSerials.length;
+  let done = 0, queued = 0, failed = 0, pendingCount = 0;
+
+  allSerials.forEach(s => {
+    const st = statusMap[String(s)] || 'pending';
+    if (st === 'server' || st === 'success') done++;
+    else if (st === 'pending') pendingCount++;
+    else if (st === 'error') failed++;
+    else queued++;
+  });
+
+  if (countEl) countEl.textContent = `${done}/${total} done`;
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>${done} Done</span>
+      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-slate-500 inline-block"></span>${pendingCount} Pending</span>
+      ${queued > 0 ? `<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>${queued} Queued</span>` : ''}
+      ${failed > 0 ? `<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>${failed} Failed</span>` : ''}
+    `;
+  }
+
+  const chipClass = (st, serial, id) => {
+    const base = 'w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold cursor-default select-none transition-all border';
+    switch (st) {
+      case 'server':
+      case 'success':
+        return `${base} bg-green-500/20 text-green-400 border-green-500/40` ;
       case 'syncing':
-        return `<span class="flex items-center justify-end gap-1 text-blue-300"><span class="spinner" style="width:9px;height:9px;border-width:2px;"></span> Syncing</span>`;
+        return `${base} bg-blue-500/20 text-blue-300 border-blue-500/40 animate-pulse`;
       case 'pending':
       case 'retry':
-        return `<span class="text-amber-400">⏳ Queued</span>`;
-      case 'success':
-        return `<span class="text-green-400">✅ Saved</span>`;
+        return `${base} bg-amber-500/20 text-amber-300 border-amber-500/40`;
       case 'error':
-        return `<button class="text-red-400 hover:text-red-300 underline retry-btn text-right" data-id="${item.id}" title="${esc(item.errorMsg)}">❌ Failed</button>`;
-      case 'server':
-        return `<span class="text-slate-400">☁️ In Sheet</span>`;
-      default:
-        return '—';
+        return `${base} bg-red-500/20 text-red-400 border-red-500/40 cursor-pointer retry-btn hover:bg-red-500/40` ;
+      default: // not entered yet
+        return `${base} bg-slate-800/80 text-slate-500 border-slate-700`;
     }
   };
 
-  body.innerHTML = rows.map(item => `
-    <tr class="border-b border-white/5 hover:bg-white/5 transition ${item.status === 'syncing' ? 'bg-blue-500/5' : item.status === 'error' ? 'bg-red-500/5' : ''}">
-      <td class="px-3 py-2.5 font-bold text-white">#${item.serial}</td>
-      <td class="px-3 py-2.5">
-        <div class="text-slate-300 leading-tight truncate max-w-[160px]" title="${esc(item.postName)}">${esc(item.postName)}</div>
-        <div class="text-[10px] text-slate-500">Table ${item.tableNum} · Rnd ${item.roundNum}</div>
-      </td>
-      <td class="px-3 py-2.5 text-right text-[11px] font-semibold">${statusBadge(item)}</td>
-    </tr>
-  `).join('');
+  const chipTitle = (s, st, meta) => {
+    const info = meta[String(s)] || {};
+    const base = `Form #${s} | Table ${info.tableNum || '?'} | ${info.postName || '?'}`;
+    if (st === 'error') {
+      const item = syncQueue.find(i => String(i.serial) === String(s));
+      return `${base} | ❌ Failed - Click to retry (${item?.errorMsg || ''})`;
+    }
+    if (st === 'pending') return `${base} | ⏳ Not entered yet`;
+    if (st === 'server') return `${base} | ☁️ Saved in Google Sheet`;
+    if (st === 'success') return `${base} | ✅ Saved this session`;
+    if (st === 'syncing') return `${base} | 🔵 Syncing to server...`;
+    return base;
+  };
 
-  if (countEl) countEl.textContent = `${rows.length} form${rows.length !== 1 ? 's' : ''}`;
+  grid.innerHTML = allSerials.map(s => {
+    const st = statusMap[String(s)] || 'not-entered';
+    const qItem = syncQueue.find(i => String(i.serial) === String(s));
+    return `<div class="${chipClass(st, s, qItem?.id)}"
+      title="${chipTitle(s, st, allFormSerialsMeta)}"
+      ${st === 'error' && qItem ? `data-id="${qItem.id}"` : ''}
+    >${s}</div>`;
+  }).join('');
 
-  // Attach retry listeners
-  body.querySelectorAll('.retry-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.id;
+  // Retry on click for failed chips
+  grid.querySelectorAll('.retry-btn').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const id = chip.dataset.id;
       const item = syncQueue.find(i => i.id === id);
       if (item) {
         item.status = 'retry';
