@@ -6,6 +6,17 @@ import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
 
+const syncQueue = [];
+let isSyncing = false;
+let currentPwd = null;
+
+window.addEventListener('beforeunload', (e) => {
+  if (syncQueue.some(i => i.status === 'pending' || i.status === 'syncing' || i.status === 'retry')) {
+    e.preventDefault();
+    e.returnValue = 'You have unsaved forms syncing in the background. Are you sure you want to leave?';
+  }
+});
+
 export async function renderAdminResultsEntry(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
   renderAdminLayout(container, 'results-entry', `
@@ -55,6 +66,14 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       <div>
         <h3 class="text-xl font-bold text-white">Enter Vote Counts</h3>
         <p class="text-slate-400 text-sm">Enter the Form Serial Number from the counting form to load the entry sheet.</p>
+      </div>
+
+      <div id="syncStatusContainer" class="hidden glass rounded-xl p-4 border border-slate-700/50 bg-slate-900/50">
+        <h4 class="text-sm font-bold text-slate-300 mb-2 flex justify-between items-center">
+          <span>Background Sync Queue</span>
+          <span id="syncCounts" class="text-xs font-normal text-slate-400"></span>
+        </h4>
+        <div id="syncBadges" class="flex flex-wrap gap-2 max-h-32 overflow-y-auto"></div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -245,28 +264,112 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
 
       if (resultsToSave.length === 0) { showToast('Enter votes', 'warning'); return; }
 
-      setLoading(btn, true, '💾 Saving...');
-      try {
-        await api.adminSaveResults(pwd, resultsToSave);
-        resultsToSave.forEach(ns => {
-          const idx = allResults.findIndex(r => String(r.TableNumber) === String(tableNum) && String(r.Post) === postName && r.CandidateId === ns.CandidateId);
-          if (idx >= 0) {
-              allResults[idx].Votes = ns.Votes;
-              allResults[idx].RoundNumber = ns.RoundNumber;
-              allResults[idx].FormSerial = ns.FormSerial;
-          } else {
-              allResults.push(ns);
-          }
-        });
-        showToast('Form results saved!', 'success');
-        area.innerHTML = '';
-        txtSerial.value = '';
-        txtSerial.focus();
-      } catch (err) {
-        showToast(`Failed: ${err.message}`, 'error');
-      } finally {
-        setLoading(btn, false, '💾 Save Form Results');
-      }
+      // Queue the save payload
+      const syncId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+      syncQueue.push({
+        id: syncId,
+        serial: serial || 'Manual',
+        tableNum: tableNum,
+        postName: postName,
+        payload: resultsToSave,
+        status: 'pending' // pending, syncing, success, error
+      });
+
+      // Optimistically update allResults
+      resultsToSave.forEach(ns => {
+        const idx = allResults.findIndex(r => String(r.TableNumber) === String(tableNum) && String(r.Post) === postName && r.CandidateId === ns.CandidateId);
+        if (idx >= 0) {
+            allResults[idx].Votes = ns.Votes;
+            allResults[idx].RoundNumber = ns.RoundNumber;
+            allResults[idx].FormSerial = ns.FormSerial;
+        } else {
+            allResults.push(ns);
+        }
+      });
+
+      showToast(`Form #${serial || 'Manual'} queued for saving!`, 'info');
+      area.innerHTML = '';
+      txtSerial.value = '';
+      txtSerial.focus();
+
+      currentPwd = pwd; 
+      renderSyncUI(main);
+      processQueue(main);
     });
   };
+
+  // Ensure sync UI is rendered if there are lingering items from a previous unmount
+  renderSyncUI(main);
+  if (syncQueue.some(i => i.status === 'pending' || i.status === 'retry')) {
+    processQueue(main);
+  }
+}
+
+async function processQueue(main) {
+  if (isSyncing) return;
+  isSyncing = true;
+
+  while(syncQueue.some(i => i.status === 'pending' || i.status === 'retry')) {
+    const item = syncQueue.find(i => i.status === 'pending' || i.status === 'retry');
+    item.status = 'syncing';
+    renderSyncUI(main);
+
+    try {
+      await api.adminSaveResults(currentPwd, item.payload);
+      item.status = 'success';
+    } catch (err) {
+      item.status = 'error';
+      item.errorMsg = err.message;
+    }
+    renderSyncUI(main);
+  }
+
+  isSyncing = false;
+}
+
+function renderSyncUI(main) {
+  const container = main.querySelector('#syncStatusContainer');
+  const badgesArea = main.querySelector('#syncBadges');
+  const counts = main.querySelector('#syncCounts');
+  
+  if (!container || !badgesArea) return;
+
+  if (syncQueue.length === 0) {
+    container.classList.add('hidden');
+    return;
+  }
+  container.classList.remove('hidden');
+
+  let pending = 0, success = 0, error = 0;
+  
+  badgesArea.innerHTML = syncQueue.map(item => {
+    if (item.status === 'pending' || item.status === 'retry') {
+      pending++;
+      return `<span class="px-2 py-1 bg-amber-500/20 text-amber-300 text-[11px] rounded border border-amber-500/30">Form #${item.serial} (Queued)</span>`;
+    } else if (item.status === 'syncing') {
+      pending++;
+      return `<span class="px-2 py-1 bg-blue-500/20 text-blue-300 text-[11px] rounded border border-blue-500/30 flex items-center gap-1"><span class="spinner" style="width:10px;height:10px;border-width:2px"></span>Form #${item.serial} (Syncing)</span>`;
+    } else if (item.status === 'success') {
+      success++;
+      return `<span class="px-2 py-1 bg-green-500/20 text-green-400 text-[11px] rounded border border-green-500/30">Form #${item.serial} (Saved)</span>`;
+    } else if (item.status === 'error') {
+      error++;
+      return `<button class="px-2 py-1 bg-red-500/20 text-red-400 text-[11px] rounded border border-red-500/30 hover:bg-red-500/40 transition retry-btn" data-id="${item.id}" title="${esc(item.errorMsg)}">Form #${item.serial} (Failed - Retry)</button>`;
+    }
+    return '';
+  }).join('');
+
+  counts.textContent = `${success} Saved | ${pending} Pending${error > 0 ? ` | ${error} Failed` : ''}`;
+
+  badgesArea.querySelectorAll('.retry-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = e.target.dataset.id;
+      const item = syncQueue.find(i => i.id === id);
+      if (item) {
+        item.status = 'retry';
+        renderSyncUI(main);
+        processQueue(main);
+      }
+    });
+  });
 }
