@@ -5,6 +5,7 @@
  */
 import { router } from '../../router.js';
 import { showToast } from '../../utils.js';
+import { api } from '../../api.js';
 
 export function getAdminPassword() {
   const pwd = localStorage.getItem('adminPwd');
@@ -25,6 +26,9 @@ export function getAdminPassword() {
 }
 
 export function renderAdminLayout(container, activeSection, contentHtml) {
+  const pwd = getAdminPassword();
+  if (pwd) api.initAdminData(pwd);
+
   container.innerHTML = `
   <div class="min-h-screen flex">
     <!-- Sidebar -->

@@ -5,6 +5,7 @@
 import './style.css';
 import { CONFIG } from './config.js';
 import { router } from './router.js';
+import { api, setSyncStatusCallback } from './api.js';
 import { renderHome }               from './pages/home.js';
 import { renderSubmitNomination }   from './pages/submitNomination.js';
 import { renderFindNomination }     from './pages/findNomination.js';
@@ -96,3 +97,35 @@ document.addEventListener('click', (e) => {
 });
 
 router.start();
+
+// ─── Background Sync UI & Init ────────────────────────────────────────────────
+document.body.insertAdjacentHTML('beforeend', `
+  <div id="sync-status" class="fixed top-4 right-4 z-[9999] bg-black/80 backdrop-blur border border-white/10 rounded-full px-4 py-2 flex items-center gap-2 text-xs font-medium text-white shadow-xl transition-all duration-300 transform translate-y-[-150%] opacity-0">
+    <span id="sync-icon" class="animate-spin inline-block">🔄</span>
+    <span id="sync-text">Saving changes...</span>
+  </div>
+`);
+
+const syncUI = document.getElementById('sync-status');
+const syncIcon = document.getElementById('sync-icon');
+const syncText = document.getElementById('sync-text');
+
+setSyncStatusCallback((status) => {
+  if (status === 'saving') {
+    syncUI.classList.remove('translate-y-[-150%]', 'opacity-0');
+    syncUI.classList.add('translate-y-0', 'opacity-100');
+    syncIcon.className = 'animate-spin inline-block text-indigo-400';
+    syncIcon.innerHTML = '&#8635;'; // refresh icon
+    syncText.innerText = 'Saving changes...';
+  } else if (status === 'saved') {
+    syncIcon.className = 'inline-block text-emerald-400';
+    syncIcon.innerHTML = '&#10003;'; // check icon
+    syncText.innerText = 'All changes saved';
+  } else if (status === 'idle') {
+    syncUI.classList.remove('translate-y-0', 'opacity-100');
+    syncUI.classList.add('translate-y-[-150%]', 'opacity-0');
+  }
+});
+
+// Initialize public data proactively
+api.initPublicData();
