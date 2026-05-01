@@ -33,19 +33,29 @@ export async function renderResults(container) {
   `;
 
   const timerEl = container.querySelector('#cacheTimer');
+  const btnRefresh = container.querySelector('#btnRefresh');
   const updateTimer = () => {
     const lastFetch = localStorage.getItem(CACHE_TIME_KEY);
-    if (!lastFetch) { timerEl.textContent = ''; return; }
+    if (!lastFetch) { 
+      timerEl.textContent = ''; 
+      btnRefresh.disabled = false;
+      btnRefresh.classList.remove('opacity-50', 'cursor-not-allowed');
+      return; 
+    }
     const nextUpdate = parseInt(lastFetch, 10) + REFRESH_INTERVAL;
     const remaining = Math.max(0, nextUpdate - Date.now());
     if (remaining <= 0) {
       timerEl.textContent = 'Live Update Available';
       timerEl.classList.add('text-green-400');
+      btnRefresh.disabled = false;
+      btnRefresh.classList.remove('opacity-50', 'cursor-not-allowed');
     } else {
       const mins = Math.floor(remaining / 60000);
       const secs = Math.floor((remaining % 60000) / 1000);
       timerEl.textContent = `Update in ${mins}:${secs.toString().padStart(2, '0')}`;
       timerEl.classList.remove('text-green-400');
+      btnRefresh.disabled = true;
+      btnRefresh.classList.add('opacity-50', 'cursor-not-allowed');
     }
   };
 
