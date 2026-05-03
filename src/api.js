@@ -367,7 +367,7 @@ export const api = {
 
   adminGetBallotPlan: (password) => get({ action: 'adminGetBallotPlan', password }),
   
-  adminRunAudit: (password) => get({ action: 'adminRunAudit', password }),
+  adminRunAudit: (password) => post({ action: 'adminRunAudit', password }),
 
   // ─── Nominal Roll Management ────────────────────────────────────────────────
   
