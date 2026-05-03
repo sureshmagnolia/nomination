@@ -1120,15 +1120,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
             </div>
           </div>
         </div>
-          <div class="flex flex-wrap gap-2">
-            ${f.length?f.map((e,t)=>`
-              <span class="badge badge-valid bg-white/10 text-white border border-white/20 px-3 py-1 flex items-center gap-2">
-                ${T(e)}
-                <button class="text-red-400 hover:text-red-300 font-bold delete-location" data-idx="${t}">×</button>
-              </span>
-            `).join(``):`<span class="text-slate-500 text-sm">No locations added yet.</span>`}
-          </div>
-        </div>
+
 
         <!-- Booth Configuration -->
         <div class="glass rounded-xl p-5 border-l-4 border-l-indigo-500">
@@ -1215,21 +1207,18 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
               .college-name { font-size: 18px; font-weight: bold; margin-bottom: 2px; }
               .title { font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
-              .stats-table { width: 100%; border-collapse: separate; border-spacing: 0; outline: 1.5px solid #555; }
-              .stats-table th, .stats-table td { border-right: 1px solid #555; border-bottom: 1px solid #555; padding: 5px 8px; text-align: left; }
-              .stats-table thead tr th:first-child, .stats-table tbody tr td:first-child { border-left: 1px solid #555; }
-              .stats-table thead tr th { border-top: 1px solid #555; background: #f0f0f0; font-size: 10px; text-transform: uppercase; font-weight: bold; }
+              .stats-table { width: 99.5%; margin: 0 auto; border-collapse: collapse; border: 1.5px solid #555; }
+              .stats-table th, .stats-table td { border: 1px solid #555; padding: 5px 8px; text-align: left; }
+              .stats-table th { background: #f0f0f0; font-size: 10px; text-transform: uppercase; font-weight: bold; }
               .footer { display: flex; justify-content: space-between; margin-top: 25px; padding: 0 30px; }
               .sig-line { border-top: 1.5px solid #000; padding-top: 5px; width: 160px; text-align: center; font-size: 11px; font-weight: bold; }
               .roll-page { page-break-before: always; break-before: page; }
               .roll-page:first-of-type { page-break-before: avoid; break-before: avoid; }
               .roll-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 6px; font-size: 11px; }
-              .roll-table { width: 100%; border-collapse: separate; border-spacing: 0; outline: 1.5px solid #555; table-layout: fixed; }
+              .roll-table { width: 99.5%; margin: 0 auto; border-collapse: collapse; border: 1.5px solid #555; table-layout: fixed; }
               .roll-table thead { display: table-header-group; }
-              .roll-table th { background: #e8e8e8; font-weight: bold; text-transform: uppercase; font-size: 9px; border-right: 1px solid #555; border-bottom: 1px solid #555; border-top: 1px solid #555; padding: 4px 6px; }
-              .roll-table th:first-child { border-left: 1px solid #555; }
-              .roll-table td { border-right: 1px solid #555; border-bottom: 1px solid #555; padding: 3px 6px; font-size: 10px; }
-              .roll-table td:first-child { border-left: 1px solid #555; }
+              .roll-table th { background: #e8e8e8; font-weight: bold; text-transform: uppercase; font-size: 9px; border: 1px solid #555; padding: 4px 6px; }
+              .roll-table td { border: 1px solid #555; padding: 3px 6px; font-size: 10px; }
               .roll-table tr { page-break-inside: avoid; break-inside: avoid; height: 22px; }
               @media print {
                 .no-print { display: none; }
@@ -1252,7 +1241,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
               .college-name { font-size: 20px; font-weight: bold; margin-bottom: 3px; }
               .title { font-size: 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-              .stats-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; }
+              .stats-table { width: 99.5%; margin: 0 auto; border-collapse: collapse; border: 1.5px solid #000; }
               .stats-table th, .stats-table td { border: 1px solid #000; padding: 6px 10px; text-align: left; font-size: 11px; }
               .stats-table th { background: #f2f2f2; font-size: 11px; text-transform: uppercase; font-weight: bold; }
               .footer { display: flex; justify-content: flex-end; margin-top: 30px; padding-right: 30px; }
