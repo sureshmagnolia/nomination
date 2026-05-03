@@ -596,7 +596,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               <thead>
                 <tr>
                   <th style="width:40%">Name of Post</th>
-                  <th style="width:25%; text-align:center">No. of Votes Recorded<br><span style="font-size:10px; font-weight:normal">(Found in Ballot Box)</span></th>
+                  <th style="width:25%; text-align:center">No. of Votes Recorded</th>
                   <th style="width:35%">Remarks</th>
                 </tr>
               </thead>
