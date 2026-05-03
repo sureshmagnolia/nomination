@@ -456,6 +456,27 @@ function doGet(e) {
 // ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 //  doPost
 // ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+/**
+ * withWriteLock — acquires a script-level mutex before executing fn().
+ * Prevents race conditions when multiple students submit nominations or
+ * withdrawals simultaneously. All non-write (read) operations bypass this.
+ * @param {Function} fn  The write operation to protect.
+ * @returns {TextOutput}  The JSON response from fn(), or a 'busy' error.
+ */
+function withWriteLock(fn) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(12000); // Queue for up to 12 seconds
+  } catch (e) {
+    return errOut('The system is busy. Please wait a moment and try again.');
+  }
+  try {
+    return fn();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function doPost(e) {
   try {
     ensureAll();
@@ -529,72 +550,76 @@ function doPost(e) {
     }
 
     if (action === 'submitNomination') {
-      let isAdmin = false;
-      if (body.password) { try { checkAdmin(body); isAdmin = true; } catch(e) {} }
+      return withWriteLock(() => {
+        let isAdmin = false;
+        if (body.password) { try { checkAdmin(body); isAdmin = true; } catch(e) {} }
 
-      const deadline = getSetting('nominationDeadline');
-      const deadlineDate = (deadline && deadline.trim()) ? new Date(deadline) : null;
-      
-      if (!isAdmin && deadlineDate && !isNaN(deadlineDate.getTime()) && new Date() > deadlineDate) {
-        return errOut('Nomination filing period has ended.');
-      }
-      
-      const { post, gender, dob, candidateSerial, proposerSerial, seconderSerial } = body;
-      const roll = getNominalRollData();
-      const findS = (sn) => roll.find(r => String(r['Nominal Roll Serial Number']) === String(sn));
-      
-      const c = findS(candidateSerial);
-      const p = findS(proposerSerial);
-      const st = findS(seconderSerial);
+        const deadline = getSetting('nominationDeadline');
+        const deadlineDate = (deadline && deadline.trim()) ? new Date(deadline) : null;
+        
+        if (!isAdmin && deadlineDate && !isNaN(deadlineDate.getTime()) && new Date() > deadlineDate) {
+          return errOut('Nomination filing period has ended.');
+        }
+        
+        const { post, gender, dob, candidateSerial, proposerSerial, seconderSerial } = body;
+        const roll = getNominalRollData();
+        const findS = (sn) => roll.find(r => String(r['Nominal Roll Serial Number']) === String(sn));
+        
+        const c = findS(candidateSerial);
+        const p = findS(proposerSerial);
+        const st = findS(seconderSerial);
 
-      if (!c || !p || !st) return errOut('Candidate/Proposer/Seconder serial not found in Nominal Roll.');
+        if (!c || !p || !st) return errOut('Candidate/Proposer/Seconder serial not found in Nominal Roll.');
 
-      // Rule: Same student can't propose or second 2 candidates for the same post
-      const allNoms = getAllNominations();
-      const samePostNoms = allNoms.filter(n => n.post === post && n.status !== 'Rejected');
-      
-      const pExists = samePostNoms.find(n => n.proposerSerial === String(proposerSerial) || n.seconderSerial === String(proposerSerial));
-      const sExists = samePostNoms.find(n => n.proposerSerial === String(seconderSerial) || n.seconderSerial === String(seconderSerial));
-      
-      if (!isAdmin) {
-        if (pExists) return errOut(`Proposer (Serial ${proposerSerial}) has already endorsed a candidate for this post.`);
-        if (sExists) return errOut(`Seconder (Serial ${seconderSerial}) has already endorsed a candidate for this post.`);
-      }
+        // Rule: Same student can't propose or second 2 candidates for the same post
+        const allNoms = getAllNominations();
+        const samePostNoms = allNoms.filter(n => n.post === post && n.status !== 'Rejected');
+        
+        const pExists = samePostNoms.find(n => n.proposerSerial === String(proposerSerial) || n.seconderSerial === String(proposerSerial));
+        const sExists = samePostNoms.find(n => n.proposerSerial === String(seconderSerial) || n.seconderSerial === String(seconderSerial));
+        
+        if (!isAdmin) {
+          if (pExists) return errOut(`Proposer (Serial ${proposerSerial}) has already endorsed a candidate for this post.`);
+          if (sExists) return errOut(`Seconder (Serial ${seconderSerial}) has already endorsed a candidate for this post.`);
+        }
 
-      const existingIds = new Set(allNoms.map(n => n.id));
-      let id; do { id = String(Math.floor(1000000000 + Math.random() * 9000000000)); } while (existingIds.has(id));
+        const existingIds = new Set(allNoms.map(n => n.id));
+        let id; do { id = String(Math.floor(1000000000 + Math.random() * 9000000000)); } while (existingIds.has(id));
 
-      const getAdm = (obj) => obj['ADMISION NO'] || obj['ADMISSION NO'] || 'N/A';
+        const getAdm = (obj) => obj['ADMISION NO'] || obj['ADMISSION NO'] || 'N/A';
 
-      const row = [
-        id, post, gender, dob, new Date().toISOString(),
-        String(candidateSerial), c.NAME, c.CLASS, getAdm(c), c.Dept || 'N/A',
-        String(proposerSerial),  p.NAME, p.CLASS, getAdm(p), p.Dept || 'N/A',
-        String(seconderSerial),  st.NAME, st.CLASS, getAdm(st), st.Dept || 'N/A',
-        'Pending', 'None'
-      ];
-      
-      getSheet(SHEET_NOMS).appendRow(row);
-      return jsonOut({ ok: true, id });
+        const row = [
+          id, post, gender, dob, new Date().toISOString(),
+          String(candidateSerial), c.NAME, c.CLASS, getAdm(c), c.Dept || 'N/A',
+          String(proposerSerial),  p.NAME, p.CLASS, getAdm(p), p.Dept || 'N/A',
+          String(seconderSerial),  st.NAME, st.CLASS, getAdm(st), st.Dept || 'N/A',
+          'Pending', 'None'
+        ];
+        
+        getSheet(SHEET_NOMS).appendRow(row);
+        return jsonOut({ ok: true, id });
+      }); // end withWriteLock
     }
 
     if (action === 'submitWithdrawal') {
-      let isAdmin = false;
-      if (body.password) { try { checkAdmin(body); isAdmin = true; } catch(e) {} }
-      
-      const start = getSetting('withdrawalStart'), end = getSetting('withdrawalEnd'), now = new Date();
-      const startDate = (start && start.trim()) ? new Date(start) : null;
-      const endDate = (end && end.trim()) ? new Date(end) : null;
+      return withWriteLock(() => {
+        let isAdmin = false;
+        if (body.password) { try { checkAdmin(body); isAdmin = true; } catch(e) {} }
+        
+        const start = getSetting('withdrawalStart'), end = getSetting('withdrawalEnd'), now = new Date();
+        const startDate = (start && start.trim()) ? new Date(start) : null;
+        const endDate = (end && end.trim()) ? new Date(end) : null;
 
-      if (!isAdmin) {
-        if (startDate && !isNaN(startDate.getTime()) && now < startDate) return errOut('Withdrawal window has not opened yet.');
-        if (endDate && !isNaN(endDate.getTime()) && now > endDate) return errOut('Withdrawal window has closed.');
-      }
-      
-      const nom = getAllNominations().find(n => n.id === body.id);
-      if (!nom || nom.status !== 'Valid') return errOut(`Invalid nomination status.`);
-      getSheet(SHEET_NOMS).getRange(nom._row, 22).setValue('Requested');
-      return jsonOut({ ok: true });
+        if (!isAdmin) {
+          if (startDate && !isNaN(startDate.getTime()) && now < startDate) return errOut('Withdrawal window has not opened yet.');
+          if (endDate && !isNaN(endDate.getTime()) && now > endDate) return errOut('Withdrawal window has closed.');
+        }
+        
+        const nom = getAllNominations().find(n => n.id === body.id);
+        if (!nom || nom.status !== 'Valid') return errOut(`Invalid nomination status.`);
+        getSheet(SHEET_NOMS).getRange(nom._row, 22).setValue('Requested');
+        return jsonOut({ ok: true });
+      }); // end withWriteLock
     }
 
     if (action === 'adminVerifyNomination') {
