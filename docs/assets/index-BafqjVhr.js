@@ -2352,7 +2352,7 @@ Are you absolutely sure?`))return;E(t,!0,`🗑️ Wiping...`);let i=n.querySelec
             <h2 class="text-2xl font-bold text-white tracking-tight">${T(t)}</h2>
           </div>
           <div class="p-6 space-y-6 bg-slate-900/20">
-            ${i.map((e,t)=>{let n=d>0?(e.votes/d*100).toFixed(1):0,r=u>0?e.votes/u*100:0,i=t<l&&e.votes>0,a=i?e.votes-p:0;return`
+            ${i.map((e,t)=>{let n=f>0?(e.votes/f*100).toFixed(1):0,r=u>0?e.votes/u*100:0,i=t<l&&e.votes>0,a=i?e.votes-p:0;return`
                 <div class="relative">
                   <div class="flex justify-between items-end mb-2 relative z-10">
                     <div class="flex items-center gap-3">
@@ -2381,14 +2381,14 @@ Are you absolutely sure?`))return;E(t,!0,`🗑️ Wiping...`);let i=n.querySelec
               ${o&&o.votes>0?`
                 <div class="flex justify-between text-sm text-slate-400">
                   <span>None of the Above (NOTA)</span>
-                  <span class="font-bold text-white">${o.votes} <span class="text-xs text-slate-500 font-normal ml-1">(${(o.votes/d*100).toFixed(1)}%)</span></span>
+                  <span class="font-bold text-white">${o.votes} <span class="text-xs text-slate-500 font-normal ml-1">(${(o.votes/f*100).toFixed(1)}%)</span></span>
                 </div>
               `:``}
 
               ${a&&a.votes>0?`
                 <div class="flex justify-between text-sm text-slate-500">
                   <span>Invalid / Rejected</span>
-                  <span class="font-bold text-red-400">${a.votes}</span>
+                  <span class="font-bold text-red-400">${a.votes} <span class="text-xs text-slate-500 font-normal ml-1">(${(a.votes/f*100).toFixed(1)}%)</span></span>
                 </div>
               `:``}
 

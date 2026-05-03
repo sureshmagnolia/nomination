@@ -253,7 +253,7 @@ function updateHeader(main, year) {
           </div>
           <div class="p-6 space-y-6 bg-slate-900/20">
             ${valids.map((c, i) => {
-              const percentage = totalValidVotes > 0 ? ((c.votes / totalValidVotes) * 100).toFixed(1) : 0;
+              const percentage = grandTotal > 0 ? ((c.votes / grandTotal) * 100).toFixed(1) : 0;
               const barWidth = maxVotes > 0 ? (c.votes / maxVotes) * 100 : 0;
               const isWinning = i < seats && c.votes > 0;
               const lead = isWinning ? (c.votes - leadThreshold) : 0;
@@ -288,14 +288,14 @@ function updateHeader(main, year) {
               ${nota && nota.votes > 0 ? `
                 <div class="flex justify-between text-sm text-slate-400">
                   <span>None of the Above (NOTA)</span>
-                  <span class="font-bold text-white">${nota.votes} <span class="text-xs text-slate-500 font-normal ml-1">(${((nota.votes / totalValidVotes) * 100).toFixed(1)}%)</span></span>
+                  <span class="font-bold text-white">${nota.votes} <span class="text-xs text-slate-500 font-normal ml-1">(${((nota.votes / grandTotal) * 100).toFixed(1)}%)</span></span>
                 </div>
               ` : ''}
 
               ${invalid && invalid.votes > 0 ? `
                 <div class="flex justify-between text-sm text-slate-500">
                   <span>Invalid / Rejected</span>
-                  <span class="font-bold text-red-400">${invalid.votes}</span>
+                  <span class="font-bold text-red-400">${invalid.votes} <span class="text-xs text-slate-500 font-normal ml-1">(${((invalid.votes / grandTotal) * 100).toFixed(1)}%)</span></span>
                 </div>
               ` : ''}
 
