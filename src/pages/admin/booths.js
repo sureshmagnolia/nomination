@@ -523,30 +523,16 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     let html = '';
     if (!plan) return `<div class="alert alert-error">❌ Master Ballot Plan not generated.</div>`;
 
-    const candidates = Array.isArray(nominationsResponse) ? nominationsResponse.filter(n => n.withdrawalStatus !== 'Approved') : (nominationsResponse?.list?.filter(n => n.withdrawalStatus !== 'Approved') || []);
-    const contestedPosts = new Set();
-    posts.forEach(p => {
-      if (candidates.filter(c => c.post === p.post).length > 1) {
-        contestedPosts.add(p.post);
-      }
-    });
-
-    const isYear = (pName) => pName.toLowerCase().includes('representative') || pName.toLowerCase().includes('year');
-    const isAssoc = (pName) => pName.toLowerCase().includes('association') || pName.toLowerCase().includes('assoc');
-    
-    const generalPostsList = posts
-      .filter(p => !isYear(p.post) && !isAssoc(p.post) && contestedPosts.has(p.post))
-      .map(p => p.post);
-
     const sortedBooths = [...booths].sort((a, b) => a.boothNumber - b.boothNumber);
 
     sortedBooths.forEach((b) => {
       if (!b.classes || b.classes.length === 0) return;
       const assignments = plan.boothAssignments[b.boothNumber] || { general: null, reps: [], assocs: [] };
 
+      const boothGeneralPosts = assignments.general ? ['General Union Posts'] : [];
       const boothRepPosts = assignments.reps.map(r => r.post);
       const boothAssocPosts = assignments.assocs.map(a => a.post);
-      const allBoothPosts = [...generalPostsList, ...boothRepPosts, ...boothAssocPosts];
+      const allBoothPosts = [...boothGeneralPosts, ...boothRepPosts, ...boothAssocPosts];
 
       html += `
       <div class="page-break">
