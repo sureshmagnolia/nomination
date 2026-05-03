@@ -1189,24 +1189,27 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
           <head>
             <title>Electoral Rolls - Booth Allotment</title>
             <style>
-              body { font-family: sans-serif; color: #333; margin: 0; padding: 0; }
-              .page-break { page-break-after: always; }
-              .facing-sheet { padding: 30px; border: 2px solid #000; height: 95vh; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; }
-              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
-              .college-name { font-size: 20px; font-weight: bold; margin-bottom: 2px; }
-              .title { font-size: 18px; font-weight: bold; text-transform: uppercase; }
-              .stats-table { width: 100%; border-collapse: collapse; border: 1px solid #000; }
-              .stats-table th, .stats-table td { border: 1px solid #000; padding: 8px 10px; text-align: left; }
-              .stats-table th { background: #f2f2f2; font-size: 11px; text-transform: uppercase; }
-              .roll-page { padding: 30px; }
-              .roll-header { display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 10px; margin-bottom: 15px; font-size: 12px; }
-              .roll-table { width: 100%; border-collapse: collapse; }
-              .roll-table th, .roll-table td { border: 1px solid #000; padding: 6px 10px; text-align: left; font-size: 11px; }
-              .roll-table th { background: #f2f2f2; font-weight: bold; text-transform: uppercase; }
-              .footer { display: flex; justify-content: space-around; margin-top: 50px; font-size: 13px; font-weight: bold; }
+              @page { size: A4 portrait; margin: 15mm 12mm; }
+              * { box-sizing: border-box; }
+              body { font-family: 'Arial', sans-serif; color: #111; margin: 0; padding: 0; font-size: 11px; }
+              .facing-sheet { padding: 0; page-break-after: always; }
+              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
+              .college-name { font-size: 18px; font-weight: bold; margin-bottom: 2px; }
+              .title { font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+              .stats-table { width: 100%; border-collapse: collapse; }
+              .stats-table th, .stats-table td { border: 1px solid #555; padding: 5px 8px; text-align: left; }
+              .stats-table th { background: #f0f0f0; font-size: 10px; text-transform: uppercase; font-weight: bold; }
+              .footer { display: flex; justify-content: space-between; margin-top: 25px; padding: 0 30px; }
+              .sig-line { border-top: 1.5px solid #000; padding-top: 5px; width: 160px; text-align: center; font-size: 11px; font-weight: bold; }
+              .roll-page { page-break-after: always; }
+              .roll-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; font-size: 11px; }
+              .roll-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+              .roll-table th, .roll-table td { border: 1px solid #999; padding: 4px 6px; text-align: left; font-size: 10px; }
+              .roll-table th { background: #e8e8e8; font-weight: bold; text-transform: uppercase; font-size: 9px; }
+              .page-num { text-align: right; font-size: 9px; color: #777; margin-top: 4px; }
               @media print {
                 .no-print { display: none; }
-                .page-break { page-break-after: always; }
+                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               }
             </style>
           </head>
@@ -1236,137 +1239,122 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
           <body>${t.innerHTML}</body>
         </html>
       `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>d.length)for(let e=d.length;e<t;e++)d.push({boothNumber:e+1,roomName:``,classes:[]});else t<d.length&&(d=d.slice(0,t));m()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{d[e.target.dataset.idx].roomName=e.target.value,m()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!f.includes(t)&&(f.push(t),m())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=f[t];f.splice(t,1),d.forEach(e=>{e.roomName===n&&(e.roomName=``)}),m()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;E(n,!0,`💾 Save Locations`);try{await C.adminSaveLocations(t,f),D(`Locations saved successfully!`,`success`)}catch(e){D(`Failed to save: ${e.message}`,`error`)}finally{E(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;d.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&d[parseInt(n,10)].classes.push(t),m()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;E(n,!0,`💾 Save Configuration`);try{await C.adminSaveBooths(t,d),D(`Booth configuration saved successfully!`,`success`)}catch(e){D(`Failed to save: ${e.message}`,`error`)}finally{E(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnRegenPlan`).addEventListener(`click`,async e=>{let n=e.target,r=`🔄 Finalize Master Plan`;try{E(n,!0,r),D(`Calculating and saving Master Plan on server...`,`info`),await C.adminGenerateBallotPlan(t),D(`Master Plan finalized successfully! You can now print documents.`,`success`),c=await C.adminGetBallotPlan(t).catch(()=>null)}catch(e){D(e.message,`error`)}finally{E(n,!1,r)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{_(),m(),D(`Auto allotment complete. Please review and save.`,`info`)})},h=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=t.filter(t=>e.classes.includes(String(t.CLASS).trim())).length,a=e.classes.map(e=>i[e]).filter(Boolean),c=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]};s+=`
-      <div class="page-break">
-        <div class="facing-sheet">
+      <div class="facing-sheet">
           <div class="header">
             <div class="college-name">${T(n.COLLEGE_NAME||`COLLEGE UNION ELECTION`)}</div>
-            <div class="title" style="font-size: 14px;">Electoral Roll — Booth Facing Sheet</div>
+            <div class="title">Electoral Roll — Booth Facing Sheet</div>
           </div>
           
-          <div style="font-size: 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #ccc; padding-bottom: 10px;">
+          <div style="font-size: 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #ccc; padding-bottom: 8px;">
             <div>
-              <strong>BOOTH:</strong> <span style="font-size: 24px; border: 2px solid #000; padding: 2px 15px; margin-left: 5px;">${e.boothNumber}</span>
-              <span style="margin-left: 20px;"><strong>LOC:</strong> ${T(e.roomName||`UNSPECIFIED`)}</span>
+              <strong>BOOTH:</strong> <span style="font-size: 20px; border: 2px solid #000; padding: 2px 12px; margin-left: 5px;">${e.boothNumber}</span>
+              <span style="margin-left: 20px;"><strong>LOCATION:</strong> ${T(e.roomName||`UNSPECIFIED`)}</span>
             </div>
-            <div style="text-align: right; font-size: 11px; color: #666;">
+            <div style="text-align: right; font-size: 10px; color: #666;">
               Ref: ${new Date().getFullYear()} Election
             </div>
           </div>
 
-          <div style="flex-grow: 1; space-y-4">
-            <!-- Top Section: Allocation Statistics -->
-            <div style="margin-bottom: 25px;">
-              <h4 style="border-bottom: 2px solid #000; padding-bottom: 3px; font-size: 13px; margin: 0 0 8px 0; text-transform: uppercase;">1. Allocation Statistics</h4>
-              <table class="stats-table" style="font-size: 11px; width: 100%;">
-                <thead>
-                  <tr style="background:#f5f5f5">
-                    <th style="width:25%">Department</th>
-                    <th>Class Name</th>
-                    <th style="text-align:right; width:15%">Voters</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${a.map(e=>`
-                    <tr><td>${T(e.dept)}</td><td>${T(e.name)}</td><td style="text-align:right">${e.count}</td></tr>
-                  `).join(``)}
-                  <tr style="font-weight:bold; background:#eee">
-                    <td colspan="2">TOTAL VOTERS ALLOTTED TO THIS BOOTH</td>
-                    <td style="text-align:right">${r}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <div style="margin-bottom: 20px;">
+            <h4 style="border-bottom: 2px solid #000; padding-bottom: 3px; font-size: 12px; margin: 0 0 6px 0; text-transform: uppercase;">1. Allocation Statistics</h4>
+            <table class="stats-table" style="font-size: 10px;">
+              <thead>
+                <tr style="background:#f5f5f5">
+                  <th style="width:25%">Department</th>
+                  <th>Class Name</th>
+                  <th style="text-align:right; width:15%">Voters</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${a.map(e=>`
+                  <tr><td>${T(e.dept)}</td><td>${T(e.name)}</td><td style="text-align:right">${e.count}</td></tr>
+                `).join(``)}
+                <tr style="font-weight:bold; background:#eee">
+                  <td colspan="2">TOTAL VOTERS ALLOTTED TO THIS BOOTH</td>
+                  <td style="text-align:right">${r}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-            <!-- Bottom Section: Ballots (Full Width) -->
-            <div>
-              <h4 style="border-bottom: 2px solid #000; padding-bottom: 3px; font-size: 13px; margin: 0 0 8px 0; text-transform: uppercase;">2. Ballots & Books Account (To be filled by PO)</h4>
-              <table class="stats-table" style="font-size: 10px; width: 100%;">
-                <thead>
+          <div>
+            <h4 style="border-bottom: 2px solid #000; padding-bottom: 3px; font-size: 12px; margin: 0 0 6px 0; text-transform: uppercase;">2. Ballots &amp; Books Account (To be filled by PO)</h4>
+            <table class="stats-table" style="font-size: 10px;">
+              <thead>
+                <tr>
+                  <th style="width:20%">Ballot Category</th>
+                  <th style="width:15%">Serial Range</th>
+                  <th style="width:10%; text-align:center">Total Qty</th>
+                  <th style="width:18%">Book IDs</th>
+                  <th style="width:10%; text-align:center">Ballots Used</th>
+                  <th style="width:10%; text-align:center">Ballots Returned</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${c.general?`
+                  <tr style="font-weight:bold">
+                    <td>General Union Posts</td>
+                    <td>G${c.general.start} - G${c.general.end}</td>
+                    <td style="text-align:center">${c.general.count}</td>
+                    <td>${c.general.bookIds}</td>
+                    <td></td><td></td><td></td>
+                  </tr>
+                `:``}
+                ${c.reps.map(e=>`
                   <tr>
-                    <th style="width:20%">Ballot Category</th>
-                    <th style="width:15%">Serial Range</th>
-                    <th style="width:10%; text-align:center">Total Qty</th>
-                    <th style="width:18%">Book IDs</th>
-                    <th style="width:10%; text-align:center">Number of Ballots Used</th>
-                    <th style="width:10%; text-align:center">Number of Ballots Returned</th>
-                    <th>Remarks</th>
+                    <td>${T(e.post)}</td>
+                    <td>R${e.start} - R${e.end}</td>
+                    <td style="text-align:center">${e.count}</td>
+                    <td>${e.bookIds}</td>
+                    <td></td><td></td><td></td>
                   </tr>
-                </thead>
-                <tbody>
-                  ${c.general?`
-                    <tr style="font-weight:bold">
-                      <td>General Union Posts</td>
-                      <td>G${c.general.start} - G${c.general.end}</td>
-                      <td style="text-align:center">${c.general.count}</td>
-                      <td>${c.general.bookIds}</td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                    </tr>
-                  `:``}
-                  ${c.reps.map(e=>`
-                    <tr>
-                      <td>${T(e.post)}</td>
-                      <td>R${e.start} - R${e.end}</td>
-                      <td style="text-align:center">${e.count}</td>
-                      <td>${e.bookIds}</td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                    </tr>
-                  `).join(``)}
-                  ${c.assocs.map(e=>`
-                    <tr>
-                      <td>${T(e.post)}</td>
-                      <td>A${e.start} - A${e.end}</td>
-                      <td style="text-align:center">${e.count}</td>
-                      <td>${e.bookIds}</td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                    </tr>
-                  `).join(``)}
-                </tbody>
-              </table>
-            </div>
+                `).join(``)}
+                ${c.assocs.map(e=>`
+                  <tr>
+                    <td>${T(e.post)}</td>
+                    <td>A${e.start} - A${e.end}</td>
+                    <td style="text-align:center">${e.count}</td>
+                    <td>${e.bookIds}</td>
+                    <td></td><td></td><td></td>
+                  </tr>
+                `).join(``)}
+              </tbody>
+            </table>
           </div>
 
-          <div class="footer" style="margin-top: 20px;">
-            <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Returning Officer</div>
-            <div style="border-top: 1px solid #000; padding-top: 5px; width: 180px; text-align: center; font-size: 11px;">Presiding Officer</div>
+          <div class="footer">
+            <div class="sig-line">Returning Officer</div>
+            <div class="sig-line">Presiding Officer</div>
           </div>
-        </div>
-      </div>`,a.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),s+=`
-        <div class="page-break">
+        </div>`,a.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME)));let i=Math.ceil(r.length/25);for(let t=0;t<i;t++){let a=r.slice(t*25,(t+1)*25),o=i>1?` (Page ${t+1} of ${i})`:``;s+=`
           <div class="roll-page">
             <div class="roll-header">
               <div><strong>BOOTH ${e.boothNumber}</strong> | ${T(e.roomName||`No Room`)}</div>
-              <div style="text-align:center; flex-grow:1; font-weight:bold; font-size:14px;">ELECTORAL ROLL - ${T(n.name)}</div>
+              <div style="text-align:center; flex-grow:1; font-weight:bold; font-size:13px;">ELECTORAL ROLL — ${T(n.name)}${o}</div>
               <div>Dept: ${T(n.dept)}</div>
             </div>
-            <table class="roll-table" style="table-layout: fixed;">
+            <table class="roll-table">
               <thead><tr>
-                <th style="width:35px">Sl.No</th>
-                <th style="width:65px">Adm. No</th>
+                <th style="width:38px">Sl.No</th>
+                <th style="width:70px">Adm. No</th>
                 <th>Student Name</th>
-                <th style="width:200px">Class</th>
-                <th style="width:90px">Signature</th>
+                <th style="width:190px">Class</th>
+                <th style="width:85px">Signature</th>
               </tr></thead>
               <tbody>
-                ${r.map(e=>`
-                  <tr style="height: 25px;">
-                    <td style="text-align:center; font-weight:bold; overflow:hidden;">${T(e[`Nominal Roll Serial Number`]||`–`)}</td>
-                    <td style="font-family:monospace; font-size:10px; overflow:hidden; white-space:nowrap;">${T(e[`ADMISION NO`]||e[`ADMISSION NO`]||`–`)}</td>
-                    <td style="font-weight:bold; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${T(e.NAME)}</td>
-                    <td style="font-size:10px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${T(e.CLASS)}</td>
+                ${a.map(e=>`
+                  <tr style="height:24px">
+                    <td style="text-align:center; font-weight:bold;">${T(String(e[`Nominal Roll Serial Number`]||`–`))}</td>
+                    <td style="font-family:monospace; font-size:9px; white-space:nowrap;">${T(e[`ADMISION NO`]||e[`ADMISSION NO`]||`–`)}</td>
+                    <td style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${T(e.NAME)}</td>
+                    <td style="font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${T(e.CLASS)}</td>
                     <td></td>
                   </tr>
                 `).join(``)}
               </tbody>
             </table>
-            <div style="margin-top:20px; text-align:right; font-size:10px; color:#999">Total Voters: ${r.length}</div>
-          </div>
-        </div>`})}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`},g=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let t=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]},r=t.general?[{name:`General Union Posts`,count:t.general.count}]:[],i=t.reps.map(e=>({name:e.post,count:e.count})),a=t.assocs.map(e=>({name:e.post,count:e.count})),c=[...r,...i,...a];s+=`
+          </div>`}})}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`},g=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let t=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]},r=t.general?[{name:`General Union Posts`,count:t.general.count}]:[],i=t.reps.map(e=>({name:e.post,count:e.count})),a=t.assocs.map(e=>({name:e.post,count:e.count})),c=[...r,...i,...a];s+=`
       <div class="page-break">
         <div class="account-page">
           <div>
