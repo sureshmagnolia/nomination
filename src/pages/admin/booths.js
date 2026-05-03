@@ -71,6 +71,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           <div class="flex flex-wrap gap-2">
             <button id="btnClearAll" class="btn btn-secondary border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white">🗑️ Clear All</button>
             <button id="btnAutoAllot" class="btn btn-secondary">⚡ Auto Allot</button>
+            <button id="btnManageLocations" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📍 Manage Locations</button>
             <button id="btnSaveBooths" class="btn btn-primary">💾 Save Configuration</button>
             <button id="btnRegenPlan" class="btn btn-primary border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 px-4">🔄 Finalize Master Plan</button>
             <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Electoral Rolls</button>
@@ -79,14 +80,32 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         </div>
         <div id="printArea" class="hidden"></div>
 
-        <!-- Location Management -->
-        <div class="glass rounded-xl p-5 border-l-4 border-l-purple-500">
-          <h4 class="font-bold text-white mb-3">Manage Locations</h4>
-          <div class="flex gap-2 mb-3">
-            <input type="text" id="newLocationInput" class="field flex-1" placeholder="Add a new room or location name...">
-            <button id="btnAddLocation" class="btn btn-secondary">Add Location</button>
-            <button id="btnSaveLocations" class="btn btn-primary">💾 Save Locations</button>
+        <!-- Locations Modal -->
+        <div id="locationsModal" class="fixed inset-0 z-[999] flex items-center justify-center hidden">
+          <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="locationsModalOverlay"></div>
+          <div class="relative glass rounded-2xl border border-white/10 shadow-2xl w-full max-w-lg p-6 z-10">
+            <div class="flex items-center justify-between mb-4">
+              <h4 class="font-bold text-white text-lg">📍 Manage Locations</h4>
+              <button id="btnCloseLocationsModal" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div class="flex gap-2 mb-4">
+              <input type="text" id="newLocationInput" class="field flex-1" placeholder="Add a new room or location name...">
+              <button id="btnAddLocation" class="btn btn-secondary">Add</button>
+            </div>
+            <div id="locationsList" class="flex flex-wrap gap-2 mb-6 min-h-[40px]">
+              ${locations.length ? locations.map((loc, i) => `
+                <span class="badge badge-valid bg-white/10 text-white border border-white/20 px-3 py-1 flex items-center gap-2">
+                  ${esc(loc)}
+                  <button class="text-red-400 hover:text-red-300 font-bold delete-location" data-idx="${i}">&times;</button>
+                </span>
+              `).join('') : '<span class="text-slate-500 text-sm">No locations added yet.</span>'}
+            </div>
+            <div class="flex justify-end gap-2">
+              <button id="btnCloseLocationsModal2" class="btn btn-secondary">Close</button>
+              <button id="btnSaveLocations" class="btn btn-primary">💾 Save Locations</button>
+            </div>
           </div>
+        </div>
           <div class="flex flex-wrap gap-2">
             ${locations.length ? locations.map((loc, i) => `
               <span class="badge badge-valid bg-white/10 text-white border border-white/20 px-3 py-1 flex items-center gap-2">
@@ -206,18 +225,21 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
               .college-name { font-size: 18px; font-weight: bold; margin-bottom: 2px; }
               .title { font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
-              .stats-table { width: 100%; border-collapse: collapse; border: 1px solid #555; }
-              .stats-table th, .stats-table td { border: 1px solid #555; padding: 5px 8px; text-align: left; }
-              .stats-table th { background: #f0f0f0; font-size: 10px; text-transform: uppercase; font-weight: bold; }
+              .stats-table { width: 100%; border-collapse: separate; border-spacing: 0; outline: 1.5px solid #555; }
+              .stats-table th, .stats-table td { border-right: 1px solid #555; border-bottom: 1px solid #555; padding: 5px 8px; text-align: left; }
+              .stats-table thead tr th:first-child, .stats-table tbody tr td:first-child { border-left: 1px solid #555; }
+              .stats-table thead tr th { border-top: 1px solid #555; background: #f0f0f0; font-size: 10px; text-transform: uppercase; font-weight: bold; }
               .footer { display: flex; justify-content: space-between; margin-top: 25px; padding: 0 30px; }
               .sig-line { border-top: 1.5px solid #000; padding-top: 5px; width: 160px; text-align: center; font-size: 11px; font-weight: bold; }
               .roll-page { page-break-before: always; break-before: page; }
               .roll-page:first-of-type { page-break-before: avoid; break-before: avoid; }
               .roll-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 6px; font-size: 11px; }
-              .roll-table { width: 100%; border-collapse: collapse; border: 1px solid #555; table-layout: fixed; }
+              .roll-table { width: 100%; border-collapse: separate; border-spacing: 0; outline: 1.5px solid #555; table-layout: fixed; }
               .roll-table thead { display: table-header-group; }
-              .roll-table th { background: #e8e8e8; font-weight: bold; text-transform: uppercase; font-size: 9px; border: 1px solid #555; padding: 4px 6px; }
-              .roll-table td { border: 1px solid #555; padding: 3px 6px; font-size: 10px; }
+              .roll-table th { background: #e8e8e8; font-weight: bold; text-transform: uppercase; font-size: 9px; border-right: 1px solid #555; border-bottom: 1px solid #555; border-top: 1px solid #555; padding: 4px 6px; }
+              .roll-table th:first-child { border-left: 1px solid #555; }
+              .roll-table td { border-right: 1px solid #555; border-bottom: 1px solid #555; padding: 3px 6px; font-size: 10px; }
+              .roll-table td:first-child { border-left: 1px solid #555; }
               .roll-table tr { page-break-inside: avoid; break-inside: avoid; height: 22px; }
               @media print {
                 .no-print { display: none; }
@@ -286,30 +308,55 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       });
     });
 
+    const modal = main.querySelector('#locationsModal');
+    const closeModal = () => modal.classList.add('hidden');
+    const openModal = () => modal.classList.remove('hidden');
+    const rerenderLocationsList = () => {
+      const list = modal.querySelector('#locationsList');
+      list.innerHTML = locations.length ? locations.map((loc, i) => `
+        <span class="badge badge-valid bg-white/10 text-white border border-white/20 px-3 py-1 flex items-center gap-2">
+          ${esc(loc)}
+          <button class="text-red-400 hover:text-red-300 font-bold delete-location" data-idx="${i}">&times;</button>
+        </span>
+      `).join('') : '<span class="text-slate-500 text-sm">No locations added yet.</span>';
+      list.querySelectorAll('.delete-location').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = parseInt(e.target.dataset.idx);
+          const loc = locations[idx];
+          locations.splice(idx, 1);
+          booths.forEach(b => { if (b.roomName === loc) b.roomName = ''; });
+          rerenderLocationsList();
+        });
+      });
+    };
+
+    main.querySelector('#btnManageLocations').addEventListener('click', openModal);
+    main.querySelector('#btnCloseLocationsModal').addEventListener('click', closeModal);
+    main.querySelector('#btnCloseLocationsModal2').addEventListener('click', closeModal);
+    main.querySelector('#locationsModalOverlay').addEventListener('click', closeModal);
+
     main.querySelector('#btnAddLocation').addEventListener('click', () => {
       const val = main.querySelector('#newLocationInput').value.trim();
       if (val && !locations.includes(val)) {
         locations.push(val);
-        refreshUI();
+        main.querySelector('#newLocationInput').value = '';
+        rerenderLocationsList();
       }
     });
-
-    main.querySelectorAll('.delete-location').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const idx = e.target.dataset.idx;
-        const loc = locations[idx];
-        locations.splice(idx, 1);
-        booths.forEach(b => { if (b.roomName === loc) b.roomName = ''; });
-        refreshUI();
-      });
+    main.querySelector('#newLocationInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') main.querySelector('#btnAddLocation').click();
     });
+
+    rerenderLocationsList();
 
     main.querySelector('#btnSaveLocations').addEventListener('click', async (e) => {
       const btn = e.target;
       setLoading(btn, true, '💾 Save Locations');
       try {
         await api.adminSaveLocations(pwd, locations);
-        showToast('Locations saved successfully!', 'success');
+        showToast('Locations saved! Refresh booths to see updated room list.', 'success');
+        closeModal();
+        refreshUI();
       } catch (err) {
         showToast(`Failed to save: ${err.message}`, 'error');
       } finally {

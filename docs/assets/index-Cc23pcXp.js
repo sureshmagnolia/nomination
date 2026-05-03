@@ -1085,6 +1085,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
           <div class="flex flex-wrap gap-2">
             <button id="btnClearAll" class="btn btn-secondary border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white">🗑️ Clear All</button>
             <button id="btnAutoAllot" class="btn btn-secondary">⚡ Auto Allot</button>
+            <button id="btnManageLocations" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📍 Manage Locations</button>
             <button id="btnSaveBooths" class="btn btn-primary">💾 Save Configuration</button>
             <button id="btnRegenPlan" class="btn btn-primary border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 px-4">🔄 Finalize Master Plan</button>
             <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Electoral Rolls</button>
@@ -1093,14 +1094,32 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
         </div>
         <div id="printArea" class="hidden"></div>
 
-        <!-- Location Management -->
-        <div class="glass rounded-xl p-5 border-l-4 border-l-purple-500">
-          <h4 class="font-bold text-white mb-3">Manage Locations</h4>
-          <div class="flex gap-2 mb-3">
-            <input type="text" id="newLocationInput" class="field flex-1" placeholder="Add a new room or location name...">
-            <button id="btnAddLocation" class="btn btn-secondary">Add Location</button>
-            <button id="btnSaveLocations" class="btn btn-primary">💾 Save Locations</button>
+        <!-- Locations Modal -->
+        <div id="locationsModal" class="fixed inset-0 z-[999] flex items-center justify-center hidden">
+          <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="locationsModalOverlay"></div>
+          <div class="relative glass rounded-2xl border border-white/10 shadow-2xl w-full max-w-lg p-6 z-10">
+            <div class="flex items-center justify-between mb-4">
+              <h4 class="font-bold text-white text-lg">📍 Manage Locations</h4>
+              <button id="btnCloseLocationsModal" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div class="flex gap-2 mb-4">
+              <input type="text" id="newLocationInput" class="field flex-1" placeholder="Add a new room or location name...">
+              <button id="btnAddLocation" class="btn btn-secondary">Add</button>
+            </div>
+            <div id="locationsList" class="flex flex-wrap gap-2 mb-6 min-h-[40px]">
+              ${f.length?f.map((e,t)=>`
+                <span class="badge badge-valid bg-white/10 text-white border border-white/20 px-3 py-1 flex items-center gap-2">
+                  ${T(e)}
+                  <button class="text-red-400 hover:text-red-300 font-bold delete-location" data-idx="${t}">&times;</button>
+                </span>
+              `).join(``):`<span class="text-slate-500 text-sm">No locations added yet.</span>`}
+            </div>
+            <div class="flex justify-end gap-2">
+              <button id="btnCloseLocationsModal2" class="btn btn-secondary">Close</button>
+              <button id="btnSaveLocations" class="btn btn-primary">💾 Save Locations</button>
+            </div>
           </div>
+        </div>
           <div class="flex flex-wrap gap-2">
             ${f.length?f.map((e,t)=>`
               <span class="badge badge-valid bg-white/10 text-white border border-white/20 px-3 py-1 flex items-center gap-2">
@@ -1196,18 +1215,21 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
               .college-name { font-size: 18px; font-weight: bold; margin-bottom: 2px; }
               .title { font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
-              .stats-table { width: 100%; border-collapse: collapse; border: 1px solid #555; }
-              .stats-table th, .stats-table td { border: 1px solid #555; padding: 5px 8px; text-align: left; }
-              .stats-table th { background: #f0f0f0; font-size: 10px; text-transform: uppercase; font-weight: bold; }
+              .stats-table { width: 100%; border-collapse: separate; border-spacing: 0; outline: 1.5px solid #555; }
+              .stats-table th, .stats-table td { border-right: 1px solid #555; border-bottom: 1px solid #555; padding: 5px 8px; text-align: left; }
+              .stats-table thead tr th:first-child, .stats-table tbody tr td:first-child { border-left: 1px solid #555; }
+              .stats-table thead tr th { border-top: 1px solid #555; background: #f0f0f0; font-size: 10px; text-transform: uppercase; font-weight: bold; }
               .footer { display: flex; justify-content: space-between; margin-top: 25px; padding: 0 30px; }
               .sig-line { border-top: 1.5px solid #000; padding-top: 5px; width: 160px; text-align: center; font-size: 11px; font-weight: bold; }
               .roll-page { page-break-before: always; break-before: page; }
               .roll-page:first-of-type { page-break-before: avoid; break-before: avoid; }
               .roll-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 6px; font-size: 11px; }
-              .roll-table { width: 100%; border-collapse: collapse; border: 1px solid #555; table-layout: fixed; }
+              .roll-table { width: 100%; border-collapse: separate; border-spacing: 0; outline: 1.5px solid #555; table-layout: fixed; }
               .roll-table thead { display: table-header-group; }
-              .roll-table th { background: #e8e8e8; font-weight: bold; text-transform: uppercase; font-size: 9px; border: 1px solid #555; padding: 4px 6px; }
-              .roll-table td { border: 1px solid #555; padding: 3px 6px; font-size: 10px; }
+              .roll-table th { background: #e8e8e8; font-weight: bold; text-transform: uppercase; font-size: 9px; border-right: 1px solid #555; border-bottom: 1px solid #555; border-top: 1px solid #555; padding: 4px 6px; }
+              .roll-table th:first-child { border-left: 1px solid #555; }
+              .roll-table td { border-right: 1px solid #555; border-bottom: 1px solid #555; padding: 3px 6px; font-size: 10px; }
+              .roll-table td:first-child { border-left: 1px solid #555; }
               .roll-table tr { page-break-inside: avoid; break-inside: avoid; height: 22px; }
               @media print {
                 .no-print { display: none; }
@@ -1240,7 +1262,12 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
           </head>
           <body>${t.innerHTML}</body>
         </html>
-      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>d.length)for(let e=d.length;e<t;e++)d.push({boothNumber:e+1,roomName:``,classes:[]});else t<d.length&&(d=d.slice(0,t));m()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{d[e.target.dataset.idx].roomName=e.target.value,m()})}),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!f.includes(t)&&(f.push(t),m())}),e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.target.dataset.idx,n=f[t];f.splice(t,1),d.forEach(e=>{e.roomName===n&&(e.roomName=``)}),m()})}),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;E(n,!0,`💾 Save Locations`);try{await C.adminSaveLocations(t,f),D(`Locations saved successfully!`,`success`)}catch(e){D(`Failed to save: ${e.message}`,`error`)}finally{E(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;d.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&d[parseInt(n,10)].classes.push(t),m()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;E(n,!0,`💾 Save Configuration`);try{await C.adminSaveBooths(t,d),D(`Booth configuration saved successfully!`,`success`)}catch(e){D(`Failed to save: ${e.message}`,`error`)}finally{E(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnRegenPlan`).addEventListener(`click`,async e=>{let n=e.target,r=`🔄 Finalize Master Plan`;try{E(n,!0,r),D(`Calculating and saving Master Plan on server...`,`info`),await C.adminGenerateBallotPlan(t),D(`Master Plan finalized successfully! You can now print documents.`,`success`),c=await C.adminGetBallotPlan(t).catch(()=>null)}catch(e){D(e.message,`error`)}finally{E(n,!1,r)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{_(),m(),D(`Auto allotment complete. Please review and save.`,`info`)})},h=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=t.filter(t=>e.classes.includes(String(t.CLASS).trim())).length,a=e.classes.map(e=>i[e]).filter(Boolean),c=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]};s+=`
+      `),n.document.close(),n.focus(),setTimeout(()=>{n.print()},500)}),e.querySelector(`#btnUpdateBoothCount`).addEventListener(`click`,()=>{let t=parseInt(e.querySelector(`#numBoothsInput`).value,10);if(t>0&&t<=50){if(t>d.length)for(let e=d.length;e<t;e++)d.push({boothNumber:e+1,roomName:``,classes:[]});else t<d.length&&(d=d.slice(0,t));m()}}),e.querySelectorAll(`.room-name-select`).forEach(e=>{e.addEventListener(`change`,e=>{d[e.target.dataset.idx].roomName=e.target.value,m()})});let a=e.querySelector(`#locationsModal`),v=()=>a.classList.add(`hidden`),y=()=>a.classList.remove(`hidden`),b=()=>{let e=a.querySelector(`#locationsList`);e.innerHTML=f.length?f.map((e,t)=>`
+        <span class="badge badge-valid bg-white/10 text-white border border-white/20 px-3 py-1 flex items-center gap-2">
+          ${T(e)}
+          <button class="text-red-400 hover:text-red-300 font-bold delete-location" data-idx="${t}">&times;</button>
+        </span>
+      `).join(``):`<span class="text-slate-500 text-sm">No locations added yet.</span>`,e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=parseInt(e.target.dataset.idx),n=f[t];f.splice(t,1),d.forEach(e=>{e.roomName===n&&(e.roomName=``)}),b()})})};e.querySelector(`#btnManageLocations`).addEventListener(`click`,y),e.querySelector(`#btnCloseLocationsModal`).addEventListener(`click`,v),e.querySelector(`#btnCloseLocationsModal2`).addEventListener(`click`,v),e.querySelector(`#locationsModalOverlay`).addEventListener(`click`,v),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!f.includes(t)&&(f.push(t),e.querySelector(`#newLocationInput`).value=``,b())}),e.querySelector(`#newLocationInput`).addEventListener(`keydown`,t=>{t.key===`Enter`&&e.querySelector(`#btnAddLocation`).click()}),b(),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;E(n,!0,`💾 Save Locations`);try{await C.adminSaveLocations(t,f),D(`Locations saved! Refresh booths to see updated room list.`,`success`),v(),m()}catch(e){D(`Failed to save: ${e.message}`,`error`)}finally{E(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;d.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&d[parseInt(n,10)].classes.push(t),m()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;E(n,!0,`💾 Save Configuration`);try{await C.adminSaveBooths(t,d),D(`Booth configuration saved successfully!`,`success`)}catch(e){D(`Failed to save: ${e.message}`,`error`)}finally{E(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnRegenPlan`).addEventListener(`click`,async e=>{let n=e.target,r=`🔄 Finalize Master Plan`;try{E(n,!0,r),D(`Calculating and saving Master Plan on server...`,`info`),await C.adminGenerateBallotPlan(t),D(`Master Plan finalized successfully! You can now print documents.`,`success`),c=await C.adminGetBallotPlan(t).catch(()=>null)}catch(e){D(e.message,`error`)}finally{E(n,!1,r)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{_(),m(),D(`Auto allotment complete. Please review and save.`,`info`)})},h=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=t.filter(t=>e.classes.includes(String(t.CLASS).trim())).length,a=e.classes.map(e=>i[e]).filter(Boolean),c=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]};s+=`
       <div class="facing-sheet">
           <div class="header">
             <div class="college-name">${T(n.COLLEGE_NAME||`COLLEGE UNION ELECTION`)}</div>
