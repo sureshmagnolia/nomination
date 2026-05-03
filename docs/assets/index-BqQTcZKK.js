@@ -1205,7 +1205,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               @page { size: A4 portrait; margin: 10mm 12mm; }
               * { box-sizing: border-box; }
               body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 0; font-size: 11px; }
-              .facing-sheet { padding: 0; page-break-before: always; break-before: page; page-break-after: always; break-after: page; }
+              .facing-sheet { padding: 0; page-break-before: always; break-before: page; page-break-after: always; break-after: page; display: flex; flex-direction: column; min-height: 275mm; }
               .facing-sheet:first-of-type { page-break-before: avoid; break-before: avoid; }
               .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px; }
               .college-name { font-size: 18px; font-weight: bold; margin-bottom: 2px; }
@@ -1241,7 +1241,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
             <style>
               body { font-family: sans-serif; color: #333; margin: 0; padding: 0; }
               .page-break { page-break-after: always; }
-              .account-page { padding: 25px; display: block; box-sizing: border-box; border: 1px solid #ccc; margin: 10px; min-height: 95%; position: relative; }
+              .account-page { padding: 25px; display: flex; flex-direction: column; box-sizing: border-box; border: 1px solid #ccc; margin: 10px; min-height: 275mm; position: relative; }
               .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
               .college-name { font-size: 20px; font-weight: bold; margin-bottom: 3px; }
               .title { font-size: 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
@@ -1277,67 +1277,67 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
             </div>
           </div>
 
-          <div style="margin-bottom: 20px;">
-            <h4 style="border-bottom: 2px solid #000; padding-bottom: 3px; font-size: 12px; margin: 0 0 6px 0; text-transform: uppercase;">1. Allocation Statistics</h4>
-            <table class="stats-table" style="font-size: 10px;">
+          <div style="flex: 1; display: flex; flex-direction: column; margin-bottom: 20px;">
+            <h4 style="border-bottom: 2px solid #000; padding-bottom: 3px; font-size: 14px; margin: 0 0 8px 0; text-transform: uppercase;">1. Allocation Statistics</h4>
+            <table class="stats-table" style="flex: 1; font-size: 13px;">
               <thead>
                 <tr style="background:#f5f5f5">
-                  <th style="width:25%">Department</th>
-                  <th>Class Name</th>
-                  <th style="text-align:right; width:15%">Voters</th>
+                  <th style="width:25%; font-size:11px;">Department</th>
+                  <th style="font-size:11px;">Class Name</th>
+                  <th style="text-align:right; width:15%; font-size:11px;">Voters</th>
                 </tr>
               </thead>
               <tbody>
                 ${a.map(e=>`
-                  <tr><td>${T(e.dept)}</td><td>${T(e.name)}</td><td style="text-align:right">${e.count}</td></tr>
+                  <tr><td style="font-size:13px; font-weight:bold;">${T(e.dept)}</td><td style="font-size:13px;">${T(e.name)}</td><td style="text-align:right; font-size:13px; font-weight:bold;">${e.count}</td></tr>
                 `).join(``)}
                 <tr style="font-weight:bold; background:#eee">
-                  <td colspan="2">TOTAL VOTERS ALLOTTED TO THIS BOOTH</td>
-                  <td style="text-align:right">${r}</td>
+                  <td colspan="2" style="font-size:12px;">TOTAL VOTERS ALLOTTED TO THIS BOOTH</td>
+                  <td style="text-align:right; font-size:14px;">${r}</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <div>
-            <h4 style="border-bottom: 2px solid #000; padding-bottom: 3px; font-size: 12px; margin: 0 0 6px 0; text-transform: uppercase;">2. Ballots &amp; Books Account (To be filled by PO)</h4>
-            <table class="stats-table" style="font-size: 10px;">
+          <div style="flex: 1.5; display: flex; flex-direction: column; margin-bottom: 20px;">
+            <h4 style="border-bottom: 2px solid #000; padding-bottom: 3px; font-size: 14px; margin: 0 0 8px 0; text-transform: uppercase;">2. Ballots &amp; Books Account (To be filled by PO)</h4>
+            <table class="stats-table" style="flex: 1; font-size: 12px;">
               <thead>
                 <tr>
-                  <th style="width:20%">Ballot Category</th>
-                  <th style="width:15%">Serial Range</th>
-                  <th style="width:10%; text-align:center">Total Qty</th>
-                  <th style="width:18%">Book IDs</th>
-                  <th style="width:10%; text-align:center">Ballots Used</th>
-                  <th style="width:10%; text-align:center">Ballots Returned</th>
-                  <th>Remarks</th>
+                  <th style="width:20%; font-size:11px;">Ballot Category</th>
+                  <th style="width:15%; font-size:11px;">Serial Range</th>
+                  <th style="width:10%; text-align:center; font-size:11px;">Total Qty</th>
+                  <th style="width:18%; font-size:11px;">Book IDs</th>
+                  <th style="width:10%; text-align:center; font-size:11px;">Ballots Used</th>
+                  <th style="width:10%; text-align:center; font-size:11px;">Ballots Returned</th>
+                  <th style="font-size:11px;">Remarks</th>
                 </tr>
               </thead>
               <tbody>
                 ${c.general?`
                   <tr style="font-weight:bold">
-                    <td>General Union Posts</td>
-                    <td>G${c.general.start} - G${c.general.end}</td>
-                    <td style="text-align:center">${c.general.count}</td>
-                    <td>${c.general.bookIds}</td>
+                    <td style="font-size:12px;">General Union Posts</td>
+                    <td style="font-size:12px;">G${c.general.start} - G${c.general.end}</td>
+                    <td style="text-align:center; font-size:13px;">${c.general.count}</td>
+                    <td style="font-size:11px;">${c.general.bookIds}</td>
                     <td></td><td></td><td></td>
                   </tr>
                 `:``}
                 ${c.reps.map(e=>`
                   <tr>
-                    <td>${T(e.post)}</td>
-                    <td>R${e.start} - R${e.end}</td>
-                    <td style="text-align:center">${e.count}</td>
-                    <td>${e.bookIds}</td>
+                    <td style="font-size:12px; font-weight:bold;">${T(e.post)}</td>
+                    <td style="font-size:12px;">R${e.start} - R${e.end}</td>
+                    <td style="text-align:center; font-size:13px;">${e.count}</td>
+                    <td style="font-size:11px;">${e.bookIds}</td>
                     <td></td><td></td><td></td>
                   </tr>
                 `).join(``)}
                 ${c.assocs.map(e=>`
                   <tr>
-                    <td>${T(e.post)}</td>
-                    <td>A${e.start} - A${e.end}</td>
-                    <td style="text-align:center">${e.count}</td>
-                    <td>${e.bookIds}</td>
+                    <td style="font-size:12px; font-weight:bold;">${T(e.post)}</td>
+                    <td style="font-size:12px;">A${e.start} - A${e.end}</td>
+                    <td style="text-align:center; font-size:13px;">${e.count}</td>
+                    <td style="font-size:11px;">${e.bookIds}</td>
                     <td></td><td></td><td></td>
                   </tr>
                 `).join(``)}
@@ -1392,70 +1392,74 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               <div style="text-align: right;"><strong>LOCATION:</strong> ${T(e.roomName||`UNSPECIFIED`)}</div>
             </div>
 
-            <table class="stats-table">
+          <div style="flex: 1; display: flex; flex-direction: column; margin-top: 10px; margin-bottom: 20px;">
+            <table class="stats-table" style="flex: 1; font-size: 13px;">
               <thead>
                 <tr>
-                  <th style="width:25%">Ballot Category</th>
-                  <th style="width:20%">Serial Range</th>
-                  <th style="width:10%; text-align:center">Total Qty</th>
-                  <th style="width:15%; text-align:center">No. Used</th>
-                  <th style="width:15%; text-align:center">No. Returned</th>
-                  <th>Remarks</th>
+                  <th style="width:25%; font-size:12px;">Ballot Category</th>
+                  <th style="width:20%; font-size:12px;">Serial Range</th>
+                  <th style="width:10%; text-align:center; font-size:12px;">Total Qty</th>
+                  <th style="width:15%; text-align:center; font-size:12px;">No. Used</th>
+                  <th style="width:15%; text-align:center; font-size:12px;">No. Returned</th>
+                  <th style="font-size:12px;">Remarks</th>
                 </tr>
               </thead>
               <tbody>
                 ${t.general?`
-                  <tr style="height: 35px; font-weight:bold">
-                    <td>General Union Posts</td>
-                    <td>G${t.general.start} - G${t.general.end}</td>
-                    <td style="text-align:center">${t.general.count}</td>
+                  <tr style="font-weight:bold;">
+                    <td style="font-size:13px;">General Union Posts</td>
+                    <td style="font-size:13px;">G${t.general.start} - G${t.general.end}</td>
+                    <td style="text-align:center; font-size:14px;">${t.general.count}</td>
                     <td></td><td></td><td></td>
                   </tr>
                 `:``}
                 ${t.reps.map(e=>`
-                  <tr style="height: 30px;">
-                    <td>${T(e.post)}</td>
-                    <td>R${e.start} - R${e.end}</td>
-                    <td style="text-align:center">${e.count}</td>
+                  <tr>
+                    <td style="font-size:13px; font-weight:bold;">${T(e.post)}</td>
+                    <td style="font-size:13px;">R${e.start} - R${e.end}</td>
+                    <td style="text-align:center; font-size:14px;">${e.count}</td>
                     <td></td><td></td><td></td>
                   </tr>
                 `).join(``)}
                 ${t.assocs.map(e=>`
-                  <tr style="height: 30px;">
-                    <td>${T(e.post)}</td>
-                    <td>A${e.start} - A${e.end}</td>
-                    <td style="text-align:center">${e.count}</td>
+                  <tr>
+                    <td style="font-size:13px; font-weight:bold;">${T(e.post)}</td>
+                    <td style="font-size:13px;">A${e.start} - A${e.end}</td>
+                    <td style="text-align:center; font-size:14px;">${e.count}</td>
                     <td></td><td></td><td></td>
                   </tr>
                 `).join(``)}
               </tbody>
             </table>
             
-            <div style="margin-top: 15px; font-size: 11px; color: #555; background: #fffde7; padding: 8px; border: 1px dashed #fbc02d;">
+            <div style="margin-top: 15px; font-size: 12px; color: #555; background: #fffde7; padding: 10px; border: 1px dashed #fbc02d;">
               <strong>Note:</strong> Total Qty should be equal to (Number of Ballots Used + Number of Ballots Returned). Please record any discrepancies in the Remarks column.
             </div>
+          </div>
 
-            <h4 style="margin: 15px 0 8px 0; font-size: 13px; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 2px;">3. Account of Votes (To be filled by PO)</h4>
-            <table class="stats-table">
+          <div style="flex: 1.2; display: flex; flex-direction: column; margin-bottom: 10px;">
+            <h4 style="margin: 0 0 8px 0; font-size: 15px; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 2px;">3. Account of Votes (To be filled by PO)</h4>
+            <table class="stats-table" style="flex: 1; font-size: 13px;">
               <thead>
                 <tr>
-                  <th style="width:35%">Name of Post</th>
-                  <th style="width:15%; text-align:center">Total Voters Assigned</th>
-                  <th style="width:20%; text-align:center">No. of Votes Recorded</th>
-                  <th style="width:30%">Remarks</th>
+                  <th style="width:35%; font-size:12px;">Name of Post</th>
+                  <th style="width:15%; text-align:center; font-size:12px;">Total Voters Assigned</th>
+                  <th style="width:20%; text-align:center; font-size:12px;">No. of Votes Recorded</th>
+                  <th style="width:30%; font-size:12px;">Remarks</th>
                 </tr>
               </thead>
               <tbody>
                 ${c.map(e=>`
-                  <tr style="height: 25px;">
-                    <td style="font-size: 11px; font-weight: bold;">${T(e.name)}</td>
-                    <td style="text-align:center; font-weight:bold;">${e.count}</td>
+                  <tr>
+                    <td style="font-size: 13px; font-weight: bold;">${T(e.name)}</td>
+                    <td style="text-align:center; font-weight:bold; font-size:14px;">${e.count}</td>
                     <td></td>
                     <td></td>
                   </tr>
                 `).join(``)}
               </tbody>
             </table>
+          </div>
           </div>
 
           <div class="footer">
