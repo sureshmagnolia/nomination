@@ -1,7 +1,9 @@
 # GVC College Union Election Management System
 
 > **Comprehensive Reference Document for Developers and AI Assistants**
-> This README is the authoritative source of truth for the project's architecture, data structures, workflows, and conventions. Always read this first before making any changes.
+> This README is the authoritative source of truth for the project's architecture, data structures, workflows, and CSS constraints. 
+> 
+> **FOR AI ASSISTANTS:** You MUST read this entire document before making architectural changes or CSS modifications. Assume no prior knowledge of the project. Pay special attention to the "Known Conventions and Gotchas" and "CSS & Print Layouts Constraints" sections to avoid breaking the delicate print engine or SPA layout.
 
 ---
 
@@ -12,13 +14,14 @@
 4. [Deployment Model](#4-deployment-model)
 5. [Backend — Google Apps Script (`Code.gs`)](#5-backend--google-apps-script-codegs)
 6. [Frontend Architecture & Caching](#6-frontend-architecture--caching)
-7. [Page-by-Page Reference (Public)](#7-page-by-page-reference-public)
-8. [Page-by-Page Reference (Admin)](#8-page-by-page-reference-admin)
-9. [Complete API Reference](#9-complete-api-reference)
-10. [Core Workflows](#10-core-workflows)
-11. [Security Model](#11-security-model)
-12. [Data Structures](#12-data-structures)
-13. [Known Conventions and Gotchas](#13-known-conventions-and-gotchas)
+7. [CSS & Print Layouts Constraints (CRITICAL)](#7-css--print-layouts-constraints-critical)
+8. [Page-by-Page Reference (Public)](#8-page-by-page-reference-public)
+9. [Page-by-Page Reference (Admin)](#9-page-by-page-reference-admin)
+10. [Complete API Reference](#10-complete-api-reference)
+11. [Core Workflows](#11-core-workflows)
+12. [Security Model](#12-security-model)
+13. [Data Structures](#13-data-structures)
+14. [Known Conventions and Gotchas](#14-known-conventions-and-gotchas)
 
 ---
 
@@ -96,9 +99,16 @@ election-app/
 ## 4. Deployment Model
 
 ### Frontend Deployment
-1. Run `npm run build` in the project root. Vite builds to `/dist`.
-2. **Manually** copy the output to `/docs` to serve via GitHub Pages (e.g. `Remove-Item docs -Recurse -Force; Copy-Item dist docs -Recurse`).
-3. Commit & push the updated `docs/` folder along with source files to the `V1` branch.
+1. Run `npm run build` in the project root. Vite compiles all assets into `/dist`.
+2. **Manually** copy the output to `/docs` to serve via GitHub Pages. On Windows PowerShell, the exact command is:
+   ```powershell
+   Remove-Item docs -Recurse -Force ; Copy-Item dist docs -Recurse
+   ```
+3. Stage, commit, and push the updated `docs/` folder along with source files to the `V1` branch:
+   ```powershell
+   git add . ; git commit -m "Update" ; git push
+   ```
+4. **Cache Warning**: The frontend is built using Vite; always instruct the user to perform a **hard refresh (Ctrl + F5)** after a deployment to avoid stale `index-*.js` or CSS files.
 
 ### Backend Deployment (Google Apps Script)
 1. Open the linked Google Apps Script project from the Google Sheet.
@@ -160,6 +170,29 @@ Uses Tailwind utility classes as well as custom classes:
 - `.badge` / `.badge-valid` / `.badge-pending` / `.badge-withdrawn` — Status chips.
 - `.spinner` — CSS loading spinner animation.
 - `.data-table` — Pre-styled HTML table for data grids.
+
+---
+
+## 7. CSS & Print Layouts Constraints (CRITICAL)
+
+**FOR AI AGENTS: Read this before modifying Modals or Print Layouts!**
+
+### The Transform Stacking Context Trap
+- The `.page-enter` animation applies a CSS `transform: translateY()`.
+- **WARNING**: In CSS, any element with a `transform`, `filter`, or `perspective` creates a new "Containing Block" for `fixed` and `absolute` positioned descendants.
+- **Rule**: NEVER place a full-screen Modal (`fixed inset-0`) inside `.page-enter` or `#adminMain` if `.page-enter` is wrapping it. The modal will be trapped inside the animated box and squished or hidden by `overflow-auto`. Modals must be placed directly inside `main.innerHTML` but **OUTSIDE** of the `<div class="page-enter">` wrapper.
+
+### Modal Glassmorphism Bugs
+- **Rule**: NEVER stack `.glass` (which uses `backdrop-filter: blur`) inside an overlay that also uses `backdrop-blur`. Browsers like Chrome will fail to paint the inner element, making the modal box invisible. Use a solid background (`bg-slate-800`) for the modal box if the overlay is semi-transparent.
+
+### Print Layouts (PDF Generation)
+Physical printing of A4 forms (Ballots, Rolls, Matrix) is a massive part of this app.
+- **Table Borders Disappearing in PDF**: When tables are exactly `100%` width, the right-most and bottom-most borders often get clipped by the browser's internal PDF margins.
+  - **Fix/Rule**: Always use `width: 99.5%; margin: 0 auto; border-collapse: collapse; border: 1.5px solid #555;` for print tables. This guarantees all borders render perfectly in Chrome/Edge.
+- **Pagination**: Do not use JavaScript `for`-loops to chunk rows per page. Rely entirely on CSS-native pagination:
+  - `<table style="page-break-inside: auto;">`
+  - `<thead style="display: table-header-group;">` (Repeats headers on every printed page)
+  - `<tr style="page-break-inside: avoid; break-inside: avoid;">` (Prevents rows splitting across pages)
 
 ---
 
@@ -303,6 +336,7 @@ All admin POST requests are handled via the `bgPost` sync queue to prevent UI bl
 5. **`refreshUI()` pattern**: Admin pages that have interactive state use a `refreshUI()` inner function that completely re-renders the section and re-attaches all event listeners. This is intentional — do not try to do partial DOM updates.
 6. **`setDefault('/')` in router**: The router's `setDefault` must be the final `.on()` chain call in `main.js`. It catches all unmatched routes.
 7. **Google Apps Script CORS**: GAS does not support standard CORS preflight. All requests must be simple requests (no custom headers on GET, `application/json` body on POST which GAS handles fine).
-8. **Build → Docs pipeline**: There is no automated script to copy `dist` → `docs`. It is a manual process requiring you to delete the old `docs/` folder, copy `dist` over to it, and commit the changes before pushing.
+8. **Build → Docs pipeline**: There is no automated script to copy `dist` → `docs`. It is a manual process requiring you to delete the old `docs/` folder, copy `dist` over to it, and commit the changes before pushing. (Always run: `npm run build ; Remove-Item docs -Recurse -Force ; Copy-Item dist docs -Recurse ; git add . ; git commit -m "Update" ; git push`).
 9. **Print Layouts**: All print layouts (Nominations, Counting Forms, Official Results) use strict inline CSS and table formatting within `window.open` templates to ensure they render perfectly on A4 paper across different browsers. Avoid external stylesheets for printed components.
 10. **NOTA Counting**: NOTA votes count toward `totalValidVotes` for the purpose of percentage calculation. INVALID votes do not.
+11. **Do not run formatting/linting scripts without permission**: The codebase relies on specific string literal structures and `.js` file templates. Do not blindly run Prettier or ESLint over the whole repository unless specifically instructed.
