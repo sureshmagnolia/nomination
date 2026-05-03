@@ -1076,28 +1076,10 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
     </tr>`).join(``):`<tr><td colspan="7" class="text-center text-slate-500 py-8">No posts configured.</td></tr>`,r.querySelectorAll(`.delete-post-btn`).forEach(t=>{t.addEventListener(`click`,async()=>{let r=t.dataset.name;if(confirm(`Delete post "${r}"? This cannot be undone.`)){t.disabled=!0;try{await C.adminDeletePost(n,r),D(`Post "${r}" deleted.`,`success`),H(e,await C.adminGetPosts(n),n)}catch(e){D(`Failed: ${e.message}`,`error`),t.disabled=!1}}})});let i=e.querySelector(`#postFormWrap`);r.querySelectorAll(`.edit-post-btn`).forEach(n=>{n.addEventListener(`click`,()=>{let r=t[parseInt(n.dataset.idx)];e.querySelector(`#postFormTitle`).textContent=`Edit Post`,e.querySelector(`#pfPost`).value=r.post,e.querySelector(`#pfYear`).value=r.yearRestriction||``,e.querySelector(`#pfFemale`).checked=!!r.femaleOnly,e.querySelector(`#pfFinalYear`).checked=!!r.finalYearIneligible,e.querySelector(`#pfDept`).checked=!!r.deptRestriction,e.querySelector(`#pfOriginalName`).value=r.post,i.classList.remove(`hidden`),i.scrollIntoView({behavior:`smooth`})})})}function Ve(e,t,n){let r=e.querySelector(`#postFormWrap`),i=e.querySelector(`#addPostBtn`),a=e.querySelector(`#cancelPostBtn`),o=e.querySelector(`#savePostBtn`);i.addEventListener(`click`,()=>{e.querySelector(`#postFormTitle`).textContent=`Add New Post`,e.querySelector(`#pfPost`).value=``,e.querySelector(`#pfYear`).value=``,e.querySelector(`#pfFemale`).checked=!1,e.querySelector(`#pfFinalYear`).checked=!1,e.querySelector(`#pfDept`).checked=!1,e.querySelector(`#pfOriginalName`).value=``,r.classList.remove(`hidden`),r.scrollIntoView({behavior:`smooth`})}),a.addEventListener(`click`,()=>r.classList.add(`hidden`)),o.addEventListener(`click`,async()=>{let t=e.querySelector(`#pfPost`).value.trim(),i=e.querySelector(`#pfYear`).value,a=e.querySelector(`#pfFemale`).checked,s=e.querySelector(`#pfFinalYear`).checked,c=e.querySelector(`#pfDept`).checked,l=e.querySelector(`#pfOriginalName`).value;if(!t){D(`Post name is required.`,`error`);return}let u={postName:t,yearRestriction:i,femaleOnly:a,finalYearIneligible:s,deptRestriction:c,originalName:l};E(o,!0,`💾 Save Post`);try{l?(await C.adminUpdatePost(n,u),D(`Post updated successfully!`,`success`)):(await C.adminAddPost(n,u),D(`Post added successfully!`,`success`)),r.classList.add(`hidden`),H(e,await C.adminGetPosts(n),n)}catch(e){D(`Failed: ${e.message}`,`error`)}finally{E(o,!1,`💾 Save Post`)}})}async function He(e){let t=L();if(t){R(e,`booths`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading booth data...</p></div>
   `);try{let[n,r,i,a,o,s]=await Promise.all([C.getNominalRoll(),C.adminGetBooths(t).catch(()=>[]),C.adminGetLocations(t).catch(()=>[]),C.adminGetPosts(t).catch(()=>[]),C.getFinalNominations().catch(()=>({active:[]})),C.adminGetBallotPlan(t).catch(()=>null)]);Ue(e.querySelector(`#adminMain`),t,n,r,i,a,o,s)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${T(t.message)}</div>`}}}function Ue(e,t,r,i,a,o,s,c){let l={};r.forEach(e=>{let t=String(e.CLASS||`Unknown`).trim(),n=String(e.Dept||`Unknown`).trim();l[t]||(l[t]={name:t,dept:n,count:0}),l[t].count++});let u=Object.values(l).sort((e,t)=>e.name.localeCompare(t.name)),d=i.length?[...i]:[{boothNumber:1,roomName:``,classes:[]}],f=[...a],p=!0,m=()=>{d.forEach(e=>e.totalStudents=0);let n=[];u.forEach(e=>{let t=d.find(t=>t.classes.includes(e.name));t?t.totalStudents+=e.count:n.push(e)});let i=window.scrollY;e.innerHTML=`
-      <div class="page-enter space-y-6">
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <h3 class="text-xl font-bold text-white">Polling Booth Allotment</h3>
-            <p class="text-slate-400 text-sm">Designate rooms and allot classes to polling booths.</p>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button id="btnClearAll" class="btn btn-secondary border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white">🗑️ Clear All</button>
-            <button id="btnAutoAllot" class="btn btn-secondary">⚡ Auto Allot</button>
-            <button id="btnManageLocations" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📍 Manage Locations</button>
-            <button id="btnSaveBooths" class="btn btn-primary">💾 Save Configuration</button>
-            <button id="btnRegenPlan" class="btn btn-primary border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 px-4">🔄 Finalize Master Plan</button>
-            <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Electoral Rolls</button>
-            <button id="btnPrintBallotAccounts" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white">📑 Print Ballot Accounts</button>
-          </div>
-        </div>
-        <div id="printArea" class="hidden"></div>
-
         <!-- Locations Modal -->
-        <div id="locationsModal" class="fixed inset-0 flex items-center justify-center hidden" style="z-index: 9999;">
-          <div class="absolute inset-0" id="locationsModalOverlay" style="background-color: rgba(15,23,42,0.8); z-index: 1000;"></div>
-          <div class="relative rounded-2xl border border-slate-700 shadow-2xl w-full max-w-lg p-6" style="background-color: #1e293b; z-index: 1001;">
+        <div id="locationsModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+          <div class="absolute inset-0 bg-slate-900/80" id="locationsModalOverlay"></div>
+          <div class="relative bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-lg p-6 z-10">
             <div class="flex items-center justify-between mb-4">
               <h4 class="font-bold text-white text-lg">📍 Manage Locations</h4>
               <button id="btnCloseLocationsModal" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
@@ -1120,6 +1102,26 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
             </div>
           </div>
         </div>
+
+      <div class="page-enter space-y-6">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-xl font-bold text-white">Polling Booth Allotment</h3>
+            <p class="text-slate-400 text-sm">Designate rooms and allot classes to polling booths.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button id="btnClearAll" class="btn btn-secondary border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white">🗑️ Clear All</button>
+            <button id="btnAutoAllot" class="btn btn-secondary">⚡ Auto Allot</button>
+            <button id="btnManageLocations" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📍 Manage Locations</button>
+            <button id="btnSaveBooths" class="btn btn-primary">💾 Save Configuration</button>
+            <button id="btnRegenPlan" class="btn btn-primary border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 px-4">🔄 Finalize Master Plan</button>
+            <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Electoral Rolls</button>
+            <button id="btnPrintBallotAccounts" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white">📑 Print Ballot Accounts</button>
+          </div>
+        </div>
+        <div id="printArea" class="hidden"></div>
+
+
 
 
         <!-- Booth Configuration -->

@@ -62,28 +62,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     const scrollPos = window.scrollY;
 
     main.innerHTML = `
-      <div class="page-enter space-y-6">
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <h3 class="text-xl font-bold text-white">Polling Booth Allotment</h3>
-            <p class="text-slate-400 text-sm">Designate rooms and allot classes to polling booths.</p>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button id="btnClearAll" class="btn btn-secondary border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white">🗑️ Clear All</button>
-            <button id="btnAutoAllot" class="btn btn-secondary">⚡ Auto Allot</button>
-            <button id="btnManageLocations" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📍 Manage Locations</button>
-            <button id="btnSaveBooths" class="btn btn-primary">💾 Save Configuration</button>
-            <button id="btnRegenPlan" class="btn btn-primary border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 px-4">🔄 Finalize Master Plan</button>
-            <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Electoral Rolls</button>
-            <button id="btnPrintBallotAccounts" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white">📑 Print Ballot Accounts</button>
-          </div>
-        </div>
-        <div id="printArea" class="hidden"></div>
-
         <!-- Locations Modal -->
-        <div id="locationsModal" class="fixed inset-0 flex items-center justify-center hidden" style="z-index: 9999;">
-          <div class="absolute inset-0" id="locationsModalOverlay" style="background-color: rgba(15,23,42,0.8); z-index: 1000;"></div>
-          <div class="relative rounded-2xl border border-slate-700 shadow-2xl w-full max-w-lg p-6" style="background-color: #1e293b; z-index: 1001;">
+        <div id="locationsModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+          <div class="absolute inset-0 bg-slate-900/80" id="locationsModalOverlay"></div>
+          <div class="relative bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-lg p-6 z-10">
             <div class="flex items-center justify-between mb-4">
               <h4 class="font-bold text-white text-lg">📍 Manage Locations</h4>
               <button id="btnCloseLocationsModal" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
@@ -106,6 +88,26 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             </div>
           </div>
         </div>
+
+      <div class="page-enter space-y-6">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-xl font-bold text-white">Polling Booth Allotment</h3>
+            <p class="text-slate-400 text-sm">Designate rooms and allot classes to polling booths.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button id="btnClearAll" class="btn btn-secondary border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white">🗑️ Clear All</button>
+            <button id="btnAutoAllot" class="btn btn-secondary">⚡ Auto Allot</button>
+            <button id="btnManageLocations" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📍 Manage Locations</button>
+            <button id="btnSaveBooths" class="btn btn-primary">💾 Save Configuration</button>
+            <button id="btnRegenPlan" class="btn btn-primary border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 px-4">🔄 Finalize Master Plan</button>
+            <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Electoral Rolls</button>
+            <button id="btnPrintBallotAccounts" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white">📑 Print Ballot Accounts</button>
+          </div>
+        </div>
+        <div id="printArea" class="hidden"></div>
+
+
 
 
         <!-- Booth Configuration -->
