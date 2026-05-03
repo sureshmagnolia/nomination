@@ -1366,7 +1366,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
             </table>
             <div style="margin-top:20px; text-align:right; font-size:10px; color:#999">Total Voters: ${r.length}</div>
           </div>
-        </div>`})}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`},g=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let t=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]};s+=`
+        </div>`})}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`},g=(e,t,r,i,a,o)=>{let s=``;if(!o)return`<div class="alert alert-error">❌ Master Ballot Plan not generated.</div>`;let c=a?.list?.filter(e=>e.withdrawalStatus!==`Approved`)||[],l=new Set;r.forEach(e=>{c.filter(t=>t.post===e.post).length>1&&l.add(e.post)});let u=e=>e.toLowerCase().includes(`representative`)||e.toLowerCase().includes(`year`),d=e=>e.toLowerCase().includes(`association`)||e.toLowerCase().includes(`assoc`),f=r.filter(e=>!u(e.post)&&!d(e.post)&&l.has(e.post)).map(e=>e.post);return[...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let t=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]},r=t.reps.map(e=>e.post),i=t.assocs.map(e=>e.post),a=[...f,...r,...i];s+=`
       <div class="page-break">
         <div class="account-page">
           <div>
@@ -1422,13 +1422,33 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
             <div style="margin-top: 30px; font-size: 11px; color: #555; background: #fffde7; padding: 10px; border: 1px dashed #fbc02d;">
               <strong>Note:</strong> Total Qty should be equal to (Number of Ballots Used + Number of Ballots Returned). Please record any discrepancies in the Remarks column.
             </div>
+
+            <h4 style="margin: 30px 0 10px 0; font-size: 14px; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 3px;">3. Account of Votes (To be filled by PO)</h4>
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th style="width:40%">Name of Post</th>
+                  <th style="width:25%; text-align:center">No. of Votes Recorded<br><span style="font-size:10px; font-weight:normal">(Found in Ballot Box)</span></th>
+                  <th style="width:35%">Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${a.map(e=>`
+                  <tr style="height: 35px;">
+                    <td style="font-size: 12px; font-weight: bold;">${T(e)}</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                `).join(``)}
+              </tbody>
+            </table>
           </div>
 
           <div class="footer">
             <div class="sig-line">Presiding Officer</div>
           </div>
         </div>
-      </div>`}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated.</div>`},_=()=>{d.forEach(e=>{e.classes=[],e.totalStudents=0});let e={};u.forEach(t=>{e[t.dept]||(e[t.dept]={name:t.dept,total:0,classes:[]}),e[t.dept].classes.push(t),e[t.dept].total+=t.count});let t=d.length,n=r.length/t*1.25;Object.values(e).sort((e,t)=>t.total-e.total).forEach(e=>{d.sort((e,t)=>e.totalStudents-t.totalStudents);let t=d[0];if(t.totalStudents+e.total>n&&e.classes.length>1){d.sort((e,t)=>e.totalStudents-t.totalStudents);let t=d[0],n=d.length>1?d[1]:d[0];[...e.classes].sort((e,t)=>t.count-e.count).forEach(e=>{let r=t.totalStudents<=n.totalStudents?t:n;r.classes.push(e.name),r.totalStudents+=e.count})}else e.classes.forEach(e=>t.classes.push(e.name)),t.totalStudents+=e.total}),d.sort((e,t)=>e.boothNumber-t.boothNumber)};m()}async function We(e){let t=L();if(t){R(e,`counting`,`
+      </div>`}),s},_=()=>{d.forEach(e=>{e.classes=[],e.totalStudents=0});let e={};u.forEach(t=>{e[t.dept]||(e[t.dept]={name:t.dept,total:0,classes:[]}),e[t.dept].classes.push(t),e[t.dept].total+=t.count});let t=d.length,n=r.length/t*1.25;Object.values(e).sort((e,t)=>t.total-e.total).forEach(e=>{d.sort((e,t)=>e.totalStudents-t.totalStudents);let t=d[0];if(t.totalStudents+e.total>n&&e.classes.length>1){d.sort((e,t)=>e.totalStudents-t.totalStudents);let t=d[0],n=d.length>1?d[1]:d[0];[...e.classes].sort((e,t)=>t.count-e.count).forEach(e=>{let r=t.totalStudents<=n.totalStudents?t:n;r.classes.push(e.name),r.totalStudents+=e.count})}else e.classes.forEach(e=>t.classes.push(e.name)),t.totalStudents+=e.total}),d.sort((e,t)=>e.boothNumber-t.boothNumber)};m()}async function We(e){let t=L();if(t){R(e,`counting`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Counting Setup...</p></div>
   `);try{let[n,r,i,a,o]=await Promise.all([C.adminGetCountingMatrix(t).catch(()=>null),C.getPosts(),C.adminGetNominations(t).catch(()=>[]),C.adminGetBooths(t),C.getNominalRoll()]),s=(Array.isArray(i)?i:[]).filter(e=>e.status===`Valid`&&e.withdrawalStatus!==`Approved`);Ge(e.querySelector(`#adminMain`),t,n,r,s,a,o)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${T(t.message)}</div>`}}}function Ge(e,t,n,r,i,a,o){if(!a.length){e.innerHTML=`<div class="alert alert-error">❌ No booths configured.</div>`;return}if(!r.length){e.innerHTML=`<div class="alert alert-error">❌ No posts configured.</div>`;return}let s=e=>String(e.post||e.name||``),c=t=>{let{matrix:n,formSerials:o,totalRounds:c,roundLabels:u}=t,d=a.length;e.innerHTML=`
       <div class="page-enter space-y-6">

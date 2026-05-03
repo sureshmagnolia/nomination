@@ -523,11 +523,30 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     let html = '';
     if (!plan) return `<div class="alert alert-error">❌ Master Ballot Plan not generated.</div>`;
 
+    const candidates = nominationsResponse?.list?.filter(n => n.withdrawalStatus !== 'Approved') || [];
+    const contestedPosts = new Set();
+    posts.forEach(p => {
+      if (candidates.filter(c => c.post === p.post).length > 1) {
+        contestedPosts.add(p.post);
+      }
+    });
+
+    const isYear = (pName) => pName.toLowerCase().includes('representative') || pName.toLowerCase().includes('year');
+    const isAssoc = (pName) => pName.toLowerCase().includes('association') || pName.toLowerCase().includes('assoc');
+    
+    const generalPostsList = posts
+      .filter(p => !isYear(p.post) && !isAssoc(p.post) && contestedPosts.has(p.post))
+      .map(p => p.post);
+
     const sortedBooths = [...booths].sort((a, b) => a.boothNumber - b.boothNumber);
 
     sortedBooths.forEach((b) => {
       if (!b.classes || b.classes.length === 0) return;
       const assignments = plan.boothAssignments[b.boothNumber] || { general: null, reps: [], assocs: [] };
+
+      const boothRepPosts = assignments.reps.map(r => r.post);
+      const boothAssocPosts = assignments.assocs.map(a => a.post);
+      const allBoothPosts = [...generalPostsList, ...boothRepPosts, ...boothAssocPosts];
 
       html += `
       <div class="page-break">
@@ -585,6 +604,26 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             <div style="margin-top: 30px; font-size: 11px; color: #555; background: #fffde7; padding: 10px; border: 1px dashed #fbc02d;">
               <strong>Note:</strong> Total Qty should be equal to (Number of Ballots Used + Number of Ballots Returned). Please record any discrepancies in the Remarks column.
             </div>
+
+            <h4 style="margin: 30px 0 10px 0; font-size: 14px; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 3px;">3. Account of Votes (To be filled by PO)</h4>
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th style="width:40%">Name of Post</th>
+                  <th style="width:25%; text-align:center">No. of Votes Recorded<br><span style="font-size:10px; font-weight:normal">(Found in Ballot Box)</span></th>
+                  <th style="width:35%">Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${allBoothPosts.map(postName => `
+                  <tr style="height: 35px;">
+                    <td style="font-size: 12px; font-weight: bold;">${esc(postName)}</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
           </div>
 
           <div class="footer">
