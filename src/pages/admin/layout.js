@@ -68,6 +68,7 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
         ${navItem('public',      '🌐', 'Public Portal',      activeSection)}
         <div class="border-t border-white/10 my-2"></div>
         ${navItem('testing',     '🧪', 'Testing Tools',      activeSection)}
+        ${navItem('audit',       '🛡️', 'Internal Audit',     activeSection)}
       </nav>
       <div class="p-3 border-t border-white/10">
         <button id="logoutBtn" class="sidebar-item text-red-400 hover:text-red-300 hover:bg-red-500/10">
