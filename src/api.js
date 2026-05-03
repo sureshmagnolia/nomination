@@ -235,6 +235,16 @@ export const api = {
     return Promise.resolve({ ok: true });
   },
 
+  adminDirectWithdrawal: (password, id) => {
+    updateCache({ action: 'adminGetNominations', password }, (noms) => {
+      const n = noms.find(x => x.id === id);
+      if (n) n.withdrawalStatus = 'Approved';
+      return noms;
+    });
+    bgPost({ action: 'adminDirectWithdrawal', password, id });
+    return Promise.resolve({ ok: true });
+  },
+
   adminPublishValidList: (password) => {
     updateCache({ action: 'adminGetSettings', password }, old => ({...old, validListPublished: 'true'}));
     bgPost({ action: 'adminPublishValidList', password });

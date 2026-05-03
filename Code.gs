@@ -646,6 +646,22 @@ function doPost(e) {
       return jsonOut({ ok: true });
     }
 
+    if (action === 'adminDirectWithdrawal') {
+      // Admin-initiated direct withdrawal — bypasses student request step.
+      // Sets withdrawalStatus to 'Approved' immediately on any Valid nomination.
+      checkAdmin(body.password, body.sessionToken);
+      const nom = getAllNominations().find(n => n.id === body.id);
+      if (!nom) return errOut('Nomination not found.');
+      if (nom.status !== 'Valid') return errOut('Only Valid nominations can be withdrawn.');
+      if (nom.withdrawalStatus === 'Approved') return errOut('Already withdrawn.');
+      // Mark as both requested and approved in one step
+      const sheet = getSheet(SHEET_NOMS);
+      sheet.getRange(nom._row, 22).setValue('Approved');
+      // Auto-sync to published lists
+      syncNominationToPublished(body.id);
+      return jsonOut({ ok: true });
+    }
+
     if (action === 'adminPublishValidList') {
       checkAdmin(body.password, body.sessionToken);
       const validNoms = getAllNominations().filter(n => n.status === 'Valid');
