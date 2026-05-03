@@ -1205,7 +1205,8 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               @page { size: A4 portrait; margin: 15mm 12mm; }
               * { box-sizing: border-box; }
               body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 0; font-size: 11px; }
-              .facing-sheet { padding: 0; page-break-after: always; break-after: page; }
+              .facing-sheet { padding: 0; page-break-before: always; break-before: page; page-break-after: always; break-after: page; }
+              .facing-sheet:first-of-type { page-break-before: avoid; break-before: avoid; }
               .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
               .college-name { font-size: 18px; font-weight: bold; margin-bottom: 2px; }
               .title { font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
