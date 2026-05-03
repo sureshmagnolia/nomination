@@ -212,27 +212,28 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           <head>
             <title>Electoral Rolls - Booth Allotment</title>
             <style>
-              @page { size: A4 portrait; margin: 15mm 12mm; }
+              @page { size: A4 portrait; margin: 10mm 12mm; }
               * { box-sizing: border-box; }
               body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 0; font-size: 11px; }
               .facing-sheet { padding: 0; page-break-before: always; break-before: page; page-break-after: always; break-after: page; }
               .facing-sheet:first-of-type { page-break-before: avoid; break-before: avoid; }
-              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
+              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px; }
               .college-name { font-size: 18px; font-weight: bold; margin-bottom: 2px; }
               .title { font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
               .stats-table { width: 99.5%; margin: 0 auto; border-collapse: collapse; border: 1.5px solid #555; }
-              .stats-table th, .stats-table td { border: 1px solid #555; padding: 5px 8px; text-align: left; }
+              .stats-table th, .stats-table td { border: 1px solid #555; padding: 4px 6px; text-align: left; }
               .stats-table th { background: #f0f0f0; font-size: 10px; text-transform: uppercase; font-weight: bold; }
-              .footer { display: flex; justify-content: space-between; margin-top: 25px; padding: 0 30px; }
+              .footer { display: flex; justify-content: space-between; margin-top: 20px; padding: 0 30px; }
               .sig-line { border-top: 1.5px solid #000; padding-top: 5px; width: 160px; text-align: center; font-size: 11px; font-weight: bold; }
               .roll-page { page-break-before: always; break-before: page; }
               .roll-page:first-of-type { page-break-before: avoid; break-before: avoid; }
-              .roll-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 6px; font-size: 11px; }
+              .roll-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 4px; font-size: 11px; }
               .roll-table { width: 99.5%; margin: 0 auto; border-collapse: collapse; border: 1.5px solid #555; table-layout: fixed; }
               .roll-table thead { display: table-header-group; }
-              .roll-table th { background: #e8e8e8; font-weight: bold; text-transform: uppercase; font-size: 9px; border: 1px solid #555; padding: 4px 6px; }
-              .roll-table td { border: 1px solid #555; padding: 3px 6px; font-size: 10px; }
-              .roll-table tr { page-break-inside: avoid; break-inside: avoid; height: 22px; }
+              .roll-table tbody { orphans: 4; widows: 4; }
+              .roll-table th { background: #e8e8e8; font-weight: bold; text-transform: uppercase; font-size: 9px; border: 1px solid #555; padding: 4px 4px; }
+              .roll-table td { border: 1px solid #555; padding: 2px 4px; font-size: 10px; }
+              .roll-table tr { page-break-inside: avoid; break-inside: avoid; height: 20px; }
               @media print {
                 .no-print { display: none; }
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
