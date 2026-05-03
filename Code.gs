@@ -1376,7 +1376,7 @@ function calculateBallotPlanServer() {
   const threshold = 15;
 
   const calcBooks = (count, start, prefix, currentGlobalBookCount) => {
-    if (!count || count <= 0) return { html: '-', ids: '-', count: 0 };
+    if (!count || count <= 0) return { books: [], ids: '-', count: 0 };
     let current = start;
     let books = [];
     const idPrefix = prefix === 'G' ? 'GB' : (prefix === 'R' ? 'RB' : 'AB');

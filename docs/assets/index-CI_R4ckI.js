@@ -1879,7 +1879,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               <div class="candidate-row"><div class="sl-no">${t.length+1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
             </div>
           </div>
-        `}),m},a=async e=>{try{D(`Generating ballots...`,`info`),r(await i(e))}catch(e){D(e.message,`error`)}},o=async()=>{try{D(`Calculating Master Plan...`,`info`);let[e,n,i]=await Promise.all([C.getPublicSchedule(),C.adminGetSettings(t).catch(()=>({})),C.adminGetBallotPlan(t).catch(()=>null)]);if(!i)return confirm(`No Master Plan found. Generate it now based on current final list and booths?`)?(await s(),o()):void 0;let a=i,c=e.electionYear||new Date().getFullYear(),l=n.collegeName||`Government Victoria College Palakkad`,u=e=>!e||e.length===0?`-`:`
+        `}),m},a=async e=>{try{D(`Generating ballots...`,`info`),r(await i(e))}catch(e){D(e.message,`error`)}},o=async()=>{try{D(`Calculating Master Plan...`,`info`);let[e,n,i]=await Promise.all([C.getPublicSchedule(),C.adminGetSettings(t).catch(()=>({})),C.adminGetBallotPlan(t).catch(()=>null)]);if(!i)return confirm(`No Master Plan found. Generate it now based on current final list and booths?`)?(await s(),o()):void 0;let a=i,c=e.electionYear||new Date().getFullYear(),l=n.collegeName||`Government Victoria College Palakkad`,u=e=>!e||Array.isArray(e)&&e.length===0?`-`:typeof e==`string`?e:`
           <table style="width:100%; border-collapse:collapse; font-size:10px; background:rgba(0,0,0,0.02);">
             ${e.map(e=>`
               <tr>
@@ -1920,7 +1920,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${e.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${e.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${u(e.books)}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${u(e.books||e.bookHtml)}</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -1953,7 +1953,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${e.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${e.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${u(e.books)}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${u(e.books||e.bookHtml)}</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -1986,7 +1986,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${e.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${e.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${u(e.books)}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${u(e.books||e.bookHtml)}</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">

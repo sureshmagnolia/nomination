@@ -346,8 +346,10 @@ export async function renderAdminBallots(container) {
       const year = schedule.electionYear || new Date().getFullYear();
       const collegeName = settings.collegeName || 'Government Victoria College Palakkad';
 
-      const renderBooks = (books) => {
-        if (!books || books.length === 0) return '-';
+      const renderBooks = (booksOrHtml) => {
+        if (!booksOrHtml || (Array.isArray(booksOrHtml) && booksOrHtml.length === 0)) return '-';
+        if (typeof booksOrHtml === 'string') return booksOrHtml;
+        const books = booksOrHtml;
         return `
           <table style="width:100%; border-collapse:collapse; font-size:10px; background:rgba(0,0,0,0.02);">
             ${books.map(b => `
@@ -392,7 +394,7 @@ export async function renderAdminBallots(container) {
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${s.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${s.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${renderBooks(s.books)}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${renderBooks(s.books || s.bookHtml)}</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -425,7 +427,7 @@ export async function renderAdminBallots(container) {
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${s.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${s.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${renderBooks(s.books)}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${renderBooks(s.books || s.bookHtml)}</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
@@ -458,7 +460,7 @@ export async function renderAdminBallots(container) {
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${s.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${s.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${renderBooks(s.books)}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${renderBooks(s.books || s.bookHtml)}</td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold;">
