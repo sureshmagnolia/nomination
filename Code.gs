@@ -134,41 +134,39 @@ function ensureTemplateSheet() {
   } else if (s.getLastRow() > 1) {
     return; // Already populated — don't overwrite
   }
+  populateTemplate(s);
+}
 
-  s.clear();
-  s.appendRow(NOMINAL_ROLL_HEADERS);
-  s.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#4f46e5').setFontColor('#ffffff');
+function populateTemplate(s) {
+  s.getRange('A1:Z100').clear();
 
-  const samples = [
-    // 1ST YEAR UG — different departments
-    [1,  'SAMPLE STUDENT A',  '1ST YEAR BSC BOTANY',           'BOT001', 'BOTANY'],
-    [2,  'SAMPLE STUDENT B',  '1ST YEAR BSC CHEMISTRY',        'CHE001', 'CHEMISTRY'],
-    [3,  'SAMPLE STUDENT C',  '1ST YEAR BCOM',                 'COM001', 'COMMERCE'],
-    [4,  'SAMPLE STUDENT D',  '1ST YEAR BSC COMPUTER-SCIENCE', 'CSC001', 'COMPUTER-SCIENCE'],
-    [5,  'SAMPLE STUDENT E',  '1ST YEAR BA ECONOMICS',         'ECO001', 'ECONOMICS'],
-    [6,  'SAMPLE STUDENT F',  '1ST YEAR BSC MATHEMATICS',      'MAT001', 'MATHEMATICS'],
-    // 2ND YEAR UG
-    [7,  'SAMPLE STUDENT G',  '2ND YEAR BSC BOTANY',           'BOT002', 'BOTANY'],
-    [8,  'SAMPLE STUDENT H',  '2ND YEAR BSC CHEMISTRY',        'CHE002', 'CHEMISTRY'],
-    [9,  'SAMPLE STUDENT I',  '2ND YEAR BCOM',                 'COM002', 'COMMERCE'],
-    [10, 'SAMPLE STUDENT J',  '2ND YEAR BSC PHYSICS',          'PHY002', 'PHYSICS'],
-    // 3RD YEAR UG
-    [11, 'SAMPLE STUDENT K',  '3RD YEAR BSC BOTANY',           'BOT003', 'BOTANY'],
-    [12, 'SAMPLE STUDENT L',  '3RD YEAR BCOM',                 'COM003', 'COMMERCE'],
-    [13, 'SAMPLE STUDENT M',  '3RD YEAR BA ENGLISH',           'ENG003', 'ENGLISH'],
-    // PG — MSC / MCOM
-    [14, 'SAMPLE STUDENT N',  '1ST YEAR MSC BOTANY',           'BOT501', 'BOTANY'],
-    [15, 'SAMPLE STUDENT O',  '2ND YEAR MSC CHEMISTRY',        'CHE502', 'CHEMISTRY'],
-    [16, 'SAMPLE STUDENT P',  '1ST YEAR MCOM',                 'COM501', 'COMMERCE'],
-    [17, 'SAMPLE STUDENT Q',  '2ND YEAR MCOM',                 'COM502', 'COMMERCE'],
-    // PhD — Admission No is BLANK for PhD students
-    [18, 'SAMPLE STUDENT R',  'PH D IN BOTANY',                '',       'BOTANY'],
-    [19, 'SAMPLE STUDENT S',  'PH D IN CHEMISTRY',             '',       'CHEMISTRY'],
-    [20, 'SAMPLE STUDENT T',  'PH D IN COMMERCE',              '',       'COMMERCE'],
+  // --- FORMAT 1: LEGACY (CLASS based) ---
+  s.getRange('A1').setValue('FORMAT 1: LEGACY (Single CLASS Column)').setFontWeight('bold').setFontSize(14).setFontColor('#4f46e5');
+  s.getRange('A2:E2').setValues([['Nominal Roll Serial Number', 'NAME', 'CLASS', 'ADMISION NO', 'Dept']])
+   .setFontWeight('bold').setBackground('#4f46e5').setFontColor('#ffffff');
+
+  const samples1 = [
+    [1,  'SAMPLE STUDENT A',  '1 UG BOTANY',           'BOT001', 'BOTANY'],
+    [2,  'SAMPLE STUDENT B',  '2 UG CHEMISTRY',        'CHE002', 'CHEMISTRY'],
+    [3,  'SAMPLE STUDENT C',  '1 PG COMMERCE',         'COM501', 'COMMERCE'],
+    [4,  'SAMPLE STUDENT D',  'PHD BOTANY',            '',       'BOTANY'],
   ];
+  s.getRange(3, 1, samples1.length, 5).setValues(samples1).setBackground('#f0f4ff');
 
-  samples.forEach(row => s.appendRow(row));
-  s.getRange(2, 1, samples.length, 5).setBackground('#f0f4ff');
+  // --- FORMAT 2: EXPLICIT (YEAR & STREAM based) ---
+  const startRow2 = samples1.length + 5;
+  s.getRange(startRow2, 1).setValue('FORMAT 2: EXPLICIT (YEAR & STREAM separated)').setFontWeight('bold').setFontSize(14).setFontColor('#059669');
+  s.getRange(startRow2 + 1, 1, 1, 6).setValues([['Nominal Roll Serial Number', 'NAME', 'YEAR', 'STREAM', 'ADMISION NO', 'Dept']])
+   .setFontWeight('bold').setBackground('#059669').setFontColor('#ffffff');
+
+  const samples2 = [
+    [1,  'ABHINAV K J',      '1', 'UG',  '250759', 'BOTANY'],
+    [2,  'ADHEENA SUDHESH',  '1', 'UG',  '250768', 'BOTANY'],
+    [3,  'AKSHAYA P',        '2', 'UG',  '250904', 'BOTANY'],
+    [8,  'ANGEL AMRUTHA S',  '1', 'PG',  '250876', 'BOTANY'],
+    [11, 'ANUSREE A',        '',  'PHD', '250080', 'BOTANY'],
+  ];
+  s.getRange(startRow2 + 2, 1, samples2.length, 6).setValues(samples2).setBackground('#ecfdf5');
 
   s.getRange('A1').setNote(
     'TEMPLATE REFERENCE SHEET\n\n' +
@@ -208,6 +206,15 @@ function getNominalRollData() {
   return v.slice(1).map(row => {
     const obj = {};
     headers.forEach((h, i) => obj[h.trim()] = row[i]);
+    
+    // Auto-map Format 2 (Explicit) to internal CLASS representation
+    if (!obj['CLASS'] && obj['STREAM']) {
+      const yearStr = obj['YEAR'] ? String(obj['YEAR']).trim() + ' ' : '';
+      const streamStr = obj['STREAM'] ? String(obj['STREAM']).trim() : '';
+      const deptStr = obj['Dept'] ? ' ' + String(obj['Dept']).trim() : '';
+      obj['CLASS'] = (yearStr + streamStr + deptStr).trim();
+    }
+    
     return obj;
   });
 }
