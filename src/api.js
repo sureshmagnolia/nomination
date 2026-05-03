@@ -394,9 +394,9 @@ export const api = {
   adminGetNominalRollTemplate: (password) =>
     get({ action: 'adminGetNominalRollTemplate', password }),
 
-  adminUploadNominalRoll: async (password, rows) => {
+  adminUploadNominalRoll: async (password, payload) => {
     // This is a heavy destructive operation — must be blocking (not bgPost)
-    const res = await post({ action: 'adminUploadNominalRoll', password, rows });
+    const res = await post({ action: 'adminUploadNominalRoll', password, ...payload });
     // Wipe all related caches so the UI refreshes with the new data
     invalidateCache('getNominalRoll');
     invalidateCache('adminGetNominations');

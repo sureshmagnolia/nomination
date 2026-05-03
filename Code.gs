@@ -1199,22 +1199,24 @@ function doPost(e) {
     if (action === 'adminUploadNominalRoll') {
       checkAdmin(body.password, body.sessionToken);
 
-      const rows = body.rows; // Array of arrays: [[serial, name, class, admission, dept], ...]
+      const headers = body.headers;
+      const rows = body.rows; // Array of arrays
       if (!Array.isArray(rows) || rows.length === 0) return errOut('No data rows provided.');
+      if (!Array.isArray(headers) || headers.length < 5) return errOut('Invalid headers provided.');
 
-      // Validate that each row has exactly 5 columns
+      // Validate that each row has exactly the correct number of columns
       for (let i = 0; i < rows.length; i++) {
-        if (!Array.isArray(rows[i]) || rows[i].length !== 5) {
-          return errOut(`Row ${i + 2} has ${rows[i] ? rows[i].length : 0} columns. Expected 5.`);
+        if (!Array.isArray(rows[i]) || rows[i].length !== headers.length) {
+          return errOut(`Row ${i + 2} has ${rows[i] ? rows[i].length : 0} columns. Expected ${headers.length}.`);
         }
       }
 
       // 1. Clear and rewrite NominalRoll sheet
       const nomSheet = getSheet(SHEET_NOMINAL);
       nomSheet.clear();
-      nomSheet.appendRow(NOMINAL_ROLL_HEADERS);
-      nomSheet.getRange(1, 1, 1, 5).setFontWeight('bold');
-      nomSheet.getRange(2, 1, rows.length, 5).setValues(rows);
+      nomSheet.appendRow(headers);
+      nomSheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+      nomSheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
 
       // 2. Wipe ALL transactional sheets
       const sheetsToWipe = [SHEET_NOMS, SHEET_VALID, SHEET_FINAL, SHEET_RESULTS, SHEET_MATRIX];

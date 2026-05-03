@@ -53,7 +53,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
           <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4">
             <div>
               <div class="text-white font-bold text-sm mb-1">📥 Step 1 — Download the CSV Template</div>
-              <div class="text-slate-400 text-xs">The template has the exact 5 columns and sample data showing all class types.<br>Delete the sample rows, fill in your data, and save as CSV.</div>
+              <div class="text-slate-400 text-xs">The template contains both Format 1 (Class) and Format 2 (Year/Stream) examples.<br><strong>CRITICAL:</strong> Keep ONLY the header row of the format you want to use. Delete ALL other sample rows and titles before saving.</div>
             </div>
             <button id="btnDownloadTemplate" class="btn btn-secondary shrink-0">
               <span id="templateBtnText">⬇️ Download Template</span>
@@ -344,7 +344,9 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
 
     // CSV File Parsing
     let parsedRows = null;
-    const REQUIRED_HEADERS = ['Nominal Roll Serial Number', 'NAME', 'CLASS', 'ADMISION NO', 'Dept'];
+    let usedHeaders = [];
+    const legacyHeaders = ['Nominal Roll Serial Number', 'NAME', 'CLASS', 'ADMISION NO', 'Dept'];
+    const explicitHeaders = ['Nominal Roll Serial Number', 'NAME', 'YEAR', 'STREAM', 'ADMISION NO', 'Dept'];
 
     main.querySelector('#csvFileInput').onchange = (e) => {
       const file = e.target.files[0];
@@ -359,18 +361,32 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
           showToast('CSV file appears empty.', 'error'); return;
         }
 
-        // Parse header
-        const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-        const missing = REQUIRED_HEADERS.filter(h => !headers.includes(h));
-        if (missing.length > 0) {
-          showToast(`Missing columns: ${missing.join(', ')}`, 'error');
+        // Find the header row dynamically (in case they left the "FORMAT 1:" title above it)
+        let headerRowIndex = -1;
+        for (let i = 0; i < Math.min(lines.length, 20); i++) {
+          const cols = lines[i].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+          if (legacyHeaders.every(h => cols.includes(h))) {
+            headerRowIndex = i;
+            usedHeaders = legacyHeaders;
+            break;
+          }
+          if (explicitHeaders.every(h => cols.includes(h))) {
+            headerRowIndex = i;
+            usedHeaders = explicitHeaders;
+            break;
+          }
+        }
+
+        if (headerRowIndex === -1) {
+          showToast('Missing required columns. Please use one of the standard templates.', 'error');
           main.querySelector('#csvPreview').classList.add('hidden');
           return;
         }
 
-        // Parse rows into ordered 5-column arrays
-        const idxMap = REQUIRED_HEADERS.map(h => headers.indexOf(h));
-        parsedRows = lines.slice(1).map(line => {
+        const headers = lines[headerRowIndex].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+        const idxMap = usedHeaders.map(h => headers.indexOf(h));
+        
+        parsedRows = lines.slice(headerRowIndex + 1).map(line => {
           // Simple CSV parse (handles quoted commas)
           const cells = [];
           let cur = '', inQ = false;
@@ -380,13 +396,22 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
             else cur += ch;
           }
           return idxMap.map(i => cells[i] ?? '');
-        }).filter(r => r[1]); // filter blank name rows
+        }).filter(r => r[1] && r[1].trim() !== '' && r[1] !== 'NAME'); // filter blank rows and accidental header dupes
 
         // Summary
-        const classes = [...new Set(parsedRows.map(r => r[2]))].sort();
-        const depts = [...new Set(parsedRows.map(r => r[4]))].sort();
+        const nameIdx = usedHeaders.indexOf('NAME');
+        const deptIdx = usedHeaders.indexOf('Dept');
+        
+        let classes = [];
+        if (usedHeaders === legacyHeaders) {
+          classes = [...new Set(parsedRows.map(r => r[usedHeaders.indexOf('CLASS')]))].sort();
+        } else {
+          classes = [...new Set(parsedRows.map(r => `${r[usedHeaders.indexOf('YEAR')]} ${r[usedHeaders.indexOf('STREAM')]} ${r[deptIdx]}`.trim()))].sort();
+        }
+        const depts = [...new Set(parsedRows.map(r => r[deptIdx]))].sort();
+
         main.querySelector('#csvSummary').innerHTML = `
-          <div>👥 <strong class="text-white">${parsedRows.length}</strong> students detected</div>
+          <div>👥 <strong class="text-white">${parsedRows.length}</strong> students detected using <strong>${usedHeaders === legacyHeaders ? 'Legacy Format' : 'Explicit Format'}</strong></div>
           <div>🏛️ <strong class="text-white">${depts.length}</strong> departments: ${depts.map(d => `<span class="text-indigo-300">${esc(d)}</span>`).join(', ')}</div>
           <div>📚 <strong class="text-white">${classes.length}</strong> unique classes found</div>
         `;
@@ -419,8 +444,8 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
 
       setLoading(e.target, true, 'Uploading & Resetting...');
       try {
-        const res = await api.adminUploadNominalRoll(confirmPwd, parsedRows);
-        showToast(`✅ Nominal Roll updated with ${res.count} students. All election data has been reset.`, 'success');
+        const res = await api.adminUploadNominalRoll(confirmPwd, { headers: usedHeaders, rows: parsedRows });
+        showToast(`✅ Nominal Roll updated with ${res.count || parsedRows.length} students. All election data has been reset.`, 'success');
         // Reload the whole page to reflect fresh data
         const appContainer = main.closest('#appContainer') || main.parentElement;
         renderAdminNominalRoll(appContainer);
