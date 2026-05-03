@@ -105,11 +105,11 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          ${O(`/nominal-roll`,`📜`,`Nominal Roll`,`View the official voter list (Draft/Final).`)}
           ${O(`/submit`,`📝`,`Submit Nomination`,`New nomination form with eligibility check.`)}
           ${O(`/find`,`🔍`,`Find My Nomination`,`Retrieve and print your submitted nomination.`)}
           ${O(`/withdraw`,`↩️`,`Withdraw Nomination`,`Request withdrawal of your candidacy.`)}
           ${O(`/valid-list`,`✅`,`Valid Nominations`,`View the list of verified candidates.`)}
-          ${O(`/nominal-roll`,`📜`,`Nominal Roll`,`View the official voter list (Draft/Final).`)}
           ${O(`/final-list`,`🏆`,`Final Candidate List`,`View the final list post-withdrawals.`)}
           ${O(`/results`,`📊`,`Live Results`,`View live vote counting and election results.`)}
         </div>

@@ -47,11 +47,11 @@ export async function renderHome(container) {
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          ${card('/nominal-roll', '📜', 'Nominal Roll', 'View the official voter list (Draft/Final).')}
           ${card('/submit', '📝', 'Submit Nomination', 'New nomination form with eligibility check.')}
           ${card('/find',   '🔍', 'Find My Nomination', 'Retrieve and print your submitted nomination.')}
           ${card('/withdraw', '↩️', 'Withdraw Nomination', 'Request withdrawal of your candidacy.')}
           ${card('/valid-list', '✅', 'Valid Nominations', 'View the list of verified candidates.')}
-          ${card('/nominal-roll', '📜', 'Nominal Roll', 'View the official voter list (Draft/Final).')}
           ${card('/final-list', '🏆', 'Final Candidate List', 'View the final list post-withdrawals.')}
           ${card('/results', '📊', 'Live Results', 'View live vote counting and election results.')}
         </div>
