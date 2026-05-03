@@ -1095,9 +1095,9 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
         <div id="printArea" class="hidden"></div>
 
         <!-- Locations Modal -->
-        <div id="locationsModal" class="fixed inset-0 z-[999] flex items-center justify-center hidden">
-          <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="locationsModalOverlay"></div>
-          <div class="relative glass rounded-2xl border border-white/10 shadow-2xl w-full max-w-lg p-6 z-10">
+        <div id="locationsModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+          <div class="absolute inset-0 bg-slate-900/80" id="locationsModalOverlay"></div>
+          <div class="relative bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-lg p-6 z-10">
             <div class="flex items-center justify-between mb-4">
               <h4 class="font-bold text-white text-lg">📍 Manage Locations</h4>
               <button id="btnCloseLocationsModal" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
