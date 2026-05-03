@@ -1191,22 +1191,24 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
             <style>
               @page { size: A4 portrait; margin: 15mm 12mm; }
               * { box-sizing: border-box; }
-              body { font-family: 'Arial', sans-serif; color: #111; margin: 0; padding: 0; font-size: 11px; }
-              .facing-sheet { padding: 0; page-break-after: always; }
+              body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 0; font-size: 11px; }
+              .facing-sheet { padding: 0; page-break-after: always; break-after: page; }
               .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
               .college-name { font-size: 18px; font-weight: bold; margin-bottom: 2px; }
               .title { font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
-              .stats-table { width: 100%; border-collapse: collapse; }
+              .stats-table { width: 100%; border-collapse: collapse; border: 1px solid #555; }
               .stats-table th, .stats-table td { border: 1px solid #555; padding: 5px 8px; text-align: left; }
               .stats-table th { background: #f0f0f0; font-size: 10px; text-transform: uppercase; font-weight: bold; }
               .footer { display: flex; justify-content: space-between; margin-top: 25px; padding: 0 30px; }
               .sig-line { border-top: 1.5px solid #000; padding-top: 5px; width: 160px; text-align: center; font-size: 11px; font-weight: bold; }
-              .roll-page { page-break-after: always; }
-              .roll-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; font-size: 11px; }
-              .roll-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-              .roll-table th, .roll-table td { border: 1px solid #999; padding: 4px 6px; text-align: left; font-size: 10px; }
-              .roll-table th { background: #e8e8e8; font-weight: bold; text-transform: uppercase; font-size: 9px; }
-              .page-num { text-align: right; font-size: 9px; color: #777; margin-top: 4px; }
+              .roll-page { page-break-before: always; break-before: page; }
+              .roll-page:first-of-type { page-break-before: avoid; break-before: avoid; }
+              .roll-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 6px; font-size: 11px; }
+              .roll-table { width: 100%; border-collapse: collapse; border: 1px solid #555; table-layout: fixed; }
+              .roll-table thead { display: table-header-group; }
+              .roll-table th { background: #e8e8e8; font-weight: bold; text-transform: uppercase; font-size: 9px; border: 1px solid #555; padding: 4px 6px; }
+              .roll-table td { border: 1px solid #555; padding: 3px 6px; font-size: 10px; }
+              .roll-table tr { page-break-inside: avoid; break-inside: avoid; height: 22px; }
               @media print {
                 .no-print { display: none; }
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1327,34 +1329,36 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
             <div class="sig-line">Returning Officer</div>
             <div class="sig-line">Presiding Officer</div>
           </div>
-        </div>`,a.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME)));let i=Math.ceil(r.length/25);for(let t=0;t<i;t++){let a=r.slice(t*25,(t+1)*25),o=i>1?` (Page ${t+1} of ${i})`:``;s+=`
-          <div class="roll-page">
-            <div class="roll-header">
-              <div><strong>BOOTH ${e.boothNumber}</strong> | ${T(e.roomName||`No Room`)}</div>
-              <div style="text-align:center; flex-grow:1; font-weight:bold; font-size:13px;">ELECTORAL ROLL — ${T(n.name)}${o}</div>
-              <div>Dept: ${T(n.dept)}</div>
-            </div>
-            <table class="roll-table">
-              <thead><tr>
+        </div>`,a.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),s+=`
+        <div class="roll-page">
+          <div class="roll-header">
+            <div><strong>BOOTH ${e.boothNumber}</strong> | ${T(e.roomName||`No Room`)}</div>
+            <div style="text-align:center; flex-grow:1; font-weight:bold; font-size:13px;">ELECTORAL ROLL — ${T(n.name)}</div>
+            <div>Dept: ${T(n.dept)}</div>
+          </div>
+          <table class="roll-table">
+            <thead>
+              <tr>
                 <th style="width:38px">Sl.No</th>
                 <th style="width:70px">Adm. No</th>
                 <th>Student Name</th>
-                <th style="width:190px">Class</th>
-                <th style="width:85px">Signature</th>
-              </tr></thead>
-              <tbody>
-                ${a.map(e=>`
-                  <tr style="height:24px">
-                    <td style="text-align:center; font-weight:bold;">${T(String(e[`Nominal Roll Serial Number`]||`–`))}</td>
-                    <td style="font-family:monospace; font-size:9px; white-space:nowrap;">${T(e[`ADMISION NO`]||e[`ADMISSION NO`]||`–`)}</td>
-                    <td style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${T(e.NAME)}</td>
-                    <td style="font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${T(e.CLASS)}</td>
-                    <td></td>
-                  </tr>
-                `).join(``)}
-              </tbody>
-            </table>
-          </div>`}})}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`},g=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let t=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]},r=t.general?[{name:`General Union Posts`,count:t.general.count}]:[],i=t.reps.map(e=>({name:e.post,count:e.count})),a=t.assocs.map(e=>({name:e.post,count:e.count})),c=[...r,...i,...a];s+=`
+                <th style="width:180px">Class</th>
+                <th style="width:80px">Signature</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${r.map(e=>`
+                <tr>
+                  <td style="text-align:center; font-weight:bold;">${T(String(e[`Nominal Roll Serial Number`]||`–`))}</td>
+                  <td style="font-family:monospace; font-size:9px; white-space:nowrap;">${T(e[`ADMISION NO`]||e[`ADMISSION NO`]||`–`)}</td>
+                  <td style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${T(e.NAME)}</td>
+                  <td style="font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${T(e.CLASS)}</td>
+                  <td></td>
+                </tr>
+              `).join(``)}
+            </tbody>
+          </table>
+        </div>`})}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`},g=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let t=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]},r=t.general?[{name:`General Union Posts`,count:t.general.count}]:[],i=t.reps.map(e=>({name:e.post,count:e.count})),a=t.assocs.map(e=>({name:e.post,count:e.count})),c=[...r,...i,...a];s+=`
       <div class="page-break">
         <div class="account-page">
           <div>

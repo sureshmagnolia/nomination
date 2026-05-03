@@ -201,22 +201,24 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             <style>
               @page { size: A4 portrait; margin: 15mm 12mm; }
               * { box-sizing: border-box; }
-              body { font-family: 'Arial', sans-serif; color: #111; margin: 0; padding: 0; font-size: 11px; }
-              .facing-sheet { padding: 0; page-break-after: always; }
+              body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 0; font-size: 11px; }
+              .facing-sheet { padding: 0; page-break-after: always; break-after: page; }
               .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
               .college-name { font-size: 18px; font-weight: bold; margin-bottom: 2px; }
               .title { font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
-              .stats-table { width: 100%; border-collapse: collapse; }
+              .stats-table { width: 100%; border-collapse: collapse; border: 1px solid #555; }
               .stats-table th, .stats-table td { border: 1px solid #555; padding: 5px 8px; text-align: left; }
               .stats-table th { background: #f0f0f0; font-size: 10px; text-transform: uppercase; font-weight: bold; }
               .footer { display: flex; justify-content: space-between; margin-top: 25px; padding: 0 30px; }
               .sig-line { border-top: 1.5px solid #000; padding-top: 5px; width: 160px; text-align: center; font-size: 11px; font-weight: bold; }
-              .roll-page { page-break-after: always; }
-              .roll-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; font-size: 11px; }
-              .roll-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-              .roll-table th, .roll-table td { border: 1px solid #999; padding: 4px 6px; text-align: left; font-size: 10px; }
-              .roll-table th { background: #e8e8e8; font-weight: bold; text-transform: uppercase; font-size: 9px; }
-              .page-num { text-align: right; font-size: 9px; color: #777; margin-top: 4px; }
+              .roll-page { page-break-before: always; break-before: page; }
+              .roll-page:first-of-type { page-break-before: avoid; break-before: avoid; }
+              .roll-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 6px; font-size: 11px; }
+              .roll-table { width: 100%; border-collapse: collapse; border: 1px solid #555; table-layout: fixed; }
+              .roll-table thead { display: table-header-group; }
+              .roll-table th { background: #e8e8e8; font-weight: bold; text-transform: uppercase; font-size: 9px; border: 1px solid #555; padding: 4px 6px; }
+              .roll-table td { border: 1px solid #555; padding: 3px 6px; font-size: 10px; }
+              .roll-table tr { page-break-inside: avoid; break-inside: avoid; height: 22px; }
               @media print {
                 .no-print { display: none; }
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -475,41 +477,36 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         const classStudents = students.filter(s => String(s['CLASS']).trim() === cls.name);
         classStudents.sort((a, b) => String(a['NAME']).localeCompare(String(b['NAME'])));
 
-        const ROWS_PER_PAGE = 25;
-        const totalPages = Math.ceil(classStudents.length / ROWS_PER_PAGE);
-
-        for (let pg = 0; pg < totalPages; pg++) {
-          const chunk = classStudents.slice(pg * ROWS_PER_PAGE, (pg + 1) * ROWS_PER_PAGE);
-          const pageLabel = totalPages > 1 ? ` (Page ${pg + 1} of ${totalPages})` : '';
-          html += `
-          <div class="roll-page">
-            <div class="roll-header">
-              <div><strong>BOOTH ${b.boothNumber}</strong> | ${esc(b.roomName || 'No Room')}</div>
-              <div style="text-align:center; flex-grow:1; font-weight:bold; font-size:13px;">ELECTORAL ROLL — ${esc(cls.name)}${pageLabel}</div>
-              <div>Dept: ${esc(cls.dept)}</div>
-            </div>
-            <table class="roll-table">
-              <thead><tr>
+        html += `
+        <div class="roll-page">
+          <div class="roll-header">
+            <div><strong>BOOTH ${b.boothNumber}</strong> | ${esc(b.roomName || 'No Room')}</div>
+            <div style="text-align:center; flex-grow:1; font-weight:bold; font-size:13px;">ELECTORAL ROLL — ${esc(cls.name)}</div>
+            <div>Dept: ${esc(cls.dept)}</div>
+          </div>
+          <table class="roll-table">
+            <thead>
+              <tr>
                 <th style="width:38px">Sl.No</th>
                 <th style="width:70px">Adm. No</th>
                 <th>Student Name</th>
-                <th style="width:190px">Class</th>
-                <th style="width:85px">Signature</th>
-              </tr></thead>
-              <tbody>
-                ${chunk.map(s => `
-                  <tr style="height:24px">
-                    <td style="text-align:center; font-weight:bold;">${esc(String(s['Nominal Roll Serial Number'] || '–'))}</td>
-                    <td style="font-family:monospace; font-size:9px; white-space:nowrap;">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
-                    <td style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(s['NAME'])}</td>
-                    <td style="font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(s['CLASS'])}</td>
-                    <td></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>`;
-        }
+                <th style="width:180px">Class</th>
+                <th style="width:80px">Signature</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${classStudents.map(s => `
+                <tr>
+                  <td style="text-align:center; font-weight:bold;">${esc(String(s['Nominal Roll Serial Number'] || '–'))}</td>
+                  <td style="font-family:monospace; font-size:9px; white-space:nowrap;">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
+                  <td style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(s['NAME'])}</td>
+                  <td style="font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(s['CLASS'])}</td>
+                  <td></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>`;
       });
     });
     return html;
