@@ -132,7 +132,10 @@ function ensureTemplateSheet() {
   if (!s) {
     s = ss.insertSheet(SHEET_TEMPLATE);
   } else if (s.getLastRow() > 1) {
-    return; // Already populated — don't overwrite
+    const a1 = s.getRange('A1').getValue();
+    if (String(a1).indexOf('FORMAT 1') !== -1) {
+      return; // Already populated with new dual-format template
+    }
   }
   populateTemplate(s);
 }
