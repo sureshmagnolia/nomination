@@ -242,14 +242,14 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             <style>
               body { font-family: sans-serif; color: #333; margin: 0; padding: 0; }
               .page-break { page-break-after: always; }
-              .account-page { padding: 40px; height: 95vh; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; border: 1px solid #ccc; margin: 10px; }
-              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 25px; }
-              .college-name { font-size: 22px; font-weight: bold; margin-bottom: 5px; }
-              .title { font-size: 16px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+              .account-page { padding: 25px; display: block; box-sizing: border-box; border: 1px solid #ccc; margin: 10px; min-height: 95%; position: relative; }
+              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+              .college-name { font-size: 20px; font-weight: bold; margin-bottom: 3px; }
+              .title { font-size: 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
               .stats-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; }
-              .stats-table th, .stats-table td { border: 1px solid #000; padding: 12px 15px; text-align: left; }
-              .stats-table th { background: #f2f2f2; font-size: 12px; text-transform: uppercase; font-weight: bold; }
-              .footer { display: flex; justify-content: flex-end; margin-top: 60px; padding-right: 50px; }
+              .stats-table th, .stats-table td { border: 1px solid #000; padding: 6px 10px; text-align: left; font-size: 11px; }
+              .stats-table th { background: #f2f2f2; font-size: 11px; text-transform: uppercase; font-weight: bold; }
+              .footer { display: flex; justify-content: flex-end; margin-top: 30px; padding-right: 30px; }
               .sig-line { border-top: 1.5px solid #000; padding-top: 8px; width: 220px; text-align: center; font-size: 13px; font-weight: bold; }
               @media print { .no-print { display: none; } .page-break { page-break-after: always; } }
             </style>
@@ -523,7 +523,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     let html = '';
     if (!plan) return `<div class="alert alert-error">❌ Master Ballot Plan not generated.</div>`;
 
-    const candidates = nominationsResponse?.list?.filter(n => n.withdrawalStatus !== 'Approved') || [];
+    const candidates = Array.isArray(nominationsResponse) ? nominationsResponse.filter(n => n.withdrawalStatus !== 'Approved') : (nominationsResponse?.list?.filter(n => n.withdrawalStatus !== 'Approved') || []);
     const contestedPosts = new Set();
     posts.forEach(p => {
       if (candidates.filter(c => c.post === p.post).length > 1) {
@@ -557,8 +557,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               <div class="title">Ballots & Books Account (To be filled by PO)</div>
             </div>
             
-            <div style="font-size: 18px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; background: #f9f9f9; padding: 15px; border: 1px solid #ddd;">
-              <div><strong>BOOTH NUMBER:</strong> <span style="font-size: 28px; font-weight: bold; margin-left: 10px;">${b.boothNumber}</span></div>
+            <div style="font-size: 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; background: #f9f9f9; padding: 10px; border: 1px solid #ddd;">
+              <div><strong>BOOTH NUMBER:</strong> <span style="font-size: 22px; font-weight: bold; margin-left: 10px;">${b.boothNumber}</span></div>
               <div style="text-align: right;"><strong>LOCATION:</strong> ${esc(b.roomName || 'UNSPECIFIED')}</div>
             </div>
 
@@ -575,7 +575,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               </thead>
               <tbody>
                 ${assignments.general ? `
-                  <tr style="height: 50px; font-weight:bold">
+                  <tr style="height: 35px; font-weight:bold">
                     <td>General Union Posts</td>
                     <td>G${assignments.general.start} - G${assignments.general.end}</td>
                     <td style="text-align:center">${assignments.general.count}</td>
@@ -583,7 +583,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                   </tr>
                 ` : ''}
                 ${assignments.reps.map(r => `
-                  <tr style="height: 45px;">
+                  <tr style="height: 30px;">
                     <td>${esc(r.post)}</td>
                     <td>R${r.start} - R${r.end}</td>
                     <td style="text-align:center">${r.count}</td>
@@ -591,7 +591,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                   </tr>
                 `).join('')}
                 ${assignments.assocs.map(a => `
-                  <tr style="height: 45px;">
+                  <tr style="height: 30px;">
                     <td>${esc(a.post)}</td>
                     <td>A${a.start} - A${a.end}</td>
                     <td style="text-align:center">${a.count}</td>
@@ -601,11 +601,11 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               </tbody>
             </table>
             
-            <div style="margin-top: 30px; font-size: 11px; color: #555; background: #fffde7; padding: 10px; border: 1px dashed #fbc02d;">
+            <div style="margin-top: 15px; font-size: 11px; color: #555; background: #fffde7; padding: 8px; border: 1px dashed #fbc02d;">
               <strong>Note:</strong> Total Qty should be equal to (Number of Ballots Used + Number of Ballots Returned). Please record any discrepancies in the Remarks column.
             </div>
 
-            <h4 style="margin: 30px 0 10px 0; font-size: 14px; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 3px;">3. Account of Votes (To be filled by PO)</h4>
+            <h4 style="margin: 15px 0 8px 0; font-size: 13px; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 2px;">3. Account of Votes (To be filled by PO)</h4>
             <table class="stats-table">
               <thead>
                 <tr>
@@ -616,8 +616,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               </thead>
               <tbody>
                 ${allBoothPosts.map(postName => `
-                  <tr style="height: 35px;">
-                    <td style="font-size: 12px; font-weight: bold;">${esc(postName)}</td>
+                  <tr style="height: 25px;">
+                    <td style="font-size: 11px; font-weight: bold;">${esc(postName)}</td>
                     <td></td>
                     <td></td>
                   </tr>

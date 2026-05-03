@@ -1221,14 +1221,14 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
             <style>
               body { font-family: sans-serif; color: #333; margin: 0; padding: 0; }
               .page-break { page-break-after: always; }
-              .account-page { padding: 40px; height: 95vh; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; border: 1px solid #ccc; margin: 10px; }
-              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 25px; }
-              .college-name { font-size: 22px; font-weight: bold; margin-bottom: 5px; }
-              .title { font-size: 16px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+              .account-page { padding: 25px; display: block; box-sizing: border-box; border: 1px solid #ccc; margin: 10px; min-height: 95%; position: relative; }
+              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+              .college-name { font-size: 20px; font-weight: bold; margin-bottom: 3px; }
+              .title { font-size: 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
               .stats-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; }
-              .stats-table th, .stats-table td { border: 1px solid #000; padding: 12px 15px; text-align: left; }
-              .stats-table th { background: #f2f2f2; font-size: 12px; text-transform: uppercase; font-weight: bold; }
-              .footer { display: flex; justify-content: flex-end; margin-top: 60px; padding-right: 50px; }
+              .stats-table th, .stats-table td { border: 1px solid #000; padding: 6px 10px; text-align: left; font-size: 11px; }
+              .stats-table th { background: #f2f2f2; font-size: 11px; text-transform: uppercase; font-weight: bold; }
+              .footer { display: flex; justify-content: flex-end; margin-top: 30px; padding-right: 30px; }
               .sig-line { border-top: 1.5px solid #000; padding-top: 8px; width: 220px; text-align: center; font-size: 13px; font-weight: bold; }
               @media print { .no-print { display: none; } .page-break { page-break-after: always; } }
             </style>
@@ -1366,7 +1366,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
             </table>
             <div style="margin-top:20px; text-align:right; font-size:10px; color:#999">Total Voters: ${r.length}</div>
           </div>
-        </div>`})}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`},g=(e,t,r,i,a,o)=>{let s=``;if(!o)return`<div class="alert alert-error">❌ Master Ballot Plan not generated.</div>`;let c=a?.list?.filter(e=>e.withdrawalStatus!==`Approved`)||[],l=new Set;r.forEach(e=>{c.filter(t=>t.post===e.post).length>1&&l.add(e.post)});let u=e=>e.toLowerCase().includes(`representative`)||e.toLowerCase().includes(`year`),d=e=>e.toLowerCase().includes(`association`)||e.toLowerCase().includes(`assoc`),f=r.filter(e=>!u(e.post)&&!d(e.post)&&l.has(e.post)).map(e=>e.post);return[...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let t=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]},r=t.reps.map(e=>e.post),i=t.assocs.map(e=>e.post),a=[...f,...r,...i];s+=`
+        </div>`})}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`},g=(e,t,r,i,a,o)=>{let s=``;if(!o)return`<div class="alert alert-error">❌ Master Ballot Plan not generated.</div>`;let c=Array.isArray(a)?a.filter(e=>e.withdrawalStatus!==`Approved`):a?.list?.filter(e=>e.withdrawalStatus!==`Approved`)||[],l=new Set;r.forEach(e=>{c.filter(t=>t.post===e.post).length>1&&l.add(e.post)});let u=e=>e.toLowerCase().includes(`representative`)||e.toLowerCase().includes(`year`),d=e=>e.toLowerCase().includes(`association`)||e.toLowerCase().includes(`assoc`),f=r.filter(e=>!u(e.post)&&!d(e.post)&&l.has(e.post)).map(e=>e.post);return[...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let t=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]},r=t.reps.map(e=>e.post),i=t.assocs.map(e=>e.post),a=[...f,...r,...i];s+=`
       <div class="page-break">
         <div class="account-page">
           <div>
@@ -1375,8 +1375,8 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               <div class="title">Ballots & Books Account (To be filled by PO)</div>
             </div>
             
-            <div style="font-size: 18px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; background: #f9f9f9; padding: 15px; border: 1px solid #ddd;">
-              <div><strong>BOOTH NUMBER:</strong> <span style="font-size: 28px; font-weight: bold; margin-left: 10px;">${e.boothNumber}</span></div>
+            <div style="font-size: 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; background: #f9f9f9; padding: 10px; border: 1px solid #ddd;">
+              <div><strong>BOOTH NUMBER:</strong> <span style="font-size: 22px; font-weight: bold; margin-left: 10px;">${e.boothNumber}</span></div>
               <div style="text-align: right;"><strong>LOCATION:</strong> ${T(e.roomName||`UNSPECIFIED`)}</div>
             </div>
 
@@ -1393,7 +1393,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               </thead>
               <tbody>
                 ${t.general?`
-                  <tr style="height: 50px; font-weight:bold">
+                  <tr style="height: 35px; font-weight:bold">
                     <td>General Union Posts</td>
                     <td>G${t.general.start} - G${t.general.end}</td>
                     <td style="text-align:center">${t.general.count}</td>
@@ -1401,7 +1401,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
                   </tr>
                 `:``}
                 ${t.reps.map(e=>`
-                  <tr style="height: 45px;">
+                  <tr style="height: 30px;">
                     <td>${T(e.post)}</td>
                     <td>R${e.start} - R${e.end}</td>
                     <td style="text-align:center">${e.count}</td>
@@ -1409,7 +1409,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
                   </tr>
                 `).join(``)}
                 ${t.assocs.map(e=>`
-                  <tr style="height: 45px;">
+                  <tr style="height: 30px;">
                     <td>${T(e.post)}</td>
                     <td>A${e.start} - A${e.end}</td>
                     <td style="text-align:center">${e.count}</td>
@@ -1419,11 +1419,11 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               </tbody>
             </table>
             
-            <div style="margin-top: 30px; font-size: 11px; color: #555; background: #fffde7; padding: 10px; border: 1px dashed #fbc02d;">
+            <div style="margin-top: 15px; font-size: 11px; color: #555; background: #fffde7; padding: 8px; border: 1px dashed #fbc02d;">
               <strong>Note:</strong> Total Qty should be equal to (Number of Ballots Used + Number of Ballots Returned). Please record any discrepancies in the Remarks column.
             </div>
 
-            <h4 style="margin: 30px 0 10px 0; font-size: 14px; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 3px;">3. Account of Votes (To be filled by PO)</h4>
+            <h4 style="margin: 15px 0 8px 0; font-size: 13px; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 2px;">3. Account of Votes (To be filled by PO)</h4>
             <table class="stats-table">
               <thead>
                 <tr>
@@ -1434,8 +1434,8 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               </thead>
               <tbody>
                 ${a.map(e=>`
-                  <tr style="height: 35px;">
-                    <td style="font-size: 12px; font-weight: bold;">${T(e)}</td>
+                  <tr style="height: 25px;">
+                    <td style="font-size: 11px; font-weight: bold;">${T(e)}</td>
                     <td></td>
                     <td></td>
                   </tr>
