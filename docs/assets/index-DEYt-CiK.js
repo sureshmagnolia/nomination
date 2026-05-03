@@ -1366,7 +1366,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
             </table>
             <div style="margin-top:20px; text-align:right; font-size:10px; color:#999">Total Voters: ${r.length}</div>
           </div>
-        </div>`})}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`},g=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let t=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]},r=t.general?[`General Union Posts`]:[],i=t.reps.map(e=>e.post),a=t.assocs.map(e=>e.post),c=[...r,...i,...a];s+=`
+        </div>`})}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`},g=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let t=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]},r=t.general?[{name:`General Union Posts`,count:t.general.count}]:[],i=t.reps.map(e=>({name:e.post,count:e.count})),a=t.assocs.map(e=>({name:e.post,count:e.count})),c=[...r,...i,...a];s+=`
       <div class="page-break">
         <div class="account-page">
           <div>
@@ -1427,15 +1427,17 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
             <table class="stats-table">
               <thead>
                 <tr>
-                  <th style="width:40%">Name of Post</th>
-                  <th style="width:25%; text-align:center">No. of Votes Recorded</th>
-                  <th style="width:35%">Remarks</th>
+                  <th style="width:35%">Name of Post</th>
+                  <th style="width:15%; text-align:center">Total Voters Assigned</th>
+                  <th style="width:20%; text-align:center">No. of Votes Recorded</th>
+                  <th style="width:30%">Remarks</th>
                 </tr>
               </thead>
               <tbody>
                 ${c.map(e=>`
                   <tr style="height: 25px;">
-                    <td style="font-size: 11px; font-weight: bold;">${T(e)}</td>
+                    <td style="font-size: 11px; font-weight: bold;">${T(e.name)}</td>
+                    <td style="text-align:center; font-weight:bold;">${e.count}</td>
                     <td></td>
                     <td></td>
                   </tr>

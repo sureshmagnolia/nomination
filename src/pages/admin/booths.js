@@ -529,9 +529,11 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       if (!b.classes || b.classes.length === 0) return;
       const assignments = plan.boothAssignments[b.boothNumber] || { general: null, reps: [], assocs: [] };
 
-      const boothGeneralPosts = assignments.general ? ['General Union Posts'] : [];
-      const boothRepPosts = assignments.reps.map(r => r.post);
-      const boothAssocPosts = assignments.assocs.map(a => a.post);
+      const boothGeneralPosts = assignments.general
+        ? [{ name: 'General Union Posts', count: assignments.general.count }]
+        : [];
+      const boothRepPosts = assignments.reps.map(r => ({ name: r.post, count: r.count }));
+      const boothAssocPosts = assignments.assocs.map(a => ({ name: a.post, count: a.count }));
       const allBoothPosts = [...boothGeneralPosts, ...boothRepPosts, ...boothAssocPosts];
 
       html += `
@@ -595,15 +597,17 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             <table class="stats-table">
               <thead>
                 <tr>
-                  <th style="width:40%">Name of Post</th>
-                  <th style="width:25%; text-align:center">No. of Votes Recorded</th>
-                  <th style="width:35%">Remarks</th>
+                  <th style="width:35%">Name of Post</th>
+                  <th style="width:15%; text-align:center">Total Voters Assigned</th>
+                  <th style="width:20%; text-align:center">No. of Votes Recorded</th>
+                  <th style="width:30%">Remarks</th>
                 </tr>
               </thead>
               <tbody>
-                ${allBoothPosts.map(postName => `
+                ${allBoothPosts.map(p => `
                   <tr style="height: 25px;">
-                    <td style="font-size: 11px; font-weight: bold;">${esc(postName)}</td>
+                    <td style="font-size: 11px; font-weight: bold;">${esc(p.name)}</td>
+                    <td style="text-align:center; font-weight:bold;">${p.count}</td>
                     <td></td>
                     <td></td>
                   </tr>
