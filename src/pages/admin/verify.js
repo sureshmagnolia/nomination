@@ -103,13 +103,23 @@ function renderVerifyTable(main, noms, pwd) {
         String(n.post).toLowerCase().includes(q);
       return matchStatus && matchSearch;
     });
+
+    // Sort: Pending first, then Valid, then Rejected
+    filtered.sort((a, b) => {
+      const order = { 'Pending': 1, 'Valid': 2, 'Rejected': 3 };
+      const aOrder = order[a.status] || 99;
+      const bOrder = order[b.status] || 99;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return String(b.id).localeCompare(String(a.id));
+    });
+
     renderRows(filtered);
   };
 
   main.querySelector('#nomSearch').addEventListener('input', applyFilters);
   main.querySelector('#statusFilter').addEventListener('change', applyFilters);
 
-  renderRows(allNoms);
+  applyFilters(); // Initial render with sorting applied
 
   main.querySelector('#nomTableBody').addEventListener('click', async (e) => {
     const btn = e.target.closest('.verify-btn');
