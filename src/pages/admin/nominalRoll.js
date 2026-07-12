@@ -481,23 +481,27 @@ function triggerRollPrint(students, isFinal, collegeName) {
     htmlContent += `
       <div class="page-break">
         <div class="watermark">${watermark}</div>
-        <div class="header">
-          <div class="college">${esc(cName)}</div>
-          <div class="title">Department of ${dept}</div>
-          <div class="title" style="margin-top: 5px;">${esc(cls)} — ${watermark}</div>
-        </div>
-        <div class="meta">
-          <div>Printed on: ${timestamp}</div>
-          <div>Students in Class: ${studentsInClass.length}</div>
-        </div>
         <table>
-          <thead><tr>
-            <th class="sl">Sl. No</th>
-            <th class="adm">Adm. No</th>
-            <th>Name</th>
-            <th class="remarks">Remarks</th>
-            <th class="sig">Signature</th>
-          </tr></thead>
+          <thead>
+            <tr>
+              <th colspan="5" class="table-header">
+                <div class="college">${esc(cName)}</div>
+                <div class="title">Department of ${dept}</div>
+                <div class="title" style="margin-top: 5px;">${esc(cls)} — ${watermark}</div>
+                <div class="meta">
+                  <div>Printed on: ${timestamp}</div>
+                  <div>Students in Class: ${studentsInClass.length}</div>
+                </div>
+              </th>
+            </tr>
+            <tr>
+              <th class="sl">Sl. No</th>
+              <th class="adm">Adm. No</th>
+              <th>Name</th>
+              <th class="remarks">Remarks</th>
+              <th class="sig">Signature</th>
+            </tr>
+          </thead>
           <tbody>
             ${studentsInClass.map(s => `
               <tr>
@@ -509,10 +513,14 @@ function triggerRollPrint(students, isFinal, collegeName) {
               </tr>
             `).join('')}
           </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="5" class="table-footer">
+                <div class="footer-content">Returning Officer</div>
+              </td>
+            </tr>
+          </tfoot>
         </table>
-        <div class="footer">
-          <div>Returning Officer</div>
-        </div>
       </div>
     `;
   });
@@ -531,13 +539,17 @@ function triggerRollPrint(students, isFinal, collegeName) {
             white-space: nowrap; text-transform: uppercase;
             -webkit-print-color-adjust: exact; print-color-adjust: exact;
           }
-          .page-break { page-break-after: always; position: relative; min-height: 90vh; }
+          .page-break { page-break-after: always; position: relative; }
           .page-break:last-child { page-break-after: auto; }
-          .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-          .college { font-size: 18px; font-weight: bold; text-transform: uppercase; }
-          .title { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-top: 2px; }
-          .meta { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 10px; }
           
+          .table-header { background: transparent; border: none; text-align: center; padding: 0 0 10px 0; }
+          .table-header .college { font-size: 18px; font-weight: bold; text-transform: uppercase; color: #000; }
+          .table-header .title { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-top: 2px; color: #000; }
+          .table-header .meta { display: flex; justify-content: space-between; font-size: 10px; margin-top: 10px; border-bottom: 2px solid #000; padding-bottom: 5px; color: #000; font-weight: normal; text-transform: none; }
+          
+          .table-footer { border: none; padding: 40px 40px 0 0; }
+          .footer-content { text-align: right; font-weight: bold; font-size: 11px; }
+
           table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
           th, td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
           th { background: #eee; font-weight: bold; text-transform: uppercase; font-size: 10px; }
@@ -546,7 +558,6 @@ function triggerRollPrint(students, isFinal, collegeName) {
           .remarks { width: 150px; }
           .sig { width: 120px; }
 
-          .footer { margin-top: 40px; display: flex; justify-content: flex-end; font-weight: bold; padding: 0 40px; }
           .no-print { display: none; }
         </style>
       </head>

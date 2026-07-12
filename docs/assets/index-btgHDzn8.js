@@ -2789,23 +2789,27 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
         `,e.querySelector(`#csvPreview`).classList.remove(`hidden`),m()},r.readAsText(n)};let m=()=>{let t=e.querySelector(`#confirmResetText`)?.value.trim().toUpperCase()===`RESET`,n=(e.querySelector(`#confirmPwd`)?.value.trim()||``)!==``,r=e.querySelector(`#btnUploadRoll`);if(!r)return;let i=t&&n&&u&&u.length>0;r.disabled=!i,r.classList.toggle(`opacity-50`,!i),r.classList.toggle(`cursor-not-allowed`,!i)};e.querySelector(`#confirmResetText`).addEventListener(`input`,m),e.querySelector(`#confirmPwd`).addEventListener(`input`,m),e.querySelector(`#btnUploadRoll`).onclick=async t=>{let n=e.querySelector(`#confirmPwd`).value.trim();if(!u||u.length===0)return O(`No data to upload.`,`error`);if(confirm(`FINAL CONFIRMATION\n\nYou are about to replace the Nominal Roll with ${u.length} students.\nAll nominations, results, and election data will be permanently deleted.\n\nThis CANNOT be undone. Proceed?`)){D(t.target,!0,`Uploading & Resetting...`);try{O(`✅ Nominal Roll updated with ${(await C.adminUploadNominalRoll(n,{headers:d,rows:u})).count||u.length} students. All election data has been reset.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){O(e.message,`error`),D(t.target,!1,`🚨 Upload & Reset Entire System`)}}}};l()}function st(e,t,r){let i=[...e].sort((e,t)=>{let n=String(e.Dept||``).toUpperCase(),r=String(t.Dept||``).toUpperCase();if(n!==r)return n.localeCompare(r);let i=String(e.CLASS).toUpperCase(),a=String(t.CLASS).toUpperCase();return i===a?String(e.NAME).toUpperCase().localeCompare(String(t.NAME).toUpperCase()):i.localeCompare(a)}),a={};i.forEach(e=>{let t=String(e.CLASS).toUpperCase()||`UNKNOWN CLASS`;a[t]||(a[t]=[]),a[t].push(e)});let o=n.COLLEGE_NAME||`GOVERNMENT VICTORIA COLLEGE, PALAKKAD`,s=r||o,c=t?`FINAL NOMINAL ROLL`:`DRAFT NOMINAL ROLL`,l=new Date().toLocaleString(),u=``;Object.keys(a).forEach(e=>{let t=a[e],n=E(t[0].Dept||`UNKNOWN DEPARTMENT`);u+=`
       <div class="page-break">
         <div class="watermark">${c}</div>
-        <div class="header">
-          <div class="college">${E(s)}</div>
-          <div class="title">Department of ${n}</div>
-          <div class="title" style="margin-top: 5px;">${E(e)} — ${c}</div>
-        </div>
-        <div class="meta">
-          <div>Printed on: ${l}</div>
-          <div>Students in Class: ${t.length}</div>
-        </div>
         <table>
-          <thead><tr>
-            <th class="sl">Sl. No</th>
-            <th class="adm">Adm. No</th>
-            <th>Name</th>
-            <th class="remarks">Remarks</th>
-            <th class="sig">Signature</th>
-          </tr></thead>
+          <thead>
+            <tr>
+              <th colspan="5" class="table-header">
+                <div class="college">${E(s)}</div>
+                <div class="title">Department of ${n}</div>
+                <div class="title" style="margin-top: 5px;">${E(e)} — ${c}</div>
+                <div class="meta">
+                  <div>Printed on: ${l}</div>
+                  <div>Students in Class: ${t.length}</div>
+                </div>
+              </th>
+            </tr>
+            <tr>
+              <th class="sl">Sl. No</th>
+              <th class="adm">Adm. No</th>
+              <th>Name</th>
+              <th class="remarks">Remarks</th>
+              <th class="sig">Signature</th>
+            </tr>
+          </thead>
           <tbody>
             ${t.map(e=>`
               <tr>
@@ -2817,10 +2821,14 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
               </tr>
             `).join(``)}
           </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="5" class="table-footer">
+                <div class="footer-content">Returning Officer</div>
+              </td>
+            </tr>
+          </tfoot>
         </table>
-        <div class="footer">
-          <div>Returning Officer</div>
-        </div>
       </div>
     `});let d=window.open(``,`_blank`);d.document.write(`
     <html>
@@ -2835,13 +2843,17 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
             white-space: nowrap; text-transform: uppercase;
             -webkit-print-color-adjust: exact; print-color-adjust: exact;
           }
-          .page-break { page-break-after: always; position: relative; min-height: 90vh; }
+          .page-break { page-break-after: always; position: relative; }
           .page-break:last-child { page-break-after: auto; }
-          .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-          .college { font-size: 18px; font-weight: bold; text-transform: uppercase; }
-          .title { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-top: 2px; }
-          .meta { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 10px; }
           
+          .table-header { background: transparent; border: none; text-align: center; padding: 0 0 10px 0; }
+          .table-header .college { font-size: 18px; font-weight: bold; text-transform: uppercase; color: #000; }
+          .table-header .title { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-top: 2px; color: #000; }
+          .table-header .meta { display: flex; justify-content: space-between; font-size: 10px; margin-top: 10px; border-bottom: 2px solid #000; padding-bottom: 5px; color: #000; font-weight: normal; text-transform: none; }
+          
+          .table-footer { border: none; padding: 40px 40px 0 0; }
+          .footer-content { text-align: right; font-weight: bold; font-size: 11px; }
+
           table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
           th, td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
           th { background: #eee; font-weight: bold; text-transform: uppercase; font-size: 10px; }
@@ -2850,7 +2862,6 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
           .remarks { width: 150px; }
           .sig { width: 120px; }
 
-          .footer { margin-top: 40px; display: flex; justify-content: flex-end; font-weight: bold; padding: 0 40px; }
           .no-print { display: none; }
         </style>
       </head>
