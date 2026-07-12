@@ -133,13 +133,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
           </div>
           <div class="flex flex-wrap gap-2">
             ${!isFinal ? `<button id="btnAddNew" class="btn btn-success">➕ Add Student</button>` : ''}
-            <div class="dropdown relative inline-block">
-              <button class="btn btn-secondary dropdown-toggle">🖨️ Print Roll ▼</button>
-              <div class="dropdown-menu absolute right-0 mt-2 w-48 glass rounded-lg shadow-xl hidden z-50 overflow-hidden border border-white/10">
-                <button class="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10" id="btnPrintSerial">Sorted by Serial No</button>
-                <button class="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10" id="btnPrintClass">Sorted by Class</button>
-              </div>
-            </div>
+            <button id="btnPrintRoll" class="btn btn-secondary">🖨️ Print Roll</button>
             ${!isFinal ? `<button id="btnFinalize" class="btn btn-primary">🔒 Finalize & Lock Roll</button>` : ''}
             ${isFinal ? `<span class="badge badge-valid py-2 px-4">✅ ROLL FINALIZED</span>` : ''}
           </div>
@@ -227,17 +221,6 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
         </div>
       </div>
     `;
-
-    // Dropdown toggle
-    const dropBtn = main.querySelector('.dropdown-toggle');
-    const dropMenu = main.querySelector('.dropdown-menu');
-    if (dropBtn) {
-      dropBtn.onclick = (e) => {
-        e.stopPropagation();
-        dropMenu.classList.toggle('hidden');
-      };
-    }
-    window.onclick = () => dropMenu?.classList.add('hidden');
 
     // Search
     main.querySelector('#searchInput').oninput = (e) => {
@@ -461,22 +444,71 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
 }
 
 
-function triggerRollPrint(students, isFinal, sortBy) {
-  const data = [...students];
-  if (sortBy === 'class') {
-    data.sort((a, b) => {
-      const cA = String(a['CLASS']).toUpperCase();
-      const cB = String(b['CLASS']).toUpperCase();
-      if (cA !== cB) return cA.localeCompare(cB);
-      return String(a['NAME']).toUpperCase().localeCompare(String(b['NAME']).toUpperCase());
-    });
-  } else {
-    data.sort((a, b) => Number(a['Nominal Roll Serial Number']) - Number(b['Nominal Roll Serial Number']));
-  }
+function triggerRollPrint(students, isFinal, collegeName) {
+  // Sort primarily by class, then by name
+  const data = [...students].sort((a, b) => {
+    const cA = String(a['CLASS']).toUpperCase();
+    const cB = String(b['CLASS']).toUpperCase();
+    if (cA !== cB) return cA.localeCompare(cB);
+    return String(a['NAME']).toUpperCase().localeCompare(String(b['NAME']).toUpperCase());
+  });
 
-  const collegeName = CONFIG.COLLEGE_NAME || 'GOVERNMENT VICTORIA COLLEGE, PALAKKAD';
+  // Group by Class
+  const classes = {};
+  data.forEach(s => {
+    const cls = String(s['CLASS']).toUpperCase() || 'UNKNOWN CLASS';
+    if (!classes[cls]) classes[cls] = [];
+    classes[cls].push(s);
+  });
+
+  const fallbackCollege = CONFIG.COLLEGE_NAME || 'GOVERNMENT VICTORIA COLLEGE, PALAKKAD';
+  const cName = collegeName || fallbackCollege;
   const watermark = isFinal ? 'FINAL NOMINAL ROLL' : 'DRAFT NOMINAL ROLL';
   const timestamp = new Date().toLocaleString();
+
+  let htmlContent = '';
+  
+  // Render each class as a separate page
+  Object.keys(classes).forEach(cls => {
+    const studentsInClass = classes[cls];
+    // Attempt to extract Department (assume they share the same department in the class)
+    const dept = esc(studentsInClass[0]['Dept'] || 'UNKNOWN DEPARTMENT');
+
+    htmlContent += `
+      <div class="page-break">
+        <div class="watermark">${watermark}</div>
+        <div class="header">
+          <div class="college">${esc(cName)}</div>
+          <div class="title">Department of ${dept}</div>
+          <div class="title" style="margin-top: 5px;">${esc(cls)} — ${watermark}</div>
+        </div>
+        <div class="meta">
+          <div>Printed on: ${timestamp}</div>
+          <div>Students in Class: ${studentsInClass.length}</div>
+        </div>
+        <table>
+          <thead><tr>
+            <th class="sl">Sl. No</th>
+            <th class="adm">Adm. No</th>
+            <th>Name</th>
+          </tr></thead>
+          <tbody>
+            ${studentsInClass.map(s => `
+              <tr>
+                <td class="sl">${esc(s['Nominal Roll Serial Number'])}</td>
+                <td class="adm">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
+                <td style="font-weight:bold">${esc(s['NAME'])}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="footer">
+          <div>Returning Officer</div>
+          <div>Principal</div>
+        </div>
+      </div>
+    `;
+  });
 
   const printWin = window.open('', '_blank');
   printWin.document.write(`
@@ -491,55 +523,25 @@ function triggerRollPrint(students, isFinal, sortBy) {
             font-size: 80px; color: rgba(0,0,0,0.05); font-weight: bold; pointer-events: none; z-index: -1;
             white-space: nowrap; text-transform: uppercase;
           }
+          .page-break { page-break-after: always; position: relative; min-height: 90vh; }
+          .page-break:last-child { page-break-after: auto; }
           .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-          .college { font-size: 18px; font-weight: bold; }
-          .title { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-top: 5px; }
+          .college { font-size: 18px; font-weight: bold; text-transform: uppercase; }
+          .title { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-top: 2px; }
           .meta { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 10px; }
           
-          table { width: 100%; border-collapse: collapse; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
           th, td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
           th { background: #eee; font-weight: bold; text-transform: uppercase; font-size: 10px; }
-          .sl { width: 40px; text-align: center; font-weight: bold; }
-          .adm { width: 80px; font-family: monospace; }
-          .cls { width: 180px; font-size: 9px; }
+          .sl { width: 50px; text-align: center; font-weight: bold; }
+          .adm { width: 100px; font-family: monospace; }
 
-          .footer { margin-top: 30px; display: flex; justify-content: space-between; font-weight: bold; }
+          .footer { margin-top: 40px; display: flex; justify-content: space-between; font-weight: bold; padding: 0 40px; }
           .no-print { display: none; }
         </style>
       </head>
       <body>
-        <div class="watermark">${watermark}</div>
-        <div class="header">
-          <div class="college">${esc(collegeName)}</div>
-          <div class="title">College Union Election — ${watermark}</div>
-        </div>
-        <div class="meta">
-          <div>Sorted by: ${sortBy === 'class' ? 'Class' : 'Serial Number'}</div>
-          <div>Printed on: ${timestamp}</div>
-          <div>Total Students: ${data.length}</div>
-        </div>
-        <table>
-          <thead><tr>
-            <th class="sl">Sl. No</th>
-            <th class="adm">Adm. No</th>
-            <th>Name</th>
-            <th class="cls">Class</th>
-          </tr></thead>
-          <tbody>
-            ${data.map(s => `
-              <tr>
-                <td class="sl">${esc(s['Nominal Roll Serial Number'])}</td>
-                <td class="adm">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
-                <td style="font-weight:bold">${esc(s['NAME'])}</td>
-                <td class="cls">${esc(s['CLASS'])}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        <div class="footer">
-          <div>Returning Officer</div>
-          <div>Principal</div>
-        </div>
+        ${htmlContent}
         <script>window.print();</script>
       </body>
     </html>

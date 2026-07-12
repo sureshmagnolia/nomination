@@ -2685,13 +2685,7 @@ Are you absolutely sure?`))return;E(t,!0,`🗑️ Wiping...`);let i=n.querySelec
           </div>
           <div class="flex flex-wrap gap-2">
             ${i?``:`<button id="btnAddNew" class="btn btn-success">➕ Add Student</button>`}
-            <div class="dropdown relative inline-block">
-              <button class="btn btn-secondary dropdown-toggle">🖨️ Print Roll ▼</button>
-              <div class="dropdown-menu absolute right-0 mt-2 w-48 glass rounded-lg shadow-xl hidden z-50 overflow-hidden border border-white/10">
-                <button class="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10" id="btnPrintSerial">Sorted by Serial No</button>
-                <button class="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10" id="btnPrintClass">Sorted by Class</button>
-              </div>
-            </div>
+            <button id="btnPrintRoll" class="btn btn-secondary">🖨️ Print Roll</button>
             ${i?``:`<button id="btnFinalize" class="btn btn-primary">🔒 Finalize & Lock Roll</button>`}
             ${i?`<span class="badge badge-valid py-2 px-4">✅ ROLL FINALIZED</span>`:``}
           </div>
@@ -2778,73 +2772,44 @@ Are you absolutely sure?`))return;E(t,!0,`🗑️ Wiping...`);let i=n.querySelec
           </div>
         </div>
       </div>
-    `;let r=e.querySelector(`.dropdown-toggle`),u=e.querySelector(`.dropdown-menu`);r&&(r.onclick=e=>{e.stopPropagation(),u.classList.toggle(`hidden`)}),window.onclick=()=>u?.classList.add(`hidden`),e.querySelector(`#searchInput`).oninput=t=>{o=t.target.value,l(),e.querySelector(`#searchInput`).focus();let n=e.querySelector(`#searchInput`).value;e.querySelector(`#searchInput`).value=``,e.querySelector(`#searchInput`).value=n},i||(e.querySelector(`#btnAddNew`).onclick=()=>e.querySelector(`#addModal`).classList.remove(`hidden`),e.querySelector(`#btnCancelAdd`).onclick=()=>e.querySelector(`#addModal`).classList.add(`hidden`),e.querySelector(`#btnConfirmAdd`).onclick=async n=>{let r={serial:e.querySelector(`#addSerial`).value,name:e.querySelector(`#addName`).value,class:e.querySelector(`#addClass`).value,admission:e.querySelector(`#addAdm`).value,dept:e.querySelector(`#addDept`).value};if(!r.serial||!r.name||!r.class)return D(`Please fill required fields.`,`warning`);E(n.target,!0,`Save Student`);try{await C.adminAddStudent(t,r),D(`Student added to roll.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){D(e.message,`error`),E(n.target,!1,`Save Student`)}},e.querySelectorAll(`.delete-student`).forEach(n=>{n.onclick=async()=>{if(confirm(`Delete student #${n.dataset.serial}?`))try{await C.adminDeleteStudent(t,n.dataset.serial),D(`Student removed.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){D(e.message,`error`)}}}),e.querySelector(`#btnFinalize`).onclick=async n=>{if(confirm(`FINALIZATION WARNING:
+    `,e.querySelector(`#searchInput`).oninput=t=>{o=t.target.value,l(),e.querySelector(`#searchInput`).focus();let n=e.querySelector(`#searchInput`).value;e.querySelector(`#searchInput`).value=``,e.querySelector(`#searchInput`).value=n},i||(e.querySelector(`#btnAddNew`).onclick=()=>e.querySelector(`#addModal`).classList.remove(`hidden`),e.querySelector(`#btnCancelAdd`).onclick=()=>e.querySelector(`#addModal`).classList.add(`hidden`),e.querySelector(`#btnConfirmAdd`).onclick=async n=>{let r={serial:e.querySelector(`#addSerial`).value,name:e.querySelector(`#addName`).value,class:e.querySelector(`#addClass`).value,admission:e.querySelector(`#addAdm`).value,dept:e.querySelector(`#addDept`).value};if(!r.serial||!r.name||!r.class)return D(`Please fill required fields.`,`warning`);E(n.target,!0,`Save Student`);try{await C.adminAddStudent(t,r),D(`Student added to roll.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){D(e.message,`error`),E(n.target,!1,`Save Student`)}},e.querySelectorAll(`.delete-student`).forEach(n=>{n.onclick=async()=>{if(confirm(`Delete student #${n.dataset.serial}?`))try{await C.adminDeleteStudent(t,n.dataset.serial),D(`Student removed.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){D(e.message,`error`)}}}),e.querySelector(`#btnFinalize`).onclick=async n=>{if(confirm(`FINALIZATION WARNING:
 
 1. All students will be sorted by Class and Name.
 2. NEW Serial Numbers will be generated sequentially (1, 2, 3...).
 3. The roll will be LOCKED for all future edits.
 
 Are you absolutely sure?`)){E(n.target,!0,`Finalizing...`);try{await C.adminFinalizeRoll(t),D(`Nominal Roll Finalized Successfully!`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){D(e.message,`error`),E(n.target,!1,`Finalize & Lock Roll`)}}}),e.querySelector(`#btnPrintSerial`).onclick=()=>st(a,i,`serial`),e.querySelector(`#btnPrintClass`).onclick=()=>st(a,i,`class`),e.querySelector(`#toggleUploadPanel`).onclick=()=>{let t=e.querySelector(`#uploadPanelBody`),n=e.querySelector(`#uploadChevron`);t.classList.toggle(`hidden`),n.style.transform=t.classList.contains(`hidden`)?``:`rotate(180deg)`},e.querySelector(`#btnDownloadTemplate`).onclick=async e=>{let n=e.currentTarget;E(n,!0,`Downloading...`);try{let e=await C.adminGetNominalRollTemplate(t),n=[e.headers.join(`,`)];e.rows.forEach(e=>{n.push(e.map(e=>{let t=String(e??``);return t.includes(`,`)||t.includes(`"`)?`"${t.replace(/"/g,`""`)}"`:t}).join(`,`))});let r=new Blob([n.join(`\r
-`)],{type:`text/csv;charset=utf-8;`}),i=URL.createObjectURL(r),a=document.createElement(`a`);a.href=i,a.download=`NominalRoll_Template.csv`,a.click(),URL.revokeObjectURL(i),D(`Template downloaded!`,`success`)}catch(e){D(e.message,`error`)}finally{E(n,!1,`⬇️ Download Template`)}};let d=null,f=[],p=[`Nominal Roll Serial Number`,`NAME`,`CLASS`,`ADMISION NO`,`Dept`],m=[`Nominal Roll Serial Number`,`NAME`,`YEAR`,`STREAM`,`ADMISION NO`,`Dept`];e.querySelector(`#csvFileInput`).onchange=t=>{let n=t.target.files[0];if(!n)return;e.querySelector(`#filePickerLabel`).textContent=`📄 ${n.name}`;let r=new FileReader;r.onload=t=>{let n=t.target.result.replace(/\r\n/g,`
+`)],{type:`text/csv;charset=utf-8;`}),i=URL.createObjectURL(r),a=document.createElement(`a`);a.href=i,a.download=`NominalRoll_Template.csv`,a.click(),URL.revokeObjectURL(i),D(`Template downloaded!`,`success`)}catch(e){D(e.message,`error`)}finally{E(n,!1,`⬇️ Download Template`)}};let r=null,u=[],d=[`Nominal Roll Serial Number`,`NAME`,`CLASS`,`ADMISION NO`,`Dept`],f=[`Nominal Roll Serial Number`,`NAME`,`YEAR`,`STREAM`,`ADMISION NO`,`Dept`];e.querySelector(`#csvFileInput`).onchange=t=>{let n=t.target.files[0];if(!n)return;e.querySelector(`#filePickerLabel`).textContent=`📄 ${n.name}`;let i=new FileReader;i.onload=t=>{let n=t.target.result.replace(/\r\n/g,`
 `).replace(/\r/g,`
 `).split(`
-`).filter(e=>e.trim());if(n.length<2){D(`CSV file appears empty.`,`error`);return}let r=-1;for(let e=0;e<Math.min(n.length,20);e++){let t=n[e].split(`,`).map(e=>e.trim().replace(/^"|"$/g,``));if(p.every(e=>t.includes(e))){r=e,f=p;break}if(m.every(e=>t.includes(e))){r=e,f=m;break}}if(r===-1){D(`Missing required columns. Please use one of the standard templates.`,`error`),e.querySelector(`#csvPreview`).classList.add(`hidden`);return}let i=n[r].split(`,`).map(e=>e.trim().replace(/^"|"$/g,``)),a=f.map(e=>i.indexOf(e));d=n.slice(r+1).map(e=>{let t=[],n=``,r=!1;for(let i of e+`,`)i===`"`?r=!r:i===`,`&&!r?(t.push(n.trim()),n=``):n+=i;return a.map(e=>t[e]??``)}).filter(e=>e[1]&&e[1].trim()!==``&&e[1]!==`NAME`),f.indexOf(`NAME`);let o=f.indexOf(`Dept`),s=[];s=f===p?[...new Set(d.map(e=>e[f.indexOf(`CLASS`)]))].sort():[...new Set(d.map(e=>`${e[f.indexOf(`YEAR`)]} ${e[f.indexOf(`STREAM`)]} ${e[o]}`.trim()))].sort();let c=[...new Set(d.map(e=>e[o]))].sort();e.querySelector(`#csvSummary`).innerHTML=`
-          <div>👥 <strong class="text-white">${d.length}</strong> students detected using <strong>${f===p?`Legacy Format`:`Explicit Format`}</strong></div>
-          <div>🏛️ <strong class="text-white">${c.length}</strong> departments: ${c.map(e=>`<span class="text-indigo-300">${T(e)}</span>`).join(`, `)}</div>
-          <div>📚 <strong class="text-white">${s.length}</strong> unique classes found</div>
-        `,e.querySelector(`#csvPreview`).classList.remove(`hidden`),h()},r.readAsText(n)};let h=()=>{let t=e.querySelector(`#confirmResetText`)?.value.trim().toUpperCase()===`RESET`,n=(e.querySelector(`#confirmPwd`)?.value.trim()||``)!==``,r=e.querySelector(`#btnUploadRoll`);if(!r)return;let i=t&&n&&d&&d.length>0;r.disabled=!i,r.classList.toggle(`opacity-50`,!i),r.classList.toggle(`cursor-not-allowed`,!i)};e.querySelector(`#confirmResetText`).addEventListener(`input`,h),e.querySelector(`#confirmPwd`).addEventListener(`input`,h),e.querySelector(`#btnUploadRoll`).onclick=async t=>{let n=e.querySelector(`#confirmPwd`).value.trim();if(!d||d.length===0)return D(`No data to upload.`,`error`);if(confirm(`FINAL CONFIRMATION\n\nYou are about to replace the Nominal Roll with ${d.length} students.\nAll nominations, results, and election data will be permanently deleted.\n\nThis CANNOT be undone. Proceed?`)){E(t.target,!0,`Uploading & Resetting...`);try{D(`✅ Nominal Roll updated with ${(await C.adminUploadNominalRoll(n,{headers:f,rows:d})).count||d.length} students. All election data has been reset.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){D(e.message,`error`),E(t.target,!1,`🚨 Upload & Reset Entire System`)}}}};l()}function st(e,t,r){let i=[...e];r===`class`?i.sort((e,t)=>{let n=String(e.CLASS).toUpperCase(),r=String(t.CLASS).toUpperCase();return n===r?String(e.NAME).toUpperCase().localeCompare(String(t.NAME).toUpperCase()):n.localeCompare(r)}):i.sort((e,t)=>Number(e[`Nominal Roll Serial Number`])-Number(t[`Nominal Roll Serial Number`]));let a=n.COLLEGE_NAME||`GOVERNMENT VICTORIA COLLEGE, PALAKKAD`,o=t?`FINAL NOMINAL ROLL`:`DRAFT NOMINAL ROLL`,s=new Date().toLocaleString(),c=window.open(``,`_blank`);c.document.write(`
-    <html>
-      <head>
-        <title>${o}</title>
-        <style>
-          @page { margin: 15mm; }
-          body { font-family: sans-serif; color: #000; line-height: 1.4; font-size: 11px; margin: 0; padding: 0; }
-          .watermark { 
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 80px; color: rgba(0,0,0,0.05); font-weight: bold; pointer-events: none; z-index: -1;
-            white-space: nowrap; text-transform: uppercase;
-          }
-          .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-          .college { font-size: 18px; font-weight: bold; }
-          .title { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-top: 5px; }
-          .meta { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 10px; }
-          
-          table { width: 100%; border-collapse: collapse; }
-          th, td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
-          th { background: #eee; font-weight: bold; text-transform: uppercase; font-size: 10px; }
-          .sl { width: 40px; text-align: center; font-weight: bold; }
-          .adm { width: 80px; font-family: monospace; }
-          .cls { width: 180px; font-size: 9px; }
-
-          .footer { margin-top: 30px; display: flex; justify-content: space-between; font-weight: bold; }
-          .no-print { display: none; }
-        </style>
-      </head>
-      <body>
-        <div class="watermark">${o}</div>
+`).filter(e=>e.trim());if(n.length<2){D(`CSV file appears empty.`,`error`);return}let i=-1;for(let e=0;e<Math.min(n.length,20);e++){let t=n[e].split(`,`).map(e=>e.trim().replace(/^"|"$/g,``));if(d.every(e=>t.includes(e))){i=e,u=d;break}if(f.every(e=>t.includes(e))){i=e,u=f;break}}if(i===-1){D(`Missing required columns. Please use one of the standard templates.`,`error`),e.querySelector(`#csvPreview`).classList.add(`hidden`);return}let a=n[i].split(`,`).map(e=>e.trim().replace(/^"|"$/g,``)),o=u.map(e=>a.indexOf(e));r=n.slice(i+1).map(e=>{let t=[],n=``,r=!1;for(let i of e+`,`)i===`"`?r=!r:i===`,`&&!r?(t.push(n.trim()),n=``):n+=i;return o.map(e=>t[e]??``)}).filter(e=>e[1]&&e[1].trim()!==``&&e[1]!==`NAME`),u.indexOf(`NAME`);let s=u.indexOf(`Dept`),c=[];c=u===d?[...new Set(r.map(e=>e[u.indexOf(`CLASS`)]))].sort():[...new Set(r.map(e=>`${e[u.indexOf(`YEAR`)]} ${e[u.indexOf(`STREAM`)]} ${e[s]}`.trim()))].sort();let l=[...new Set(r.map(e=>e[s]))].sort();e.querySelector(`#csvSummary`).innerHTML=`
+          <div>👥 <strong class="text-white">${r.length}</strong> students detected using <strong>${u===d?`Legacy Format`:`Explicit Format`}</strong></div>
+          <div>🏛️ <strong class="text-white">${l.length}</strong> departments: ${l.map(e=>`<span class="text-indigo-300">${T(e)}</span>`).join(`, `)}</div>
+          <div>📚 <strong class="text-white">${c.length}</strong> unique classes found</div>
+        `,e.querySelector(`#csvPreview`).classList.remove(`hidden`),p()},i.readAsText(n)};let p=()=>{let t=e.querySelector(`#confirmResetText`)?.value.trim().toUpperCase()===`RESET`,n=(e.querySelector(`#confirmPwd`)?.value.trim()||``)!==``,i=e.querySelector(`#btnUploadRoll`);if(!i)return;let a=t&&n&&r&&r.length>0;i.disabled=!a,i.classList.toggle(`opacity-50`,!a),i.classList.toggle(`cursor-not-allowed`,!a)};e.querySelector(`#confirmResetText`).addEventListener(`input`,p),e.querySelector(`#confirmPwd`).addEventListener(`input`,p),e.querySelector(`#btnUploadRoll`).onclick=async t=>{let n=e.querySelector(`#confirmPwd`).value.trim();if(!r||r.length===0)return D(`No data to upload.`,`error`);if(confirm(`FINAL CONFIRMATION\n\nYou are about to replace the Nominal Roll with ${r.length} students.\nAll nominations, results, and election data will be permanently deleted.\n\nThis CANNOT be undone. Proceed?`)){E(t.target,!0,`Uploading & Resetting...`);try{D(`✅ Nominal Roll updated with ${(await C.adminUploadNominalRoll(n,{headers:u,rows:r})).count||r.length} students. All election data has been reset.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){D(e.message,`error`),E(t.target,!1,`🚨 Upload & Reset Entire System`)}}}};l()}function st(e,t,r){let i=[...e].sort((e,t)=>{let n=String(e.CLASS).toUpperCase(),r=String(t.CLASS).toUpperCase();return n===r?String(e.NAME).toUpperCase().localeCompare(String(t.NAME).toUpperCase()):n.localeCompare(r)}),a={};i.forEach(e=>{let t=String(e.CLASS).toUpperCase()||`UNKNOWN CLASS`;a[t]||(a[t]=[]),a[t].push(e)});let o=n.COLLEGE_NAME||`GOVERNMENT VICTORIA COLLEGE, PALAKKAD`,s=r||o,c=t?`FINAL NOMINAL ROLL`:`DRAFT NOMINAL ROLL`,l=new Date().toLocaleString(),u=``;Object.keys(a).forEach(e=>{let t=a[e],n=T(t[0].Dept||`UNKNOWN DEPARTMENT`);u+=`
+      <div class="page-break">
+        <div class="watermark">${c}</div>
         <div class="header">
-          <div class="college">${T(a)}</div>
-          <div class="title">College Union Election — ${o}</div>
+          <div class="college">${T(s)}</div>
+          <div class="title">Department of ${n}</div>
+          <div class="title" style="margin-top: 5px;">${T(e)} — ${c}</div>
         </div>
         <div class="meta">
-          <div>Sorted by: ${r===`class`?`Class`:`Serial Number`}</div>
-          <div>Printed on: ${s}</div>
-          <div>Total Students: ${i.length}</div>
+          <div>Printed on: ${l}</div>
+          <div>Students in Class: ${t.length}</div>
         </div>
         <table>
           <thead><tr>
             <th class="sl">Sl. No</th>
             <th class="adm">Adm. No</th>
             <th>Name</th>
-            <th class="cls">Class</th>
           </tr></thead>
           <tbody>
-            ${i.map(e=>`
+            ${t.map(e=>`
               <tr>
                 <td class="sl">${T(e[`Nominal Roll Serial Number`])}</td>
                 <td class="adm">${T(e[`ADMISION NO`]||e[`ADMISSION NO`]||`–`)}</td>
                 <td style="font-weight:bold">${T(e.NAME)}</td>
-                <td class="cls">${T(e.CLASS)}</td>
               </tr>
             `).join(``)}
           </tbody>
@@ -2853,10 +2818,42 @@ Are you absolutely sure?`)){E(n.target,!0,`Finalizing...`);try{await C.adminFina
           <div>Returning Officer</div>
           <div>Principal</div>
         </div>
+      </div>
+    `});let d=window.open(``,`_blank`);d.document.write(`
+    <html>
+      <head>
+        <title>${c}</title>
+        <style>
+          @page { margin: 15mm; }
+          body { font-family: sans-serif; color: #000; line-height: 1.4; font-size: 11px; margin: 0; padding: 0; }
+          .watermark { 
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 80px; color: rgba(0,0,0,0.05); font-weight: bold; pointer-events: none; z-index: -1;
+            white-space: nowrap; text-transform: uppercase;
+          }
+          .page-break { page-break-after: always; position: relative; min-height: 90vh; }
+          .page-break:last-child { page-break-after: auto; }
+          .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+          .college { font-size: 18px; font-weight: bold; text-transform: uppercase; }
+          .title { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-top: 2px; }
+          .meta { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 10px; }
+          
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th, td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
+          th { background: #eee; font-weight: bold; text-transform: uppercase; font-size: 10px; }
+          .sl { width: 50px; text-align: center; font-weight: bold; }
+          .adm { width: 100px; font-family: monospace; }
+
+          .footer { margin-top: 40px; display: flex; justify-content: space-between; font-weight: bold; padding: 0 40px; }
+          .no-print { display: none; }
+        </style>
+      </head>
+      <body>
+        ${u}
         <script>window.print();<\/script>
       </body>
     </html>
-  `),c.document.close()}async function ct(e){let t=L();if(t){R(e,`schedule`,`
+  `),d.document.close()}async function ct(e){let t=L();if(t){R(e,`schedule`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading schedule...</p></div>
   `);try{let n=await C.getPublicSchedule();lt(e.querySelector(`#adminMain`),t,n)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${T(t.message)}</div>`}}}function lt(e,t,n){let r=e=>e?new Date(e).toISOString().slice(0,16):``;e.innerHTML=`
     <div class="page-enter space-y-6 max-w-4xl">
