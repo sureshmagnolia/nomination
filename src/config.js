@@ -12,6 +12,7 @@ export const CONFIG = {
 
   // College name for printed forms
   COLLEGE_NAME: 'Government Victoria College, Palakkad',
+  COLLEGE_SHORT_NAME: 'GVC',
 
   // Posts are now managed dynamically via the Admin → Manage Posts page.
   // This array is used only as a fallback if the API hasn't loaded yet.

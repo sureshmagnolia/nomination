@@ -5,6 +5,7 @@
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
+import { CONFIG } from '../../config.js';
 
 export async function renderAdminPublish(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -109,7 +110,7 @@ function renderPublishPage(main, settings, nominations, postsData, pwd) {
     
     let html = `
       <div style="text-align:center;margin-bottom:30px;border-bottom:2px solid #000;padding-bottom:15px">
-        <div style="font-size:12px;color:#444">Government Victoria College, Palakkad</div>
+        <div style="font-size:12px;color:#444">${CONFIG.COLLEGE_NAME}</div>
         <h1 style="margin:5px 0;font-size:22px;text-transform:uppercase">College Union Election 2026-27</h1>
         <h2 style="margin:0;font-size:18px;color:#000">${isFinal ? 'FINAL LIST OF ELIGIBLE CANDIDATES' : 'LIST OF VALID NOMINATIONS'}</h2>
       </div>

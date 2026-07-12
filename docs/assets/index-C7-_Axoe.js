@@ -1,4 +1,4 @@
-var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],enumerable:!0});return n||e(r,Symbol.toStringTag,{value:`Module`}),r};(function(){let e=document.createElement(`link`).relList;if(e&&e.supports&&e.supports(`modulepreload`))return;for(let e of document.querySelectorAll(`link[rel="modulepreload"]`))n(e);new MutationObserver(e=>{for(let t of e)if(t.type===`childList`)for(let e of t.addedNodes)e.tagName===`LINK`&&e.rel===`modulepreload`&&n(e)}).observe(document,{childList:!0,subtree:!0});function t(e){let t={};return e.integrity&&(t.integrity=e.integrity),e.referrerPolicy&&(t.referrerPolicy=e.referrerPolicy),e.crossOrigin===`use-credentials`?t.credentials=`include`:e.crossOrigin===`anonymous`?t.credentials=`omit`:t.credentials=`same-origin`,t}function n(e){if(e.ep)return;e.ep=!0;let n=t(e);fetch(e.href,n)}})();var n={APPS_SCRIPT_URL:`https://script.google.com/macros/s/AKfycbw29XuhvNI4cV-tlAWz5IaRrWPY1T9P7ZiQJbu-7za9226PyEqlhuLOrOMTG2QulzzOog/exec`,ELECTION_DATE:`2026-10-12`,COLLEGE_NAME:`Government Victoria College, Palakkad`,DEFAULT_POSTS:[{post:`The Chairman`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The Vice Chairman`,femaleOnly:!0,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The Secretary`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The Joint Secretary`,femaleOnly:!0,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The Chief Student Editor`,femaleOnly:!1,finalYearIneligible:!0,yearRestriction:``,deptRestriction:!1},{post:`The Secretary Fine Arts`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The General Captain For Sports And Games`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The University Union Councillor`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`I UG Representative`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:`1`,deptRestriction:!1},{post:`II UG Representative`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:`2`,deptRestriction:!1},{post:`III UG Representative`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:`3`,deptRestriction:!1},{post:`PG Representative`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:`PG`,deptRestriction:!1},{post:`Association Secretary Botany`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Chemistry`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Commerce`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Computer Science`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Economics`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary English`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Hindi`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary History`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Malayalam`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Mathematics`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Physics`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Psychology`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Sanskrit`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Tamil`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Zoology`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0}]},r=t({router:()=>o}),i={},a=`/`,o={on(e,t){return i[e]=t,this},setDefault(e){return a=e,this},navigate(e,t={}){window.history.pushState({path:e,params:t},``,`#${e}`),this._resolve(e,t)},start(){window.addEventListener(`popstate`,e=>{let{path:t,params:n}=e.state||{path:a,params:{}};this._resolve(t,n)});let e=window.location.hash.replace(`#`,``)||a;this._resolve(e,{})},_resolve(e,t){let n=i[e]||i[a];n&&n(t)}},s=n.APPS_SCRIPT_URL,c={},l=[],u=!1,d=null;function f(){return sessionStorage.getItem(`adminSessionToken`)||localStorage.getItem(`adminSessionToken`)}function p(){localStorage.removeItem(`adminPwd`),localStorage.removeItem(`adminLoginDate`),localStorage.removeItem(`adminSessionToken`),sessionStorage.removeItem(`adminSessionToken`),c={},alert(`⚠️ Another admin has logged in from a different device. You have been logged out.`),window.location.hash=`/admin`}function m(e){d=e}function h(e){d&&d(e)}function g(){window._unloadGuardAdded||(window._unloadGuardAdded=!0,window.addEventListener(`beforeunload`,e=>{if(l.length>0||u)return e.returnValue=`Changes are still saving. Are you sure you want to leave?`,e.returnValue}))}async function _(){if(!(u||l.length===0)){for(u=!0,g(),h(`saving`);l.length>0;){let e=l[0];try{let t=await fetch(s,{method:`POST`,headers:{"Content-Type":`text/plain;charset=utf-8`},body:JSON.stringify(e.body)});if(!t.ok)throw Error(`Network error: ${t.status}`);let n=await t.json();if(n.error===`SESSION_EXPIRED`){p(),l.length=0;break}if(n.error)throw Error(n.error);e.resolve&&e.resolve(n)}catch(t){console.error(`Background sync failed for`,e.body.action,t),e.reject&&e.reject(t)}l.shift()}u=!1,h(`saved`),setTimeout(()=>{!u&&l.length===0&&h(`idle`)},3e3)}}async function v(e){let t=f();t&&e.password&&(e={...e,sessionToken:t});let n=JSON.stringify(e);if(c[n]!==void 0)return c[n];let r=new URL(s);Object.entries(e).forEach(([e,t])=>r.searchParams.append(e,t)),r.searchParams.append(`_t`,Date.now());let i=await fetch(r.toString());if(!i.ok)throw Error(`Network error: ${i.status}`);let a=await i.json();if(a.error===`SESSION_EXPIRED`)throw p(),Error(`SESSION_EXPIRED`);if(a.error)throw Error(a.error);return c[n]=a,a}async function y(e){let t=f();t&&e.password&&(e={...e,sessionToken:t});let n=await fetch(s,{method:`POST`,headers:{"Content-Type":`text/plain;charset=utf-8`},body:JSON.stringify(e)});if(!n.ok)throw Error(`Network error: ${n.status}`);let r=await n.json();if(r.error===`SESSION_EXPIRED`)throw p(),Error(`SESSION_EXPIRED`);if(r.error)throw Error(r.error);return r}function b(e){let t=f();return t&&e.password&&(e={...e,sessionToken:t}),new Promise((t,n)=>{l.push({body:e,resolve:t,reject:n}),_()})}function x(e,t){let n=JSON.stringify(e);typeof t==`function`?c[n]!==void 0&&(c[n]=t(c[n])):c[n]=t}function S(e){Object.keys(c).forEach(t=>{t.includes(e)&&delete c[t]})}var C={invalidateCache:S,initPublicData:async()=>{let e=[C.getPublicSchedule().catch(()=>null),C.getSettings().catch(()=>null),C.getPosts().catch(()=>null),C.getResults().catch(()=>null),C.getNominalRoll().catch(()=>null),C.getPublicNominations().catch(()=>null),C.getValidNominations().catch(()=>null),C.getFinalNominations().catch(()=>null)];await Promise.all(e)},initAdminData:async e=>{let t=[C.adminGetNominations(e).catch(()=>null),C.adminGetSettings(e).catch(()=>null),C.adminGetPosts(e).catch(()=>null),C.adminGetBooths(e).catch(()=>null),C.adminGetLocations(e).catch(()=>null),C.adminGetBallotPlan(e).catch(()=>null),C.adminGetCountingMatrix(e).catch(()=>null)];await Promise.all(t)},getNominalRoll:()=>v({action:`getNominalRoll`}),getPosts:()=>v({action:`getPosts`}),getPublicNominations:()=>v({action:`getPublicNominations`}),getNomination:e=>v({action:`getNomination`,id:e}),getValidNominations:()=>v({action:`getValidNominations`}),getFinalNominations:()=>v({action:`getFinalNominations`}),submitNomination:e=>y({action:`submitNomination`,...e}),submitWithdrawal:e=>y({action:`submitWithdrawal`,id:e}),adminLogin:async e=>{let t=await fetch(s,{method:`POST`,headers:{"Content-Type":`text/plain;charset=utf-8`},body:JSON.stringify({action:`adminLogin`,password:e})});if(!t.ok)throw Error(`Network error: ${t.status}`);let n=await t.json();if(n.error)throw Error(n.error);return n.sessionToken&&sessionStorage.setItem(`adminSessionToken`,n.sessionToken),n},adminSendOTP:e=>y({action:`adminSendOTP`,password:e}),adminVerifyOTP:(e,t)=>y({action:`adminVerifyOTP`,password:e,otp:t}),adminGetNominations:e=>v({action:`adminGetNominations`,password:e}),adminVerifyNomination:(e,t,n)=>(x({action:`adminGetNominations`,password:e},e=>{let r=e.find(e=>e.id===t);return r&&(r.status=n),e}),b({action:`adminVerifyNomination`,password:e,id:t,status:n}),Promise.resolve({ok:!0})),adminApproveWithdrawal:(e,t)=>(x({action:`adminGetNominations`,password:e},e=>{let n=e.find(e=>e.id===t);return n&&(n.withdrawalStatus=`Approved`),e}),b({action:`adminApproveWithdrawal`,password:e,id:t}),Promise.resolve({ok:!0})),adminDirectWithdrawal:(e,t)=>(x({action:`adminGetNominations`,password:e},e=>{let n=e.find(e=>e.id===t);return n&&(n.withdrawalStatus=`Approved`),e}),b({action:`adminDirectWithdrawal`,password:e,id:t}),Promise.resolve({ok:!0})),adminPublishValidList:e=>(x({action:`adminGetSettings`,password:e},e=>({...e,validListPublished:`true`})),b({action:`adminPublishValidList`,password:e}),S(`getValidNominations`),Promise.resolve({ok:!0})),adminPublishFinalList:e=>(x({action:`adminGetSettings`,password:e},e=>({...e,finalListPublished:`true`})),b({action:`adminPublishFinalList`,password:e}),S(`getFinalNominations`),Promise.resolve({ok:!0})),adminUnpublishValidList:async e=>(x({action:`adminGetSettings`,password:e},e=>({...e,validListPublished:`false`,finalListPublished:`false`})),await b({action:`adminUnpublishValidList`,password:e}),S(`getValidNominations`),S(`getFinalNominations`),{ok:!0}),adminUnpublishFinalList:async e=>(x({action:`adminGetSettings`,password:e},e=>({...e,finalListPublished:`false`})),await b({action:`adminUnpublishFinalList`,password:e}),S(`getFinalNominations`),{ok:!0}),adminGetSettings:e=>v({action:`adminGetSettings`,password:e}),adminUpdateSettings:(e,t)=>(x({action:`adminGetSettings`,password:e},e=>({...e,...t})),b({action:`adminUpdateSettings`,password:e,...t}),Promise.resolve({ok:!0})),getPublicSettings:()=>v({action:`adminGetSettings`,password:`NONE`}),adminGetPosts:e=>v({action:`adminGetPosts`,password:e}),adminAddPost:async(e,t)=>(x({action:`adminGetPosts`,password:e},e=>[...e,t]),await b({action:`adminAddPost`,password:e,...t}),S(`getPosts`),{ok:!0}),adminUpdatePost:async(e,t)=>(x({action:`adminGetPosts`,password:e},e=>{let n=e.findIndex(e=>e.post===t.post);return n!==-1&&(e[n]=t),e}),await b({action:`adminUpdatePost`,password:e,...t}),S(`getPosts`),{ok:!0}),adminDeletePost:async(e,t)=>(x({action:`adminGetPosts`,password:e},e=>e.filter(e=>e.post!==t)),await b({action:`adminDeletePost`,password:e,postName:t}),S(`getPosts`),{ok:!0}),adminReorderPosts:async(e,t)=>(x({action:`adminGetPosts`,password:e},e=>{let n={};return e.forEach(e=>n[e.post]=e),t.map(e=>n[e]).filter(Boolean)}),await b({action:`adminReorderPosts`,password:e,posts:t}),S(`getPosts`),{ok:!0}),adminGetBooths:e=>v({action:`adminGetBooths`,password:e}),adminSaveBooths:(e,t)=>(x({action:`adminGetBooths`,password:e},t),b({action:`adminSaveBooths`,password:e,booths:t}),Promise.resolve({ok:!0})),adminGetLocations:e=>v({action:`adminGetLocations`,password:e}),adminSaveLocations:(e,t)=>(x({action:`adminGetLocations`,password:e},t),b({action:`adminSaveLocations`,password:e,locations:t}),Promise.resolve({ok:!0})),getResults:()=>v({action:`getResults`}),adminSaveResults:(e,t)=>(b({action:`adminSaveResults`,password:e,results:t}).then(()=>S(`getResults`)),Promise.resolve({ok:!0})),adminInjectTestData:e=>y({action:`adminInjectTestData`,password:e}),adminWipeData:e=>(c={},y({action:`adminWipeData`,password:e})),adminGetCountingMatrix:e=>v({action:`adminGetCountingMatrix`,password:e}),adminSaveCountingMatrix:(e,t)=>(x({action:`adminGetCountingMatrix`,password:e},t),b({action:`adminSaveCountingMatrix`,password:e,matrixData:t}),Promise.resolve({ok:!0})),adminGenerateBallotPlan:async e=>{let t=await b({action:`adminGenerateBallotPlan`,password:e});return x({action:`adminGetBallotPlan`,password:e},t.plan),t},adminGetBallotPlan:e=>v({action:`adminGetBallotPlan`,password:e}),adminRunAudit:e=>y({action:`adminRunAudit`,password:e}),getSettings:()=>v({action:`getSettings`}),adminAddStudent:async(e,t)=>(await b({action:`adminAddStudent`,password:e,...t}),S(`getNominalRoll`),{ok:!0}),adminDeleteStudent:async(e,t)=>(await b({action:`adminDeleteStudent`,password:e,serial:t}),S(`getNominalRoll`),{ok:!0}),adminFinalizeRoll:async e=>(await b({action:`adminFinalizeRoll`,password:e}),S(`getNominalRoll`),{ok:!0}),adminGetNominalRollTemplate:e=>v({action:`adminGetNominalRollTemplate`,password:e}),adminUploadNominalRoll:async(e,t)=>{let n=await y({action:`adminUploadNominalRoll`,password:e,...t});return S(`getNominalRoll`),S(`adminGetNominations`),S(`getSettings`),S(`adminGetSettings`),S(`getValidNominations`),S(`getFinalNominations`),S(`getPublicNominations`),n},getPublicSchedule:()=>v({action:`getPublicSchedule`}),adminSaveSchedule:(e,t)=>(x({action:`getPublicSchedule`},t),b({action:`adminSaveSchedule`,password:e,...t}),Promise.resolve({ok:!0}))};function ee(e,t=n.ELECTION_DATE){if(!e)return`N/A`;let r=new Date(t),i=new Date(e),a=r.getFullYear()-i.getFullYear(),o=r.getMonth()-i.getMonth(),s=r.getDate()-i.getDate();return s<0&&(o--,s+=new Date(r.getFullYear(),r.getMonth(),0).getDate()),o<0&&(a--,o+=12),`${a} Years, ${o} Months, ${s} Days`}function te(e,t,n,r=null,i=[],a=[]){if(!e)return[];let o=[],s=String(e.CLASS||``).toUpperCase(),c=String(e.Dept||``).toUpperCase(),l=String(e[`Nominal Roll Serial Number`]),u=i.find(e=>e.post===t)||{};if((n===`Proposer`||n===`Seconder`)&&a.some(e=>e.post===t&&e.status!==`Rejected`&&(String(e.proposerSerial)===l||String(e.seconderSerial)===l))&&o.push(`Student #${l} has already proposed or seconded a candidate for "${t}". They cannot endorse multiple candidates for the same post.`),u.deptRestriction){let r=`Association Secretary `,i=t.startsWith(r)?t.replace(r,``).toUpperCase():null;i&&c!==i&&o.push(`${n} for "${t}" must be from the ${i} dept (current: ${e.Dept||`N/A`}).`)}let d=String(u.yearRestriction||``);return d===`1`&&!s.includes(`1ST YEAR`)&&o.push(`${n} must be a 1st Year student for this post.`),d===`2`&&!s.includes(`2ND YEAR`)&&o.push(`${n} must be a 2nd Year student for this post.`),d===`3`&&!s.includes(`3RD YEAR`)&&o.push(`${n} must be a 3rd Year student for this post.`),d===`PG`&&(s.includes(`MA`)||s.includes(`MSC`)||s.includes(`MCOM`)||s.includes(`M.SC`)||s.includes(`M.COM`)||s.includes(`M.A`)||o.push(`${n} for PG Representative must be a PG student (MA/MSc/MCom).`)),n===`Candidate`&&r&&(u.femaleOnly&&r===`Male`&&o.push(`The post of "${t}" is reserved for female candidates only.`),u.finalYearIneligible&&(s.includes(`3RD YEAR`)||s.includes(`2ND YEAR M`))&&o.push(`Final year students are not eligible for "${t}".`)),o}function ne(){let e=Math.floor(Math.random()*10)+1,t=Math.floor(Math.random()*10)+1;return{question:`${e} + ${t}`,answer:String(e+t)}}function re(){return new Date().toLocaleDateString(`en-GB`)}function ie(e,t,n){let r=[`January`,`February`,`March`,`April`,`May`,`June`,`July`,`August`,`September`,`October`,`November`,`December`];for(let t=1;t<=31;t++)e.innerHTML+=`<option value="${t}">${t}</option>`;r.forEach((e,n)=>t.innerHTML+=`<option value="${n+1}">${e}</option>`);for(let e=2015;e>=1950;e--)n.innerHTML+=`<option value="${e}">${e}</option>`}function ae(e,t,n){return`${n}-${String(t).padStart(2,`0`)}-${String(e).padStart(2,`0`)}`}function oe(e,t,n){return`${String(e).padStart(2,`0`)}/${String(t).padStart(2,`0`)}/${n}`}function w(e,t=`Nomination Form`){let n=window.open(``,`_blank`);n.document.write(`
+var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],enumerable:!0});return n||e(r,Symbol.toStringTag,{value:`Module`}),r};(function(){let e=document.createElement(`link`).relList;if(e&&e.supports&&e.supports(`modulepreload`))return;for(let e of document.querySelectorAll(`link[rel="modulepreload"]`))n(e);new MutationObserver(e=>{for(let t of e)if(t.type===`childList`)for(let e of t.addedNodes)e.tagName===`LINK`&&e.rel===`modulepreload`&&n(e)}).observe(document,{childList:!0,subtree:!0});function t(e){let t={};return e.integrity&&(t.integrity=e.integrity),e.referrerPolicy&&(t.referrerPolicy=e.referrerPolicy),e.crossOrigin===`use-credentials`?t.credentials=`include`:e.crossOrigin===`anonymous`?t.credentials=`omit`:t.credentials=`same-origin`,t}function n(e){if(e.ep)return;e.ep=!0;let n=t(e);fetch(e.href,n)}})();var n={APPS_SCRIPT_URL:`https://script.google.com/macros/s/AKfycbw29XuhvNI4cV-tlAWz5IaRrWPY1T9P7ZiQJbu-7za9226PyEqlhuLOrOMTG2QulzzOog/exec`,ELECTION_DATE:`2026-10-12`,COLLEGE_NAME:`Government Victoria College, Palakkad`,COLLEGE_SHORT_NAME:`GVC`,DEFAULT_POSTS:[{post:`The Chairman`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The Vice Chairman`,femaleOnly:!0,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The Secretary`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The Joint Secretary`,femaleOnly:!0,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The Chief Student Editor`,femaleOnly:!1,finalYearIneligible:!0,yearRestriction:``,deptRestriction:!1},{post:`The Secretary Fine Arts`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The General Captain For Sports And Games`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`The University Union Councillor`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!1},{post:`I UG Representative`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:`1`,deptRestriction:!1},{post:`II UG Representative`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:`2`,deptRestriction:!1},{post:`III UG Representative`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:`3`,deptRestriction:!1},{post:`PG Representative`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:`PG`,deptRestriction:!1},{post:`Association Secretary Botany`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Chemistry`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Commerce`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Computer Science`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Economics`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary English`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Hindi`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary History`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Malayalam`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Mathematics`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Physics`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Psychology`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Sanskrit`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Tamil`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0},{post:`Association Secretary Zoology`,femaleOnly:!1,finalYearIneligible:!1,yearRestriction:``,deptRestriction:!0}]},r=t({router:()=>o}),i={},a=`/`,o={on(e,t){return i[e]=t,this},setDefault(e){return a=e,this},navigate(e,t={}){window.history.pushState({path:e,params:t},``,`#${e}`),this._resolve(e,t)},start(){window.addEventListener(`popstate`,e=>{let{path:t,params:n}=e.state||{path:a,params:{}};this._resolve(t,n)});let e=window.location.hash.replace(`#`,``)||a;this._resolve(e,{})},_resolve(e,t){let n=i[e]||i[a];n&&n(t)}},s=n.APPS_SCRIPT_URL,c={},l=[],u=!1,d=null;function f(){return sessionStorage.getItem(`adminSessionToken`)||localStorage.getItem(`adminSessionToken`)}function p(){localStorage.removeItem(`adminPwd`),localStorage.removeItem(`adminLoginDate`),localStorage.removeItem(`adminSessionToken`),sessionStorage.removeItem(`adminSessionToken`),c={},alert(`⚠️ Another admin has logged in from a different device. You have been logged out.`),window.location.hash=`/admin`}function m(e){d=e}function h(e){d&&d(e)}function g(){window._unloadGuardAdded||(window._unloadGuardAdded=!0,window.addEventListener(`beforeunload`,e=>{if(l.length>0||u)return e.returnValue=`Changes are still saving. Are you sure you want to leave?`,e.returnValue}))}async function _(){if(!(u||l.length===0)){for(u=!0,g(),h(`saving`);l.length>0;){let e=l[0];try{let t=await fetch(s,{method:`POST`,headers:{"Content-Type":`text/plain;charset=utf-8`},body:JSON.stringify(e.body)});if(!t.ok)throw Error(`Network error: ${t.status}`);let n=await t.json();if(n.error===`SESSION_EXPIRED`){p(),l.length=0;break}if(n.error)throw Error(n.error);e.resolve&&e.resolve(n)}catch(t){console.error(`Background sync failed for`,e.body.action,t),e.reject&&e.reject(t)}l.shift()}u=!1,h(`saved`),setTimeout(()=>{!u&&l.length===0&&h(`idle`)},3e3)}}async function v(e){let t=f();t&&e.password&&(e={...e,sessionToken:t});let n=JSON.stringify(e);if(c[n]!==void 0)return c[n];let r=new URL(s);Object.entries(e).forEach(([e,t])=>r.searchParams.append(e,t)),r.searchParams.append(`_t`,Date.now());let i=await fetch(r.toString());if(!i.ok)throw Error(`Network error: ${i.status}`);let a=await i.json();if(a.error===`SESSION_EXPIRED`)throw p(),Error(`SESSION_EXPIRED`);if(a.error)throw Error(a.error);return c[n]=a,a}async function y(e){let t=f();t&&e.password&&(e={...e,sessionToken:t});let n=await fetch(s,{method:`POST`,headers:{"Content-Type":`text/plain;charset=utf-8`},body:JSON.stringify(e)});if(!n.ok)throw Error(`Network error: ${n.status}`);let r=await n.json();if(r.error===`SESSION_EXPIRED`)throw p(),Error(`SESSION_EXPIRED`);if(r.error)throw Error(r.error);return r}function b(e){let t=f();return t&&e.password&&(e={...e,sessionToken:t}),new Promise((t,n)=>{l.push({body:e,resolve:t,reject:n}),_()})}function x(e,t){let n=JSON.stringify(e);typeof t==`function`?c[n]!==void 0&&(c[n]=t(c[n])):c[n]=t}function S(e){Object.keys(c).forEach(t=>{t.includes(e)&&delete c[t]})}var C={invalidateCache:S,initPublicData:async()=>{let e=[C.getPublicSchedule().catch(()=>null),C.getSettings().catch(()=>null),C.getPosts().catch(()=>null),C.getResults().catch(()=>null),C.getNominalRoll().catch(()=>null),C.getPublicNominations().catch(()=>null),C.getValidNominations().catch(()=>null),C.getFinalNominations().catch(()=>null)];await Promise.all(e)},initAdminData:async e=>{let t=[C.adminGetNominations(e).catch(()=>null),C.adminGetSettings(e).catch(()=>null),C.adminGetPosts(e).catch(()=>null),C.adminGetBooths(e).catch(()=>null),C.adminGetLocations(e).catch(()=>null),C.adminGetBallotPlan(e).catch(()=>null),C.adminGetCountingMatrix(e).catch(()=>null)];await Promise.all(t)},getNominalRoll:()=>v({action:`getNominalRoll`}),getPosts:()=>v({action:`getPosts`}),getPublicNominations:()=>v({action:`getPublicNominations`}),getNomination:e=>v({action:`getNomination`,id:e}),getValidNominations:()=>v({action:`getValidNominations`}),getFinalNominations:()=>v({action:`getFinalNominations`}),submitNomination:e=>y({action:`submitNomination`,...e}),submitWithdrawal:e=>y({action:`submitWithdrawal`,id:e}),adminLogin:async e=>{let t=await fetch(s,{method:`POST`,headers:{"Content-Type":`text/plain;charset=utf-8`},body:JSON.stringify({action:`adminLogin`,password:e})});if(!t.ok)throw Error(`Network error: ${t.status}`);let n=await t.json();if(n.error)throw Error(n.error);return n.sessionToken&&sessionStorage.setItem(`adminSessionToken`,n.sessionToken),n},adminSendOTP:e=>y({action:`adminSendOTP`,password:e}),adminVerifyOTP:(e,t)=>y({action:`adminVerifyOTP`,password:e,otp:t}),adminGetNominations:e=>v({action:`adminGetNominations`,password:e}),adminVerifyNomination:(e,t,n)=>(x({action:`adminGetNominations`,password:e},e=>{let r=e.find(e=>e.id===t);return r&&(r.status=n),e}),b({action:`adminVerifyNomination`,password:e,id:t,status:n}),Promise.resolve({ok:!0})),adminApproveWithdrawal:(e,t)=>(x({action:`adminGetNominations`,password:e},e=>{let n=e.find(e=>e.id===t);return n&&(n.withdrawalStatus=`Approved`),e}),b({action:`adminApproveWithdrawal`,password:e,id:t}),Promise.resolve({ok:!0})),adminDirectWithdrawal:(e,t)=>(x({action:`adminGetNominations`,password:e},e=>{let n=e.find(e=>e.id===t);return n&&(n.withdrawalStatus=`Approved`),e}),b({action:`adminDirectWithdrawal`,password:e,id:t}),Promise.resolve({ok:!0})),adminPublishValidList:e=>(x({action:`adminGetSettings`,password:e},e=>({...e,validListPublished:`true`})),b({action:`adminPublishValidList`,password:e}),S(`getValidNominations`),Promise.resolve({ok:!0})),adminPublishFinalList:e=>(x({action:`adminGetSettings`,password:e},e=>({...e,finalListPublished:`true`})),b({action:`adminPublishFinalList`,password:e}),S(`getFinalNominations`),Promise.resolve({ok:!0})),adminUnpublishValidList:async e=>(x({action:`adminGetSettings`,password:e},e=>({...e,validListPublished:`false`,finalListPublished:`false`})),await b({action:`adminUnpublishValidList`,password:e}),S(`getValidNominations`),S(`getFinalNominations`),{ok:!0}),adminUnpublishFinalList:async e=>(x({action:`adminGetSettings`,password:e},e=>({...e,finalListPublished:`false`})),await b({action:`adminUnpublishFinalList`,password:e}),S(`getFinalNominations`),{ok:!0}),adminGetSettings:e=>v({action:`adminGetSettings`,password:e}),adminUpdateSettings:(e,t)=>(x({action:`adminGetSettings`,password:e},e=>({...e,...t})),b({action:`adminUpdateSettings`,password:e,...t}),Promise.resolve({ok:!0})),getPublicSettings:()=>v({action:`adminGetSettings`,password:`NONE`}),adminGetPosts:e=>v({action:`adminGetPosts`,password:e}),adminAddPost:async(e,t)=>(x({action:`adminGetPosts`,password:e},e=>[...e,t]),await b({action:`adminAddPost`,password:e,...t}),S(`getPosts`),{ok:!0}),adminUpdatePost:async(e,t)=>(x({action:`adminGetPosts`,password:e},e=>{let n=e.findIndex(e=>e.post===t.post);return n!==-1&&(e[n]=t),e}),await b({action:`adminUpdatePost`,password:e,...t}),S(`getPosts`),{ok:!0}),adminDeletePost:async(e,t)=>(x({action:`adminGetPosts`,password:e},e=>e.filter(e=>e.post!==t)),await b({action:`adminDeletePost`,password:e,postName:t}),S(`getPosts`),{ok:!0}),adminReorderPosts:async(e,t)=>(x({action:`adminGetPosts`,password:e},e=>{let n={};return e.forEach(e=>n[e.post]=e),t.map(e=>n[e]).filter(Boolean)}),await b({action:`adminReorderPosts`,password:e,posts:t}),S(`getPosts`),{ok:!0}),adminGetBooths:e=>v({action:`adminGetBooths`,password:e}),adminSaveBooths:(e,t)=>(x({action:`adminGetBooths`,password:e},t),b({action:`adminSaveBooths`,password:e,booths:t}),Promise.resolve({ok:!0})),adminGetLocations:e=>v({action:`adminGetLocations`,password:e}),adminSaveLocations:(e,t)=>(x({action:`adminGetLocations`,password:e},t),b({action:`adminSaveLocations`,password:e,locations:t}),Promise.resolve({ok:!0})),getResults:()=>v({action:`getResults`}),adminSaveResults:(e,t)=>(b({action:`adminSaveResults`,password:e,results:t}).then(()=>S(`getResults`)),Promise.resolve({ok:!0})),adminInjectTestData:e=>y({action:`adminInjectTestData`,password:e}),adminWipeData:e=>(c={},y({action:`adminWipeData`,password:e})),adminGetCountingMatrix:e=>v({action:`adminGetCountingMatrix`,password:e}),adminSaveCountingMatrix:(e,t)=>(x({action:`adminGetCountingMatrix`,password:e},t),b({action:`adminSaveCountingMatrix`,password:e,matrixData:t}),Promise.resolve({ok:!0})),adminGenerateBallotPlan:async e=>{let t=await b({action:`adminGenerateBallotPlan`,password:e});return x({action:`adminGetBallotPlan`,password:e},t.plan),t},adminGetBallotPlan:e=>v({action:`adminGetBallotPlan`,password:e}),adminRunAudit:e=>y({action:`adminRunAudit`,password:e}),getSettings:()=>v({action:`getSettings`}),adminAddStudent:async(e,t)=>(await b({action:`adminAddStudent`,password:e,...t}),S(`getNominalRoll`),{ok:!0}),adminDeleteStudent:async(e,t)=>(await b({action:`adminDeleteStudent`,password:e,serial:t}),S(`getNominalRoll`),{ok:!0}),adminFinalizeRoll:async e=>(await b({action:`adminFinalizeRoll`,password:e}),S(`getNominalRoll`),{ok:!0}),adminGetNominalRollTemplate:e=>v({action:`adminGetNominalRollTemplate`,password:e}),adminUploadNominalRoll:async(e,t)=>{let n=await y({action:`adminUploadNominalRoll`,password:e,...t});return S(`getNominalRoll`),S(`adminGetNominations`),S(`getSettings`),S(`adminGetSettings`),S(`getValidNominations`),S(`getFinalNominations`),S(`getPublicNominations`),n},getPublicSchedule:()=>v({action:`getPublicSchedule`}),adminSaveSchedule:(e,t)=>(x({action:`getPublicSchedule`},t),b({action:`adminSaveSchedule`,password:e,...t}),Promise.resolve({ok:!0}))};function ee(e,t=n.ELECTION_DATE){if(!e)return`N/A`;let r=new Date(t),i=new Date(e),a=r.getFullYear()-i.getFullYear(),o=r.getMonth()-i.getMonth(),s=r.getDate()-i.getDate();return s<0&&(o--,s+=new Date(r.getFullYear(),r.getMonth(),0).getDate()),o<0&&(a--,o+=12),`${a} Years, ${o} Months, ${s} Days`}function te(e,t,n,r=null,i=[],a=[]){if(!e)return[];let o=[],s=String(e.CLASS||``).toUpperCase(),c=String(e.Dept||``).toUpperCase(),l=String(e[`Nominal Roll Serial Number`]),u=i.find(e=>e.post===t)||{};if((n===`Proposer`||n===`Seconder`)&&a.some(e=>e.post===t&&e.status!==`Rejected`&&(String(e.proposerSerial)===l||String(e.seconderSerial)===l))&&o.push(`Student #${l} has already proposed or seconded a candidate for "${t}". They cannot endorse multiple candidates for the same post.`),u.deptRestriction){let r=`Association Secretary `,i=t.startsWith(r)?t.replace(r,``).toUpperCase():null;i&&c!==i&&o.push(`${n} for "${t}" must be from the ${i} dept (current: ${e.Dept||`N/A`}).`)}let d=String(u.yearRestriction||``);return d===`1`&&!s.includes(`1ST YEAR`)&&o.push(`${n} must be a 1st Year student for this post.`),d===`2`&&!s.includes(`2ND YEAR`)&&o.push(`${n} must be a 2nd Year student for this post.`),d===`3`&&!s.includes(`3RD YEAR`)&&o.push(`${n} must be a 3rd Year student for this post.`),d===`PG`&&(s.includes(`MA`)||s.includes(`MSC`)||s.includes(`MCOM`)||s.includes(`M.SC`)||s.includes(`M.COM`)||s.includes(`M.A`)||o.push(`${n} for PG Representative must be a PG student (MA/MSc/MCom).`)),n===`Candidate`&&r&&(u.femaleOnly&&r===`Male`&&o.push(`The post of "${t}" is reserved for female candidates only.`),u.finalYearIneligible&&(s.includes(`3RD YEAR`)||s.includes(`2ND YEAR M`))&&o.push(`Final year students are not eligible for "${t}".`)),o}function ne(){let e=Math.floor(Math.random()*10)+1,t=Math.floor(Math.random()*10)+1;return{question:`${e} + ${t}`,answer:String(e+t)}}function re(){return new Date().toLocaleDateString(`en-GB`)}function ie(e,t,n){let r=[`January`,`February`,`March`,`April`,`May`,`June`,`July`,`August`,`September`,`October`,`November`,`December`];for(let t=1;t<=31;t++)e.innerHTML+=`<option value="${t}">${t}</option>`;r.forEach((e,n)=>t.innerHTML+=`<option value="${n+1}">${e}</option>`);for(let e=2015;e>=1950;e--)n.innerHTML+=`<option value="${e}">${e}</option>`}function ae(e,t,n){return`${n}-${String(t).padStart(2,`0`)}-${String(e).padStart(2,`0`)}`}function oe(e,t,n){return`${String(e).padStart(2,`0`)}/${String(t).padStart(2,`0`)}/${n}`}function w(e,t=`Nomination Form`){let n=window.open(``,`_blank`);n.document.write(`
     <!DOCTYPE html>
     <html>
       <head>
@@ -266,7 +266,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       <span>Date: ______ / ______ / ________</span>
       <span>Signature: _______________</span>
     </div>`}
-  </div>`:``}function me(e,t,n=`2026`){return`
+  </div>`:``}function me(e,t,r=`2026`){return`
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-50 border-b border-white/10 glass">
       <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
@@ -278,7 +278,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <h1 class="font-bold text-white text-lg tracking-tight">${T(e)}</h1>
         </div>
         <div class="text-xs text-slate-500 font-medium hidden md:block uppercase tracking-widest">
-          GVC Election Portal ${n}
+          ${n.COLLEGE_SHORT_NAME} Election Portal ${r}
         </div>
       </div>
     </header>
@@ -383,7 +383,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <main class="max-w-5xl mx-auto px-4 py-12">${t}</main>
   </div>`}async function xe(e){let t=new Date().getFullYear();try{let e=await C.getPublicSchedule();e.electionYear&&(t=e.electionYear)}catch{}e.innerHTML=Ce(`Final Candidates List`,`
     <div class="text-center py-20"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Final List...</p></div>
-  `,t),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));try{let n=await C.getFinalNominations();Se(e.querySelector(`main`),n.active||[],t)}catch(t){e.querySelector(`main`).innerHTML=`<div class="alert alert-warning text-center py-10 shadow-xl">${T(t.message)}</div>`}}function Se(e,t,n){if(!t||t.length===0){e.innerHTML=`
+  `,t,shortName),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));try{let n=await C.getFinalNominations();Se(e.querySelector(`main`),n.active||[],t)}catch(t){e.querySelector(`main`).innerHTML=`<div class="alert alert-warning text-center py-10 shadow-xl">${T(t.message)}</div>`}}function Se(e,t,n){if(!t||t.length===0){e.innerHTML=`
       <div class="glass rounded-3xl p-20 text-center border-dashed border-white/10">
         <div class="text-6xl mb-6">🏁</div>
         <h2 class="text-2xl font-bold text-white mb-2">Final List Pending</h2>
@@ -436,7 +436,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </div>
         `).join(``)}
       </div>
-    </div>`}function Ce(e,t,n=`2026`){return`
+    </div>`}function Ce(e,t,n=`2026`,r=`GVC`){return`
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
       <div class="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
@@ -445,7 +445,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <span class="text-slate-600">|</span>
           <h1 class="font-bold text-white text-sm tracking-tight">${T(e)}</h1>
         </div>
-        <div class="text-[10px] text-slate-500 font-mono hidden sm:block">GVC ELECTION PORTAL ${n}</div>
+        <div class="text-[10px] text-slate-500 font-mono hidden sm:block">${T(r||`GVC`).toUpperCase()} ELECTION PORTAL ${n}</div>
       </div>
     </header>
     <main class="max-w-5xl mx-auto px-4 py-12">${t}</main>
@@ -605,15 +605,15 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         </div>
       </form>
     </div>
-  `;let t=e.querySelector(`#loginForm`),n=e.querySelector(`#errorMsg`),i=e.querySelector(`#passwordStep`),a=e.querySelector(`#otpStep`),o=e.querySelector(`#adminPassword`),s=e.querySelector(`#adminOTP`),c=e=>{n.textContent=e,n.classList.remove(`hidden`),n.classList.add(`shake`),setTimeout(()=>n.classList.remove(`shake`),500)};t.onsubmit=async t=>{t.preventDefault();let r=o.value.trim();if(!r)return c(`Please enter the admin password.`);let l=e.querySelector(`#btnRequestOTP`);E(l,!0,`Verifying...`),n.classList.add(`hidden`);try{await C.adminSendOTP(r),i.classList.add(`hidden`),a.classList.remove(`hidden`),a.classList.add(`page-enter`),s.focus(),D(`OTP sent successfully!`,`success`)}catch(e){c(e.message===`Unauthorized`?`Incorrect admin password.`:e.message)}finally{E(l,!1,`Request Secure OTP`)}},e.querySelector(`#btnVerifyLogin`).onclick=async e=>{let t=o.value.trim(),i=s.value.trim();if(!i||i.length!==6)return c(`Please enter a valid 6-digit OTP.`);E(e.target,!0,`Verifying OTP...`),n.classList.add(`hidden`);try{await C.adminVerifyOTP(t,i);let e=await C.adminLogin(t),n=new Date().toISOString().split(`T`)[0];localStorage.setItem(`adminPwd`,t),localStorage.setItem(`adminLoginDate`,n),e.sessionToken&&localStorage.setItem(`adminSessionToken`,e.sessionToken),D(`Authentication successful!`,`success`),je(async()=>{let{router:e}=await Promise.resolve().then(()=>r);return{router:e}},void 0).then(({router:e})=>e.navigate(`/admin/dashboard`))}catch(e){c(e.message)}finally{E(e.target,!1,`Verify & Login`)}},e.querySelector(`#btnBackToPassword`).onclick=()=>{a.classList.add(`hidden`),i.classList.remove(`hidden`),i.classList.add(`page-enter`),n.classList.add(`hidden`)}}function L(){let e=localStorage.getItem(`adminPwd`),t=localStorage.getItem(`adminLoginDate`),n=new Date().toISOString().split(`T`)[0];if(!e||t!==n)return e&&(localStorage.removeItem(`adminPwd`),localStorage.removeItem(`adminLoginDate`),localStorage.removeItem(`adminSessionToken`),sessionStorage.removeItem(`adminSessionToken`),D(`Daily session expired. Please log in again.`,`warning`)),o.navigate(`/admin`),null;let r=localStorage.getItem(`adminSessionToken`);return r&&sessionStorage.setItem(`adminSessionToken`,r),e}function R(e,t,n){let r=L();r&&C.initAdminData(r),e.innerHTML=`
+  `;let t=e.querySelector(`#loginForm`),n=e.querySelector(`#errorMsg`),i=e.querySelector(`#passwordStep`),a=e.querySelector(`#otpStep`),o=e.querySelector(`#adminPassword`),s=e.querySelector(`#adminOTP`),c=e=>{n.textContent=e,n.classList.remove(`hidden`),n.classList.add(`shake`),setTimeout(()=>n.classList.remove(`shake`),500)};t.onsubmit=async t=>{t.preventDefault();let r=o.value.trim();if(!r)return c(`Please enter the admin password.`);let l=e.querySelector(`#btnRequestOTP`);E(l,!0,`Verifying...`),n.classList.add(`hidden`);try{await C.adminSendOTP(r),i.classList.add(`hidden`),a.classList.remove(`hidden`),a.classList.add(`page-enter`),s.focus(),D(`OTP sent successfully!`,`success`)}catch(e){c(e.message===`Unauthorized`?`Incorrect admin password.`:e.message)}finally{E(l,!1,`Request Secure OTP`)}},e.querySelector(`#btnVerifyLogin`).onclick=async e=>{let t=o.value.trim(),i=s.value.trim();if(!i||i.length!==6)return c(`Please enter a valid 6-digit OTP.`);E(e.target,!0,`Verifying OTP...`),n.classList.add(`hidden`);try{await C.adminVerifyOTP(t,i);let e=await C.adminLogin(t),n=new Date().toISOString().split(`T`)[0];localStorage.setItem(`adminPwd`,t),localStorage.setItem(`adminLoginDate`,n),e.sessionToken&&localStorage.setItem(`adminSessionToken`,e.sessionToken),D(`Authentication successful!`,`success`),je(async()=>{let{router:e}=await Promise.resolve().then(()=>r);return{router:e}},void 0).then(({router:e})=>e.navigate(`/admin/dashboard`))}catch(e){c(e.message)}finally{E(e.target,!1,`Verify & Login`)}},e.querySelector(`#btnBackToPassword`).onclick=()=>{a.classList.add(`hidden`),i.classList.remove(`hidden`),i.classList.add(`page-enter`),n.classList.add(`hidden`)}}function L(){let e=localStorage.getItem(`adminPwd`),t=localStorage.getItem(`adminLoginDate`),n=new Date().toISOString().split(`T`)[0];if(!e||t!==n)return e&&(localStorage.removeItem(`adminPwd`),localStorage.removeItem(`adminLoginDate`),localStorage.removeItem(`adminSessionToken`),sessionStorage.removeItem(`adminSessionToken`),D(`Daily session expired. Please log in again.`,`warning`)),o.navigate(`/admin`),null;let r=localStorage.getItem(`adminSessionToken`);return r&&sessionStorage.setItem(`adminSessionToken`,r),e}function R(e,t,r){let i=L();i&&C.initAdminData(i),e.innerHTML=`
   <div class="min-h-screen flex">
     <!-- Sidebar -->
     <aside class="no-print w-60 flex-shrink-0 glass border-r border-white/10 flex flex-col">
       <div class="p-5 border-b border-white/10">
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">G</div>
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">${n.COLLEGE_SHORT_NAME.charAt(0)}</div>
           <div>
-            <p class="font-bold text-white text-xs">GVC Election</p>
+            <p class="font-bold text-white text-xs">${n.COLLEGE_SHORT_NAME} Election</p>
             <p class="text-slate-500 text-xs">Admin Panel</p>
           </div>
         </div>
@@ -653,7 +653,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         <span class="text-xs text-slate-500">Logged in as Admin</span>
       </header>
       <main id="adminMain" class="flex-1 p-6 overflow-auto">
-        ${n}
+        ${r}
       </main>
     </div>
   </div>`,e.querySelectorAll(`[data-admin-nav]`).forEach(e=>{e.addEventListener(`click`,()=>{let t=e.dataset.adminNav;if(t===`public`){o.navigate(`/`);return}o.navigate(`/admin/${t}`)})}),e.querySelector(`#logoutBtn`).addEventListener(`click`,()=>{localStorage.removeItem(`adminPwd`),localStorage.removeItem(`adminLoginDate`),localStorage.removeItem(`adminSessionToken`),sessionStorage.removeItem(`adminSessionToken`),D(`Logged out.`,`info`),o.navigate(`/`)})}function z(e,t,n,r){return`
@@ -934,7 +934,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         </td>
       </tr>`).join(``):`<tr><td colspan="6" class="text-center text-slate-500 py-12">No valid nominations available for withdrawal.</td></tr>`},h=()=>{let t=e.querySelector(`#directSearch`).value.toLowerCase();m(p.filter(e=>!t||String(e.id).toLowerCase().includes(t)||String(e.candidateName||``).toLowerCase().includes(t)||String(e.post).toLowerCase().includes(t)))};e.querySelector(`#directSearch`).addEventListener(`input`,h),m(p),e.querySelector(`#panelDirect`).addEventListener(`click`,async e=>{let t=e.target.closest(`.direct-withdraw-btn`);if(!t)return;let r=t.dataset.id,i=p.find(e=>e.id===r);if(confirm(`CONFIRM DIRECT WITHDRAWAL\n\nCandidate: ${i?.candidateName||r}\nPost: ${i?.post||``}\n\nThis will immediately mark this nomination as Withdrawn. This cannot be undone. Proceed?`)){t.disabled=!0,t.innerHTML=`<span class="spinner" style="width:1rem;height:1rem;border-width:2px;"></span>`;try{await C.adminDirectWithdrawal(n,r),D(`Nomination ${r} directly withdrawn.`,`success`),p=p.filter(e=>e.id!==r),h()}catch(e){D(`Failed: ${e.message}`,`error`),t.disabled=!1,t.innerHTML=`⚡ Withdraw Now`}}})}async function Re(e){let t=L();if(t){R(e,`publish`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading data...</p></div>
-  `);try{let[n,r,i]=await Promise.all([C.adminGetSettings(t),C.adminGetNominations(t),C.getPosts()]);V(e.querySelector(`#adminMain`),n,r,i,t)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${T(t.message)}</div>`}}}function V(e,t,n,r,i){let a=t.validListPublished===`true`,o=t.finalListPublished===`true`;e.innerHTML=`
+  `);try{let[n,r,i]=await Promise.all([C.adminGetSettings(t),C.adminGetNominations(t),C.getPosts()]);V(e.querySelector(`#adminMain`),n,r,i,t)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${T(t.message)}</div>`}}}function V(e,t,r,i,a){let o=t.validListPublished===`true`,s=t.finalListPublished===`true`;e.innerHTML=`
     <div class="page-enter space-y-6">
       <div class="flex justify-between items-center">
         <div>
@@ -952,12 +952,12 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </div>
           <div class="flex items-center gap-2">
             <button id="btnPrintValid" class="btn btn-secondary btn-sm">🖨️ Print List</button>
-            <span class="badge ${a?`badge-valid`:`badge-pending`} text-sm">
-              ${a?`✅ Published`:`⏳ Not Published`}
+            <span class="badge ${o?`badge-valid`:`badge-pending`} text-sm">
+              ${o?`✅ Published`:`⏳ Not Published`}
             </span>
           </div>
         </div>
-        ${a?`
+        ${o?`
         <div class="alert alert-success text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <span>✅ This list is currently visible to the public.</span>
           <button id="unpublishValidBtn" class="btn btn-sm" style="background:#dc2626;color:white;border:none;">🚫 Unpublish</button>
@@ -977,12 +977,12 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </div>
           <div class="flex items-center gap-2">
             <button id="btnPrintFinal" class="btn btn-secondary btn-sm">🖨️ Print List</button>
-            <span class="badge ${o?`badge-valid`:`badge-pending`} text-sm">
-              ${o?`✅ Published`:`⏳ Not Published`}
+            <span class="badge ${s?`badge-valid`:`badge-pending`} text-sm">
+              ${s?`✅ Published`:`⏳ Not Published`}
             </span>
           </div>
         </div>
-        ${o?`
+        ${s?`
         <div class="alert alert-success text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <span>✅ The final list is currently visible to the public.</span>
           <button id="unpublishFinalBtn" class="btn btn-sm" style="background:#dc2626;color:white;border:none;">🚫 Unpublish</button>
@@ -990,11 +990,11 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         <div class="alert alert-warning text-sm">
           ⚠ Ensure all withdrawal requests have been processed before publishing.
         </div>
-        <button id="publishFinalBtn" class="btn btn-primary" ${a?``:`disabled title="Publish the valid list first"`}>📢 Publish Final Nominations List</button>`}
+        <button id="publishFinalBtn" class="btn btn-primary" ${o?``:`disabled title="Publish the valid list first"`}>📢 Publish Final Nominations List</button>`}
       </div>
-    </div>`;let s=e=>{let t=e===`final`,i=t?n.filter(e=>e.status===`Valid`&&e.withdrawalStatus!==`Approved`):n.filter(e=>e.status===`Valid`);if(i.length===0){alert(`No valid nominations found to print.`);return}let a={};i.forEach(e=>{a[e.post]||(a[e.post]=[]),a[e.post].push(e)});let o=r.map(e=>e.post||e.name).filter(e=>a[e]),s=`
+    </div>`;let c=e=>{let t=e===`final`,a=t?r.filter(e=>e.status===`Valid`&&e.withdrawalStatus!==`Approved`):r.filter(e=>e.status===`Valid`);if(a.length===0){alert(`No valid nominations found to print.`);return}let o={};a.forEach(e=>{o[e.post]||(o[e.post]=[]),o[e.post].push(e)});let s=i.map(e=>e.post||e.name).filter(e=>o[e]),c=`
       <div style="text-align:center;margin-bottom:30px;border-bottom:2px solid #000;padding-bottom:15px">
-        <div style="font-size:12px;color:#444">Government Victoria College, Palakkad</div>
+        <div style="font-size:12px;color:#444">${n.COLLEGE_NAME}</div>
         <h1 style="margin:5px 0;font-size:22px;text-transform:uppercase">College Union Election 2026-27</h1>
         <h2 style="margin:0;font-size:18px;color:#000">${t?`FINAL LIST OF ELIGIBLE CANDIDATES`:`LIST OF VALID NOMINATIONS`}</h2>
       </div>
@@ -1008,20 +1008,20 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           </tr>
         </thead>
         <tbody>
-    `;o.forEach(e=>{s+=`
+    `;s.forEach(e=>{c+=`
         <tr>
           <td colspan="4" style="border:1px solid #000;padding:10px 8px;background:#eee;font-weight:bold;text-transform:uppercase">
             POST: ${T(e)}
           </td>
         </tr>
-      `,a[e].forEach((e,t)=>{s+=`
+      `,o[e].forEach((e,t)=>{c+=`
           <tr>
             <td style="border:1px solid #000;padding:8px;text-align:center">${t+1}</td>
             <td style="border:1px solid #000;padding:8px;font-weight:bold">${T(e.candidateName)}</td>
             <td style="border:1px solid #000;padding:8px">${T(e.candidateClass)}</td>
             <td style="border:1px solid #000;padding:8px">${T(e.candidateDept)}</td>
           </tr>
-        `})}),s+=`
+        `})}),c+=`
         </tbody>
       </table>
       <div style="margin-top:60px;display:flex;justify-content:flex-end">
@@ -1030,14 +1030,14 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
           <div style="font-size:11px">Signature & Seal</div>
         </div>
       </div>
-    `;let c=window.open(``,`_blank`);c.document.write(`<!DOCTYPE html><html><head><title>Print List</title><style>
+    `;let l=window.open(``,`_blank`);l.document.write(`<!DOCTYPE html><html><head><title>Print List</title><style>
       @page{size:A4;margin:20mm}
       body{font-family:Arial,sans-serif;line-height:1.4}
-    </style></head><body>${s}<script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`),c.document.close()};e.querySelector(`#btnPrintValid`).addEventListener(`click`,()=>s(`valid`)),e.querySelector(`#btnPrintFinal`).addEventListener(`click`,()=>s(`final`)),e.querySelector(`#publishValidBtn`)?.addEventListener(`click`,async t=>{let a=t.currentTarget;if(confirm(`Are you sure you want to publish the valid nominations list? This will be visible to all students.`)){E(a,!0,`📢 Publish Valid Nominations List`);try{await C.adminPublishValidList(i),D(`Valid nominations list published successfully!`,`success`),V(e,{validListPublished:`true`,finalListPublished:o?`true`:`false`},n,r,i)}catch(e){D(`Failed: ${e.message}`,`error`),E(a,!1,`📢 Publish Valid Nominations List`)}}}),e.querySelector(`#publishFinalBtn`)?.addEventListener(`click`,async t=>{let a=t.currentTarget;if(confirm(`Are you sure you want to publish the final nominations list?`)){E(a,!0,`📢 Publish Final Nominations List`);try{await C.adminPublishFinalList(i),D(`Final nominations list published successfully!`,`success`),V(e,{validListPublished:`true`,finalListPublished:`true`},n,r,i)}catch(e){D(`Failed: ${e.message}`,`error`),E(a,!1,`📢 Publish Final Nominations List`)}}}),e.querySelector(`#unpublishValidBtn`)?.addEventListener(`click`,async t=>{let a=t.currentTarget;if(confirm(`Unpublish Valid List?
+    </style></head><body>${c}<script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`),l.document.close()};e.querySelector(`#btnPrintValid`).addEventListener(`click`,()=>c(`valid`)),e.querySelector(`#btnPrintFinal`).addEventListener(`click`,()=>c(`final`)),e.querySelector(`#publishValidBtn`)?.addEventListener(`click`,async t=>{let n=t.currentTarget;if(confirm(`Are you sure you want to publish the valid nominations list? This will be visible to all students.`)){E(n,!0,`📢 Publish Valid Nominations List`);try{await C.adminPublishValidList(a),D(`Valid nominations list published successfully!`,`success`),V(e,{validListPublished:`true`,finalListPublished:s?`true`:`false`},r,i,a)}catch(e){D(`Failed: ${e.message}`,`error`),E(n,!1,`📢 Publish Valid Nominations List`)}}}),e.querySelector(`#publishFinalBtn`)?.addEventListener(`click`,async t=>{let n=t.currentTarget;if(confirm(`Are you sure you want to publish the final nominations list?`)){E(n,!0,`📢 Publish Final Nominations List`);try{await C.adminPublishFinalList(a),D(`Final nominations list published successfully!`,`success`),V(e,{validListPublished:`true`,finalListPublished:`true`},r,i,a)}catch(e){D(`Failed: ${e.message}`,`error`),E(n,!1,`📢 Publish Final Nominations List`)}}}),e.querySelector(`#unpublishValidBtn`)?.addEventListener(`click`,async t=>{let n=t.currentTarget;if(confirm(`Unpublish Valid List?
 
-This will remove it from public view. The Final List will also be unpublished.`)){E(a,!0,`🚫 Unpublish`);try{await C.adminUnpublishValidList(i),D(`Valid list unpublished.`,`success`),V(e,{validListPublished:`false`,finalListPublished:`false`},n,r,i)}catch(e){D(`Failed: ${e.message}`,`error`),E(a,!1,`🚫 Unpublish`)}}}),e.querySelector(`#unpublishFinalBtn`)?.addEventListener(`click`,async t=>{let a=t.currentTarget;if(confirm(`Unpublish Final List?
+This will remove it from public view. The Final List will also be unpublished.`)){E(n,!0,`🚫 Unpublish`);try{await C.adminUnpublishValidList(a),D(`Valid list unpublished.`,`success`),V(e,{validListPublished:`false`,finalListPublished:`false`},r,i,a)}catch(e){D(`Failed: ${e.message}`,`error`),E(n,!1,`🚫 Unpublish`)}}}),e.querySelector(`#unpublishFinalBtn`)?.addEventListener(`click`,async t=>{let n=t.currentTarget;if(confirm(`Unpublish Final List?
 
-This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpublish`);try{await C.adminUnpublishFinalList(i),D(`Final list unpublished.`,`success`),V(e,{validListPublished:`true`,finalListPublished:`false`},n,r,i)}catch(e){D(`Failed: ${e.message}`,`error`),E(a,!1,`🚫 Unpublish`)}}})}async function ze(e){let t=L();if(t){R(e,`posts`,`
+This will remove the final candidate list from public view.`)){E(n,!0,`🚫 Unpublish`);try{await C.adminUnpublishFinalList(a),D(`Final list unpublished.`,`success`),V(e,{validListPublished:`true`,finalListPublished:`false`},r,i,a)}catch(e){D(`Failed: ${e.message}`,`error`),E(n,!1,`🚫 Unpublish`)}}})}async function ze(e){let t=L();if(t){R(e,`posts`,`
     <div class="text-center py-16">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 mt-4 text-sm">Loading posts...</p>
@@ -1590,7 +1590,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
         <td style="padding:18px 8px"></td></tr>`).join(``):`<tr><td colspan="3" style="padding:14px;text-align:center;color:#555">No Candidates Found</td></tr>`;return`<div class="pg">
     <div class="serial-tag">FORM #${i}</div>
     <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:16px;padding-right:100px;">
-      <div style="font-size:11px;color:#555">Government Victoria College, Palakkad — College Union Election</div>
+      <div style="font-size:11px;color:#555">${collegeName} — College Union Election</div>
       <h2 style="margin:6px 0 0;font-size:20px;text-transform:uppercase;letter-spacing:2px">Counting Form</h2>
       <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:15px;font-weight:bold">
         <span>TABLE: <u>${e}</u></span><span>ROUND: <u>${t}</u></span>
@@ -1779,7 +1779,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 mt-4 text-sm">Preparing ballot generator...</p>
     </div>
-  `);let n=e.querySelector(`#adminMain`);n.innerHTML=`
+  `);let r=e.querySelector(`#adminMain`);r.innerHTML=`
     <div class="space-y-6 page-enter">
       <div class="flex justify-between items-center bg-white/5 p-6 rounded-2xl border border-white/10 backdrop-blur-md">
         <div>
@@ -1833,10 +1833,10 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
         </div>
       </div>
     </div>
-  `;let r=e=>{let t=window.open(``,`_blank`);t.document.write(`
+  `;let i=e=>{let t=window.open(``,`_blank`);t.document.write(`
       <html>
         <head>
-          <title>Official Ballots - GVC Election</title>
+          <title>Official Ballots - ${n.COLLEGE_SHORT_NAME} Election</title>
           <style>
             @media print {
               .no-print { display: none !important; }
@@ -1901,12 +1901,12 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
           ${e}
         </body>
       </html>
-    `),t.document.close()},i=async(e=`all`)=>{let n,r,i,a;try{[n,r,i,a]=await Promise.all([C.adminGetPosts(t),C.getFinalNominations(),C.getPublicSchedule(),C.adminGetSettings(t).catch(()=>({}))])}catch(e){throw Error(e.message.includes(`not published`)?`Final List Not Published. Please finalize and publish the list first.`:e.message)}let o=a.collegeName||`GOVERNMENT VICTORIA COLLEGE PALAKKAD`,s=a.collegeShortName||`GVC`,c=i.electionYear||new Date().getFullYear().toString(),l=r.active||[];if(l.length===0)throw Error(`No active candidates found.`);let u=e=>{let t=e.post.toLowerCase();return t.includes(`representative`)||t.includes(`year`)},d=e=>{let t=e.post.toLowerCase();return t.includes(`association`)||t.includes(`assoc`)},f=e=>!u(e)&&!d(e),p=n.filter(e=>l.filter(t=>t.post===e.post).length>1),m=``;if(e===`all`||e===`general`){let e=p.filter(f);if(e.length>0){m+=`
+    `),t.document.close()},a=async(e=`all`)=>{let r,i,a,o;try{[r,i,a,o]=await Promise.all([C.adminGetPosts(t),C.getFinalNominations(),C.getPublicSchedule(),C.adminGetSettings(t).catch(()=>({}))])}catch(e){throw Error(e.message.includes(`not published`)?`Final List Not Published. Please finalize and publish the list first.`:e.message)}let s=o.collegeName||n.COLLEGE_NAME,c=o.collegeShortName||n.COLLEGE_SHORT_NAME,l=a.electionYear||new Date().getFullYear().toString(),u=i.active||[];if(u.length===0)throw Error(`No active candidates found.`);let d=e=>{let t=e.post.toLowerCase();return t.includes(`representative`)||t.includes(`year`)},f=e=>{let t=e.post.toLowerCase();return t.includes(`association`)||t.includes(`assoc`)},p=e=>!d(e)&&!f(e),m=r.filter(e=>u.filter(t=>t.post===e.post).length>1),h=``;if(e===`all`||e===`general`){let e=m.filter(p);if(e.length>0){h+=`
           <div class="ballot-container a3 page-break">
             <!-- Counterfoil -->
             <div style="border-bottom: 2px dotted #000; padding-bottom: 20px; margin-bottom: 30px; text-align: center;">
-              <h1 style="font-size: 16px; margin: 0;">COLLEGE UNION ELECTION ${c}</h1>
-              <h1 style="font-size: 18px; margin: 5px 0;">${T(o)}</h1>
+              <h1 style="font-size: 16px; margin: 0;">COLLEGE UNION ELECTION ${l}</h1>
+              <h1 style="font-size: 18px; margin: 5px 0;">${T(s)}</h1>
               <h2 style="font-size: 14px; margin: 0;">OFFICIAL BALLOT PAPER (GENERAL) - COUNTERFOIL</h2>
               <div style="margin-top: 15px; font-weight: bold; text-align: left; display: flex; flex-direction: column; gap: 8px;">
                 <div style="display: flex; justify-content: space-between;">
@@ -1918,8 +1918,8 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
             </div>
 
             <div class="ballot-header">
-              <h1>COLLEGE UNION ELECTION ${c}</h1>
-              <h1>${T(o)}</h1>
+              <h1>COLLEGE UNION ELECTION ${l}</h1>
+              <h1>${T(s)}</h1>
               <h2>OFFICIAL BALLOT PAPER (GENERAL)</h2>
             </div>
             <div class="meta-row"><div>SL.NO. G____________</div><div>Signature of PRO</div></div>
@@ -1929,7 +1929,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               <div class="ballot-col" id="col2"></div>
             </div>
           </div>
-        `;let t=[...e].sort((e,t)=>{let n=e.post.toLowerCase(),r=t.post.toLowerCase();return n.includes(`chairman`)&&!n.includes(`vice`)?-1:r.includes(`chairman`)&&!r.includes(`vice`)?1:n.includes(`vice chairman`)?-1:r.includes(`vice chairman`)||n.includes(`university union councillor`)||n.includes(`uuc`)?1:r.includes(`university union councillor`)||r.includes(`uuc`)?-1:0}),n=``,r=``;t.forEach((e,t)=>{let i=l.filter(t=>t.post===e.post),a=`
+        `;let t=[...e].sort((e,t)=>{let n=e.post.toLowerCase(),r=t.post.toLowerCase();return n.includes(`chairman`)&&!n.includes(`vice`)?-1:r.includes(`chairman`)&&!r.includes(`vice`)?1:n.includes(`vice chairman`)?-1:r.includes(`vice chairman`)||n.includes(`university union councillor`)||n.includes(`uuc`)?1:r.includes(`university union councillor`)||r.includes(`uuc`)?-1:0}),n=``,r=``;t.forEach((e,t)=>{let i=u.filter(t=>t.post===e.post),a=`
             <div class="post-box">
               <div class="post-title">${T(e.post.toUpperCase())}</div>
               ${i.map((e,t)=>`
@@ -1944,11 +1944,11 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               `).join(``)}
               <div class="candidate-row"><div class="sl-no">${i.length+1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
             </div>
-          `;t%2==0?n+=a:r+=a}),m=m.replace(`<div class="ballot-col" id="col1"></div>`,`<div class="ballot-col" id="col1">${n}</div>`),m=m.replace(`<div class="ballot-col" id="col2"></div>`,`<div class="ballot-col" id="col2">${r}</div>`)}}let h=p.filter(e=>u(e)||d(e));return(e===`all`||e===`year`||e===`assoc`)&&h.filter(t=>e===`all`||e===`year`&&u(t)||e===`assoc`&&d(t)).forEach(e=>{let t=l.filter(t=>t.post===e.post),n=u(e)?`R`:`A`;m+=`
+          `;t%2==0?n+=a:r+=a}),h=h.replace(`<div class="ballot-col" id="col1"></div>`,`<div class="ballot-col" id="col1">${n}</div>`),h=h.replace(`<div class="ballot-col" id="col2"></div>`,`<div class="ballot-col" id="col2">${r}</div>`)}}let g=m.filter(e=>d(e)||f(e));return(e===`all`||e===`year`||e===`assoc`)&&g.filter(t=>e===`all`||e===`year`&&d(t)||e===`assoc`&&f(t)).forEach(e=>{let t=u.filter(t=>t.post===e.post),n=d(e)?`R`:`A`;h+=`
           <div class="ballot-container a5 page-break">
             <!-- Counterfoil -->
             <div style="border-bottom: 2px dotted #000; padding-bottom: 15px; margin-bottom: 20px; text-align: center;">
-              <h1 style="font-size: 14px; margin: 0;">${T(s)} ELECTION ${c}</h1>
+              <h1 style="font-size: 14px; margin: 0;">${T(c)} ELECTION ${l}</h1>
               <h2 style="font-size: 12px; margin: 2px 0;">OFFICIAL BALLOT (${n}) - COUNTERFOIL</h2>
               <div style="margin-top: 10px; font-weight: bold; text-align: left; display: flex; flex-direction: column; gap: 5px; font-size: 11px;">
                 <div style="display: flex; justify-content: space-between;">
@@ -1960,7 +1960,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
             </div>
 
             <div class="ballot-header">
-              <h1>${T(s)} ELECTION ${c}</h1>
+              <h1>${T(c)} ELECTION ${l}</h1>
               <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER (${n})</h2>
             </div>
             <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ${n}____________</div><div>PRO Sign</div></div>
@@ -1979,7 +1979,7 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               <div class="candidate-row"><div class="sl-no">${t.length+1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
             </div>
           </div>
-        `}),m},a=async e=>{try{D(`Generating ballots...`,`info`),r(await i(e))}catch(e){D(e.message,`error`)}},o=async()=>{try{D(`Calculating Master Plan...`,`info`);let[e,n,i]=await Promise.all([C.getPublicSchedule(),C.adminGetSettings(t).catch(()=>({})),C.adminGetBallotPlan(t).catch(()=>null)]);if(!i)return confirm(`No Master Plan found. Generate it now based on current final list and booths?`)?(await s(),o()):void 0;let a=i,c=e.electionYear||new Date().getFullYear(),l=n.collegeName||`Government Victoria College Palakkad`,u=e=>!e||Array.isArray(e)&&e.length===0?`-`:typeof e==`string`?e:`
+        `}),h},o=async e=>{try{D(`Generating ballots...`,`info`),i(await a(e))}catch(e){D(e.message,`error`)}},s=async()=>{try{D(`Calculating Master Plan...`,`info`);let[e,r,a]=await Promise.all([C.getPublicSchedule(),C.adminGetSettings(t).catch(()=>({})),C.adminGetBallotPlan(t).catch(()=>null)]);if(!a)return confirm(`No Master Plan found. Generate it now based on current final list and booths?`)?(await c(),s()):void 0;let o=a,l=e.electionYear||new Date().getFullYear(),u=r.collegeName||`Government Victoria College Palakkad`,d=e=>!e||Array.isArray(e)&&e.length===0?`-`:typeof e==`string`?e:`
           <table style="width:100%; border-collapse:collapse; font-size:10px; background:rgba(0,0,0,0.02);">
             ${e.map(e=>`
               <tr>
@@ -1990,11 +1990,11 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               </tr>
             `).join(``)}
           </table>
-        `;r(`
+        `;i(`
         <div style="padding: 40px; font-family: sans-serif; color: #333;">
           <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
-            <h1 style="margin: 0; font-size: 24px;">BALLOT PRINTING SUMMARY - ${c}</h1>
-            <h2 style="margin: 5px 0 0 0; font-size: 18px; color: #666;">${T(l)}</h2>
+            <h1 style="margin: 0; font-size: 24px;">BALLOT PRINTING SUMMARY - ${l}</h1>
+            <h2 style="margin: 5px 0 0 0; font-size: 18px; color: #666;">${T(u)}</h2>
           </div>
 
           <p style="font-size: 14px; margin-bottom: 20px;">
@@ -2014,20 +2014,20 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               </tr>
             </thead>
             <tbody>
-              ${a.general.results.map(e=>`
+              ${o.general.results.map(e=>`
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 10px;">Booth ${e.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${e.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${e.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${u(e.books||e.bookHtml)}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${d(e.books||e.bookHtml)}</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
                 <td style="border: 1px solid #ddd; padding: 10px;">TOTAL GENERAL</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${a.general.total}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${o.general.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G1</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G${a.general.total}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G${o.general.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
               </tr>
             </tbody>
@@ -2046,21 +2046,21 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               </tr>
             </thead>
             <tbody>
-              ${a.reps.results.map(e=>`
+              ${o.reps.results.map(e=>`
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${T(e.post)}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">B${e.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${e.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${e.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${u(e.books||e.bookHtml)}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${d(e.books||e.bookHtml)}</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
                 <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL REPRESENTATIVE</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${a.reps.total}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${o.reps.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R1</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${a.reps.total}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${o.reps.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
               </tr>
             </tbody>
@@ -2079,31 +2079,31 @@ This will remove the final candidate list from public view.`)){E(a,!0,`🚫 Unpu
               </tr>
             </thead>
             <tbody>
-              ${a.assocs.results.map(e=>`
+              ${o.assocs.results.map(e=>`
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${T(e.post)}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">B${e.booth}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${e.count}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${e.start}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${e.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${u(e.books||e.bookHtml)}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${d(e.books||e.bookHtml)}</td>
                 </tr>
               `).join(``)}
               <tr style="background: #f1f5f9; font-weight: bold;">
                 <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL ASSOCIATION</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${a.assocs.total}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${o.assocs.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A1</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${a.assocs.total}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${o.assocs.total}</td>
                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
               </tr>
             </tbody>
           </table>
 
           <div style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px; font-size: 12px; color: #666; text-align: center;">
-            Generated on ${new Date().toLocaleString()} | Official GVC Election Portal
+            Generated on ${new Date().toLocaleString()} | Official ${n.COLLEGE_SHORT_NAME} Election Portal
           </div>
         </div>
-      `)}catch(e){D(e.message,`error`)}},s=async e=>{let n=e?.target,r=`🔄 Finalize Master Plan`;try{n&&E(n,!0,r),D(`Calculating and saving Master Plan on server...`,`info`),await C.adminGenerateBallotPlan(t),D(`Master Plan finalized successfully!`,`success`),n&&E(n,!1,r)}catch(e){n&&E(n,!1,r),D(e.message,`error`)}};n.querySelector(`#btnGenSummary`).onclick=o,n.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>a(e.dataset.type)})}function Ze(e){let t=L();if(!t)return;R(e,`testing`,`
+      `)}catch(e){D(e.message,`error`)}},c=async e=>{let n=e?.target,r=`🔄 Finalize Master Plan`;try{n&&E(n,!0,r),D(`Calculating and saving Master Plan on server...`,`info`),await C.adminGenerateBallotPlan(t),D(`Master Plan finalized successfully!`,`success`),n&&E(n,!1,r)}catch(e){n&&E(n,!1,r),D(e.message,`error`)}};r.querySelector(`#btnGenSummary`).onclick=s,r.querySelectorAll(`.preview-btn`).forEach(e=>{e.onclick=()=>o(e.dataset.type)})}function Ze(e){let t=L();if(!t)return;R(e,`testing`,`
     <div class="page-enter space-y-8 max-w-3xl mx-auto">
 
       <!-- Warning Banner -->

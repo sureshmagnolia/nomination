@@ -6,6 +6,7 @@
 import { router } from '../../router.js';
 import { showToast } from '../../utils.js';
 import { api } from '../../api.js';
+import { CONFIG } from '../../config.js';
 
 export function getAdminPassword() {
   const pwd = localStorage.getItem('adminPwd');
@@ -42,9 +43,9 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
     <aside class="no-print w-60 flex-shrink-0 glass border-r border-white/10 flex flex-col">
       <div class="p-5 border-b border-white/10">
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">G</div>
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">${CONFIG.COLLEGE_SHORT_NAME.charAt(0)}</div>
           <div>
-            <p class="font-bold text-white text-xs">GVC Election</p>
+            <p class="font-bold text-white text-xs">${CONFIG.COLLEGE_SHORT_NAME} Election</p>
             <p class="text-slate-500 text-xs">Admin Panel</p>
           </div>
         </div>

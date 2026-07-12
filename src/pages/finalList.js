@@ -15,7 +15,7 @@ export async function renderFinalList(container) {
 
   container.innerHTML = publicLayout('Final Candidates List', `
     <div class="text-center py-20"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Final List...</p></div>
-  `, year);
+  `, year, shortName);
   container.querySelector('#backToHome').addEventListener('click', () => router.navigate('/'));
 
   try {
@@ -96,7 +96,7 @@ function renderList(main, nominations, year) {
     </div>`;
 }
 
-function publicLayout(title, bodyHtml, yearValue = '2026') {
+function publicLayout(title, bodyHtml, yearValue = '2026', shortName = 'GVC') {
   return `
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
@@ -106,7 +106,7 @@ function publicLayout(title, bodyHtml, yearValue = '2026') {
           <span class="text-slate-600">|</span>
           <h1 class="font-bold text-white text-sm tracking-tight">${esc(title)}</h1>
         </div>
-        <div class="text-[10px] text-slate-500 font-mono hidden sm:block">GVC ELECTION PORTAL ${yearValue}</div>
+        <div class="text-[10px] text-slate-500 font-mono hidden sm:block">${esc(shortName || 'GVC').toUpperCase()} ELECTION PORTAL ${yearValue}</div>
       </div>
     </header>
     <main class="max-w-5xl mx-auto px-4 py-12">${bodyHtml}</main>

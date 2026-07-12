@@ -384,7 +384,7 @@ function publicLayout(title, bodyHtml, yearValue = '2026') {
           <h1 class="font-bold text-white text-lg tracking-tight">${esc(title)}</h1>
         </div>
         <div class="text-xs text-slate-500 font-medium hidden md:block uppercase tracking-widest">
-          GVC Election Portal ${yearValue}
+          ${CONFIG.COLLEGE_SHORT_NAME} Election Portal ${yearValue}
         </div>
       </div>
     </header>

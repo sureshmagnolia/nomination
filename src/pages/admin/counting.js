@@ -251,7 +251,7 @@ function buildFormHtml(tableNum, roundNum, postName, candidates, serial) {
   return `<div class="pg">
     <div class="serial-tag">FORM #${serial}</div>
     <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:16px;padding-right:100px;">
-      <div style="font-size:11px;color:#555">Government Victoria College, Palakkad — College Union Election</div>
+      <div style="font-size:11px;color:#555">${collegeName} — College Union Election</div>
       <h2 style="margin:6px 0 0;font-size:20px;text-transform:uppercase;letter-spacing:2px">Counting Form</h2>
       <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:15px;font-weight:bold">
         <span>TABLE: <u>${tableNum}</u></span><span>ROUND: <u>${roundNum}</u></span>

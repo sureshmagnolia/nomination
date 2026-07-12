@@ -5,6 +5,7 @@
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
+import { CONFIG } from '../../config.js';
 
 export async function renderAdminBallots(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -79,7 +80,7 @@ export async function renderAdminBallots(container) {
     printWin.document.write(`
       <html>
         <head>
-          <title>Official Ballots - GVC Election</title>
+          <title>Official Ballots - ${CONFIG.COLLEGE_SHORT_NAME} Election</title>
           <style>
             @media print {
               .no-print { display: none !important; }
@@ -163,8 +164,8 @@ export async function renderAdminBallots(container) {
         : err.message);
     }
 
-    const collegeName = settings.collegeName || 'GOVERNMENT VICTORIA COLLEGE PALAKKAD';
-    const shortName = settings.collegeShortName || 'GVC';
+    const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
+    const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
 
     const year = schedule.electionYear || new Date().getFullYear().toString();
     const candidates = candidatesResponse.active || [];
@@ -474,7 +475,7 @@ export async function renderAdminBallots(container) {
           </table>
 
           <div style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px; font-size: 12px; color: #666; text-align: center;">
-            Generated on ${new Date().toLocaleString()} | Official GVC Election Portal
+            Generated on ${new Date().toLocaleString()} | Official ${CONFIG.COLLEGE_SHORT_NAME} Election Portal
           </div>
         </div>
       `;
