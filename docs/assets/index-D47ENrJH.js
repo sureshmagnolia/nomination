@@ -2803,6 +2803,8 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
             <th class="sl">Sl. No</th>
             <th class="adm">Adm. No</th>
             <th>Name</th>
+            <th class="remarks">Remarks</th>
+            <th class="sig">Signature</th>
           </tr></thead>
           <tbody>
             ${t.map(e=>`
@@ -2810,6 +2812,8 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
                 <td class="sl">${E(e[`Nominal Roll Serial Number`])}</td>
                 <td class="adm">${E(e[`ADMISION NO`]||e[`ADMISSION NO`]||`–`)}</td>
                 <td style="font-weight:bold">${E(e.NAME)}</td>
+                <td></td>
+                <td></td>
               </tr>
             `).join(``)}
           </tbody>
@@ -2843,6 +2847,8 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
           th { background: #eee; font-weight: bold; text-transform: uppercase; font-size: 10px; }
           .sl { width: 50px; text-align: center; font-weight: bold; }
           .adm { width: 100px; font-family: monospace; }
+          .remarks { width: 150px; }
+          .sig { width: 120px; }
 
           .footer { margin-top: 40px; display: flex; justify-content: flex-end; font-weight: bold; padding: 0 40px; }
           .no-print { display: none; }

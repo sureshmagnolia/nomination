@@ -495,6 +495,8 @@ function triggerRollPrint(students, isFinal, collegeName) {
             <th class="sl">Sl. No</th>
             <th class="adm">Adm. No</th>
             <th>Name</th>
+            <th class="remarks">Remarks</th>
+            <th class="sig">Signature</th>
           </tr></thead>
           <tbody>
             ${studentsInClass.map(s => `
@@ -502,6 +504,8 @@ function triggerRollPrint(students, isFinal, collegeName) {
                 <td class="sl">${esc(s['Nominal Roll Serial Number'])}</td>
                 <td class="adm">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
                 <td style="font-weight:bold">${esc(s['NAME'])}</td>
+                <td></td>
+                <td></td>
               </tr>
             `).join('')}
           </tbody>
@@ -539,6 +543,8 @@ function triggerRollPrint(students, isFinal, collegeName) {
           th { background: #eee; font-weight: bold; text-transform: uppercase; font-size: 10px; }
           .sl { width: 50px; text-align: center; font-weight: bold; }
           .adm { width: 100px; font-family: monospace; }
+          .remarks { width: 150px; }
+          .sig { width: 120px; }
 
           .footer { margin-top: 40px; display: flex; justify-content: flex-end; font-weight: bold; padding: 0 40px; }
           .no-print { display: none; }
