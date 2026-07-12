@@ -2786,18 +2786,18 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
           <div>👥 <strong class="text-white">${u.length}</strong> students detected using <strong>${d===f?`Legacy Format`:`Explicit Format`}</strong></div>
           <div>🏛️ <strong class="text-white">${c.length}</strong> departments: ${c.map(e=>`<span class="text-indigo-300">${E(e)}</span>`).join(`, `)}</div>
           <div>📚 <strong class="text-white">${s.length}</strong> unique classes found</div>
-        `,e.querySelector(`#csvPreview`).classList.remove(`hidden`),m()},r.readAsText(n)};let m=()=>{let t=e.querySelector(`#confirmResetText`)?.value.trim().toUpperCase()===`RESET`,n=(e.querySelector(`#confirmPwd`)?.value.trim()||``)!==``,r=e.querySelector(`#btnUploadRoll`);if(!r)return;let i=t&&n&&u&&u.length>0;r.disabled=!i,r.classList.toggle(`opacity-50`,!i),r.classList.toggle(`cursor-not-allowed`,!i)};e.querySelector(`#confirmResetText`).addEventListener(`input`,m),e.querySelector(`#confirmPwd`).addEventListener(`input`,m),e.querySelector(`#btnUploadRoll`).onclick=async t=>{let n=e.querySelector(`#confirmPwd`).value.trim();if(!u||u.length===0)return O(`No data to upload.`,`error`);if(confirm(`FINAL CONFIRMATION\n\nYou are about to replace the Nominal Roll with ${u.length} students.\nAll nominations, results, and election data will be permanently deleted.\n\nThis CANNOT be undone. Proceed?`)){D(t.target,!0,`Uploading & Resetting...`);try{O(`✅ Nominal Roll updated with ${(await C.adminUploadNominalRoll(n,{headers:d,rows:u})).count||u.length} students. All election data has been reset.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){O(e.message,`error`),D(t.target,!1,`🚨 Upload & Reset Entire System`)}}}};l()}function st(e,t,r){let i=[...e].sort((e,t)=>{let n=String(e.Dept||``).toUpperCase(),r=String(t.Dept||``).toUpperCase();if(n!==r)return n.localeCompare(r);let i=String(e.CLASS).toUpperCase(),a=String(t.CLASS).toUpperCase();return i===a?String(e.NAME).toUpperCase().localeCompare(String(t.NAME).toUpperCase()):i.localeCompare(a)}),a={};i.forEach(e=>{let t=String(e.CLASS).toUpperCase()||`UNKNOWN CLASS`;a[t]||(a[t]=[]),a[t].push(e)});let o=n.COLLEGE_NAME||`GOVERNMENT VICTORIA COLLEGE, PALAKKAD`,s=r||o,c=t?`FINAL NOMINAL ROLL`:`DRAFT NOMINAL ROLL`,l=new Date().toLocaleString(),u=``;Object.keys(a).forEach(e=>{let t=a[e],n=E(t[0].Dept||`UNKNOWN DEPARTMENT`);u+=`
+        `,e.querySelector(`#csvPreview`).classList.remove(`hidden`),m()},r.readAsText(n)};let m=()=>{let t=e.querySelector(`#confirmResetText`)?.value.trim().toUpperCase()===`RESET`,n=(e.querySelector(`#confirmPwd`)?.value.trim()||``)!==``,r=e.querySelector(`#btnUploadRoll`);if(!r)return;let i=t&&n&&u&&u.length>0;r.disabled=!i,r.classList.toggle(`opacity-50`,!i),r.classList.toggle(`cursor-not-allowed`,!i)};e.querySelector(`#confirmResetText`).addEventListener(`input`,m),e.querySelector(`#confirmPwd`).addEventListener(`input`,m),e.querySelector(`#btnUploadRoll`).onclick=async t=>{let n=e.querySelector(`#confirmPwd`).value.trim();if(!u||u.length===0)return O(`No data to upload.`,`error`);if(confirm(`FINAL CONFIRMATION\n\nYou are about to replace the Nominal Roll with ${u.length} students.\nAll nominations, results, and election data will be permanently deleted.\n\nThis CANNOT be undone. Proceed?`)){D(t.target,!0,`Uploading & Resetting...`);try{O(`✅ Nominal Roll updated with ${(await C.adminUploadNominalRoll(n,{headers:d,rows:u})).count||u.length} students. All election data has been reset.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){O(e.message,`error`),D(t.target,!1,`🚨 Upload & Reset Entire System`)}}}};l()}function st(e,t,r){let i=e=>{let t=String(e).toUpperCase();if(t.includes(`PH D`)||t.includes(`PHD`))return 3e3;let n=4e3;t.match(/\b(BA|BSC|BCOM|BBA|BCA)\b/)?n=1e3:t.match(/\b(MA|MSC|MCOM|MBA|MCA)\b/)&&(n=2e3);let r=900;return t.includes(`1ST YEAR`)||t.match(/\bI\b/)?r=100:t.includes(`2ND YEAR`)||t.match(/\bII\b/)?r=200:(t.includes(`3RD YEAR`)||t.match(/\bIII\b/))&&(r=300),n+r},a=[...e].sort((e,t)=>{let n=String(e.Dept||``).toUpperCase(),r=String(t.Dept||``).toUpperCase();if(n!==r)return n.localeCompare(r);let a=String(e.CLASS).toUpperCase(),o=String(t.CLASS).toUpperCase();if(a!==o){let e=i(a),t=i(o);return e===t?a.localeCompare(o):e-t}return String(e.NAME).toUpperCase().localeCompare(String(t.NAME).toUpperCase())}),o={};a.forEach(e=>{let t=String(e.CLASS).toUpperCase()||`UNKNOWN CLASS`;o[t]||(o[t]=[]),o[t].push(e)});let s=n.COLLEGE_NAME||`GOVERNMENT VICTORIA COLLEGE, PALAKKAD`,c=r||s,l=t?`FINAL NOMINAL ROLL`:`DRAFT NOMINAL ROLL`,u=new Date().toLocaleString(),d=``;Object.keys(o).forEach(e=>{let t=o[e],n=E(t[0].Dept||`UNKNOWN DEPARTMENT`);d+=`
       <div class="page-break">
-        <div class="watermark">${c}</div>
+        <div class="watermark">${l}</div>
         <table>
           <thead>
             <tr>
               <th colspan="5" class="table-header">
-                <div class="college">${E(s)}</div>
+                <div class="college">${E(c)}</div>
                 <div class="title">Department of ${n}</div>
-                <div class="title" style="margin-top: 5px;">${E(e)} — ${c}</div>
+                <div class="title" style="margin-top: 5px;">${E(e)} — ${l}</div>
                 <div class="meta">
-                  <div>Printed on: ${l}</div>
+                  <div>Printed on: ${u}</div>
                   <div>Students in Class: ${t.length}</div>
                 </div>
               </th>
@@ -2830,10 +2830,10 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
           </tfoot>
         </table>
       </div>
-    `});let d=window.open(``,`_blank`);d.document.write(`
+    `});let f=window.open(``,`_blank`);f.document.write(`
     <html>
       <head>
-        <title>${c}</title>
+        <title>${l}</title>
         <style>
           @page { margin: 15mm; }
           body { font-family: sans-serif; color: #000; line-height: 1.4; font-size: 11px; margin: 0; padding: 0; }
@@ -2866,11 +2866,11 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
         </style>
       </head>
       <body>
-        ${u}
+        ${d}
         <script>window.print();<\/script>
       </body>
     </html>
-  `),d.document.close()}async function ct(e){let t=R();if(t){z(e,`schedule`,`
+  `),f.document.close()}async function ct(e){let t=R();if(t){z(e,`schedule`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading schedule...</p></div>
   `);try{let n=await C.getPublicSchedule();lt(e.querySelector(`#adminMain`),t,n)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${E(t.message)}</div>`}}}function lt(e,t,n){let r=e=>e?new Date(e).toISOString().slice(0,16):``;e.innerHTML=`
     <div class="page-enter space-y-6 max-w-4xl">

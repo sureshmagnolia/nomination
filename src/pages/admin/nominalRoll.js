@@ -444,7 +444,23 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
 
 
 function triggerRollPrint(students, isFinal, collegeName) {
-  // Sort primarily by Dept, then Class, then Name
+  const getClassWeight = (className) => {
+    const cls = String(className).toUpperCase();
+    if (cls.includes('PH D') || cls.includes('PHD')) return 3000;
+    
+    let typeWeight = 4000;
+    if (cls.match(/\b(BA|BSC|BCOM|BBA|BCA)\b/)) typeWeight = 1000;
+    else if (cls.match(/\b(MA|MSC|MCOM|MBA|MCA)\b/)) typeWeight = 2000;
+
+    let yearWeight = 900;
+    if (cls.includes('1ST YEAR') || cls.match(/\bI\b/)) yearWeight = 100;
+    else if (cls.includes('2ND YEAR') || cls.match(/\bII\b/)) yearWeight = 200;
+    else if (cls.includes('3RD YEAR') || cls.match(/\bIII\b/)) yearWeight = 300;
+
+    return typeWeight + yearWeight;
+  };
+
+  // Sort primarily by Dept, then Class (custom), then Name
   const data = [...students].sort((a, b) => {
     const dA = String(a['Dept'] || '').toUpperCase();
     const dB = String(b['Dept'] || '').toUpperCase();
@@ -452,7 +468,12 @@ function triggerRollPrint(students, isFinal, collegeName) {
 
     const cA = String(a['CLASS']).toUpperCase();
     const cB = String(b['CLASS']).toUpperCase();
-    if (cA !== cB) return cA.localeCompare(cB);
+    if (cA !== cB) {
+      const wA = getClassWeight(cA);
+      const wB = getClassWeight(cB);
+      if (wA !== wB) return wA - wB;
+      return cA.localeCompare(cB);
+    }
     
     return String(a['NAME']).toUpperCase().localeCompare(String(b['NAME']).toUpperCase());
   });
