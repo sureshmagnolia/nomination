@@ -260,18 +260,18 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           <head>
             <title>Ballot Accounts - Booth Wise</title>
             <style>
-              @page { size: A4 portrait; margin: 10mm; }
+              @page { size: A4 portrait; margin: 8mm; }
               body { font-family: sans-serif; color: #333; margin: 0; padding: 0; }
               .page-break { page-break-after: always; }
-              .account-page { padding: 20px; display: flex; flex-direction: column; box-sizing: border-box; border: 1px solid #ccc; margin: 5px; min-height: 270mm; position: relative; }
-              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
-              .college-name { font-size: 20px; font-weight: bold; margin-bottom: 3px; }
-              .title { font-size: 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-              .stats-table { width: 99.5%; margin: 0 auto; border-collapse: collapse; border: 1.5px solid #000; }
-              .stats-table th, .stats-table td { border: 1px solid #000; padding: 6px 10px; text-align: left; font-size: 11px; }
-              .stats-table th { background: #f2f2f2; font-size: 11px; text-transform: uppercase; font-weight: bold; }
-              .footer { display: flex; justify-content: flex-end; margin-top: 30px; padding-right: 30px; }
-              .sig-line { border-top: 1.5px solid #000; padding-top: 8px; width: 220px; text-align: center; font-size: 13px; font-weight: bold; }
+              .account-page { padding: 10px; display: flex; flex-direction: column; box-sizing: border-box; border: 1px solid #ccc; margin: 0; height: 280mm; position: relative; overflow: hidden; }
+              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 8px; }
+              .college-name { font-size: 16px; font-weight: bold; margin-bottom: 2px; }
+              .title { font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+              .stats-table { width: 100%; margin: 0 auto; border-collapse: collapse; border: 1px solid #000; }
+              .stats-table th, .stats-table td { border: 1px solid #000; padding: 2px 4px; text-align: left; font-size: 10px; }
+              .stats-table th { background: #f2f2f2; font-size: 10px; text-transform: uppercase; font-weight: bold; }
+              .footer { display: flex; justify-content: flex-end; margin-top: auto; padding-right: 30px; padding-bottom: 10px; }
+              .sig-line { border-top: 1px solid #000; padding-top: 4px; width: 200px; text-align: center; font-size: 11px; font-weight: bold; }
               @media print { .no-print { display: none; } .page-break { page-break-after: always; } }
             </style>
           </head>
@@ -581,72 +581,72 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               <div class="title">Ballots & Books Account (To be filled by PO)</div>
             </div>
             
-            <div style="font-size: 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; background: #f9f9f9; padding: 10px; border: 1px solid #ddd;">
-              <div><strong>BOOTH NUMBER:</strong> <span style="font-size: 22px; font-weight: bold; margin-left: 10px;">${b.boothNumber}</span></div>
+            <div style="font-size: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; background: #f9f9f9; padding: 6px 10px; border: 1px solid #ddd;">
+              <div><strong>BOOTH NUMBER:</strong> <span style="font-size: 18px; font-weight: bold; margin-left: 10px;">${b.boothNumber}</span></div>
               <div style="text-align: right;"><strong>LOCATION:</strong> ${esc(b.roomName || 'UNSPECIFIED')}</div>
             </div>
 
-          <div style="flex: 1; display: flex; flex-direction: column; margin-top: 10px; margin-bottom: 20px;">
-            <table class="stats-table" style="flex: 1; font-size: 13px;">
+          <div style="flex: 1; display: flex; flex-direction: column; margin-top: 5px; margin-bottom: 10px;">
+            <table class="stats-table" style="flex: 1; font-size: 11px;">
               <thead>
                 <tr>
-                  <th style="width:25%; font-size:12px;">Ballot Category</th>
-                  <th style="width:20%; font-size:12px;">Serial Range</th>
-                  <th style="width:10%; text-align:center; font-size:12px;">Total Qty</th>
-                  <th style="width:15%; text-align:center; font-size:12px;">No. Used</th>
-                  <th style="width:15%; text-align:center; font-size:12px;">No. Returned</th>
-                  <th style="font-size:12px;">Remarks</th>
+                  <th style="width:25%; font-size:10px;">Ballot Category</th>
+                  <th style="width:20%; font-size:10px;">Serial Range</th>
+                  <th style="width:10%; text-align:center; font-size:10px;">Total Qty</th>
+                  <th style="width:15%; text-align:center; font-size:10px;">No. Used</th>
+                  <th style="width:15%; text-align:center; font-size:10px;">No. Returned</th>
+                  <th style="font-size:10px;">Remarks</th>
                 </tr>
               </thead>
               <tbody>
                 ${assignments.general ? `
                   <tr style="font-weight:bold;">
-                    <td style="font-size:13px;">General Union Posts</td>
-                    <td style="font-size:13px;">G${assignments.general.start} - G${assignments.general.end}</td>
-                    <td style="text-align:center; font-size:14px;">${assignments.general.count}</td>
+                    <td style="font-size:11px;">General Union Posts</td>
+                    <td style="font-size:11px;">G${assignments.general.start} - G${assignments.general.end}</td>
+                    <td style="text-align:center; font-size:12px;">${assignments.general.count}</td>
                     <td></td><td></td><td></td>
                   </tr>
                 ` : ''}
                 ${assignments.reps.map(r => `
                   <tr>
-                    <td style="font-size:13px; font-weight:bold;">${esc(r.post)}</td>
-                    <td style="font-size:13px;">R${r.start} - R${r.end}</td>
-                    <td style="text-align:center; font-size:14px;">${r.count}</td>
+                    <td style="font-size:11px; font-weight:bold;">${esc(r.post)}</td>
+                    <td style="font-size:11px;">R${r.start} - R${r.end}</td>
+                    <td style="text-align:center; font-size:12px;">${r.count}</td>
                     <td></td><td></td><td></td>
                   </tr>
                 `).join('')}
                 ${assignments.assocs.map(a => `
                   <tr>
-                    <td style="font-size:13px; font-weight:bold;">${esc(a.post)}</td>
-                    <td style="font-size:13px;">A${a.start} - A${a.end}</td>
-                    <td style="text-align:center; font-size:14px;">${a.count}</td>
+                    <td style="font-size:11px; font-weight:bold;">${esc(a.post)}</td>
+                    <td style="font-size:11px;">A${a.start} - A${a.end}</td>
+                    <td style="text-align:center; font-size:12px;">${a.count}</td>
                     <td></td><td></td><td></td>
                   </tr>
                 `).join('')}
               </tbody>
             </table>
             
-            <div style="margin-top: 15px; font-size: 12px; color: #555; background: #fffde7; padding: 10px; border: 1px dashed #fbc02d;">
+            <div style="margin-top: 8px; font-size: 10px; color: #555; background: #fffde7; padding: 6px; border: 1px dashed #fbc02d;">
               <strong>Note:</strong> Total Qty should be equal to (Number of Ballots Used + Number of Ballots Returned). Please record any discrepancies in the Remarks column.
             </div>
           </div>
 
-          <div style="flex: 1.2; display: flex; flex-direction: column; margin-bottom: 10px;">
-            <h4 style="margin: 0 0 8px 0; font-size: 15px; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 2px;">3. Account of Votes (To be filled by PO)</h4>
-            <table class="stats-table" style="flex: 1; font-size: 13px;">
+          <div style="flex: 1; display: flex; flex-direction: column; margin-bottom: 5px;">
+            <h4 style="margin: 0 0 6px 0; font-size: 13px; text-transform: uppercase; border-bottom: 1.5px solid #000; padding-bottom: 2px;">3. Account of Votes (To be filled by PO)</h4>
+            <table class="stats-table" style="flex: 1; font-size: 11px;">
               <thead>
                 <tr>
-                  <th style="width:35%; font-size:12px;">Name of Post</th>
-                  <th style="width:15%; text-align:center; font-size:12px;">Total Voters Assigned</th>
-                  <th style="width:20%; text-align:center; font-size:12px;">No. of Votes Recorded</th>
-                  <th style="width:30%; font-size:12px;">Remarks</th>
+                  <th style="width:35%; font-size:10px;">Name of Post</th>
+                  <th style="width:15%; text-align:center; font-size:10px;">Total Voters Assigned</th>
+                  <th style="width:20%; text-align:center; font-size:10px;">No. of Votes Recorded</th>
+                  <th style="width:30%; font-size:10px;">Remarks</th>
                 </tr>
               </thead>
               <tbody>
                 ${allBoothPosts.map(p => `
                   <tr>
-                    <td style="font-size: 13px; font-weight: bold;">${esc(p.name)}</td>
-                    <td style="text-align:center; font-weight:bold; font-size:14px;">${p.count}</td>
+                    <td style="font-size: 11px; font-weight: bold;">${esc(p.name)}</td>
+                    <td style="text-align:center; font-size: 12px;">${p.count}</td>
                     <td></td>
                     <td></td>
                   </tr>
