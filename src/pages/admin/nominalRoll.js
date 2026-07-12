@@ -285,8 +285,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
     }
 
     // Printing
-    main.querySelector('#btnPrintSerial').onclick = () => triggerRollPrint(students, isFinal, 'serial');
-    main.querySelector('#btnPrintClass').onclick = () => triggerRollPrint(students, isFinal, 'class');
+    main.querySelector('#btnPrintRoll').onclick = () => triggerRollPrint(students, isFinal, settings.collegeName);
 
     // ── Upload Panel Handlers ────────────────────────────────────────────────
 
