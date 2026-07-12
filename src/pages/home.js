@@ -58,8 +58,7 @@ export async function renderHome(container) {
       </main>
 
       <footer class="py-12 border-t border-white/5 text-center text-slate-500 text-sm">
-        <p>&copy; ${year} ${esc(collegeName)}</p>
-        <p class="mt-1 font-medium text-slate-400">Developed by Exam Wing ${esc(shortName)}</p>
+        <p>&copy; Magnolia 🌸</p>
       </footer>
     </div>
   `;

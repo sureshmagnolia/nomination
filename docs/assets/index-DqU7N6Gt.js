@@ -116,8 +116,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </main>
 
       <footer class="py-12 border-t border-white/5 text-center text-slate-500 text-sm">
-        <p>&copy; ${t} ${T(n)}</p>
-        <p class="mt-1 font-medium text-slate-400">Developed by Exam Wing ${T(r)}</p>
+        <p>&copy; Magnolia 🌸</p>
       </footer>
     </div>
   `}function O(e,t,n,r){return`
