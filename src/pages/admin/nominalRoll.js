@@ -533,7 +533,7 @@ function triggerRollPrint(students, isFinal, collegeName) {
               <tr>
                 <td class="sl">${esc(s['Nominal Roll Serial Number'])}</td>
                 <td class="adm">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
-                <td style="font-weight:bold">${esc(s['NAME'])}</td>
+                <td>${esc(s['NAME'])}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -577,7 +577,7 @@ function triggerRollPrint(students, isFinal, collegeName) {
           table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
           th, td { border: 1px solid #000; padding: 3px 5px; text-align: left; }
           th { background: #eee; font-weight: bold; text-transform: uppercase; font-size: 10px; }
-          .sl { width: 50px; text-align: center; font-weight: bold; }
+          .sl { width: 50px; text-align: center; }
           .adm { width: 65px; font-family: monospace; }
 
           .squish th, .squish td { padding: 1px 4px !important; }

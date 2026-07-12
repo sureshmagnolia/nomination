@@ -2813,7 +2813,7 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
               <tr>
                 <td class="sl">${E(e[`Nominal Roll Serial Number`])}</td>
                 <td class="adm">${E(e[`ADMISION NO`]||e[`ADMISSION NO`]||`–`)}</td>
-                <td style="font-weight:bold">${E(e.NAME)}</td>
+                <td>${E(e.NAME)}</td>
               </tr>
             `).join(``)}
           </tbody>
@@ -2853,7 +2853,7 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
           table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
           th, td { border: 1px solid #000; padding: 3px 5px; text-align: left; }
           th { background: #eee; font-weight: bold; text-transform: uppercase; font-size: 10px; }
-          .sl { width: 50px; text-align: center; font-weight: bold; }
+          .sl { width: 50px; text-align: center; }
           .adm { width: 65px; font-family: monospace; }
 
           .squish th, .squish td { padding: 1px 4px !important; }
