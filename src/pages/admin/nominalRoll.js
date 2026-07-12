@@ -554,9 +554,9 @@ function triggerRollPrint(students, isFinal, collegeName) {
           th, td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
           th { background: #eee; font-weight: bold; text-transform: uppercase; font-size: 10px; }
           .sl { width: 50px; text-align: center; font-weight: bold; }
-          .adm { width: 100px; font-family: monospace; }
-          .remarks { width: 150px; }
-          .sig { width: 120px; }
+          .adm { width: 65px; font-family: monospace; }
+          .remarks { width: 100px; }
+          .sig { width: 80px; }
 
           .no-print { display: none; }
         </style>
