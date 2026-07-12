@@ -8,9 +8,14 @@ import { esc } from '../utils.js';
 
 export async function renderFinalList(container) {
   let year = new Date().getFullYear();
+  let shortName = 'GVC';
   try {
-    const s = await api.getPublicSchedule();
+    const [s, sets] = await Promise.all([
+      api.getPublicSchedule(),
+      api.getSettings().catch(() => ({}))
+    ]);
     if (s.electionYear) year = s.electionYear;
+    if (sets.shortName) shortName = sets.shortName;
   } catch(e) {}
 
   container.innerHTML = publicLayout('Final Candidates List', `

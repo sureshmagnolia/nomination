@@ -12,7 +12,7 @@ export async function renderHome(container) {
   try {
     const [schedule, sets] = await Promise.all([
       api.getPublicSchedule(),
-      api.getPublicSettings().catch(() => ({}))
+      api.getSettings().catch(() => ({}))
     ]);
     if (schedule.electionYear) year = schedule.electionYear;
     if (sets.collegeName) collegeName = sets.collegeName;

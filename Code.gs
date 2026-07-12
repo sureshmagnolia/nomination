@@ -359,8 +359,10 @@ function doGet(e) {
         validListPublished: getSetting('validListPublished'),
         finalListPublished: getSetting('finalListPublished'),
         collegeName: getSetting('collegeName') || 'GOVERNMENT VICTORIA COLLEGE PALAKKAD',
-        collegeShortName: getSetting('collegeShortName') || 'GVC'
-      });
+        collegeShortName: getSetting('collegeShortName') || 'GVC',
+        notificationDate: getSetting('notificationDate') || '2026-04-20',
+        electionYear: getSetting('electionYear') || new Date().getFullYear().toString()
+      }, 30);
     }
 
     if (action === 'adminGetPosts') {
@@ -419,7 +421,9 @@ function doGet(e) {
       return jsonOut({
         validListPublished: getSetting('validListPublished'),
         finalListPublished: getSetting('finalListPublished'),
-        isRollFinalized: getSetting('isRollFinalized')
+        isRollFinalized: getSetting('isRollFinalized'),
+        collegeName: getSetting('collegeName'),
+        collegeShortName: getSetting('collegeShortName')
       });
     }
 
