@@ -504,7 +504,7 @@ function triggerRollPrint(students, isFinal, collegeName) {
     // A4 usually fits ~31 students on page 1, and ~36 on subsequent pages.
     // If the overflow onto the last page is 10 students or fewer, applying tighter padding pulls them into the previous page.
     const spill = len <= 31 ? 0 : ((len - 31) % 36);
-    if (spill > 0 && spill <= 10) squishClass = 'squish';
+    if (spill > 0 && spill <= 12) squishClass = 'squish';
 
     htmlContent += `
       <div class="page-break">
@@ -512,7 +512,7 @@ function triggerRollPrint(students, isFinal, collegeName) {
         <table class="${squishClass}">
           <thead>
             <tr>
-              <th colspan="5" class="table-header">
+              <th colspan="3" class="table-header">
                 <div class="college">${esc(cName)}</div>
                 <div class="title">Department of ${dept}</div>
                 <div class="title" style="margin-top: 5px;">${esc(cls)} — ${watermark}</div>
@@ -526,8 +526,6 @@ function triggerRollPrint(students, isFinal, collegeName) {
               <th class="sl">Sl. No</th>
               <th class="adm">Adm. No</th>
               <th>Name</th>
-              <th class="remarks">Remarks</th>
-              <th class="sig">Signature</th>
             </tr>
           </thead>
           <tbody>
@@ -536,14 +534,12 @@ function triggerRollPrint(students, isFinal, collegeName) {
                 <td class="sl">${esc(s['Nominal Roll Serial Number'])}</td>
                 <td class="adm">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
                 <td style="font-weight:bold">${esc(s['NAME'])}</td>
-                <td></td>
-                <td></td>
               </tr>
             `).join('')}
           </tbody>
           <tfoot>
             <tr>
-              <td colspan="5" class="table-footer">
+              <td colspan="3" class="table-footer">
                 <div class="footer-content">Returning Officer</div>
               </td>
             </tr>
@@ -583,12 +579,11 @@ function triggerRollPrint(students, isFinal, collegeName) {
           th { background: #eee; font-weight: bold; text-transform: uppercase; font-size: 10px; }
           .sl { width: 50px; text-align: center; font-weight: bold; }
           .adm { width: 65px; font-family: monospace; }
-          .remarks { width: 100px; }
-          .sig { width: 80px; }
 
-          .squish th, .squish td { padding: 3px 8px !important; }
-          .squish .table-header { padding: 0 0 5px 0 !important; }
-          .squish .table-footer { padding: 20px 40px 0 0 !important; }
+          .squish th, .squish td { padding: 1px 4px !important; }
+          .squish table { margin-bottom: 5px !important; }
+          .squish .table-header { padding: 0 0 2px 0 !important; }
+          .squish .table-footer { padding: 10px 40px 0 0 !important; }
 
           .no-print { display: none; }
         </style>

@@ -2786,13 +2786,13 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
           <div>👥 <strong class="text-white">${u.length}</strong> students detected using <strong>${d===f?`Legacy Format`:`Explicit Format`}</strong></div>
           <div>🏛️ <strong class="text-white">${c.length}</strong> departments: ${c.map(e=>`<span class="text-indigo-300">${E(e)}</span>`).join(`, `)}</div>
           <div>📚 <strong class="text-white">${s.length}</strong> unique classes found</div>
-        `,e.querySelector(`#csvPreview`).classList.remove(`hidden`),m()},r.readAsText(n)};let m=()=>{let t=e.querySelector(`#confirmResetText`)?.value.trim().toUpperCase()===`RESET`,n=(e.querySelector(`#confirmPwd`)?.value.trim()||``)!==``,r=e.querySelector(`#btnUploadRoll`);if(!r)return;let i=t&&n&&u&&u.length>0;r.disabled=!i,r.classList.toggle(`opacity-50`,!i),r.classList.toggle(`cursor-not-allowed`,!i)};e.querySelector(`#confirmResetText`).addEventListener(`input`,m),e.querySelector(`#confirmPwd`).addEventListener(`input`,m),e.querySelector(`#btnUploadRoll`).onclick=async t=>{let n=e.querySelector(`#confirmPwd`).value.trim();if(!u||u.length===0)return O(`No data to upload.`,`error`);if(confirm(`FINAL CONFIRMATION\n\nYou are about to replace the Nominal Roll with ${u.length} students.\nAll nominations, results, and election data will be permanently deleted.\n\nThis CANNOT be undone. Proceed?`)){D(t.target,!0,`Uploading & Resetting...`);try{O(`✅ Nominal Roll updated with ${(await C.adminUploadNominalRoll(n,{headers:d,rows:u})).count||u.length} students. All election data has been reset.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){O(e.message,`error`),D(t.target,!1,`🚨 Upload & Reset Entire System`)}}}};l()}function st(e,t,r){let i=e=>{let t=String(e).toUpperCase();if(t.includes(`PH D`)||t.includes(`PHD`))return 3e3;let n=4e3;t.match(/\b(BA|BSC|BCOM|BBA|BCA)\b/)?n=1e3:t.match(/\b(MA|MSC|MCOM|MBA|MCA)\b/)&&(n=2e3);let r=900;return t.includes(`1ST YEAR`)||t.match(/\bI\b/)?r=100:t.includes(`2ND YEAR`)||t.match(/\bII\b/)?r=200:(t.includes(`3RD YEAR`)||t.match(/\bIII\b/))&&(r=300),n+r},a=[...e].sort((e,t)=>{let n=String(e.Dept||``).toUpperCase(),r=String(t.Dept||``).toUpperCase();if(n!==r)return n.localeCompare(r);let a=String(e.CLASS).toUpperCase(),o=String(t.CLASS).toUpperCase();if(a!==o){let e=i(a),t=i(o);return e===t?a.localeCompare(o):e-t}return String(e.NAME).toUpperCase().localeCompare(String(t.NAME).toUpperCase())}),o={};a.forEach(e=>{let t=String(e.CLASS).toUpperCase()||`UNKNOWN CLASS`;o[t]||(o[t]=[]),o[t].push(e)});let s=n.COLLEGE_NAME||`GOVERNMENT VICTORIA COLLEGE, PALAKKAD`,c=r||s,l=t?`FINAL NOMINAL ROLL`:`DRAFT NOMINAL ROLL`,u=new Date().toLocaleString(),d=``;Object.keys(o).forEach(e=>{let t=o[e],n=E(t[0].Dept||`UNKNOWN DEPARTMENT`),r=t.length,i=``,a=r<=31?0:(r-31)%36;a>0&&a<=10&&(i=`squish`),d+=`
+        `,e.querySelector(`#csvPreview`).classList.remove(`hidden`),m()},r.readAsText(n)};let m=()=>{let t=e.querySelector(`#confirmResetText`)?.value.trim().toUpperCase()===`RESET`,n=(e.querySelector(`#confirmPwd`)?.value.trim()||``)!==``,r=e.querySelector(`#btnUploadRoll`);if(!r)return;let i=t&&n&&u&&u.length>0;r.disabled=!i,r.classList.toggle(`opacity-50`,!i),r.classList.toggle(`cursor-not-allowed`,!i)};e.querySelector(`#confirmResetText`).addEventListener(`input`,m),e.querySelector(`#confirmPwd`).addEventListener(`input`,m),e.querySelector(`#btnUploadRoll`).onclick=async t=>{let n=e.querySelector(`#confirmPwd`).value.trim();if(!u||u.length===0)return O(`No data to upload.`,`error`);if(confirm(`FINAL CONFIRMATION\n\nYou are about to replace the Nominal Roll with ${u.length} students.\nAll nominations, results, and election data will be permanently deleted.\n\nThis CANNOT be undone. Proceed?`)){D(t.target,!0,`Uploading & Resetting...`);try{O(`✅ Nominal Roll updated with ${(await C.adminUploadNominalRoll(n,{headers:d,rows:u})).count||u.length} students. All election data has been reset.`,`success`),X(e.closest(`#appContainer`)||e.parentElement)}catch(e){O(e.message,`error`),D(t.target,!1,`🚨 Upload & Reset Entire System`)}}}};l()}function st(e,t,r){let i=e=>{let t=String(e).toUpperCase();if(t.includes(`PH D`)||t.includes(`PHD`))return 3e3;let n=4e3;t.match(/\b(BA|BSC|BCOM|BBA|BCA)\b/)?n=1e3:t.match(/\b(MA|MSC|MCOM|MBA|MCA)\b/)&&(n=2e3);let r=900;return t.includes(`1ST YEAR`)||t.match(/\bI\b/)?r=100:t.includes(`2ND YEAR`)||t.match(/\bII\b/)?r=200:(t.includes(`3RD YEAR`)||t.match(/\bIII\b/))&&(r=300),n+r},a=[...e].sort((e,t)=>{let n=String(e.Dept||``).toUpperCase(),r=String(t.Dept||``).toUpperCase();if(n!==r)return n.localeCompare(r);let a=String(e.CLASS).toUpperCase(),o=String(t.CLASS).toUpperCase();if(a!==o){let e=i(a),t=i(o);return e===t?a.localeCompare(o):e-t}return String(e.NAME).toUpperCase().localeCompare(String(t.NAME).toUpperCase())}),o={};a.forEach(e=>{let t=String(e.CLASS).toUpperCase()||`UNKNOWN CLASS`;o[t]||(o[t]=[]),o[t].push(e)});let s=n.COLLEGE_NAME||`GOVERNMENT VICTORIA COLLEGE, PALAKKAD`,c=r||s,l=t?`FINAL NOMINAL ROLL`:`DRAFT NOMINAL ROLL`,u=new Date().toLocaleString(),d=``;Object.keys(o).forEach(e=>{let t=o[e],n=E(t[0].Dept||`UNKNOWN DEPARTMENT`),r=t.length,i=``,a=r<=31?0:(r-31)%36;a>0&&a<=12&&(i=`squish`),d+=`
       <div class="page-break">
         <div class="watermark">${l}</div>
         <table class="${i}">
           <thead>
             <tr>
-              <th colspan="5" class="table-header">
+              <th colspan="3" class="table-header">
                 <div class="college">${E(c)}</div>
                 <div class="title">Department of ${n}</div>
                 <div class="title" style="margin-top: 5px;">${E(e)} — ${l}</div>
@@ -2806,8 +2806,6 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
               <th class="sl">Sl. No</th>
               <th class="adm">Adm. No</th>
               <th>Name</th>
-              <th class="remarks">Remarks</th>
-              <th class="sig">Signature</th>
             </tr>
           </thead>
           <tbody>
@@ -2816,14 +2814,12 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
                 <td class="sl">${E(e[`Nominal Roll Serial Number`])}</td>
                 <td class="adm">${E(e[`ADMISION NO`]||e[`ADMISSION NO`]||`–`)}</td>
                 <td style="font-weight:bold">${E(e.NAME)}</td>
-                <td></td>
-                <td></td>
               </tr>
             `).join(``)}
           </tbody>
           <tfoot>
             <tr>
-              <td colspan="5" class="table-footer">
+              <td colspan="3" class="table-footer">
                 <div class="footer-content">Returning Officer</div>
               </td>
             </tr>
@@ -2859,12 +2855,11 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
           th { background: #eee; font-weight: bold; text-transform: uppercase; font-size: 10px; }
           .sl { width: 50px; text-align: center; font-weight: bold; }
           .adm { width: 65px; font-family: monospace; }
-          .remarks { width: 100px; }
-          .sig { width: 80px; }
 
-          .squish th, .squish td { padding: 3px 8px !important; }
-          .squish .table-header { padding: 0 0 5px 0 !important; }
-          .squish .table-footer { padding: 20px 40px 0 0 !important; }
+          .squish th, .squish td { padding: 1px 4px !important; }
+          .squish table { margin-bottom: 5px !important; }
+          .squish .table-header { padding: 0 0 2px 0 !important; }
+          .squish .table-footer { padding: 10px 40px 0 0 !important; }
 
           .no-print { display: none; }
         </style>
