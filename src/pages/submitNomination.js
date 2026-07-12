@@ -21,8 +21,12 @@ let captchaAnswer = '';
 export async function renderSubmitNomination(container) {
   let year = new Date().getFullYear();
   try {
-    const s = await api.getPublicSchedule();
+    const [s, sets] = await Promise.all([
+      api.getPublicSchedule(),
+      api.getSettings().catch(() => ({}))
+    ]);
     if (s.electionYear) year = s.electionYear;
+    if (sets.electionYear) year = sets.electionYear;
   } catch(e) {}
 
   container.innerHTML = publicLayout('Submit Nomination', `

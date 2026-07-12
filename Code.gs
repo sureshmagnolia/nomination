@@ -423,7 +423,8 @@ function doGet(e) {
         finalListPublished: getSetting('finalListPublished'),
         isRollFinalized: getSetting('isRollFinalized'),
         collegeName: getSetting('collegeName'),
-        collegeShortName: getSetting('collegeShortName')
+        collegeShortName: getSetting('collegeShortName'),
+        electionYear: getSetting('electionYear')
       });
     }
 

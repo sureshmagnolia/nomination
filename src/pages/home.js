@@ -15,6 +15,7 @@ export async function renderHome(container) {
       api.getSettings().catch(() => ({}))
     ]);
     if (schedule.electionYear) year = schedule.electionYear;
+    if (sets.electionYear) year = sets.electionYear;
     if (sets.collegeName) collegeName = sets.collegeName;
     if (sets.collegeShortName) shortName = sets.collegeShortName;
   } catch(e) {}

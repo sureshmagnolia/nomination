@@ -15,6 +15,7 @@ export async function renderFinalList(container) {
       api.getSettings().catch(() => ({}))
     ]);
     if (s.electionYear) year = s.electionYear;
+    if (sets.electionYear) year = sets.electionYear;
     if (sets.shortName) shortName = sets.shortName;
   } catch(e) {}
 

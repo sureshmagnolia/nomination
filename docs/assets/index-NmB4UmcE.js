@@ -77,7 +77,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
         <\/script>
       </body>
     </html>
-  `),n.document.close()}function T(e){return String(e??``).replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`)}function E(e,t,n){t?(e.disabled=!0,e.innerHTML=`<span class="spinner"></span> Please wait...`):(e.disabled=!1,e.innerHTML=n)}function D(e,t=`info`){let n={info:`#6366f1`,success:`#10b981`,error:`#ef4444`,warning:`#f59e0b`},r=document.createElement(`div`);r.style.cssText=`position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;padding:0.75rem 1.25rem;border-radius:0.5rem;color:white;font-size:0.875rem;font-weight:500;background:${n[t]||n.info};box-shadow:0 10px 40px rgba(0,0,0,0.4);max-width:320px;transition:opacity 0.4s;`,r.textContent=e,document.body.appendChild(r),setTimeout(()=>{r.style.opacity=`0`,setTimeout(()=>r.remove(),400)},3500)}async function se(e){e.innerHTML=`<div class="min-h-screen flex items-center justify-center"><span class="spinner"></span></div>`;let t=new Date().getFullYear(),n=`Government Victoria College, Palakkad`,r=`GVC`;try{let[e,i]=await Promise.all([C.getPublicSchedule(),C.getSettings().catch(()=>({}))]);e.electionYear&&(t=e.electionYear),i.collegeName&&(n=i.collegeName),i.collegeShortName&&(r=i.collegeShortName)}catch{}e.innerHTML=`
+  `),n.document.close()}function T(e){return String(e??``).replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`)}function E(e,t,n){t?(e.disabled=!0,e.innerHTML=`<span class="spinner"></span> Please wait...`):(e.disabled=!1,e.innerHTML=n)}function D(e,t=`info`){let n={info:`#6366f1`,success:`#10b981`,error:`#ef4444`,warning:`#f59e0b`},r=document.createElement(`div`);r.style.cssText=`position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;padding:0.75rem 1.25rem;border-radius:0.5rem;color:white;font-size:0.875rem;font-weight:500;background:${n[t]||n.info};box-shadow:0 10px 40px rgba(0,0,0,0.4);max-width:320px;transition:opacity 0.4s;`,r.textContent=e,document.body.appendChild(r),setTimeout(()=>{r.style.opacity=`0`,setTimeout(()=>r.remove(),400)},3500)}async function se(e){e.innerHTML=`<div class="min-h-screen flex items-center justify-center"><span class="spinner"></span></div>`;let t=new Date().getFullYear(),n=`Government Victoria College, Palakkad`,r=`GVC`;try{let[e,i]=await Promise.all([C.getPublicSchedule(),C.getSettings().catch(()=>({}))]);e.electionYear&&(t=e.electionYear),i.electionYear&&(t=i.electionYear),i.collegeName&&(n=i.collegeName),i.collegeShortName&&(r=i.collegeShortName)}catch{}e.innerHTML=`
     <div class="page-enter min-h-screen flex flex-col">
       <header class="glass sticky top-0 z-50 border-b border-white/10">
         <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -127,7 +127,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
     <div class="mt-6 flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition">
       Continue <span>→</span>
     </div>
-  </div>`}var k=[],A=[],ce=[],j={},M=``;async function N(e){let t=new Date().getFullYear();try{let e=await C.getPublicSchedule();e.electionYear&&(t=e.electionYear)}catch{}e.innerHTML=me(`Submit Nomination`,`
+  </div>`}var k=[],A=[],ce=[],j={},M=``;async function N(e){let t=new Date().getFullYear();try{let[e,n]=await Promise.all([C.getPublicSchedule(),C.getSettings().catch(()=>({}))]);e.electionYear&&(t=e.electionYear),n.electionYear&&(t=n.electionYear)}catch{}e.innerHTML=me(`Submit Nomination`,`
     <div id="loadingState" class="flex flex-col items-center justify-center py-24 gap-4">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 text-sm">Loading data...</p>
@@ -381,7 +381,7 @@ var e=Object.defineProperty,t=(t,n)=>{let r={};for(var i in t)e(r,i,{get:t[i],en
       </div>
     </header>
     <main class="max-w-5xl mx-auto px-4 py-12">${t}</main>
-  </div>`}async function xe(e){let t=new Date().getFullYear(),n=`GVC`;try{let[e,r]=await Promise.all([C.getPublicSchedule(),C.getSettings().catch(()=>({}))]);e.electionYear&&(t=e.electionYear),r.shortName&&(n=r.shortName)}catch{}e.innerHTML=Ce(`Final Candidates List`,`
+  </div>`}async function xe(e){let t=new Date().getFullYear(),n=`GVC`;try{let[e,r]=await Promise.all([C.getPublicSchedule(),C.getSettings().catch(()=>({}))]);e.electionYear&&(t=e.electionYear),r.electionYear&&(t=r.electionYear),r.shortName&&(n=r.shortName)}catch{}e.innerHTML=Ce(`Final Candidates List`,`
     <div class="text-center py-20"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Final List...</p></div>
   `,t,n),e.querySelector(`#backToHome`).addEventListener(`click`,()=>o.navigate(`/`));try{let n=await C.getFinalNominations();Se(e.querySelector(`main`),n.active||[],t)}catch(t){e.querySelector(`main`).innerHTML=`<div class="alert alert-warning text-center py-10 shadow-xl">${T(t.message)}</div>`}}function Se(e,t,n){if(!t||t.length===0){e.innerHTML=`
       <div class="glass rounded-3xl p-20 text-center border-dashed border-white/10">
