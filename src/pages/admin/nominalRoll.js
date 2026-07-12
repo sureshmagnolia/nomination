@@ -501,9 +501,9 @@ function triggerRollPrint(students, isFinal, collegeName) {
 
     const len = studentsInClass.length;
     let squishClass = '';
-    // A4 usually fits ~31 students on page 1, and ~36 on subsequent pages.
-    // If the overflow onto the last page is 10 students or fewer, applying tighter padding pulls them into the previous page.
-    const spill = len <= 31 ? 0 : ((len - 31) % 36);
+    // A4 usually fits ~35 students on page 1, and ~40 on subsequent pages.
+    // If the overflow onto the last page is 6 students or fewer, applying tighter padding pulls them into the previous page.
+    const spill = len <= 35 ? 0 : ((len - 35) % 40);
     if (spill > 0 && spill <= 6) squishClass = 'squish';
 
     htmlContent += `
@@ -575,7 +575,7 @@ function triggerRollPrint(students, isFinal, collegeName) {
           .footer-content { text-align: right; font-weight: bold; font-size: 11px; }
 
           table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-          th, td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
+          th, td { border: 1px solid #000; padding: 3px 5px; text-align: left; }
           th { background: #eee; font-weight: bold; text-transform: uppercase; font-size: 10px; }
           .sl { width: 50px; text-align: center; font-weight: bold; }
           .adm { width: 65px; font-family: monospace; }
