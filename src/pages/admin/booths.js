@@ -14,21 +14,22 @@ export async function renderAdminBooths(container) {
   `);
 
   try {
-    const [nominalRoll, booths, locations, posts, nominations, plan] = await Promise.all([
+    const [nominalRoll, booths, locations, posts, nominations, plan, settings] = await Promise.all([
       api.getNominalRoll(),
       api.adminGetBooths(pwd).catch(() => []),
       api.adminGetLocations(pwd).catch(() => []),
       api.adminGetPosts(pwd).catch(() => []),
       api.getFinalNominations().catch(() => ({ active: [] })),
-      api.adminGetBallotPlan(pwd).catch(() => null)
+      api.adminGetBallotPlan(pwd).catch(() => null),
+      api.adminGetSettings(pwd).catch(() => ({}))
     ]);
-    renderBoothsUI(container.querySelector('#adminMain'), pwd, nominalRoll, booths, locations, posts, nominations, plan);
+    renderBoothsUI(container.querySelector('#adminMain'), pwd, nominalRoll, booths, locations, posts, nominations, plan, settings);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
   }
 }
 
-function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations, posts, nominations, plan) {
+function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations, posts, nominations, plan, settings) {
   // 1. Process Nominal Roll to get classes and sizes
   const classStats = {};
   nominalRoll.forEach(student => {
@@ -215,7 +216,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               @page { size: A4 portrait; margin: 10mm 12mm; }
               * { box-sizing: border-box; }
               body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 0; font-size: 11px; }
-              .facing-sheet { padding: 0; page-break-before: always; break-before: page; page-break-after: always; break-after: page; display: flex; flex-direction: column; min-height: 275mm; }
+              .facing-sheet { padding: 0; page-break-before: always; break-before: page; page-break-after: always; break-after: page; display: flex; flex-direction: column; height: 250mm; }
               .facing-sheet:first-of-type { page-break-before: avoid; break-before: avoid; }
               .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px; }
               .college-name { font-size: 18px; font-weight: bold; margin-bottom: 2px; }
@@ -263,7 +264,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               @page { size: A4 portrait; margin: 10mm; }
               body { font-family: sans-serif; color: #333; margin: 0; padding: 0; }
               .page-break { page-break-after: always; }
-              .account-page { padding: 20px; display: flex; flex-direction: column; box-sizing: border-box; border: 1px solid #ccc; margin: 5px; min-height: 270mm; position: relative; }
+              .account-page { padding: 20px; display: flex; flex-direction: column; box-sizing: border-box; border: 1px solid #ccc; margin: 5px; height: 250mm; position: relative; }
               .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
               .college-name { font-size: 20px; font-weight: bold; margin-bottom: 3px; }
               .title { font-size: 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
@@ -407,7 +408,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
   };
 
   const buildElectoralRollHtml = (booths, students, posts, classStats, nominationsResponse, plan) => {
-    const collegeName = localStorage.getItem('collegeName') || CONFIG.COLLEGE_NAME || 'COLLEGE UNION ELECTION';
+    const collegeName = settings?.collegeName || CONFIG.COLLEGE_NAME || 'COLLEGE UNION ELECTION';
     let html = '';
     
     if (!plan) {
@@ -555,7 +556,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
   };
 
   const buildBallotAccountHtml = (booths, students, posts, classStats, nominationsResponse, plan) => {
-    const collegeName = localStorage.getItem('collegeName') || CONFIG.COLLEGE_NAME || 'COLLEGE UNION ELECTION';
+    const collegeName = settings?.collegeName || CONFIG.COLLEGE_NAME || 'COLLEGE UNION ELECTION';
     let html = '';
     if (!plan) return `<div class="alert alert-error">❌ Master Ballot Plan not generated.</div>`;
 
