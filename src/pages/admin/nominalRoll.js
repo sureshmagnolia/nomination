@@ -499,10 +499,17 @@ function triggerRollPrint(students, isFinal, collegeName) {
     // Attempt to extract Department (assume they share the same department in the class)
     const dept = esc(studentsInClass[0]['Dept'] || 'UNKNOWN DEPARTMENT');
 
+    const len = studentsInClass.length;
+    let squishClass = '';
+    // A4 usually fits ~31 students on page 1, and ~36 on subsequent pages.
+    // If the overflow onto the last page is 10 students or fewer, applying tighter padding pulls them into the previous page.
+    const spill = len <= 31 ? 0 : ((len - 31) % 36);
+    if (spill > 0 && spill <= 10) squishClass = 'squish';
+
     htmlContent += `
       <div class="page-break">
         <div class="watermark">${watermark}</div>
-        <table>
+        <table class="${squishClass}">
           <thead>
             <tr>
               <th colspan="5" class="table-header">
@@ -578,6 +585,10 @@ function triggerRollPrint(students, isFinal, collegeName) {
           .adm { width: 65px; font-family: monospace; }
           .remarks { width: 100px; }
           .sig { width: 80px; }
+
+          .squish th, .squish td { padding: 3px 8px !important; }
+          .squish .table-header { padding: 0 0 5px 0 !important; }
+          .squish .table-footer { padding: 20px 40px 0 0 !important; }
 
           .no-print { display: none; }
         </style>
