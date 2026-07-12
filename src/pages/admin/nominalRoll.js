@@ -504,7 +504,7 @@ function triggerRollPrint(students, isFinal, collegeName) {
     // A4 usually fits ~31 students on page 1, and ~36 on subsequent pages.
     // If the overflow onto the last page is 10 students or fewer, applying tighter padding pulls them into the previous page.
     const spill = len <= 31 ? 0 : ((len - 31) % 36);
-    if (spill > 0 && spill <= 12) squishClass = 'squish';
+    if (spill > 0 && spill <= 6) squishClass = 'squish';
 
     htmlContent += `
       <div class="page-break">
