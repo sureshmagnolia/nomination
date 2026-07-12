@@ -1301,9 +1301,10 @@ This will remove the final candidate list from public view.`)){D(n,!0,`🚫 Unpu
           <head>
             <title>Ballot Accounts - Booth Wise</title>
             <style>
+              @page { size: A4 portrait; margin: 10mm; }
               body { font-family: sans-serif; color: #333; margin: 0; padding: 0; }
               .page-break { page-break-after: always; }
-              .account-page { padding: 25px; display: flex; flex-direction: column; box-sizing: border-box; border: 1px solid #ccc; margin: 10px; min-height: 275mm; position: relative; }
+              .account-page { padding: 20px; display: flex; flex-direction: column; box-sizing: border-box; border: 1px solid #ccc; margin: 5px; min-height: 270mm; position: relative; }
               .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
               .college-name { font-size: 20px; font-weight: bold; margin-bottom: 3px; }
               .title { font-size: 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
@@ -1322,10 +1323,10 @@ This will remove the final candidate list from public view.`)){D(n,!0,`🚫 Unpu
           ${E(e)}
           <button class="text-red-400 hover:text-red-300 font-bold delete-location" data-idx="${t}">&times;</button>
         </span>
-      `).join(``):`<span class="text-slate-500 text-sm">No locations added yet.</span>`,e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=parseInt(e.target.dataset.idx),n=f[t];f.splice(t,1),d.forEach(e=>{e.roomName===n&&(e.roomName=``)}),b()})})};e.querySelector(`#btnManageLocations`).addEventListener(`click`,y),e.querySelector(`#btnCloseLocationsModal`).addEventListener(`click`,v),e.querySelector(`#btnCloseLocationsModal2`).addEventListener(`click`,v),e.querySelector(`#locationsModalOverlay`).addEventListener(`click`,v),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!f.includes(t)&&(f.push(t),e.querySelector(`#newLocationInput`).value=``,b())}),e.querySelector(`#newLocationInput`).addEventListener(`keydown`,t=>{t.key===`Enter`&&e.querySelector(`#btnAddLocation`).click()}),b(),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;D(n,!0,`💾 Save Locations`);try{await C.adminSaveLocations(t,f),O(`Locations saved! Refresh booths to see updated room list.`,`success`),v(),m()}catch(e){O(`Failed to save: ${e.message}`,`error`)}finally{D(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;d.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&d[parseInt(n,10)].classes.push(t),m()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;D(n,!0,`💾 Save Configuration`);try{await C.adminSaveBooths(t,d),O(`Booth configuration saved successfully!`,`success`)}catch(e){O(`Failed to save: ${e.message}`,`error`)}finally{D(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnRegenPlan`).addEventListener(`click`,async e=>{let n=e.target,r=`🔄 Finalize Master Plan`;try{D(n,!0,r),O(`Calculating and saving Master Plan on server...`,`info`),await C.adminGenerateBallotPlan(t),O(`Master Plan finalized successfully! You can now print documents.`,`success`),c=await C.adminGetBallotPlan(t).catch(()=>null)}catch(e){O(e.message,`error`)}finally{D(n,!1,r)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{_(),m(),O(`Auto allotment complete. Please review and save.`,`info`)})},h=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let r=t.filter(t=>e.classes.includes(String(t.CLASS).trim())).length,a=e.classes.map(e=>i[e]).filter(Boolean),c=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]};s+=`
+      `).join(``):`<span class="text-slate-500 text-sm">No locations added yet.</span>`,e.querySelectorAll(`.delete-location`).forEach(e=>{e.addEventListener(`click`,e=>{let t=parseInt(e.target.dataset.idx),n=f[t];f.splice(t,1),d.forEach(e=>{e.roomName===n&&(e.roomName=``)}),b()})})};e.querySelector(`#btnManageLocations`).addEventListener(`click`,y),e.querySelector(`#btnCloseLocationsModal`).addEventListener(`click`,v),e.querySelector(`#btnCloseLocationsModal2`).addEventListener(`click`,v),e.querySelector(`#locationsModalOverlay`).addEventListener(`click`,v),e.querySelector(`#btnAddLocation`).addEventListener(`click`,()=>{let t=e.querySelector(`#newLocationInput`).value.trim();t&&!f.includes(t)&&(f.push(t),e.querySelector(`#newLocationInput`).value=``,b())}),e.querySelector(`#newLocationInput`).addEventListener(`keydown`,t=>{t.key===`Enter`&&e.querySelector(`#btnAddLocation`).click()}),b(),e.querySelector(`#btnSaveLocations`).addEventListener(`click`,async e=>{let n=e.target;D(n,!0,`💾 Save Locations`);try{await C.adminSaveLocations(t,f),O(`Locations saved! Refresh booths to see updated room list.`,`success`),v(),m()}catch(e){O(`Failed to save: ${e.message}`,`error`)}finally{D(n,!1,`💾 Save Locations`)}}),e.querySelectorAll(`.class-booth-select`).forEach(e=>{e.addEventListener(`change`,e=>{let t=e.target.dataset.class,n=e.target.value;d.forEach(e=>{e.classes=e.classes.filter(e=>e!==t)}),n!==``&&d[parseInt(n,10)].classes.push(t),m()})}),e.querySelector(`#btnSaveBooths`).addEventListener(`click`,async e=>{let n=e.target;D(n,!0,`💾 Save Configuration`);try{await C.adminSaveBooths(t,d),O(`Booth configuration saved successfully!`,`success`)}catch(e){O(`Failed to save: ${e.message}`,`error`)}finally{D(n,!1,`💾 Save Configuration`)}}),e.querySelector(`#btnRegenPlan`).addEventListener(`click`,async e=>{let n=e.target,r=`🔄 Finalize Master Plan`;try{D(n,!0,r),O(`Calculating and saving Master Plan on server...`,`info`),await C.adminGenerateBallotPlan(t),O(`Master Plan finalized successfully! You can now print documents.`,`success`),c=await C.adminGetBallotPlan(t).catch(()=>null)}catch(e){O(e.message,`error`)}finally{D(n,!1,r)}}),e.querySelector(`#btnAutoAllot`).addEventListener(`click`,()=>{_(),m(),O(`Auto allotment complete. Please review and save.`,`info`)})},h=(e,t,r,i,a,o)=>{let s=localStorage.getItem(`collegeName`)||n.COLLEGE_NAME||`COLLEGE UNION ELECTION`,c=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let n=t.filter(t=>e.classes.includes(String(t.CLASS).trim())).length,r=e.classes.map(e=>i[e]).filter(Boolean),a=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]};c+=`
       <div class="facing-sheet">
           <div class="header">
-            <div class="college-name">${E(n.COLLEGE_NAME||`COLLEGE UNION ELECTION`)}</div>
+            <div class="college-name">${E(s)}</div>
             <div class="title">Electoral Roll — Booth Facing Sheet</div>
           </div>
           
@@ -1350,12 +1351,12 @@ This will remove the final candidate list from public view.`)){D(n,!0,`🚫 Unpu
                 </tr>
               </thead>
               <tbody>
-                ${a.map(e=>`
+                ${r.map(e=>`
                   <tr><td style="font-size:13px; font-weight:bold;">${E(e.dept)}</td><td style="font-size:13px;">${E(e.name)}</td><td style="text-align:right; font-size:13px; font-weight:bold;">${e.count}</td></tr>
                 `).join(``)}
                 <tr style="font-weight:bold; background:#eee">
                   <td colspan="2" style="font-size:12px;">TOTAL VOTERS ALLOTTED TO THIS BOOTH</td>
-                  <td style="text-align:right; font-size:14px;">${r}</td>
+                  <td style="text-align:right; font-size:14px;">${n}</td>
                 </tr>
               </tbody>
             </table>
@@ -1376,16 +1377,16 @@ This will remove the final candidate list from public view.`)){D(n,!0,`🚫 Unpu
                 </tr>
               </thead>
               <tbody>
-                ${c.general?`
+                ${a.general?`
                   <tr style="font-weight:bold">
                     <td style="font-size:12px;">General Union Posts</td>
-                    <td style="font-size:12px;">G${c.general.start} - G${c.general.end}</td>
-                    <td style="text-align:center; font-size:13px;">${c.general.count}</td>
-                    <td style="font-size:11px;">${c.general.bookIds}</td>
+                    <td style="font-size:12px;">G${a.general.start} - G${a.general.end}</td>
+                    <td style="text-align:center; font-size:13px;">${a.general.count}</td>
+                    <td style="font-size:11px;">${a.general.bookIds}</td>
                     <td></td><td></td><td></td>
                   </tr>
                 `:``}
-                ${c.reps.map(e=>`
+                ${a.reps.map(e=>`
                   <tr>
                     <td style="font-size:12px; font-weight:bold;">${E(e.post)}</td>
                     <td style="font-size:12px;">R${e.start} - R${e.end}</td>
@@ -1394,7 +1395,7 @@ This will remove the final candidate list from public view.`)){D(n,!0,`🚫 Unpu
                     <td></td><td></td><td></td>
                   </tr>
                 `).join(``)}
-                ${c.assocs.map(e=>`
+                ${a.assocs.map(e=>`
                   <tr>
                     <td style="font-size:12px; font-weight:bold;">${E(e.post)}</td>
                     <td style="font-size:12px;">A${e.start} - A${e.end}</td>
@@ -1411,7 +1412,7 @@ This will remove the final candidate list from public view.`)){D(n,!0,`🚫 Unpu
             <div class="sig-line">Returning Officer</div>
             <div class="sig-line">Presiding Officer</div>
           </div>
-        </div>`,a.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),s+=`
+        </div>`,r.forEach(n=>{let r=t.filter(e=>String(e.CLASS).trim()===n.name);r.sort((e,t)=>String(e.NAME).localeCompare(String(t.NAME))),c+=`
         <div class="roll-page">
           <div class="roll-header">
             <div><strong>BOOTH ${e.boothNumber}</strong> | ${E(e.roomName||`No Room`)}</div>
@@ -1440,12 +1441,12 @@ This will remove the final candidate list from public view.`)){D(n,!0,`🚫 Unpu
               `).join(``)}
             </tbody>
           </table>
-        </div>`})}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`},g=(e,t,r,i,a,o)=>{let s=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let t=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]},r=t.general?[{name:`General Union Posts`,count:t.general.count}]:[],i=t.reps.map(e=>({name:e.post,count:e.count})),a=t.assocs.map(e=>({name:e.post,count:e.count})),c=[...r,...i,...a];s+=`
+        </div>`})}),c):`<div class="alert alert-error">❌ Master Ballot Plan not generated. Please generate it from the Ballot Printing page first.</div>`},g=(e,t,r,i,a,o)=>{let s=localStorage.getItem(`collegeName`)||n.COLLEGE_NAME||`COLLEGE UNION ELECTION`,c=``;return o?([...e].sort((e,t)=>e.boothNumber-t.boothNumber).forEach(e=>{if(!e.classes||e.classes.length===0)return;let t=o.boothAssignments[e.boothNumber]||{general:null,reps:[],assocs:[]},n=t.general?[{name:`General Union Posts`,count:t.general.count}]:[],r=t.reps.map(e=>({name:e.post,count:e.count})),i=t.assocs.map(e=>({name:e.post,count:e.count})),a=[...n,...r,...i];c+=`
       <div class="page-break">
         <div class="account-page">
           <div>
             <div class="header">
-              <div class="college-name">${E(n.COLLEGE_NAME||`COLLEGE UNION ELECTION`)}</div>
+              <div class="college-name">${E(s)}</div>
               <div class="title">Ballots & Books Account (To be filled by PO)</div>
             </div>
             
@@ -1511,7 +1512,7 @@ This will remove the final candidate list from public view.`)){D(n,!0,`🚫 Unpu
                 </tr>
               </thead>
               <tbody>
-                ${c.map(e=>`
+                ${a.map(e=>`
                   <tr>
                     <td style="font-size: 13px; font-weight: bold;">${E(e.name)}</td>
                     <td style="text-align:center; font-weight:bold; font-size:14px;">${e.count}</td>
@@ -1528,7 +1529,7 @@ This will remove the final candidate list from public view.`)){D(n,!0,`🚫 Unpu
             <div class="sig-line">Presiding Officer</div>
           </div>
         </div>
-      </div>`}),s):`<div class="alert alert-error">❌ Master Ballot Plan not generated.</div>`},_=()=>{d.forEach(e=>{e.classes=[],e.totalStudents=0});let e={};u.forEach(t=>{e[t.dept]||(e[t.dept]={name:t.dept,total:0,classes:[]}),e[t.dept].classes.push(t),e[t.dept].total+=t.count});let t=d.length,n=r.length/t*1.25;Object.values(e).sort((e,t)=>t.total-e.total).forEach(e=>{d.sort((e,t)=>e.totalStudents-t.totalStudents);let t=d[0];if(t.totalStudents+e.total>n&&e.classes.length>1){d.sort((e,t)=>e.totalStudents-t.totalStudents);let t=d[0],n=d.length>1?d[1]:d[0];[...e.classes].sort((e,t)=>t.count-e.count).forEach(e=>{let r=t.totalStudents<=n.totalStudents?t:n;r.classes.push(e.name),r.totalStudents+=e.count})}else e.classes.forEach(e=>t.classes.push(e.name)),t.totalStudents+=e.total}),d.sort((e,t)=>e.boothNumber-t.boothNumber)};m()}async function Ue(e){let t=R();if(t){z(e,`counting`,`
+      </div>`}),c):`<div class="alert alert-error">❌ Master Ballot Plan not generated.</div>`},_=()=>{d.forEach(e=>{e.classes=[],e.totalStudents=0});let e={};u.forEach(t=>{e[t.dept]||(e[t.dept]={name:t.dept,total:0,classes:[]}),e[t.dept].classes.push(t),e[t.dept].total+=t.count});let t=d.length,n=r.length/t*1.25;Object.values(e).sort((e,t)=>t.total-e.total).forEach(e=>{d.sort((e,t)=>e.totalStudents-t.totalStudents);let t=d[0];if(t.totalStudents+e.total>n&&e.classes.length>1){d.sort((e,t)=>e.totalStudents-t.totalStudents);let t=d[0],n=d.length>1?d[1]:d[0];[...e.classes].sort((e,t)=>t.count-e.count).forEach(e=>{let r=t.totalStudents<=n.totalStudents?t:n;r.classes.push(e.name),r.totalStudents+=e.count})}else e.classes.forEach(e=>t.classes.push(e.name)),t.totalStudents+=e.total}),d.sort((e,t)=>e.boothNumber-t.boothNumber)};m()}async function Ue(e){let t=R();if(t){z(e,`counting`,`
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Counting Setup...</p></div>
   `);try{let[n,r,i,a,o]=await Promise.all([C.adminGetCountingMatrix(t).catch(()=>null),C.getPosts(),C.adminGetNominations(t).catch(()=>[]),C.adminGetBooths(t),C.getNominalRoll()]),s=(Array.isArray(i)?i:[]).filter(e=>e.status===`Valid`&&e.withdrawalStatus!==`Approved`);We(e.querySelector(`#adminMain`),t,n,r,s,a,o)}catch(t){e.querySelector(`#adminMain`).innerHTML=`<div class="alert alert-error">❌ ${E(t.message)}</div>`}}}function We(e,t,n,r,i,a,o){if(!a.length){e.innerHTML=`<div class="alert alert-error">❌ No booths configured.</div>`;return}if(!r.length){e.innerHTML=`<div class="alert alert-error">❌ No posts configured.</div>`;return}let s=e=>String(e.post||e.name||``),c=t=>{let{matrix:n,formSerials:o,totalRounds:c,roundLabels:u}=t,d=a.length;e.innerHTML=`
       <div class="page-enter space-y-6">

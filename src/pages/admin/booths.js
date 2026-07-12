@@ -260,9 +260,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           <head>
             <title>Ballot Accounts - Booth Wise</title>
             <style>
+              @page { size: A4 portrait; margin: 10mm; }
               body { font-family: sans-serif; color: #333; margin: 0; padding: 0; }
               .page-break { page-break-after: always; }
-              .account-page { padding: 25px; display: flex; flex-direction: column; box-sizing: border-box; border: 1px solid #ccc; margin: 10px; min-height: 275mm; position: relative; }
+              .account-page { padding: 20px; display: flex; flex-direction: column; box-sizing: border-box; border: 1px solid #ccc; margin: 5px; min-height: 270mm; position: relative; }
               .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
               .college-name { font-size: 20px; font-weight: bold; margin-bottom: 3px; }
               .title { font-size: 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
@@ -406,6 +407,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
   };
 
   const buildElectoralRollHtml = (booths, students, posts, classStats, nominationsResponse, plan) => {
+    const collegeName = localStorage.getItem('collegeName') || CONFIG.COLLEGE_NAME || 'COLLEGE UNION ELECTION';
     let html = '';
     
     if (!plan) {
@@ -425,7 +427,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       html += `
       <div class="facing-sheet">
           <div class="header">
-            <div class="college-name">${esc(CONFIG.COLLEGE_NAME || 'COLLEGE UNION ELECTION')}</div>
+            <div class="college-name">${esc(collegeName)}</div>
             <div class="title">Electoral Roll — Booth Facing Sheet</div>
           </div>
           
@@ -553,6 +555,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
   };
 
   const buildBallotAccountHtml = (booths, students, posts, classStats, nominationsResponse, plan) => {
+    const collegeName = localStorage.getItem('collegeName') || CONFIG.COLLEGE_NAME || 'COLLEGE UNION ELECTION';
     let html = '';
     if (!plan) return `<div class="alert alert-error">❌ Master Ballot Plan not generated.</div>`;
 
@@ -574,7 +577,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         <div class="account-page">
           <div>
             <div class="header">
-              <div class="college-name">${esc(CONFIG.COLLEGE_NAME || 'COLLEGE UNION ELECTION')}</div>
+              <div class="college-name">${esc(collegeName)}</div>
               <div class="title">Ballots & Books Account (To be filled by PO)</div>
             </div>
             
