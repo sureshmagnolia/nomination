@@ -2816,7 +2816,6 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
         </table>
         <div class="footer">
           <div>Returning Officer</div>
-          <div>Principal</div>
         </div>
       </div>
     `});let d=window.open(``,`_blank`);d.document.write(`
@@ -2845,7 +2844,7 @@ Are you absolutely sure?`)){D(n.target,!0,`Finalizing...`);try{await C.adminFina
           .sl { width: 50px; text-align: center; font-weight: bold; }
           .adm { width: 100px; font-family: monospace; }
 
-          .footer { margin-top: 40px; display: flex; justify-content: space-between; font-weight: bold; padding: 0 40px; }
+          .footer { margin-top: 40px; display: flex; justify-content: flex-end; font-weight: bold; padding: 0 40px; }
           .no-print { display: none; }
         </style>
       </head>
