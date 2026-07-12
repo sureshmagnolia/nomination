@@ -1285,7 +1285,7 @@ This will remove the final candidate list from public view.`)){D(n,!0,`🚫 Unpu
               .roll-table tbody { orphans: 4; widows: 4; }
               .roll-table th { background: #e8e8e8; font-weight: bold; text-transform: uppercase; font-size: 9px; border: 1px solid #555; padding: 4px 4px; }
               .roll-table td { border: 1px solid #555; padding: 2px 4px; font-size: 10px; }
-              .roll-table tr { page-break-inside: avoid; break-inside: avoid; height: 20px; }
+              .roll-table tr { page-break-inside: avoid; break-inside: avoid; height: 24px; }
               @media print {
                 .no-print { display: none; }
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
