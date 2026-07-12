@@ -444,11 +444,16 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
 
 
 function triggerRollPrint(students, isFinal, collegeName) {
-  // Sort primarily by class, then by name
+  // Sort primarily by Dept, then Class, then Name
   const data = [...students].sort((a, b) => {
+    const dA = String(a['Dept'] || '').toUpperCase();
+    const dB = String(b['Dept'] || '').toUpperCase();
+    if (dA !== dB) return dA.localeCompare(dB);
+
     const cA = String(a['CLASS']).toUpperCase();
     const cB = String(b['CLASS']).toUpperCase();
     if (cA !== cB) return cA.localeCompare(cB);
+    
     return String(a['NAME']).toUpperCase().localeCompare(String(b['NAME']).toUpperCase());
   });
 
@@ -519,8 +524,9 @@ function triggerRollPrint(students, isFinal, collegeName) {
           body { font-family: sans-serif; color: #000; line-height: 1.4; font-size: 11px; margin: 0; padding: 0; }
           .watermark { 
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 80px; color: rgba(0,0,0,0.05); font-weight: bold; pointer-events: none; z-index: -1;
+            font-size: 80px; color: #f1f5f9; font-weight: bold; pointer-events: none; z-index: -1;
             white-space: nowrap; text-transform: uppercase;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
           }
           .page-break { page-break-after: always; position: relative; min-height: 90vh; }
           .page-break:last-child { page-break-after: auto; }
