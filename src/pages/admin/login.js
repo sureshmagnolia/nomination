@@ -13,7 +13,12 @@ export function renderAdminLogin(container) {
       <div class="absolute -top-24 -right-24 w-48 h-48 bg-indigo-600/20 rounded-full blur-3xl"></div>
       <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-purple-600/20 rounded-full blur-3xl"></div>
 
-      <div class="text-center mb-8 relative z-10">
+      <button data-nav="/" class="absolute top-6 left-6 text-slate-400 hover:text-white flex items-center gap-1 text-sm z-20 transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        Home
+      </button>
+
+      <div class="text-center mb-8 relative z-10 mt-4">
         <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-3xl font-bold mx-auto mb-4 shadow-xl">G</div>
         <h2 class="text-3xl font-black text-white tracking-tight">Admin Access</h2>
         <p class="text-slate-400 text-sm mt-2">Secure Gateway for Election Management</p>
