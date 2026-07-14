@@ -1,24 +1,25 @@
 import { neon } from '@neondatabase/serverless';
+import { Resend } from 'resend';
 
 // Ensure DATABASE_URL is set in your Vercel project environment variables
 // If missing, use a valid placeholder format so the module doesn't crash on load
 const sql = neon(process.env.DATABASE_URL || 'postgresql://user:pass@host.com/db');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Helper to standardise responses
 const jsonOut = (res, data, status = 200) => res.status(status).json(data);
 const errOut = (res, msg, status = 400) => res.status(status).json({ error: msg });
 
-// Simple auth check (in production, use JWT or proper sessions)
-const checkAdmin = (password, sessionToken, isLogin = false) => {
-  const now = new Date();
-  // Using simple UTC date for demo - adjust timezone logic if needed
-  const dateStr = String(now.getDate()).padStart(2, '0') + String(now.getMonth() + 1).padStart(2, '0') + now.getFullYear();
-  const dayStr = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-  const dynamicPassword = dateStr + dayStr;
+// Async admin check
+const checkAdmin = async (password, sessionToken, action) => {
+  if (!action.startsWith('admin')) return;
+  if (action === 'adminSendOTP' || action === 'adminVerifyOTP' || action === 'adminLogin') return; // Auth handled in endpoint
 
-  // Minimal token check stub
-  if (!isLogin && !sessionToken) {
-    throw new Error('SESSION_EXPIRED');
+  const rows = await sql`SELECT value FROM settings WHERE key = 'adminPassword'`;
+  const realPwd = rows.length > 0 ? rows[0].value : 'admin123';
+  
+  if (password !== realPwd) {
+    throw new Error('UNAUTHORIZED_PASSWORD');
   }
 };
 
@@ -47,6 +48,9 @@ export default async function handler(req, res) {
       body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       action = body.action;
     }
+
+    // Authenticate Admin Endpoints
+    await checkAdmin(body.password, body.sessionToken, action);
 
     if (action === 'initDB') {
       await sql`
@@ -217,17 +221,54 @@ export default async function handler(req, res) {
       return jsonOut(res, JSON.parse(data));
     }
 
+    if (action === 'adminGetNominalRollTemplate') {
+      const csv = `Serial_Number,Name,Year,Stream,Dept,Admission_No\n1,Jane Doe,1,B.A,Economics,12345`;
+      return jsonOut(res, { template: csv });
+    }
+
     // ─── POST ENDPOINTS ───────────────────────────────────────────────────────
 
     if (action === 'adminLogin') {
-      return jsonOut(res, { ok: true, sessionToken: 'admin-token-1234' });
+      // In a real app, generate a JWT. For this, we'll just check password and return a static token for demo,
+      // but OTP is required in the UI, so adminLogin just checks if password is correct before proceeding.
+      const rows = await sql`SELECT value FROM settings WHERE key = 'adminPassword'`;
+      const realPwd = rows.length > 0 ? rows[0].value : 'admin123';
+      if (body.password !== realPwd) return errOut(res, 'Invalid password', 401);
+      return jsonOut(res, { ok: true }); // UI proceeds to OTP
     }
 
     if (action === 'adminSendOTP') {
-      return jsonOut(res, { ok: true, email: 'ad***@example.com' });
+      const rows = await sql`SELECT value FROM settings WHERE key = 'adminEmail'`;
+      const adminEmail = rows.length > 0 ? rows[0].value : 'admin@example.com';
+      if (!adminEmail || adminEmail === 'admin@example.com') return errOut(res, 'No admin email configured in Settings.');
+      
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      await setSetting('adminOTP', otp); // Store it
+      
+      try {
+        await resend.emails.send({
+          from: 'Election Admin <onboarding@resend.dev>',
+          to: adminEmail,
+          subject: 'Your Admin Login OTP',
+          text: `Your OTP for the Election Admin Portal is: ${otp}`
+        });
+        const masked = adminEmail.replace(/^(..)(.*)(@.*)$/, '$1***$3');
+        return jsonOut(res, { ok: true, email: masked });
+      } catch (err) {
+        return errOut(res, 'Failed to send OTP email. Please check your Resend configuration.');
+      }
     }
 
     if (action === 'adminVerifyOTP') {
+      const stored = await getSetting('adminOTP');
+      if (!stored || stored !== body.otp) return errOut(res, 'Invalid or expired OTP', 401);
+      await setSetting('adminOTP', ''); // Clear it
+      return jsonOut(res, { ok: true, sessionToken: 'admin-verified-session-token' });
+    }
+
+    if (action === 'adminUpdateCredentials') {
+      if (body.password) await setSetting('adminPassword', body.password);
+      if (body.email) await setSetting('adminEmail', body.email);
       return jsonOut(res, { ok: true });
     }
 
@@ -353,6 +394,49 @@ export default async function handler(req, res) {
 
     if (action === 'adminSaveBallotPlan') {
       await setSetting('ballotPlan', JSON.stringify(body.plan));
+      return jsonOut(res, { ok: true });
+    }
+
+    if (action === 'adminUploadNominalRoll') {
+      await sql`DELETE FROM nominal_roll`;
+      await sql`DELETE FROM nominations`;
+      await sql`UPDATE settings SET value='false' WHERE key IN ('validListPublished', 'finalListPublished', 'isRollFinalized')`;
+      await sql`DELETE FROM settings WHERE key IN ('results_data', 'ballotPlan', 'countingMatrix')`;
+      
+      const isLegacy = body.headers && body.headers.join() === ['Serial No', 'NAME', 'CLASS', 'Admission No', 'Dept'].join();
+      
+      const toInsert = body.rows.map(r => {
+        let cl = r[2], adm = r[3], dpt = r[4];
+        if (!isLegacy) {
+          cl = `${r[2] || ''} ${r[3] || ''} ${r[4] || ''}`.trim();
+          adm = r[5] || '';
+          dpt = r[4] || '';
+        }
+        return { serial_number: String(r[0] || ''), name: String(r[1] || ''), class: String(cl), admission_no: String(adm), dept: String(dpt) };
+      });
+      
+      if (toInsert.length > 0) {
+        // Bulk insert using Neon
+        await sql`INSERT INTO nominal_roll ${sql(toInsert, 'serial_number', 'name', 'class', 'admission_no', 'dept')}`;
+      }
+      return jsonOut(res, { ok: true, count: toInsert.length });
+    }
+
+    if (action === 'adminAddStudent') {
+      await sql`
+        INSERT INTO nominal_roll (serial_number, name, class, admission_no, dept)
+        VALUES (${body.serial_number}, ${body.name}, ${body.class}, ${body.admission_no}, ${body.dept})
+      `;
+      return jsonOut(res, { ok: true });
+    }
+
+    if (action === 'adminDeleteStudent') {
+      await sql`DELETE FROM nominal_roll WHERE serial_number = ${body.serial}`;
+      return jsonOut(res, { ok: true });
+    }
+
+    if (action === 'adminFinalizeRoll') {
+      await setSetting('isRollFinalized', 'true');
       return jsonOut(res, { ok: true });
     }
 

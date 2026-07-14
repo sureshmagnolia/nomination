@@ -282,6 +282,10 @@ export const api = {
     return Promise.resolve({ ok: true });
   },
 
+  adminUpdateCredentials: (password, credentials) => {
+    return post({ action: 'adminUpdateCredentials', password, ...credentials });
+  },
+
   getPublicSettings: () => get({ action: 'adminGetSettings', password: 'NONE' }),
 
   // ─── Posts Management ───────────────────────────────────────────────────────
