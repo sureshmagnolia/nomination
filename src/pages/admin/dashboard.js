@@ -66,36 +66,6 @@ export async function renderAdminDashboard(container) {
             </div>
           </div>
           
-          <div class="space-y-6">
-            <div class="glass rounded-2xl p-6 space-y-4">
-              <h4 class="font-bold text-white text-sm">College Information</h4>
-              <div class="space-y-4">
-                <div>
-                  <label class="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Full College Name</label>
-                  <input type="text" id="inputCollegeName" class="field text-xs py-1.5" value="${esc(settings.collegeName)}">
-                </div>
-                <div>
-                  <label class="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Short Form (Abbreviation)</label>
-                  <input type="text" id="inputCollegeShort" class="field text-xs py-1.5" value="${esc(settings.collegeShortName)}">
-                </div>
-                <button id="btnUpdateBranding" class="btn btn-primary w-full text-xs py-2">Update Branding</button>
-              </div>
-            </div>
-
-            <div class="glass rounded-2xl p-6 space-y-4 border border-rose-500/20">
-              <h4 class="font-bold text-rose-300 text-sm">Security & Access</h4>
-              <div class="space-y-4">
-                <div>
-                  <label class="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">New Admin Password</label>
-                  <input type="password" id="inputAdminPassword" class="field text-xs py-1.5" placeholder="Leave blank to keep current">
-                </div>
-                <div>
-                  <label class="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Admin Email (For OTP)</label>
-                  <input type="email" id="inputAdminEmail" class="field text-xs py-1.5" value="${esc(settings.adminEmail || '')}" placeholder="admin@college.edu">
-                </div>
-                <button id="btnUpdateSecurity" class="btn bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 w-full text-xs py-2">Update Credentials</button>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -143,34 +113,6 @@ export async function renderAdminDashboard(container) {
       btn.addEventListener('click', () => {
         import('../../router.js').then(({ router }) => router.navigate(`/admin/${btn.dataset.adminNav}`));
       });
-    });
-
-    // Handle branding update
-    container.querySelector('#btnUpdateBranding').addEventListener('click', async () => {
-      const collegeName = container.querySelector('#inputCollegeName').value.trim();
-      const collegeShortName = container.querySelector('#inputCollegeShort').value.trim();
-      if (!collegeName || !collegeShortName) return showToast('Please fill all branding fields.', 'error');
-
-      try {
-        await api.adminUpdateSettings(pwd, { collegeName, collegeShortName });
-        showToast('College branding updated successfully! Refresh to see changes system-wide.', 'success');
-      } catch (e) {
-        showToast(e.message, 'error');
-      }
-    });
-
-    // Handle security update
-    container.querySelector('#btnUpdateSecurity').addEventListener('click', async () => {
-      const newPassword = container.querySelector('#inputAdminPassword').value.trim();
-      const newEmail = container.querySelector('#inputAdminEmail').value.trim();
-      
-      try {
-        await api.adminUpdateCredentials(pwd, { newPassword, newEmail });
-        showToast('Security credentials updated successfully!', 'success');
-        container.querySelector('#inputAdminPassword').value = '';
-      } catch (e) {
-        showToast(e.message, 'error');
-      }
     });
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
