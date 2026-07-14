@@ -1,7 +1,8 @@
 import { neon } from '@neondatabase/serverless';
 
 // Ensure DATABASE_URL is set in your Vercel project environment variables
-const sql = neon(process.env.DATABASE_URL || 'postgresql://placeholder');
+// If missing, use a valid placeholder format so the module doesn't crash on load
+const sql = neon(process.env.DATABASE_URL || 'postgresql://user:pass@host.com/db');
 
 // Helper to standardise responses
 const jsonOut = (res, data, status = 200) => res.status(status).json(data);
