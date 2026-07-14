@@ -92,7 +92,7 @@ async function get(params) {
   const cacheKey = JSON.stringify(params);
   if (_cache[cacheKey] !== undefined) return _cache[cacheKey];
 
-  const url = new URL(BASE_URL);
+  const url = new URL(BASE_URL, window.location.origin);
   Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
   url.searchParams.append('_t', Date.now());
   const res = await fetch(url.toString());
