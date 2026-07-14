@@ -278,8 +278,8 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminUpdateCredentials') {
-      if (body.password) await setSetting('adminPassword', body.password);
-      if (body.email) await setSetting('adminEmail', body.email);
+      if (body.newPassword) await setSetting('adminPassword', body.newPassword);
+      if (body.newEmail) await setSetting('adminEmail', body.newEmail);
       return jsonOut(res, { ok: true });
     }
 

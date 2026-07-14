@@ -165,7 +165,7 @@ export async function renderAdminDashboard(container) {
       const newEmail = container.querySelector('#inputAdminEmail').value.trim();
       
       try {
-        await api.adminUpdateCredentials(pwd, { password: newPassword, email: newEmail });
+        await api.adminUpdateCredentials(pwd, { newPassword, newEmail });
         showToast('Security credentials updated successfully!', 'success');
         container.querySelector('#inputAdminPassword').value = '';
       } catch (e) {
