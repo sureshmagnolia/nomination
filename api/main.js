@@ -4,7 +4,7 @@ import { Resend } from 'resend';
 // Ensure DATABASE_URL is set in your Vercel project environment variables
 // If missing, use a valid placeholder format so the module doesn't crash on load
 const sql = neon(process.env.DATABASE_URL || 'postgresql://user:pass@host.com/db');
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_to_prevent_crash');
 
 // Helper to standardise responses
 const jsonOut = (res, data, status = 200) => res.status(status).json(data);
