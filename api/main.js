@@ -222,8 +222,12 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminGetNominalRollTemplate') {
-      const csv = `Serial_Number,Name,Year,Stream,Dept,Admission_No\n1,Jane Doe,1,B.A,Economics,12345`;
-      return jsonOut(res, { template: csv });
+      const headers = ['Nominal Roll Serial Number', 'NAME', 'YEAR', 'STREAM', 'ADMISION NO', 'Dept'];
+      const rows = [
+        ['1', 'Jane Doe', '1', 'B.A', '12345', 'Economics'],
+        ['2', 'John Smith', '2', 'B.Sc', '12346', 'Physics']
+      ];
+      return jsonOut(res, { headers, rows });
     }
 
     // ─── POST ENDPOINTS ───────────────────────────────────────────────────────
