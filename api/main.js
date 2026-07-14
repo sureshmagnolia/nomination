@@ -240,10 +240,14 @@ export default async function handler(req, res) {
     if (action === 'adminSendOTP') {
       const rows = await sql`SELECT value FROM settings WHERE key = 'adminEmail'`;
       const adminEmail = rows.length > 0 ? rows[0].value : 'admin@example.com';
-      if (!adminEmail || adminEmail === 'admin@example.com') return errOut(res, 'No admin email configured in Settings.');
       
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       await setSetting('adminOTP', otp); // Store it
+      
+      if (adminEmail === 'admin@example.com') {
+        // Initial setup fallback: Don't send email, just tell them to use a master code
+        return jsonOut(res, { ok: true, email: 'admin@example.com (Initial Setup: Use OTP 000000)' });
+      }
       
       try {
         await resend.emails.send({
@@ -260,6 +264,13 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminVerifyOTP') {
+      const emailRows = await sql`SELECT value FROM settings WHERE key = 'adminEmail'`;
+      const adminEmail = emailRows.length > 0 ? emailRows[0].value : 'admin@example.com';
+      
+      if (adminEmail === 'admin@example.com' && body.otp === '000000') {
+        return jsonOut(res, { ok: true, sessionToken: 'admin-verified-session-token' });
+      }
+
       const stored = await getSetting('adminOTP');
       if (!stored || stored !== body.otp) return errOut(res, 'Invalid or expired OTP', 401);
       await setSetting('adminOTP', ''); // Clear it
