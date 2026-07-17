@@ -54,19 +54,28 @@ function renderScheduleUI(main, pwd, schedule) {
           <!-- Nomination Deadline -->
           <div>
             <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Nomination Deadline</label>
-            <input type="datetime-local" id="nominationDeadline" class="field" value="${toLocal(schedule.nominationDeadline)}">
+            <div class="flex gap-2">
+              <input type="date" id="nominationDeadlineDate" class="field flex-1" value="${toLocal(schedule.nominationDeadline).split('T')[0] || ''}">
+              <input type="time" id="nominationDeadlineTime" class="field flex-1" value="${toLocal(schedule.nominationDeadline).split('T')[1] || ''}">
+            </div>
           </div>
 
           <!-- Withdrawal Window Start -->
           <div>
             <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Withdrawal Start</label>
-            <input type="datetime-local" id="withdrawalStart" class="field" value="${toLocal(schedule.withdrawalStart)}">
+            <div class="flex gap-2">
+              <input type="date" id="withdrawalStartDate" class="field flex-1" value="${toLocal(schedule.withdrawalStart).split('T')[0] || ''}">
+              <input type="time" id="withdrawalStartTime" class="field flex-1" value="${toLocal(schedule.withdrawalStart).split('T')[1] || ''}">
+            </div>
           </div>
 
           <!-- Withdrawal Window End -->
           <div>
             <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Withdrawal End</label>
-            <input type="datetime-local" id="withdrawalEnd" class="field" value="${toLocal(schedule.withdrawalEnd)}">
+            <div class="flex gap-2">
+              <input type="date" id="withdrawalEndDate" class="field flex-1" value="${toLocal(schedule.withdrawalEnd).split('T')[0] || ''}">
+              <input type="time" id="withdrawalEndTime" class="field flex-1" value="${toLocal(schedule.withdrawalEnd).split('T')[1] || ''}">
+            </div>
           </div>
         </div>
         
@@ -94,17 +103,25 @@ function renderScheduleUI(main, pwd, schedule) {
 
   const updateStatus = () => {
     const now = new Date();
-    const nomEnd = main.querySelector('#nominationDeadline').value;
-    const withStart = main.querySelector('#withdrawalStart').value;
-    const withEnd = main.querySelector('#withdrawalEnd').value;
+    const ndD = main.querySelector('#nominationDeadlineDate').value;
+    const ndT = main.querySelector('#nominationDeadlineTime').value;
+    const nomEnd = ndD && ndT ? `${ndD}T${ndT}` : null;
+    
+    const wsD = main.querySelector('#withdrawalStartDate').value;
+    const wsT = main.querySelector('#withdrawalStartTime').value;
+    const wStart = wsD && wsT ? `${wsD}T${wsT}` : null;
+    
+    const weD = main.querySelector('#withdrawalEndDate').value;
+    const weT = main.querySelector('#withdrawalEndTime').value;
+    const wEnd = weD && weT ? `${weD}T${weT}` : null;
 
     const nomStatus = nomEnd && now > new Date(nomEnd) ? '<span class="text-rose-400">CLOSED</span>' : '<span class="text-emerald-400">OPEN</span>';
     main.querySelector('#statusNom').innerHTML = nomStatus;
 
     let withText = '<span class="text-slate-500">Not Set</span>';
-    if (withStart && withEnd) {
-      if (now < new Date(withStart)) withText = '<span class="text-amber-400">PENDING (Starts soon)</span>';
-      else if (now > new Date(withEnd)) withText = '<span class="text-rose-400">CLOSED</span>';
+    if (wStart && wEnd) {
+      if (now < new Date(wStart)) withText = '<span class="text-amber-400">PENDING (Starts soon)</span>';
+      else if (now > new Date(wEnd)) withText = '<span class="text-rose-400">CLOSED</span>';
       else withText = '<span class="text-emerald-400">ACTIVE (Open now)</span>';
     }
     main.querySelector('#statusWith').innerHTML = withText;
@@ -114,12 +131,19 @@ function renderScheduleUI(main, pwd, schedule) {
   main.querySelectorAll('input').forEach(i => i.onchange = updateStatus);
 
     main.querySelector('#btnSaveSchedule').onclick = async (e) => {
+      const nomDate = main.querySelector('#nominationDeadlineDate').value;
+      const nomTime = main.querySelector('#nominationDeadlineTime').value;
+      const wStartDate = main.querySelector('#withdrawalStartDate').value;
+      const wStartTime = main.querySelector('#withdrawalStartTime').value;
+      const wEndDate = main.querySelector('#withdrawalEndDate').value;
+      const wEndTime = main.querySelector('#withdrawalEndTime').value;
+
       const payload = {
         electionYear: main.querySelector('#electionYear').value,
         notificationDate: main.querySelector('#notificationDate').value,
-        nominationDeadline: main.querySelector('#nominationDeadline').value ? new Date(main.querySelector('#nominationDeadline').value).toISOString() : '',
-        withdrawalStart: main.querySelector('#withdrawalStart').value ? new Date(main.querySelector('#withdrawalStart').value).toISOString() : '',
-        withdrawalEnd: main.querySelector('#withdrawalEnd').value ? new Date(main.querySelector('#withdrawalEnd').value).toISOString() : '',
+        nominationDeadline: nomDate && nomTime ? new Date(`${nomDate}T${nomTime}`).toISOString() : '',
+        withdrawalStart: wStartDate && wStartTime ? new Date(`${wStartDate}T${wStartTime}`).toISOString() : '',
+        withdrawalEnd: wEndDate && wEndTime ? new Date(`${wEndDate}T${wEndTime}`).toISOString() : '',
       };
 
     setLoading(e.target, true, 'Saving Schedule...');

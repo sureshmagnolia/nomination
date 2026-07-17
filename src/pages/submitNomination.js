@@ -198,11 +198,7 @@ function personBlock(role, label, isCandidate) {
     </div>
     <div>
       <label class="text-xs text-slate-400 block mb-1">Date of Birth</label>
-      <div class="flex gap-2">
-        <select id="dob-day"   class="field dob-sel"><option value="">Day</option></select>
-        <select id="dob-month" class="field dob-sel"><option value="">Month</option></select>
-        <select id="dob-year"  class="field dob-sel"><option value="">Year</option></select>
-      </div>
+      <input type="date" id="dob-input" class="field w-full">
     </div>` : ''}
   </div>`;
 }
@@ -263,12 +259,10 @@ async function handleSubmit(e, formArea, yearValue) {
 
   const post = formArea.querySelector('#postSelect').value;
   const gender = formArea.querySelector('[name="gender"]:checked')?.value;
-  const day = formArea.querySelector('#dob-day').value;
-  const month = formArea.querySelector('#dob-month').value;
-  const year = formArea.querySelector('#dob-year').value;
+  const dob = formArea.querySelector('#dob-input').value;
 
   if (!gender) { showToast('Please select a gender for the candidate.', 'error'); return; }
-  if (!day || !month || !year) { showToast('Please enter a complete date of birth.', 'error'); return; }
+  if (!dob) { showToast('Please enter a date of birth.', 'error'); return; }
 
   const roles = ['candidate','proposer','seconder'];
   const serials = roles.map(r => formArea.querySelector(`#serial-${r}`).value.trim());
@@ -282,10 +276,13 @@ async function handleSubmit(e, formArea, yearValue) {
   setLoading(submitBtn, true, 'Generate &amp; Preview Nomination');
 
   try {
-    const payload = {
-      post, gender,
-      dob: buildDobString(day, month, year),
-      candidateSerial: serials[0],
+      const dobParts = dob.split('-'); // YYYY-MM-DD
+      const formattedDob = `${dobParts[2]}-${dobParts[1]}-${dobParts[0]}`; // DD-MM-YYYY
+
+      const payload = {
+        post, gender,
+        dob: formattedDob,
+        candidateSerial: serials[0],
       proposerSerial:  serials[1],
       seconderSerial:  serials[2],
       candidateAdmission
@@ -298,7 +295,7 @@ async function handleSubmit(e, formArea, yearValue) {
 
     const result = await api.submitNomination(payload);
 
-    showPreview(formArea, result.id, { post, gender, day, month, year, students }, yearValue);
+    showPreview(formArea, result.id, { post, gender, dob: formattedDob, students }, yearValue);
     showToast(`Nomination submitted! ID: ${result.id}`, 'success');
   } catch (err) {
     showToast(`Submission failed: ${err.message}`, 'error');
@@ -307,10 +304,11 @@ async function handleSubmit(e, formArea, yearValue) {
   }
 }
 
-function showPreview(formArea, id, { post, gender, day, month, year, students }, yearValue) {
+function showPreview(formArea, id, { post, gender, dob, students }, yearValue) {
   const [candidate, proposer, seconder] = students;
-  const dob = buildDobString(day, month, year);
-  const dobDisplay = displayDob(day, month, year);
+  // Convert DD-MM-YYYY to word format if needed for display, or just display DD-MM-YYYY.
+  const dobParts = dob.split('-'); // [DD, MM, YYYY]
+  const dobDisplay = displayDob(dobParts[0], dobParts[1], dobParts[2]);
   const age = calculateAge(dob);
 
   const preview = formArea.querySelector('#previewSection');
