@@ -111,17 +111,15 @@ export function renderAdminLogin(container) {
     errorEl.classList.add('hidden');
 
     try {
-      await api.adminVerifyOTP(password, otp);
+      const verifyRes = await api.adminVerifyOTP(password, otp);
       
-      // Get a session token (establishes this as the single active session)
-      const loginRes = await api.adminLogin(password);
-
       // Success! Store persistent session and navigate
       const today = new Date().toISOString().split('T')[0];
       localStorage.setItem('adminPwd', password);
       localStorage.setItem('adminLoginDate', today);
-      if (loginRes.sessionToken) {
-        localStorage.setItem('adminSessionToken', loginRes.sessionToken);
+      if (verifyRes.sessionToken) {
+        localStorage.setItem('adminSessionToken', verifyRes.sessionToken);
+        sessionStorage.setItem('adminSessionToken', verifyRes.sessionToken);
       }
       
       showToast('Authentication successful!', 'success');

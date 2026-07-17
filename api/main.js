@@ -534,6 +534,8 @@ export default async function handler(req, res) {
     return errOut(res, `Unknown or unimplemented action: ${action}`);
   } catch (error) {
     console.error('API Error:', error);
-    return errOut(res, error.message, 500);
+    const msg = error.message || 'Internal Server Error';
+    const status = msg.startsWith('UNAUTHORIZED_') ? 401 : 500;
+    return errOut(res, msg, status);
   }
 }
