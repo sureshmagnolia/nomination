@@ -82,8 +82,14 @@ label {
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
   border-radius: 0.6rem;
   color: white !important;
+  color-scheme: dark;
   outline: none;
   transition: all 0.2s;
+}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(0.8);
 }
 .field:focus { border-color: #6366f1 !important; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
 .field.pl-10 { padding-left: 2.75rem !important; }
