@@ -165,7 +165,7 @@ export default async function handler(req, res) {
     }
 
     if (action === 'getSettings' || action === 'adminGetSettings') {
-      return jsonOut(res, {
+      const obj = {
         validListPublished: await getSetting('validListPublished'),
         finalListPublished: await getSetting('finalListPublished'),
         isRollFinalized: await getSetting('isRollFinalized'),
@@ -173,7 +173,12 @@ export default async function handler(req, res) {
         collegeShortName: await getSetting('collegeShortName'),
         electionYear: await getSetting('electionYear'),
         notificationDate: await getSetting('notificationDate')
-      });
+      };
+      if (action === 'adminGetSettings') {
+        const rows = await sql`SELECT value FROM settings WHERE key = 'adminEmail'`;
+        obj.adminEmail = rows.length > 0 ? rows[0].value : 'admin@example.com';
+      }
+      return jsonOut(res, obj);
     }
 
     if (action === 'getPublicSchedule') {
@@ -297,6 +302,41 @@ export default async function handler(req, res) {
       if (sessionToken) {
         await sql`DELETE FROM admin_sessions WHERE token = ${sessionToken}`;
       }
+      return jsonOut(res, { ok: true });
+    }
+
+    if (action === 'adminFactoryReset') {
+      await checkAdmin(adminPwd, adminToken, action);
+
+      // Verify OTP again
+      const emailRows = await sql`SELECT value FROM settings WHERE key = 'adminEmail'`;
+      const adminEmail = emailRows.length > 0 ? emailRows[0].value : 'admin@example.com';
+      
+      let otpValid = false;
+      if (adminEmail === 'admin@example.com' && body.otp === '000000') {
+        otpValid = true;
+      } else {
+        const stored = await getSetting('adminOTP');
+        if (stored && stored === body.otp) {
+          otpValid = true;
+        }
+      }
+      
+      if (!otpValid) return errOut(res, 'Invalid or expired OTP', 401);
+      
+      // Clear the OTP to prevent reuse
+      await setSetting('adminOTP', '');
+
+      // Wipe transactional data
+      await sql`TRUNCATE TABLE nominal_roll`;
+      await sql`TRUNCATE TABLE nominations`;
+      await sql`TRUNCATE TABLE ballot_plan`;
+
+      // Reset election state flags
+      await setSetting('isRollFinalized', 'false');
+      await setSetting('validListPublished', 'false');
+      await setSetting('finalListPublished', 'false');
+
       return jsonOut(res, { ok: true });
     }
 

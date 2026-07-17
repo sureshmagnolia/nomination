@@ -64,6 +64,37 @@ export async function renderSettings(container) {
             </div>
           </div>
         </div>
+        
+        <!-- Danger Zone -->
+        <div class="mt-8 border border-rose-500/30 bg-rose-950/20 rounded-2xl p-6">
+          <div class="flex items-start gap-4">
+            <div class="text-3xl">⚠️</div>
+            <div class="flex-1">
+              <h4 class="font-bold text-rose-400 text-lg">Danger Zone: New Election Year</h4>
+              <p class="text-rose-200/60 text-sm mt-1">This action permanently deletes all Nominal Roll students, Nominations, and resets election state flags. Your configuration (Posts, Booths, Passwords) will be kept.</p>
+              
+              <div class="mt-5 space-y-4 max-w-md">
+                <button id="btnInitReset" class="btn bg-rose-600 text-white hover:bg-rose-700 w-full">🚨 Start Factory Reset</button>
+                
+                <div id="resetFlow" class="hidden space-y-4 mt-4 p-4 bg-black/40 rounded-xl border border-rose-500/20">
+                  <div id="resetStep1">
+                    <label class="text-xs font-bold text-rose-300 block mb-2">1. Enter Admin Password to request OTP</label>
+                    <input type="password" id="resetPwd" class="field text-sm mb-2" placeholder="Admin Password">
+                    <button id="btnResetSendOTP" class="btn btn-secondary w-full">Send OTP to Email</button>
+                  </div>
+                  
+                  <div id="resetStep2" class="hidden">
+                    <label class="text-xs font-bold text-emerald-400 block mb-2">2. Check Email for OTP</label>
+                    <input type="text" id="resetOTP" class="field text-center tracking-widest text-lg font-mono mb-3" placeholder="000000" maxlength="6">
+                    <label class="text-xs font-bold text-rose-300 block mb-2">3. Type RESET to confirm</label>
+                    <input type="text" id="resetConfirmText" class="field text-center font-mono uppercase text-rose-400 mb-3" placeholder="RESET">
+                    <button id="btnResetConfirm" class="btn bg-rose-600 text-white hover:bg-rose-700 w-full font-bold">PERMANENTLY WIPE DATA</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     `;
 
@@ -92,6 +123,59 @@ export async function renderSettings(container) {
         container.querySelector('#inputAdminPassword').value = '';
       } catch (e) {
         showToast(e.message, 'error');
+      }
+    });
+
+    // Handle Factory Reset
+    const btnInitReset = container.querySelector('#btnInitReset');
+    const resetFlow = container.querySelector('#resetFlow');
+    const resetStep1 = container.querySelector('#resetStep1');
+    const resetStep2 = container.querySelector('#resetStep2');
+    
+    btnInitReset.addEventListener('click', () => {
+      resetFlow.classList.remove('hidden');
+      btnInitReset.classList.add('hidden');
+    });
+
+    container.querySelector('#btnResetSendOTP').addEventListener('click', async (e) => {
+      const resetPwd = container.querySelector('#resetPwd').value;
+      if (!resetPwd) return showToast('Password required', 'error');
+      
+      const btn = e.target;
+      const oldText = btn.textContent;
+      btn.textContent = 'Sending...';
+      btn.disabled = true;
+      try {
+        await api.post({ action: 'adminSendOTP', password: resetPwd });
+        showToast('OTP sent to your admin email!', 'success');
+        resetStep1.classList.add('hidden');
+        resetStep2.classList.remove('hidden');
+      } catch (err) {
+        showToast(err.message, 'error');
+        btn.textContent = oldText;
+        btn.disabled = false;
+      }
+    });
+
+    container.querySelector('#btnResetConfirm').addEventListener('click', async (e) => {
+      const resetPwd = container.querySelector('#resetPwd').value;
+      const otp = container.querySelector('#resetOTP').value.trim();
+      const confirm = container.querySelector('#resetConfirmText').value.trim().toUpperCase();
+      
+      if (!otp || otp.length !== 6) return showToast('Enter 6-digit OTP', 'error');
+      if (confirm !== 'RESET') return showToast('Type RESET to confirm', 'error');
+      
+      const btn = e.target;
+      btn.textContent = 'WIPING DATA...';
+      btn.disabled = true;
+      try {
+        await api.post({ action: 'adminFactoryReset', password: resetPwd, otp });
+        showToast('✅ System Reset Successful! Reloading...', 'success');
+        setTimeout(() => window.location.reload(), 2000);
+      } catch (err) {
+        showToast(err.message, 'error');
+        btn.textContent = 'PERMANENTLY WIPE DATA';
+        btn.disabled = false;
       }
     });
 
