@@ -264,6 +264,10 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminSendOTP') {
+      const pwdRows = await sql`SELECT value FROM settings WHERE key = 'adminPassword'`;
+      const realPwd = pwdRows.length > 0 ? pwdRows[0].value : 'admin123';
+      if (body.password !== realPwd) return errOut(res, 'UNAUTHORIZED_PASSWORD_MISMATCH', 401);
+
       const rows = await sql`SELECT value FROM settings WHERE key = 'adminEmail'`;
       const adminEmail = rows.length > 0 ? rows[0].value : 'admin@example.com';
       
@@ -297,6 +301,10 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminVerifyOTP') {
+      const pwdRows = await sql`SELECT value FROM settings WHERE key = 'adminPassword'`;
+      const realPwd = pwdRows.length > 0 ? pwdRows[0].value : 'admin123';
+      if (body.password !== realPwd) return errOut(res, 'UNAUTHORIZED_PASSWORD_MISMATCH', 401);
+
       const emailRows = await sql`SELECT value FROM settings WHERE key = 'adminEmail'`;
       const adminEmail = emailRows.length > 0 ? emailRows[0].value : 'admin@example.com';
       
