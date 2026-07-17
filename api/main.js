@@ -155,7 +155,7 @@ export default async function handler(req, res) {
     }
     
     if (action === 'getNominalRoll') {
-      const roll = await sql`SELECT serial_number as "Nominal Roll Serial Number", name as "NAME", class as "CLASS", dept as "Dept" FROM nominal_roll`;
+      const roll = await sql`SELECT serial_number as "Nominal Roll Serial Number", name as "NAME", class as "CLASS", admission_no as "ADMISION NO", dept as "Dept" FROM nominal_roll`;
       return jsonOut(res, roll);
     }
     
@@ -519,6 +519,16 @@ export default async function handler(req, res) {
       await sql`
         INSERT INTO nominal_roll (serial_number, name, class, admission_no, dept)
         VALUES (${body.serial_number}, ${body.name}, ${body.class}, ${body.admission_no}, ${body.dept})
+      `;
+      return jsonOut(res, { ok: true });
+    }
+
+    if (action === 'adminUpdateStudent') {
+      // Update by old serial_number (in case serial_number itself is updated)
+      await sql`
+        UPDATE nominal_roll
+        SET serial_number = ${body.serial_number}, name = ${body.name}, class = ${body.class}, admission_no = ${body.admission_no}, dept = ${body.dept}
+        WHERE serial_number = ${body.old_serial}
       `;
       return jsonOut(res, { ok: true });
     }

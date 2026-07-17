@@ -170,6 +170,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
                     <td class="text-slate-400 text-xs">${esc(s['Dept'] || '–')}</td>
                     ${!isFinal ? `
                       <td>
+                        <button class="text-indigo-400 hover:text-indigo-300 edit-student mr-3" data-serial="${esc(s['Nominal Roll Serial Number'])}" data-name="${esc(s['NAME'])}" data-class="${esc(s['CLASS'])}" data-adm="${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '')}" data-dept="${esc(s['Dept'] || '')}">Edit</button>
                         <button class="text-rose-400 hover:text-rose-300 delete-student" data-serial="${s['Nominal Roll Serial Number']}">Delete</button>
                       </td>
                     ` : ''}
@@ -181,11 +182,12 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
         </div>
       </div>
 
-      <!-- Add Student Modal -->
+      <!-- Add / Edit Student Modal -->
       <div id="addModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
         <div class="glass w-full max-w-md rounded-2xl p-6 shadow-2xl border border-white/10">
-          <h4 class="text-xl font-bold text-white mb-4">Add New Student</h4>
+          <h4 id="modalTitle" class="text-xl font-bold text-white mb-4">Add New Student</h4>
           <div class="space-y-4">
+            <input type="hidden" id="editOldSerial" value="">
             <div>
               <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Serial Number (Draft)</label>
               <input type="text" id="addSerial" class="field" placeholder="e.g. 1001 or 1001a">
@@ -235,29 +237,58 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
 
     // Actions
     if (!isFinal) {
-      main.querySelector('#btnAddNew').onclick = () => main.querySelector('#addModal').classList.remove('hidden');
+      const openModal = (isEdit, data = {}) => {
+        main.querySelector('#modalTitle').textContent = isEdit ? 'Edit Student' : 'Add New Student';
+        main.querySelector('#editOldSerial').value = isEdit ? data.serial : '';
+        main.querySelector('#addSerial').value = data.serial || '';
+        main.querySelector('#addName').value = data.name || '';
+        main.querySelector('#addClass').value = data.class || '';
+        main.querySelector('#addAdm').value = data.adm || '';
+        main.querySelector('#addDept').value = data.dept || '';
+        main.querySelector('#addModal').classList.remove('hidden');
+      };
+
+      main.querySelector('#btnAddNew').onclick = () => openModal(false);
       main.querySelector('#btnCancelAdd').onclick = () => main.querySelector('#addModal').classList.add('hidden');
       main.querySelector('#btnConfirmAdd').onclick = async (e) => {
         const payload = {
-          serial: main.querySelector('#addSerial').value,
+          old_serial: main.querySelector('#editOldSerial').value,
+          serial_number: main.querySelector('#addSerial').value,
           name: main.querySelector('#addName').value,
           class: main.querySelector('#addClass').value,
-          admission: main.querySelector('#addAdm').value,
+          admission_no: main.querySelector('#addAdm').value,
           dept: main.querySelector('#addDept').value
         };
-        if (!payload.serial || !payload.name || !payload.class) return showToast('Please fill required fields.', 'warning');
+        if (!payload.serial_number || !payload.name || !payload.class) return showToast('Please fill required fields.', 'warning');
         
         setLoading(e.target, true, 'Save Student');
         try {
-          await api.adminAddStudent(pwd, payload);
-          showToast('Student added to roll.', 'success');
-          // Reload page
+          if (payload.old_serial) {
+            await api.adminUpdateStudent(pwd, payload);
+            showToast('Student updated.', 'success');
+          } else {
+            await api.adminAddStudent(pwd, payload);
+            showToast('Student added.', 'success');
+          }
+          main.querySelector('#addModal').classList.add('hidden');
           renderAdminNominalRoll(main.closest('#appContainer') || main.parentElement);
         } catch (err) {
           showToast(err.message, 'error');
           setLoading(e.target, false, 'Save Student');
         }
       };
+
+      main.querySelectorAll('.edit-student').forEach(btn => {
+        btn.onclick = () => {
+          openModal(true, {
+            serial: btn.dataset.serial,
+            name: btn.dataset.name,
+            class: btn.dataset.class,
+            adm: btn.dataset.adm,
+            dept: btn.dataset.dept
+          });
+        };
+      });
 
       main.querySelectorAll('.delete-student').forEach(btn => {
         btn.onclick = async () => {

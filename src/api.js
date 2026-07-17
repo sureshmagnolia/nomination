@@ -403,6 +403,12 @@ export const api = {
     return { ok: true };
   },
 
+  adminUpdateStudent: async (password, studentData) => {
+    await bgPost({ action: 'adminUpdateStudent', password, ...studentData });
+    invalidateCache('getNominalRoll');
+    return { ok: true };
+  },
+
   adminDeleteStudent: async (password, serial) => {
     await bgPost({ action: 'adminDeleteStudent', password, serial });
     invalidateCache('getNominalRoll');
