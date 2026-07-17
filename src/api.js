@@ -417,7 +417,13 @@ export const api = {
 
   adminFinalizeRoll: async (password) => {
     await bgPost({ action: 'adminFinalizeRoll', password });
-    invalidateCache('getNominalRoll');
+    invalidateCache('adminGetSettings');
+    return { ok: true };
+  },
+
+  adminUnfinalizeRoll: async (password) => {
+    await bgPost({ action: 'adminUnfinalizeRoll', password });
+    invalidateCache('adminGetSettings');
     return { ok: true };
   },
 

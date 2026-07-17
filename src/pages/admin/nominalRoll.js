@@ -135,7 +135,8 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
             ${!isFinal ? `<button id="btnAddNew" class="btn btn-success">➕ Add Student</button>` : ''}
             <button id="btnPrintRoll" class="btn btn-secondary">🖨️ Print Roll</button>
             ${!isFinal ? `<button id="btnFinalize" class="btn btn-primary">🔒 Finalize & Lock Roll</button>` : ''}
-            ${isFinal ? `<span class="badge badge-valid py-2 px-4">✅ ROLL FINALIZED</span>` : ''}
+            ${isFinal ? `<span class="badge badge-valid py-2 px-4 flex items-center gap-2">✅ ROLL FINALIZED</span>` : ''}
+            ${isFinal ? `<button id="btnUnfinalize" class="btn bg-rose-500/20 text-rose-300 border border-rose-500/50 hover:bg-rose-500/30">🔓 Unfinalize</button>` : ''}
           </div>
         </div>
 
@@ -300,9 +301,11 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
           } catch (err) { showToast(err.message, 'error'); }
         };
       });
+    }
 
+    if (main.querySelector('#btnFinalize')) {
       main.querySelector('#btnFinalize').onclick = async (e) => {
-        if (!confirm('FINALIZATION WARNING:\n\n1. All students will be sorted by Class and Name.\n2. NEW Serial Numbers will be generated sequentially (1, 2, 3...).\n3. The roll will be LOCKED for all future edits.\n\nAre you absolutely sure?')) return;
+        if (!confirm('Are you sure you want to finalize the Nominal Roll?\n\nThis will lock the list and prevent any further additions or deletions.')) return;
         setLoading(e.target, true, 'Finalizing...');
         try {
           await api.adminFinalizeRoll(pwd);
@@ -310,7 +313,24 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
           renderAdminNominalRoll(main.closest('#appContainer') || main.parentElement);
         } catch (err) {
           showToast(err.message, 'error');
+        } finally {
           setLoading(e.target, false, 'Finalize & Lock Roll');
+        }
+      };
+    }
+
+    if (main.querySelector('#btnUnfinalize')) {
+      main.querySelector('#btnUnfinalize').onclick = async (e) => {
+        if (!confirm('Are you sure you want to unfinalize the Nominal Roll?\n\nThis will unlock the list and allow edits again.')) return;
+        setLoading(e.target, true, 'Unfinalizing...');
+        try {
+          await api.adminUnfinalizeRoll(pwd);
+          showToast('Nominal Roll Unlocked!', 'success');
+          renderAdminNominalRoll(main.closest('#appContainer') || main.parentElement);
+        } catch (err) {
+          showToast(err.message, 'error');
+        } finally {
+          setLoading(e.target, false, '🔓 Unfinalize');
         }
       };
     }

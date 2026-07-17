@@ -543,6 +543,11 @@ export default async function handler(req, res) {
       return jsonOut(res, { ok: true });
     }
 
+    if (action === 'adminUnfinalizeRoll') {
+      await setSetting('isRollFinalized', 'false');
+      return jsonOut(res, { ok: true });
+    }
+
     return errOut(res, `Unknown or unimplemented action: ${action}`);
   } catch (error) {
     console.error('API Error:', error);
