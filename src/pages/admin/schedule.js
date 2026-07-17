@@ -50,31 +50,40 @@ function renderScheduleUI(main, pwd, schedule) {
 
         <hr class="border-white/10" />
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="space-y-6">
           <!-- Nomination Deadline -->
-          <div>
-            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Nomination Deadline</label>
-            <div class="flex gap-2">
-              <input type="date" id="nominationDeadlineDate" class="field flex-1" value="${toLocal(schedule.nominationDeadline).split('T')[0] || ''}">
-              <input type="time" id="nominationDeadlineTime" class="field flex-1" value="${toLocal(schedule.nominationDeadline).split('T')[1] || ''}">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-white/5 bg-black/20 rounded-lg">
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Nomination Deadline Date</label>
+              <input type="date" id="nominationDeadlineDate" class="field w-full" value="${toLocal(schedule.nominationDeadline).split('T')[0] || ''}">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Nomination Deadline Time</label>
+              <input type="time" id="nominationDeadlineTime" class="field w-full" value="${toLocal(schedule.nominationDeadline).split('T')[1] || ''}">
             </div>
           </div>
 
           <!-- Withdrawal Window Start -->
-          <div>
-            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Withdrawal Start</label>
-            <div class="flex gap-2">
-              <input type="date" id="withdrawalStartDate" class="field flex-1" value="${toLocal(schedule.withdrawalStart).split('T')[0] || ''}">
-              <input type="time" id="withdrawalStartTime" class="field flex-1" value="${toLocal(schedule.withdrawalStart).split('T')[1] || ''}">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-white/5 bg-black/20 rounded-lg">
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Withdrawal Start Date</label>
+              <input type="date" id="withdrawalStartDate" class="field w-full" value="${toLocal(schedule.withdrawalStart).split('T')[0] || ''}">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Withdrawal Start Time</label>
+              <input type="time" id="withdrawalStartTime" class="field w-full" value="${toLocal(schedule.withdrawalStart).split('T')[1] || ''}">
             </div>
           </div>
 
           <!-- Withdrawal Window End -->
-          <div>
-            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Withdrawal End</label>
-            <div class="flex gap-2">
-              <input type="date" id="withdrawalEndDate" class="field flex-1" value="${toLocal(schedule.withdrawalEnd).split('T')[0] || ''}">
-              <input type="time" id="withdrawalEndTime" class="field flex-1" value="${toLocal(schedule.withdrawalEnd).split('T')[1] || ''}">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-white/5 bg-black/20 rounded-lg">
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Withdrawal End Date</label>
+              <input type="date" id="withdrawalEndDate" class="field w-full" value="${toLocal(schedule.withdrawalEnd).split('T')[0] || ''}">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Withdrawal End Time</label>
+              <input type="time" id="withdrawalEndTime" class="field w-full" value="${toLocal(schedule.withdrawalEnd).split('T')[1] || ''}">
             </div>
           </div>
         </div>
