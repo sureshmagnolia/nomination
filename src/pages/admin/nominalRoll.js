@@ -299,16 +299,27 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
     if (main.querySelector('#btnFinalize')) {
       main.querySelector('#btnFinalize').onclick = async (e) => {
         if (!confirm('Are you sure you want to finalize the Nominal Roll?\n\nThis will lock the list and prevent any further additions or deletions.')) return;
-        setLoading(e.target, true, 'Finalizing...');
-        try {
-          await api.adminFinalizeRoll(pwd);
-          showToast('Nominal Roll Finalized Successfully!', 'success');
-          renderAdminNominalRoll(main.closest('#appContainer') || main.parentElement);
-        } catch (err) {
-          showToast(err.message, 'error');
-        } finally {
-          setLoading(e.target, false, 'Finalize & Lock Roll');
-        }
+        
+        const doFinalize = async (matchNominations = false) => {
+          setLoading(e.target, true, 'Finalizing...');
+          try {
+            const res = await api.adminFinalizeRoll(pwd, { matchNominations });
+            if (res && res.requiresMatching) {
+              setLoading(e.target, false, 'Finalize & Lock Roll');
+              if (confirm(`⚠️ ${res.count} existing nominations found!\n\nBecause you edited the Nominal Roll, their Serial Numbers have shifted.\n\nWould you like the system to automatically remap them using their Admission Numbers?`)) {
+                return await doFinalize(true);
+              } else {
+                return; // Admin cancelled the remap, so we don't finalize.
+              }
+            }
+            showToast('Nominal Roll Finalized Successfully!', 'success');
+            renderAdminNominalRoll(main.closest('#appContainer') || main.parentElement);
+          } catch (err) {
+            showToast(err.message, 'error');
+            setLoading(e.target, false, 'Finalize & Lock Roll');
+          }
+        };
+        await doFinalize(false);
       };
     }
 

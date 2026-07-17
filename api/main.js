@@ -350,6 +350,9 @@ export default async function handler(req, res) {
     }
 
     if (action === 'submitNomination') {
+      const isRollFinal = await getSetting('isRollFinalized');
+      if (isRollFinal !== 'true') return errOut(res, 'Nominations cannot be submitted while the Nominal Roll is being edited (Draft Mode).');
+
       // Basic Identity Rules
       if (body.candidateSerial === body.proposerSerial) return errOut(res, 'Candidate cannot propose themselves.');
       if (body.candidateSerial === body.seconderSerial) return errOut(res, 'Candidate cannot second themselves.');
@@ -580,6 +583,25 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminFinalizeRoll') {
+      const existingNoms = await sql`SELECT id, candidate_admission, proposer_admission, seconder_admission FROM nominations`;
+      if (existingNoms.length > 0 && !body.matchNominations) {
+        return jsonOut(res, { ok: false, requiresMatching: true, count: existingNoms.length });
+      }
+
+      if (body.matchNominations && existingNoms.length > 0) {
+        for (const n of existingNoms) {
+          const cand = await sql`SELECT serial_number FROM nominal_roll WHERE admission_no = ${n.candidate_admission}`;
+          const prop = await sql`SELECT serial_number FROM nominal_roll WHERE admission_no = ${n.proposer_admission}`;
+          const sec = await sql`SELECT serial_number FROM nominal_roll WHERE admission_no = ${n.seconder_admission}`;
+          
+          await sql`UPDATE nominations SET 
+            candidate_serial = ${cand[0]?.serial_number || null},
+            proposer_serial = ${prop[0]?.serial_number || null},
+            seconder_serial = ${sec[0]?.serial_number || null}
+          WHERE id = ${n.id}`;
+        }
+      }
+
       await setSetting('isRollFinalized', 'true');
       return jsonOut(res, { ok: true });
     }

@@ -415,8 +415,9 @@ export const api = {
     return { ok: true };
   },
 
-  adminFinalizeRoll: async (password) => {
-    await bgPost({ action: 'adminFinalizeRoll', password });
+  adminFinalizeRoll: async (password, options = {}) => {
+    const res = await bgPost({ action: 'adminFinalizeRoll', password, ...options });
+    if (res && res.requiresMatching) return res;
     invalidateCache('adminGetSettings');
     return { ok: true };
   },
