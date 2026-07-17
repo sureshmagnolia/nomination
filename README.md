@@ -309,3 +309,27 @@ All admin POST requests are handled via the `bgPost` sync queue to prevent UI bl
 7. **Print Layouts**: All print layouts (Nominations, Counting Forms, Official Results) use strict inline CSS and table formatting within `window.open` templates to ensure they render perfectly on A4 paper across different browsers. Avoid external stylesheets for printed components.
 8. **NOTA Counting**: Both NOTA and INVALID votes count toward the total base when computing the final vote percentage for candidates.
 9. **Do not run formatting/linting scripts without permission**: The codebase relies on specific string literal structures and `.js` file templates. Do not blindly run Prettier or ESLint over the whole repository unless specifically instructed.
+
+---
+
+## 15. Recent Hardening & Edge Case Handling (Session Log)
+
+**For Future AI Assistants:** The following critical updates and architectural decisions were made recently to harden the system:
+
+1. **Dynamic Serial Number Recalculation (Option 2)**: 
+   - The Nominal Roll serial numbers (`Nominal Roll Serial Number`) are NOT static. They are dynamically recalculated (sorted by `CLASS` then `NAME`, numbered 1 to N) automatically in `api/main.js` whenever a student is added, edited, or deleted. 
+   - *Why?* To ensure continuous serial numbers without gaps if a student is deleted.
+
+2. **Nomination Re-mapping Engine (`adminFinalizeRoll`)**: 
+   - Because serial numbers change dynamically, if the Admin modifies the Nominal Roll *after* Nominations have been submitted, the serials attached to existing nominations (candidate, proposer, seconder) will become invalid. 
+   - *Solution:* The system uses the student's `admission_no` as the immutable primary key. When the Admin clicks "Finalize Roll", the backend detects if any existing nominations have stale serial numbers. If so, it returns `requiresMatching: true`, prompts the Admin, and then automatically remaps all `_serial` fields in the `nominations` table based on their `admission_no`.
+
+3. **API Wrapper Error Parsing (`src/api.js`)**: 
+   - `res.ok` checks in the `fetch` wrappers now correctly parse the JSON body to extract `data.error` even on non-200 responses (like `400`). This ensures the UI displays actual validation errors (like "Roll is not finalized") instead of generic "Network error: 400".
+
+4. **Factory Reset (New Election Year)**: 
+   - A `adminFactoryReset` action exists in `api/main.js` and `settings.js`. It requires OTP verification sent to the `adminEmail`. It truncates all transactional data (`nominal_roll`, `nominations`, `ballot_plan`) and resets election flags, but preserves structural configuration (Posts, Booths, Passwords) for the next year.
+
+5. **Date/Time Pickers & Dark Mode CSS**: 
+   - All `datetime-local` inputs were split into native `<input type="date">` and `<input type="time">` for cross-browser reliability. 
+   - *CSS Rule:* `.field` has `color-scheme: dark;` and the webkit calendar icons have `filter: invert(0.8)` in `style.css` so they are visible against the dark UI background. Do not remove this, otherwise the icons vanish.
