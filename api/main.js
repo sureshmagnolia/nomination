@@ -511,30 +511,71 @@ export default async function handler(req, res) {
             sql`INSERT INTO nominal_roll (serial_number, name, class, admission_no, dept) VALUES (${r.serial_number}, ${r.name}, ${r.class}, ${r.admission_no}, ${r.dept})`
           ));
         }
+        
+        // Recalculate
+        await sql`UPDATE nominal_roll SET serial_number = serial_number || '_' || gen_random_uuid()::varchar`;
+        await sql`
+          WITH renumbered AS (
+            SELECT serial_number as old_serial, ROW_NUMBER() OVER (ORDER BY class ASC, name ASC) as new_serial
+            FROM nominal_roll
+          )
+          UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
+          FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
+        `;
       }
       return jsonOut(res, { ok: true, count: toInsert.length });
     }
 
+
     if (action === 'adminAddStudent') {
       await sql`
         INSERT INTO nominal_roll (serial_number, name, class, admission_no, dept)
-        VALUES (${body.serial_number}, ${body.name}, ${body.class}, ${body.admission_no}, ${body.dept})
+        VALUES (gen_random_uuid()::varchar, ${body.name}, ${body.class}, ${body.admission_no}, ${body.dept})
+      `;
+      // Recalculate
+      await sql`WITH temp AS (SELECT serial_number FROM nominal_roll) UPDATE nominal_roll SET serial_number = serial_number || '_temp'`;
+      await sql`
+        WITH renumbered AS (
+          SELECT serial_number as old_serial, ROW_NUMBER() OVER (ORDER BY class ASC, name ASC) as new_serial
+          FROM nominal_roll
+        )
+        UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
+        FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
       `;
       return jsonOut(res, { ok: true });
     }
 
     if (action === 'adminUpdateStudent') {
-      // Update by old serial_number (in case serial_number itself is updated)
       await sql`
         UPDATE nominal_roll
-        SET serial_number = ${body.serial_number}, name = ${body.name}, class = ${body.class}, admission_no = ${body.admission_no}, dept = ${body.dept}
+        SET name = ${body.name}, class = ${body.class}, admission_no = ${body.admission_no}, dept = ${body.dept}
         WHERE serial_number = ${body.old_serial}
+      `;
+      // Recalculate
+      await sql`UPDATE nominal_roll SET serial_number = serial_number || '_' || gen_random_uuid()::varchar`;
+      await sql`
+        WITH renumbered AS (
+          SELECT serial_number as old_serial, ROW_NUMBER() OVER (ORDER BY class ASC, name ASC) as new_serial
+          FROM nominal_roll
+        )
+        UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
+        FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
       `;
       return jsonOut(res, { ok: true });
     }
 
     if (action === 'adminDeleteStudent') {
       await sql`DELETE FROM nominal_roll WHERE serial_number = ${body.serial}`;
+      // Recalculate
+      await sql`UPDATE nominal_roll SET serial_number = serial_number || '_' || gen_random_uuid()::varchar`;
+      await sql`
+        WITH renumbered AS (
+          SELECT serial_number as old_serial, ROW_NUMBER() OVER (ORDER BY class ASC, name ASC) as new_serial
+          FROM nominal_roll
+        )
+        UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
+        FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
+      `;
       return jsonOut(res, { ok: true });
     }
 

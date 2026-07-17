@@ -190,11 +190,6 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
           <div class="space-y-4">
             <input type="hidden" id="editOldSerial" value="">
             <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Serial Number (Draft)</label>
-              <input type="text" id="addSerial" class="field" placeholder="e.g. 1001 or 1001a">
-              <p class="text-[10px] text-slate-500 mt-1">Use suffixes like 'a' to insert between numbers.</p>
-            </div>
-            <div>
               <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Full Name</label>
               <input type="text" id="addName" class="field" placeholder="Student Name">
             </div>
@@ -241,7 +236,6 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
       const openModal = (isEdit, data = {}) => {
         main.querySelector('#modalTitle').textContent = isEdit ? 'Edit Student' : 'Add New Student';
         main.querySelector('#editOldSerial').value = isEdit ? data.serial : '';
-        main.querySelector('#addSerial').value = data.serial || '';
         main.querySelector('#addName').value = data.name || '';
         main.querySelector('#addClass').value = data.class || '';
         main.querySelector('#addAdm').value = data.adm || '';
@@ -254,13 +248,12 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
       main.querySelector('#btnConfirmAdd').onclick = async (e) => {
         const payload = {
           old_serial: main.querySelector('#editOldSerial').value,
-          serial_number: main.querySelector('#addSerial').value,
           name: main.querySelector('#addName').value,
           class: main.querySelector('#addClass').value,
           admission_no: main.querySelector('#addAdm').value,
           dept: main.querySelector('#addDept').value
         };
-        if (!payload.serial_number || !payload.name || !payload.class) return showToast('Please fill required fields.', 'warning');
+        if (!payload.name || !payload.class) return showToast('Please fill required fields.', 'warning');
         
         setLoading(e.target, true, 'Save Student');
         try {
