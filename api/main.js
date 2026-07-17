@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { Resend } from 'resend';
+import crypto from 'crypto';
 
 // Ensure DATABASE_URL is set in your Vercel project environment variables
 // If missing, use a valid placeholder format so the module doesn't crash on load
