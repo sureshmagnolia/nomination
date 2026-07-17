@@ -503,19 +503,13 @@ export default async function handler(req, res) {
       });
       
       if (toInsert.length > 0) {
-        // Bulk insert using Neon HTTP client (chunked)
-        const batchSize = 100;
+        // Bulk insert using concurrent Neon HTTP requests (chunked to avoid Vercel timeouts)
+        const batchSize = 50;
         for (let i = 0; i < toInsert.length; i += batchSize) {
           const batch = toInsert.slice(i, i + batchSize);
-          const values = [];
-          batch.forEach(r => values.push(r.serial_number, r.name, r.class, r.admission_no, r.dept));
-          
-          const placeholders = batch.map((_, idx) => {
-            const o = idx * 5;
-            return `($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4}, $${o + 5})`;
-          }).join(', ');
-          
-          await sql(`INSERT INTO nominal_roll (serial_number, name, class, admission_no, dept) VALUES ${placeholders}`, values);
+          await Promise.all(batch.map(r => 
+            sql`INSERT INTO nominal_roll (serial_number, name, class, admission_no, dept) VALUES (${r.serial_number}, ${r.name}, ${r.class}, ${r.admission_no}, ${r.dept})`
+          ));
         }
       }
       return jsonOut(res, { ok: true, count: toInsert.length });
