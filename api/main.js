@@ -19,16 +19,16 @@ const checkAdmin = async (password, sessionToken, action) => {
   const realPwd = rows.length > 0 ? rows[0].value : 'admin123';
   
   if (password !== realPwd) {
-    throw new Error('UNAUTHORIZED_PASSWORD');
+    throw new Error(`UNAUTHORIZED_PASSWORD_MISMATCH`);
   }
 
   if (!sessionToken) {
-    throw new Error('UNAUTHORIZED_SESSION');
+    throw new Error('UNAUTHORIZED_SESSION_MISSING');
   }
-  
-  const valid = await sql`SELECT * FROM admin_sessions WHERE token = ${sessionToken}`;
-  if (valid.length === 0) {
-    throw new Error('SESSION_EXPIRED');
+
+  const validSession = await sql`SELECT token FROM admin_sessions WHERE token = ${sessionToken}`;
+  if (validSession.length === 0) {
+    throw new Error('UNAUTHORIZED_SESSION_INVALID_OR_EXPIRED');
   }
 };
 
