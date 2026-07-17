@@ -63,7 +63,11 @@ async function processQueue() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(task.body),
       });
-      if (!res.ok) throw new Error(`Network error: ${res.status}`);
+      if (!res.ok) {
+        let errMessage = `Network error: ${res.status}`;
+        try { const errData = await res.json(); if (errData.error) errMessage = errData.error; } catch(e) {}
+        throw new Error(errMessage);
+      }
       const data = await res.json();
       if (data.error === 'SESSION_EXPIRED') { handleSessionExpired(); _syncQueue.length = 0; break; }
       if (data.error) throw new Error(data.error);
@@ -105,7 +109,11 @@ async function get(params) {
   const url = new URL(BASE_URL, window.location.origin);
   Object.entries(queryParams).forEach(([k, v]) => url.searchParams.append(k, v));
   const res = await fetch(url.toString(), { headers });
-  if (!res.ok) throw new Error(`Network error: ${res.status}`);
+  if (!res.ok) {
+    let errMessage = `Network error: ${res.status}`;
+    try { const errData = await res.json(); if (errData.error) errMessage = errData.error; } catch(e) {}
+    throw new Error(errMessage);
+  }
   const data = await res.json();
   if (data.error === 'SESSION_EXPIRED') { handleSessionExpired(); throw new Error('SESSION_EXPIRED'); }
   if (data.error) throw new Error(data.error);
@@ -125,7 +133,11 @@ async function post(body) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`Network error: ${res.status}`);
+  if (!res.ok) {
+    let errMessage = `Network error: ${res.status}`;
+    try { const errData = await res.json(); if (errData.error) errMessage = errData.error; } catch(e) {}
+    throw new Error(errMessage);
+  }
   const data = await res.json();
   if (data.error === 'SESSION_EXPIRED') { handleSessionExpired(); throw new Error('SESSION_EXPIRED'); }
   if (data.error) throw new Error(data.error);
