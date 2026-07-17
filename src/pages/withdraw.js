@@ -58,12 +58,16 @@ export async function renderWithdraw(container) {
         <div class="text-center mb-8">
           <div class="text-5xl mb-3">↩️</div>
           <h2 class="text-xl font-bold text-white">Submit Withdrawal</h2>
-          <p class="text-slate-400 text-sm mt-2">Enter your 10-digit nomination ID to fetch your details and submit a withdrawal request.</p>
+          <p class="text-slate-400 text-sm mt-2">Enter your 10-digit nomination ID and Admission Number to securely fetch your details and submit a withdrawal request.</p>
         </div>
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-semibold text-slate-300 mb-1">Nomination ID (10 digits)</label>
             <input id="withdrawId" type="text" maxlength="10" class="field text-center text-xl tracking-widest font-mono" placeholder="0000000000" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-slate-300 mb-1">Your Admission Number (Authentication)</label>
+            <input id="authAdm" type="text" class="field text-center text-xl tracking-widest font-mono" placeholder="12345" />
           </div>
           <button id="fetchBtn" class="btn btn-primary w-full">Fetch Nomination Details</button>
         </div>
@@ -74,13 +78,17 @@ export async function renderWithdraw(container) {
     const fetchBtn = area.querySelector('#fetchBtn');
     fetchBtn.addEventListener('click', async () => {
       const id = area.querySelector('#withdrawId').value.trim();
+      const adm = area.querySelector('#authAdm').value.trim();
       if (id.length !== 10 || !/^\d+$/.test(id)) {
         showToast('Please enter a valid 10-digit numeric ID.', 'error'); return;
       }
+      if (!adm) {
+        showToast('Please enter your Admission Number.', 'error'); return;
+      }
       setLoading(fetchBtn, true, 'Fetch Nomination Details');
       try {
-        const nom = await api.getNomination(id);
-        showDetails(area.querySelector('#nominationDetails'), nom, id);
+        const nom = await api.getNomination(id, adm);
+        showDetails(area.querySelector('#nominationDetails'), nom, id, adm);
       } catch (e) {
         area.querySelector('#nominationDetails').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
       } finally {
@@ -93,7 +101,7 @@ export async function renderWithdraw(container) {
   }
 }
 
-function showDetails(area, nom, id) {
+function showDetails(area, nom, id, adm) {
   if (nom.status !== 'Valid') {
     area.innerHTML = `<div class="alert alert-warning">⚠ This nomination has status <strong>${esc(nom.status)}</strong>. Only <strong>Valid</strong> nominations can be withdrawn.</div>`;
     return;
@@ -125,7 +133,7 @@ function showDetails(area, nom, id) {
     const btn = area.querySelector('#withdrawBtn');
     setLoading(btn, true, 'Submit Withdrawal Request');
     try {
-      await api.submitWithdrawal(id);
+      await api.submitWithdrawal(id, adm);
       area.innerHTML = `
         <div class="alert alert-success">✅ Withdrawal request submitted successfully! The Returning Officer will review your request.</div>
         <div class="mt-4 no-print">

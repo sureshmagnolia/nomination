@@ -109,7 +109,12 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
     });
   });
 
-  container.querySelector('#logoutBtn').addEventListener('click', () => {
+  container.querySelector('#logoutBtn').addEventListener('click', async () => {
+    try {
+      const pwd = localStorage.getItem('adminPwd');
+      if (pwd) await api.adminLogout(pwd);
+    } catch (e) { console.error('Logout API failed:', e); }
+
     localStorage.removeItem('adminPwd');
     localStorage.removeItem('adminLoginDate');
     localStorage.removeItem('adminSessionToken');

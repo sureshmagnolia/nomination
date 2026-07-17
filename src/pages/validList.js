@@ -60,7 +60,6 @@ function renderList(main, nominations) {
                     <th class="w-16">#</th>
                     <th>Candidate Details</th>
                     <th>Department</th>
-                    <th class="text-right">Nomination ID</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -72,7 +71,6 @@ function renderList(main, nominations) {
                         <div class="text-xs text-slate-500 mt-0.5">${esc(n.candidateClass)}</div>
                       </td>
                       <td class="text-sm text-slate-400">${esc(n.candidateDept)}</td>
-                      <td class="text-right font-mono text-indigo-400/70 text-[10px]">${esc(n.id)}</td>
                     </tr>
                   `).join('')}
                 </tbody>

@@ -485,7 +485,7 @@ function renderLedger(main, allResults, allFormSerialsMeta) {
       return `${base} | ❌ Failed${action} (${item?.errorMsg || ''})`;
     }
     if (st === 'pending') return `${base} | ⏳ Not entered yet${action}`;
-    if (st === 'server') return `${base} | ☁️ In Sheet${action}`;
+    if (st === 'server') return `${base} | ☁️ In DB${action}`;
     if (st === 'success') return `${base} | ✅ Saved${action}`;
     if (st === 'syncing') return `${base} | 🔵 Syncing...`;
     return base + action;

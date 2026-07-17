@@ -1,11 +1,11 @@
 /**
  * config.js
- * Central configuration. Replace APPS_SCRIPT_URL with your deployed Google Apps Script URL.
+ * Central configuration.
  */
 
 export const CONFIG = {
   // Point to Vercel Serverless API
-  APPS_SCRIPT_URL: '/api/main',
+  API_BASE_URL: '/api/main',
 
   // Election date for age cutoff (YYYY-MM-DD)
   ELECTION_DATE: '2026-10-12',

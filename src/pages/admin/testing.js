@@ -37,7 +37,7 @@ export function renderAdminTesting(container) {
         </div>
         <div class="p-6 space-y-4">
           <ul class="text-sm text-slate-400 space-y-1 list-disc list-inside">
-            <li>Reads all posts from the <strong class="text-white">Posts</strong> sheet.</li>
+            <li>Reads all posts from the <strong class="text-white">Posts</strong> table.</li>
             <li>Picks real students from <strong class="text-white">NominalRoll</strong> as candidates, proposers, and seconders.</li>
             <li>Sets status to <strong class="text-green-400">Valid</strong> and populates <strong class="text-white">Nominations, ValidList, and FinalList</strong>.</li>
             <li>IDs are prefixed with <code class="text-indigo-300 bg-black/30 px-1 rounded">TEST</code> for easy identification.</li>
@@ -62,10 +62,10 @@ export function renderAdminTesting(container) {
         </div>
         <div class="p-6 space-y-4">
           <div class="rounded-lg bg-red-900/20 border border-red-800/40 p-4 text-sm text-red-300 space-y-1">
-            <p>🗑️ <strong>Nominations</strong> sheet — will be cleared</p>
-            <p>🗑️ <strong>ValidList</strong> sheet — will be cleared</p>
-            <p>🗑️ <strong>FinalList</strong> sheet — will be cleared</p>
-            <p>🗑️ <strong>Results</strong> sheet — will be cleared</p>
+            <p>🗑️ <strong>Nominations</strong> table — will be cleared</p>
+            <p>🗑️ <strong>ValidList</strong> cache — will be cleared</p>
+            <p>🗑️ <strong>FinalList</strong> cache — will be cleared</p>
+            <p>🗑️ <strong>Results</strong> data — will be cleared</p>
             <p>🔄 <strong>Publish flags</strong> — will be reset to false</p>
             <p class="text-green-400 mt-2">✅ NominalRoll, Posts, Booths, Settings (locations) — <strong>preserved</strong></p>
           </div>

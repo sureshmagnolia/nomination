@@ -1,7 +1,7 @@
 /**
- * pages/submitNomination.js
- * Multi-step nomination form with auto-fill, eligibility checks, captcha, and print preview.
- * Posts are loaded dynamically from the Google Sheet via the API.
+ * submitNomination.js
+ * Renders the nomination form for students.
+ * Posts are loaded dynamically from the database via the API.
  */
 import { api } from '../api.js';
 import { CONFIG } from '../config.js';
@@ -54,7 +54,7 @@ export async function renderSubmitNomination(container) {
 
     if (nominalRoll.length === 0) throw new Error('Nominal roll is empty. Please contact the admin.');
 
-    // Use sheet posts if available, otherwise fall back to config defaults
+    // Use database posts if available, otherwise fall back to config defaults
     allPosts = Array.isArray(postsData) && postsData.length > 0
       ? postsData
       : CONFIG.DEFAULT_POSTS;
@@ -181,7 +181,11 @@ function personBlock(role, label, isCandidate) {
     </div>
     <div id="details-${role}" class="text-xs text-slate-400 space-y-1 min-h-[3rem]"></div>
     ${isCandidate ? `
-    <div>
+    <div class="mt-4 pt-4 border-t border-white/10">
+      <label class="text-xs font-semibold text-indigo-300 block mb-1">Your Admission Number (Auth)</label>
+      <input id="auth-candidate" type="text" class="field mt-1 border-indigo-500/30 bg-indigo-900/20" placeholder="Required for submission" />
+    </div>
+    <div class="mt-4">
       <label class="text-xs text-slate-400 block mb-1">Gender</label>
       <div class="flex gap-4">
         <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
@@ -271,6 +275,9 @@ async function handleSubmit(e, formArea, yearValue) {
   const students = serials.map(s => nominalRoll.find(st => String(st['Nominal Roll Serial Number']) === s));
   if (students.some(s => !s)) { showToast('One or more serial numbers are invalid.', 'error'); return; }
 
+  const candidateAdmission = formArea.querySelector('#auth-candidate').value.trim();
+  if (!candidateAdmission) { showToast('Please enter the Candidate Admission Number.', 'error'); return; }
+
   const submitBtn = formArea.querySelector('#submitBtn');
   setLoading(submitBtn, true, 'Generate &amp; Preview Nomination');
 
@@ -281,6 +288,7 @@ async function handleSubmit(e, formArea, yearValue) {
       candidateSerial: serials[0],
       proposerSerial:  serials[1],
       seconderSerial:  serials[2],
+      candidateAdmission
     };
 
     // If admin is doing direct entry, include password to bypass deadline

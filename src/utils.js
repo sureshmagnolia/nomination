@@ -29,7 +29,7 @@ export function calculateAge(dobString, asOfDate = CONFIG.ELECTION_DATE) {
  * @param {string} postName   - Name of the selected post
  * @param {string} role       - 'Candidate' | 'Proposer' | 'Seconder'
  * @param {string|null} gender
- * @param {object[]} allPosts - Array of post-rule objects from the sheet/config
+ * @param {object[]} allPosts - Array of post-rule objects from the database/config
  */
 export function checkEligibility(student, postName, role, gender = null, allPosts = [], existingNominations = []) {
   if (!student) return [];

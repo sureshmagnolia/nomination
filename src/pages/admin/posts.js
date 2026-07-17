@@ -1,7 +1,7 @@
 /**
  * pages/admin/posts.js
  * Admin page to manage election posts and their eligibility rules.
- * Posts are stored in the Google Sheet "Posts" tab.
+ * Posts are stored in the database.
  */
 import { api } from '../../api.js';
 import { CONFIG } from '../../config.js';
@@ -106,7 +106,7 @@ function renderPostsPage(main, posts, pwd) {
         </div>
       </div>
       <p class="text-xs text-slate-500">
-        ℹ Changes are saved to the Google Sheet. The nomination form will reflect these immediately after saving.
+        ℹ Changes are saved to the database. The nomination form will reflect these immediately after saving.
       </p>
     </div>`;
 

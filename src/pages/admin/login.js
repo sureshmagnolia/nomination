@@ -1,6 +1,6 @@
 /**
  * pages/admin/login.js
- * Admin login page — verifies password against Apps Script backend.
+ * Admin login page — verifies password against backend.
  */
 import { api } from '../../api.js';
 import { router } from '../../router.js';

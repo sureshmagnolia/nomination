@@ -40,22 +40,7 @@ document.body.insertAdjacentHTML('afterbegin', `
   <div class="bg-blob bg-blob-3"></div>
 `);
 
-// ─── Setup warning banner ─────────────────────────────────────────────────────
-if (CONFIG.APPS_SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
-  document.body.insertAdjacentHTML('afterbegin', `
-    <div id="setup-banner" style="
-      position:fixed;top:0;left:0;right:0;z-index:9999;
-      background:#dc2626;color:white;text-align:center;
-      padding:0.75rem 1rem;font-size:0.85rem;font-weight:600;
-      font-family:Inter,sans-serif;
-    ">
-      ⚙️ Setup Required: Open <code style="background:rgba(0,0,0,0.3);padding:0.1rem 0.4rem;border-radius:4px;">src/config.js</code>
-      and replace <code style="background:rgba(0,0,0,0.3);padding:0.1rem 0.4rem;border-radius:4px;">YOUR_SCRIPT_ID</code>
-      with your Google Apps Script Web App URL, then rebuild &amp; push.
-    </div>
-  `);
-  document.getElementById('app').style.marginTop = '48px';
-}
+
 
 // ─── Router setup ─────────────────────────────────────────────────────────────
 const render = (fn) => (params) => {

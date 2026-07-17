@@ -1,11 +1,11 @@
 /**
  * api.js
- * All communication with the Google Apps Script Web App backend.
+ * All communication with the Vercel backend.
  * Includes in-memory caching and background sync queue for instant UI response.
  */
 import { CONFIG } from './config.js';
 
-const BASE_URL = CONFIG.APPS_SCRIPT_URL;
+const BASE_URL = CONFIG.API_BASE_URL;
 
 // --- Background Sync & Cache Infrastructure ---
 let _cache = {};
@@ -60,7 +60,7 @@ async function processQueue() {
     try {
       const res = await fetch(BASE_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(task.body),
       });
       if (!res.ok) throw new Error(`Network error: ${res.status}`);
@@ -85,17 +85,26 @@ async function processQueue() {
 }
 
 async function get(params) {
-  // Inject session token for admin requests
   const token = getSessionToken();
-  if (token && params.password) params = { ...params, sessionToken: token };
+  const headers = {};
+  const queryParams = { ...params };
+  
+  if (queryParams.password) {
+    headers['X-Admin-Password'] = queryParams.password;
+    delete queryParams.password;
+  }
+  if (token) {
+    headers['X-Session-Token'] = token;
+    delete queryParams.sessionToken;
+  }
 
+  // Use the original params for the cache key to maintain compatibility with updateCache
   const cacheKey = JSON.stringify(params);
   if (_cache[cacheKey] !== undefined) return _cache[cacheKey];
 
   const url = new URL(BASE_URL, window.location.origin);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
-  url.searchParams.append('_t', Date.now());
-  const res = await fetch(url.toString());
+  Object.entries(queryParams).forEach(([k, v]) => url.searchParams.append(k, v));
+  const res = await fetch(url.toString(), { headers });
   if (!res.ok) throw new Error(`Network error: ${res.status}`);
   const data = await res.json();
   if (data.error === 'SESSION_EXPIRED') { handleSessionExpired(); throw new Error('SESSION_EXPIRED'); }
@@ -113,7 +122,7 @@ async function post(body) {
 
   const res = await fetch(BASE_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`Network error: ${res.status}`);
@@ -188,11 +197,11 @@ export const api = {
   getNominalRoll: () => get({ action: 'getNominalRoll' }),
   getPosts: () => get({ action: 'getPosts' }),
   getPublicNominations: () => get({ action: 'getPublicNominations' }),
-  getNomination: (id) => get({ action: 'getNomination', id }),
+  getNomination: (id, admissionNo) => get({ action: 'getNomination', id, admissionNo }),
   getValidNominations: () => get({ action: 'getValidNominations' }),
   getFinalNominations: () => get({ action: 'getFinalNominations' }),
   submitNomination: (payload) => post({ action: 'submitNomination', ...payload }),
-  submitWithdrawal: (id) => post({ action: 'submitWithdrawal', id }),
+  submitWithdrawal: (id, admissionNo) => post({ action: 'submitWithdrawal', id, admissionNo }),
 
   // ─── Admin API ──────────────────────────────────────────────────────────────
 
@@ -200,7 +209,7 @@ export const api = {
     // Login does NOT send a sessionToken — it creates a new one
     const res = await fetch(BASE_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'adminLogin', password }),
     });
     if (!res.ok) throw new Error(`Network error: ${res.status}`);
@@ -211,6 +220,7 @@ export const api = {
     }
     return data;
   },
+  adminLogout: (password) => post({ action: 'adminLogout', password }),
   adminSendOTP: (password) => post({ action: 'adminSendOTP', password }),
   adminVerifyOTP: (password, otp) => post({ action: 'adminVerifyOTP', password, otp }),
   adminGetNominations: (password) => get({ action: 'adminGetNominations', password }),

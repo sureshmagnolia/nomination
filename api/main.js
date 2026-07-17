@@ -10,7 +10,6 @@ const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_to_prevent
 const jsonOut = (res, data, status = 200) => res.status(status).json(data);
 const errOut = (res, msg, status = 400) => res.status(status).json({ error: msg });
 
-// Async admin check
 const checkAdmin = async (password, sessionToken, action) => {
   if (!action.startsWith('admin')) return;
   if (action === 'adminSendOTP' || action === 'adminVerifyOTP' || action === 'adminLogin') return; // Auth handled in endpoint
@@ -21,16 +20,26 @@ const checkAdmin = async (password, sessionToken, action) => {
   if (password !== realPwd) {
     throw new Error('UNAUTHORIZED_PASSWORD');
   }
+
+  if (!sessionToken) {
+    throw new Error('UNAUTHORIZED_SESSION');
+  }
+  
+  const valid = await sql`SELECT * FROM admin_sessions WHERE token = ${sessionToken}`;
+  if (valid.length === 0) {
+    throw new Error('SESSION_EXPIRED');
+  }
 };
 
 export default async function handler(req, res) {
-  // CORS Headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // CORS setup
+  const origin = req.headers.origin || '*';
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, X-Admin-Password, X-Session-Token'
   );
 
   if (req.method === 'OPTIONS') {
@@ -49,14 +58,24 @@ export default async function handler(req, res) {
       action = body.action;
     }
 
+    // Extract auth from custom headers (preferred for GET) or body
+    const adminPwd = req.headers['x-admin-password'] || body.password;
+    const adminToken = req.headers['x-session-token'] || body.sessionToken;
+
     // Authenticate Admin Endpoints
-    await checkAdmin(body.password, body.sessionToken, action);
+    await checkAdmin(adminPwd, adminToken, action);
 
     if (action === 'initDB') {
       await sql`
         CREATE TABLE IF NOT EXISTS settings (
           key VARCHAR(255) PRIMARY KEY,
           value TEXT
+        );
+      `;
+      await sql`
+        CREATE TABLE IF NOT EXISTS admin_sessions (
+          token VARCHAR(255) PRIMARY KEY,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `;
       await sql`
@@ -100,9 +119,11 @@ export default async function handler(req, res) {
           seconder_name VARCHAR(255),
           seconder_class VARCHAR(255),
           seconder_admission VARCHAR(255),
-          seconder_dept VARCHAR(255)
+          seconder_dept VARCHAR(255),
+          rejection_reason TEXT
         );
       `;
+      await sql`CREATE UNIQUE INDEX IF NOT EXISTS unq_candidate_active ON nominations (candidate_serial) WHERE status != 'Rejected'`;
       await sql`INSERT INTO settings (key, value) VALUES ('validListPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('finalListPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
 
@@ -126,14 +147,14 @@ export default async function handler(req, res) {
     // ─── GET ENDPOINTS ────────────────────────────────────────────────────────
 
     if (action === 'getPublicNominations') {
-      const noms = await sql`SELECT post, proposer_serial, seconder_serial, status FROM nominations WHERE status != 'Rejected'`;
+      const noms = await sql`SELECT post, candidate_serial, proposer_serial, seconder_serial, status FROM nominations WHERE status != 'Rejected'`;
       return jsonOut(res, noms.map(n => ({
-        post: n.post, proposerSerial: n.proposer_serial, seconderSerial: n.seconder_serial, status: n.status
+        post: n.post, candidateSerial: n.candidate_serial, proposerSerial: n.proposer_serial, seconderSerial: n.seconder_serial, status: n.status
       })));
     }
     
     if (action === 'getNominalRoll') {
-      const roll = await sql`SELECT serial_number as "Nominal Roll Serial Number", name as "NAME", class as "CLASS", admission_no as "ADMISION NO", dept as "Dept" FROM nominal_roll`;
+      const roll = await sql`SELECT serial_number as "Nominal Roll Serial Number", name as "NAME", class as "CLASS", dept as "Dept" FROM nominal_roll`;
       return jsonOut(res, roll);
     }
     
@@ -182,7 +203,7 @@ export default async function handler(req, res) {
       const published = await getSetting('validListPublished');
       if (published !== 'true') return errOut(res, 'Valid list not published.');
       const noms = await sql`SELECT * FROM nominations WHERE status = 'Valid'`;
-      return jsonOut(res, noms.map(n => ({ id: n.id, post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, status: n.status })));
+      return jsonOut(res, noms.map(n => ({ post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept, status: n.status })));
     }
 
     if (action === 'getFinalNominations') {
@@ -190,8 +211,8 @@ export default async function handler(req, res) {
       if (published !== 'true') return errOut(res, 'Final list not published.');
       const noms = await sql`SELECT * FROM nominations WHERE status = 'Valid'`;
       return jsonOut(res, {
-        active: noms.filter(n => n.withdrawal_status !== 'Approved').map(n => ({ id: n.id, post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class })),
-        withdrawn: noms.filter(n => n.withdrawal_status === 'Approved').map(n => ({ id: n.id, post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class }))
+        active: noms.filter(n => n.withdrawal_status !== 'Approved').map(n => ({ post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept })),
+        withdrawn: noms.filter(n => n.withdrawal_status === 'Approved').map(n => ({ post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept }))
       });
     }
 
@@ -267,18 +288,35 @@ export default async function handler(req, res) {
       }
     }
 
+    if (action === 'adminLogout') {
+      if (sessionToken) {
+        await sql`DELETE FROM admin_sessions WHERE token = ${sessionToken}`;
+      }
+      return jsonOut(res, { ok: true });
+    }
+
     if (action === 'adminVerifyOTP') {
       const emailRows = await sql`SELECT value FROM settings WHERE key = 'adminEmail'`;
       const adminEmail = emailRows.length > 0 ? emailRows[0].value : 'admin@example.com';
       
+      let verified = false;
       if (adminEmail === 'admin@example.com' && body.otp === '000000') {
-        return jsonOut(res, { ok: true, sessionToken: 'admin-verified-session-token' });
+        verified = true;
+      } else {
+        const stored = await getSetting('adminOTP');
+        
+        // Always clear the OTP upon any verification attempt to prevent brute-force
+        if (stored) await setSetting('adminOTP', ''); 
+        
+        if (!stored || stored !== body.otp) return errOut(res, 'Invalid or expired OTP', 401);
+        verified = true;
       }
 
-      const stored = await getSetting('adminOTP');
-      if (!stored || stored !== body.otp) return errOut(res, 'Invalid or expired OTP', 401);
-      await setSetting('adminOTP', ''); // Clear it
-      return jsonOut(res, { ok: true, sessionToken: 'admin-verified-session-token' });
+      if (verified) {
+        const token = crypto.randomUUID();
+        await sql`INSERT INTO admin_sessions (token) VALUES (${token})`;
+        return jsonOut(res, { ok: true, sessionToken: token });
+      }
     }
 
     if (action === 'adminUpdateCredentials') {
@@ -303,14 +341,36 @@ export default async function handler(req, res) {
     }
 
     if (action === 'submitNomination') {
-      const id = String(Math.floor(1000000000 + Math.random() * 9000000000));
-      
+      // Basic Identity Rules
+      if (body.candidateSerial === body.proposerSerial) return errOut(res, 'Candidate cannot propose themselves.');
+      if (body.candidateSerial === body.seconderSerial) return errOut(res, 'Candidate cannot second themselves.');
+      if (body.proposerSerial === body.seconderSerial) return errOut(res, 'Proposer and Seconder cannot be the same person.');
+
       const cand = await sql`SELECT * FROM nominal_roll WHERE serial_number = ${body.candidateSerial}`;
       const prop = await sql`SELECT * FROM nominal_roll WHERE serial_number = ${body.proposerSerial}`;
       const sec = await sql`SELECT * FROM nominal_roll WHERE serial_number = ${body.seconderSerial}`;
       
       if (!cand.length || !prop.length || !sec.length) return errOut(res, 'Candidate/Proposer/Seconder serial not found.');
+      if (cand[0].admission_no !== String(body.candidateAdmission)) return errOut(res, 'Authentication Failed: Invalid Admission Number for Candidate.');
 
+      // Strict Election Integrity Rules enforced on the Server
+      const existing = await sql`SELECT post, candidate_serial, proposer_serial, seconder_serial FROM nominations WHERE status != 'Rejected'`;
+      if (existing.some(n => n.candidate_serial === body.candidateSerial)) {
+        return errOut(res, 'Candidate is already nominated for a post.');
+      }
+      if (existing.some(n => n.post === body.post && (n.proposer_serial === body.proposerSerial || n.seconder_serial === body.proposerSerial))) {
+        return errOut(res, 'Proposer has already signed a nomination for this post.');
+      }
+      if (existing.some(n => n.post === body.post && (n.proposer_serial === body.seconderSerial || n.seconder_serial === body.seconderSerial))) {
+        return errOut(res, 'Seconder has already signed a nomination for this post.');
+      }
+      const postDef = await sql`SELECT female_only FROM posts WHERE post = ${body.post}`;
+      if (postDef.length && postDef[0].female_only && body.gender !== 'Female') {
+        return errOut(res, 'This post is reserved for Female candidates only.');
+      }
+
+      const id = String(Math.floor(1000000000 + Math.random() * 9000000000));
+      
       await sql`
         INSERT INTO nominations (
           id, post, gender, dob, candidate_serial, proposer_serial, seconder_serial,
@@ -328,9 +388,12 @@ export default async function handler(req, res) {
     }
 
     if (action === 'submitWithdrawal') {
-      const nom = await sql`SELECT status FROM nominations WHERE id = ${body.id}`;
-      if (!nom.length || nom[0].status !== 'Valid') return errOut(res, 'Invalid nomination status.');
-      await sql`UPDATE nominations SET withdrawal_status = 'Requested' WHERE id = ${body.id}`;
+      const id = body.id;
+      const nom = await sql`SELECT * FROM nominations WHERE id = ${id}`;
+      if (!nom.length) return errOut(res, 'Nomination not found.');
+      if (nom[0].candidate_admission !== String(body.admissionNo)) return errOut(res, 'Authentication Failed: Invalid Admission Number.');
+
+      await sql`UPDATE nominations SET withdrawal_status = 'Pending' WHERE id = ${id}`;
       return jsonOut(res, { ok: true });
     }
 
@@ -418,21 +481,33 @@ export default async function handler(req, res) {
       await sql`UPDATE settings SET value='false' WHERE key IN ('validListPublished', 'finalListPublished', 'isRollFinalized')`;
       await sql`DELETE FROM settings WHERE key IN ('results_data', 'ballotPlan', 'countingMatrix')`;
       
-      const isLegacy = body.headers && body.headers.join() === ['Serial No', 'NAME', 'CLASS', 'Admission No', 'Dept'].join();
+      const isLegacy = body.headers && body.headers.join() === ['Nominal Roll Serial Number', 'NAME', 'CLASS', 'ADMISION NO', 'Dept'].join();
       
       const toInsert = body.rows.map(r => {
         let cl = r[2], adm = r[3], dpt = r[4];
         if (!isLegacy) {
-          cl = `${r[2] || ''} ${r[3] || ''} ${r[4] || ''}`.trim();
-          adm = r[5] || '';
-          dpt = r[4] || '';
+          cl = `${r[2] || ''} ${r[3] || ''} ${r[5] || ''}`.trim(); // Year + Stream + Dept
+          adm = r[4] || ''; // Admission No
+          dpt = r[5] || ''; // Dept
         }
         return { serial_number: String(r[0] || ''), name: String(r[1] || ''), class: String(cl), admission_no: String(adm), dept: String(dpt) };
       });
       
       if (toInsert.length > 0) {
-        // Bulk insert using Neon
-        await sql`INSERT INTO nominal_roll ${sql(toInsert, 'serial_number', 'name', 'class', 'admission_no', 'dept')}`;
+        // Bulk insert using Neon HTTP client (chunked)
+        const batchSize = 100;
+        for (let i = 0; i < toInsert.length; i += batchSize) {
+          const batch = toInsert.slice(i, i + batchSize);
+          const values = [];
+          batch.forEach(r => values.push(r.serial_number, r.name, r.class, r.admission_no, r.dept));
+          
+          const placeholders = batch.map((_, idx) => {
+            const o = idx * 5;
+            return `($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4}, $${o + 5})`;
+          }).join(', ');
+          
+          await sql(`INSERT INTO nominal_roll (serial_number, name, class, admission_no, dept) VALUES ${placeholders}`, values);
+        }
       }
       return jsonOut(res, { ok: true, count: toInsert.length });
     }
