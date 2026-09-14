@@ -12,8 +12,19 @@ import { CONFIG } from './config.js';
 // ─── Age Calculation ───────────────────────────────────────────────────────────
 export function calculateAge(dobString, asOfDate = CONFIG.ELECTION_DATE) {
   if (!dobString) return 'N/A';
+  let birth;
+  if (typeof dobString === 'string' && dobString.includes('-')) {
+    const parts = dobString.split('-');
+    if (parts[0].length === 4) {
+      birth = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    } else {
+      birth = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+    }
+  } else {
+    birth = new Date(dobString);
+  }
+  if (isNaN(birth.getTime())) return 'N/A';
   const today = new Date(asOfDate);
-  const birth = new Date(dobString);
   let years = today.getFullYear() - birth.getFullYear();
   let months = today.getMonth() - birth.getMonth();
   let days = today.getDate() - birth.getDate();
@@ -105,6 +116,7 @@ export function todayFormatted() {
 
 // ─── DOB dropdowns ─────────────────────────────────────────────────────────────
 export function populateDobSelects(dayEl, monthEl, yearEl) {
+  if (!dayEl || !monthEl || !yearEl) return;
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   for (let i = 1; i <= 31; i++) dayEl.innerHTML += `<option value="${i}">${i}</option>`;
   months.forEach((m, i) => monthEl.innerHTML += `<option value="${i+1}">${m}</option>`);

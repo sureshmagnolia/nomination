@@ -149,26 +149,30 @@ function renderForm(container, year) {
     formArea.querySelector('#dob-year')
   );
 
-  // Auto-fill listeners
+  // Auto-fill listeners on BOTH input and change so typing serial immediately populates details!
   ['candidate','proposer','seconder'].forEach(role => {
-    formArea.querySelector(`#serial-${role}`).addEventListener('change', () => fillDetails(formArea, role));
+    const el = formArea.querySelector(`#serial-${role}`);
+    if (el) {
+      el.addEventListener('input', () => fillDetails(formArea, role));
+      el.addEventListener('change', () => fillDetails(formArea, role));
+    }
   });
 
   // Revalidate on any change
-  formArea.querySelector('#postSelect').addEventListener('change', () => runValidation(formArea));
+  formArea.querySelector('#postSelect')?.addEventListener('change', () => runValidation(formArea));
   formArea.querySelectorAll('[name="gender"]').forEach(r => r.addEventListener('change', () => runValidation(formArea)));
   formArea.querySelectorAll('.dob-sel').forEach(s => s.addEventListener('change', () => runValidation(formArea)));
 
   // Captcha refresh
-  formArea.querySelector('#refreshCaptcha').addEventListener('click', () => {
+  formArea.querySelector('#refreshCaptcha')?.addEventListener('click', () => {
     const c = generateCaptcha();
     captchaAnswer = c.answer;
     formArea.querySelector('#captchaInput').value = '';
     formArea.querySelector('#captchaQuestion').textContent = c.question;
   });
 
-  formArea.querySelector('#backHomeBtn').addEventListener('click', () => router.navigate('/'));
-  formArea.querySelector('#nomForm').addEventListener('submit', (e) => handleSubmit(e, formArea, year));
+  formArea.querySelector('#backHomeBtn')?.addEventListener('click', () => router.navigate('/'));
+  formArea.querySelector('#nomForm')?.addEventListener('submit', (e) => handleSubmit(e, formArea, year));
 }
 
 function personBlock(role, label, isCandidate) {
@@ -198,34 +202,39 @@ function personBlock(role, label, isCandidate) {
     </div>
     <div>
       <label class="text-xs text-slate-400 block mb-1">Date of Birth</label>
-      <input type="date" id="dob-input" class="field w-full">
+      <div class="flex gap-2">
+        <select id="dob-day"   class="field dob-sel"><option value="">Day</option></select>
+        <select id="dob-month" class="field dob-sel"><option value="">Month</option></select>
+        <select id="dob-year"  class="field dob-sel"><option value="">Year</option></select>
+      </div>
     </div>` : ''}
   </div>`;
 }
 
 function fillDetails(formArea, role) {
-  const serial = formArea.querySelector(`#serial-${role}`).value.trim();
+  const serial = formArea.querySelector(`#serial-${role}`)?.value.trim();
   const box = formArea.querySelector(`#details-${role}`);
-  const student = nominalRoll.find(s => String(s['Nominal Roll Serial Number']) === serial);
+  if (!box) return;
+  const student = nominalRoll.find(s => String(s['Nominal Roll Serial Number'] || s.serial_number || '') === serial);
   if (!student) {
     box.innerHTML = serial ? `<span class="text-red-400">⚠ Student not found</span>` : '';
     return;
   }
   box.innerHTML = `
-    <p><span class="text-slate-500">Name:</span> <strong class="text-slate-200">${esc(student['NAME'])}</strong></p>
-    <p><span class="text-slate-500">Class:</span> ${esc(student['CLASS'])}</p>
-    <p><span class="text-slate-500">Dept:</span> ${esc(student['Dept'] || 'N/A')}</p>`;
+    <p><span class="text-slate-500">Name:</span> <strong class="text-slate-200">${esc(student['NAME'] || student.name || '')}</strong></p>
+    <p><span class="text-slate-500">Class:</span> ${esc(student['CLASS'] || student.class || '')}</p>
+    <p><span class="text-slate-500">Dept:</span> ${esc(student['Dept'] || student.dept || 'N/A')}</p>`;
   runValidation(formArea);
 }
 
 function runValidation(formArea) {
   const warnings = [];
-  const postName = formArea.querySelector('#postSelect').value;
+  const postName = formArea.querySelector('#postSelect')?.value;
   const gender = formArea.querySelector('[name="gender"]:checked')?.value || null;
 
   const roles = ['candidate','proposer','seconder'];
-  const serials = roles.map(r => formArea.querySelector(`#serial-${r}`).value.trim());
-  const students = serials.map(s => s ? nominalRoll.find(st => String(st['Nominal Roll Serial Number']) === s) : null);
+  const serials = roles.map(r => formArea.querySelector(`#serial-${r}`)?.value.trim() || '');
+  const students = serials.map(s => s ? nominalRoll.find(st => String(st['Nominal Roll Serial Number'] || st.serial_number || '') === s) : null);
 
   // Uniqueness
   const [cS, pS, sS] = serials;
@@ -240,11 +249,13 @@ function runValidation(formArea) {
   });
 
   const box = formArea.querySelector('#warningBox');
-  if (warnings.length) {
-    box.innerHTML = '<strong class="block mb-1">⚠ Eligibility Warnings</strong>' + warnings.map(w => `<p class="text-sm">• ${esc(w)}</p>`).join('');
-    box.classList.remove('hidden');
-  } else {
-    box.classList.add('hidden');
+  if (box) {
+    if (warnings.length) {
+      box.innerHTML = '<strong class="block mb-1">⚠ Eligibility Warnings</strong>' + warnings.map(w => `<p class="text-sm">• ${esc(w)}</p>`).join('');
+      box.classList.remove('hidden');
+    } else {
+      box.classList.add('hidden');
+    }
   }
   return warnings;
 }
@@ -254,35 +265,36 @@ async function handleSubmit(e, formArea, yearValue) {
   const warnings = runValidation(formArea);
   if (warnings.length) { showToast('Please resolve all eligibility warnings first.', 'error'); return; }
 
-  const captchaVal = formArea.querySelector('#captchaInput').value.trim();
+  const captchaVal = formArea.querySelector('#captchaInput')?.value.trim();
   if (captchaVal !== captchaAnswer) { showToast('Captcha answer is incorrect.', 'error'); return; }
 
-  const post = formArea.querySelector('#postSelect').value;
+  const post = formArea.querySelector('#postSelect')?.value;
   const gender = formArea.querySelector('[name="gender"]:checked')?.value;
-  const dob = formArea.querySelector('#dob-input').value;
+  const day = formArea.querySelector('#dob-day')?.value;
+  const month = formArea.querySelector('#dob-month')?.value;
+  const year = formArea.querySelector('#dob-year')?.value;
 
   if (!gender) { showToast('Please select a gender for the candidate.', 'error'); return; }
-  if (!dob) { showToast('Please enter a date of birth.', 'error'); return; }
+  if (!day || !month || !year) { showToast('Please select a complete Date of Birth (Day, Month, Year).', 'error'); return; }
 
   const roles = ['candidate','proposer','seconder'];
-  const serials = roles.map(r => formArea.querySelector(`#serial-${r}`).value.trim());
-  const students = serials.map(s => nominalRoll.find(st => String(st['Nominal Roll Serial Number']) === s));
+  const serials = roles.map(r => formArea.querySelector(`#serial-${r}`)?.value.trim() || '');
+  const students = serials.map(s => nominalRoll.find(st => String(st['Nominal Roll Serial Number'] || st.serial_number || '') === s));
   if (students.some(s => !s)) { showToast('One or more serial numbers are invalid.', 'error'); return; }
 
-  const candidateAdmission = formArea.querySelector('#auth-candidate').value.trim();
+  const candidateAdmission = formArea.querySelector('#auth-candidate')?.value.trim();
   if (!candidateAdmission) { showToast('Please enter the Candidate Admission Number.', 'error'); return; }
 
   const submitBtn = formArea.querySelector('#submitBtn');
-  setLoading(submitBtn, true, 'Generate &amp; Preview Nomination');
+  setLoading(submitBtn, true, 'Generating & Previewing...');
 
   try {
-      const dobParts = dob.split('-'); // YYYY-MM-DD
-      const formattedDob = `${dobParts[2]}-${dobParts[1]}-${dobParts[0]}`; // DD-MM-YYYY
+    const formattedDob = buildDobString(day, month, year); // YYYY-MM-DD
 
-      const payload = {
-        post, gender,
-        dob: formattedDob,
-        candidateSerial: serials[0],
+    const payload = {
+      post, gender,
+      dob: formattedDob,
+      candidateSerial: serials[0],
       proposerSerial:  serials[1],
       seconderSerial:  serials[2],
       candidateAdmission
@@ -295,7 +307,7 @@ async function handleSubmit(e, formArea, yearValue) {
 
     const result = await api.submitNomination(payload);
 
-    showPreview(formArea, result.id, { post, gender, dob: formattedDob, students }, yearValue);
+    showPreview(formArea, result.id, { post, gender, day, month, year, dob: formattedDob, students }, yearValue);
     showToast(`Nomination submitted! ID: ${result.id}`, 'success');
   } catch (err) {
     showToast(`Submission failed: ${err.message}`, 'error');
@@ -304,23 +316,21 @@ async function handleSubmit(e, formArea, yearValue) {
   }
 }
 
-function showPreview(formArea, id, { post, gender, dob, students }, yearValue) {
+function showPreview(formArea, id, { post, gender, day, month, year, dob, students }, yearValue) {
   const [candidate, proposer, seconder] = students;
-  // Convert DD-MM-YYYY to word format if needed for display, or just display DD-MM-YYYY.
-  const dobParts = dob.split('-'); // [DD, MM, YYYY]
-  const dobDisplay = displayDob(dobParts[0], dobParts[1], dobParts[2]);
+  const dobDisplay = displayDob(day, month, year);
   const age = calculateAge(dob);
 
   const preview = formArea.querySelector('#previewSection');
   formArea.querySelector('#printZone').innerHTML =
-    buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, '', yearValue);
+    buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, 'Pending', yearValue);
 
   preview.classList.remove('hidden');
   preview.scrollIntoView({ behavior: 'smooth' });
-  preview.querySelector('#printBtn').addEventListener('click', () => {
+  preview.querySelector('#printBtn')?.addEventListener('click', () => {
     triggerPrint(formArea.querySelector('#printZone').innerHTML);
   });
-  preview.querySelector('#newNomBtn').addEventListener('click', () => renderSubmitNomination(formArea.closest('#app')));
+  preview.querySelector('#newNomBtn')?.addEventListener('click', () => renderSubmitNomination(formArea.closest('#app')));
 }
 
 export function buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, status = '', yearValue = '2026') {
@@ -365,10 +375,10 @@ function sectionBlock(label, s, gender = null, dob = null, age = null) {
   <div class="glass rounded-lg p-4 text-sm space-y-1">
     <h3 class="font-bold text-white uppercase text-xs tracking-widest mb-2 border-b border-white/10 pb-1">${label} Details</h3>
     <div class="grid grid-cols-2 gap-x-4 gap-y-1">
-      <p><span class="text-slate-500">Name:</span> <strong class="text-slate-200">${esc(s['NAME'])}</strong></p>
-      <p><span class="text-slate-500">Class:</span> ${esc(s['CLASS'])}</p>
-      <p><span class="text-slate-500">Dept:</span> ${esc(s['Dept'] || 'N/A')}</p>
-      <p><span class="text-slate-500">Electoral Roll No:</span> ${esc(s['Nominal Roll Serial Number'])}</p>
+      <p><span class="text-slate-500">Name:</span> <strong class="text-slate-200">${esc(s['NAME'] || s.name || '')}</strong></p>
+      <p><span class="text-slate-500">Class:</span> ${esc(s['CLASS'] || s.class || '')}</p>
+      <p><span class="text-slate-500">Dept:</span> ${esc(s['Dept'] || s.dept || 'N/A')}</p>
+      <p><span class="text-slate-500">Electoral Roll No:</span> ${esc(s['Nominal Roll Serial Number'] || s.serial_number || '')}</p>
       ${gender ? `<p><span class="text-slate-500">Gender:</span> ${esc(gender)}</p>` : ''}
       ${dob ? `<p><span class="text-slate-500">Date of Birth:</span> ${esc(dob)}</p>` : ''}
       ${age ? `<p class="col-span-2"><span class="text-slate-500">Age as on Notification Date:</span> ${esc(age)}</p>` : ''}

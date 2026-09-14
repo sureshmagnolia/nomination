@@ -209,6 +209,23 @@ export default async function handler(req, res) {
       })));
     }
 
+    if (action === 'getNomination') {
+      const id = body.id;
+      const rows = await sql`SELECT * FROM nominations WHERE id = ${id}`;
+      if (!rows.length) return errOut(res, 'Nomination not found.', 404);
+      const n = rows[0];
+      return jsonOut(res, {
+        id: n.id, post: n.post, gender: n.gender, dob: n.dob, timestamp: n.timestamp,
+        candidateSerial: n.candidate_serial, proposerSerial: n.proposer_serial, seconderSerial: n.seconder_serial,
+        status: n.status, withdrawalStatus: n.withdrawal_status,
+        candidate: { 'Nominal Roll Serial Number': n.candidate_serial, 'NAME': n.candidate_name, 'CLASS': n.candidate_class, 'ADMISION NO': n.candidate_admission, 'Dept': n.candidate_dept },
+        proposer: { 'Nominal Roll Serial Number': n.proposer_serial, 'NAME': n.proposer_name, 'CLASS': n.proposer_class, 'ADMISION NO': n.proposer_admission, 'Dept': n.proposer_dept },
+        seconder: { 'Nominal Roll Serial Number': n.seconder_serial, 'NAME': n.seconder_name, 'CLASS': n.seconder_class, 'ADMISION NO': n.seconder_admission, 'Dept': n.seconder_dept },
+        candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept,
+        proposerName: n.proposer_name, seconderName: n.seconder_name
+      });
+    }
+
     if (action === 'getValidNominations') {
       const published = await getSetting('validListPublished');
       if (published !== 'true') return errOut(res, 'Valid list not published.');
@@ -420,7 +437,9 @@ export default async function handler(req, res) {
 
     if (action === 'submitNomination') {
       const isRollFinal = await getSetting('isRollFinalized');
-      if (isRollFinal !== 'true') return errOut(res, 'Nominations cannot be submitted while the Nominal Roll is being edited (Draft Mode).');
+      if (isRollFinal !== 'true' && !body.password) {
+        return errOut(res, 'Nominations cannot be submitted while the Nominal Roll is being edited (Draft Mode).');
+      }
 
       // Basic Identity Rules
       if (body.candidateSerial === body.proposerSerial) return errOut(res, 'Candidate cannot propose themselves.');
@@ -432,7 +451,9 @@ export default async function handler(req, res) {
       const sec = await sql`SELECT * FROM nominal_roll WHERE serial_number = ${body.seconderSerial}`;
       
       if (!cand.length || !prop.length || !sec.length) return errOut(res, 'Candidate/Proposer/Seconder serial not found.');
-      if (cand[0].admission_no !== String(body.candidateAdmission)) return errOut(res, 'Authentication Failed: Invalid Admission Number for Candidate.');
+      if (String(cand[0].admission_no || '').trim().toLowerCase() !== String(body.candidateAdmission || '').trim().toLowerCase()) {
+        return errOut(res, 'Authentication Failed: Invalid Admission Number for Candidate.');
+      }
 
       // Strict Election Integrity Rules enforced on the Server
       const existing = await sql`SELECT post, candidate_serial, proposer_serial, seconder_serial FROM nominations WHERE status != 'Rejected'`;
