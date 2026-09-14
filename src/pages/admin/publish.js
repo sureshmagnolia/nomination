@@ -87,6 +87,31 @@ function renderPublishPage(main, settings, nominations, postsData, pwd) {
           <button id="unpublishFinalBtn" class="btn btn-sm" style="background:#dc2626;color:white;border:none;">🚫 Unpublish</button>
         </div>`}
       </div>
+
+      <!-- Election Results publish & lock -->
+      <div class="glass rounded-xl p-6 space-y-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <h4 class="font-bold text-white text-base">📊 Election Results Visibility & Control</h4>
+            <p class="text-slate-400 text-sm mt-1">Control public results visibility and freeze/lock vote changes.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button data-nav="/admin/results" class="btn btn-secondary btn-sm">🏆 View Results</button>
+            <span class="badge ${settings.resultsPublished === 'true' ? 'badge-valid' : 'badge-pending'} text-sm">
+              ${settings.resultsPublished === 'true' ? '✅ Publicly Visible' : '⏳ Hidden from Public'}
+            </span>
+            ${settings.resultsLocked === 'true' ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 text-sm">🔒 Locked</span>` : ''}
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-3 pt-2">
+          <button id="toggleResultsPublishBtn" class="btn ${settings.resultsPublished === 'true' ? 'btn-danger' : 'btn-primary'} btn-sm">
+            ${settings.resultsPublished === 'true' ? '🚫 Hide Results from Public' : '📢 Publish Results to Public'}
+          </button>
+          <button id="toggleResultsLockBtn" class="btn ${settings.resultsLocked === 'true' ? 'btn-secondary' : 'bg-amber-500 hover:bg-amber-600 text-black font-bold'} btn-sm">
+            ${settings.resultsLocked === 'true' ? '🔓 Unlock Results' : '🔒 Freeze / Lock Results'}
+          </button>
+        </div>
+      </div>
     </div>`;
 
   // ── Print Logic ───────────────────────────────────────────────────────────
@@ -222,6 +247,44 @@ function renderPublishPage(main, settings, nominations, postsData, pwd) {
     } catch (err) {
       showToast(`Failed: ${err.message}`, 'error');
       setLoading(btn, false, '🚫 Unpublish');
+    }
+  });
+
+  main.querySelector('#toggleResultsPublishBtn')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const isPub = settings.resultsPublished === 'true';
+    const msg = isPub 
+      ? 'Hide election results from public view? Public visitors will see counting in progress.'
+      : 'Publish election results to the public portal? Results will be immediately visible to all visitors.';
+    if (!confirm(msg)) return;
+    setLoading(btn, true, 'Updating...');
+    try {
+      const res = await api.adminTogglePublishResults(pwd);
+      settings.resultsPublished = res.published ? 'true' : 'false';
+      showToast(res.published ? '📢 Results published to public view!' : '👁️‍🗨️ Results hidden from public view.', 'success');
+      renderPublishPage(main, settings, nominations, postsData, pwd);
+    } catch (err) {
+      showToast(`Failed: ${err.message}`, 'error');
+      setLoading(btn, false, isPub ? '🚫 Hide Results from Public' : '📢 Publish Results to Public');
+    }
+  });
+
+  main.querySelector('#toggleResultsLockBtn')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const isLocked = settings.resultsLocked === 'true';
+    const msg = isLocked 
+      ? 'Unlock election results? Vote entry modifications will be re-enabled.'
+      : 'Freeze and lock election results? Further vote entries will be blocked.';
+    if (!confirm(msg)) return;
+    setLoading(btn, true, 'Updating...');
+    try {
+      const res = await api.adminToggleLockResults(pwd);
+      settings.resultsLocked = res.locked ? 'true' : 'false';
+      showToast(res.locked ? '🔒 Results locked and frozen.' : '🔓 Results unlocked.', 'success');
+      renderPublishPage(main, settings, nominations, postsData, pwd);
+    } catch (err) {
+      showToast(`Failed: ${err.message}`, 'error');
+      setLoading(btn, false, isLocked ? '🔓 Unlock Results' : '🔒 Freeze / Lock Results');
     }
   });
 }

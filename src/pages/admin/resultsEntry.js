@@ -50,23 +50,25 @@ export async function renderAdminResultsEntry(container) {
   `);
 
   try {
-    const [booths, posts, nominationsRaw, allResults, savedMatrix] = await Promise.all([
+    const [booths, posts, nominationsRaw, allResults, savedMatrix, settings] = await Promise.all([
       api.adminGetBooths(pwd).catch(() => []),
       api.getPosts(),
       api.adminGetNominations(pwd).catch(() => []),
-      api.getResults().catch(() => []),
-      api.adminGetCountingMatrix(pwd).catch(() => null)
+      api.adminGetResults(pwd).catch(() => []),
+      api.adminGetCountingMatrix(pwd).catch(() => null),
+      api.adminGetSettings(pwd).catch(() => ({}))
     ]);
     const allNoms  = Array.isArray(nominationsRaw) ? nominationsRaw : [];
     const finalList = allNoms.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved');
-    renderEntryUI(container.querySelector('#adminMain'), pwd, booths, posts, finalList, allResults, savedMatrix);
+    renderEntryUI(container.querySelector('#adminMain'), pwd, booths, posts, finalList, allResults, savedMatrix, settings);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
   }
 }
 
-function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMatrix) {
+function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMatrix, settings = {}) {
   currentMain = main;
+  const isLocked = settings.resultsLocked === 'true';
   const pName = p => String(p.post || p.name || '');
 
   if (!savedMatrix) {
@@ -99,6 +101,12 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
 
   main.innerHTML = `
     <div class="page-enter w-full max-w-[1500px] mx-auto">
+      ${isLocked ? `
+        <div class="alert alert-warning text-xs flex items-center justify-between mb-4">
+          <span>🔒 <strong>Results are Locked & Frozen:</strong> Vote entries cannot be added or edited. Unlock results from the Results or Publish page if changes are needed.</span>
+          <button data-nav="/admin/results" class="btn btn-secondary btn-sm">Go to Results</button>
+        </div>
+      ` : ''}
       <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
 
         <!-- LEFT: Entry Panel -->
@@ -196,8 +204,8 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
     
     try {
       setLoading(btnSerial, true, 'Loading...');
-      api.invalidateCache('getResults');
-      const freshResults = await api.getResults().catch(() => []);
+      api.invalidateCache('adminGetResults');
+      const freshResults = await api.adminGetResults(pwd, true).catch(() => []);
       allResults.length = 0;
       allResults.push(...freshResults);
       // Re-apply any optimistic updates from the sync queue on top of server data
@@ -234,8 +242,8 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
 
     try {
       setLoading(main.querySelector('#btnLoadForm'), true, '...');
-      api.invalidateCache('getResults');
-      const freshResults = await api.getResults().catch(() => []);
+      api.invalidateCache('adminGetResults');
+      const freshResults = await api.adminGetResults(pwd, true).catch(() => []);
       allResults.length = 0;
       allResults.push(...freshResults);
       mergeQueueIntoResults(allResults);
@@ -280,7 +288,7 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
                 </div>
               </div>
               <div class="w-32">
-                <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="${esc(c.id)}" data-cname="${esc(c.candidateName)}" placeholder="0" value="${getVotes(c.id)}" min="0">
+                <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="${esc(c.id)}" data-cname="${esc(c.candidateName)}" placeholder="0" value="${getVotes(c.id)}" min="0" ${isLocked ? 'disabled' : ''}>
               </div>
             </div>
           `).join('')}
@@ -290,14 +298,14 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
           <div class="flex items-center justify-between bg-slate-800/50 p-4 rounded-lg border border-slate-700">
             <div><div class="font-bold text-slate-300">NOTA</div></div>
             <div class="w-32">
-              <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="NOTA" data-cname="NOTA" placeholder="0" value="${getVotes('NOTA')}" min="0">
+              <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="NOTA" data-cname="NOTA" placeholder="0" value="${getVotes('NOTA')}" min="0" ${isLocked ? 'disabled' : ''}>
             </div>
           </div>
           
           <div class="flex items-center justify-between bg-red-500/5 p-4 rounded-lg border border-red-500/20">
             <div><div class="font-bold text-red-400">INVALID</div></div>
             <div class="w-32">
-              <input type="number" class="field text-center text-lg font-bold border-red-500/30 vote-input" data-cid="INVALID" data-cname="Invalid" placeholder="0" value="${getVotes('INVALID')}" min="0">
+              <input type="number" class="field text-center text-lg font-bold border-red-500/30 vote-input" data-cid="INVALID" data-cname="Invalid" placeholder="0" value="${getVotes('INVALID')}" min="0" ${isLocked ? 'disabled' : ''}>
             </div>
           </div>
 
@@ -308,7 +316,9 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
         </div>
         <div class="bg-slate-900/50 p-4 border-t border-white/10 flex justify-between items-center">
           <p class="text-xs text-slate-500 italic ml-2">Verify that this total matches the physical ballot count.</p>
-          <button id="btnSaveVotes" class="btn btn-success px-12">💾 Save Form Results</button>
+          <button id="btnSaveVotes" class="btn ${isLocked ? 'opacity-50 cursor-not-allowed bg-slate-700 text-slate-400' : 'btn-success'} px-12" ${isLocked ? 'disabled' : ''}>
+            ${isLocked ? '🔒 Results Locked (Save Blocked)' : '💾 Save Form Results'}
+          </button>
         </div>
       </div>
     `;
@@ -327,6 +337,10 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
     updateGrandTotal();
 
     area.querySelector('#btnSaveVotes').addEventListener('click', async () => {
+      if (isLocked) {
+        showToast('Results are locked and frozen. No further vote entries are allowed.', 'error');
+        return;
+      }
       const inputs = area.querySelectorAll('.vote-input');
       const resultsToSave = [];
       

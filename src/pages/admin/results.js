@@ -12,24 +12,50 @@ export async function renderAdminResults(container) {
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Aggregating results...</p></div>
   `);
 
-  try {
-    const [posts, nominations, results, schedule, sets] = await Promise.all([
-      api.getPosts(),
-      api.getFinalNominations(),
-      api.getResults().catch(() => []),
-      api.getPublicSchedule().catch(() => ({})),
-      api.adminGetSettings(pwd).catch(() => ({}))
-    ]);
-    renderResultsUI(container.querySelector('#adminMain'), pwd, posts, nominations.active || [], results, schedule, sets);
-  } catch (e) {
-    container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
+  async function loadData(force = false) {
+    const main = container.querySelector('#adminMain');
+    if (!main) return;
+    if (force) {
+      api.invalidateCache('adminGetResults');
+      api.invalidateCache('getResults');
+      api.invalidateCache('adminGetFinalNominations');
+      api.invalidateCache('adminGetNominations');
+      api.invalidateCache('adminGetSettings');
+      api.invalidateCache('getSettings');
+      api.invalidateCache('getPosts');
+      api.invalidateCache('getPublicSchedule');
+    }
+
+    try {
+      const [posts, candidatesResp, results, schedule, sets] = await Promise.all([
+        api.getPosts(),
+        api.adminGetFinalNominations(pwd).catch(async () => {
+          const all = await api.adminGetNominations(pwd).catch(() => []);
+          return {
+            active: all.filter(n => n.status !== 'Rejected' && n.withdrawalStatus !== 'Approved'),
+            withdrawn: all.filter(n => n.withdrawalStatus === 'Approved'),
+            isPublished: false
+          };
+        }),
+        api.adminGetResults(pwd, force).catch(() => api.getResults(force).catch(() => [])),
+        api.getPublicSchedule().catch(() => ({})),
+        api.adminGetSettings(pwd).catch(() => ({}))
+      ]);
+      renderResultsUI(main, pwd, posts, candidatesResp.active || [], results, schedule, sets, candidatesResp.isPublished, loadData);
+    } catch (e) {
+      main.innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
+    }
   }
+
+  await loadData(false);
 }
 
-function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets) {
+function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished = false, reloadData = null) {
   const year = schedule.electionYear || new Date().getFullYear();
   const collegeName = sets.collegeName || 'GOVERNMENT VICTORIA COLLEGE PALAKKAD';
   const shortName = sets.collegeShortName || 'GVC';
+  let isLocked = sets.resultsLocked === 'true';
+  let isPublic = sets.resultsPublished === 'true';
   
   // 1. Aggregate results
   const agg = {};
@@ -85,14 +111,55 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets) 
 
   main.innerHTML = `
     <div class="page-enter space-y-6">
-      <div class="flex justify-between items-center bg-white/5 p-6 rounded-2xl border border-white/10">
+      ${!isFinalPublished ? `
+        <div class="alert alert-warning text-xs flex items-center justify-between">
+          <span>ℹ️ <strong>Preview Mode:</strong> Final candidate list has not been published yet. Showing active nominations for internal review.</span>
+          <button data-nav="/admin/publish" class="btn btn-secondary btn-sm">Publish Lists</button>
+        </div>
+      ` : ''}
+
+      <!-- Control Panels: Lock/Freeze and Public Visibility -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="p-4 rounded-xl border ${isLocked ? 'bg-amber-500/10 border-amber-500/30' : 'bg-white/5 border-white/10'} flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">${isLocked ? '🔒' : '🔓'}</span>
+            <div>
+              <div class="font-bold text-sm text-white">${isLocked ? 'Results are Locked & Frozen' : 'Results are Unlocked'}</div>
+              <div class="text-xs text-slate-400">${isLocked ? 'Vote entry is blocked to prevent accidental changes' : 'Vote entry portal is currently open for edits'}</div>
+            </div>
+          </div>
+          <button id="btnToggleLock" class="btn btn-sm ${isLocked ? 'btn-secondary' : 'bg-amber-500 hover:bg-amber-600 text-black font-bold'}">
+            ${isLocked ? '🔓 Unlock Results' : '🔒 Freeze / Lock'}
+          </button>
+        </div>
+
+        <div class="p-4 rounded-xl border ${isPublic ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-500/10 border-slate-500/30'} flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">${isPublic ? '🌐' : '👁️‍🗨️'}</span>
+            <div>
+              <div class="font-bold text-sm text-white">${isPublic ? 'Public View: Published' : 'Public View: Hidden'}</div>
+              <div class="text-xs text-slate-400">${isPublic ? 'Live results are visible to the public on the portal' : 'Only admins can view results right now'}</div>
+            </div>
+          </div>
+          <button id="btnTogglePublic" class="btn btn-sm ${isPublic ? 'bg-rose-500/80 hover:bg-rose-600 text-white font-bold' : 'btn-success font-bold'}">
+            ${isPublic ? '👁️‍🗨️ Hide Public View' : '📢 Publish to Public'}
+          </button>
+        </div>
+      </div>
+
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/5 p-6 rounded-2xl border border-white/10">
         <div>
           <h3 class="text-2xl font-bold text-white">Election Results Summary</h3>
           <p class="text-slate-400 text-sm">Post-wise breakdown of votes and winning candidates.</p>
         </div>
-        <button id="btnPrintOfficial" class="btn btn-primary px-8 flex items-center gap-2">
-          <span>🖨️</span> Print Official Result Sheet
-        </button>
+        <div class="flex flex-wrap items-center gap-3">
+          <button id="btnAdminRefreshResults" class="btn btn-secondary px-5 flex items-center gap-2">
+            <span>🔄</span> Refresh Results
+          </button>
+          <button id="btnPrintOfficial" class="btn btn-primary px-6 flex items-center gap-2">
+            <span>🖨️</span> Print Official Result Sheet
+          </button>
+        </div>
       </div>
 
       <div class="grid grid-cols-1 gap-6">
@@ -292,4 +359,73 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets) 
     `);
     printWin.document.close();
   });
+
+  // ── Admin Refresh Results ──────────────────────────────────────────────────
+  const btnAdminRefresh = main.querySelector('#btnAdminRefreshResults');
+  if (btnAdminRefresh && reloadData) {
+    btnAdminRefresh.onclick = async () => {
+      btnAdminRefresh.disabled = true;
+      btnAdminRefresh.innerHTML = '<span>⏳</span> Refreshing...';
+      try {
+        await reloadData(true);
+        showToast('Election results refreshed with latest counts.', 'success');
+      } catch (err) {
+        showToast(`Refresh failed: ${err.message}`, 'error');
+        btnAdminRefresh.disabled = false;
+        btnAdminRefresh.innerHTML = '<span>🔄</span> Refresh Results';
+      }
+    };
+  }
+
+  // ── Toggle Lock / Freeze ────────────────────────────────────────────────────
+  const btnLock = main.querySelector('#btnToggleLock');
+  if (btnLock) {
+    btnLock.onclick = async () => {
+      const willLock = !isLocked;
+      const msg = willLock 
+        ? 'Lock and freeze election results? No further vote entries will be allowed.'
+        : 'Unlock election results? Vote entries will be re-enabled.';
+      if (!confirm(msg)) return;
+
+      btnLock.disabled = true;
+      btnLock.textContent = 'Please wait...';
+      try {
+        const res = await api.adminToggleLockResults(pwd);
+        isLocked = res.locked;
+        sets.resultsLocked = isLocked ? 'true' : 'false';
+        showToast(isLocked ? '🔒 Results locked and frozen.' : '🔓 Results unlocked for editing.', 'success');
+        renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData);
+      } catch (err) {
+        showToast(err.message, 'error');
+        btnLock.disabled = false;
+        btnLock.textContent = isLocked ? '🔓 Unlock Results' : '🔒 Freeze / Lock';
+      }
+    };
+  }
+
+  // ── Toggle Public Visibility ────────────────────────────────────────────────
+  const btnPublic = main.querySelector('#btnTogglePublic');
+  if (btnPublic) {
+    btnPublic.onclick = async () => {
+      const willPublish = !isPublic;
+      const msg = willPublish
+        ? 'Publish election results to the public portal? Anyone visiting the site will see live results.'
+        : 'Hide election results from public view? The public portal will show counting in progress.';
+      if (!confirm(msg)) return;
+
+      btnPublic.disabled = true;
+      btnPublic.textContent = 'Please wait...';
+      try {
+        const res = await api.adminTogglePublishResults(pwd);
+        isPublic = res.published;
+        sets.resultsPublished = isPublic ? 'true' : 'false';
+        showToast(isPublic ? '📢 Results published to public portal!' : '👁️‍🗨️ Results hidden from public view.', 'success');
+        renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData);
+      } catch (err) {
+        showToast(err.message, 'error');
+        btnPublic.disabled = false;
+        btnPublic.textContent = isPublic ? '👁️‍🗨️ Hide Public View' : '📢 Publish to Public';
+      }
+    };
+  }
 }

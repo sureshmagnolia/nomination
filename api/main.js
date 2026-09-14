@@ -127,6 +127,8 @@ export default async function handler(req, res) {
       await sql`CREATE UNIQUE INDEX IF NOT EXISTS unq_candidate_active ON nominations (candidate_serial) WHERE status != 'Rejected'`;
       await sql`INSERT INTO settings (key, value) VALUES ('validListPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('finalListPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
+      await sql`INSERT INTO settings (key, value) VALUES ('resultsPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
+      await sql`INSERT INTO settings (key, value) VALUES ('resultsLocked', 'false') ON CONFLICT (key) DO NOTHING;`;
 
       return jsonOut(res, { ok: true, message: 'Database initialized' });
     }
@@ -168,6 +170,8 @@ export default async function handler(req, res) {
       const obj = {
         validListPublished: await getSetting('validListPublished'),
         finalListPublished: await getSetting('finalListPublished'),
+        resultsPublished: (await getSetting('resultsPublished')) || 'false',
+        resultsLocked: (await getSetting('resultsLocked')) || 'false',
         isRollFinalized: await getSetting('isRollFinalized'),
         collegeName: await getSetting('collegeName'),
         collegeShortName: await getSetting('collegeShortName'),
@@ -217,8 +221,24 @@ export default async function handler(req, res) {
       if (published !== 'true') return errOut(res, 'Final list not published.');
       const noms = await sql`SELECT * FROM nominations WHERE status = 'Valid'`;
       return jsonOut(res, {
-        active: noms.filter(n => n.withdrawal_status !== 'Approved').map(n => ({ post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept })),
-        withdrawn: noms.filter(n => n.withdrawal_status === 'Approved').map(n => ({ post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept }))
+        active: noms.filter(n => n.withdrawal_status !== 'Approved').map(n => ({ id: n.id, post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept })),
+        withdrawn: noms.filter(n => n.withdrawal_status === 'Approved').map(n => ({ id: n.id, post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept }))
+      });
+    }
+
+    if (action === 'adminGetFinalNominations') {
+      const published = await getSetting('finalListPublished');
+      const isPublished = published === 'true';
+      let noms;
+      if (isPublished) {
+        noms = await sql`SELECT * FROM nominations WHERE status = 'Valid'`;
+      } else {
+        noms = await sql`SELECT * FROM nominations WHERE status != 'Rejected'`;
+      }
+      return jsonOut(res, {
+        isPublished,
+        active: noms.filter(n => n.withdrawal_status !== 'Approved').map(n => ({ id: n.id, post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept })),
+        withdrawn: noms.filter(n => n.withdrawal_status === 'Approved').map(n => ({ id: n.id, post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept }))
       });
     }
 
@@ -233,6 +253,13 @@ export default async function handler(req, res) {
     }
 
     if (action === 'getResults') {
+      const published = await getSetting('resultsPublished');
+      if (published !== 'true') return jsonOut(res, []);
+      const data = await getSetting('results_data');
+      return jsonOut(res, data ? JSON.parse(data) : []);
+    }
+
+    if (action === 'adminGetResults') {
       const data = await getSetting('results_data');
       return jsonOut(res, data ? JSON.parse(data) : []);
     }
@@ -336,6 +363,8 @@ export default async function handler(req, res) {
       await setSetting('isRollFinalized', 'false');
       await setSetting('validListPublished', 'false');
       await setSetting('finalListPublished', 'false');
+      await setSetting('resultsPublished', 'false');
+      await setSetting('resultsLocked', 'false');
 
       return jsonOut(res, { ok: true });
     }
@@ -512,12 +541,54 @@ export default async function handler(req, res) {
       return jsonOut(res, { ok: true });
     }
 
+    if (action === 'adminToggleLockResults') {
+      const current = await getSetting('resultsLocked');
+      const next = current === 'true' ? 'false' : 'true';
+      await setSetting('resultsLocked', next);
+      return jsonOut(res, { ok: true, locked: next === 'true', resultsLocked: next });
+    }
+
+    if (action === 'adminTogglePublishResults') {
+      const current = await getSetting('resultsPublished');
+      const next = current === 'true' ? 'false' : 'true';
+      await setSetting('resultsPublished', next);
+      return jsonOut(res, { ok: true, published: next === 'true', resultsPublished: next });
+    }
+
+    if (action === 'adminLockResults') {
+      await setSetting('resultsLocked', 'true');
+      return jsonOut(res, { ok: true, locked: true, resultsLocked: 'true' });
+    }
+
+    if (action === 'adminUnlockResults') {
+      await setSetting('resultsLocked', 'false');
+      return jsonOut(res, { ok: true, locked: false, resultsLocked: 'false' });
+    }
+
+    if (action === 'adminPublishResults') {
+      await setSetting('resultsPublished', 'true');
+      return jsonOut(res, { ok: true, published: true, resultsPublished: 'true' });
+    }
+
+    if (action === 'adminUnpublishResults') {
+      await setSetting('resultsPublished', 'false');
+      return jsonOut(res, { ok: true, published: false, resultsPublished: 'false' });
+    }
+
     if (action === 'adminSaveResults') {
+      const isLocked = await getSetting('resultsLocked');
+      if (isLocked === 'true') {
+        return errOut(res, 'Results are locked and frozen. No further vote entries are allowed.');
+      }
       await setSetting('results_data', JSON.stringify(body.results));
       return jsonOut(res, { ok: true });
     }
 
     if (action === 'adminSaveCountingMatrix') {
+      const isLocked = await getSetting('resultsLocked');
+      if (isLocked === 'true') {
+        return errOut(res, 'Results are locked and frozen. No further vote entries are allowed.');
+      }
       await setSetting('countingMatrix', JSON.stringify(body.matrix));
       return jsonOut(res, { ok: true });
     }

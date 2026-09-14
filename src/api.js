@@ -236,6 +236,7 @@ export const api = {
   adminSendOTP: (password) => post({ action: 'adminSendOTP', password }),
   adminVerifyOTP: (password, otp) => post({ action: 'adminVerifyOTP', password, otp }),
   adminGetNominations: (password) => get({ action: 'adminGetNominations', password }),
+  adminGetFinalNominations: (password) => get({ action: 'adminGetFinalNominations', password }),
 
   adminVerifyNomination: (password, id, status) => {
     updateCache({ action: 'adminGetNominations', password }, (noms) => {
@@ -370,11 +371,76 @@ export const api = {
 
   // ─── Results Management ──────────────────────────────────────────────────────
 
-  getResults: () => get({ action: 'getResults' }),
+  getResults: (force = false) => {
+    if (force) invalidateCache('getResults');
+    return get({ action: 'getResults' });
+  },
+
+  adminGetResults: (password, force = false) => {
+    if (force) invalidateCache('adminGetResults');
+    return get({ action: 'adminGetResults', password });
+  },
+
+  adminToggleLockResults: async (password) => {
+    const res = await post({ action: 'adminToggleLockResults', password });
+    updateCache({ action: 'adminGetSettings', password }, old => ({ ...old, resultsLocked: res.locked ? 'true' : 'false' }));
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    return res;
+  },
+
+  adminTogglePublishResults: async (password) => {
+    const res = await post({ action: 'adminTogglePublishResults', password });
+    updateCache({ action: 'adminGetSettings', password }, old => ({ ...old, resultsPublished: res.published ? 'true' : 'false' }));
+    invalidateCache('getResults');
+    invalidateCache('adminGetResults');
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    return res;
+  },
+
+  adminLockResults: async (password) => {
+    const res = await post({ action: 'adminLockResults', password });
+    updateCache({ action: 'adminGetSettings', password }, old => ({ ...old, resultsLocked: 'true' }));
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    return res;
+  },
+
+  adminUnlockResults: async (password) => {
+    const res = await post({ action: 'adminUnlockResults', password });
+    updateCache({ action: 'adminGetSettings', password }, old => ({ ...old, resultsLocked: 'false' }));
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    return res;
+  },
+
+  adminPublishResults: async (password) => {
+    const res = await post({ action: 'adminPublishResults', password });
+    updateCache({ action: 'adminGetSettings', password }, old => ({ ...old, resultsPublished: 'true' }));
+    invalidateCache('getResults');
+    invalidateCache('adminGetResults');
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    return res;
+  },
+
+  adminUnpublishResults: async (password) => {
+    const res = await post({ action: 'adminUnpublishResults', password });
+    updateCache({ action: 'adminGetSettings', password }, old => ({ ...old, resultsPublished: 'false' }));
+    invalidateCache('getResults');
+    invalidateCache('adminGetResults');
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    return res;
+  },
 
   adminSaveResults: (password, results) => {
     // We queue the network save, invalidate the results cache since it's hard to append optimally here
-    bgPost({ action: 'adminSaveResults', password, results }).then(() => invalidateCache('getResults'));
+    bgPost({ action: 'adminSaveResults', password, results }).then(() => {
+      invalidateCache('getResults');
+      invalidateCache('adminGetResults');
+    });
     return Promise.resolve({ ok: true });
   },
 
