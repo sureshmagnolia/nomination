@@ -80,7 +80,7 @@ async function fetchAndRender(main, force = false) {
     const lastFetch = localStorage.getItem(CACHE_TIME_KEY);
     const cachedData = localStorage.getItem(CACHE_KEY);
     
-    let posts, results;
+    let posts, results, isCountingActive = false, isResultsPublished = false;
 
     if (!force && lastFetch && cachedData && (Date.now() - parseInt(lastFetch, 10) < REFRESH_INTERVAL)) {
       // Use cache
@@ -88,6 +88,8 @@ async function fetchAndRender(main, force = false) {
       posts = parsed.posts;
       results = parsed.results;
       const schedule = parsed.schedule || {};
+      isCountingActive = parsed.isCountingActive || schedule.countingActive === 'true';
+      isResultsPublished = parsed.isResultsPublished || schedule.resultsPublished === 'true';
       const year = schedule.electionYear || new Date().getFullYear();
       updateHeader(main, year);
     } else {
@@ -96,41 +98,75 @@ async function fetchAndRender(main, force = false) {
         <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Fetching Live Results...</p></div>
       `;
       if (force) {
-        // If the user manually clicked refresh, we must bypass the api.js in-memory cache
-        // to guarantee a true network request to the backend.
+        // If the user manually clicked refresh, bypass in-memory cache
         api.invalidateCache('getResults');
         api.invalidateCache('getPosts');
         api.invalidateCache('getPublicSchedule');
+        api.invalidateCache('getSettings');
       }
 
-      let schedule;
-      [posts, results, schedule] = await Promise.all([
+      let schedule, rawResults, sets;
+      [posts, rawResults, schedule, sets] = await Promise.all([
         api.getPosts(),
-        api.getResults().catch(() => []),
-        api.getPublicSchedule().catch(() => ({}))
+        api.getResults(force).catch(() => ({ results: [], published: false, countingActive: false })),
+        api.getPublicSchedule().catch(() => ({})),
+        api.getSettings().catch(() => ({}))
       ]);
       
+      results = Array.isArray(rawResults) ? rawResults : (rawResults?.results || []);
+      isCountingActive = (rawResults && rawResults.countingActive === true) || schedule?.countingActive === 'true' || sets?.countingActive === 'true';
+      isResultsPublished = (rawResults && rawResults.published === true) || schedule?.resultsPublished === 'true' || sets?.resultsPublished === 'true';
+
       // Save to cache
       localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ posts, results, schedule }));
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ posts, results, schedule, isCountingActive, isResultsPublished }));
       
-      const year = schedule.electionYear || new Date().getFullYear();
+      const year = schedule?.electionYear || sets?.electionYear || new Date().getFullYear();
       updateHeader(main, year);
     }
 
-function updateHeader(main, year) {
-  const header = main.closest('.page-enter')?.querySelector('h1');
-  if (header) header.textContent = `Live Election Results ${year}`;
-}
+    function updateHeader(main, year) {
+      const header = main.closest('.page-enter')?.querySelector('h1');
+      if (header) header.textContent = `Live Election Results ${year}`;
+    }
 
-    if (results.length === 0) {
-      main.innerHTML = `
-        <div class="text-center py-20 bg-white/5 rounded-2xl border border-white/10">
-          <div class="text-5xl mb-4">📊</div>
-          <h2 class="text-2xl font-bold text-white mb-2">Counting in Progress</h2>
-          <p class="text-slate-400">No results have been published yet. Please check back later.</p>
-        </div>
-      `;
+    if (results.length === 0 || !isResultsPublished) {
+      if (isCountingActive) {
+        main.innerHTML = `
+          <div class="text-center py-20 bg-amber-500/10 rounded-2xl border border-amber-500/30 page-enter shadow-2xl">
+            <div class="text-6xl mb-4 animate-bounce">🗳️</div>
+            <div class="inline-flex items-center gap-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-3">
+              <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span> Live Counting Underway
+            </div>
+            <h2 class="text-3xl font-black text-white mb-2">Counting in Progress</h2>
+            <p class="text-slate-300 max-w-lg mx-auto text-sm leading-relaxed mb-6">
+              Vote counting is actively in progress under the supervision of the Returning Officer.
+              Official post-wise counts and leaderboards will appear as rounds are completed. Please check back shortly.
+            </p>
+            <button id="btnCountingRefresh" class="btn btn-primary px-6">🔄 Check for Updates</button>
+          </div>
+        `;
+        main.querySelector('#btnCountingRefresh')?.addEventListener('click', () => fetchAndRender(main, true));
+      } else {
+        main.innerHTML = `
+          <div class="text-center py-20 bg-white/5 rounded-2xl border border-white/10 page-enter shadow-xl">
+            <div class="text-6xl mb-4">⏳</div>
+            <div class="inline-block bg-slate-500/20 text-slate-400 border border-slate-500/40 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-3">
+              Awaiting Counting
+            </div>
+            <h2 class="text-3xl font-black text-white mb-2">Counting Not Started</h2>
+            <p class="text-slate-400 max-w-lg mx-auto text-sm leading-relaxed mb-6">
+              The counting of votes has not commenced yet. Please wait for the Returning Officer to initiate the official counting process.
+            </p>
+            <div class="flex justify-center gap-3">
+              <button id="btnWaitHome" class="btn btn-secondary">← Return to Home</button>
+              <button id="btnWaitRefresh" class="btn btn-secondary bg-white/5 border-white/10 hover:bg-white/10">🔄 Refresh</button>
+            </div>
+          </div>
+        `;
+        main.querySelector('#btnWaitHome')?.addEventListener('click', () => router.navigate('/'));
+        main.querySelector('#btnWaitRefresh')?.addEventListener('click', () => fetchAndRender(main, true));
+      }
       return;
     }
 

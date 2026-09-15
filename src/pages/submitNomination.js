@@ -44,12 +44,13 @@ export async function renderSubmitNomination(container) {
   container.querySelector('#backToHome').addEventListener('click', () => router.navigate('/'));
 
   try {
-    // Load nominal roll, posts, existing nominations, and schedule in parallel
-    const [rollData, postsData, nomsData, scheduleData] = await Promise.all([
+    // Load nominal roll, posts, existing nominations, schedule, and settings in parallel
+    const [rollData, postsData, nomsData, scheduleData, setsData] = await Promise.all([
       api.getNominalRoll(),
       api.getPosts().catch(() => null),
       api.getPublicNominations().catch(() => []),
       api.getPublicSchedule().catch(() => ({})),
+      api.getSettings().catch(() => ({}))
     ]);
 
     nominalRoll = Array.isArray(rollData) ? rollData : [];
@@ -63,7 +64,7 @@ export async function renderSubmitNomination(container) {
       ? postsData
       : CONFIG.DEFAULT_POSTS;
 
-    renderForm(container, year, collegeName);
+    renderForm(container, year, collegeName, setsData || {});
   } catch (e) {
     container.querySelector('#loadingState').innerHTML = `
       <div class="alert alert-error">${esc(e.message)}</div>
@@ -72,7 +73,7 @@ export async function renderSubmitNomination(container) {
   }
 }
 
-function renderForm(container, year, collegeName) {
+function renderForm(container, year, collegeName, setsData = {}) {
   const captcha = generateCaptcha();
   captchaAnswer = captcha.answer;
 
@@ -80,16 +81,65 @@ function renderForm(container, year, collegeName) {
   const formArea = container.querySelector('#formArea');
   formArea.classList.remove('hidden');
 
+  // 1. Enforce Final Nominal Roll publication
+  const isRollFinal = setsData.nominalRollFinalized === 'true' || setsData.isRollFinalized === 'true';
+  const isDraft = !isRollFinal && setsData.draftRollPublished === 'true';
+
+  if (!window.ADMIN_BYPASS_PWD && !isRollFinal) {
+    formArea.innerHTML = `
+      <div class="glass p-12 text-center rounded-2xl border border-amber-500/20 max-w-2xl mx-auto page-enter">
+        <div class="text-6xl mb-6">📜</div>
+        <div class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-1 text-xs font-bold uppercase tracking-widest mb-3 inline-block">
+          ${isDraft ? 'Draft Nominal Roll Live' : 'Nominal Roll Unpublished'}
+        </div>
+        <h3 class="text-2xl font-bold text-white mb-3">Nominations Not Open Yet</h3>
+        <p class="text-slate-400 mb-6 leading-relaxed">
+          Nomination submission will become active only after the <strong>Final Nominal Roll</strong> is officially published by the Returning Officer.
+          ${isDraft ? '<br/><span class="text-xs text-amber-400/90 mt-2 block">Currently, only the Draft Voter List is published for verification & claims.</span>' : ''}
+        </p>
+        <div class="flex justify-center gap-3">
+          <button id="viewRollBtn" class="btn btn-primary">📜 View Nominal Roll</button>
+          <button id="backBtn" class="btn btn-secondary">← Back to Home</button>
+        </div>
+      </div>
+    `;
+    formArea.querySelector('#viewRollBtn').onclick = () => router.navigate('/nominal-roll');
+    formArea.querySelector('#backBtn').onclick = () => router.navigate('/');
+    return;
+  }
+
+  // 2. Enforce Schedule Windows (Start and End)
   const now = new Date();
+  const start = electionSchedule.nominationStart ? new Date(electionSchedule.nominationStart) : null;
   const deadline = electionSchedule.nominationDeadline ? new Date(electionSchedule.nominationDeadline) : null;
 
-  // Skip deadline check if admin is doing direct entry
-  if (!window.ADMIN_BYPASS_PWD && deadline && now > deadline) {
+  if (!window.ADMIN_BYPASS_PWD && start && !isNaN(start.getTime()) && now < start) {
+    formArea.innerHTML = `
+      <div class="glass p-12 text-center rounded-2xl border border-amber-500/20 max-w-2xl mx-auto page-enter">
+        <div class="text-6xl mb-6">📅</div>
+        <div class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-1 text-xs font-bold uppercase tracking-widest mb-3 inline-block">
+          Scheduled Opening
+        </div>
+        <h3 class="text-2xl font-bold text-white mb-3">Nomination Filing Not Started</h3>
+        <p class="text-slate-400 mb-6 leading-relaxed">
+          Nomination submissions are scheduled to open on <strong>${start.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })}</strong>.
+        </p>
+        <button id="pendingBackBtn" class="btn btn-secondary">← Back to Home</button>
+      </div>
+    `;
+    formArea.querySelector('#pendingBackBtn').onclick = () => router.navigate('/');
+    return;
+  }
+
+  if (!window.ADMIN_BYPASS_PWD && deadline && !isNaN(deadline.getTime()) && now > deadline) {
     formArea.innerHTML = `
       <div class="glass p-12 text-center rounded-2xl border border-rose-500/20 max-w-2xl mx-auto page-enter">
         <div class="text-6xl mb-6">⏳</div>
-        <h3 class="text-2xl font-bold text-white mb-3">Nomination Filing Ended</h3>
-        <p class="text-slate-400 mb-6">The official deadline for filing nominations was <strong>${new Date(deadline).toLocaleString()}</strong>.</p>
+        <div class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 px-3 py-1 text-xs font-bold uppercase tracking-widest mb-3 inline-block">
+          Filing Ended
+        </div>
+        <h3 class="text-2xl font-bold text-white mb-3">Nomination Window Closed</h3>
+        <p class="text-slate-400 mb-6 leading-relaxed">The official deadline for filing nominations was <strong>${deadline.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })}</strong>.</p>
         <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
       </div>
     `;

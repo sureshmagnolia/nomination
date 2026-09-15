@@ -56,6 +56,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   const shortName = sets.collegeShortName || 'GVC';
   let isLocked = sets.resultsLocked === 'true';
   let isPublic = sets.resultsPublished === 'true';
+  let isCountingActive = sets.countingActive === 'true' || schedule.countingActive === 'true';
   
   // 1. Aggregate results
   const agg = {};
@@ -118,18 +119,31 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
         </div>
       ` : ''}
 
-      <!-- Control Panels: Lock/Freeze and Public Visibility -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Control Panels: Lock/Freeze, Live Counting, and Public Visibility -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="p-4 rounded-xl border ${isCountingActive ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-500/10 border-slate-500/30'} flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">${isCountingActive ? '🗳️' : '⏳'}</span>
+            <div>
+              <div class="font-bold text-sm text-white">${isCountingActive ? 'Counting: Active' : 'Counting: Inactive'}</div>
+              <div class="text-xs text-slate-400">${isCountingActive ? 'Public sees "Counting in Progress"' : 'Public sees "Counting Not Started"'}</div>
+            </div>
+          </div>
+          <button id="btnToggleCounting" class="btn btn-sm ${isCountingActive ? 'bg-rose-500/80 hover:bg-rose-600 text-white font-bold' : 'bg-amber-500 hover:bg-amber-600 text-black font-bold'}">
+            ${isCountingActive ? '⏸️ Stop Counting' : '⚡ Set Counting Active'}
+          </button>
+        </div>
+
         <div class="p-4 rounded-xl border ${isLocked ? 'bg-amber-500/10 border-amber-500/30' : 'bg-white/5 border-white/10'} flex items-center justify-between">
           <div class="flex items-center gap-3">
             <span class="text-2xl">${isLocked ? '🔒' : '🔓'}</span>
             <div>
-              <div class="font-bold text-sm text-white">${isLocked ? 'Results are Locked & Frozen' : 'Results are Unlocked'}</div>
-              <div class="text-xs text-slate-400">${isLocked ? 'Vote entry is blocked to prevent accidental changes' : 'Vote entry portal is currently open for edits'}</div>
+              <div class="font-bold text-sm text-white">${isLocked ? 'Results: Locked & Frozen' : 'Results: Unlocked'}</div>
+              <div class="text-xs text-slate-400">${isLocked ? 'Vote entry blocked' : 'Vote entry portal open'}</div>
             </div>
           </div>
           <button id="btnToggleLock" class="btn btn-sm ${isLocked ? 'btn-secondary' : 'bg-amber-500 hover:bg-amber-600 text-black font-bold'}">
-            ${isLocked ? '🔓 Unlock Results' : '🔒 Freeze / Lock'}
+            ${isLocked ? '🔓 Unlock' : '🔒 Freeze / Lock'}
           </button>
         </div>
 
@@ -138,11 +152,11 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
             <span class="text-2xl">${isPublic ? '🌐' : '👁️‍🗨️'}</span>
             <div>
               <div class="font-bold text-sm text-white">${isPublic ? 'Public View: Published' : 'Public View: Hidden'}</div>
-              <div class="text-xs text-slate-400">${isPublic ? 'Live results are visible to the public on the portal' : 'Only admins can view results right now'}</div>
+              <div class="text-xs text-slate-400">${isPublic ? 'Results visible to public' : 'Only admins see results'}</div>
             </div>
           </div>
           <button id="btnTogglePublic" class="btn btn-sm ${isPublic ? 'bg-rose-500/80 hover:bg-rose-600 text-white font-bold' : 'btn-success font-bold'}">
-            ${isPublic ? '👁️‍🗨️ Hide Public View' : '📢 Publish to Public'}
+            ${isPublic ? '👁️‍🗨️ Hide' : '📢 Publish'}
           </button>
         </div>
       </div>
@@ -373,6 +387,32 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
         showToast(`Refresh failed: ${err.message}`, 'error');
         btnAdminRefresh.disabled = false;
         btnAdminRefresh.innerHTML = '<span>🔄</span> Refresh Results';
+      }
+    };
+  }
+
+  // ── Toggle Counting Mode ────────────────────────────────────────────────────
+  const btnCounting = main.querySelector('#btnToggleCounting');
+  if (btnCounting) {
+    btnCounting.onclick = async () => {
+      const willActivate = !isCountingActive;
+      const msg = willActivate
+        ? 'Set Counting Mode Active? Visitors to the public portal will see "Counting in Progress".'
+        : 'Set Counting Mode Inactive? Visitors to the public portal will be asked to wait for counting to begin.';
+      if (!confirm(msg)) return;
+
+      btnCounting.disabled = true;
+      btnCounting.textContent = 'Please wait...';
+      try {
+        const res = await api.adminToggleCounting(pwd);
+        isCountingActive = res.active;
+        sets.countingActive = isCountingActive ? 'true' : 'false';
+        showToast(isCountingActive ? '⚡ Counting mode active! Public sees "Counting in Progress".' : '⏳ Counting mode inactive. Public asked to wait.', 'success');
+        renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData);
+      } catch (err) {
+        showToast(err.message, 'error');
+        btnCounting.disabled = false;
+        btnCounting.textContent = isCountingActive ? '⏸️ Stop Counting' : '⚡ Set Counting Active';
       }
     };
   }

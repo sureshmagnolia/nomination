@@ -49,6 +49,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
   const finalPublished = settings.finalListPublished === 'true';
   const resultsPublished = settings.resultsPublished === 'true';
   const resultsLocked = settings.resultsLocked === 'true';
+  const isCountingActive = settings.countingActive === 'true';
 
   const year = settings.electionYear || new Date().getFullYear();
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
@@ -106,11 +107,11 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
           </div>
         </div>
 
-        <div class="glass rounded-xl p-3 border ${resultsPublished ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-white/10 bg-white/5'}">
+        <div class="glass rounded-xl p-3 border ${resultsPublished ? 'border-emerald-500/30 bg-emerald-500/10' : (isCountingActive ? 'border-amber-500/30 bg-amber-500/10' : 'border-white/10 bg-white/5')}">
           <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">4. Results</div>
-          <div class="text-white font-bold text-sm mt-0.5">${resultsLocked ? '🔒 Frozen' : '🔓 Live Entry'}</div>
-          <div class="text-xs font-semibold ${resultsPublished ? 'text-emerald-400' : 'text-slate-400'}">
-            ${resultsPublished ? '📢 Publicly Live' : '👁️‍🗨️ Hidden'}
+          <div class="text-white font-bold text-sm mt-0.5">${resultsLocked ? '🔒 Frozen' : (isCountingActive ? '🗳️ Counting' : '🔓 Live Entry')}</div>
+          <div class="text-xs font-semibold ${resultsPublished ? 'text-emerald-400' : (isCountingActive ? 'text-amber-400' : 'text-slate-400')}">
+            ${resultsPublished ? '📢 Publicly Live' : (isCountingActive ? '⚡ Counting Active' : '👁️‍🗨️ Hidden')}
           </div>
         </div>
       </div>
@@ -245,10 +246,13 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
               <span class="badge ${resultsPublished ? 'badge-valid' : 'badge-pending'} text-xs">
                 ${resultsPublished ? '📢 Publicly Live' : '👁️‍🗨️ Hidden from Public'}
               </span>
+              <span class="badge ${isCountingActive ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-slate-700 text-slate-300'} text-xs">
+                ${isCountingActive ? '⚡ Counting in Progress' : '⏳ Counting Inactive'}
+              </span>
               ${resultsLocked ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs">🔒 Locked & Frozen</span>` : ''}
             </div>
             <p class="text-slate-400 text-xs mt-1">
-              Control public access to live results and freeze vote tallies against modifications.
+              Control live counting status, public results visibility, and lock vote tallies against modification.
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-2 shrink-0">
@@ -260,6 +264,9 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
         </div>
 
         <div class="flex flex-wrap items-center gap-3 pt-2">
+          <button id="toggleCountingBtn" class="btn ${isCountingActive ? 'btn-danger' : 'bg-amber-500 hover:bg-amber-600 text-black font-bold'} btn-sm">
+            ${isCountingActive ? '⏸️ Stop Counting Mode' : '⚡ Set Counting Active'}
+          </button>
           <button id="toggleResultsPublishBtn" class="btn ${resultsPublished ? 'btn-danger' : 'btn-primary'} btn-sm">
             ${resultsPublished ? '🚫 Hide Results from Public' : '📢 Publish Results to Public'}
           </button>
@@ -670,6 +677,25 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
     } catch (err) {
       showToast(`Failed: ${err.message}`, 'error');
       setLoading(btn, false, isLocked ? '🔓 Unlock Results' : '🔒 Freeze / Lock Results');
+    }
+  });
+
+  // Toggle Counting Mode
+  main.querySelector('#toggleCountingBtn')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const isAct = isCountingActive;
+    const msg = isAct
+      ? 'Deactivate Counting Mode? Public visitors to the results page will be asked to wait.'
+      : 'Activate Counting Mode? Public visitors will see "Counting in Progress".';
+    if (!confirm(msg)) return;
+    setLoading(btn, true, 'Updating...');
+    try {
+      const res = await api.adminToggleCounting(pwd);
+      showToast(res.active ? '⚡ Live counting mode active!' : '⏳ Counting mode inactive.', 'success');
+      await reloadPublishData(main, pwd);
+    } catch (err) {
+      showToast(`Failed: ${err.message}`, 'error');
+      setLoading(btn, false, isAct ? '⏸️ Stop Counting Mode' : '⚡ Set Counting Active');
     }
   });
 }

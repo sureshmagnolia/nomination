@@ -33,14 +33,36 @@ export async function renderWithdraw(container) {
   container.querySelector('#backToHome').addEventListener('click', () => router.navigate('/'));
 
   try {
-    const schedule = await api.getPublicSchedule().catch(() => ({}));
+    const [schedule, sets] = await Promise.all([
+      api.getPublicSchedule().catch(() => ({})),
+      api.getSettings().catch(() => ({}))
+    ]);
     const now = new Date();
     const start = schedule.withdrawalStart ? new Date(schedule.withdrawalStart) : null;
     const end = schedule.withdrawalEnd ? new Date(schedule.withdrawalEnd) : null;
+    const isValidPublished = sets?.validListPublished === 'true' || schedule?.validListPublished === 'true';
 
     const area = container.querySelector('#withdrawArea');
     container.querySelector('#loadingState').classList.add('hidden');
     area.classList.remove('hidden');
+
+    if (!isValidPublished) {
+      area.innerHTML = `
+        <div class="glass p-12 text-center rounded-2xl border border-amber-500/20 max-w-2xl mx-auto page-enter">
+          <div class="text-6xl mb-6">⏳</div>
+          <div class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-1 text-xs font-bold uppercase tracking-widest mb-3 inline-block">
+            Awaiting Scrutiny
+          </div>
+          <h3 class="text-2xl font-bold text-white mb-3">Withdrawals Not Open Yet</h3>
+          <p class="text-slate-400 mb-6 leading-relaxed">
+            Withdrawal of candidature will open only after the <strong>Valid Nominations List</strong> is officially published by the Returning Officer.
+          </p>
+          <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
+        </div>
+      `;
+      area.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
+      return;
+    }
 
     if (start && now < start) {
       area.innerHTML = `

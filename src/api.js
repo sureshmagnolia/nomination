@@ -476,6 +476,24 @@ export const api = {
     return res;
   },
 
+  adminToggleCounting: async (password) => {
+    const res = await post({ action: 'adminToggleCounting', password });
+    invalidateCache('getResults');
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    invalidateCache('getPublicSchedule');
+    return res;
+  },
+
+  adminSetCountingActive: async (password, active) => {
+    const res = await post({ action: 'adminSetCountingActive', password, active });
+    invalidateCache('getResults');
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    invalidateCache('getPublicSchedule');
+    return res;
+  },
+
   adminSaveResults: (password, results) => {
     // We queue the network save, invalidate the results cache since it's hard to append optimally here
     bgPost({ action: 'adminSaveResults', password, results }).then(() => {
@@ -615,10 +633,13 @@ export const api = {
 
   getPublicSchedule: () => get({ action: 'getPublicSchedule' }),
 
-  adminSaveSchedule: (password, scheduleData) => {
+  adminSaveSchedule: async (password, scheduleData) => {
     updateCache({ action: 'getPublicSchedule' }, scheduleData);
-    bgPost({ action: 'adminSaveSchedule', password, ...scheduleData });
-    return Promise.resolve({ ok: true });
+    const res = await post({ action: 'adminSaveSchedule', password, ...scheduleData });
+    invalidateCache('getPublicSchedule');
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    return res || { ok: true };
   },
 
   // ─── Backup & Restore Suite ─────────────────────────────────────────────────

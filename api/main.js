@@ -155,6 +155,8 @@ export default async function handler(req, res) {
       await sql`INSERT INTO settings (key, value) VALUES ('finalListPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('resultsPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('resultsLocked', 'false') ON CONFLICT (key) DO NOTHING;`;
+      await sql`INSERT INTO settings (key, value) VALUES ('countingActive', 'false') ON CONFLICT (key) DO NOTHING;`;
+      await sql`INSERT INTO settings (key, value) VALUES ('nominationStart', '') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('collegeName', 'Government Victoria College, Palakkad') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('collegeShortName', 'GVC') ON CONFLICT (key) DO NOTHING;`;
 
@@ -275,10 +277,15 @@ export default async function handler(req, res) {
       const rollFinal = (await getSetting('isRollFinalized')) || 'false';
       const draftPub  = (await getSetting('draftRollPublished')) || 'false';
       const obj = {
-        validListPublished: await getSetting('validListPublished'),
-        finalListPublished: await getSetting('finalListPublished'),
+        validListPublished: (await getSetting('validListPublished')) || 'false',
+        finalListPublished: (await getSetting('finalListPublished')) || 'false',
         resultsPublished: (await getSetting('resultsPublished')) || 'false',
         resultsLocked: (await getSetting('resultsLocked')) || 'false',
+        countingActive: (await getSetting('countingActive')) || 'false',
+        nominationStart: (await getSetting('nominationStart')) || '',
+        nominationDeadline: (await getSetting('nominationDeadline')) || '',
+        withdrawalStart: (await getSetting('withdrawalStart')) || '',
+        withdrawalEnd: (await getSetting('withdrawalEnd')) || '',
         isRollFinalized: rollFinal,
         nominalRollFinalized: rollFinal,
         draftRollPublished: draftPub,
@@ -295,12 +302,22 @@ export default async function handler(req, res) {
     }
 
     if (action === 'getPublicSchedule') {
+      const rollFinal = (await getSetting('isRollFinalized')) || 'false';
+      const draftPub  = (await getSetting('draftRollPublished')) || 'false';
       return jsonOut(res, {
-        nominationDeadline: await getSetting('nominationDeadline'),
-        withdrawalStart: await getSetting('withdrawalStart'),
-        withdrawalEnd: await getSetting('withdrawalEnd'),
-        notificationDate: await getSetting('notificationDate'),
-        electionYear: await getSetting('electionYear')
+        nominationStart: (await getSetting('nominationStart')) || '',
+        nominationDeadline: (await getSetting('nominationDeadline')) || '',
+        withdrawalStart: (await getSetting('withdrawalStart')) || '',
+        withdrawalEnd: (await getSetting('withdrawalEnd')) || '',
+        notificationDate: (await getSetting('notificationDate')) || '',
+        electionYear: (await getSetting('electionYear')) || new Date().getFullYear().toString(),
+        countingActive: (await getSetting('countingActive')) || 'false',
+        resultsPublished: (await getSetting('resultsPublished')) || 'false',
+        isRollFinalized: rollFinal,
+        nominalRollFinalized: rollFinal,
+        draftRollPublished: draftPub,
+        validListPublished: (await getSetting('validListPublished')) || 'false',
+        finalListPublished: (await getSetting('finalListPublished')) || 'false'
       });
     }
 
@@ -380,9 +397,16 @@ export default async function handler(req, res) {
 
     if (action === 'getResults') {
       const published = await getSetting('resultsPublished');
-      if (published !== 'true') return jsonOut(res, []);
+      const countingActive = (await getSetting('countingActive')) === 'true';
+      if (published !== 'true') {
+        return jsonOut(res, { results: [], published: false, countingActive });
+      }
       const data = await getSetting('results_data');
-      return jsonOut(res, data ? JSON.parse(data) : []);
+      return jsonOut(res, {
+        results: data ? JSON.parse(data) : [],
+        published: true,
+        countingActive
+      });
     }
 
     if (action === 'adminGetResults') {
@@ -530,11 +554,15 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminSaveSchedule') {
-      await setSetting('nominationDeadline', body.nominationDeadline);
-      await setSetting('withdrawalStart', body.withdrawalStart);
-      await setSetting('withdrawalEnd', body.withdrawalEnd);
-      await setSetting('notificationDate', body.notificationDate);
+      await setSetting('nominationStart', body.nominationStart || '');
+      await setSetting('nominationDeadline', body.nominationDeadline || '');
+      await setSetting('withdrawalStart', body.withdrawalStart || '');
+      await setSetting('withdrawalEnd', body.withdrawalEnd || '');
+      await setSetting('notificationDate', body.notificationDate || '');
       await setSetting('electionYear', body.electionYear || new Date().getFullYear().toString());
+      if (body.countingActive !== undefined) {
+        await setSetting('countingActive', body.countingActive === true || body.countingActive === 'true' ? 'true' : 'false');
+      }
       return jsonOut(res, { ok: true });
     }
 
@@ -545,9 +573,28 @@ export default async function handler(req, res) {
     }
 
     if (action === 'submitNomination') {
-      const isRollFinal = await getSetting('isRollFinalized');
-      if (isRollFinal !== 'true' && !body.password) {
-        return errOut(res, 'Nominations cannot be submitted while the Nominal Roll is being edited (Draft Mode).');
+      const isRollFinal = (await getSetting('isRollFinalized')) === 'true' || (await getSetting('nominalRollFinalized')) === 'true';
+      if (!isRollFinal && !body.password) {
+        return errOut(res, 'Nominations can only be submitted after the Final Nominal Roll is published by the Returning Officer.');
+      }
+
+      // Schedule window check
+      const now = new Date();
+      const nomStart = await getSetting('nominationStart');
+      const nomEnd = await getSetting('nominationDeadline');
+      if (!body.password) {
+        if (nomStart && nomStart.trim()) {
+          const startDate = new Date(nomStart);
+          if (!isNaN(startDate.getTime()) && now < startDate) {
+            return errOut(res, `Nomination submission has not opened yet (Opens on ${startDate.toLocaleString('en-IN')}).`);
+          }
+        }
+        if (nomEnd && nomEnd.trim()) {
+          const endDate = new Date(nomEnd);
+          if (!isNaN(endDate.getTime()) && now > endDate) {
+            return errOut(res, 'Nomination submission window has closed.');
+          }
+        }
       }
 
       // Basic Identity Rules
@@ -599,6 +646,30 @@ export default async function handler(req, res) {
     }
 
     if (action === 'submitWithdrawal') {
+      const validPublished = (await getSetting('validListPublished')) === 'true';
+      if (!validPublished && !body.password) {
+        return errOut(res, 'Withdrawals can only be submitted after the Valid Nominations List is published.');
+      }
+
+      // Schedule window check
+      const now = new Date();
+      const withStart = await getSetting('withdrawalStart');
+      const withEnd = await getSetting('withdrawalEnd');
+      if (!body.password) {
+        if (withStart && withStart.trim()) {
+          const startDate = new Date(withStart);
+          if (!isNaN(startDate.getTime()) && now < startDate) {
+            return errOut(res, `Withdrawal window has not opened yet (Opens on ${startDate.toLocaleString('en-IN')}).`);
+          }
+        }
+        if (withEnd && withEnd.trim()) {
+          const endDate = new Date(withEnd);
+          if (!isNaN(endDate.getTime()) && now > endDate) {
+            return errOut(res, 'Withdrawal window has closed.');
+          }
+        }
+      }
+
       const id = body.id;
       const nom = await sql`SELECT * FROM nominations WHERE id = ${id}`;
       if (!nom.length) return errOut(res, 'Nomination not found.');
@@ -694,6 +765,20 @@ export default async function handler(req, res) {
       const next = current === 'true' ? 'false' : 'true';
       await setSetting('resultsPublished', next);
       return jsonOut(res, { ok: true, published: next === 'true', resultsPublished: next });
+    }
+
+    if (action === 'adminToggleCounting') {
+      const current = await getSetting('countingActive');
+      const next = current === 'true' ? 'false' : 'true';
+      await setSetting('countingActive', next);
+      return jsonOut(res, { ok: true, active: next === 'true', countingActive: next });
+    }
+
+    if (action === 'adminSetCountingActive') {
+      const active = body.active === true || body.active === 'true';
+      const next = active ? 'true' : 'false';
+      await setSetting('countingActive', next);
+      return jsonOut(res, { ok: true, active, countingActive: next });
     }
 
     if (action === 'adminLockResults') {

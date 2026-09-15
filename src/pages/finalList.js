@@ -29,9 +29,9 @@ export async function renderFinalList(container) {
   try {
     const data = await api.getFinalNominations();
     // getFinalNominations returns { active: [], withdrawn: [] }
-    renderList(container.querySelector('main'), data.active || [], year);
+    renderList(container.querySelector('main'), data?.active || [], year);
   } catch (e) {
-    container.querySelector('main').innerHTML = `<div class="alert alert-warning text-center py-10 shadow-xl">${esc(e.message)}</div>`;
+    renderList(container.querySelector('main'), [], year);
   }
 }
 
