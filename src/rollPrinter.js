@@ -419,15 +419,7 @@ export function executeRollPrint({
           <div class="print-footer">
             <div class="sig-box">
               <div class="sig-line"></div>
-              <div>Tutor / Head of Dept</div>
-            </div>
-            <div class="sig-box">
-              <div class="sig-line"></div>
               <div>Returning Officer</div>
-            </div>
-            <div class="sig-box">
-              <div class="sig-line"></div>
-              <div>Principal</div>
             </div>
           </div>
         </div>
@@ -482,10 +474,6 @@ export function executeRollPrint({
           <div class="sig-box">
             <div class="sig-line"></div>
             <div>Returning Officer</div>
-          </div>
-          <div class="sig-box">
-            <div class="sig-line"></div>
-            <div>Principal</div>
           </div>
         </div>
       </div>
@@ -611,22 +599,22 @@ export function executeRollPrint({
           .font-bold { font-weight: 700; }
           
           .print-footer {
-            margin-top: 30px;
+            margin-top: 35px;
             padding-top: 15px;
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: flex-end;
           }
           .sig-box {
             text-align: center;
             font-weight: 700;
-            font-size: 10px;
-            width: 130px;
+            font-size: 11px;
+            width: 160px;
           }
           .sig-line {
             border-bottom: 1px dashed #4b5563;
-            margin-bottom: 5px;
-            height: 35px;
+            margin-bottom: 6px;
+            height: 40px;
           }
         </style>
       </head>
