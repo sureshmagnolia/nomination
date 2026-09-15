@@ -109,15 +109,14 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
               <div id="csvSummary" class="text-slate-300 space-y-1 text-xs"></div>
             </div>
 
-            <!-- Danger Warning -->
-            <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
-              <div class="text-red-300 font-bold text-sm mb-2">⚠️ DESTRUCTIVE OPERATION — Read Before Proceeding</div>
-              <ul class="text-red-200/80 text-xs space-y-1 list-disc list-inside">
-                <li>The entire current Nominal Roll will be <strong>permanently replaced</strong></li>
-                <li>All submitted <strong>Nominations</strong> will be deleted</li>
-                <li>The <strong>Valid List</strong> and <strong>Final List</strong> will be cleared</li>
-                <li>All <strong>Results</strong> and <strong>Ballot Plans</strong> will be wiped</li>
-                <li>Election flags (finalized, published) will be <strong>reset to false</strong></li>
+            <!-- Roll Update Notice -->
+            <div class="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-4">
+              <div class="text-indigo-300 font-bold text-sm mb-2">🔄 Nominal Roll Update & Automatic Re-mapping</div>
+              <ul class="text-indigo-200/90 text-xs space-y-1.5 list-disc list-inside">
+                <li>The Nominal Roll student voter records will be <strong>replaced</strong> with the uploaded CSV data</li>
+                <li><strong>Existing Nominations are SAFELY PRESERVED:</strong> All candidates, proposers, and seconders will be <strong>automatically re-mapped</strong> using their Admission Numbers!</li>
+                <li>Serial numbers for candidates, proposers, and seconders will be recalculated based on the new roll</li>
+                <li>Draft and finalized roll publication flags will be reset so you can review before publishing</li>
               </ul>
             </div>
 
@@ -125,17 +124,17 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
             <div class="space-y-3">
               <div>
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-                  Type <span class="text-red-400 font-mono">RESET</span> to confirm
+                  Type <span class="text-indigo-400 font-mono">CONFIRM</span> to upload
                 </label>
-                <input type="text" id="confirmResetText" class="field font-mono tracking-widest uppercase" placeholder="RESET" autocomplete="off">
+                <input type="text" id="confirmResetText" class="field font-mono tracking-widest uppercase" placeholder="CONFIRM" autocomplete="off">
               </div>
               <div>
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Re-enter Admin Password</label>
                 <input type="password" id="confirmPwd" class="field" placeholder="Admin password" autocomplete="current-password">
               </div>
               <button id="btnUploadRoll" class="btn w-full py-3 text-sm font-bold opacity-50 cursor-not-allowed" disabled
-                style="background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; border: none;">
-                🚨 Upload & Reset Entire System
+                style="background: linear-gradient(135deg, #4f46e5, #4338ca); color: white; border: none;">
+                📤 Upload Roll & Auto-Remap Nominations
               </button>
             </div>
           </div>
@@ -249,6 +248,8 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
             ${isDraft ? `<button id="btnUnpublishDraftTop" class="btn btn-secondary border-rose-500/30 text-rose-300 hover:bg-rose-500/20">🚫 Unpublish Draft</button>` : ''}
             ${!isFinal ? `<button id="btnAddNew" class="btn btn-success">➕ Add Student</button>` : ''}
             <button id="btnPrintRoll" class="btn btn-secondary">🖨️ Print Roll</button>
+            ${!isFinal ? `<button id="btnRemapNoms" class="btn bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 text-xs py-2 px-3">🔄 Re-map Nominations</button>` : ''}
+            ${!isFinal && students.length > 0 ? `<button id="btnClearRoll" class="btn bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 text-xs py-2 px-3">🗑️ Clear Roll Data</button>` : ''}
             ${!isFinal ? `<button id="btnFinalize" class="btn btn-primary">🔒 Finalize & Lock Roll</button>` : ''}
             ${isFinal ? `<span class="badge badge-valid py-2 px-4 flex items-center gap-2">✅ ROLL FINALIZED</span>` : ''}
             ${isFinal ? `<button id="btnUnfinalize" class="btn bg-rose-500/20 text-rose-300 border border-rose-500/50 hover:bg-rose-500/30">🔓 Unfinalize</button>` : ''}
@@ -359,6 +360,46 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
           <div class="flex gap-2 mt-6">
             <button type="button" id="btnCancelUnfinalize" class="btn btn-secondary flex-1">Cancel</button>
             <button type="button" id="btnConfirmUnfinalize" class="btn bg-rose-600 hover:bg-rose-500 text-white flex-1 font-bold">Confirm & Unlock</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clear Nominal Roll Modal -->
+      <div id="clearRollModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
+        <div class="glass w-full max-w-md rounded-2xl p-6 shadow-2xl border border-rose-500/30">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-xl font-bold border border-rose-500/30">🗑️</div>
+            <div>
+              <h4 class="text-xl font-bold text-white">Clear Nominal Roll Alone</h4>
+              <p class="text-slate-400 text-xs">Delete student records without deleting nominations</p>
+            </div>
+          </div>
+          
+          <div class="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-3 my-3 text-xs text-indigo-200 leading-relaxed space-y-1.5">
+            <div class="font-bold text-indigo-300 flex items-center gap-1.5">
+              <span>🛡️</span> Nominations Safety Guarantee
+            </div>
+            <div>This will clear all <strong>${students.length}</strong> student records from the Nominal Roll <strong>alone</strong>.</div>
+            <div class="text-indigo-200/80">Existing nominations will <strong>NOT</strong> be deleted. When you upload a new nominal roll or add students, the system will <strong>automatically re-map</strong> candidate, proposer, and seconder serial numbers using their Admission Numbers.</div>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Type <span class="text-rose-400 font-mono">CLEAR</span> to confirm
+              </label>
+              <input type="text" id="clearRollConfirmText" class="field w-full font-mono uppercase" placeholder="CLEAR" autocomplete="off">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Admin Password</label>
+              <input type="password" id="clearRollPwdInput" class="field w-full" placeholder="Enter Admin Password" autocomplete="current-password">
+            </div>
+            <div id="clearRollError" class="text-rose-400 text-xs font-medium hidden"></div>
+          </div>
+
+          <div class="flex gap-2 mt-6">
+            <button type="button" id="btnCancelClearRoll" class="btn btn-secondary flex-1">Cancel</button>
+            <button type="button" id="btnConfirmClearRoll" class="btn bg-rose-600 hover:bg-rose-500 text-white flex-1 font-bold">🗑️ Clear Roll Data</button>
           </div>
         </div>
       </div>
@@ -595,7 +636,8 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
       }
 
       const checkUploadReady = () => {
-        const resetOk = main.querySelector('#confirmResetText')?.value.trim().toUpperCase() === 'RESET';
+        const resetVal = main.querySelector('#confirmResetText')?.value.trim().toUpperCase() || '';
+        const resetOk = resetVal === 'RESET' || resetVal === 'CONFIRM';
         const pwdOk = (main.querySelector('#confirmPwd')?.value.trim() || '') !== '';
         const btn = main.querySelector('#btnUploadRoll');
         if (!btn) return;
@@ -612,16 +654,99 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
         main.querySelector('#btnUploadRoll').onclick = async (e) => {
           const confirmPwd = main.querySelector('#confirmPwd').value.trim();
           if (!parsedRows || parsedRows.length === 0) return showToast('No data to upload.', 'error');
-          if (!confirm(`FINAL CONFIRMATION\n\nYou are about to replace the Nominal Roll with ${parsedRows.length} students.\nAll nominations, results, and election data will be permanently deleted.\n\nThis CANNOT be undone. Proceed?`)) return;
+          if (!confirm(`CONFIRMATION\n\nYou are about to update the Nominal Roll with ${parsedRows.length} students.\nExisting nominations will be preserved and automatically re-mapped by Admission Number.\n\nProceed?`)) return;
 
-          setLoading(e.target, true, 'Uploading & Resetting...');
+          setLoading(e.target, true, 'Uploading & Re-mapping...');
           try {
             const res = await api.adminUploadNominalRoll(confirmPwd, { headers: usedHeaders, rows: parsedRows });
-            showToast(`✅ Nominal Roll updated with ${res.count || parsedRows.length} students. All election data has been reset.`, 'success');
+            const remapMsg = res.remappedNominations !== undefined ? ` Re-mapped ${res.remappedNominations} existing nominations.` : '';
+            showToast(`✅ Nominal Roll updated with ${res.count || parsedRows.length} students.${remapMsg}`, 'success');
             await reloadRollData(main, pwd);
           } catch (err) {
             showToast(err.message, 'error');
-            setLoading(e.target, false, '🚨 Upload & Reset Entire System');
+            setLoading(e.target, false, '📤 Upload Roll & Auto-Remap Nominations');
+          }
+        };
+      }
+
+      // Clear Nominal Roll Alone Modal & Handlers
+      const openClearRollModal = () => {
+        const modal = main.querySelector('#clearRollModal');
+        const confirmTxt = main.querySelector('#clearRollConfirmText');
+        const pwdInp = main.querySelector('#clearRollPwdInput');
+        const errEl = main.querySelector('#clearRollError');
+        if (confirmTxt) confirmTxt.value = '';
+        if (pwdInp) pwdInp.value = '';
+        if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+        if (modal) {
+          modal.classList.remove('hidden');
+          if (confirmTxt) setTimeout(() => confirmTxt.focus(), 50);
+        }
+      };
+
+      if (main.querySelector('#btnClearRoll')) {
+        main.querySelector('#btnClearRoll').onclick = openClearRollModal;
+      }
+      if (main.querySelector('#btnCancelClearRoll')) {
+        main.querySelector('#btnCancelClearRoll').onclick = () => {
+          main.querySelector('#clearRollModal')?.classList.add('hidden');
+        };
+      }
+
+      if (main.querySelector('#btnConfirmClearRoll')) {
+        main.querySelector('#btnConfirmClearRoll').onclick = async (e) => {
+          const confirmTxt = (main.querySelector('#clearRollConfirmText')?.value || '').trim().toUpperCase();
+          const enteredPwd = (main.querySelector('#clearRollPwdInput')?.value || '').trim();
+          const errEl = main.querySelector('#clearRollError');
+          const btn = e.target;
+
+          if (confirmTxt !== 'CLEAR') {
+            if (errEl) {
+              errEl.textContent = '❌ Please type CLEAR to confirm deletion.';
+              errEl.classList.remove('hidden');
+            }
+            main.querySelector('#clearRollConfirmText')?.focus();
+            return;
+          }
+
+          if (!enteredPwd) {
+            if (errEl) {
+              errEl.textContent = '❌ Please enter your admin password.';
+              errEl.classList.remove('hidden');
+            }
+            main.querySelector('#clearRollPwdInput')?.focus();
+            return;
+          }
+
+          setLoading(btn, true, 'Clearing Roll Data...');
+          if (errEl) errEl.classList.add('hidden');
+
+          try {
+            const res = await api.adminClearNominalRoll(enteredPwd);
+            showToast(`🗑️ Cleared ${res.clearedCount} students from Nominal Roll. ${res.preservedNominations || 0} nominations remain preserved.`, 'success');
+            main.querySelector('#clearRollModal')?.classList.add('hidden');
+            await reloadRollData(main, pwd);
+          } catch (err) {
+            if (errEl) {
+              errEl.textContent = `❌ ${err.message}`;
+              errEl.classList.remove('hidden');
+            }
+            setLoading(btn, false, '🗑️ Clear Roll Data');
+          }
+        };
+      }
+
+      // Re-map Nominations On-Demand
+      if (main.querySelector('#btnRemapNoms')) {
+        main.querySelector('#btnRemapNoms').onclick = async (e) => {
+          setLoading(e.target, true, 'Re-mapping...');
+          try {
+            const res = await api.adminRemapNominations(pwd);
+            showToast(`🔄 Re-mapping complete: ${res.remapped || 0} of ${res.total || 0} nominations re-linked to Nominal Roll.`, 'success');
+            await reloadRollData(main, pwd);
+          } catch (err) {
+            showToast(err.message, 'error');
+            setLoading(e.target, false, '🔄 Re-map Nominations');
           }
         };
       }

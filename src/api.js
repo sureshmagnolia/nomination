@@ -581,6 +581,28 @@ export const api = {
     return res;
   },
 
+  adminClearNominalRoll: async (password) => {
+    const res = await post({ action: 'adminClearNominalRoll', password, confirmPassword: password });
+    invalidateCache('getNominalRoll');
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    invalidateCache('adminGetNominations');
+    invalidateCache('getValidNominations');
+    invalidateCache('getFinalNominations');
+    invalidateCache('getPublicNominations');
+    return res;
+  },
+
+  adminRemapNominations: async (password) => {
+    const res = await post({ action: 'adminRemapNominations', password });
+    invalidateCache('adminGetNominations');
+    invalidateCache('getPublicNominations');
+    invalidateCache('getValidNominations');
+    invalidateCache('getFinalNominations');
+    return res;
+  },
+
+
   // ─── Schedule Management ───────────────────────────────────────────────────
 
   getPublicSchedule: () => get({ action: 'getPublicSchedule' }),

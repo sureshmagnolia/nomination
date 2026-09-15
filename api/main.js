@@ -175,6 +175,83 @@ export default async function handler(req, res) {
       `;
     };
 
+    const remapNominationsWithRoll = async () => {
+      const existingNoms = await sql`
+        SELECT id, post, candidate_admission, candidate_name, 
+               proposer_admission, proposer_name, 
+               seconder_admission, seconder_name 
+        FROM nominations
+      `;
+      if (existingNoms.length === 0) return { total: 0, remapped: 0, details: [] };
+
+      const allStudents = await sql`
+        SELECT serial_number, name, class, admission_no, dept 
+        FROM nominal_roll
+      `;
+      
+      const admMap = new Map();
+      const nameMap = new Map();
+
+      for (const s of allStudents) {
+        const admClean = String(s.admission_no || '').trim().toLowerCase();
+        if (admClean) admMap.set(admClean, s);
+
+        const nameClean = String(s.name || '').trim().toLowerCase();
+        if (nameClean && !nameMap.has(nameClean)) nameMap.set(nameClean, s);
+      }
+
+      const findStudent = (adm, name) => {
+        const admClean = String(adm || '').trim().toLowerCase();
+        if (admClean && admMap.has(admClean)) return admMap.get(admClean);
+
+        const nameClean = String(name || '').trim().toLowerCase();
+        if (nameClean && nameMap.has(nameClean)) return nameMap.get(nameClean);
+
+        return null;
+      };
+
+      let remappedCount = 0;
+      const details = [];
+
+      for (const n of existingNoms) {
+        const cand = findStudent(n.candidate_admission, n.candidate_name);
+        const prop = findStudent(n.proposer_admission, n.proposer_name);
+        const sec = findStudent(n.seconder_admission, n.seconder_name);
+
+        await sql`
+          UPDATE nominations SET
+            candidate_serial = ${cand ? cand.serial_number : null},
+            candidate_name = ${cand ? cand.name : n.candidate_name},
+            candidate_class = ${cand ? cand.class : null},
+            candidate_dept = ${cand ? cand.dept : null},
+            proposer_serial = ${prop ? prop.serial_number : null},
+            proposer_name = ${prop ? prop.name : n.proposer_name},
+            proposer_class = ${prop ? prop.class : null},
+            proposer_dept = ${prop ? prop.dept : null},
+            seconder_serial = ${sec ? sec.serial_number : null},
+            seconder_name = ${sec ? sec.name : n.seconder_name},
+            seconder_class = ${sec ? sec.class : null},
+            seconder_dept = ${sec ? sec.dept : null}
+          WHERE id = ${n.id}
+        `;
+
+        if (cand || prop || sec) {
+          remappedCount++;
+        }
+
+        details.push({
+          id: n.id,
+          post: n.post,
+          candidate: cand ? { serial: cand.serial_number, name: cand.name, adm: cand.admission_no } : null,
+          proposer: prop ? { serial: prop.serial_number, name: prop.name, adm: prop.admission_no } : null,
+          seconder: sec ? { serial: sec.serial_number, name: sec.name, adm: sec.admission_no } : null
+        });
+      }
+
+      return { total: existingNoms.length, remapped: remappedCount, details };
+    };
+
+
     // ─── GET ENDPOINTS ────────────────────────────────────────────────────────
 
     if (action === 'getPublicNominations') {
@@ -669,8 +746,8 @@ export default async function handler(req, res) {
       }
 
       await sql`DELETE FROM nominal_roll`;
-      await sql`DELETE FROM nominations`;
-      await sql`UPDATE settings SET value='false' WHERE key IN ('validListPublished', 'finalListPublished', 'isRollFinalized')`;
+      // DO NOT DELETE NOMINATIONS! Preserve nominations and auto-remap
+      await sql`UPDATE settings SET value='false' WHERE key IN ('validListPublished', 'finalListPublished', 'isRollFinalized', 'draftRollPublished')`;
       await sql`DELETE FROM settings WHERE key IN ('results_data', 'ballotPlan', 'countingMatrix')`;
       
       const isLegacy = body.headers && body.headers.some(h => String(h).toUpperCase().includes('CLASS'));
@@ -716,9 +793,42 @@ export default async function handler(req, res) {
           FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
         `;
       }
-      return jsonOut(res, { ok: true, count: toInsert.length });
+
+      // Automatically re-map existing nominations against newly uploaded roll
+      const remapResult = await remapNominationsWithRoll();
+
+      return jsonOut(res, { ok: true, count: toInsert.length, remappedNominations: remapResult.remapped, totalNominations: remapResult.total });
     }
 
+    if (action === 'adminClearNominalRoll') {
+      const isRollFinal = await getSetting('isRollFinalized');
+      if (isRollFinal === 'true') {
+        return errOut(res, 'Nominal Roll is finalized and locked. Please unfinalize with admin password before clearing the roll.', 400);
+      }
+
+      const countRows = await sql`SELECT COUNT(*)::int as count FROM nominal_roll`;
+      const clearedCount = countRows[0]?.count || 0;
+
+      // Delete nominal roll data ALONE
+      await sql`DELETE FROM nominal_roll`;
+
+      // Serials in nominations reset to NULL, while keeping admission numbers, names, classes, departments, and posts fully intact!
+      await sql`UPDATE nominations SET candidate_serial = NULL, proposer_serial = NULL, seconder_serial = NULL`;
+
+      // Reset publication and finalized state for the nominal roll
+      await setSetting('draftRollPublished', 'false');
+      await setSetting('isRollFinalized', 'false');
+
+      const nomsRows = await sql`SELECT COUNT(*)::int as count FROM nominations`;
+      const preservedNominations = nomsRows[0]?.count || 0;
+
+      return jsonOut(res, { ok: true, clearedCount, preservedNominations });
+    }
+
+    if (action === 'adminRemapNominations') {
+      const remapResult = await remapNominationsWithRoll();
+      return jsonOut(res, { ok: true, ...remapResult });
+    }
 
     if (action === 'adminAddStudent') {
       const isRollFinal = await getSetting('isRollFinalized');
@@ -740,6 +850,7 @@ export default async function handler(req, res) {
         UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
         FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
       `;
+      await remapNominationsWithRoll();
       return jsonOut(res, { ok: true });
     }
 
@@ -764,6 +875,7 @@ export default async function handler(req, res) {
         UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
         FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
       `;
+      await remapNominationsWithRoll();
       return jsonOut(res, { ok: true });
     }
 
@@ -784,6 +896,7 @@ export default async function handler(req, res) {
         UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
         FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
       `;
+      await remapNominationsWithRoll();
       return jsonOut(res, { ok: true });
     }
 
@@ -804,17 +917,7 @@ export default async function handler(req, res) {
       }
 
       if (body.matchNominations && existingNoms.length > 0) {
-        for (const n of existingNoms) {
-          const cand = await sql`SELECT serial_number FROM nominal_roll WHERE admission_no = ${n.candidate_admission}`;
-          const prop = await sql`SELECT serial_number FROM nominal_roll WHERE admission_no = ${n.proposer_admission}`;
-          const sec = await sql`SELECT serial_number FROM nominal_roll WHERE admission_no = ${n.seconder_admission}`;
-          
-          await sql`UPDATE nominations SET 
-            candidate_serial = ${cand[0]?.serial_number || null},
-            proposer_serial = ${prop[0]?.serial_number || null},
-            seconder_serial = ${sec[0]?.serial_number || null}
-          WHERE id = ${n.id}`;
-        }
+        await remapNominationsWithRoll();
       }
 
       await setSetting('isRollFinalized', 'true');
