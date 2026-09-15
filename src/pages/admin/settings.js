@@ -65,6 +65,20 @@ export async function renderSettings(container) {
           </div>
         </div>
         
+        <!-- Backup & Disaster Recovery -->
+        <div class="mt-8 border border-sky-500/30 bg-sky-950/20 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div class="flex items-start gap-4">
+            <div class="text-3xl">💾</div>
+            <div>
+              <h4 class="font-bold text-sky-400 text-lg">Full Data Backup & Disaster Recovery</h4>
+              <p class="text-sky-200/70 text-sm mt-1">Export or restore the entire election database: Nominal Roll, Corrections, Nominations, Booths, Ballots, Counting Matrices, and Certified Results. Includes automatic pre-restore safety snapshots and 1-click rollbacks.</p>
+            </div>
+          </div>
+          <a href="#/admin/backup" class="btn bg-sky-600 hover:bg-sky-500 text-white font-semibold px-5 py-2.5 whitespace-nowrap shadow-lg shadow-sky-900/40">
+            Open Backup Center &rarr;
+          </a>
+        </div>
+
         <!-- Danger Zone -->
         <div class="mt-8 border border-rose-500/30 bg-rose-950/20 rounded-2xl p-6">
           <div class="flex items-start gap-4">

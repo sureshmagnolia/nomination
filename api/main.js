@@ -140,6 +140,16 @@ export default async function handler(req, res) {
           timestamp VARCHAR(100)
         );
       `;
+      await sql`
+        CREATE TABLE IF NOT EXISTS backup_snapshots (
+          id VARCHAR(64) PRIMARY KEY,
+          snapshot_name VARCHAR(255) NOT NULL,
+          trigger_type VARCHAR(50) NOT NULL,
+          created_at VARCHAR(100) NOT NULL,
+          summary_json TEXT NOT NULL,
+          data_json TEXT NOT NULL
+        );
+      `;
       await sql`INSERT INTO settings (key, value) VALUES ('draftRollPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('validListPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('finalListPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
@@ -891,6 +901,393 @@ export default async function handler(req, res) {
 
       await sql`DELETE FROM nominations WHERE id = ${id}`;
       return jsonOut(res, { ok: true, deletedId: id });
+    }
+
+    // ─── BACKUP & RESTORE SUITE ───────────────────────────────────────────────
+
+    const ensureBackupTable = async () => {
+      await sql`
+        CREATE TABLE IF NOT EXISTS backup_snapshots (
+          id VARCHAR(64) PRIMARY KEY,
+          snapshot_name VARCHAR(255) NOT NULL,
+          trigger_type VARCHAR(50) NOT NULL,
+          created_at VARCHAR(100) NOT NULL,
+          summary_json TEXT NOT NULL,
+          data_json TEXT NOT NULL
+        );
+      `;
+    };
+
+    const restoreDatabasePayload = async (backupData, options = {}) => {
+      const modules = options.selectedModules || {
+        nominalRoll: true,
+        rollCorrections: true,
+        posts: true,
+        nominations: true,
+        settings: true
+      };
+      const restoreMode = options.restoreMode || 'full_wipe_and_replace';
+      const restoredCounts = {
+        nominalRoll: 0,
+        rollCorrections: 0,
+        posts: 0,
+        nominations: 0,
+        settings: 0
+      };
+      const nowIso = new Date().toISOString();
+
+      // 1. Nominal Roll
+      if (modules.nominalRoll && Array.isArray(backupData.data?.nominal_roll)) {
+        if (restoreMode === 'full_wipe_and_replace') {
+          await sql`DELETE FROM nominal_roll`;
+        }
+        const rollItems = backupData.data.nominal_roll;
+        const batchSize = 50;
+        for (let i = 0; i < rollItems.length; i += batchSize) {
+          const batch = rollItems.slice(i, i + batchSize);
+          await Promise.all(batch.map(r => 
+            sql`
+              INSERT INTO nominal_roll (serial_number, name, class, admission_no, dept)
+              VALUES (${String(r.serial_number || '')}, ${String(r.name || '')}, ${String(r.class || '')}, ${String(r.admission_no || '')}, ${String(r.dept || '')})
+              ON CONFLICT (serial_number) DO UPDATE SET
+                name = EXCLUDED.name,
+                class = EXCLUDED.class,
+                admission_no = EXCLUDED.admission_no,
+                dept = EXCLUDED.dept
+            `
+          ));
+        }
+        restoredCounts.nominalRoll = rollItems.length;
+      }
+
+      // 2. Roll Corrections
+      if (modules.rollCorrections && Array.isArray(backupData.data?.roll_corrections)) {
+        if (restoreMode === 'full_wipe_and_replace') {
+          await sql`DELETE FROM roll_corrections`;
+        }
+        const corrItems = backupData.data.roll_corrections;
+        for (const c of corrItems) {
+          await sql`
+            INSERT INTO roll_corrections (id, admission_no, student_name, department, class_name, correction_type, details, contact_info, status, admin_notes, timestamp)
+            VALUES (${c.id}, ${c.admission_no}, ${c.student_name}, ${c.department || ''}, ${c.class_name || ''}, ${c.correction_type || ''}, ${c.details || ''}, ${c.contact_info || ''}, ${c.status || 'Pending'}, ${c.admin_notes || ''}, ${c.timestamp || nowIso})
+            ON CONFLICT (id) DO UPDATE SET
+              status = EXCLUDED.status,
+              admin_notes = EXCLUDED.admin_notes
+          `;
+        }
+        restoredCounts.rollCorrections = corrItems.length;
+      }
+
+      // 3. Posts
+      if (modules.posts && Array.isArray(backupData.data?.posts)) {
+        if (restoreMode === 'full_wipe_and_replace') {
+          await sql`DELETE FROM posts`;
+        }
+        const postItems = backupData.data.posts;
+        for (const p of postItems) {
+          await sql`
+            INSERT INTO posts (post, female_only, final_year_ineligible, year_restriction, dept_restriction)
+            VALUES (${p.post}, ${p.femaleOnly ? true : false}, ${p.finalYearIneligible ? true : false}, ${p.yearRestriction || null}, ${p.deptRestriction || null})
+            ON CONFLICT (post) DO UPDATE SET
+              female_only = EXCLUDED.female_only,
+              final_year_ineligible = EXCLUDED.final_year_ineligible,
+              year_restriction = EXCLUDED.year_restriction,
+              dept_restriction = EXCLUDED.dept_restriction
+          `;
+        }
+        restoredCounts.posts = postItems.length;
+      }
+
+      // 4. Nominations
+      if (modules.nominations && Array.isArray(backupData.data?.nominations)) {
+        if (restoreMode === 'full_wipe_and_replace') {
+          await sql`DELETE FROM nominations`;
+        }
+        const nomItems = backupData.data.nominations;
+        const nomBatchSize = 50;
+        for (let i = 0; i < nomItems.length; i += nomBatchSize) {
+          const batch = nomItems.slice(i, i + nomBatchSize);
+          await Promise.all(batch.map(n => 
+            sql`
+              INSERT INTO nominations (
+                id, post, candidate_serial, candidate_admission, proposer_serial, proposer_admission,
+                seconder_serial, seconder_admission, status, withdrawal_status, candidate_name,
+                candidate_class, candidate_dept, gender, dob, proposer_name, proposer_class,
+                proposer_admission, proposer_dept, seconder_name, seconder_class, seconder_admission,
+                seconder_dept, rejection_reason
+              ) VALUES (
+                ${n.id}, ${n.post}, ${n.candidate_serial}, ${n.candidate_admission}, ${n.proposer_serial}, ${n.proposer_admission},
+                ${n.seconder_serial}, ${n.seconder_admission}, ${n.status || 'Pending'}, ${n.withdrawal_status || 'None'}, ${n.candidate_name || ''},
+                ${n.candidate_class || ''}, ${n.candidate_dept || ''}, ${n.gender || ''}, ${n.dob || ''}, ${n.proposer_name || ''}, ${n.proposer_class || ''},
+                ${n.proposer_admission || ''}, ${n.proposer_dept || ''}, ${n.seconder_name || ''}, ${n.seconder_class || ''}, ${n.seconder_admission || ''},
+                ${n.seconder_dept || ''}, ${n.rejection_reason || null}
+              )
+              ON CONFLICT (id) DO UPDATE SET
+                status = EXCLUDED.status,
+                withdrawal_status = EXCLUDED.withdrawal_status,
+                rejection_reason = EXCLUDED.rejection_reason
+            `
+          ));
+        }
+        restoredCounts.nominations = nomItems.length;
+      }
+
+      // 5. Settings
+      if (modules.settings && Array.isArray(backupData.data?.settings)) {
+        const settingItems = backupData.data.settings;
+        for (const s of settingItems) {
+          if (s.key === 'adminPassword' || s.key === 'adminOTP') continue;
+          await setSetting(s.key, s.value);
+        }
+        restoredCounts.settings = settingItems.length;
+      }
+
+      return restoredCounts;
+    };
+
+    if (action === 'adminExportBackup') {
+      const enteredPwd = body.password || getAuthToken(req);
+      const pwdRows = await sql`SELECT value FROM settings WHERE key = 'adminPassword'`;
+      const realPwd = pwdRows.length > 0 ? pwdRows[0].value : 'admin123';
+      const isPwdValid = enteredPwd === realPwd;
+      let isSessionValid = false;
+      if (!isPwdValid && enteredPwd) {
+        const sess = await sql`SELECT token FROM admin_sessions WHERE token = ${enteredPwd}`;
+        isSessionValid = sess.length > 0;
+      }
+      if (!isPwdValid && !isSessionValid) {
+        return errOut(res, 'Unauthorized: Invalid Admin Credentials', 401);
+      }
+
+      await ensureBackupTable();
+
+      const [rollRows, correctionRows, postRows, nominationRows, settingRows] = await Promise.all([
+        sql`SELECT serial_number, name, class, admission_no, dept FROM nominal_roll ORDER BY serial_number ASC`,
+        sql`SELECT * FROM roll_corrections ORDER BY timestamp DESC`,
+        sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction" FROM posts`,
+        sql`SELECT * FROM nominations ORDER BY created_at ASC`,
+        sql`SELECT key, value FROM settings WHERE key NOT IN ('adminPassword', 'adminOTP')`
+      ]);
+
+      const nowIso = new Date().toISOString();
+      const cName = (await getSetting('collegeName')) || 'Government Victoria College, Palakkad';
+      const cShort = (await getSetting('collegeShortName')) || 'GVC';
+      const eYear = (await getSetting('electionYear')) || new Date().getFullYear().toString();
+
+      const counts = {
+        nominalRoll: rollRows.length,
+        rollCorrections: correctionRows.length,
+        posts: postRows.length,
+        nominations: nominationRows.length,
+        settingsCount: settingRows.length,
+        isRollFinalized: (await getSetting('isRollFinalized')) === 'true',
+        draftRollPublished: (await getSetting('draftRollPublished')) === 'true',
+        resultsRecorded: !!(await getSetting('results_data'))
+      };
+
+      const dataPayload = {
+        nominal_roll: rollRows,
+        roll_corrections: correctionRows,
+        posts: postRows,
+        nominations: nominationRows,
+        settings: settingRows
+      };
+
+      const dataStr = JSON.stringify(dataPayload);
+      const checksum = crypto.createHash('sha256').update(dataStr).digest('hex');
+
+      const backupPackage = {
+        metadata: {
+          app: 'College Union Election Portal',
+          schemaVersion: '2.0',
+          exportedAt: nowIso,
+          collegeName: cName,
+          collegeShortName: cShort,
+          electionYear: eYear,
+          counts,
+          checksum
+        },
+        data: dataPayload
+      };
+
+      // Save internal snapshot (retain up to 10)
+      try {
+        const snapId = 'SNAP_' + Date.now();
+        await sql`
+          INSERT INTO backup_snapshots (id, snapshot_name, trigger_type, created_at, summary_json, data_json)
+          VALUES (${snapId}, ${'Export Snapshot (' + nowIso.slice(0, 16).replace('T', ' ') + ')'}, 'export', ${nowIso}, ${JSON.stringify(counts)}, ${JSON.stringify(backupPackage)})
+        `;
+        await sql`
+          DELETE FROM backup_snapshots WHERE id NOT IN (
+            SELECT id FROM backup_snapshots ORDER BY created_at DESC LIMIT 10
+          )
+        `;
+      } catch (err) {
+        console.error('Snapshot store warning:', err);
+      }
+
+      return jsonOut(res, backupPackage);
+    }
+
+    if (action === 'adminGetSnapshots') {
+      await ensureBackupTable();
+      const rows = await sql`
+        SELECT id, snapshot_name as "snapshotName", trigger_type as "triggerType", created_at as "createdAt", summary_json as "summaryJson"
+        FROM backup_snapshots
+        ORDER BY created_at DESC
+        LIMIT 10
+      `;
+      const snapshots = rows.map(r => ({
+        id: r.id,
+        snapshotName: r.snapshotName,
+        triggerType: r.triggerType,
+        createdAt: r.createdAt,
+        summary: r.summaryJson ? JSON.parse(r.summaryJson) : {}
+      }));
+      return jsonOut(res, snapshots);
+    }
+
+    if (action === 'adminDownloadSnapshot') {
+      await ensureBackupTable();
+      const snapId = body.snapshotId;
+      if (!snapId) return errOut(res, 'Snapshot ID is required.');
+      const rows = await sql`SELECT data_json FROM backup_snapshots WHERE id = ${snapId}`;
+      if (!rows.length) return errOut(res, 'Snapshot not found.');
+      return jsonOut(res, JSON.parse(rows[0].data_json));
+    }
+
+    if (action === 'adminRestoreBackup') {
+      const enteredPwd = body.password;
+      const pwdRows = await sql`SELECT value FROM settings WHERE key = 'adminPassword'`;
+      const realPwd = pwdRows.length > 0 ? pwdRows[0].value : 'admin123';
+      if (!enteredPwd || enteredPwd !== realPwd) {
+        return errOut(res, 'Incorrect admin password. Restore denied.', 401);
+      }
+
+      if (body.confirmPhrase !== 'CONFIRM RESTORE') {
+        return errOut(res, 'Security validation failed: Confirmation phrase "CONFIRM RESTORE" is required.', 400);
+      }
+
+      const backupData = body.backupData;
+      if (!backupData || !backupData.data) {
+        return errOut(res, 'Invalid backup format: Missing data payload.', 400);
+      }
+
+      await ensureBackupTable();
+
+      // ── Pre-Restore Safety Snapshot ──
+      const preRestoreSnapId = 'PRE_RESTORE_' + Date.now();
+      const nowIso = new Date().toISOString();
+      try {
+        const [curRoll, curCorr, curPosts, curNoms, curSettings] = await Promise.all([
+          sql`SELECT serial_number, name, class, admission_no, dept FROM nominal_roll`,
+          sql`SELECT * FROM roll_corrections`,
+          sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction" FROM posts`,
+          sql`SELECT * FROM nominations`,
+          sql`SELECT key, value FROM settings WHERE key NOT IN ('adminPassword', 'adminOTP')`
+        ]);
+
+        const preCounts = {
+          nominalRoll: curRoll.length,
+          rollCorrections: curCorr.length,
+          posts: curPosts.length,
+          nominations: curNoms.length,
+          settingsCount: curSettings.length
+        };
+
+        const prePackage = {
+          metadata: {
+            app: 'College Union Election Portal',
+            schemaVersion: '2.0',
+            exportedAt: nowIso,
+            type: 'pre_restore_safety_snapshot',
+            counts: preCounts
+          },
+          data: {
+            nominal_roll: curRoll,
+            roll_corrections: curCorr,
+            posts: curPosts,
+            nominations: curNoms,
+            settings: curSettings
+          }
+        };
+
+        await sql`
+          INSERT INTO backup_snapshots (id, snapshot_name, trigger_type, created_at, summary_json, data_json)
+          VALUES (${preRestoreSnapId}, ${'Pre-Restore Safety Snapshot (' + nowIso.slice(0, 16).replace('T', ' ') + ')'}, 'pre_restore', ${nowIso}, ${JSON.stringify(preCounts)}, ${JSON.stringify(prePackage)})
+        `;
+      } catch (snapErr) {
+        console.error('Failed to create pre-restore snapshot:', snapErr);
+      }
+
+      const restoredCounts = await restoreDatabasePayload(backupData, {
+        selectedModules: body.selectedModules,
+        restoreMode: body.restoreMode
+      });
+
+      return jsonOut(res, {
+        ok: true,
+        message: 'System restore completed successfully.',
+        restoredCounts,
+        preRestoreSnapshotId: preRestoreSnapId
+      });
+    }
+
+    if (action === 'adminRevertSnapshot') {
+      const enteredPwd = body.password;
+      const pwdRows = await sql`SELECT value FROM settings WHERE key = 'adminPassword'`;
+      const realPwd = pwdRows.length > 0 ? pwdRows[0].value : 'admin123';
+      if (!enteredPwd || enteredPwd !== realPwd) {
+        return errOut(res, 'Incorrect admin password. Revert denied.', 401);
+      }
+
+      const snapId = body.snapshotId;
+      if (!snapId) return errOut(res, 'Snapshot ID is required.');
+      await ensureBackupTable();
+
+      const snapRows = await sql`SELECT data_json FROM backup_snapshots WHERE id = ${snapId}`;
+      if (!snapRows.length) return errOut(res, 'Snapshot record not found.');
+
+      const backupPackage = JSON.parse(snapRows[0].data_json);
+      const restoredCounts = await restoreDatabasePayload(backupPackage, {
+        selectedModules: { nominalRoll: true, rollCorrections: true, posts: true, nominations: true, settings: true },
+        restoreMode: 'full_wipe_and_replace'
+      });
+
+      return jsonOut(res, {
+        ok: true,
+        message: 'System successfully reverted to snapshot.',
+        restoredCounts
+      });
+    }
+
+    if (action === 'adminRunAudit') {
+      const enteredPwd = body.password || getAuthToken(req);
+      const pwdRows = await sql`SELECT value FROM settings WHERE key = 'adminPassword'`;
+      const realPwd = pwdRows.length > 0 ? pwdRows[0].value : 'admin123';
+      if (!enteredPwd || enteredPwd !== realPwd) {
+        return errOut(res, 'Unauthorized: Invalid credentials', 401);
+      }
+
+      const [rollCount, postCount, nomCount, resultsRaw, ballotPlanRaw, boothDataRaw] = await Promise.all([
+        sql`SELECT COUNT(*) as count FROM nominal_roll`,
+        sql`SELECT COUNT(*) as count FROM posts`,
+        sql`SELECT COUNT(*) as count FROM nominations WHERE status = 'Valid'`,
+        getSetting('results_data'),
+        getSetting('ballotPlan'),
+        getSetting('booths_data')
+      ]);
+
+      const report = {
+        nominalRoll: { pass: Number(rollCount[0].count) > 0, count: Number(rollCount[0].count) },
+        posts: { pass: Number(postCount[0].count) > 0, count: Number(postCount[0].count) },
+        nominations: { pass: Number(nomCount[0].count) >= 0, count: Number(nomCount[0].count) },
+        booths: { pass: !!boothDataRaw },
+        ballots: { pass: !!ballotPlanRaw },
+        results: { pass: !!resultsRaw }
+      };
+
+      return jsonOut(res, { ok: true, report });
     }
 
     return errOut(res, `Unknown or unimplemented action: ${action}`);

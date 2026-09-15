@@ -566,4 +566,25 @@ export const api = {
     bgPost({ action: 'adminSaveSchedule', password, ...scheduleData });
     return Promise.resolve({ ok: true });
   },
+
+  // ─── Backup & Restore Suite ─────────────────────────────────────────────────
+
+  adminExportBackup: (password) => post({ action: 'adminExportBackup', password }),
+
+  adminGetSnapshots: (password) => get({ action: 'adminGetSnapshots', password }),
+
+  adminDownloadSnapshot: (password, snapshotId) =>
+    post({ action: 'adminDownloadSnapshot', password, snapshotId }),
+
+  adminRestoreBackup: async (password, payload) => {
+    const res = await post({ action: 'adminRestoreBackup', password, ...payload });
+    _cache = {}; // Clear all cache so fresh state reflects across UI
+    return res;
+  },
+
+  adminRevertSnapshot: async (password, snapshotId) => {
+    const res = await post({ action: 'adminRevertSnapshot', password, snapshotId });
+    _cache = {};
+    return res;
+  },
 };
