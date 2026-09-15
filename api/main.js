@@ -541,6 +541,11 @@ export default async function handler(req, res) {
       return jsonOut(res, { ok: true });
     }
 
+    if (action === 'adminRestoreWithdrawal') {
+      await sql`UPDATE nominations SET withdrawal_status = 'None' WHERE id = ${body.id}`;
+      return jsonOut(res, { ok: true });
+    }
+
     if (action === 'adminPublishValidList') {
       await setSetting('validListPublished', 'true');
       return jsonOut(res, { ok: true });
