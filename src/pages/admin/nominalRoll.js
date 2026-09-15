@@ -24,20 +24,24 @@ async function reloadRollData(main, pwd) {
   `;
 
   try {
-    const [nominalRoll, settings] = await Promise.all([
-      api.getNominalRoll(),
-      api.getSettings()
+    const [nominalRoll, settings, corrections] = await Promise.all([
+      api.getNominalRoll().catch(() => []),
+      api.adminGetSettings(pwd),
+      api.adminGetRollCorrections(pwd).catch(() => [])
     ]);
-    renderNominalRollUI(main, pwd, nominalRoll, settings);
+    renderNominalRollUI(main, pwd, nominalRoll, settings, corrections);
   } catch (e) {
     main.innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
   }
 }
 
-function renderNominalRollUI(main, pwd, nominalRoll, settings) {
+function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = []) {
   const isFinal = settings.nominalRollFinalized === 'true' || settings.isRollFinalized === 'true';
+  const isDraft = !isFinal && settings.draftRollPublished === 'true';
+  const isUnpublished = !isFinal && !isDraft;
   let students = [...nominalRoll];
   let filterText = '';
+  let showCorrections = false;
 
   const allClasses = [...new Set(nominalRoll.map(s => String(s['CLASS']).trim()))].sort();
   const allDepts = [...new Set(nominalRoll.map(s => String(s['Dept'] || '–').trim()))].sort();
@@ -152,28 +156,96 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
       <div class="page-enter space-y-6">
         ${uploadPanelHtml}
 
-        ${isFinal ? `
-          <div class="glass rounded-xl p-4 border border-emerald-500/30 bg-emerald-500/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
-            <div class="flex items-center gap-3">
-              <span class="text-2xl">🔒</span>
-              <div>
-                <div class="text-emerald-300 font-bold text-sm flex items-center gap-2">
-                  Nominal Roll is Finalized & Locked
-                  <span class="badge badge-valid text-[10px] py-0.5 px-2">READ-ONLY</span>
-                </div>
-                <div class="text-slate-300 text-xs mt-0.5">Voter list is locked against adding, editing, or deleting students. To make changes, unfinalize with your Admin Password.</div>
+        <!-- Publication Stage Status Banner -->
+        <div class="glass rounded-xl p-4 border ${isFinal ? 'border-emerald-500/30 bg-emerald-500/10' : (isDraft ? 'border-amber-500/30 bg-amber-500/10' : 'border-slate-700 bg-slate-800/40')} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">${isFinal ? '🔒' : (isDraft ? '📋' : '⏳')}</span>
+            <div>
+              <div class="font-bold text-sm flex items-center gap-2 ${isFinal ? 'text-emerald-300' : (isDraft ? 'text-amber-300' : 'text-slate-300')}">
+                ${isFinal ? 'Nominal Roll Finalized & Locked' : (isDraft ? 'Draft Nominal Roll Published' : 'Nominal Roll Unpublished')}
+                <span class="badge ${isFinal ? 'badge-valid' : (isDraft ? 'badge-pending' : 'bg-slate-700 text-slate-300')} text-[10px] py-0.5 px-2">
+                  ${isFinal ? 'PUBLIC (1, 2, 3...)' : (isDraft ? 'PUBLIC (D1, D2, D3...)' : 'HIDDEN FROM PUBLIC')}
+                </span>
+              </div>
+              <div class="text-slate-400 text-xs mt-0.5">
+                ${isFinal ? 'Voter list is locked and read-only. Standard 1, 2, 3... serial numbers are active.' : (isDraft ? 'Draft list is live to students with provisional D1, D2... Sl. numbers. Editing is enabled and student correction requests can be submitted.' : 'The voter list is currently not published to the public. Publish draft when ready for student review.')}
               </div>
             </div>
-            <button id="btnUnfinalizeBanner" class="btn bg-rose-500/20 text-rose-300 border border-rose-500/50 hover:bg-rose-500/30 text-xs py-2 px-3 shrink-0">🔓 Unfinalize Roll</button>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            ${isUnpublished ? `
+              <button id="btnPublishDraft" class="btn btn-sm btn-primary bg-amber-600 hover:bg-amber-500 text-white font-medium">📢 Publish Draft Roll</button>
+            ` : ''}
+            ${isDraft ? `
+              <button id="btnUnpublishDraft" class="btn btn-sm btn-secondary border-rose-500/30 text-rose-300 hover:bg-rose-500/20">🚫 Unpublish Draft</button>
+            ` : ''}
+            ${isFinal ? `
+              <button id="btnUnfinalizeBanner" class="btn bg-rose-500/20 text-rose-300 border border-rose-500/50 hover:bg-rose-500/30 text-xs py-2 px-3">🔓 Unfinalize Roll</button>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Student Correction Requests (if any exist) -->
+        ${corrections && corrections.length > 0 ? `
+          <div class="glass rounded-xl border border-amber-500/30 overflow-hidden shadow-lg">
+            <div class="flex items-center justify-between p-4 bg-amber-500/10 cursor-pointer select-none" id="toggleCorrectionsPanel">
+              <div class="flex items-center gap-2.5">
+                <span class="text-xl">📝</span>
+                <div>
+                  <strong class="text-white text-sm">Student Correction Requests</strong>
+                  <span class="text-xs text-amber-300 ml-2">(${corrections.filter(c => c.status === 'Pending').length} Pending / ${corrections.length} Total)</span>
+                </div>
+              </div>
+              <span id="corrChevron" class="text-slate-400 text-sm">▼ View Requests</span>
+            </div>
+            <div id="correctionsPanelBody" class="p-4 space-y-3 bg-black/20 border-t border-amber-500/20 hidden">
+              <div class="overflow-x-auto">
+                <table class="data-table text-xs">
+                  <thead><tr>
+                    <th>Date</th>
+                    <th>Adm. No</th>
+                    <th>Student Name</th>
+                    <th>Class / Dept</th>
+                    <th>Issue Type</th>
+                    <th>Details</th>
+                    <th>Contact</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr></thead>
+                  <tbody>
+                    ${corrections.map(c => `
+                      <tr>
+                        <td class="whitespace-nowrap text-slate-400 font-mono text-[10px]">${c.timestamp ? new Date(c.timestamp).toLocaleDateString() : '–'}</td>
+                        <td class="font-mono text-indigo-300 font-bold">${esc(c.admission_no)}</td>
+                        <td class="font-bold text-white">${esc(c.student_name)}</td>
+                        <td class="text-slate-300">${esc(c.class_name || '–')} / ${esc(c.department || '–')}</td>
+                        <td><span class="badge badge-pending text-[10px]">${esc(c.correction_type)}</span></td>
+                        <td class="max-w-xs text-slate-300">${esc(c.details)}</td>
+                        <td class="text-slate-400 text-[10px]">${esc(c.contact_info || '–')}</td>
+                        <td><span class="badge ${c.status === 'Resolved' ? 'badge-valid' : (c.status === 'Dismissed' ? 'bg-slate-700 text-slate-400' : 'badge-pending')} text-[10px]">${esc(c.status)}</span></td>
+                        <td>
+                          <div class="flex gap-1.5">
+                            ${c.status !== 'Resolved' ? `<button class="btn btn-xs btn-success resolve-corr" data-id="${esc(c.id)}">Resolve</button>` : ''}
+                            ${c.status !== 'Dismissed' ? `<button class="btn btn-xs btn-secondary dismiss-corr" data-id="${esc(c.id)}">Dismiss</button>` : ''}
+                          </div>
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         ` : ''}
 
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h3 class="text-xl font-bold text-white">Nominal Roll Management</h3>
-            <p class="text-slate-400 text-sm">Manage student data and finalize the official voter list.</p>
+            <p class="text-slate-400 text-sm">Manage student data, review draft edits, and finalize the official voter list.</p>
           </div>
           <div class="flex flex-wrap gap-2">
+            ${isUnpublished ? `<button id="btnPublishDraftTop" class="btn btn-warning bg-amber-600 hover:bg-amber-500 text-white">📢 Publish Draft Roll</button>` : ''}
+            ${isDraft ? `<button id="btnUnpublishDraftTop" class="btn btn-secondary border-rose-500/30 text-rose-300 hover:bg-rose-500/20">🚫 Unpublish Draft</button>` : ''}
             ${!isFinal ? `<button id="btnAddNew" class="btn btn-success">➕ Add Student</button>` : ''}
             <button id="btnPrintRoll" class="btn btn-secondary">🖨️ Print Roll</button>
             ${!isFinal ? `<button id="btnFinalize" class="btn btn-primary">🔒 Finalize & Lock Roll</button>` : ''}
@@ -196,7 +268,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
           <div class="overflow-x-auto">
             <table class="data-table">
               <thead><tr>
-                <th>Sl. No</th>
+                <th class="w-24 text-center">${isDraft ? 'Draft Sl. No' : 'Sl. No'}</th>
                 <th>Admission No</th>
                 <th>Name</th>
                 <th>Class</th>
@@ -206,7 +278,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
               <tbody>
                 ${filtered.length ? filtered.map(s => `
                   <tr>
-                    <td class="font-bold text-indigo-400">${esc(s['Nominal Roll Serial Number'])}</td>
+                    <td class="text-center font-bold font-mono ${isDraft ? 'text-amber-400' : 'text-indigo-400'}">${isDraft ? 'D' : ''}${esc(s['Nominal Roll Serial Number'])}</td>
                     <td class="font-mono text-xs">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
                     <td class="text-white font-medium">${esc(s['NAME'])}</td>
                     <td class="text-slate-300 text-sm">${esc(s['CLASS'])}</td>
@@ -554,33 +626,101 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
       }
     } // end if (!isFinal)
 
-    // Finalize button handler (only present if !isFinal)
-    if (main.querySelector('#btnFinalize')) {
-      main.querySelector('#btnFinalize').onclick = async (e) => {
-        if (!confirm('Are you sure you want to finalize the Nominal Roll?\n\nThis will lock the list and prevent any further additions, edits, or deletions.')) return;
-        
-        const doFinalize = async (matchNominations = false) => {
-          setLoading(e.target, true, 'Finalizing...');
-          try {
-            const res = await api.adminFinalizeRoll(pwd, { matchNominations });
-            if (res && res.requiresMatching) {
-              setLoading(e.target, false, '🔒 Finalize & Lock Roll');
-              if (confirm(`⚠️ ${res.count} existing nominations found!\n\nBecause you edited the Nominal Roll, their Serial Numbers have shifted.\n\nWould you like the system to automatically remap them using their Admission Numbers?`)) {
-                return await doFinalize(true);
-              } else {
-                return; // Admin cancelled the remap, so we don't finalize.
-              }
-            }
-            showToast('Nominal Roll Finalized & Locked Successfully!', 'success');
-            await reloadRollData(main, pwd);
-          } catch (err) {
-            showToast(err.message, 'error');
-            setLoading(e.target, false, '🔒 Finalize & Lock Roll');
-          }
-        };
-        await doFinalize(false);
+    // Publish Draft handlers
+    const handlePublishDraft = async (e) => {
+      setLoading(e.target, true, 'Publishing Draft...');
+      try {
+        await api.adminPublishDraftRoll(pwd);
+        showToast('Draft Nominal Roll published! Serial numbers are set to D1, D2...', 'success');
+        await reloadRollData(main, pwd);
+      } catch (err) {
+        showToast(err.message, 'error');
+        setLoading(e.target, false, '📢 Publish Draft Roll');
+      }
+    };
+    if (main.querySelector('#btnPublishDraft')) main.querySelector('#btnPublishDraft').onclick = handlePublishDraft;
+    if (main.querySelector('#btnPublishDraftTop')) main.querySelector('#btnPublishDraftTop').onclick = handlePublishDraft;
+
+    // Unpublish Draft handlers
+    const handleUnpublishDraft = async (e) => {
+      if (!confirm('Unpublish the Draft Nominal Roll? Public visitors will no longer be able to see it.')) return;
+      setLoading(e.target, true, 'Unpublishing...');
+      try {
+        await api.adminUnpublishDraftRoll(pwd);
+        showToast('Draft Nominal Roll unpublished.', 'success');
+        await reloadRollData(main, pwd);
+      } catch (err) {
+        showToast(err.message, 'error');
+        setLoading(e.target, false, '🚫 Unpublish Draft');
+      }
+    };
+    if (main.querySelector('#btnUnpublishDraft')) main.querySelector('#btnUnpublishDraft').onclick = handleUnpublishDraft;
+    if (main.querySelector('#btnUnpublishDraftTop')) main.querySelector('#btnUnpublishDraftTop').onclick = handleUnpublishDraft;
+
+    // Corrections Panel Toggle
+    const togglePanel = main.querySelector('#toggleCorrectionsPanel');
+    if (togglePanel) {
+      togglePanel.onclick = () => {
+        const body = main.querySelector('#correctionsPanelBody');
+        const chev = main.querySelector('#corrChevron');
+        if (body) {
+          const isHidden = body.classList.toggle('hidden');
+          if (chev) chev.textContent = isHidden ? '▼ View Requests' : '▲ Hide Requests';
+        }
       };
     }
+
+    // Resolve / Dismiss Correction Requests
+    main.querySelectorAll('.resolve-corr').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.dataset.id;
+        try {
+          await api.adminUpdateRollCorrection(pwd, id, 'Resolved');
+          showToast('Correction marked as Resolved.', 'success');
+          await reloadRollData(main, pwd);
+        } catch (err) { showToast(err.message, 'error'); }
+      };
+    });
+
+    main.querySelectorAll('.dismiss-corr').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.dataset.id;
+        try {
+          await api.adminUpdateRollCorrection(pwd, id, 'Dismissed');
+          showToast('Correction marked as Dismissed.', 'success');
+          await reloadRollData(main, pwd);
+        } catch (err) { showToast(err.message, 'error'); }
+      };
+    });
+
+    // Finalize button handler
+    const handleFinalize = async (e) => {
+      if (!confirm('Are you sure you want to finalize the Nominal Roll?\n\nThis will lock the list and prevent any further additions, edits, or deletions.')) return;
+      
+      const doFinalize = async (matchNominations = false) => {
+        setLoading(e.target, true, 'Finalizing...');
+        try {
+          const res = await api.adminFinalizeRoll(pwd, { matchNominations });
+          if (res && res.requiresMatching) {
+            setLoading(e.target, false, '🔒 Finalize & Lock Roll');
+            if (confirm(`⚠️ ${res.count} existing nominations found!\n\nBecause you edited the Nominal Roll, their Serial Numbers have shifted.\n\nWould you like the system to automatically remap them using their Admission Numbers?`)) {
+              return await doFinalize(true);
+            } else {
+              return; // Admin cancelled the remap, so we don't finalize.
+            }
+          }
+          showToast('Nominal Roll Finalized & Locked Successfully!', 'success');
+          await reloadRollData(main, pwd);
+        } catch (err) {
+          showToast(err.message, 'error');
+          setLoading(e.target, false, '🔒 Finalize & Lock Roll');
+        }
+      };
+      await doFinalize(false);
+    };
+
+    if (main.querySelector('#btnFinalize')) main.querySelector('#btnFinalize').onclick = handleFinalize;
+    if (main.querySelector('#btnFinalizeTop')) main.querySelector('#btnFinalizeTop').onclick = handleFinalize;
 
     // Unfinalize handlers (modal with admin password, no OTP)
     const openUnfinalizeModal = () => {

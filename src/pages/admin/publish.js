@@ -26,6 +26,8 @@ export async function renderAdminPublish(container) {
 }
 
 function renderPublishPage(main, settings, nominations, postsData, pwd) {
+  const isRollFinal = settings.nominalRollFinalized === 'true' || settings.isRollFinalized === 'true';
+  const isDraftRoll = !isRollFinal && settings.draftRollPublished === 'true';
   const validPublished = settings.validListPublished === 'true';
   const finalPublished = settings.finalListPublished === 'true';
 
@@ -36,6 +38,46 @@ function renderPublishPage(main, settings, nominations, postsData, pwd) {
           <h3 class="text-xl font-bold text-white">Publish & Print Lists</h3>
           <p class="text-slate-400 text-sm">Control public visibility and generate official printed lists.</p>
         </div>
+      </div>
+
+      <!-- Nominal Roll publish -->
+      <div class="glass rounded-xl p-6 space-y-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <h4 class="font-bold text-white text-base">📜 Nominal Roll (Voter List) Stages</h4>
+            <p class="text-slate-400 text-sm mt-1">Control public visibility of Draft Roll (D1, D2...) and Finalized Voter Roll (1, 2, 3...).</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button data-nav="/admin/nominal-roll" class="btn btn-secondary btn-sm">👥 Manage Roll</button>
+            <span class="badge ${isRollFinal ? 'badge-valid' : (isDraftRoll ? 'badge-pending' : 'bg-slate-700 text-slate-300')} text-sm">
+              ${isRollFinal ? '🔒 Finalized' : (isDraftRoll ? '📋 Draft Published' : '⏳ Unpublished')}
+            </span>
+          </div>
+        </div>
+
+        ${!isDraftRoll && !isRollFinal ? `
+        <div class="alert alert-warning text-sm">
+          ℹ️ The Nominal Roll is currently <strong>Unpublished</strong> (hidden from students). Publish the Draft Roll so students can verify their details and submit corrections.
+        </div>
+        <button id="publishDraftRollBtn" class="btn btn-primary bg-amber-600 hover:bg-amber-500 text-white">📢 Publish Draft Nominal Roll</button>
+        ` : ''}
+
+        ${isDraftRoll ? `
+        <div class="alert alert-success text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <span>📋 <strong>Draft Roll is currently live to students</strong> with <strong>D1, D2...</strong> Sl. numbers. Students can submit correction requests.</span>
+          <div class="flex gap-2">
+            <button id="unpublishDraftRollBtn" class="btn btn-sm" style="background:#dc2626;color:white;border:none;">🚫 Unpublish Draft</button>
+            <button data-nav="/admin/nominal-roll" class="btn btn-sm btn-primary">🔒 Finalize in Roll Management</button>
+          </div>
+        </div>
+        ` : ''}
+
+        ${isRollFinal ? `
+        <div class="alert alert-success text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <span>✅ <strong>Nominal Roll is Finalized & Locked.</strong> Serial numbers are standard <strong>1, 2, 3...</strong></span>
+          <button data-nav="/admin/nominal-roll" class="btn btn-sm bg-rose-500/20 text-rose-300 border border-rose-500/50 hover:bg-rose-500/30">🔓 Unfinalize</button>
+        </div>
+        ` : ''}
       </div>
 
       <!-- Valid list publish -->
@@ -135,7 +177,7 @@ function renderPublishPage(main, settings, nominations, postsData, pwd) {
     
     let html = `
       <div style="text-align:center;margin-bottom:30px;border-bottom:2px solid #000;padding-bottom:15px">
-        <div style="font-size:12px;color:#444">${CONFIG.COLLEGE_NAME}</div>
+        <div style="font-size:12px;color:#444">${esc(settings.collegeName || CONFIG.COLLEGE_NAME)}</div>
         <h1 style="margin:5px 0;font-size:22px;text-transform:uppercase">College Union Election 2026-27</h1>
         <h2 style="margin:0;font-size:18px;color:#000">${isFinal ? 'FINAL LIST OF ELIGIBLE CANDIDATES' : 'LIST OF VALID NOMINATIONS'}</h2>
       </div>
@@ -194,6 +236,35 @@ function renderPublishPage(main, settings, nominations, postsData, pwd) {
   main.querySelector('#btnPrintFinal').addEventListener('click', () => printList('final'));
 
   // ── Action Buttons ────────────────────────────────────────────────────────
+  main.querySelector('#publishDraftRollBtn')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    setLoading(btn, true, 'Publishing Draft...');
+    try {
+      await api.adminPublishDraftRoll(pwd);
+      showToast('Draft Nominal Roll published! Serial numbers are set to D1, D2...', 'success');
+      const newSets = await api.adminGetSettings(pwd);
+      renderPublishPage(main, newSets, nominations, postsData, pwd);
+    } catch (err) {
+      showToast(`Failed: ${err.message}`, 'error');
+      setLoading(btn, false, '📢 Publish Draft Nominal Roll');
+    }
+  });
+
+  main.querySelector('#unpublishDraftRollBtn')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    if (!confirm('Unpublish the Draft Nominal Roll? Students will no longer be able to view it.')) return;
+    setLoading(btn, true, 'Unpublishing...');
+    try {
+      await api.adminUnpublishDraftRoll(pwd);
+      showToast('Draft Nominal Roll unpublished.', 'success');
+      const newSets = await api.adminGetSettings(pwd);
+      renderPublishPage(main, newSets, nominations, postsData, pwd);
+    } catch (err) {
+      showToast(`Failed: ${err.message}`, 'error');
+      setLoading(btn, false, '🚫 Unpublish Draft');
+    }
+  });
+
   main.querySelector('#publishValidBtn')?.addEventListener('click', async (e) => {
     const btn = e.currentTarget;
     if (!confirm('Are you sure you want to publish the valid nominations list? This will be visible to all students.')) return;

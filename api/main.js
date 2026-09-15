@@ -125,10 +125,28 @@ export default async function handler(req, res) {
         );
       `;
       await sql`CREATE UNIQUE INDEX IF NOT EXISTS unq_candidate_active ON nominations (candidate_serial) WHERE status != 'Rejected'`;
+      await sql`
+        CREATE TABLE IF NOT EXISTS roll_corrections (
+          id VARCHAR(64) PRIMARY KEY,
+          admission_no VARCHAR(255) NOT NULL,
+          student_name VARCHAR(255) NOT NULL,
+          department VARCHAR(255),
+          class_name VARCHAR(255),
+          correction_type VARCHAR(100) NOT NULL,
+          details TEXT NOT NULL,
+          contact_info VARCHAR(255),
+          status VARCHAR(50) DEFAULT 'Pending',
+          admin_notes TEXT,
+          timestamp VARCHAR(100)
+        );
+      `;
+      await sql`INSERT INTO settings (key, value) VALUES ('draftRollPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('validListPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('finalListPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('resultsPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('resultsLocked', 'false') ON CONFLICT (key) DO NOTHING;`;
+      await sql`INSERT INTO settings (key, value) VALUES ('collegeName', 'Government Victoria College, Palakkad') ON CONFLICT (key) DO NOTHING;`;
+      await sql`INSERT INTO settings (key, value) VALUES ('collegeShortName', 'GVC') ON CONFLICT (key) DO NOTHING;`;
 
       return jsonOut(res, { ok: true, message: 'Database initialized' });
     }
@@ -168,6 +186,7 @@ export default async function handler(req, res) {
 
     if (action === 'getSettings' || action === 'adminGetSettings') {
       const rollFinal = (await getSetting('isRollFinalized')) || 'false';
+      const draftPub  = (await getSetting('draftRollPublished')) || 'false';
       const obj = {
         validListPublished: await getSetting('validListPublished'),
         finalListPublished: await getSetting('finalListPublished'),
@@ -175,9 +194,10 @@ export default async function handler(req, res) {
         resultsLocked: (await getSetting('resultsLocked')) || 'false',
         isRollFinalized: rollFinal,
         nominalRollFinalized: rollFinal,
-        collegeName: await getSetting('collegeName'),
-        collegeShortName: await getSetting('collegeShortName'),
-        electionYear: await getSetting('electionYear'),
+        draftRollPublished: draftPub,
+        collegeName: (await getSetting('collegeName')) || 'Government Victoria College, Palakkad',
+        collegeShortName: (await getSetting('collegeShortName')) || 'GVC',
+        electionYear: (await getSetting('electionYear')) || new Date().getFullYear().toString(),
         notificationDate: await getSetting('notificationDate')
       };
       if (action === 'adminGetSettings') {
@@ -746,6 +766,16 @@ export default async function handler(req, res) {
       return jsonOut(res, { ok: true });
     }
 
+    if (action === 'adminPublishDraftRoll') {
+      await setSetting('draftRollPublished', 'true');
+      return jsonOut(res, { ok: true, draftRollPublished: 'true' });
+    }
+
+    if (action === 'adminUnpublishDraftRoll') {
+      await setSetting('draftRollPublished', 'false');
+      return jsonOut(res, { ok: true, draftRollPublished: 'false' });
+    }
+
     if (action === 'adminFinalizeRoll') {
       const existingNoms = await sql`SELECT id, candidate_admission, proposer_admission, seconder_admission FROM nominations`;
       if (existingNoms.length > 0 && !body.matchNominations) {
@@ -767,6 +797,7 @@ export default async function handler(req, res) {
       }
 
       await setSetting('isRollFinalized', 'true');
+      await setSetting('draftRollPublished', 'true');
       return jsonOut(res, { ok: true, isRollFinalized: 'true' });
     }
 
@@ -779,7 +810,87 @@ export default async function handler(req, res) {
       }
 
       await setSetting('isRollFinalized', 'false');
+      await setSetting('draftRollPublished', 'true');
       return jsonOut(res, { ok: true, isRollFinalized: 'false' });
+    }
+
+    if (action === 'submitRollCorrection') {
+      const draftPub = await getSetting('draftRollPublished');
+      const isFinal = await getSetting('isRollFinalized');
+      if (isFinal === 'true') {
+        return errOut(res, 'The Nominal Roll has been finalized. Correction requests are no longer accepted.');
+      }
+      if (draftPub !== 'true') {
+        return errOut(res, 'The Draft Nominal Roll is not currently open for correction requests.');
+      }
+      if (!body.admissionNo || !body.studentName || !body.details) {
+        return errOut(res, 'Admission number, student name, and details are required.');
+      }
+
+      await sql`
+        CREATE TABLE IF NOT EXISTS roll_corrections (
+          id VARCHAR(64) PRIMARY KEY,
+          admission_no VARCHAR(255) NOT NULL,
+          student_name VARCHAR(255) NOT NULL,
+          department VARCHAR(255),
+          class_name VARCHAR(255),
+          correction_type VARCHAR(100) NOT NULL,
+          details TEXT NOT NULL,
+          contact_info VARCHAR(255),
+          status VARCHAR(50) DEFAULT 'Pending',
+          admin_notes TEXT,
+          timestamp VARCHAR(100)
+        );
+      `;
+
+      const id = 'CORR_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+      const ts = new Date().toISOString();
+      await sql`
+        INSERT INTO roll_corrections (id, admission_no, student_name, department, class_name, correction_type, details, contact_info, status, timestamp)
+        VALUES (${id}, ${body.admissionNo}, ${body.studentName}, ${body.department || ''}, ${body.className || ''}, ${body.correctionType || 'General'}, ${body.details}, ${body.contactInfo || ''}, 'Pending', ${ts})
+      `;
+      return jsonOut(res, { ok: true, id });
+    }
+
+    if (action === 'adminGetRollCorrections') {
+      await sql`
+        CREATE TABLE IF NOT EXISTS roll_corrections (
+          id VARCHAR(64) PRIMARY KEY,
+          admission_no VARCHAR(255) NOT NULL,
+          student_name VARCHAR(255) NOT NULL,
+          department VARCHAR(255),
+          class_name VARCHAR(255),
+          correction_type VARCHAR(100) NOT NULL,
+          details TEXT NOT NULL,
+          contact_info VARCHAR(255),
+          status VARCHAR(50) DEFAULT 'Pending',
+          admin_notes TEXT,
+          timestamp VARCHAR(100)
+        );
+      `;
+      const rows = await sql`SELECT * FROM roll_corrections ORDER BY timestamp DESC`;
+      return jsonOut(res, rows);
+    }
+
+    if (action === 'adminUpdateRollCorrection') {
+      const status = body.status || 'Resolved';
+      const notes = body.notes || '';
+      await sql`UPDATE roll_corrections SET status = ${status}, admin_notes = ${notes} WHERE id = ${body.id}`;
+      return jsonOut(res, { ok: true });
+    }
+
+    if (action === 'adminDeleteNomination') {
+      const enteredPwd = body.confirmPassword || body.password;
+      const rows = await sql`SELECT value FROM settings WHERE key = 'adminPassword'`;
+      const realPwd = rows.length > 0 ? rows[0].value : 'admin123';
+      if (!enteredPwd || enteredPwd !== realPwd) {
+        return errOut(res, 'Incorrect admin password. Deletion denied.', 401);
+      }
+      const id = body.id;
+      if (!id) return errOut(res, 'Nomination ID is required.', 400);
+
+      await sql`DELETE FROM nominations WHERE id = ${id}`;
+      return jsonOut(res, { ok: true, deletedId: id });
     }
 
     return errOut(res, `Unknown or unimplemented action: ${action}`);

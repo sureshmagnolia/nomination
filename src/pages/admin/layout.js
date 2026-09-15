@@ -35,10 +35,13 @@ export function getAdminPassword() {
 
 export function renderAdminLayout(container, activeSection, contentHtml) {
   const pwd = getAdminPassword();
+  const cachedShort = localStorage.getItem('cachedCollegeShortName') || CONFIG.COLLEGE_SHORT_NAME;
+
   if (pwd) {
     api.initAdminData(pwd);
     api.adminGetSettings(pwd).then(sets => {
       const shortName = sets.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
+      localStorage.setItem('cachedCollegeShortName', shortName);
       const logoEl = container.querySelector('#layout-college-logo');
       const nameEl = container.querySelector('#layout-college-name');
       if (logoEl) logoEl.textContent = shortName.charAt(0);
@@ -52,9 +55,9 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
     <aside class="no-print w-60 flex-shrink-0 glass border-r border-white/10 flex flex-col">
       <div class="p-5 border-b border-white/10">
         <div class="flex items-center gap-3">
-          <div id="layout-college-logo" class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">${CONFIG.COLLEGE_SHORT_NAME.charAt(0)}</div>
+          <div id="layout-college-logo" class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">${cachedShort.charAt(0)}</div>
           <div>
-            <p id="layout-college-name" class="font-bold text-white text-xs">${CONFIG.COLLEGE_SHORT_NAME} Election</p>
+            <p id="layout-college-name" class="font-bold text-white text-xs">${cachedShort} Election</p>
             <p class="text-slate-500 text-xs">Admin Panel</p>
           </div>
         </div>

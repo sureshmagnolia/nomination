@@ -81,15 +81,91 @@ function renderVerifyTable(main, noms, pwd) {
         <td class="text-xs">${esc(n.seconderName || n.seconder?.NAME || 'N/A')}</td>
         <td><span class="badge badge-${(n.status || 'pending').toLowerCase()}">${esc(n.status)}</span></td>
         <td>
-          <div class="flex gap-2">
-            <button class="btn btn-primary btn-sm verify-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white" data-id="${esc(n.id)}" data-action="Valid"
+          <div class="flex items-center gap-1.5">
+            <button class="btn btn-primary btn-xs verify-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white" data-id="${esc(n.id)}" data-action="Valid"
               ${n.status === 'Valid' ? 'disabled' : ''}>Valid</button>
-            <button class="btn btn-secondary btn-sm verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white" data-id="${esc(n.id)}" data-action="Rejected"
+            <button class="btn btn-secondary btn-xs verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white" data-id="${esc(n.id)}" data-action="Rejected"
               ${n.status === 'Rejected' ? 'disabled' : ''}>Reject</button>
+            <button class="btn btn-secondary btn-xs delete-nom-btn bg-red-900/20 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/30 px-2" data-id="${esc(n.id)}" data-candidate="${esc(n.candidateName || n.candidate?.NAME || '')}" data-post="${esc(n.post)}" title="Delete Nomination">🗑️</button>
           </div>
         </td>
       </tr>`).join('') : `<tr><td colspan="8" class="text-center text-slate-500 py-12">No nominations found matching those criteria.</td></tr>`;
   };
+
+  // Add Delete Warning Modal to main
+  main.insertAdjacentHTML('beforeend', `
+    <div id="deleteNomModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
+      <div class="glass w-full max-w-md rounded-2xl p-6 shadow-2xl border border-red-500/30">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center text-xl font-bold border border-red-500/30">⚠️</div>
+          <div>
+            <h4 class="text-xl font-bold text-white">Delete Nomination</h4>
+            <p class="text-slate-400 text-xs">Permanent deletion of submission</p>
+          </div>
+        </div>
+        <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-3 my-4 text-xs text-red-200 leading-relaxed">
+          <strong>WARNING:</strong> This will permanently delete the nomination of <strong id="delNomCandidate" class="text-white"></strong> for <strong id="delNomPost" class="text-white"></strong> (ID: <span id="delNomId" class="font-mono text-amber-300"></span>). This cannot be undone.
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Enter Admin Password to Confirm</label>
+            <input type="password" id="delNomPwdInput" class="field w-full" placeholder="Admin Password" autocomplete="current-password">
+          </div>
+          <div id="delNomError" class="text-rose-400 text-xs font-medium hidden"></div>
+        </div>
+        <div class="flex gap-2 mt-6">
+          <button type="button" id="btnCancelDelNom" class="btn btn-secondary flex-1">Cancel</button>
+          <button type="button" id="btnConfirmDelNom" class="btn bg-red-600 hover:bg-red-500 text-white flex-1 font-bold">Permanently Delete</button>
+        </div>
+      </div>
+    </div>
+  `);
+
+  let pendingDeleteId = null;
+  const delModal = main.querySelector('#deleteNomModal');
+  const delInput = main.querySelector('#delNomPwdInput');
+  const delErr = main.querySelector('#delNomError');
+  const btnConfirmDel = main.querySelector('#btnConfirmDelNom');
+
+  const closeDelModal = () => {
+    delModal?.classList.add('hidden');
+    pendingDeleteId = null;
+    if (delInput) delInput.value = '';
+    if (delErr) { delErr.textContent = ''; delErr.classList.add('hidden'); }
+  };
+
+  main.querySelector('#btnCancelDelNom')?.addEventListener('click', closeDelModal);
+
+  main.querySelector('#btnConfirmDelNom')?.addEventListener('click', async () => {
+    const enteredPwd = (delInput?.value || '').trim();
+    if (!enteredPwd) {
+      if (delErr) { delErr.textContent = '❌ Please enter admin password.'; delErr.classList.remove('hidden'); }
+      delInput?.focus();
+      return;
+    }
+    if (!pendingDeleteId) return;
+
+    btnConfirmDel.disabled = true;
+    btnConfirmDel.textContent = 'Deleting...';
+    if (delErr) delErr.classList.add('hidden');
+
+    try {
+      await api.adminDeleteNomination(enteredPwd, pendingDeleteId);
+      const idx = allNoms.findIndex(x => x.id === pendingDeleteId);
+      if (idx !== -1) allNoms.splice(idx, 1);
+      showToast(`Nomination ${pendingDeleteId} permanently deleted.`, 'success');
+      closeDelModal();
+      applyFilters();
+    } catch (err) {
+      const msg = err.message.includes('password') ? 'Incorrect admin password.' : err.message;
+      if (delErr) { delErr.textContent = `❌ ${msg}`; delErr.classList.remove('hidden'); }
+      showToast(msg, 'error');
+      delInput?.focus();
+    } finally {
+      btnConfirmDel.disabled = false;
+      btnConfirmDel.textContent = 'Permanently Delete';
+    }
+  });
 
   const applyFilters = () => {
     const q = main.querySelector('#nomSearch').value.toLowerCase();
@@ -122,6 +198,20 @@ function renderVerifyTable(main, noms, pwd) {
   applyFilters(); // Initial render with sorting applied
 
   main.querySelector('#nomTableBody').addEventListener('click', async (e) => {
+    // Delete nomination button click
+    const delBtn = e.target.closest('.delete-nom-btn');
+    if (delBtn) {
+      pendingDeleteId = delBtn.dataset.id;
+      main.querySelector('#delNomCandidate').textContent = delBtn.dataset.candidate || 'Unknown';
+      main.querySelector('#delNomPost').textContent = delBtn.dataset.post || 'Unknown';
+      main.querySelector('#delNomId').textContent = pendingDeleteId;
+      if (delInput) delInput.value = '';
+      if (delErr) { delErr.textContent = ''; delErr.classList.add('hidden'); }
+      delModal?.classList.remove('hidden');
+      setTimeout(() => delInput?.focus(), 50);
+      return;
+    }
+
     const btn = e.target.closest('.verify-btn');
     if (!btn) return;
     const id = btn.dataset.id;

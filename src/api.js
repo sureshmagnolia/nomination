@@ -248,6 +248,15 @@ export const api = {
     return Promise.resolve({ ok: true });
   },
 
+  adminDeleteNomination: async (password, id) => {
+    const res = await post({ action: 'adminDeleteNomination', password, confirmPassword: password, id });
+    invalidateCache('adminGetNominations');
+    invalidateCache('getPublicNominations');
+    invalidateCache('getValidNominations');
+    invalidateCache('getFinalNominations');
+    return res;
+  },
+
   adminApproveWithdrawal: (password, id) => {
     updateCache({ action: 'adminGetNominations', password }, (noms) => {
       const n = noms.find(x => x.id === id);
@@ -492,6 +501,27 @@ export const api = {
     invalidateCache('getNominalRoll');
     return { ok: true };
   },
+
+  adminPublishDraftRoll: async (password) => {
+    const res = await post({ action: 'adminPublishDraftRoll', password });
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    return res;
+  },
+
+  adminUnpublishDraftRoll: async (password) => {
+    const res = await post({ action: 'adminUnpublishDraftRoll', password });
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    return res;
+  },
+
+  submitRollCorrection: (payload) => post({ action: 'submitRollCorrection', ...payload }),
+
+  adminGetRollCorrections: (password) => get({ action: 'adminGetRollCorrections', password }),
+
+  adminUpdateRollCorrection: (password, id, status, notes = '') => 
+    post({ action: 'adminUpdateRollCorrection', password, id, status, notes }),
 
   adminFinalizeRoll: async (password, options = {}) => {
     const res = await post({ action: 'adminFinalizeRoll', password, ...options });

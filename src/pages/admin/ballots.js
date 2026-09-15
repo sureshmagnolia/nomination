@@ -75,12 +75,13 @@ export async function renderAdminBallots(container) {
     </div>
   `;
 
-  const triggerPrint = (html) => {
+  const triggerPrint = (html, sName = null) => {
+    const brand = sName || CONFIG.COLLEGE_SHORT_NAME;
     const printWin = window.open('', '_blank');
     printWin.document.write(`
       <html>
         <head>
-          <title>Official Ballots - ${CONFIG.COLLEGE_SHORT_NAME} Election</title>
+          <title>Official Ballots - ${brand} Election</title>
           <style>
             @media print {
               .no-print { display: none !important; }
@@ -345,7 +346,8 @@ export async function renderAdminBallots(container) {
       const plan = planResponse;
 
       const year = schedule.electionYear || new Date().getFullYear();
-      const collegeName = settings.collegeName || 'Government Victoria College Palakkad';
+      const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
+      const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
 
       const renderBooks = (booksOrHtml) => {
         if (!booksOrHtml || (Array.isArray(booksOrHtml) && booksOrHtml.length === 0)) return '-';
@@ -475,11 +477,11 @@ export async function renderAdminBallots(container) {
           </table>
 
           <div style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px; font-size: 12px; color: #666; text-align: center;">
-            Generated on ${new Date().toLocaleString()} | Official ${CONFIG.COLLEGE_SHORT_NAME} Election Portal
+            Generated on ${new Date().toLocaleString()} | Official ${esc(shortName || CONFIG.COLLEGE_SHORT_NAME)} Election Portal
           </div>
         </div>
       `;
-      triggerPrint(reportHtml);
+      triggerPrint(reportHtml, shortName);
     } catch (err) {
       showToast(err.message, 'error');
     }

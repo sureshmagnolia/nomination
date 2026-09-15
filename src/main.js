@@ -40,7 +40,12 @@ document.body.insertAdjacentHTML('afterbegin', `
   <div class="bg-blob bg-blob-3"></div>
 `);
 
-
+// Dynamically update document title from settings
+api.getSettings().then(sets => {
+  const short = sets.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
+  const year = sets.electionYear || new Date().getFullYear();
+  document.title = `${short} Election Portal ${year}`;
+}).catch(() => {});
 
 // ─── Router setup ─────────────────────────────────────────────────────────────
 const render = (fn) => (params) => {

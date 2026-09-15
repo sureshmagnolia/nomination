@@ -8,13 +8,27 @@ import { esc, setLoading, showToast, triggerPrint, todayFormatted } from '../uti
 import { CONFIG } from '../config.js';
 
 export async function renderWithdraw(container) {
+  let year = new Date().getFullYear();
+  let shortName = CONFIG.COLLEGE_SHORT_NAME;
+  let collegeName = CONFIG.COLLEGE_NAME;
+  try {
+    const [schedule, sets] = await Promise.all([
+      api.getPublicSchedule().catch(() => ({})),
+      api.getSettings().catch(() => ({}))
+    ]);
+    if (schedule.electionYear) year = schedule.electionYear;
+    if (sets.electionYear) year = sets.electionYear;
+    if (sets.collegeName) collegeName = sets.collegeName;
+    if (sets.collegeShortName) shortName = sets.collegeShortName;
+  } catch(e) {}
+
   container.innerHTML = publicLayout('Withdrawal Form', `
     <div id="loadingState" class="flex flex-col items-center justify-center py-24 gap-4">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 text-sm">Checking schedule...</p>
     </div>
     <div id="withdrawArea" class="hidden"></div>
-  `);
+  `, year, shortName);
 
   container.querySelector('#backToHome').addEventListener('click', () => router.navigate('/'));
 
@@ -88,7 +102,7 @@ export async function renderWithdraw(container) {
       setLoading(fetchBtn, true, 'Fetch Nomination Details');
       try {
         const nom = await api.getNomination(id, adm);
-        showDetails(area.querySelector('#nominationDetails'), nom, id, adm);
+        showDetails(area.querySelector('#nominationDetails'), nom, id, adm, collegeName);
       } catch (e) {
         area.querySelector('#nominationDetails').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
       } finally {
@@ -101,7 +115,7 @@ export async function renderWithdraw(container) {
   }
 }
 
-function showDetails(area, nom, id, adm) {
+function showDetails(area, nom, id, adm, collegeName = null) {
   if (nom.status !== 'Valid') {
     area.innerHTML = `<div class="alert alert-warning">⚠ This nomination has status <strong>${esc(nom.status)}</strong>. Only <strong>Valid</strong> nominations can be withdrawn.</div>`;
     return;
@@ -140,7 +154,7 @@ function showDetails(area, nom, id, adm) {
           <button id="printWithdrawal" class="btn btn-secondary">🖨️ Print Withdrawal Form</button>
         </div>
         <div class="print-zone mt-4">
-          ${buildWithdrawalPaper(id, nom)}
+          ${buildWithdrawalPaper(id, nom, collegeName)}
         </div>`;
       area.querySelector('#printWithdrawal').addEventListener('click', triggerPrint);
       showToast('Withdrawal request submitted!', 'success');
@@ -153,17 +167,18 @@ function showDetails(area, nom, id, adm) {
 
 }
 
-function buildWithdrawalPaper(id, nom) {
+function buildWithdrawalPaper(id, nom, collegeName = null) {
   const today = todayFormatted();
   const name = nom.candidate?.NAME || nom.candidateName || 'N/A';
   const cls  = nom.candidate?.CLASS || nom.candidateClass || 'N/A';
   const dept = nom.candidate?.Dept || nom.candidateDept || 'N/A';
+  const cName = collegeName || CONFIG.COLLEGE_NAME;
 
   return `
   <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-5">
     <div class="flex justify-between text-sm">
       <div>
-        <p class="font-bold text-white text-base">${esc(CONFIG.COLLEGE_NAME)}</p>
+        <p class="font-bold text-white text-base">${esc(cName)}</p>
         <p class="text-slate-400">College Union Election — Withdrawal Form</p>
       </div>
       <p class="text-slate-400 text-xs">Date: ${today}</p>
@@ -196,14 +211,22 @@ function buildWithdrawalPaper(id, nom) {
   </div>`;
 }
 
-function publicLayout(title, bodyHtml) {
+function publicLayout(title, bodyHtml, yearValue = '2026', shortName = null) {
+  const brandShort = shortName || CONFIG.COLLEGE_SHORT_NAME;
   return `
   <div class="page-enter min-h-screen">
-    <header class="no-print sticky top-0 z-10 border-b border-white/10 glass">
-      <div class="max-w-4xl mx-auto px-6 py-3 flex items-center gap-4">
-        <button id="backToHome" class="text-slate-400 hover:text-white transition text-sm">← Home</button>
-        <span class="text-slate-600">|</span>
-        <h1 class="font-bold text-white text-sm">${esc(title)}</h1>
+    <header class="no-print sticky top-0 z-50 border-b border-white/10 glass">
+      <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <button id="backToHome" class="btn btn-secondary btn-sm flex items-center gap-2">
+            <span class="text-lg">←</span> Home
+          </button>
+          <div class="h-6 w-px bg-white/10 mx-2"></div>
+          <h1 class="font-bold text-white text-lg tracking-tight">${esc(title)}</h1>
+        </div>
+        <div class="text-xs text-slate-500 font-medium hidden md:block uppercase tracking-widest">
+          ${esc(brandShort)} Election Portal ${yearValue}
+        </div>
       </div>
     </header>
     <main class="max-w-4xl mx-auto px-4 py-8">${bodyHtml}</main>

@@ -1,17 +1,18 @@
 import { api } from '../api.js';
 import { esc } from '../utils.js';
+import { CONFIG } from '../config.js';
 
 export async function renderHome(container) {
   // Show loading state for year fetch
   container.innerHTML = `<div class="min-h-screen flex items-center justify-center"><span class="spinner"></span></div>`;
   
   let year = new Date().getFullYear();
-  let collegeName = 'Government Victoria College, Palakkad';
-  let shortName = 'GVC';
+  let collegeName = CONFIG.COLLEGE_NAME;
+  let shortName = CONFIG.COLLEGE_SHORT_NAME;
 
   try {
     const [schedule, sets] = await Promise.all([
-      api.getPublicSchedule(),
+      api.getPublicSchedule().catch(() => ({})),
       api.getSettings().catch(() => ({}))
     ]);
     if (schedule.electionYear) year = schedule.electionYear;

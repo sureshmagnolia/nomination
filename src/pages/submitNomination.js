@@ -20,13 +20,17 @@ let captchaAnswer = '';
 
 export async function renderSubmitNomination(container) {
   let year = new Date().getFullYear();
+  let collegeName = CONFIG.COLLEGE_NAME;
+  let shortName = CONFIG.COLLEGE_SHORT_NAME;
   try {
     const [s, sets] = await Promise.all([
-      api.getPublicSchedule(),
+      api.getPublicSchedule().catch(() => ({})),
       api.getSettings().catch(() => ({}))
     ]);
     if (s.electionYear) year = s.electionYear;
     if (sets.electionYear) year = sets.electionYear;
+    if (sets.collegeName) collegeName = sets.collegeName;
+    if (sets.collegeShortName) shortName = sets.collegeShortName;
   } catch(e) {}
 
   container.innerHTML = publicLayout('Submit Nomination', `
@@ -35,7 +39,7 @@ export async function renderSubmitNomination(container) {
       <p class="text-slate-400 text-sm">Loading data...</p>
     </div>
     <div id="formArea" class="hidden"></div>
-  `, year);
+  `, year, shortName);
 
   container.querySelector('#backToHome').addEventListener('click', () => router.navigate('/'));
 
@@ -59,7 +63,7 @@ export async function renderSubmitNomination(container) {
       ? postsData
       : CONFIG.DEFAULT_POSTS;
 
-    renderForm(container, year);
+    renderForm(container, year, collegeName);
   } catch (e) {
     container.querySelector('#loadingState').innerHTML = `
       <div class="alert alert-error">${esc(e.message)}</div>
@@ -68,7 +72,7 @@ export async function renderSubmitNomination(container) {
   }
 }
 
-function renderForm(container, year) {
+function renderForm(container, year, collegeName) {
   const captcha = generateCaptcha();
   captchaAnswer = captcha.answer;
 
@@ -172,7 +176,7 @@ function renderForm(container, year) {
   });
 
   formArea.querySelector('#backHomeBtn')?.addEventListener('click', () => router.navigate('/'));
-  formArea.querySelector('#nomForm')?.addEventListener('submit', (e) => handleSubmit(e, formArea, year));
+  formArea.querySelector('#nomForm')?.addEventListener('submit', (e) => handleSubmit(e, formArea, year, collegeName));
 }
 
 function personBlock(role, label, isCandidate) {
@@ -260,7 +264,7 @@ function runValidation(formArea) {
   return warnings;
 }
 
-async function handleSubmit(e, formArea, yearValue) {
+async function handleSubmit(e, formArea, yearValue, collegeName) {
   e.preventDefault();
   const warnings = runValidation(formArea);
   if (warnings.length) { showToast('Please resolve all eligibility warnings first.', 'error'); return; }
@@ -307,7 +311,7 @@ async function handleSubmit(e, formArea, yearValue) {
 
     const result = await api.submitNomination(payload);
 
-    showPreview(formArea, result.id, { post, gender, day, month, year, dob: formattedDob, students }, yearValue);
+    showPreview(formArea, result.id, { post, gender, day, month, year, dob: formattedDob, students }, yearValue, collegeName);
     showToast(`Nomination submitted! ID: ${result.id}`, 'success');
   } catch (err) {
     showToast(`Submission failed: ${err.message}`, 'error');
@@ -316,14 +320,14 @@ async function handleSubmit(e, formArea, yearValue) {
   }
 }
 
-function showPreview(formArea, id, { post, gender, day, month, year, dob, students }, yearValue) {
+function showPreview(formArea, id, { post, gender, day, month, year, dob, students }, yearValue, collegeName) {
   const [candidate, proposer, seconder] = students;
   const dobDisplay = displayDob(day, month, year);
   const age = calculateAge(dob);
 
   const preview = formArea.querySelector('#previewSection');
   formArea.querySelector('#printZone').innerHTML =
-    buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, 'Pending', yearValue);
+    buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, 'Pending', yearValue, collegeName);
 
   preview.classList.remove('hidden');
   preview.scrollIntoView({ behavior: 'smooth' });
@@ -333,13 +337,14 @@ function showPreview(formArea, id, { post, gender, day, month, year, dob, studen
   preview.querySelector('#newNomBtn')?.addEventListener('click', () => renderSubmitNomination(formArea.closest('#app')));
 }
 
-export function buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, status = '', yearValue = '2026') {
+export function buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, status = '', yearValue = '2026', collegeName = null) {
   const today = todayFormatted();
+  const cName = collegeName || CONFIG.COLLEGE_NAME;
   return `
   <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-4">
     <div class="flex justify-between items-start text-sm">
       <div>
-        <p class="font-bold text-white text-base">${CONFIG.COLLEGE_NAME}</p>
+        <p class="font-bold text-white text-base">${esc(cName)}</p>
         <p class="text-slate-400">College Union Election ${yearValue}</p>
       </div>
       <div class="text-right">
@@ -391,7 +396,8 @@ function sectionBlock(label, s, gender = null, dob = null, age = null) {
   </div>`;
 }
 
-function publicLayout(title, bodyHtml, yearValue = '2026') {
+function publicLayout(title, bodyHtml, yearValue = '2026', shortName = null) {
+  const brandShort = shortName || CONFIG.COLLEGE_SHORT_NAME;
   return `
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-50 border-b border-white/10 glass">
@@ -404,7 +410,7 @@ function publicLayout(title, bodyHtml, yearValue = '2026') {
           <h1 class="font-bold text-white text-lg tracking-tight">${esc(title)}</h1>
         </div>
         <div class="text-xs text-slate-500 font-medium hidden md:block uppercase tracking-widest">
-          ${CONFIG.COLLEGE_SHORT_NAME} Election Portal ${yearValue}
+          ${esc(brandShort)} Election Portal ${yearValue}
         </div>
       </div>
     </header>
