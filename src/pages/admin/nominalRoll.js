@@ -497,7 +497,15 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
             if (usedHeaders === legacyHeaders) {
               classes = [...new Set(parsedRows.map(r => r[usedHeaders.indexOf('CLASS')]))].sort();
             } else {
-              classes = [...new Set(parsedRows.map(r => `${r[usedHeaders.indexOf('YEAR')]} ${r[usedHeaders.indexOf('STREAM')]} ${r[deptIdx]}`.trim()))].sort();
+              const formatYearPrefix = (y) => {
+                const u = String(y || '').trim().toUpperCase();
+                if (u === '1' || u === '1ST' || u === 'I') return '1ST YEAR';
+                if (u === '2' || u === '2ND' || u === 'II') return '2ND YEAR';
+                if (u === '3' || u === '3RD' || u === 'III') return '3RD YEAR';
+                if (u && !u.includes('YEAR')) return `${u} YEAR`;
+                return u;
+              };
+              classes = [...new Set(parsedRows.map(r => `${formatYearPrefix(r[usedHeaders.indexOf('YEAR')])} ${r[usedHeaders.indexOf('STREAM')]} ${r[deptIdx]}`.replace(/\s+/g, ' ').trim()))].sort();
             }
             const depts = [...new Set(parsedRows.map(r => r[deptIdx]))].sort();
 

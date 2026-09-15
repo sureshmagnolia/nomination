@@ -75,14 +75,15 @@ export function checkEligibility(student, postName, role, gender = null, allPost
 
   // 3. Year restriction
   const yr = String(rule.yearRestriction || '');
-  if (yr === '1' && !cls.includes('1ST YEAR')) warnings.push(`${role} must be a 1st Year student for this post.`);
-  if (yr === '2' && !cls.includes('2ND YEAR')) warnings.push(`${role} must be a 2nd Year student for this post.`);
-  if (yr === '3' && !cls.includes('3RD YEAR')) warnings.push(`${role} must be a 3rd Year student for this post.`);
-  if (yr === 'PG') {
-    const isPG = cls.includes('MA') || cls.includes('MSC') || cls.includes('MCOM') ||
-                 cls.includes('M.SC') || cls.includes('M.COM') || cls.includes('M.A');
-    if (!isPG) warnings.push(`${role} for PG Representative must be a PG student (MA/MSc/MCom).`);
-  }
+  const isYr1 = cls.includes('1ST YEAR') || /^\s*(1|1ST|I)\b/.test(cls) || /\b1ST\b/.test(cls);
+  const isYr2 = cls.includes('2ND YEAR') || /^\s*(2|2ND|II)\b/.test(cls) || /\b2ND\b/.test(cls);
+  const isYr3 = cls.includes('3RD YEAR') || /^\s*(3|3RD|III)\b/.test(cls) || /\b3RD\b/.test(cls);
+  const isPG  = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A|MBA|MCA)\b/.test(cls);
+
+  if (yr === '1' && !isYr1) warnings.push(`${role} must be a 1st Year student for this post.`);
+  if (yr === '2' && !isYr2) warnings.push(`${role} must be a 2nd Year student for this post.`);
+  if (yr === '3' && !isYr3) warnings.push(`${role} must be a 3rd Year student for this post.`);
+  if (yr === 'PG' && !isPG) warnings.push(`${role} for PG Representative must be a PG student (MA/MSc/MCom).`);
 
   // 4. Candidate-only rules
   if (role === 'Candidate') {
@@ -94,7 +95,7 @@ export function checkEligibility(student, postName, role, gender = null, allPost
         warnings.push(`The post of "${postName}" is reserved for female candidates only.`);
       }
       if (rule.finalYearIneligible) {
-        const isFinalYear = cls.includes('3RD YEAR') || cls.includes('2ND YEAR M');
+        const isFinalYear = isYr3 || cls.includes('3RD YEAR') || (isPG && (isYr2 || cls.includes('2ND YEAR')));
         if (isFinalYear) warnings.push(`Final year students are not eligible for "${postName}".`);
       }
     }

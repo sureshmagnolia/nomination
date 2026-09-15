@@ -634,10 +634,20 @@ export default async function handler(req, res) {
       
       const isLegacy = body.headers && body.headers.some(h => String(h).toUpperCase().includes('CLASS'));
       
+      const formatYearPrefix = (y) => {
+        const u = String(y || '').trim().toUpperCase();
+        if (u === '1' || u === '1ST' || u === 'I') return '1ST YEAR';
+        if (u === '2' || u === '2ND' || u === 'II') return '2ND YEAR';
+        if (u === '3' || u === '3RD' || u === 'III') return '3RD YEAR';
+        if (u && !u.includes('YEAR')) return `${u} YEAR`;
+        return u;
+      };
+
       const toInsert = body.rows.map(r => {
         let cl = r[2], adm = r[3], dpt = r[4];
         if (!isLegacy) {
-          cl = `${r[2] || ''} ${r[3] || ''} ${r[5] || ''}`.trim(); // Year + Stream + Dept
+          const yr = formatYearPrefix(r[2]);
+          cl = `${yr} ${r[3] || ''} ${r[5] || ''}`.replace(/\s+/g, ' ').trim(); // e.g. 1ST YEAR B.A Economics
           adm = r[4] || ''; // Admission No
           dpt = r[5] || ''; // Dept
         }

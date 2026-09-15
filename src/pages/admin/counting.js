@@ -142,9 +142,9 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         if (isPG) {
           yrs.add('PG');
         } else {
-          if (u.includes('1ST YEAR')) yrs.add('1');
-          if (u.includes('2ND YEAR')) yrs.add('2');
-          if (u.includes('3RD YEAR')) yrs.add('3');
+          if (u.includes('1ST YEAR') || /^\s*(1|1ST|I)\b/.test(u) || /\b1ST\b/.test(u)) yrs.add('1');
+          if (u.includes('2ND YEAR') || /^\s*(2|2ND|II)\b/.test(u) || /\b2ND\b/.test(u)) yrs.add('2');
+          if (u.includes('3RD YEAR') || /^\s*(3|3RD|III)\b/.test(u) || /\b3RD\b/.test(u)) yrs.add('3');
         }
       });
       return yrs;
