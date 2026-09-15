@@ -32,6 +32,70 @@ const checkAdmin = async (password, sessionToken, action) => {
   }
 };
 
+function getStudentYearLevelServer(cls) {
+  const c = String(cls || '').toUpperCase().trim();
+  const isPG = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A|MBA|MCA|MSW)\b/.test(c) || c.includes('POST GRADUATE') || c.includes('PG');
+  const isYr1 = c.includes('1ST') || /^\s*(1|1ST|I)\b/.test(c) || /\b1ST\s+YEAR\b/.test(c) || /\bI\s+(YEAR|UG|PG|DC|DEG|BA|BSC|BCOM|MA|MSC|MCOM)\b/.test(c);
+  const isYr2 = c.includes('2ND') || /^\s*(2|2ND|II)\b/.test(c) || /\b2ND\s+YEAR\b/.test(c) || /\bII\s+(YEAR|UG|PG|DC|DEG|BA|BSC|BCOM|MA|MSC|MCOM)\b/.test(c);
+  const isYr3 = c.includes('3RD') || /^\s*(3|3RD|III)\b/.test(c) || /\b3RD\s+YEAR\b/.test(c) || /\bIII\s+(YEAR|UG|DC|DEG|BA|BSC|BCOM)\b/.test(c);
+
+  if (isPG) {
+    if (isYr2) return '2_PG';
+    return '1_PG';
+  } else {
+    if (isYr3) return '3_UG';
+    if (isYr2) return '2_UG';
+    return '1_UG';
+  }
+}
+
+function isYearEligibleServer(cls, rule) {
+  if (!rule) return true;
+  const studentLvl = getStudentYearLevelServer(cls);
+  const mode = rule.yearRuleMode || rule.year_rule_mode || (rule.finalYearIneligible || rule.final_year_ineligible ? 'EXCLUDE' : ((rule.yearRestriction || rule.year_restriction) ? 'INCLUDE' : 'ALL'));
+
+  let targetYears = [];
+  const yrRaw = rule.yearRuleYears !== undefined ? rule.yearRuleYears : rule.year_rule_years;
+  if (Array.isArray(yrRaw)) {
+    targetYears = yrRaw;
+  } else if (typeof yrRaw === 'string' && yrRaw.trim()) {
+    targetYears = yrRaw.split(',').map(y => y.trim()).filter(Boolean);
+  } else {
+    const finalInelig = rule.finalYearIneligible || rule.final_year_ineligible;
+    const yrRestr = rule.yearRestriction || rule.year_restriction;
+    if (finalInelig) targetYears = ['3_UG', '2_PG'];
+    else if (yrRestr === '1') targetYears = ['1_UG'];
+    else if (yrRestr === '2') targetYears = ['2_UG'];
+    else if (yrRestr === '3') targetYears = ['3_UG'];
+    else if (yrRestr === 'PG') targetYears = ['1_PG', '2_PG'];
+    else if (yrRestr === 'UG') targetYears = ['1_UG', '2_UG', '3_UG'];
+    else if (yrRestr === '1,2') targetYears = ['1_UG', '2_UG'];
+  }
+
+  if (mode === 'ALL' || targetYears.length === 0) {
+    if ((rule.finalYearIneligible || rule.final_year_ineligible) && (studentLvl === '3_UG' || studentLvl === '2_PG')) return false;
+    return true;
+  }
+
+  const matches = (lvl, list) => {
+    if (list.includes(lvl)) return true;
+    if (lvl.endsWith('_UG') && list.includes('UG')) return true;
+    if (lvl.endsWith('_PG') && list.includes('PG')) return true;
+    if (lvl.startsWith('1_') && list.includes('1')) return true;
+    if (lvl.startsWith('2_') && list.includes('2')) return true;
+    if (lvl.startsWith('3_') && list.includes('3')) return true;
+    return false;
+  };
+
+  if (mode === 'INCLUDE') {
+    return matches(studentLvl, targetYears);
+  }
+  if (mode === 'EXCLUDE') {
+    return !matches(studentLvl, targetYears);
+  }
+  return true;
+}
+
 export default async function handler(req, res) {
   // CORS setup
   const origin = req.headers.origin || '*';
@@ -86,11 +150,15 @@ export default async function handler(req, res) {
           final_year_ineligible BOOLEAN,
           year_restriction VARCHAR(50),
           dept_restriction BOOLEAN,
-          restricted_dept VARCHAR(255)
+          restricted_dept VARCHAR(255),
+          year_rule_mode VARCHAR(20) DEFAULT 'ALL',
+          year_rule_years VARCHAR(255) DEFAULT ''
         );
       `;
       try {
         await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS restricted_dept VARCHAR(255);`;
+        await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS year_rule_mode VARCHAR(20) DEFAULT 'ALL';`;
+        await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS year_rule_years VARCHAR(255) DEFAULT '';`;
       } catch (e) {}
       await sql`
         CREATE TABLE IF NOT EXISTS nominal_roll (
@@ -280,13 +348,34 @@ export default async function handler(req, res) {
           final_year_ineligible as "finalYearIneligible", 
           year_restriction as "yearRestriction", 
           dept_restriction as "deptRestriction",
-          restricted_dept as "restrictedDept"
+          restricted_dept as "restrictedDept",
+          year_rule_mode as "yearRuleMode",
+          year_rule_years as "yearRuleYears"
         FROM posts
       `;
-      const normalized = posts.map(p => ({
-        ...p,
-        restrictedDept: p.restrictedDept || (p.deptRestriction && String(p.post || '').startsWith('Association Secretary ') ? p.post.replace('Association Secretary ', '').trim() : '')
-      }));
+      const normalized = posts.map(p => {
+        let yrYears = [];
+        if (p.yearRuleYears) {
+          yrYears = String(p.yearRuleYears).split(',').map(y => y.trim()).filter(Boolean);
+        } else {
+          // Backward compatibility from legacy fields
+          if (p.finalYearIneligible) yrYears = ['3_UG', '2_PG'];
+          else if (p.yearRestriction === '1') yrYears = ['1_UG'];
+          else if (p.yearRestriction === '2') yrYears = ['2_UG'];
+          else if (p.yearRestriction === '3') yrYears = ['3_UG'];
+          else if (p.yearRestriction === 'PG') yrYears = ['1_PG', '2_PG'];
+          else if (p.yearRestriction === 'UG') yrYears = ['1_UG', '2_UG', '3_UG'];
+          else if (p.yearRestriction === '1,2') yrYears = ['1_UG', '2_UG'];
+        }
+        const yrMode = p.yearRuleMode || (p.finalYearIneligible ? 'EXCLUDE' : (p.yearRestriction ? 'INCLUDE' : 'ALL'));
+
+        return {
+          ...p,
+          restrictedDept: p.restrictedDept || (p.deptRestriction && String(p.post || '').startsWith('Association Secretary ') ? p.post.replace('Association Secretary ', '').trim() : ''),
+          yearRuleMode: yrMode,
+          yearRuleYears: yrYears
+        };
+      });
       return jsonOut(res, normalized);
     }
 
@@ -440,6 +529,189 @@ export default async function handler(req, res) {
       const data = await getSetting('ballotPlan');
       if (!data) return errOut(res, 'No ballot plan generated yet.');
       return jsonOut(res, JSON.parse(data));
+    }
+
+    if (action === 'adminGenerateBallotPlan') {
+      const postsRows = await sql`
+        SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", 
+               year_restriction as "yearRestriction", dept_restriction as "deptRestriction",
+               restricted_dept as "restrictedDept", year_rule_mode as "yearRuleMode", year_rule_years as "yearRuleYears"
+        FROM posts
+      `;
+      const posts = postsRows.map(p => ({
+        ...p,
+        yearRuleMode: p.yearRuleMode || (p.finalYearIneligible ? 'EXCLUDE' : (p.yearRestriction ? 'INCLUDE' : 'ALL')),
+        yearRuleYears: p.yearRuleYears ? String(p.yearRuleYears).split(',').map(y => y.trim()).filter(Boolean) : []
+      }));
+
+      const nomRows = await sql`SELECT * FROM nominations WHERE status = 'Valid'`;
+      const candidates = nomRows.filter(n => n.withdrawal_status !== 'Approved');
+
+      const boothsDataRaw = await getSetting('booths_data');
+      const booths = boothsDataRaw ? JSON.parse(boothsDataRaw) : [];
+      booths.sort((a, b) => Number(a.boothNumber) - Number(b.boothNumber));
+
+      const students = await sql`SELECT serial_number as "Nominal Roll Serial Number", name as "NAME", class as "CLASS", admission_no as "ADMISION NO", dept as "Dept" FROM nominal_roll`;
+
+      const isYear = (p) => {
+        const name = String(p.post || '').toLowerCase();
+        return name.includes('representative') || name.includes('year rep') || (p.yearRuleMode && p.yearRuleMode !== 'ALL') || !!p.yearRestriction;
+      };
+      const isAssoc = (p) => {
+        const name = String(p.post || '').toLowerCase();
+        return name.includes('association') || name.includes('assoc') || !!p.deptRestriction;
+      };
+
+      const contestablePosts = posts.filter(p => {
+        const pCands = candidates.filter(c => c.post === p.post);
+        return pCands.length > 1;
+      });
+
+      let genSl = 1, repSl = 1, assocSl = 1;
+      let gbCount = 0, rbCount = 0, abCount = 0;
+
+      const standard = 50;
+      const threshold = 15;
+
+      const calcBooks = (count, start, prefix, currentGlobalBookCount) => {
+        if (!count || count <= 0) return { books: [], ids: '-', count: 0, nextCounter: currentGlobalBookCount };
+        let current = start;
+        let books = [];
+        const idPrefix = prefix === 'G' ? 'GB' : (prefix === 'R' ? 'RB' : 'AB');
+        let counter = currentGlobalBookCount;
+        let ids = [];
+
+        const createRange = (size) => {
+          counter++;
+          const id = idPrefix + counter;
+          ids.push(id);
+          const range = `${prefix}${current}-${current + size - 1}`;
+          current += size;
+          return { id, range };
+        };
+
+        if (count <= (standard + threshold)) {
+          books.push({ qty: 1, size: count, items: [createRange(count)] });
+        } else {
+          const fullBooks = Math.floor(count / standard);
+          const remainder = count % standard;
+          if (remainder === 0) {
+            let items = [];
+            for (let i = 0; i < fullBooks; i++) items.push(createRange(standard));
+            books.push({ qty: fullBooks, size: standard, items });
+          } else if (remainder <= threshold) {
+            let items = [];
+            for (let i = 0; i < fullBooks - 1; i++) items.push(createRange(standard));
+            if (items.length > 0) books.push({ qty: fullBooks - 1, size: standard, items });
+            const lastSize = standard + remainder;
+            books.push({ qty: 1, size: lastSize, items: [createRange(lastSize)] });
+          } else {
+            let items = [];
+            for (let i = 0; i < fullBooks; i++) items.push(createRange(standard));
+            books.push({ qty: fullBooks, size: standard, items });
+            books.push({ qty: 1, size: remainder, items: [createRange(remainder)] });
+          }
+        }
+
+        return { 
+          books, 
+          ids: ids.length === 1 ? ids[0] : `${ids[0]} to ${ids[ids.length - 1]}`, 
+          nextCounter: counter 
+        };
+      };
+
+      const boothMap = {};
+      booths.forEach(b => {
+        boothMap[b.boothNumber] = { general: null, reps: [], assocs: [] };
+      });
+
+      // 1. General
+      const genResults = [];
+      booths.forEach(b => {
+        const bClasses = (Array.isArray(b.classes) ? b.classes : JSON.parse(b.classes || '[]')).map(c => String(c).trim().toUpperCase());
+        const boothStudents = students.filter(s => bClasses.includes(String(s.CLASS || '').trim().toUpperCase()));
+        const count = boothStudents.length;
+        const start = genSl;
+        const end = start + count - 1;
+        const bookData = calcBooks(count, start, 'G', gbCount);
+        gbCount = bookData.nextCounter;
+
+        const data = { booth: b.boothNumber, count, start, end, books: bookData.books, bookIds: bookData.ids };
+        genResults.push(data);
+        boothMap[b.boothNumber].general = data;
+        genSl += count;
+      });
+
+      // 2. Reps (filtered using isYearEligibleServer)
+      const repResults = [];
+      const yrPosts = contestablePosts.filter(p => isYear(p) && !isAssoc(p));
+      yrPosts.forEach(p => {
+        booths.forEach(b => {
+          const bClasses = (Array.isArray(b.classes) ? b.classes : JSON.parse(b.classes || '[]')).map(c => String(c).trim().toUpperCase());
+          const boothStudents = students.filter(s => bClasses.includes(String(s.CLASS || '').trim().toUpperCase()));
+          const targetStudents = boothStudents.filter(s => {
+            const cls = String(s.CLASS || '').toUpperCase();
+            if (cls.includes('PH D') || cls.includes('PH.D')) return false;
+            return isYearEligibleServer(cls, p);
+          });
+
+          if (targetStudents.length > 0) {
+            const count = targetStudents.length;
+            const start = repSl;
+            const end = start + count - 1;
+            const bookData = calcBooks(count, start, 'R', rbCount);
+            rbCount = bookData.nextCounter;
+
+            const data = { post: p.post, booth: b.boothNumber, count, start, end, books: bookData.books, bookIds: bookData.ids };
+            repResults.push(data);
+            boothMap[b.boothNumber].reps.push(data);
+            repSl += count;
+          }
+        });
+      });
+
+      // 3. Assocs
+      const assocResults = [];
+      const aPosts = contestablePosts.filter(isAssoc);
+      aPosts.forEach(p => {
+        const prefix = 'Association Secretary';
+        let dept = String(p.restrictedDept || p.post || '').toUpperCase();
+        if (dept.includes(prefix.toUpperCase())) dept = dept.split(prefix.toUpperCase())[1].trim();
+        dept = dept.replace(/[-\s]/g, ' ').trim();
+
+        booths.forEach(b => {
+          const bClasses = (Array.isArray(b.classes) ? b.classes : JSON.parse(b.classes || '[]')).map(c => String(c).trim().toUpperCase());
+          const boothStudents = students.filter(s => bClasses.includes(String(s.CLASS || '').trim().toUpperCase()));
+          const targetStudents = boothStudents.filter(s => {
+            const sDept = String(s.Dept || '').trim().toUpperCase().replace(/[-\s]/g, ' ');
+            const sCls  = String(s.CLASS || '').trim().toUpperCase().replace(/[-\s]/g, ' ');
+            return sDept === dept || sDept.includes(dept) || sCls.includes(dept);
+          });
+
+          if (targetStudents.length > 0) {
+            const count = targetStudents.length;
+            const start = assocSl;
+            const end = start + count - 1;
+            const bookData = calcBooks(count, start, 'A', abCount);
+            abCount = bookData.nextCounter;
+
+            const data = { post: p.post, booth: b.boothNumber, count, start, end, books: bookData.books, bookIds: bookData.ids };
+            assocResults.push(data);
+            boothMap[b.boothNumber].assocs.push(data);
+            assocSl += count;
+          }
+        });
+      });
+
+      const plan = {
+        general: { results: genResults, total: genSl - 1 },
+        reps: { results: repResults, total: repSl - 1 },
+        assocs: { results: assocResults, total: assocSl - 1 },
+        boothAssignments: boothMap
+      };
+
+      await setSetting('ballotPlan', JSON.stringify(plan));
+      return jsonOut(res, { ok: true, plan });
     }
 
     if (action === 'adminGetNominalRollTemplate') {
@@ -639,7 +911,7 @@ export default async function handler(req, res) {
       if (existing.some(n => n.post === body.post && (n.proposer_serial === body.seconderSerial || n.seconder_serial === body.seconderSerial))) {
         return errOut(res, 'Seconder has already signed a nomination for this post.');
       }
-      const postDef = await sql`SELECT female_only, final_year_ineligible, year_restriction, dept_restriction, restricted_dept FROM posts WHERE post = ${body.post}`;
+      const postDef = await sql`SELECT female_only, final_year_ineligible, year_restriction, dept_restriction, restricted_dept, year_rule_mode, year_rule_years FROM posts WHERE post = ${body.post}`;
       if (postDef.length) {
         const rule = postDef[0];
         if (rule.female_only && body.gender !== 'Female') {
@@ -653,38 +925,14 @@ export default async function handler(req, res) {
         const pDept = String(prop[0].dept || '').toUpperCase();
         const sDept = String(sec[0].dept || '').toUpperCase();
 
-        const isFinalYear = (cls) => {
-          const isPG = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A|MBA|MCA|MSW)\b/.test(cls) || cls.includes('PG') || cls.includes('POST GRADUATE');
-          const isYr3 = cls.includes('3RD') || cls.includes('III') || /^\s*3\b/.test(cls);
-          const isYr2 = cls.includes('2ND') || cls.includes('II') || /^\s*2\b/.test(cls);
-          if (isPG && isYr2) return true;
-          if (!isPG && isYr3) return true;
-          return false;
-        };
-
-        if (rule.final_year_ineligible && isFinalYear(cCls)) {
-          return errOut(res, 'Final year students (3rd Year UG / 2nd Year PG) are ineligible for this post.');
+        if (!isYearEligibleServer(cCls, rule)) {
+          return errOut(res, `Candidate class (${cand[0].class || 'Unspecified'}) is ineligible under the year restriction for this post.`);
         }
-
-        const matchYr = (cls, yr) => {
-          const isYr1 = cls.includes('1ST') || /^\s*(1|1ST|I)\b/.test(cls) || /\b1ST\s+YEAR\b/.test(cls);
-          const isYr2 = cls.includes('2ND') || /^\s*(2|2ND|II)\b/.test(cls) || /\b2ND\s+YEAR\b/.test(cls);
-          const isYr3 = cls.includes('3RD') || /^\s*(3|3RD|III)\b/.test(cls) || /\b3RD\s+YEAR\b/.test(cls);
-          const isPG  = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A|MBA|MCA|MSW)\b/.test(cls) || cls.includes('PG');
-          if (yr === '1') return isYr1;
-          if (yr === '2') return isYr2;
-          if (yr === '3') return isYr3;
-          if (yr === 'PG') return isPG;
-          if (yr === 'UG') return !isPG;
-          if (yr === '1,2') return isYr1 || isYr2;
-          return true;
-        };
-
-        const yrReq = String(rule.year_restriction || '').trim();
-        if (yrReq) {
-          if (!matchYr(cCls, yrReq)) return errOut(res, `Candidate does not satisfy the year requirement (${yrReq}) for this post.`);
-          if (!matchYr(pCls, yrReq)) return errOut(res, `Proposer does not satisfy the year requirement (${yrReq}) for this post.`);
-          if (!matchYr(sCls, yrReq)) return errOut(res, `Seconder does not satisfy the year requirement (${yrReq}) for this post.`);
+        if (!isYearEligibleServer(pCls, rule)) {
+          return errOut(res, `Proposer class (${prop[0].class || 'Unspecified'}) is ineligible under the year restriction for this post.`);
+        }
+        if (!isYearEligibleServer(sCls, rule)) {
+          return errOut(res, `Seconder class (${sec[0].class || 'Unspecified'}) is ineligible under the year restriction for this post.`);
         }
 
         if (rule.dept_restriction) {
@@ -801,15 +1049,38 @@ export default async function handler(req, res) {
       const pName = (body.post || body.postName || '').trim();
       if (!pName) return errOut(res, 'Post name is required');
       const rDept = (body.restrictedDept || (body.deptRestriction && pName.startsWith('Association Secretary ') ? pName.replace('Association Secretary ', '').trim() : '')).trim();
+      const yrMode = body.yearRuleMode || (body.finalYearIneligible ? 'EXCLUDE' : (body.yearRestriction ? 'INCLUDE' : 'ALL'));
+      const yrYears = Array.isArray(body.yearRuleYears) ? body.yearRuleYears.join(',') : (body.yearRuleYears || '');
+      
+      // Keep legacy fields in sync for full backward compatibility
+      const isFinalIneligible = yrMode === 'EXCLUDE' && yrYears.includes('3_UG') && yrYears.includes('2_PG');
+      let yrRestr = body.yearRestriction || '';
+      if (yrMode === 'INCLUDE') {
+        if (yrYears === '1_UG') yrRestr = '1';
+        else if (yrYears === '2_UG') yrRestr = '2';
+        else if (yrYears === '3_UG') yrRestr = '3';
+        else if (yrYears === '1_PG,2_PG' || yrYears === '2_PG,1_PG') yrRestr = 'PG';
+        else if (yrYears === '1_UG,2_UG,3_UG') yrRestr = 'UG';
+        else if (yrYears === '1_UG,2_UG') yrRestr = '1,2';
+      }
+
       await sql`
-        INSERT INTO posts (post, female_only, final_year_ineligible, year_restriction, dept_restriction, restricted_dept)
-        VALUES (${pName}, ${!!body.femaleOnly}, ${!!body.finalYearIneligible}, ${body.yearRestriction || ''}, ${!!body.deptRestriction}, ${rDept || null})
+        INSERT INTO posts (
+          post, female_only, final_year_ineligible, year_restriction, dept_restriction, restricted_dept,
+          year_rule_mode, year_rule_years
+        )
+        VALUES (
+          ${pName}, ${!!body.femaleOnly}, ${isFinalIneligible || !!body.finalYearIneligible}, ${yrRestr}, ${!!body.deptRestriction}, ${rDept || null},
+          ${yrMode}, ${yrYears}
+        )
         ON CONFLICT (post) DO UPDATE SET
           female_only = EXCLUDED.female_only,
           final_year_ineligible = EXCLUDED.final_year_ineligible,
           year_restriction = EXCLUDED.year_restriction,
           dept_restriction = EXCLUDED.dept_restriction,
-          restricted_dept = EXCLUDED.restricted_dept
+          restricted_dept = EXCLUDED.restricted_dept,
+          year_rule_mode = EXCLUDED.year_rule_mode,
+          year_rule_years = EXCLUDED.year_rule_years
       `;
       return jsonOut(res, { ok: true });
     }
@@ -819,16 +1090,31 @@ export default async function handler(req, res) {
       const origName = (body.originalName || newName).trim();
       if (!newName) return errOut(res, 'Post name is required');
       const rDept = (body.restrictedDept || (body.deptRestriction && newName.startsWith('Association Secretary ') ? newName.replace('Association Secretary ', '').trim() : '')).trim();
+      const yrMode = body.yearRuleMode || (body.finalYearIneligible ? 'EXCLUDE' : (body.yearRestriction ? 'INCLUDE' : 'ALL'));
+      const yrYears = Array.isArray(body.yearRuleYears) ? body.yearRuleYears.join(',') : (body.yearRuleYears || '');
       
+      const isFinalIneligible = yrMode === 'EXCLUDE' && yrYears.includes('3_UG') && yrYears.includes('2_PG');
+      let yrRestr = body.yearRestriction || '';
+      if (yrMode === 'INCLUDE') {
+        if (yrYears === '1_UG') yrRestr = '1';
+        else if (yrYears === '2_UG') yrRestr = '2';
+        else if (yrYears === '3_UG') yrRestr = '3';
+        else if (yrYears === '1_PG,2_PG' || yrYears === '2_PG,1_PG') yrRestr = 'PG';
+        else if (yrYears === '1_UG,2_UG,3_UG') yrRestr = 'UG';
+        else if (yrYears === '1_UG,2_UG') yrRestr = '1,2';
+      }
+
       await sql`
         UPDATE posts 
         SET 
           post = ${newName},
           female_only = ${!!body.femaleOnly}, 
-          final_year_ineligible = ${!!body.finalYearIneligible}, 
-          year_restriction = ${body.yearRestriction || ''}, 
+          final_year_ineligible = ${isFinalIneligible || !!body.finalYearIneligible}, 
+          year_restriction = ${yrRestr}, 
           dept_restriction = ${!!body.deptRestriction},
-          restricted_dept = ${rDept || null}
+          restricted_dept = ${rDept || null},
+          year_rule_mode = ${yrMode},
+          year_rule_years = ${yrYears}
         WHERE post = ${origName}
       `;
 
@@ -1591,7 +1877,7 @@ export default async function handler(req, res) {
 
     if (action === 'adminInjectTestData') {
       const students = await sql`SELECT serial_number as "Nominal Roll Serial Number", name as "NAME", class as "CLASS", admission_no as "ADMISION NO", dept as "Dept" FROM nominal_roll`;
-      const posts = await sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction", restricted_dept as "restrictedDept" FROM posts`;
+      const posts = await sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction", restricted_dept as "restrictedDept", year_rule_mode as "yearRuleMode", year_rule_years as "yearRuleYears" FROM posts`;
 
       if (students.length < 9) return errOut(res, 'Not enough students in Nominal Roll to generate test data.');
       if (posts.length === 0) return errOut(res, 'No posts configured. Add posts first.');
@@ -1610,25 +1896,7 @@ export default async function handler(req, res) {
           }
         }
 
-        const isYr1 = cls.includes('1ST') || /^\s*(1|1ST|I)\b/.test(cls);
-        const isYr2 = cls.includes('2ND') || /^\s*(2|2ND|II)\b/.test(cls);
-        const isYr3 = cls.includes('3RD') || /^\s*(3|3RD|III)\b/.test(cls);
-        const isPG  = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A|MBA|MCA)\b/.test(cls) || cls.includes('PG');
-
-        const yr = String(postRule.yearRestriction || '').trim();
-        if (yr === '1' && !isYr1) return false;
-        if (yr === '2' && !isYr2) return false;
-        if (yr === '3' && !isYr3) return false;
-        if (yr === 'PG' && !isPG) return false;
-        if (yr === 'UG' && isPG) return false;
-        if (yr === '1,2' && !isYr1 && !isYr2) return false;
-
-        if (postRule.finalYearIneligible) {
-          if (!isPG && isYr3) return false;
-          if (isPG && isYr2) return false;
-        }
-
-        return true;
+        return isYearEligibleServer(cls, postRule);
       }
 
       function isEligibleSupporter(student, postRule) {
@@ -1645,20 +1913,7 @@ export default async function handler(req, res) {
           }
         }
 
-        const isYr1 = cls.includes('1ST') || /^\s*(1|1ST|I)\b/.test(cls);
-        const isYr2 = cls.includes('2ND') || /^\s*(2|2ND|II)\b/.test(cls);
-        const isYr3 = cls.includes('3RD') || /^\s*(3|3RD|III)\b/.test(cls);
-        const isPG  = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A|MBA|MCA)\b/.test(cls) || cls.includes('PG');
-
-        const yr = String(postRule.yearRestriction || '').trim();
-        if (yr === '1' && !isYr1) return false;
-        if (yr === '2' && !isYr2) return false;
-        if (yr === '3' && !isYr3) return false;
-        if (yr === 'PG' && !isPG) return false;
-        if (yr === 'UG' && isPG) return false;
-        if (yr === '1,2' && !isYr1 && !isYr2) return false;
-
-        return true;
+        return isYearEligibleServer(cls, postRule);
       }
 
       function shuffle(arr) {

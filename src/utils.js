@@ -33,6 +33,108 @@ export function calculateAge(dobString, asOfDate = CONFIG.ELECTION_DATE) {
   return `${years} Years, ${months} Months, ${days} Days`;
 }
 
+// ─── Year Levels & Classification ─────────────────────────────────────────────
+export const YEAR_LEVELS = [
+  { id: '1_UG', label: '1st Year UG (I UG)', short: 'I UG' },
+  { id: '2_UG', label: '2nd Year UG (II UG)', short: 'II UG' },
+  { id: '3_UG', label: '3rd Year UG (III UG)', short: 'III UG' },
+  { id: '1_PG', label: '1st Year PG (I PG)', short: 'I PG' },
+  { id: '2_PG', label: '2nd Year PG (II PG)', short: 'II PG' }
+];
+
+export function getStudentYearLevel(cls) {
+  const c = String(cls || '').toUpperCase().trim();
+  const isPG = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A|MBA|MCA|MSW)\b/.test(c) || c.includes('POST GRADUATE') || c.includes('PG');
+  const isYr1 = c.includes('1ST') || /^\s*(1|1ST|I)\b/.test(c) || /\b1ST\s+YEAR\b/.test(c) || /\bI\s+(YEAR|UG|PG|DC|DEG|BA|BSC|BCOM|MA|MSC|MCOM)\b/.test(c);
+  const isYr2 = c.includes('2ND') || /^\s*(2|2ND|II)\b/.test(c) || /\b2ND\s+YEAR\b/.test(c) || /\bII\s+(YEAR|UG|PG|DC|DEG|BA|BSC|BCOM|MA|MSC|MCOM)\b/.test(c);
+  const isYr3 = c.includes('3RD') || /^\s*(3|3RD|III)\b/.test(c) || /\b3RD\s+YEAR\b/.test(c) || /\bIII\s+(YEAR|UG|DC|DEG|BA|BSC|BCOM)\b/.test(c);
+
+  if (isPG) {
+    if (isYr2) return '2_PG';
+    return '1_PG';
+  } else {
+    if (isYr3) return '3_UG';
+    if (isYr2) return '2_UG';
+    return '1_UG';
+  }
+}
+
+export function isYearEligible(cls, rule) {
+  if (!rule) return true;
+  const studentLvl = getStudentYearLevel(cls);
+  const mode = rule.yearRuleMode || (rule.finalYearIneligible ? 'EXCLUDE' : (rule.yearRestriction ? 'INCLUDE' : 'ALL'));
+
+  let targetYears = [];
+  if (Array.isArray(rule.yearRuleYears)) {
+    targetYears = rule.yearRuleYears;
+  } else if (typeof rule.yearRuleYears === 'string' && rule.yearRuleYears.trim()) {
+    targetYears = rule.yearRuleYears.split(',').map(y => y.trim()).filter(Boolean);
+  } else {
+    if (rule.finalYearIneligible) targetYears = ['3_UG', '2_PG'];
+    else if (rule.yearRestriction === '1') targetYears = ['1_UG'];
+    else if (rule.yearRestriction === '2') targetYears = ['2_UG'];
+    else if (rule.yearRestriction === '3') targetYears = ['3_UG'];
+    else if (rule.yearRestriction === 'PG') targetYears = ['1_PG', '2_PG'];
+    else if (rule.yearRestriction === 'UG') targetYears = ['1_UG', '2_UG', '3_UG'];
+    else if (rule.yearRestriction === '1,2') targetYears = ['1_UG', '2_UG'];
+  }
+
+  if (mode === 'ALL' || targetYears.length === 0) {
+    if (rule.finalYearIneligible && (studentLvl === '3_UG' || studentLvl === '2_PG')) return false;
+    return true;
+  }
+
+  const matches = (lvl, list) => {
+    if (list.includes(lvl)) return true;
+    if (lvl.endsWith('_UG') && list.includes('UG')) return true;
+    if (lvl.endsWith('_PG') && list.includes('PG')) return true;
+    if (lvl.startsWith('1_') && list.includes('1')) return true;
+    if (lvl.startsWith('2_') && list.includes('2')) return true;
+    if (lvl.startsWith('3_') && list.includes('3')) return true;
+    return false;
+  };
+
+  if (mode === 'INCLUDE') {
+    return matches(studentLvl, targetYears);
+  }
+  if (mode === 'EXCLUDE') {
+    return !matches(studentLvl, targetYears);
+  }
+  return true;
+}
+
+export function formatYearRuleDescription(rule) {
+  if (!rule) return 'All Years Eligible';
+  const mode = rule.yearRuleMode || (rule.finalYearIneligible ? 'EXCLUDE' : (rule.yearRestriction ? 'INCLUDE' : 'ALL'));
+  let targetYears = [];
+  if (Array.isArray(rule.yearRuleYears)) targetYears = rule.yearRuleYears;
+  else if (typeof rule.yearRuleYears === 'string' && rule.yearRuleYears.trim()) targetYears = rule.yearRuleYears.split(',').map(y => y.trim()).filter(Boolean);
+  else {
+    if (rule.finalYearIneligible) targetYears = ['3_UG', '2_PG'];
+    else if (rule.yearRestriction === '1') targetYears = ['1_UG'];
+    else if (rule.yearRestriction === '2') targetYears = ['2_UG'];
+    else if (rule.yearRestriction === '3') targetYears = ['3_UG'];
+    else if (rule.yearRestriction === 'PG') targetYears = ['1_PG', '2_PG'];
+    else if (rule.yearRestriction === 'UG') targetYears = ['1_UG', '2_UG', '3_UG'];
+    else if (rule.yearRestriction === '1,2') targetYears = ['1_UG', '2_UG'];
+  }
+
+  if (mode === 'ALL' || targetYears.length === 0) {
+    if (rule.finalYearIneligible) return 'Final Years Barred (3rd UG & 2nd PG)';
+    return 'All Years Eligible';
+  }
+
+  const mapShort = y => {
+    const found = YEAR_LEVELS.find(l => l.id === y);
+    return found ? found.short : y;
+  };
+
+  const labels = targetYears.map(mapShort).join(', ');
+  if (mode === 'INCLUDE') return `Only: ${labels}`;
+  if (mode === 'EXCLUDE') return `Barred: ${labels}`;
+  return 'All Years';
+}
+
 // ─── Eligibility Rules ─────────────────────────────────────────────────────────
 /**
  * Returns array of warning strings. Empty = eligible.
@@ -64,13 +166,6 @@ export function checkEligibility(student, postName, role, gender = null, allPost
     }
   }
 
-  // Helper year classifiers
-  const isYr1 = cls.includes('1ST') || /^\s*(1|1ST|I)\b/.test(cls) || /\b1ST\s+YEAR\b/.test(cls) || /\bI\s+(YEAR|UG|DC|DEG|BA|BSC|BCOM|MA|MSC|MCOM)\b/.test(cls);
-  const isYr2 = cls.includes('2ND') || /^\s*(2|2ND|II)\b/.test(cls) || /\b2ND\s+YEAR\b/.test(cls) || /\bII\s+(YEAR|UG|DC|DEG|BA|BSC|BCOM|MA|MSC|MCOM)\b/.test(cls);
-  const isYr3 = cls.includes('3RD') || /^\s*(3|3RD|III)\b/.test(cls) || /\b3RD\s+YEAR\b/.test(cls) || /\bIII\s+(YEAR|UG|DC|DEG|BA|BSC|BCOM)\b/.test(cls);
-  const isPG  = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A|MBA|MCA|MSW)\b/.test(cls) || cls.includes('POST GRADUATE') || cls.includes('PG');
-  const isUG  = !isPG || /\b(BA|BSC|BCOM|B\.A|B\.SC|B\.COM|UG)\b/.test(cls);
-
   // 2. Department restriction (Applies to Candidate, Proposer, and Seconder)
   if (rule.deptRestriction) {
     const targetDept = (rule.restrictedDept || (postName.startsWith('Association Secretary ') ? postName.replace('Association Secretary ', '') : '')).trim();
@@ -85,20 +180,10 @@ export function checkEligibility(student, postName, role, gender = null, allPost
     }
   }
 
-  // 3. Year restriction (Applies to Candidate, Proposer, and Seconder for Year-specific posts)
-  const yr = String(rule.yearRestriction || '').trim();
-  if (yr === '1' && !isYr1) {
-    warnings.push(`${role} must be a 1st Year student for "${postName}".`);
-  } else if (yr === '2' && !isYr2) {
-    warnings.push(`${role} must be a 2nd Year student for "${postName}".`);
-  } else if (yr === '3' && !isYr3) {
-    warnings.push(`${role} must be a 3rd Year student for "${postName}".`);
-  } else if (yr === 'PG' && !isPG) {
-    warnings.push(`${role} for "${postName}" must be a PG student (MA/MSc/MCom).`);
-  } else if (yr === 'UG' && isPG) {
-    warnings.push(`${role} for "${postName}" must be a UG student.`);
-  } else if (yr === '1,2' && !isYr1 && !isYr2) {
-    warnings.push(`${role} must be a 1st or 2nd Year student for "${postName}".`);
+  // 3. Year / Level Policy (Supports Include / Exclude modes for any combination of years)
+  if (!isYearEligible(cls, rule)) {
+    const desc = formatYearRuleDescription(rule);
+    warnings.push(`${role} (${cls || 'Unspecified'}) is not eligible under year restriction for "${postName}" (${desc}).`);
   }
 
   // 4. Candidate-only rules
@@ -106,14 +191,6 @@ export function checkEligibility(student, postName, role, gender = null, allPost
     // Gender restriction
     if (rule.femaleOnly && gender && gender !== 'Female') {
       warnings.push(`The post of "${postName}" is reserved for female candidates only.`);
-    }
-
-    // Final Year Ineligibility (3rd Year UG and 2nd Year PG cannot apply)
-    if (rule.finalYearIneligible) {
-      const isFinalYear = (!isPG && isYr3) || (isPG && isYr2);
-      if (isFinalYear) {
-        warnings.push(`Final year students (3rd Year UG / 2nd Year PG) are ineligible for the post of "${postName}".`);
-      }
     }
   }
 

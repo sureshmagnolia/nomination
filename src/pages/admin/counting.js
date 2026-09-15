@@ -1,6 +1,6 @@
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast, setLoading } from '../../utils.js';
+import { esc, showToast, setLoading, isYearEligible } from '../../utils.js';
 
 export async function renderAdminCounting(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -156,7 +156,8 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       return name.includes('UUC') || name.includes('UNIVERSITY UNION COUNCILLOR');
     });
     const assocPosts   = posts.filter(p => !uucPosts.includes(p) && pName(p).toUpperCase().includes('ASSOCIATION'));
-    const yearRepPosts = posts.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && p.yearRestriction && String(p.yearRestriction).trim() !== '');
+    const isYearPost   = (p) => (p.yearRuleMode && p.yearRuleMode !== 'ALL') || (p.yearRestriction && String(p.yearRestriction).trim() !== '') || p.finalYearIneligible;
+    const yearRepPosts = posts.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && isYearPost(p));
     const generalPosts = posts.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && !yearRepPosts.includes(p));
     const G = generalPosts.length;
 
@@ -172,9 +173,11 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         }
       });
 
-      // 2. Year Reps
+      // 2. Year Reps (Filtered by isYearEligible against booth classes)
       yearRepPosts.forEach(yp => {
-        if (boothYears[t].has(String(yp.yearRestriction))) {
+        const bClasses = (booths[t].classes || []);
+        const hasEligibleClass = bClasses.some(c => isYearEligible(c, yp));
+        if (hasEligibleClass) {
           rounds.push(yp);
         }
       });

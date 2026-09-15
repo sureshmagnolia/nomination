@@ -9,7 +9,8 @@ import { router } from '../router.js';
 import {
   checkEligibility, generateCaptcha, populateDobSelects,
   buildDobString, displayDob, calculateAge, esc,
-  setLoading, showToast, todayFormatted, triggerPrint
+  setLoading, showToast, todayFormatted, triggerPrint,
+  formatYearRuleDescription
 } from '../utils.js';
 
 let nominalRoll = [];
@@ -215,22 +216,14 @@ function renderForm(container, year, collegeName, setsData = {}) {
       badges.push(`<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold">🏢 ${esc(deptName || 'Dept')} Only (Candidate & Supporters)</span>`);
     }
 
-    if (rule.yearRestriction === '1') {
-      badges.push('<span class="badge bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs">🎓 1st Year Only</span>');
-    } else if (rule.yearRestriction === '2') {
-      badges.push('<span class="badge bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs">🎓 2nd Year Only</span>');
-    } else if (rule.yearRestriction === '3') {
-      badges.push('<span class="badge bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs">🎓 3rd Year Only</span>');
-    } else if (rule.yearRestriction === 'PG') {
-      badges.push('<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs">🎓 PG Only (MA / MSc / MCom)</span>');
-    } else if (rule.yearRestriction === 'UG') {
-      badges.push('<span class="badge bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs">🎓 UG Students Only</span>');
-    } else if (rule.yearRestriction === '1,2') {
-      badges.push('<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs">🎓 1st &amp; 2nd Year Only</span>');
-    }
-
-    if (rule.finalYearIneligible) {
-      badges.push('<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold">🚫 3rd UG &amp; 2nd PG Ineligible</span>');
+    const yrDesc = formatYearRuleDescription(rule);
+    if (yrDesc && yrDesc !== 'All Years Eligible' && yrDesc !== 'All Years') {
+      const isBarred = rule.yearRuleMode === 'EXCLUDE' || rule.finalYearIneligible;
+      if (isBarred) {
+        badges.push(`<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold">🚫 ${esc(yrDesc)}</span>`);
+      } else {
+        badges.push(`<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-semibold">🎓 ${esc(yrDesc)}</span>`);
+      }
     }
 
     if (badges.length === 0) {
