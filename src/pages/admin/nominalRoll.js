@@ -9,18 +9,28 @@ import { CONFIG } from '../../config.js';
 
 export async function renderAdminNominalRoll(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
-  renderAdminLayout(container, 'nominalRoll', `
+  renderAdminLayout(container, 'nominal-roll', `
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading nominal roll...</p></div>
   `);
+
+  const adminMain = container.querySelector('#adminMain');
+  await reloadRollData(adminMain, pwd);
+}
+
+async function reloadRollData(main, pwd) {
+  if (!main) return;
+  main.innerHTML = `
+    <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading nominal roll...</p></div>
+  `;
 
   try {
     const [nominalRoll, settings] = await Promise.all([
       api.getNominalRoll(),
       api.getSettings()
     ]);
-    renderNominalRollUI(container.querySelector('#adminMain'), pwd, nominalRoll, settings);
+    renderNominalRollUI(main, pwd, nominalRoll, settings);
   } catch (e) {
-    container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
+    main.innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
   }
 }
 
@@ -327,7 +337,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
               showToast('Student added.', 'success');
             }
             main.querySelector('#addModal').classList.add('hidden');
-            renderAdminNominalRoll(main.closest('#appContainer') || main.parentElement);
+            await reloadRollData(main, pwd);
           } catch (err) {
             showToast(err.message, 'error');
             setLoading(e.target, false, 'Save Student');
@@ -353,7 +363,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
           try {
             await api.adminDeleteStudent(pwd, btn.dataset.serial);
             showToast('Student removed.', 'success');
-            renderAdminNominalRoll(main.closest('#appContainer') || main.parentElement);
+            await reloadRollData(main, pwd);
           } catch (err) { showToast(err.message, 'error'); }
         };
       });
@@ -496,8 +506,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
           try {
             const res = await api.adminUploadNominalRoll(confirmPwd, { headers: usedHeaders, rows: parsedRows });
             showToast(`✅ Nominal Roll updated with ${res.count || parsedRows.length} students. All election data has been reset.`, 'success');
-            const appContainer = main.closest('#appContainer') || main.parentElement;
-            renderAdminNominalRoll(appContainer);
+            await reloadRollData(main, pwd);
           } catch (err) {
             showToast(err.message, 'error');
             setLoading(e.target, false, '🚨 Upload & Reset Entire System');
@@ -524,7 +533,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
               }
             }
             showToast('Nominal Roll Finalized & Locked Successfully!', 'success');
-            renderAdminNominalRoll(main.closest('#appContainer') || main.parentElement);
+            await reloadRollData(main, pwd);
           } catch (err) {
             showToast(err.message, 'error');
             setLoading(e.target, false, '🔒 Finalize & Lock Roll');
@@ -582,7 +591,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
         await api.adminUnfinalizeRoll(enteredPwd);
         showToast('Nominal Roll Unlocked! You can now add, edit, or delete students.', 'success');
         main.querySelector('#unfinalizeModal')?.classList.add('hidden');
-        renderAdminNominalRoll(main.closest('#appContainer') || main.parentElement);
+        await reloadRollData(main, pwd);
       } catch (err) {
         const msg = (err.message && (err.message.includes('UNAUTHORIZED') || err.message.includes('password')))
           ? 'Incorrect admin password. Please try again.'
