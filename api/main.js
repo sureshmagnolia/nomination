@@ -1489,6 +1489,189 @@ export default async function handler(req, res) {
       return jsonOut(res, { ok: true, report });
     }
 
+    if (action === 'adminInjectTestData') {
+      const students = await sql`SELECT serial_number as "Nominal Roll Serial Number", name as "NAME", class as "CLASS", admission_no as "ADMISION NO", dept as "Dept" FROM nominal_roll`;
+      const posts = await sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction" FROM posts`;
+
+      if (students.length < 9) return errOut(res, 'Not enough students in Nominal Roll to generate test data.');
+      if (posts.length === 0) return errOut(res, 'No posts configured. Add posts first.');
+
+      function isEligibleCandidate(student, postRule) {
+        const cls = String(student['CLASS'] || '').toUpperCase();
+        const dept = String(student['Dept'] || '').toUpperCase();
+
+        if (postRule.deptRestriction) {
+          const prefix = 'Association Secretary ';
+          const postName = String(postRule.post || '');
+          const reqDept = postName.startsWith(prefix) ? postName.replace(prefix, '').toUpperCase() : null;
+          if (reqDept && dept !== reqDept) return false;
+        }
+
+        const yr = String(postRule.yearRestriction || '');
+        if (yr === '1' && !cls.includes('1ST YEAR')) return false;
+        if (yr === '2' && !cls.includes('2ND YEAR')) return false;
+        if (yr === '3' && !cls.includes('3RD YEAR')) return false;
+        if (yr === 'PG') {
+          const isPG = cls.includes('MA') || cls.includes('MSC') || cls.includes('MCOM') ||
+                       cls.includes('M.SC') || cls.includes('M.COM') || cls.includes('M.A');
+          if (!isPG) return false;
+        }
+
+        if (postRule.finalYearIneligible) {
+          if (cls.includes('3RD YEAR') || cls.includes('2ND YEAR M')) return false;
+        }
+
+        return true;
+      }
+
+      function isEligibleSupporter(student, postRule) {
+        if (!postRule.deptRestriction) return true;
+        const dept = String(student['Dept'] || '').toUpperCase();
+        const prefix = 'Association Secretary ';
+        const postName = String(postRule.post || '');
+        const reqDept = postName.startsWith(prefix) ? postName.replace(prefix, '').toUpperCase() : null;
+        if (reqDept && dept !== reqDept) return false;
+        return true;
+      }
+
+      function shuffle(arr) {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+
+      const existingNoms = await sql`SELECT id, candidate_serial FROM nominations WHERE status != 'Rejected'`;
+      const existingIds = new Set(existingNoms.map(n => n.id));
+      const usedCandidateSerials = new Set(existingNoms.map(n => String(n.candidate_serial)));
+
+      function makeTestId() {
+        let id;
+        do {
+          id = String(Math.floor(1000000000 + Math.random() * 9000000000));
+        } while (existingIds.has(id));
+        existingIds.add(id);
+        return id;
+      }
+
+      const injected = [];
+      const skipped = [];
+      const resultsData = [];
+      let globalCandidateOffset = 0;
+      let globalSupporterOffset = 0;
+
+      for (const p of posts) {
+        const eligibleCandidates = shuffle(students.filter(s =>
+          !usedCandidateSerials.has(String(s['Nominal Roll Serial Number'])) && isEligibleCandidate(s, p)
+        ));
+        const eligibleSupporters = shuffle(students.filter(s => isEligibleSupporter(s, p)));
+
+        if (eligibleCandidates.length < 2 || eligibleSupporters.length < 4) {
+          skipped.push(p.post);
+          continue;
+        }
+
+        for (let i = 0; i < 2; i++) {
+          const candidate = eligibleCandidates[(globalCandidateOffset + i) % eligibleCandidates.length];
+          usedCandidateSerials.add(String(candidate['Nominal Roll Serial Number']));
+
+          const usedSerials = new Set([String(candidate['Nominal Roll Serial Number'])]);
+          const availSupporters = [];
+          for (let k = 0; k < eligibleSupporters.length; k++) {
+            const s = eligibleSupporters[(globalSupporterOffset + k) % eligibleSupporters.length];
+            if (!usedSerials.has(String(s['Nominal Roll Serial Number']))) {
+              availSupporters.push(s);
+              usedSerials.add(String(s['Nominal Roll Serial Number']));
+              if (availSupporters.length === 2) break;
+            }
+          }
+          if (availSupporters.length < 2) { skipped.push(p.post); break; }
+
+          const [proposer, seconder] = availSupporters;
+          const id = makeTestId();
+          const gender = p.femaleOnly ? 'Female' : 'Male';
+          const dob = '2003-05-15';
+          const candName = candidate['NAME'];
+          const candClass = candidate['CLASS'];
+          const candAdm = candidate['ADMISION NO'];
+          const candDept = candidate['Dept'] || 'N/A';
+
+          await sql`
+            INSERT INTO nominations (
+              id, post, gender, dob, candidate_serial, proposer_serial, seconder_serial,
+              status, withdrawal_status,
+              candidate_name, candidate_class, candidate_admission, candidate_dept,
+              proposer_name, proposer_class, proposer_admission, proposer_dept,
+              seconder_name, seconder_class, seconder_admission, seconder_dept
+            ) VALUES (
+              ${id}, ${p.post}, ${gender}, ${dob},
+              ${String(candidate['Nominal Roll Serial Number'])},
+              ${String(proposer['Nominal Roll Serial Number'])},
+              ${String(seconder['Nominal Roll Serial Number'])},
+              'Valid', 'None',
+              ${candName}, ${candClass}, ${candAdm}, ${candDept},
+              ${proposer['NAME']}, ${proposer['CLASS']}, ${proposer['ADMISION NO']}, ${proposer['Dept'] || 'N/A'},
+              ${seconder['NAME']}, ${seconder['CLASS']}, ${seconder['ADMISION NO']}, ${seconder['Dept'] || 'N/A'}
+            )
+          `;
+          injected.push(id);
+
+          resultsData.push({
+            TableNumber: 1,
+            RoundNumber: 1,
+            Post: p.post,
+            CandidateId: id,
+            CandidateName: candName,
+            Votes: Math.floor(Math.random() * 100) + 50,
+            FormSerial: 'TEST-AUTO'
+          });
+        }
+
+        resultsData.push({
+          TableNumber: 1,
+          RoundNumber: 1,
+          Post: p.post,
+          CandidateId: 'NOTA',
+          CandidateName: 'NOTA',
+          Votes: Math.floor(Math.random() * 20),
+          FormSerial: 'TEST-AUTO'
+        });
+        resultsData.push({
+          TableNumber: 1,
+          RoundNumber: 1,
+          Post: p.post,
+          CandidateId: 'INVALID',
+          CandidateName: 'Invalid',
+          Votes: Math.floor(Math.random() * 10),
+          FormSerial: 'TEST-AUTO'
+        });
+
+        globalCandidateOffset += 5;
+        globalSupporterOffset += 7;
+      }
+
+      // Save results
+      if (resultsData.length > 0) {
+        const existingResultsRaw = await getSetting('results_data');
+        let existingResults = [];
+        if (existingResultsRaw) {
+          try { existingResults = JSON.parse(existingResultsRaw); } catch(e) {}
+        }
+        await setSetting('results_data', JSON.stringify([...existingResults, ...resultsData]));
+      }
+
+      return jsonOut(res, { ok: true, injected: injected.length, skipped: skipped.length, skippedPosts: skipped });
+    }
+
+    if (action === 'adminWipeData') {
+      await sql`DELETE FROM nominations`;
+      await sql`UPDATE settings SET value = 'false' WHERE key IN ('validListPublished', 'finalListPublished', 'resultsPublished', 'resultsLocked', 'countingActive')`;
+      await sql`DELETE FROM settings WHERE key IN ('results_data', 'ballotPlan', 'countingMatrix')`;
+      return jsonOut(res, { ok: true });
+    }
+
     return errOut(res, `Unknown or unimplemented action: ${action}`);
   } catch (error) {
     console.error('API Error:', error);

@@ -503,7 +503,10 @@ export const api = {
     return Promise.resolve({ ok: true });
   },
 
-  adminInjectTestData: (password) => post({ action: 'adminInjectTestData', password }),
+  adminInjectTestData: (password) => {
+    _cache = {}; // Clear everything so fresh nominations and results show immediately
+    return post({ action: 'adminInjectTestData', password });
+  },
   adminWipeData: (password) => {
     _cache = {}; // Clear everything
     return post({ action: 'adminWipeData', password });
