@@ -494,16 +494,20 @@ export const api = {
   },
 
   adminFinalizeRoll: async (password, options = {}) => {
-    const res = await bgPost({ action: 'adminFinalizeRoll', password, ...options });
+    const res = await post({ action: 'adminFinalizeRoll', password, ...options });
     if (res && res.requiresMatching) return res;
+    invalidateCache('getSettings');
     invalidateCache('adminGetSettings');
-    return { ok: true };
+    invalidateCache('getNominalRoll');
+    return res || { ok: true };
   },
 
   adminUnfinalizeRoll: async (password) => {
-    await bgPost({ action: 'adminUnfinalizeRoll', password });
+    const res = await post({ action: 'adminUnfinalizeRoll', password, confirmPassword: password });
+    invalidateCache('getSettings');
     invalidateCache('adminGetSettings');
-    return { ok: true };
+    invalidateCache('getNominalRoll');
+    return res || { ok: true };
   },
 
   adminGetNominalRollTemplate: (password) =>

@@ -23,7 +23,7 @@ export async function renderNominalRoll(container) {
 }
 
 function renderPublicRollUI(container, nominalRoll, settings) {
-  const isFinal = settings.nominalRollFinalized === 'true';
+  const isFinal = settings.nominalRollFinalized === 'true' || settings.isRollFinalized === 'true';
   let students = [...nominalRoll];
   let filterText = '';
 

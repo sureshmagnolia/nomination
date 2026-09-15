@@ -167,12 +167,14 @@ export default async function handler(req, res) {
     }
 
     if (action === 'getSettings' || action === 'adminGetSettings') {
+      const rollFinal = (await getSetting('isRollFinalized')) || 'false';
       const obj = {
         validListPublished: await getSetting('validListPublished'),
         finalListPublished: await getSetting('finalListPublished'),
         resultsPublished: (await getSetting('resultsPublished')) || 'false',
         resultsLocked: (await getSetting('resultsLocked')) || 'false',
-        isRollFinalized: await getSetting('isRollFinalized'),
+        isRollFinalized: rollFinal,
+        nominalRollFinalized: rollFinal,
         collegeName: await getSetting('collegeName'),
         collegeShortName: await getSetting('collegeShortName'),
         electionYear: await getSetting('electionYear'),
@@ -620,6 +622,11 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminUploadNominalRoll') {
+      const isRollFinal = await getSetting('isRollFinalized');
+      if (isRollFinal === 'true') {
+        return errOut(res, 'Nominal Roll is finalized and locked. Please unfinalize with admin password before replacing the roll.', 400);
+      }
+
       await sql`DELETE FROM nominal_roll`;
       await sql`DELETE FROM nominations`;
       await sql`UPDATE settings SET value='false' WHERE key IN ('validListPublished', 'finalListPublished', 'isRollFinalized')`;
@@ -663,6 +670,11 @@ export default async function handler(req, res) {
 
 
     if (action === 'adminAddStudent') {
+      const isRollFinal = await getSetting('isRollFinalized');
+      if (isRollFinal === 'true') {
+        return errOut(res, 'Nominal Roll is finalized and locked. Please unfinalize with admin password before adding students.', 400);
+      }
+
       await sql`
         INSERT INTO nominal_roll (serial_number, name, class, admission_no, dept)
         VALUES (gen_random_uuid()::varchar, ${body.name}, ${body.class}, ${body.admission_no}, ${body.dept})
@@ -681,6 +693,11 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminUpdateStudent') {
+      const isRollFinal = await getSetting('isRollFinalized');
+      if (isRollFinal === 'true') {
+        return errOut(res, 'Nominal Roll is finalized and locked. Please unfinalize with admin password before editing students.', 400);
+      }
+
       await sql`
         UPDATE nominal_roll
         SET name = ${body.name}, class = ${body.class}, admission_no = ${body.admission_no}, dept = ${body.dept}
@@ -700,6 +717,11 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminDeleteStudent') {
+      const isRollFinal = await getSetting('isRollFinalized');
+      if (isRollFinal === 'true') {
+        return errOut(res, 'Nominal Roll is finalized and locked. Please unfinalize with admin password before deleting students.', 400);
+      }
+
       await sql`DELETE FROM nominal_roll WHERE serial_number = ${body.serial}`;
       // Recalculate
       await sql`UPDATE nominal_roll SET serial_number = serial_number || '_' || gen_random_uuid()::varchar`;
@@ -735,12 +757,19 @@ export default async function handler(req, res) {
       }
 
       await setSetting('isRollFinalized', 'true');
-      return jsonOut(res, { ok: true });
+      return jsonOut(res, { ok: true, isRollFinalized: 'true' });
     }
 
     if (action === 'adminUnfinalizeRoll') {
+      const enteredPwd = body.confirmPassword || body.password;
+      const rows = await sql`SELECT value FROM settings WHERE key = 'adminPassword'`;
+      const realPwd = rows.length > 0 ? rows[0].value : 'admin123';
+      if (!enteredPwd || enteredPwd !== realPwd) {
+        return errOut(res, 'Incorrect admin password. Unfinalize denied.', 401);
+      }
+
       await setSetting('isRollFinalized', 'false');
-      return jsonOut(res, { ok: true });
+      return jsonOut(res, { ok: true, isRollFinalized: 'false' });
     }
 
     return errOut(res, `Unknown or unimplemented action: ${action}`);
