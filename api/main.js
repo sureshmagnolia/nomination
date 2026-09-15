@@ -542,7 +542,13 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminRestoreWithdrawal') {
-      await sql`UPDATE nominations SET withdrawal_status = 'None' WHERE id = ${body.id}`;
+      const targetStatus = body.targetStatus || 'None';
+      await sql`UPDATE nominations SET withdrawal_status = ${targetStatus} WHERE id = ${body.id}`;
+      return jsonOut(res, { ok: true });
+    }
+
+    if (action === 'adminRejectWithdrawal') {
+      await sql`UPDATE nominations SET withdrawal_status = 'Rejected' WHERE id = ${body.id}`;
       return jsonOut(res, { ok: true });
     }
 

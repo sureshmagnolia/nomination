@@ -136,7 +136,7 @@ function renderWithdrawalUI(main, allNoms, pwd) {
                   <th>Post</th>
                   <th>Candidate</th>
                   <th>Class / Dept</th>
-                  <th>Withdrawal State</th>
+                  <th>Withdrawal Source</th>
                   <th>Action</th>
                 </tr></thead>
                 <tbody id="withdrawnTableBody"></tbody>
@@ -181,27 +181,40 @@ function renderWithdrawalUI(main, allNoms, pwd) {
     const tbody = main.querySelector('#withdrawalTableBody');
     tbody.innerHTML = data.length ? data.map(n => {
       const isApproved = n.withdrawalStatus === 'Approved';
+      const isPending  = n.withdrawalStatus === 'Pending' || n.withdrawalStatus === 'Requested';
+      const isRejected = n.withdrawalStatus === 'Rejected';
+
+      let statusBadge = `<span class="badge badge-pending">Pending</span>`;
+      if (isApproved) statusBadge = `<span class="badge badge-valid">Approved (Withdrawn)</span>`;
+      else if (isRejected) statusBadge = `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/30">Rejected (Active)</span>`;
+
       return `
       <tr id="wrow-${esc(n.id)}">
         <td class="font-mono text-indigo-300 text-xs">${esc(n.id)}</td>
         <td class="text-xs font-medium text-slate-300">${esc(n.post)}</td>
         <td class="font-bold text-white">${esc(n.candidateName || 'N/A')}</td>
         <td class="text-xs text-slate-400">${esc(n.candidateClass || '')} / ${esc(n.candidateDept || '')}</td>
-        <td>
-          <span class="badge ${isApproved ? 'badge-valid' : 'badge-pending'}">
-            ${esc(n.withdrawalStatus)}
-          </span>
-        </td>
+        <td>${statusBadge}</td>
         <td>
           ${isApproved ? `
             <button class="btn btn-sm unapprove-btn" data-id="${esc(n.id)}"
-              style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);"
-              title="Undo approval and restore candidate to Valid list">
-              ↺ Restore
+              style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.4);"
+              title="Undo approval and restore candidate to active Valid list">
+              ↺ Restore Approval
             </button>
+          ` : isPending ? `
+            <div class="flex items-center gap-1.5">
+              <button class="btn btn-primary btn-sm approve-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white" data-id="${esc(n.id)}" title="Approve withdrawal and withdraw candidate">
+                ✅ Approve
+              </button>
+              <button class="btn btn-sm reject-btn" data-id="${esc(n.id)}"
+                style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3);" title="Reject request; keep candidate active">
+                ❌ Reject
+              </button>
+            </div>
           ` : `
-            <button class="btn btn-primary btn-sm approve-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white" data-id="${esc(n.id)}">
-              ✅ Approve
+            <button class="btn btn-sm approve-btn text-xs bg-slate-700/50 hover:bg-emerald-600/30 text-slate-300 hover:text-emerald-300 border border-white/10" data-id="${esc(n.id)}" title="Re-evaluate and approve withdrawal">
+              Approve
             </button>
           `}
         </td>
@@ -223,7 +236,7 @@ function renderWithdrawalUI(main, allNoms, pwd) {
   renderRequestRows(withRequests);
 
   main.querySelector('#panelRequests').addEventListener('click', async (e) => {
-    // Approve Request
+    // 1. Approve Request
     const appBtn = e.target.closest('.approve-btn');
     if (appBtn) {
       const id = appBtn.dataset.id;
@@ -254,17 +267,48 @@ function renderWithdrawalUI(main, allNoms, pwd) {
       return;
     }
 
-    // Restore Accidental Approval in Requests tab
+    // 2. Reject Request
+    const rejBtn = e.target.closest('.reject-btn');
+    if (rejBtn) {
+      const id = rejBtn.dataset.id;
+      const req = withRequests.find(r => r.id === id);
+      if (!confirm(`REJECT WITHDRAWAL REQUEST\n\nCandidate: ${req?.candidateName || id}\nPost: ${req?.post || ''}\n\nRejecting this request will keep the candidate active on the Valid List. Proceed?`)) return;
+      rejBtn.disabled = true;
+      rejBtn.innerHTML = '<span class="spinner" style="width:1rem;height:1rem;border-width:2px;"></span>';
+      try {
+        await api.adminRejectWithdrawal(pwd, id);
+        showToast(`Withdrawal request for ${req?.candidateName || id} rejected. Candidate remains active.`, 'info');
+        if (req) req.withdrawalStatus = 'Rejected';
+        
+        const targetNom = allNomsList.find(n => n.id === id) || req;
+        if (targetNom) {
+          targetNom.withdrawalStatus = 'Rejected';
+          withdrawnList = withdrawnList.filter(n => n.id !== id);
+          if (!directList.some(n => n.id === id)) directList.unshift(targetNom);
+        }
+        updateBadges();
+        applyRequestSearch();
+        applyDirectSearch();
+        applyRestoreSearch();
+      } catch (err) {
+        showToast(`Failed: ${err.message}`, 'error');
+        rejBtn.disabled = false;
+        rejBtn.innerHTML = '❌ Reject';
+      }
+      return;
+    }
+
+    // 3. Restore Accidental Approval in Requests tab
     const unappBtn = e.target.closest('.unapprove-btn');
     if (unappBtn) {
       const id = unappBtn.dataset.id;
       const req = withRequests.find(r => r.id === id);
-      if (!confirm(`RESTORE NOMINATION\n\nCandidate: ${req?.candidateName || id}\nPost: ${req?.post || ''}\n\nThis will undo the approved withdrawal and restore the candidate to the active Valid List. Proceed?`)) return;
+      if (!confirm(`RESTORE STUDENT WITHDRAWAL APPROVAL\n\nCandidate: ${req?.candidateName || id}\nPost: ${req?.post || ''}\n\nThis will undo the approved withdrawal, restore the candidate to the active Valid List, and return this request to 'Pending'.\n\nProceed?`)) return;
       unappBtn.disabled = true;
       unappBtn.innerHTML = '<span class="spinner" style="width:1rem;height:1rem;border-width:2px;"></span>';
       try {
-        await api.adminRestoreWithdrawal(pwd, id);
-        showToast(`✅ Nomination ${id} restored to Valid list!`, 'success');
+        await api.adminRestoreWithdrawal(pwd, id, 'Pending');
+        showToast(`✅ Withdrawal approval undone! ${req?.candidateName || id} restored to Valid list.`, 'success');
         if (req) req.withdrawalStatus = 'Pending';
 
         const targetNom = allNomsList.find(n => n.id === id) || req;
@@ -280,7 +324,7 @@ function renderWithdrawalUI(main, allNoms, pwd) {
       } catch (err) {
         showToast(`Restore Failed: ${err.message}`, 'error');
         unappBtn.disabled = false;
-        unappBtn.innerHTML = '↺ Restore';
+        unappBtn.innerHTML = '↺ Restore Approval';
       }
       return;
     }
@@ -312,15 +356,17 @@ function renderWithdrawalUI(main, allNoms, pwd) {
 
   const renderWithdrawnRows = (data) => {
     const tbody = main.querySelector('#withdrawnTableBody');
-    tbody.innerHTML = data.length ? data.map(n => `
+    tbody.innerHTML = data.length ? data.map(n => {
+      const isStudent = withRequests.some(r => r.id === n.id);
+      return `
       <tr id="rrow-${esc(n.id)}" class="bg-amber-950/10">
         <td class="font-mono text-indigo-300 text-xs">${esc(n.id)}</td>
         <td class="text-xs font-medium text-slate-300">${esc(n.post)}</td>
         <td class="font-bold text-white">${esc(n.candidateName || 'N/A')}</td>
         <td class="text-xs text-slate-400">${esc(n.candidateClass || '')} / ${esc(n.candidateDept || '')}</td>
         <td>
-          <span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30">
-            Withdrawn
+          <span class="badge ${isStudent ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'} text-xs">
+            ${isStudent ? 'Student Request' : 'Admin Direct'}
           </span>
         </td>
         <td>
@@ -332,7 +378,8 @@ function renderWithdrawalUI(main, allNoms, pwd) {
             ↺ Restore to Valid List
           </button>
         </td>
-      </tr>`).join('') : `<tr><td colspan="6" class="text-center text-slate-500 py-8">No withdrawn nominations found.</td></tr>`;
+      </tr>`;
+    }).join('') : `<tr><td colspan="6" class="text-center text-slate-500 py-8">No withdrawn nominations found.</td></tr>`;
   };
 
   const applyDirectSearch = () => {
@@ -403,18 +450,25 @@ function renderWithdrawalUI(main, allNoms, pwd) {
 
       rBtn.disabled = true;
       rBtn.innerHTML = '<span class="spinner" style="width:1rem;height:1rem;border-width:2px;"></span>';
+      
+      const isStudentReq = withRequests.some(r => r.id === id);
+      const targetStatus = isStudentReq ? 'Pending' : 'None';
+
       try {
-        await api.adminRestoreWithdrawal(pwd, id);
+        await api.adminRestoreWithdrawal(pwd, id, targetStatus);
         showToast(`✅ Nomination ${id} (${nom?.candidateName || ''}) successfully restored to Valid List!`, 'success');
 
         // Move from withdrawnList back to directList
         if (nom) {
-          nom.withdrawalStatus = 'None';
+          nom.withdrawalStatus = targetStatus;
           withdrawnList = withdrawnList.filter(n => n.id !== id);
           if (!directList.some(n => n.id === id)) {
             directList.unshift(nom);
           }
         }
+        const reqItem = withRequests.find(r => r.id === id);
+        if (reqItem) reqItem.withdrawalStatus = 'Pending';
+
         updateBadges();
         applyDirectSearch();
         applyRestoreSearch();

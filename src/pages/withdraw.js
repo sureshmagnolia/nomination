@@ -120,8 +120,9 @@ function showDetails(area, nom, id, adm, collegeName = null) {
     area.innerHTML = `<div class="alert alert-warning">⚠ This nomination has status <strong>${esc(nom.status)}</strong>. Only <strong>Valid</strong> nominations can be withdrawn.</div>`;
     return;
   }
-  if (nom.withdrawalStatus === 'Requested' || nom.withdrawalStatus === 'Approved') {
-    area.innerHTML = `<div class="alert alert-info">ℹ A withdrawal has already been ${esc(nom.withdrawalStatus.toLowerCase())} for this nomination.</div>`;
+  if (nom.withdrawalStatus === 'Requested' || nom.withdrawalStatus === 'Pending' || nom.withdrawalStatus === 'Approved') {
+    const stText = nom.withdrawalStatus === 'Approved' ? 'approved' : 'submitted and is currently under review by the Returning Officer';
+    area.innerHTML = `<div class="alert alert-info">ℹ A withdrawal request has already been ${stText} for this nomination.</div>`;
     return;
   }
 

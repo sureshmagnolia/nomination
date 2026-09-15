@@ -22,7 +22,7 @@ export async function renderAdminDashboard(container) {
     const pending   = noms.filter(n => n.status === 'Pending').length;
     const valid     = noms.filter(n => n.status === 'Valid').length;
     const rejected  = noms.filter(n => n.status === 'Rejected').length;
-    const withdrawn = noms.filter(n => n.withdrawalStatus === 'Requested').length;
+    const withdrawn = noms.filter(n => n.withdrawalStatus === 'Requested' || n.withdrawalStatus === 'Pending').length;
 
     const main = container.querySelector('#adminMain');
     main.innerHTML = `

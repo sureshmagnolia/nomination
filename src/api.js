@@ -277,13 +277,25 @@ export const api = {
     return Promise.resolve({ ok: true });
   },
 
-  adminRestoreWithdrawal: (password, id) => {
+  adminRestoreWithdrawal: (password, id, targetStatus = 'None') => {
     updateCache({ action: 'adminGetNominations', password }, (noms) => {
       const n = noms.find(x => x.id === id);
-      if (n) n.withdrawalStatus = 'None';
+      if (n) n.withdrawalStatus = targetStatus;
       return noms;
     });
-    bgPost({ action: 'adminRestoreWithdrawal', password, id });
+    bgPost({ action: 'adminRestoreWithdrawal', password, id, targetStatus });
+    invalidateCache('getFinalNominations');
+    invalidateCache('adminGetFinalNominations');
+    return Promise.resolve({ ok: true });
+  },
+
+  adminRejectWithdrawal: (password, id) => {
+    updateCache({ action: 'adminGetNominations', password }, (noms) => {
+      const n = noms.find(x => x.id === id);
+      if (n) n.withdrawalStatus = 'Rejected';
+      return noms;
+    });
+    bgPost({ action: 'adminRejectWithdrawal', password, id });
     invalidateCache('getFinalNominations');
     invalidateCache('adminGetFinalNominations');
     return Promise.resolve({ ok: true });
