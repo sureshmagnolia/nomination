@@ -64,42 +64,59 @@ export function checkEligibility(student, postName, role, gender = null, allPost
     }
   }
 
-  // 2. Department restriction
+  // Helper year classifiers
+  const isYr1 = cls.includes('1ST') || /^\s*(1|1ST|I)\b/.test(cls) || /\b1ST\s+YEAR\b/.test(cls) || /\bI\s+(YEAR|UG|DC|DEG|BA|BSC|BCOM|MA|MSC|MCOM)\b/.test(cls);
+  const isYr2 = cls.includes('2ND') || /^\s*(2|2ND|II)\b/.test(cls) || /\b2ND\s+YEAR\b/.test(cls) || /\bII\s+(YEAR|UG|DC|DEG|BA|BSC|BCOM|MA|MSC|MCOM)\b/.test(cls);
+  const isYr3 = cls.includes('3RD') || /^\s*(3|3RD|III)\b/.test(cls) || /\b3RD\s+YEAR\b/.test(cls) || /\bIII\s+(YEAR|UG|DC|DEG|BA|BSC|BCOM)\b/.test(cls);
+  const isPG  = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A|MBA|MCA|MSW)\b/.test(cls) || cls.includes('POST GRADUATE') || cls.includes('PG');
+  const isUG  = !isPG || /\b(BA|BSC|BCOM|B\.A|B\.SC|B\.COM|UG)\b/.test(cls);
+
+  // 2. Department restriction (Applies to Candidate, Proposer, and Seconder)
   if (rule.deptRestriction) {
-    const prefix = 'Association Secretary ';
-    const reqDept = postName.startsWith(prefix) ? postName.replace(prefix, '').toUpperCase() : null;
-    if (reqDept && dept !== reqDept) {
-      warnings.push(`${role} for "${postName}" must be from the ${reqDept} dept (current: ${student['Dept'] || 'N/A'}).`);
+    const targetDept = (rule.restrictedDept || (postName.startsWith('Association Secretary ') ? postName.replace('Association Secretary ', '') : '')).trim();
+    if (targetDept) {
+      const norm = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const sNorm = norm(dept);
+      const tNorm = norm(targetDept);
+      const isMatch = sNorm === tNorm || sNorm.includes(tNorm) || tNorm.includes(sNorm);
+      if (!isMatch) {
+        warnings.push(`${role} for "${postName}" must belong to the ${targetDept} department (current student: ${student['Dept'] || 'N/A'}).`);
+      }
     }
   }
 
-  // 3. Year restriction
-  const yr = String(rule.yearRestriction || '');
-  const isYr1 = cls.includes('1ST YEAR') || /^\s*(1|1ST|I)\b/.test(cls) || /\b1ST\b/.test(cls);
-  const isYr2 = cls.includes('2ND YEAR') || /^\s*(2|2ND|II)\b/.test(cls) || /\b2ND\b/.test(cls);
-  const isYr3 = cls.includes('3RD YEAR') || /^\s*(3|3RD|III)\b/.test(cls) || /\b3RD\b/.test(cls);
-  const isPG  = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A|MBA|MCA)\b/.test(cls);
-
-  if (yr === '1' && !isYr1) warnings.push(`${role} must be a 1st Year student for this post.`);
-  if (yr === '2' && !isYr2) warnings.push(`${role} must be a 2nd Year student for this post.`);
-  if (yr === '3' && !isYr3) warnings.push(`${role} must be a 3rd Year student for this post.`);
-  if (yr === 'PG' && !isPG) warnings.push(`${role} for PG Representative must be a PG student (MA/MSc/MCom).`);
+  // 3. Year restriction (Applies to Candidate, Proposer, and Seconder for Year-specific posts)
+  const yr = String(rule.yearRestriction || '').trim();
+  if (yr === '1' && !isYr1) {
+    warnings.push(`${role} must be a 1st Year student for "${postName}".`);
+  } else if (yr === '2' && !isYr2) {
+    warnings.push(`${role} must be a 2nd Year student for "${postName}".`);
+  } else if (yr === '3' && !isYr3) {
+    warnings.push(`${role} must be a 3rd Year student for "${postName}".`);
+  } else if (yr === 'PG' && !isPG) {
+    warnings.push(`${role} for "${postName}" must be a PG student (MA/MSc/MCom).`);
+  } else if (yr === 'UG' && isPG) {
+    warnings.push(`${role} for "${postName}" must be a UG student.`);
+  } else if (yr === '1,2' && !isYr1 && !isYr2) {
+    warnings.push(`${role} must be a 1st or 2nd Year student for "${postName}".`);
+  }
 
   // 4. Candidate-only rules
   if (role === 'Candidate') {
-    // Cannot propose/second themselves (common sense check)
-    // Handled in UI, but safe to keep.
+    // Gender restriction
+    if (rule.femaleOnly && gender && gender !== 'Female') {
+      warnings.push(`The post of "${postName}" is reserved for female candidates only.`);
+    }
 
-    if (gender) {
-      if (rule.femaleOnly && gender === 'Male') {
-        warnings.push(`The post of "${postName}" is reserved for female candidates only.`);
-      }
-      if (rule.finalYearIneligible) {
-        const isFinalYear = isYr3 || cls.includes('3RD YEAR') || (isPG && (isYr2 || cls.includes('2ND YEAR')));
-        if (isFinalYear) warnings.push(`Final year students are not eligible for "${postName}".`);
+    // Final Year Ineligibility (3rd Year UG and 2nd Year PG cannot apply)
+    if (rule.finalYearIneligible) {
+      const isFinalYear = (!isPG && isYr3) || (isPG && isYr2);
+      if (isFinalYear) {
+        warnings.push(`Final year students (3rd Year UG / 2nd Year PG) are ineligible for the post of "${postName}".`);
       }
     }
   }
+
   return warnings;
 }
 

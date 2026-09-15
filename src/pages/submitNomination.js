@@ -157,6 +157,7 @@ function renderForm(container, year, collegeName, setsData = {}) {
       <div>
         <label class="block text-sm font-semibold text-slate-300 mb-1">Post Applied For</label>
         <select id="postSelect" class="field">${postOptions}</select>
+        <div id="postRuleBadgeStrip" class="mt-2.5 flex flex-wrap items-center gap-2"></div>
       </div>
 
       <!-- Three columns: Candidate / Proposer / Seconder -->
@@ -196,6 +197,49 @@ function renderForm(container, year, collegeName, setsData = {}) {
     </div>
   `;
 
+  // Helper to show eligibility badges for selected post
+  function updatePostBadgeStrip(area) {
+    const pName = area.querySelector('#postSelect')?.value;
+    const strip = area.querySelector('#postRuleBadgeStrip');
+    if (!strip || !pName) return;
+
+    const rule = allPosts.find(p => p.post === pName) || {};
+    const badges = [];
+
+    if (rule.femaleOnly) {
+      badges.push('<span class="badge bg-pink-500/20 text-pink-300 border border-pink-500/30 text-xs">♀ Female Candidates Only</span>');
+    }
+
+    const deptName = rule.restrictedDept || (rule.deptRestriction && String(rule.post || '').startsWith('Association Secretary ') ? rule.post.replace('Association Secretary ', '').trim() : '');
+    if (rule.deptRestriction || deptName) {
+      badges.push(`<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold">🏢 ${esc(deptName || 'Dept')} Only (Candidate & Supporters)</span>`);
+    }
+
+    if (rule.yearRestriction === '1') {
+      badges.push('<span class="badge bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs">🎓 1st Year Only</span>');
+    } else if (rule.yearRestriction === '2') {
+      badges.push('<span class="badge bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs">🎓 2nd Year Only</span>');
+    } else if (rule.yearRestriction === '3') {
+      badges.push('<span class="badge bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs">🎓 3rd Year Only</span>');
+    } else if (rule.yearRestriction === 'PG') {
+      badges.push('<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs">🎓 PG Only (MA / MSc / MCom)</span>');
+    } else if (rule.yearRestriction === 'UG') {
+      badges.push('<span class="badge bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs">🎓 UG Students Only</span>');
+    } else if (rule.yearRestriction === '1,2') {
+      badges.push('<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs">🎓 1st &amp; 2nd Year Only</span>');
+    }
+
+    if (rule.finalYearIneligible) {
+      badges.push('<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold">🚫 3rd UG &amp; 2nd PG Ineligible</span>');
+    }
+
+    if (badges.length === 0) {
+      badges.push('<span class="badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs">✓ Open to all eligible students</span>');
+    }
+
+    strip.innerHTML = badges.join('');
+  }
+
   // Populate DOB dropdowns
   populateDobSelects(
     formArea.querySelector('#dob-day'),
@@ -213,7 +257,11 @@ function renderForm(container, year, collegeName, setsData = {}) {
   });
 
   // Revalidate on any change
-  formArea.querySelector('#postSelect')?.addEventListener('change', () => runValidation(formArea));
+  formArea.querySelector('#postSelect')?.addEventListener('change', () => {
+    updatePostBadgeStrip(formArea);
+    runValidation(formArea);
+  });
+  updatePostBadgeStrip(formArea);
   formArea.querySelectorAll('[name="gender"]').forEach(r => r.addEventListener('change', () => runValidation(formArea)));
   formArea.querySelectorAll('.dob-sel').forEach(s => s.addEventListener('change', () => runValidation(formArea)));
 

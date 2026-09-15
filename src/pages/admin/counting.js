@@ -118,6 +118,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     
     // Helper to get department from post name
     const getPostDept = (p) => {
+      if (p.restrictedDept) return String(p.restrictedDept).toUpperCase().trim();
       const name = pName(p);
       const prefix = 'Association Secretary ';
       if (name.toUpperCase().startsWith(prefix.toUpperCase())) {

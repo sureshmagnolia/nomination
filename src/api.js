@@ -357,20 +357,27 @@ export const api = {
   adminGetPosts: (password) => get({ action: 'adminGetPosts', password }),
 
   adminAddPost: async (password, postData) => {
-    updateCache({ action: 'adminGetPosts', password }, posts => [...posts, postData]);
-    await bgPost({ action: 'adminAddPost', password, ...postData });
+    const formatted = { ...postData, post: postData.post || postData.postName };
+    updateCache({ action: 'adminGetPosts', password }, posts => [...(Array.isArray(posts) ? posts : []), formatted]);
+    await bgPost({ action: 'adminAddPost', password, ...formatted });
     invalidateCache('getPosts');
+    invalidateCache('adminGetPosts');
     return { ok: true };
   },
 
   adminUpdatePost: async (password, postData) => {
+    const formatted = { ...postData, post: postData.post || postData.postName };
+    const orig = postData.originalName || formatted.post;
     updateCache({ action: 'adminGetPosts', password }, posts => {
-      const idx = posts.findIndex(p => p.post === postData.post);
-      if (idx !== -1) posts[idx] = postData;
+      if (!Array.isArray(posts)) return [formatted];
+      const idx = posts.findIndex(p => p.post === orig || p.post === formatted.post);
+      if (idx !== -1) posts[idx] = formatted;
+      else posts.push(formatted);
       return posts;
     });
-    await bgPost({ action: 'adminUpdatePost', password, ...postData });
+    await bgPost({ action: 'adminUpdatePost', password, ...formatted });
     invalidateCache('getPosts');
+    invalidateCache('adminGetPosts');
     return { ok: true };
   },
 

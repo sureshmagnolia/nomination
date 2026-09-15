@@ -85,9 +85,13 @@ export default async function handler(req, res) {
           female_only BOOLEAN,
           final_year_ineligible BOOLEAN,
           year_restriction VARCHAR(50),
-          dept_restriction BOOLEAN
+          dept_restriction BOOLEAN,
+          restricted_dept VARCHAR(255)
         );
       `;
+      try {
+        await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS restricted_dept VARCHAR(255);`;
+      } catch (e) {}
       await sql`
         CREATE TABLE IF NOT EXISTS nominal_roll (
           serial_number VARCHAR(255) PRIMARY KEY,
@@ -269,8 +273,21 @@ export default async function handler(req, res) {
     }
     
     if (action === 'getPosts' || action === 'adminGetPosts') {
-      const posts = await sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction" FROM posts`;
-      return jsonOut(res, posts);
+      const posts = await sql`
+        SELECT 
+          post, 
+          female_only as "femaleOnly", 
+          final_year_ineligible as "finalYearIneligible", 
+          year_restriction as "yearRestriction", 
+          dept_restriction as "deptRestriction",
+          restricted_dept as "restrictedDept"
+        FROM posts
+      `;
+      const normalized = posts.map(p => ({
+        ...p,
+        restrictedDept: p.restrictedDept || (p.deptRestriction && String(p.post || '').startsWith('Association Secretary ') ? p.post.replace('Association Secretary ', '').trim() : '')
+      }));
+      return jsonOut(res, normalized);
     }
 
     if (action === 'getSettings' || action === 'adminGetSettings') {
@@ -622,9 +639,68 @@ export default async function handler(req, res) {
       if (existing.some(n => n.post === body.post && (n.proposer_serial === body.seconderSerial || n.seconder_serial === body.seconderSerial))) {
         return errOut(res, 'Seconder has already signed a nomination for this post.');
       }
-      const postDef = await sql`SELECT female_only FROM posts WHERE post = ${body.post}`;
-      if (postDef.length && postDef[0].female_only && body.gender !== 'Female') {
-        return errOut(res, 'This post is reserved for Female candidates only.');
+      const postDef = await sql`SELECT female_only, final_year_ineligible, year_restriction, dept_restriction, restricted_dept FROM posts WHERE post = ${body.post}`;
+      if (postDef.length) {
+        const rule = postDef[0];
+        if (rule.female_only && body.gender !== 'Female') {
+          return errOut(res, 'This post is reserved for Female candidates only.');
+        }
+
+        const cCls = String(cand[0].class || '').toUpperCase();
+        const pCls = String(prop[0].class || '').toUpperCase();
+        const sCls = String(sec[0].class || '').toUpperCase();
+        const cDept = String(cand[0].dept || '').toUpperCase();
+        const pDept = String(prop[0].dept || '').toUpperCase();
+        const sDept = String(sec[0].dept || '').toUpperCase();
+
+        const isFinalYear = (cls) => {
+          const isPG = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A|MBA|MCA|MSW)\b/.test(cls) || cls.includes('PG') || cls.includes('POST GRADUATE');
+          const isYr3 = cls.includes('3RD') || cls.includes('III') || /^\s*3\b/.test(cls);
+          const isYr2 = cls.includes('2ND') || cls.includes('II') || /^\s*2\b/.test(cls);
+          if (isPG && isYr2) return true;
+          if (!isPG && isYr3) return true;
+          return false;
+        };
+
+        if (rule.final_year_ineligible && isFinalYear(cCls)) {
+          return errOut(res, 'Final year students (3rd Year UG / 2nd Year PG) are ineligible for this post.');
+        }
+
+        const matchYr = (cls, yr) => {
+          const isYr1 = cls.includes('1ST') || /^\s*(1|1ST|I)\b/.test(cls) || /\b1ST\s+YEAR\b/.test(cls);
+          const isYr2 = cls.includes('2ND') || /^\s*(2|2ND|II)\b/.test(cls) || /\b2ND\s+YEAR\b/.test(cls);
+          const isYr3 = cls.includes('3RD') || /^\s*(3|3RD|III)\b/.test(cls) || /\b3RD\s+YEAR\b/.test(cls);
+          const isPG  = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A|MBA|MCA|MSW)\b/.test(cls) || cls.includes('PG');
+          if (yr === '1') return isYr1;
+          if (yr === '2') return isYr2;
+          if (yr === '3') return isYr3;
+          if (yr === 'PG') return isPG;
+          if (yr === 'UG') return !isPG;
+          if (yr === '1,2') return isYr1 || isYr2;
+          return true;
+        };
+
+        const yrReq = String(rule.year_restriction || '').trim();
+        if (yrReq) {
+          if (!matchYr(cCls, yrReq)) return errOut(res, `Candidate does not satisfy the year requirement (${yrReq}) for this post.`);
+          if (!matchYr(pCls, yrReq)) return errOut(res, `Proposer does not satisfy the year requirement (${yrReq}) for this post.`);
+          if (!matchYr(sCls, yrReq)) return errOut(res, `Seconder does not satisfy the year requirement (${yrReq}) for this post.`);
+        }
+
+        if (rule.dept_restriction) {
+          const reqD = (rule.restricted_dept || (String(body.post).startsWith('Association Secretary ') ? body.post.replace('Association Secretary ', '').trim() : '')).trim();
+          if (reqD) {
+            const norm = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const nReq = norm(reqD);
+            const matches = d => {
+              const nd = norm(d);
+              return nd === nReq || nd.includes(nReq) || nReq.includes(nd);
+            };
+            if (!matches(cDept)) return errOut(res, `Candidate must belong to the ${reqD} department (found: ${cand[0].dept}).`);
+            if (!matches(pDept)) return errOut(res, `Proposer must belong to the ${reqD} department (found: ${prop[0].dept}).`);
+            if (!matches(sDept)) return errOut(res, `Seconder must belong to the ${reqD} department (found: ${sec[0].dept}).`);
+          }
+        }
       }
 
       const id = String(Math.floor(1000000000 + Math.random() * 9000000000));
@@ -722,19 +798,43 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminAddPost') {
+      const pName = (body.post || body.postName || '').trim();
+      if (!pName) return errOut(res, 'Post name is required');
+      const rDept = (body.restrictedDept || (body.deptRestriction && pName.startsWith('Association Secretary ') ? pName.replace('Association Secretary ', '').trim() : '')).trim();
       await sql`
-        INSERT INTO posts (post, female_only, final_year_ineligible, year_restriction, dept_restriction)
-        VALUES (${body.post}, ${body.femaleOnly}, ${body.finalYearIneligible}, ${body.yearRestriction}, ${body.deptRestriction})
+        INSERT INTO posts (post, female_only, final_year_ineligible, year_restriction, dept_restriction, restricted_dept)
+        VALUES (${pName}, ${!!body.femaleOnly}, ${!!body.finalYearIneligible}, ${body.yearRestriction || ''}, ${!!body.deptRestriction}, ${rDept || null})
+        ON CONFLICT (post) DO UPDATE SET
+          female_only = EXCLUDED.female_only,
+          final_year_ineligible = EXCLUDED.final_year_ineligible,
+          year_restriction = EXCLUDED.year_restriction,
+          dept_restriction = EXCLUDED.dept_restriction,
+          restricted_dept = EXCLUDED.restricted_dept
       `;
       return jsonOut(res, { ok: true });
     }
 
     if (action === 'adminUpdatePost') {
+      const newName = (body.post || body.postName || '').trim();
+      const origName = (body.originalName || newName).trim();
+      if (!newName) return errOut(res, 'Post name is required');
+      const rDept = (body.restrictedDept || (body.deptRestriction && newName.startsWith('Association Secretary ') ? newName.replace('Association Secretary ', '').trim() : '')).trim();
+      
       await sql`
         UPDATE posts 
-        SET female_only = ${body.femaleOnly}, final_year_ineligible = ${body.finalYearIneligible}, year_restriction = ${body.yearRestriction}, dept_restriction = ${body.deptRestriction}
-        WHERE post = ${body.post}
+        SET 
+          post = ${newName},
+          female_only = ${!!body.femaleOnly}, 
+          final_year_ineligible = ${!!body.finalYearIneligible}, 
+          year_restriction = ${body.yearRestriction || ''}, 
+          dept_restriction = ${!!body.deptRestriction},
+          restricted_dept = ${rDept || null}
+        WHERE post = ${origName}
       `;
+
+      if (origName !== newName) {
+        await sql`UPDATE nominations SET post = ${newName} WHERE post = ${origName}`;
+      }
       return jsonOut(res, { ok: true });
     }
 
@@ -1491,7 +1591,7 @@ export default async function handler(req, res) {
 
     if (action === 'adminInjectTestData') {
       const students = await sql`SELECT serial_number as "Nominal Roll Serial Number", name as "NAME", class as "CLASS", admission_no as "ADMISION NO", dept as "Dept" FROM nominal_roll`;
-      const posts = await sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction" FROM posts`;
+      const posts = await sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction", restricted_dept as "restrictedDept" FROM posts`;
 
       if (students.length < 9) return errOut(res, 'Not enough students in Nominal Roll to generate test data.');
       if (posts.length === 0) return errOut(res, 'No posts configured. Add posts first.');
@@ -1501,36 +1601,63 @@ export default async function handler(req, res) {
         const dept = String(student['Dept'] || '').toUpperCase();
 
         if (postRule.deptRestriction) {
-          const prefix = 'Association Secretary ';
-          const postName = String(postRule.post || '');
-          const reqDept = postName.startsWith(prefix) ? postName.replace(prefix, '').toUpperCase() : null;
-          if (reqDept && dept !== reqDept) return false;
+          const reqDept = (postRule.restrictedDept || (String(postRule.post || '').startsWith('Association Secretary ') ? postRule.post.replace('Association Secretary ', '').trim() : '')).trim().toUpperCase();
+          if (reqDept) {
+            const norm = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const nd = norm(dept);
+            const nReq = norm(reqDept);
+            if (nd !== nReq && !nd.includes(nReq) && !nReq.includes(nd)) return false;
+          }
         }
 
-        const yr = String(postRule.yearRestriction || '');
-        if (yr === '1' && !cls.includes('1ST YEAR')) return false;
-        if (yr === '2' && !cls.includes('2ND YEAR')) return false;
-        if (yr === '3' && !cls.includes('3RD YEAR')) return false;
-        if (yr === 'PG') {
-          const isPG = cls.includes('MA') || cls.includes('MSC') || cls.includes('MCOM') ||
-                       cls.includes('M.SC') || cls.includes('M.COM') || cls.includes('M.A');
-          if (!isPG) return false;
-        }
+        const isYr1 = cls.includes('1ST') || /^\s*(1|1ST|I)\b/.test(cls);
+        const isYr2 = cls.includes('2ND') || /^\s*(2|2ND|II)\b/.test(cls);
+        const isYr3 = cls.includes('3RD') || /^\s*(3|3RD|III)\b/.test(cls);
+        const isPG  = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A|MBA|MCA)\b/.test(cls) || cls.includes('PG');
+
+        const yr = String(postRule.yearRestriction || '').trim();
+        if (yr === '1' && !isYr1) return false;
+        if (yr === '2' && !isYr2) return false;
+        if (yr === '3' && !isYr3) return false;
+        if (yr === 'PG' && !isPG) return false;
+        if (yr === 'UG' && isPG) return false;
+        if (yr === '1,2' && !isYr1 && !isYr2) return false;
 
         if (postRule.finalYearIneligible) {
-          if (cls.includes('3RD YEAR') || cls.includes('2ND YEAR M')) return false;
+          if (!isPG && isYr3) return false;
+          if (isPG && isYr2) return false;
         }
 
         return true;
       }
 
       function isEligibleSupporter(student, postRule) {
-        if (!postRule.deptRestriction) return true;
+        const cls = String(student['CLASS'] || '').toUpperCase();
         const dept = String(student['Dept'] || '').toUpperCase();
-        const prefix = 'Association Secretary ';
-        const postName = String(postRule.post || '');
-        const reqDept = postName.startsWith(prefix) ? postName.replace(prefix, '').toUpperCase() : null;
-        if (reqDept && dept !== reqDept) return false;
+
+        if (postRule.deptRestriction) {
+          const reqDept = (postRule.restrictedDept || (String(postRule.post || '').startsWith('Association Secretary ') ? postRule.post.replace('Association Secretary ', '').trim() : '')).trim().toUpperCase();
+          if (reqDept) {
+            const norm = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const nd = norm(dept);
+            const nReq = norm(reqDept);
+            if (nd !== nReq && !nd.includes(nReq) && !nReq.includes(nd)) return false;
+          }
+        }
+
+        const isYr1 = cls.includes('1ST') || /^\s*(1|1ST|I)\b/.test(cls);
+        const isYr2 = cls.includes('2ND') || /^\s*(2|2ND|II)\b/.test(cls);
+        const isYr3 = cls.includes('3RD') || /^\s*(3|3RD|III)\b/.test(cls);
+        const isPG  = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A|MBA|MCA)\b/.test(cls) || cls.includes('PG');
+
+        const yr = String(postRule.yearRestriction || '').trim();
+        if (yr === '1' && !isYr1) return false;
+        if (yr === '2' && !isYr2) return false;
+        if (yr === '3' && !isYr3) return false;
+        if (yr === 'PG' && !isPG) return false;
+        if (yr === 'UG' && isPG) return false;
+        if (yr === '1,2' && !isYr1 && !isYr2) return false;
+
         return true;
       }
 
