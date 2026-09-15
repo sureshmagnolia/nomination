@@ -426,16 +426,29 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
             }
 
             let headerRowIndex = -1;
+            let detectedDelimiter = ',';
+            const normCol = c => String(c || '').trim().replace(/^"|"$/g, '').toUpperCase().replace(/\s+/g, ' ');
+            const isAdmCol = c => {
+              const u = normCol(c);
+              return u === 'ADMISION NO' || u === 'ADMISSION NO' || u === 'ADMISION NUMBER' || u === 'ADMISSION NUMBER' || u === 'ADM NO';
+            };
+
             for (let i = 0; i < Math.min(lines.length, 20); i++) {
-              const cols = lines[i].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-              if (legacyHeaders.every(h => cols.includes(h))) {
+              const delim = lines[i].includes('\t') && !lines[i].includes(',') ? '\t' : ',';
+              const cols = lines[i].split(delim).map(normCol);
+
+              const hasSerial = cols.some(c => c === 'NOMINAL ROLL SERIAL NUMBER' || c === 'SERIAL NUMBER' || c === 'SL. NO' || c === 'SL NO');
+              const hasName = cols.includes('NAME');
+              const hasDept = cols.includes('DEPT') || cols.includes('DEPARTMENT');
+              const hasAdm = cols.some(isAdmCol);
+              const hasClass = cols.includes('CLASS');
+              const hasYear = cols.includes('YEAR');
+              const hasStream = cols.includes('STREAM');
+
+              if (hasSerial && hasName && hasDept && hasAdm) {
                 headerRowIndex = i;
-                usedHeaders = legacyHeaders;
-                break;
-              }
-              if (explicitHeaders.every(h => cols.includes(h))) {
-                headerRowIndex = i;
-                usedHeaders = explicitHeaders;
+                detectedDelimiter = delim;
+                usedHeaders = (hasYear && hasStream) ? explicitHeaders : legacyHeaders;
                 break;
               }
             }
@@ -446,19 +459,37 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings) {
               return;
             }
 
-            const headers = lines[headerRowIndex].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-            const idxMap = usedHeaders.map(h => headers.indexOf(h));
+            const rawHeaders = lines[headerRowIndex].split(detectedDelimiter).map(h => h.trim().replace(/^"|"$/g, ''));
+            const normHeaders = rawHeaders.map(normCol);
+            
+            let idxMap;
+            if (usedHeaders === explicitHeaders) {
+              const sIdx = normHeaders.findIndex(c => c === 'NOMINAL ROLL SERIAL NUMBER' || c === 'SERIAL NUMBER' || c === 'SL. NO' || c === 'SL NO');
+              const nIdx = normHeaders.indexOf('NAME');
+              const yIdx = normHeaders.indexOf('YEAR');
+              const stIdx = normHeaders.indexOf('STREAM');
+              const aIdx = normHeaders.findIndex(isAdmCol);
+              const dIdx = normHeaders.findIndex(c => c === 'DEPT' || c === 'DEPARTMENT');
+              idxMap = [sIdx, nIdx, yIdx, stIdx, aIdx, dIdx];
+            } else {
+              const sIdx = normHeaders.findIndex(c => c === 'NOMINAL ROLL SERIAL NUMBER' || c === 'SERIAL NUMBER' || c === 'SL. NO' || c === 'SL NO');
+              const nIdx = normHeaders.indexOf('NAME');
+              const cIdx = normHeaders.indexOf('CLASS');
+              const aIdx = normHeaders.findIndex(isAdmCol);
+              const dIdx = normHeaders.findIndex(c => c === 'DEPT' || c === 'DEPARTMENT');
+              idxMap = [sIdx, nIdx, cIdx, aIdx, dIdx];
+            }
             
             parsedRows = lines.slice(headerRowIndex + 1).map(line => {
               const cells = [];
               let cur = '', inQ = false;
-              for (const ch of line + ',') {
+              for (const ch of line + detectedDelimiter) {
                 if (ch === '"') { inQ = !inQ; }
-                else if (ch === ',' && !inQ) { cells.push(cur.trim()); cur = ''; }
+                else if (ch === detectedDelimiter && !inQ) { cells.push(cur.trim()); cur = ''; }
                 else cur += ch;
               }
-              return idxMap.map(i => cells[i] ?? '');
-            }).filter(r => r[1] && r[1].trim() !== '' && r[1] !== 'NAME');
+              return idxMap.map(i => (i >= 0 ? cells[i] ?? '' : ''));
+            }).filter(r => r[1] && r[1].trim() !== '' && r[1].toUpperCase() !== 'NAME');
 
             const deptIdx = usedHeaders.indexOf('Dept');
             

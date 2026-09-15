@@ -632,7 +632,7 @@ export default async function handler(req, res) {
       await sql`UPDATE settings SET value='false' WHERE key IN ('validListPublished', 'finalListPublished', 'isRollFinalized')`;
       await sql`DELETE FROM settings WHERE key IN ('results_data', 'ballotPlan', 'countingMatrix')`;
       
-      const isLegacy = body.headers && body.headers.join() === ['Nominal Roll Serial Number', 'NAME', 'CLASS', 'ADMISION NO', 'Dept'].join();
+      const isLegacy = body.headers && body.headers.some(h => String(h).toUpperCase().includes('CLASS'));
       
       const toInsert = body.rows.map(r => {
         let cl = r[2], adm = r[3], dpt = r[4];
