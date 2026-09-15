@@ -6,6 +6,7 @@
 import { api } from '../api.js';
 import { esc, showToast } from '../utils.js';
 import { CONFIG } from '../config.js';
+import { openPrintRollModal } from '../rollPrinter.js';
 
 export async function renderNominalRoll(container) {
   container.innerHTML = `
@@ -201,13 +202,10 @@ function renderPublicRollUI(container, nominalRoll, settings) {
             </button>
           ` : ''}
 
-          <div class="dropdown relative inline-block">
-            <button class="btn btn-secondary btn-sm dropdown-toggle">🖨️ Print Roll ▼</button>
-            <div class="dropdown-menu absolute right-0 mt-2 w-52 glass rounded-lg shadow-xl hidden z-50 overflow-hidden border border-white/10">
-              <button class="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10" id="btnPrintSerial">Sorted by Serial No</button>
-              <button class="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10" id="btnPrintClass">Sorted by Class</button>
-            </div>
-          </div>
+          <button id="btnOpenPrintModal" class="btn btn-secondary btn-sm flex items-center gap-1.5 shadow-md hover:border-indigo-400">
+            <span>🖨️</span>
+            <span>Print Roll</span>
+          </button>
         </div>
       </div>
 
@@ -462,27 +460,20 @@ function renderPublicRollUI(container, nominalRoll, settings) {
     }
   });
 
-  // Dropdown toggle for Print
-  const dropBtn = container.querySelector('.dropdown-toggle');
-  const dropMenu = container.querySelector('.dropdown-menu');
-  if (dropBtn) {
-    dropBtn.onclick = (e) => {
-      e.stopPropagation();
-      dropMenu.classList.toggle('hidden');
+  // Print Roll via interactive Print Modal (All, Department, Class filtering)
+  const printBtn = container.querySelector('#btnOpenPrintModal');
+  if (printBtn) {
+    printBtn.onclick = () => {
+      openPrintRollModal({
+        students,
+        isFinal,
+        isDraft,
+        collegeName,
+        initialDept: selectedDept,
+        initialClass: selectedClass
+      });
     };
   }
-  window.onclick = () => dropMenu?.classList.add('hidden');
-
-  // Printing (Prints currently filtered list)
-  container.querySelector('#btnPrintSerial').onclick = () => {
-    const dataToPrint = getFilteredStudents();
-    triggerRollPrint(dataToPrint, isFinal, isDraft, 'serial', collegeName, selectedDept, selectedClass);
-  };
-
-  container.querySelector('#btnPrintClass').onclick = () => {
-    const dataToPrint = getFilteredStudents();
-    triggerRollPrint(dataToPrint, isFinal, isDraft, 'class', collegeName, selectedDept, selectedClass);
-  };
 
   // Correction Request Modal Events
   const modal = container.querySelector('#correctionModal');
@@ -527,101 +518,4 @@ function renderPublicRollUI(container, nominalRoll, settings) {
       }
     };
   }
-}
-
-// Print function supporting Draft D1, D2 and Final 1, 2, plus filter info
-function triggerRollPrint(students, isFinal, isDraft, sortBy, collegeName, filterDept = '', filterClass = '') {
-  const data = [...students];
-  if (sortBy === 'class') {
-    data.sort((a, b) => {
-      const cA = String(a['CLASS']).toUpperCase();
-      const cB = String(b['CLASS']).toUpperCase();
-      if (cA !== cB) return cA.localeCompare(cB);
-      return String(a['NAME']).toUpperCase().localeCompare(String(b['NAME']).toUpperCase());
-    });
-  } else {
-    data.sort((a, b) => Number(a['Nominal Roll Serial Number']) - Number(b['Nominal Roll Serial Number']));
-  }
-
-  const watermark = isFinal ? 'FINAL NOMINAL ROLL' : 'DRAFT NOMINAL ROLL';
-  const timestamp = new Date().toLocaleString();
-
-  let filterSubtitle = '';
-  if (filterDept || filterClass) {
-    const parts = [];
-    if (filterDept) parts.push(`Department: ${filterDept}`);
-    if (filterClass) parts.push(`Class: ${filterClass}`);
-    filterSubtitle = `<div style="font-size:12px; margin-top:4px; font-weight:bold; color:#444;">[ ${esc(parts.join(' | '))} ]</div>`;
-  }
-
-  const printWin = window.open('', '_blank');
-  printWin.document.write(`
-    <html>
-      <head>
-        <title>${watermark}</title>
-        <style>
-          @page { margin: 15mm; }
-          body { font-family: sans-serif; color: #000; line-height: 1.4; font-size: 11px; margin: 0; padding: 0; }
-          .watermark { 
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 80px; color: rgba(0,0,0,0.05); font-weight: bold; pointer-events: none; z-index: -1;
-            white-space: nowrap; text-transform: uppercase;
-          }
-          .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-          .college { font-size: 18px; font-weight: bold; text-transform: uppercase; }
-          .title { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-top: 5px; }
-          .meta { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 10px; }
-          
-          table { width: 100%; border-collapse: collapse; }
-          th, td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
-          th { background: #eee; font-weight: bold; text-transform: uppercase; font-size: 10px; }
-          .sl { width: 50px; text-align: center; font-weight: bold; font-family: monospace; }
-          .adm { width: 80px; font-family: monospace; }
-          .cls { width: 160px; font-size: 9px; }
-          .dept { width: 100px; font-size: 9px; }
-
-          .footer { margin-top: 30px; display: flex; justify-content: space-between; font-weight: bold; }
-        </style>
-      </head>
-      <body>
-        <div class="watermark">${watermark}</div>
-        <div class="header">
-          <div class="college">${esc(collegeName)}</div>
-          <div class="title">College Union Election — ${watermark}</div>
-          ${filterSubtitle}
-        </div>
-        <div class="meta">
-          <div>Sorted by: ${sortBy === 'class' ? 'Class' : 'Serial Number'}</div>
-          <div>Printed on: ${timestamp}</div>
-          <div>Total Students: ${data.length}</div>
-        </div>
-        <table>
-          <thead><tr>
-            <th class="sl">${isDraft ? 'Draft Sl.' : 'Sl. No'}</th>
-            <th class="adm">Adm. No</th>
-            <th>Name</th>
-            <th class="cls">Class</th>
-            <th class="dept">Department</th>
-          </tr></thead>
-          <tbody>
-            ${data.map(s => `
-              <tr>
-                <td class="sl">${isDraft ? 'D' : ''}${esc(s['Nominal Roll Serial Number'])}</td>
-                <td class="adm">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
-                <td style="font-weight:bold">${esc(s['NAME'])}</td>
-                <td class="cls">${esc(s['CLASS'])}</td>
-                <td class="dept">${esc(s['Dept'] || '–')}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        <div class="footer">
-          <div>Returning Officer</div>
-          <div>Principal</div>
-        </div>
-        <script>window.print();</script>
-      </body>
-    </html>
-  `);
-  printWin.document.close();
 }

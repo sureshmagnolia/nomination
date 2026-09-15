@@ -6,6 +6,7 @@ import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
 import { CONFIG } from '../../config.js';
+import { openPrintRollModal } from '../../rollPrinter.js';
 
 export async function renderAdminNominalRoll(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -794,9 +795,16 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
       };
     }
 
-    // Printing
+    // Printing via interactive Print Modal (All, Department, Class filtering)
     if (main.querySelector('#btnPrintRoll')) {
-      main.querySelector('#btnPrintRoll').onclick = () => triggerRollPrint(students, isFinal, settings.collegeName);
+      main.querySelector('#btnPrintRoll').onclick = () => {
+        openPrintRollModal({
+          students,
+          isFinal,
+          isDraft,
+          collegeName: settings.collegeName
+        });
+      };
     }
 
   }; // end refreshTable
@@ -805,156 +813,3 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
 }
 
 
-function triggerRollPrint(students, isFinal, collegeName) {
-  const getClassWeight = (className) => {
-    const cls = String(className).toUpperCase();
-    if (cls.includes('PH D') || cls.includes('PHD')) return 3000;
-    
-    let typeWeight = 4000;
-    if (cls.match(/\b(BA|BSC|BCOM|BBA|BCA)\b/)) typeWeight = 1000;
-    else if (cls.match(/\b(MA|MSC|MCOM|MBA|MCA)\b/)) typeWeight = 2000;
-
-    let yearWeight = 900;
-    if (cls.includes('1ST YEAR') || cls.match(/\bI\b/)) yearWeight = 100;
-    else if (cls.includes('2ND YEAR') || cls.match(/\bII\b/)) yearWeight = 200;
-    else if (cls.includes('3RD YEAR') || cls.match(/\bIII\b/)) yearWeight = 300;
-
-    return typeWeight + yearWeight;
-  };
-
-  // Sort primarily by Dept, then Class (custom), then Name
-  const data = [...students].sort((a, b) => {
-    const dA = String(a['Dept'] || '').toUpperCase();
-    const dB = String(b['Dept'] || '').toUpperCase();
-    if (dA !== dB) return dA.localeCompare(dB);
-
-    const cA = String(a['CLASS']).toUpperCase();
-    const cB = String(b['CLASS']).toUpperCase();
-    if (cA !== cB) {
-      const wA = getClassWeight(cA);
-      const wB = getClassWeight(cB);
-      if (wA !== wB) return wA - wB;
-      return cA.localeCompare(cB);
-    }
-    
-    return String(a['NAME']).toUpperCase().localeCompare(String(b['NAME']).toUpperCase());
-  });
-
-  // Group by Class
-  const classes = {};
-  data.forEach(s => {
-    const cls = String(s['CLASS']).toUpperCase() || 'UNKNOWN CLASS';
-    if (!classes[cls]) classes[cls] = [];
-    classes[cls].push(s);
-  });
-
-  const fallbackCollege = CONFIG.COLLEGE_NAME || 'GOVERNMENT VICTORIA COLLEGE, PALAKKAD';
-  const cName = collegeName || fallbackCollege;
-  const watermark = isFinal ? 'FINAL NOMINAL ROLL' : 'DRAFT NOMINAL ROLL';
-  const timestamp = new Date().toLocaleString();
-
-  let htmlContent = '';
-  
-  // Render each class as a separate page
-  Object.keys(classes).forEach(cls => {
-    const studentsInClass = classes[cls];
-    // Attempt to extract Department (assume they share the same department in the class)
-    const dept = esc(studentsInClass[0]['Dept'] || 'UNKNOWN DEPARTMENT');
-
-    const len = studentsInClass.length;
-    let squishClass = '';
-    // A4 usually fits ~35 students on page 1, and ~40 on subsequent pages.
-    // If the overflow onto the last page is 6 students or fewer, applying tighter padding pulls them into the previous page.
-    const spill = len <= 35 ? 0 : ((len - 35) % 40);
-    if (spill > 0 && spill <= 6) squishClass = 'squish';
-
-    htmlContent += `
-      <div class="page-break">
-        <div class="watermark">${watermark}</div>
-        <table class="${squishClass}">
-          <thead>
-            <tr>
-              <th colspan="3" class="table-header">
-                <div class="college">${esc(cName)}</div>
-                <div class="title">Department of ${dept}</div>
-                <div class="title" style="margin-top: 5px;">${esc(cls)} — ${watermark}</div>
-                <div class="meta">
-                  <div>Printed on: ${timestamp}</div>
-                  <div>Students in Class: ${studentsInClass.length}</div>
-                </div>
-              </th>
-            </tr>
-            <tr>
-              <th class="sl">Sl. No</th>
-              <th class="adm">Adm. No</th>
-              <th>Name</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${studentsInClass.map(s => `
-              <tr>
-                <td class="sl">${esc(s['Nominal Roll Serial Number'])}</td>
-                <td class="adm">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
-                <td>${esc(s['NAME'])}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="3" class="table-footer">
-                <div class="footer-content">Returning Officer</div>
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    `;
-  });
-
-  const printWin = window.open('', '_blank');
-  printWin.document.write(`
-    <html>
-      <head>
-        <title>${watermark}</title>
-        <style>
-          @page { margin: 15mm; }
-          body { font-family: sans-serif; color: #000; line-height: 1.4; font-size: 11px; margin: 0; padding: 0; }
-          .watermark { 
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 80px; color: #f1f5f9; font-weight: bold; pointer-events: none; z-index: -1;
-            white-space: nowrap; text-transform: uppercase;
-            -webkit-print-color-adjust: exact; print-color-adjust: exact;
-          }
-          .page-break { page-break-after: always; position: relative; }
-          .page-break:last-child { page-break-after: auto; }
-          
-          .table-header { background: transparent; border: none; text-align: center; padding: 0 0 10px 0; }
-          .table-header .college { font-size: 18px; font-weight: bold; text-transform: uppercase; color: #000; }
-          .table-header .title { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-top: 2px; color: #000; }
-          .table-header .meta { display: flex; justify-content: space-between; font-size: 10px; margin-top: 10px; border-bottom: 2px solid #000; padding-bottom: 5px; color: #000; font-weight: normal; text-transform: none; }
-          
-          .table-footer { border: none; padding: 40px 40px 0 0; }
-          .footer-content { text-align: right; font-weight: bold; font-size: 11px; }
-
-          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-          th, td { border: 1px solid #000; padding: 3px 5px; text-align: left; }
-          th { background: #eee; font-weight: bold; text-transform: uppercase; font-size: 10px; }
-          .sl { width: 50px; text-align: center; }
-          .adm { width: 65px; font-family: monospace; }
-
-          .squish th, .squish td { padding: 1px 4px !important; }
-          .squish table { margin-bottom: 5px !important; }
-          .squish .table-header { padding: 0 0 2px 0 !important; }
-          .squish .table-footer { padding: 10px 40px 0 0 !important; }
-
-          .no-print { display: none; }
-        </style>
-      </head>
-      <body>
-        ${htmlContent}
-        <script>window.print();</script>
-      </body>
-    </html>
-  `);
-  printWin.document.close();
-}
