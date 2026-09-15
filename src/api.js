@@ -301,33 +301,41 @@ export const api = {
     return Promise.resolve({ ok: true });
   },
 
-  adminPublishValidList: (password) => {
+  adminPublishValidList: async (password) => {
     updateCache({ action: 'adminGetSettings', password }, old => ({...old, validListPublished: 'true'}));
-    bgPost({ action: 'adminPublishValidList', password });
+    const res = await post({ action: 'adminPublishValidList', password });
     invalidateCache('getValidNominations');
-    return Promise.resolve({ ok: true });
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    return res;
   },
 
-  adminPublishFinalList: (password) => {
+  adminPublishFinalList: async (password) => {
     updateCache({ action: 'adminGetSettings', password }, old => ({...old, finalListPublished: 'true'}));
-    bgPost({ action: 'adminPublishFinalList', password });
+    const res = await post({ action: 'adminPublishFinalList', password });
     invalidateCache('getFinalNominations');
-    return Promise.resolve({ ok: true });
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    return res;
   },
 
   adminUnpublishValidList: async (password) => {
     updateCache({ action: 'adminGetSettings', password }, old => ({...old, validListPublished: 'false', finalListPublished: 'false'}));
-    await bgPost({ action: 'adminUnpublishValidList', password });
+    const res = await post({ action: 'adminUnpublishValidList', password });
     invalidateCache('getValidNominations');
     invalidateCache('getFinalNominations');
-    return { ok: true };
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    return res;
   },
 
   adminUnpublishFinalList: async (password) => {
     updateCache({ action: 'adminGetSettings', password }, old => ({...old, finalListPublished: 'false'}));
-    await bgPost({ action: 'adminUnpublishFinalList', password });
+    const res = await post({ action: 'adminUnpublishFinalList', password });
     invalidateCache('getFinalNominations');
-    return { ok: true };
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    return res;
   },
 
   adminGetSettings: (password) => get({ action: 'adminGetSettings', password }),
