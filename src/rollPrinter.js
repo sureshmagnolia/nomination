@@ -2,9 +2,10 @@
  * rollPrinter.js
  * Comprehensive print engine and modal dialog for Nominal Rolls (Draft & Final).
  * Supports:
- *   1. All Students (with option for continuous list or page-break per class)
- *   2. Department-Wise (filtered to a specific department)
- *   3. Class-Wise (filtered to a specific class)
+ *   1. All Students, Department-Wise, or Specific Class filtering
+ *   2. 1 Column (Standard) or 2 Columns (Side-by-Side Dual Lists to save space & paper)
+ *   3. No Voter Signature/Remarks on Draft/Final Nominal Roll (reserved for Marked Copy in Booths)
+ *   4. Sole official signatory: Returning Officer (aligned right)
  */
 import { esc } from './utils.js';
 import { CONFIG } from './config.js';
@@ -17,7 +18,6 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, in
   if (existingModal) existingModal.remove();
 
   const cName = collegeName || CONFIG.COLLEGE_NAME || 'College Union Election';
-  const watermarkText = isFinal ? 'FINAL NOMINAL ROLL' : 'DRAFT NOMINAL ROLL';
 
   // Extract unique departments and classes
   const allDepartments = Array.from(new Set(
@@ -41,6 +41,7 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, in
   let currentDept = initialDept || (allDepartments[0] || '');
   let currentClass = initialClass || (getClassesForDept(currentDept)[0] || '');
   let currentSort = 'serial';
+  let currentColumns = '1';
   let pageBreakEachClass = true;
 
   const modalEl = document.createElement('div');
@@ -160,26 +161,34 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, in
           ` : ''}
         </div>
 
-        <!-- Sort Order & Page Break Options -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Sort Order, Column Layout & Page Break Options -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1.5">2. Sort Order</label>
-            <select id="printSortSelect" class="field text-sm bg-slate-800 border-white/10 text-white w-full">
-              <option value="serial" ${currentSort === 'serial' ? 'selected' : ''}>By Serial Number (Recommended)</option>
-              <option value="class" ${currentSort === 'class' ? 'selected' : ''}>By Class & Alphabetical Name</option>
+            <select id="printSortSelect" class="field text-xs bg-slate-800 border-white/10 text-white w-full py-2">
+              <option value="serial" ${currentSort === 'serial' ? 'selected' : ''}>By Serial Number</option>
+              <option value="class" ${currentSort === 'class' ? 'selected' : ''}>By Class & Alphabetical</option>
             </select>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5">3. Multi-Class Layout</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">3. Column Layout</label>
+            <select id="printColumnsSelect" class="field text-xs bg-slate-800 border-white/10 text-white w-full py-2">
+              <option value="1" ${currentColumns === '1' ? 'selected' : ''}>1 Column (Standard)</option>
+              <option value="2" ${currentColumns === '2' ? 'selected' : ''}>2 Columns (Saves Space / Paper)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">4. Multi-Class Layout</label>
             ${currentScope === 'class' ? `
-              <div class="field text-sm bg-slate-800/50 text-slate-400 py-2 border-dashed">
-                Single Class Mode (1 Document)
+              <div class="field text-xs bg-slate-800/50 text-slate-400 py-2 border-dashed">
+                Single Class Mode
               </div>
             ` : `
-              <label class="flex items-center gap-2.5 p-2 rounded-lg bg-slate-800/60 border border-white/5 cursor-pointer hover:bg-slate-800">
+              <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-800/60 border border-white/5 cursor-pointer hover:bg-slate-800 h-[38px]">
                 <input type="checkbox" id="pageBreakCheckbox" class="rounded text-indigo-600" ${pageBreakEachClass ? 'checked' : ''}>
-                <span class="text-xs text-slate-300">New page per class <span class="text-indigo-400 text-[11px]">(Recommended for notice boards)</span></span>
+                <span class="text-xs text-slate-300">New page per class</span>
               </label>
             `}
           </div>
@@ -259,6 +268,14 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, in
       };
     }
 
+    // Column layout
+    const colSel = modalEl.querySelector('#printColumnsSelect');
+    if (colSel) {
+      colSel.onchange = (e) => {
+        currentColumns = e.target.value;
+      };
+    }
+
     // Page break checkbox
     const pbCheck = modalEl.querySelector('#pageBreakCheckbox');
     if (pbCheck) {
@@ -278,7 +295,8 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, in
         dept: currentDept,
         className: currentClass,
         sortBy: currentSort,
-        pageBreakPerClass: pageBreakEachClass
+        pageBreakPerClass: pageBreakEachClass,
+        columns: currentColumns
       });
       modalEl.remove();
     };
@@ -300,7 +318,8 @@ export function executeRollPrint({
   dept = '',
   className = '',
   sortBy = 'serial',
-  pageBreakPerClass = true
+  pageBreakPerClass = true,
+  columns = '1'
 }) {
   // 1. Filter students based on scope
   let data = [...students];
@@ -375,21 +394,252 @@ export function executeRollPrint({
     classKeys.forEach((cKey, idx) => {
       const classStudents = groups[cKey];
       const classDept = classStudents[0]['Dept'] || (scope === 'dept' ? dept : '–');
-      const isLast = idx === classKeys.length - 1;
+      const isLastClass = idx === classKeys.length - 1;
 
-      bodyContent += `
-        <div class="page-container ${!isLast ? 'page-break' : ''}">
+      if (columns === '2') {
+        // 2 Columns Mode: Chunk by ~70 students per page (35 per column)
+        const PAGE_SIZE = 70;
+        const numPages = Math.max(1, Math.ceil(classStudents.length / PAGE_SIZE));
+
+        for (let p = 0; p < numPages; p++) {
+          const pageChunk = classStudents.slice(p * PAGE_SIZE, (p + 1) * PAGE_SIZE);
+          const mid = Math.ceil(pageChunk.length / 2);
+          const leftList = pageChunk.slice(0, mid);
+          const rightList = pageChunk.slice(mid);
+          const isLastPageOfClass = p === numPages - 1;
+          const isVeryLastPage = isLastClass && isLastPageOfClass;
+
+          bodyContent += `
+            <div class="page-container ${!isVeryLastPage ? 'page-break' : ''}">
+              <div class="watermark">${watermark}</div>
+              
+              <div class="print-header">
+                <div class="college-name">${esc(collegeName)}</div>
+                <div class="election-title">College Union Election — ${watermark}</div>
+                <div class="class-header">
+                  <span class="badge-tag">CLASS: ${esc(cKey)}</span>
+                  <span class="badge-tag">DEPARTMENT: ${esc(classDept)}</span>
+                  ${numPages > 1 ? `<span class="badge-tag">PAGE ${p + 1} OF ${numPages}</span>` : ''}
+                </div>
+                <div class="meta-bar">
+                  <div>Students in Class: <strong>${classStudents.length}</strong></div>
+                  <div>Sorted By: ${sortBy === 'class' ? 'Class & Alphabetical' : 'Serial Number'}</div>
+                  <div>Printed: ${timestamp}</div>
+                </div>
+              </div>
+
+              <div class="dual-columns">
+                <div class="column-half">
+                  <table class="roll-table">
+                    <thead>
+                      <tr>
+                        <th class="col-sl">${isDraft ? 'Draft Sl.' : 'Sl. No'}</th>
+                        <th class="col-adm">Adm. No</th>
+                        <th>Student Name</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${leftList.map(s => `
+                        <tr>
+                          <td class="col-sl font-mono font-bold">${formatSl(esc(s['Nominal Roll Serial Number']))}</td>
+                          <td class="col-adm font-mono">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
+                          <td class="font-semibold">${esc(s['NAME'])}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="column-half">
+                  <table class="roll-table">
+                    <thead>
+                      <tr>
+                        <th class="col-sl">${isDraft ? 'Draft Sl.' : 'Sl. No'}</th>
+                        <th class="col-adm">Adm. No</th>
+                        <th>Student Name</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${rightList.map(s => `
+                        <tr>
+                          <td class="col-sl font-mono font-bold">${formatSl(esc(s['Nominal Roll Serial Number']))}</td>
+                          <td class="col-adm font-mono">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
+                          <td class="font-semibold">${esc(s['NAME'])}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              ${isLastPageOfClass ? `
+                <div class="print-footer">
+                  <div class="sig-box">
+                    <div class="sig-line"></div>
+                    <div>Returning Officer</div>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }
+
+      } else {
+        // 1 Column Mode: Standard single table without signature/remarks
+        bodyContent += `
+          <div class="page-container ${!isLastClass ? 'page-break' : ''}">
+            <div class="watermark">${watermark}</div>
+            
+            <div class="print-header">
+              <div class="college-name">${esc(collegeName)}</div>
+              <div class="election-title">College Union Election — ${watermark}</div>
+              <div class="class-header">
+                <span class="badge-tag">CLASS: ${esc(cKey)}</span>
+                <span class="badge-tag">DEPARTMENT: ${esc(classDept)}</span>
+              </div>
+              <div class="meta-bar">
+                <div>Students in Class: <strong>${classStudents.length}</strong></div>
+                <div>Sorted By: ${sortBy === 'class' ? 'Class & Alphabetical' : 'Serial Number'}</div>
+                <div>Printed: ${timestamp}</div>
+              </div>
+            </div>
+
+            <table class="roll-table">
+              <thead>
+                <tr>
+                  <th class="col-sl">${isDraft ? 'Draft Sl. No' : 'Sl. No'}</th>
+                  <th class="col-adm">Admission No</th>
+                  <th>Student Full Name</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${classStudents.map(s => `
+                  <tr>
+                    <td class="col-sl font-mono font-bold">${formatSl(esc(s['Nominal Roll Serial Number']))}</td>
+                    <td class="col-adm font-mono">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
+                    <td class="font-semibold">${esc(s['NAME'])}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+
+            <div class="print-footer">
+              <div class="sig-box">
+                <div class="sig-line"></div>
+                <div>Returning Officer</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    });
+
+  } else {
+    // Case B: Continuous table (Entire College or Department continuous)
+    if (columns === '2') {
+      // 2 Columns Continuous Mode: Chunk by 70 students per page
+      const PAGE_SIZE = 70;
+      const numPages = Math.max(1, Math.ceil(data.length / PAGE_SIZE));
+
+      for (let p = 0; p < numPages; p++) {
+        const pageChunk = data.slice(p * PAGE_SIZE, (p + 1) * PAGE_SIZE);
+        const mid = Math.ceil(pageChunk.length / 2);
+        const leftList = pageChunk.slice(0, mid);
+        const rightList = pageChunk.slice(mid);
+        const isLastPage = p === numPages - 1;
+
+        bodyContent += `
+          <div class="page-container ${!isLastPage ? 'page-break' : ''}">
+            <div class="watermark">${watermark}</div>
+
+            <div class="print-header">
+              <div class="college-name">${esc(collegeName)}</div>
+              <div class="election-title">College Union Election — ${watermark}</div>
+              <div class="class-header">
+                <span class="badge-tag">${esc(scopeSubtitle.toUpperCase())}</span>
+                ${numPages > 1 ? `<span class="badge-tag">PAGE ${p + 1} OF ${numPages}</span>` : ''}
+              </div>
+              <div class="meta-bar">
+                <div>Total Students: <strong>${data.length}</strong></div>
+                <div>Sorted By: ${sortBy === 'class' ? 'Class & Alphabetical' : 'Serial Number'}</div>
+                <div>Printed: ${timestamp}</div>
+              </div>
+            </div>
+
+            <div class="dual-columns">
+              <div class="column-half">
+                <table class="roll-table">
+                  <thead>
+                    <tr>
+                      <th class="col-sl">${isDraft ? 'Draft Sl.' : 'Sl. No'}</th>
+                      <th class="col-adm">Adm. No</th>
+                      <th>Student Name</th>
+                      <th>Class</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${leftList.map(s => `
+                      <tr>
+                        <td class="col-sl font-mono font-bold">${formatSl(esc(s['Nominal Roll Serial Number']))}</td>
+                        <td class="col-adm font-mono">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
+                        <td class="font-semibold">${esc(s['NAME'])}</td>
+                        <td class="text-xs">${esc(s['CLASS'])}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="column-half">
+                <table class="roll-table">
+                  <thead>
+                    <tr>
+                      <th class="col-sl">${isDraft ? 'Draft Sl.' : 'Sl. No'}</th>
+                      <th class="col-adm">Adm. No</th>
+                      <th>Student Name</th>
+                      <th>Class</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${rightList.map(s => `
+                      <tr>
+                        <td class="col-sl font-mono font-bold">${formatSl(esc(s['Nominal Roll Serial Number']))}</td>
+                        <td class="col-adm font-mono">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
+                        <td class="font-semibold">${esc(s['NAME'])}</td>
+                        <td class="text-xs">${esc(s['CLASS'])}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            ${isLastPage ? `
+              <div class="print-footer">
+                <div class="sig-box">
+                  <div class="sig-line"></div>
+                  <div>Returning Officer</div>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+
+    } else {
+      // 1 Column Continuous Mode: Single continuous table without signature/remarks
+      bodyContent = `
+        <div class="page-container">
           <div class="watermark">${watermark}</div>
-          
+
           <div class="print-header">
             <div class="college-name">${esc(collegeName)}</div>
             <div class="election-title">College Union Election — ${watermark}</div>
             <div class="class-header">
-              <span class="badge-tag">CLASS: ${esc(cKey)}</span>
-              <span class="badge-tag">DEPARTMENT: ${esc(classDept)}</span>
+              <span class="badge-tag">${esc(scopeSubtitle.toUpperCase())}</span>
             </div>
             <div class="meta-bar">
-              <div>Students in Class: <strong>${classStudents.length}</strong></div>
+              <div>Total Students: <strong>${data.length}</strong></div>
               <div>Sorted By: ${sortBy === 'class' ? 'Class & Alphabetical' : 'Serial Number'}</div>
               <div>Printed: ${timestamp}</div>
             </div>
@@ -401,16 +651,18 @@ export function executeRollPrint({
                 <th class="col-sl">${isDraft ? 'Draft Sl. No' : 'Sl. No'}</th>
                 <th class="col-adm">Admission No</th>
                 <th>Student Full Name</th>
-                <th class="col-sig">Voter Signature / Remarks</th>
+                <th>Class</th>
+                <th>Department</th>
               </tr>
             </thead>
             <tbody>
-              ${classStudents.map(s => `
+              ${data.map(s => `
                 <tr>
                   <td class="col-sl font-mono font-bold">${formatSl(esc(s['Nominal Roll Serial Number']))}</td>
                   <td class="col-adm font-mono">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
                   <td class="font-semibold">${esc(s['NAME'])}</td>
-                  <td class="col-sig"></td>
+                  <td>${esc(s['CLASS'])}</td>
+                  <td>${esc(s['Dept'] || '–')}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -424,60 +676,7 @@ export function executeRollPrint({
           </div>
         </div>
       `;
-    });
-
-  } else {
-    // Case B: Continuous table (Entire College or Department continuous)
-    bodyContent = `
-      <div class="page-container">
-        <div class="watermark">${watermark}</div>
-
-        <div class="print-header">
-          <div class="college-name">${esc(collegeName)}</div>
-          <div class="election-title">College Union Election — ${watermark}</div>
-          <div class="class-header">
-            <span class="badge-tag">${esc(scopeSubtitle.toUpperCase())}</span>
-          </div>
-          <div class="meta-bar">
-            <div>Total Students: <strong>${data.length}</strong></div>
-            <div>Sorted By: ${sortBy === 'class' ? 'Class & Alphabetical' : 'Serial Number'}</div>
-            <div>Printed: ${timestamp}</div>
-          </div>
-        </div>
-
-        <table class="roll-table">
-          <thead>
-            <tr>
-              <th class="col-sl">${isDraft ? 'Draft Sl. No' : 'Sl. No'}</th>
-              <th class="col-adm">Admission No</th>
-              <th>Student Full Name</th>
-              <th>Class</th>
-              <th>Department</th>
-              <th class="col-sig">Voter Signature</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.map(s => `
-              <tr>
-                <td class="col-sl font-mono font-bold">${formatSl(esc(s['Nominal Roll Serial Number']))}</td>
-                <td class="col-adm font-mono">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
-                <td class="font-semibold">${esc(s['NAME'])}</td>
-                <td>${esc(s['CLASS'])}</td>
-                <td>${esc(s['Dept'] || '–')}</td>
-                <td class="col-sig"></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-
-        <div class="print-footer">
-          <div class="sig-box">
-            <div class="sig-line"></div>
-            <div>Returning Officer</div>
-          </div>
-        </div>
-      </div>
-    `;
+    }
   }
 
   const printWin = window.open('', '_blank');
@@ -488,8 +687,8 @@ export function executeRollPrint({
         <title>${watermark} — ${scopeSubtitle}</title>
         <style>
           @page {
-            size: A4;
-            margin: 12mm 15mm;
+            size: A4 portrait;
+            margin: 10mm 12mm;
           }
           @media print {
             body {
@@ -513,10 +712,7 @@ export function executeRollPrint({
           }
           .page-container {
             position: relative;
-            min-height: 98vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            margin-bottom: 20px;
           }
           .watermark {
             position: fixed;
@@ -536,7 +732,7 @@ export function executeRollPrint({
             text-align: center;
             border-bottom: 2px solid #1f2937;
             padding-bottom: 8px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
           }
           .college-name {
             font-size: 17px;
@@ -573,14 +769,26 @@ export function executeRollPrint({
             margin-top: 8px;
             color: #4b5563;
           }
+          .dual-columns {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            align-items: flex-start;
+          }
+          .column-half {
+            flex: 1;
+            width: calc(50% - 6px);
+          }
+          .column-half .roll-table {
+            width: 100%;
+          }
           .roll-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: auto;
           }
           .roll-table th, .roll-table td {
             border: 1px solid #9ca3af;
-            padding: 4px 7px;
+            padding: 3px 6px;
             text-align: left;
             vertical-align: middle;
           }
@@ -588,22 +796,23 @@ export function executeRollPrint({
             background: #e5e7eb;
             font-weight: 800;
             text-transform: uppercase;
-            font-size: 10px;
+            font-size: 9.5px;
             color: #111827;
           }
-          .col-sl { width: 60px; text-align: center; }
-          .col-adm { width: 90px; }
-          .col-sig { width: 140px; }
+          .col-sl { width: 55px; text-align: center; }
+          .col-adm { width: 85px; }
           .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
           .font-semibold { font-weight: 600; }
           .font-bold { font-weight: 700; }
+          .text-xs { font-size: 9.5px; }
           
           .print-footer {
-            margin-top: 35px;
-            padding-top: 15px;
+            margin-top: 25px;
+            padding-top: 10px;
             display: flex;
             justify-content: flex-end;
             align-items: flex-end;
+            page-break-inside: avoid;
           }
           .sig-box {
             text-align: center;

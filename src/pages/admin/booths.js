@@ -102,7 +102,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             <button id="btnManageLocations" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📍 Manage Locations</button>
             <button id="btnSaveBooths" class="btn btn-primary">💾 Save Configuration</button>
             <button id="btnRegenPlan" class="btn btn-primary border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 px-4">🔄 Finalize Master Plan</button>
-            <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Electoral Rolls</button>
+            <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Marked Copy (Electoral Rolls)</button>
             <button id="btnPrintBallotAccounts" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white">📑 Print Ballot Accounts</button>
           </div>
         </div>
@@ -524,7 +524,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         <div class="roll-page">
           <div class="roll-header">
             <div><strong>BOOTH ${b.boothNumber}</strong> | ${esc(b.roomName || 'No Room')}</div>
-            <div style="text-align:center; flex-grow:1; font-weight:bold; font-size:13px;">ELECTORAL ROLL — ${esc(cls.name)}</div>
+            <div style="text-align:center; flex-grow:1; font-weight:bold; font-size:13px;">MARKED COPY OF ELECTORAL ROLL (POLLING BOOTH) — ${esc(cls.name)}</div>
             <div>Dept: ${esc(cls.dept)}</div>
           </div>
           <table class="roll-table">
@@ -533,8 +533,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                 <th style="width:38px">Sl.No</th>
                 <th style="width:70px">Adm. No</th>
                 <th>Student Name</th>
-                <th style="width:180px">Class</th>
-                <th style="width:80px">Signature</th>
+                <th style="width:160px">Class</th>
+                <th style="width:100px">Voter Signature</th>
               </tr>
             </thead>
             <tbody>
@@ -549,6 +549,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               `).join('')}
             </tbody>
           </table>
+          <div style="display:flex; justify-content:space-between; margin-top:14px; padding:6px 12px; font-size:10px; font-weight:bold; border-top:1.5px solid #000;">
+            <div>Verified by Polling Officer: ___________________</div>
+            <div>Signature of Presiding Officer: ___________________</div>
+          </div>
         </div>`;
       });
     });
