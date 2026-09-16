@@ -19,7 +19,7 @@ export async function renderAdminBooths(container) {
       api.adminGetBooths(pwd).catch(() => []),
       api.adminGetLocations(pwd).catch(() => []),
       api.adminGetPosts(pwd).catch(() => []),
-      api.getFinalNominations().catch(() => ({ active: [] })),
+      api.adminGetFinalNominations(pwd).catch(() => api.getFinalNominations()).catch(() => ({ active: [] })),
       api.adminGetBallotPlan(pwd).catch(() => null),
       api.adminGetSettings(pwd).catch(() => ({}))
     ]);

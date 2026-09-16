@@ -155,7 +155,7 @@ export async function renderAdminBallots(container) {
     try {
       [posts, candidatesResponse, schedule, settings] = await Promise.all([
         api.adminGetPosts(pwd),
-        api.getFinalNominations(),
+        api.adminGetFinalNominations(pwd).catch(() => api.getFinalNominations()),
         api.getPublicSchedule(),
         api.adminGetSettings(pwd).catch(() => ({}))
       ]);
@@ -169,18 +169,23 @@ export async function renderAdminBallots(container) {
     const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
 
     const year = schedule.electionYear || new Date().getFullYear().toString();
-    const candidates = candidatesResponse.active || [];
-    if (candidates.length === 0) throw new Error('No active candidates found.');
+    const candidates = Array.isArray(candidatesResponse) ? candidatesResponse : (candidatesResponse?.active || []);
+    if (candidates.length === 0) throw new Error('No active candidates found. Please ensure candidates are nominated and verified.');
 
-    const isYear = (p) => {
-      const name = p.post.toLowerCase();
-      return name.includes('representative') || name.includes('year');
-    };
     const isAssoc = (p) => {
-      const name = p.post.toLowerCase();
-      return name.includes('association') || name.includes('assoc');
+      const name = String(p.post || p.name || '').toUpperCase();
+      return name.includes('ASSOCIATION') || name.includes('ASSOC') || !!p.deptRestriction;
     };
-    const isGeneral = (p) => !isYear(p) && !isAssoc(p);
+    const isUUC = (p) => {
+      const name = String(p.post || p.name || '').toUpperCase();
+      return name.includes('UUC') || name.includes('UNIVERSITY UNION COUNCILLOR');
+    };
+    const isYear = (p) => {
+      if (isAssoc(p) || isUUC(p)) return false;
+      const name = String(p.post || p.name || '').toUpperCase();
+      return name.includes('REPRESENTATIVE') || name.includes('REP');
+    };
+    const isGeneral = (p) => !isAssoc(p) && !isYear(p);
 
     // Filter out Unanimous Winners (Posts with only 1 candidate)
     const contestablePosts = posts.filter(p => {
@@ -322,6 +327,21 @@ export async function renderAdminBallots(container) {
       const html = await generateBallotsHTML(type);
       triggerPrint(html);
     } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleRegenPlan = async (e) => {
+    const btn = e?.target;
+    const defaultText = '🔄 Finalize Master Plan';
+    try {
+      if (btn) setLoading(btn, true, defaultText);
+      showToast('Calculating and saving Master Plan on server...', 'info');
+      await api.adminGenerateBallotPlan(pwd);
+      showToast('Master Plan finalized successfully!', 'success');
+      if (btn) setLoading(btn, false, defaultText);
+    } catch (err) {
+      if (btn) setLoading(btn, false, defaultText);
       showToast(err.message, 'error');
     }
   };
@@ -483,21 +503,6 @@ export async function renderAdminBallots(container) {
       `;
       triggerPrint(reportHtml, shortName);
     } catch (err) {
-      showToast(err.message, 'error');
-    }
-  };
-
-  const handleRegenPlan = async (e) => {
-    const btn = e?.target;
-    const defaultText = '🔄 Finalize Master Plan';
-    try {
-      if (btn) setLoading(btn, true, defaultText);
-      showToast('Calculating and saving Master Plan on server...', 'info');
-      await api.adminGenerateBallotPlan(pwd);
-      showToast('Master Plan finalized successfully!', 'success');
-      if (btn) setLoading(btn, false, defaultText);
-    } catch (err) {
-      if (btn) setLoading(btn, false, defaultText);
       showToast(err.message, 'error');
     }
   };

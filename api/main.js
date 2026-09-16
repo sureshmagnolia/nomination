@@ -727,7 +727,10 @@ export default async function handler(req, res) {
     if (action === 'adminGenerateBallotPlan') {
       const posts = await fetchPostsFromDb();
 
-      const nomRows = await sql`SELECT * FROM nominations WHERE status = 'Valid'`;
+      let nomRows = await sql`SELECT * FROM nominations WHERE status = 'Valid'`;
+      if (nomRows.length === 0) {
+        nomRows = await sql`SELECT * FROM nominations WHERE status != 'Rejected'`;
+      }
       const candidates = nomRows.filter(n => n.withdrawal_status !== 'Approved');
 
       const boothsDataRaw = await getSetting('booths_data');
@@ -736,13 +739,18 @@ export default async function handler(req, res) {
 
       const students = await sql`SELECT serial_number as "Nominal Roll Serial Number", name as "NAME", class as "CLASS", admission_no as "ADMISION NO", dept as "Dept" FROM nominal_roll`;
 
-      const isYear = (p) => {
-        const name = String(p.post || '').toLowerCase();
-        return name.includes('representative') || name.includes('year rep') || (p.yearRuleMode && p.yearRuleMode !== 'ALL') || !!p.yearRestriction;
-      };
       const isAssoc = (p) => {
-        const name = String(p.post || '').toLowerCase();
-        return name.includes('association') || name.includes('assoc') || !!p.deptRestriction;
+        const name = String(p.post || '').toUpperCase();
+        return name.includes('ASSOCIATION') || name.includes('ASSOC') || !!p.deptRestriction;
+      };
+      const isUUC = (p) => {
+        const name = String(p.post || '').toUpperCase();
+        return name.includes('UUC') || name.includes('UNIVERSITY UNION COUNCILLOR');
+      };
+      const isYear = (p) => {
+        if (isAssoc(p) || isUUC(p)) return false;
+        const name = String(p.post || '').toUpperCase();
+        return name.includes('REPRESENTATIVE') || name.includes('REP');
       };
 
       const contestablePosts = posts.filter(p => {
