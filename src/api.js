@@ -538,6 +538,15 @@ export const api = {
 
   adminGetBallotPlan: (password) => get({ action: 'adminGetBallotPlan', password }),
   
+  adminGetBallotConfig: (password) => get({ action: 'adminGetBallotConfig', password }),
+  
+  adminSaveBallotConfig: async (password, config) => {
+    const res = await post({ action: 'adminSaveBallotConfig', password, config });
+    invalidateCache('adminGetBallotConfig');
+    invalidateCache('adminGetBallotPlan');
+    return res;
+  },
+
   adminRunAudit: (password) => post({ action: 'adminRunAudit', password }),
 
   // ─── Nominal Roll Management ────────────────────────────────────────────────

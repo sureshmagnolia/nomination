@@ -718,6 +718,17 @@ export default async function handler(req, res) {
       return jsonOut(res, data ? JSON.parse(data) : null);
     }
 
+    if (action === 'adminGetBallotConfig') {
+      const data = await getSetting('general_ballot_config');
+      return jsonOut(res, data ? JSON.parse(data) : null);
+    }
+
+    if (action === 'adminSaveBallotConfig') {
+      const config = body.config;
+      await setSetting('general_ballot_config', JSON.stringify(config));
+      return jsonOut(res, { ok: true });
+    }
+
     if (action === 'adminGetBallotPlan') {
       const data = await getSetting('ballotPlan');
       if (!data) return jsonOut(res, null);
@@ -758,25 +769,72 @@ export default async function handler(req, res) {
         return pCands.length > 1;
       });
 
-      let genSl = 1, repSl = 1, assocSl = 1;
-      let gbCount = 0, rbCount = 0, abCount = 0;
+      const genContestablePosts = contestablePosts.filter(p => !isAssoc(p) && !isYear(p));
+
+      // Retrieve Ballot Configuration for General Posts (Split or Unified)
+      const rawBallotConfig = await getSetting('general_ballot_config');
+      const ballotConfig = rawBallotConfig ? JSON.parse(rawBallotConfig) : null;
+      const isSplit = !!(ballotConfig && ballotConfig.isSplit && Array.isArray(ballotConfig.ballots) && ballotConfig.ballots.length > 1);
+
+      let generalParts = [];
+      if (isSplit) {
+        generalParts = ballotConfig.ballots.map((b, idx) => ({
+          id: b.id || `gen_${idx + 1}`,
+          partNumber: idx + 1,
+          title: b.title || `General Union Posts - Part ${idx + 1}`,
+          shortCode: b.shortCode || `G${idx + 1}`,
+          bookPrefix: b.bookPrefix || `GB${idx + 1}-`,
+          paperSize: b.paperSize || 'A3',
+          posts: Array.isArray(b.posts) ? [...b.posts] : []
+        }));
+      } else {
+        generalParts = [{
+          id: 'gen_main',
+          partNumber: 1,
+          title: 'General Union Posts',
+          shortCode: 'G',
+          bookPrefix: 'GB',
+          paperSize: 'A3',
+          posts: genContestablePosts.map(p => p.post)
+        }];
+      }
+
+      // Ensure any unassigned general contestable posts are allocated to Part 1
+      const allAssigned = new Set();
+      generalParts.forEach(gp => gp.posts.forEach(p => allAssigned.add(p)));
+      genContestablePosts.forEach(p => {
+        if (!allAssigned.has(p.post)) {
+          generalParts[0].posts.push(p.post);
+          allAssigned.add(p.post);
+        }
+      });
+
+      let repSl = 1, assocSl = 1;
+      let rbCount = 0, abCount = 0;
 
       const standard = 50;
       const threshold = 15;
 
-      const calcBooks = (count, start, prefix, currentGlobalBookCount) => {
+      const calcBooks = (count, start, prefix, currentGlobalBookCount, customBookPrefix = null) => {
         if (!count || count <= 0) return { books: [], ids: '-', count: 0, nextCounter: currentGlobalBookCount };
         let current = start;
         let books = [];
-        const idPrefix = prefix === 'G' ? 'GB' : (prefix === 'R' ? 'RB' : 'AB');
+        const idPrefix = customBookPrefix || (prefix === 'G' ? 'GB' : (prefix === 'R' ? 'RB' : 'AB'));
         let counter = currentGlobalBookCount;
         let ids = [];
 
+        const formatSlip = (num) => {
+          if (prefix === 'G' || prefix === 'R' || prefix === 'A') {
+            return `${prefix}${num}`;
+          }
+          return `${prefix}-${num}`;
+        };
+
         const createRange = (size) => {
           counter++;
-          const id = idPrefix + counter;
+          const id = (idPrefix.endsWith('-') ? idPrefix : idPrefix) + counter;
           ids.push(id);
-          const range = `${prefix}${current}-${current + size - 1}`;
+          const range = `${formatSlip(current)} - ${formatSlip(current + size - 1)}`;
           current += size;
           return { id, range };
         };
@@ -813,24 +871,59 @@ export default async function handler(req, res) {
 
       const boothMap = {};
       booths.forEach(b => {
-        boothMap[b.boothNumber] = { general: null, reps: [], assocs: [] };
+        boothMap[b.boothNumber] = { general: null, generalParts: [], reps: [], assocs: [] };
       });
 
-      // 1. General
-      const genResults = [];
-      booths.forEach(b => {
-        const bClasses = (Array.isArray(b.classes) ? b.classes : JSON.parse(b.classes || '[]')).map(c => String(c).trim().toUpperCase());
-        const boothStudents = students.filter(s => bClasses.includes(String(s.CLASS || '').trim().toUpperCase()));
-        const count = boothStudents.length;
-        const start = genSl;
-        const end = start + count - 1;
-        const bookData = calcBooks(count, start, 'G', gbCount);
-        gbCount = bookData.nextCounter;
+      // 1. General Posts (Single or Split Parts)
+      const genPartsResults = [];
+      generalParts.forEach(gp => {
+        let partSl = 1;
+        let partBookCount = 0;
+        const partBoothResults = [];
 
-        const data = { booth: b.boothNumber, count, start, end, books: bookData.books, bookIds: bookData.ids };
-        genResults.push(data);
-        boothMap[b.boothNumber].general = data;
-        genSl += count;
+        booths.forEach(b => {
+          const bClasses = (Array.isArray(b.classes) ? b.classes : JSON.parse(b.classes || '[]')).map(c => String(c).trim().toUpperCase());
+          const boothStudents = students.filter(s => bClasses.includes(String(s.CLASS || '').trim().toUpperCase()));
+          const count = boothStudents.length;
+          const start = partSl;
+          const end = start + count - 1;
+          const bookData = calcBooks(count, start, gp.shortCode, partBookCount, gp.bookPrefix);
+          partBookCount = bookData.nextCounter;
+
+          const data = {
+            partId: gp.id,
+            partNumber: gp.partNumber,
+            title: gp.title,
+            prefix: gp.shortCode,
+            booth: b.boothNumber,
+            count,
+            start,
+            end,
+            books: bookData.books,
+            bookIds: bookData.ids
+          };
+          partBoothResults.push(data);
+          boothMap[b.boothNumber].generalParts.push(data);
+          partSl += count;
+        });
+
+        const partSummary = {
+          id: gp.id,
+          partNumber: gp.partNumber,
+          title: gp.title,
+          shortCode: gp.shortCode,
+          bookPrefix: gp.bookPrefix,
+          paperSize: gp.paperSize,
+          posts: gp.posts,
+          results: partBoothResults,
+          total: partSl - 1
+        };
+        genPartsResults.push(partSummary);
+      });
+
+      // Backward compatibility: boothMap[b.boothNumber].general points to Part 1
+      booths.forEach(b => {
+        boothMap[b.boothNumber].general = boothMap[b.boothNumber].generalParts[0] || null;
       });
 
       // 2. Reps (filtered using isYearEligibleServer)
@@ -895,7 +988,9 @@ export default async function handler(req, res) {
       });
 
       const plan = {
-        general: { results: genResults, total: genSl - 1 },
+        isSplit,
+        general: genPartsResults[0] || { results: [], total: 0 },
+        generalParts: genPartsResults,
         reps: { results: repResults, total: repSl - 1 },
         assocs: { results: assocResults, total: assocSl - 1 },
         boothAssignments: boothMap

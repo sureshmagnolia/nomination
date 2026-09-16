@@ -479,15 +479,23 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                 </tr>
               </thead>
               <tbody>
-                ${assignments.general ? `
+                ${(assignments.generalParts && assignments.generalParts.length > 1) ? assignments.generalParts.map(gp => `
                   <tr style="font-weight:bold">
-                    <td style="font-size:12px;">General Union Posts</td>
-                    <td style="font-size:12px;">G${assignments.general.start} - G${assignments.general.end}</td>
+                    <td style="font-size:12px;">${esc(gp.title || 'General Union Posts')}</td>
+                    <td style="font-size:12px;">${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.start} - ${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.end}</td>
+                    <td style="text-align:center; font-size:13px;">${gp.count}</td>
+                    <td style="font-size:11px;">${gp.bookIds}</td>
+                    <td></td><td></td><td></td>
+                  </tr>
+                `).join('') : (assignments.general ? `
+                  <tr style="font-weight:bold">
+                    <td style="font-size:12px;">${esc(assignments.general.title || 'General Union Posts')}</td>
+                    <td style="font-size:12px;">${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.start} - ${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.end}</td>
                     <td style="text-align:center; font-size:13px;">${assignments.general.count}</td>
                     <td style="font-size:11px;">${assignments.general.bookIds}</td>
                     <td></td><td></td><td></td>
                   </tr>
-                ` : ''}
+                ` : '')}
                 ${assignments.reps.map(r => `
                   <tr>
                     <td style="font-size:12px; font-weight:bold;">${esc(r.post)}</td>
