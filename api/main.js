@@ -1844,7 +1844,13 @@ export default async function handler(req, res) {
           await Promise.all(batch.map(r => 
             sql`
               INSERT INTO nominal_roll (serial_number, name, class, admission_no, dept)
-              VALUES (${String(r.serial_number || '')}, ${String(r.name || '')}, ${String(r.class || '')}, ${String(r.admission_no || '')}, ${String(r.dept || '')})
+              VALUES (
+                ${String(r.serial_number || r['Nominal Roll Serial Number'] || r['SL_NO'] || r['SL NO'] || r['Serial Number'] || '')},
+                ${String(r.name || r['NAME'] || r['Name'] || '')},
+                ${String(r.class || r['CLASS'] || r['Class'] || '')},
+                ${String(r.admission_no || r['ADMISION NO'] || r['ADMISSION NO'] || r['Admission No'] || '')},
+                ${String(r.dept || r['Dept'] || r['DEPT'] || '')}
+              )
               ON CONFLICT (serial_number) DO UPDATE SET
                 name = EXCLUDED.name,
                 class = EXCLUDED.class,
@@ -1882,13 +1888,27 @@ export default async function handler(req, res) {
         const postItems = backupData.data.posts;
         for (const p of postItems) {
           await sql`
-            INSERT INTO posts (post, female_only, final_year_ineligible, year_restriction, dept_restriction)
-            VALUES (${p.post}, ${p.femaleOnly ? true : false}, ${p.finalYearIneligible ? true : false}, ${p.yearRestriction || null}, ${p.deptRestriction || null})
+            INSERT INTO posts (
+              post, female_only, final_year_ineligible, year_restriction, dept_restriction,
+              restricted_dept, year_rule_mode, year_rule_years
+            ) VALUES (
+              ${p.post},
+              ${p.femaleOnly ? true : false},
+              ${p.finalYearIneligible ? true : false},
+              ${p.yearRestriction || null},
+              ${p.deptRestriction ? true : false},
+              ${p.restrictedDept || null},
+              ${p.yearRuleMode || 'ALL'},
+              ${Array.isArray(p.yearRuleYears) ? p.yearRuleYears.join(',') : (p.yearRuleYears || '')}
+            )
             ON CONFLICT (post) DO UPDATE SET
               female_only = EXCLUDED.female_only,
               final_year_ineligible = EXCLUDED.final_year_ineligible,
               year_restriction = EXCLUDED.year_restriction,
-              dept_restriction = EXCLUDED.dept_restriction
+              dept_restriction = EXCLUDED.dept_restriction,
+              restricted_dept = EXCLUDED.restricted_dept,
+              year_rule_mode = EXCLUDED.year_rule_mode,
+              year_rule_years = EXCLUDED.year_rule_years
           `;
         }
         restoredCounts.posts = postItems.length;
@@ -1928,9 +1948,18 @@ export default async function handler(req, res) {
         restoredCounts.nominations = nomItems.length;
       }
 
-      // 5. Settings
+      // 5. Settings (including Booths, Ballots, Counting Matrix & Results)
       if (modules.settings && Array.isArray(backupData.data?.settings)) {
         const settingItems = backupData.data.settings;
+        if (restoreMode === 'full_wipe_and_replace') {
+          const backupKeys = new Set(settingItems.map(s => s.key));
+          const allCurrent = await sql`SELECT key FROM settings WHERE key NOT IN ('adminPassword', 'adminOTP', 'adminEmail')`;
+          for (const s of allCurrent) {
+            if (!backupKeys.has(s.key)) {
+              await sql`DELETE FROM settings WHERE key = ${s.key}`;
+            }
+          }
+        }
         for (const s of settingItems) {
           if (s.key === 'adminPassword' || s.key === 'adminOTP') continue;
           await setSetting(s.key, s.value);
@@ -1960,7 +1989,7 @@ export default async function handler(req, res) {
       const [rollRows, correctionRows, postRows, nominationRows, settingRows] = await Promise.all([
         sql`SELECT serial_number, name, class, admission_no, dept FROM nominal_roll ORDER BY serial_number ASC`,
         sql`SELECT * FROM roll_corrections ORDER BY timestamp DESC`,
-        sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction" FROM posts`,
+        sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction", restricted_dept as "restrictedDept", year_rule_mode as "yearRuleMode", year_rule_years as "yearRuleYears" FROM posts ORDER BY id ASC`,
         sql`SELECT * FROM nominations ORDER BY created_at ASC`,
         sql`SELECT key, value FROM settings WHERE key NOT IN ('adminPassword', 'adminOTP')`
       ]);
@@ -2078,7 +2107,7 @@ export default async function handler(req, res) {
         const [curRoll, curCorr, curPosts, curNoms, curSettings] = await Promise.all([
           sql`SELECT serial_number, name, class, admission_no, dept FROM nominal_roll`,
           sql`SELECT * FROM roll_corrections`,
-          sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction" FROM posts`,
+          sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction", restricted_dept as "restrictedDept", year_rule_mode as "yearRuleMode", year_rule_years as "yearRuleYears" FROM posts ORDER BY id ASC`,
           sql`SELECT * FROM nominations`,
           sql`SELECT key, value FROM settings WHERE key NOT IN ('adminPassword', 'adminOTP')`
         ]);
