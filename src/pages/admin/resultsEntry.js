@@ -258,10 +258,22 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
 
   const renderFormGrid = (tableNum, postName, serial, roundNum) => {
     const area = main.querySelector('#entryFormArea');
-    const candidates = finalList.filter(c => c.post === postName);
+    const candidates = finalList.filter(c => c.post === postName).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
     
     if (candidates.length === 0) {
       area.innerHTML = `<div class="alert alert-warning">No candidates found for ${esc(postName)}.</div>`;
+      return;
+    }
+
+    if (candidates.length === 1) {
+      area.innerHTML = `
+        <div class="glass p-8 rounded-2xl border border-emerald-500/30 text-center page-enter">
+          <div class="text-4xl mb-3">🏆</div>
+          <h3 class="text-lg font-bold text-emerald-400">Elected Unanimously (Unopposed)</h3>
+          <p class="text-sm text-slate-300 mt-1"><strong>${esc(candidates[0].candidateName)}</strong> (${esc(candidates[0].candidateClass || '')}) is returned unopposed for <strong>${esc(postName)}</strong>.</p>
+          <p class="text-xs text-slate-500 mt-2">No ballot voting or vote entry was conducted for this post.</p>
+        </div>
+      `;
       return;
     }
 

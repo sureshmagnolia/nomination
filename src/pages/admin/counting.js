@@ -95,7 +95,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
           if (!post) continue;
           const pn = pName(post);
           const serial = formSerials[`${t}-${r}`];
-          const cands = finalList.filter(c => c.post === pn);
+          const cands = finalList.filter(c => c.post === pn).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
           html += buildFormHtml(booths[t].boothNumber, r + 1, pn, cands, serial, collegeName);
           count++;
         }
@@ -154,13 +154,19 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       return yrs;
     });
 
-    const uucPosts     = posts.filter(p => {
+    const activeContestablePosts = posts.filter(p => {
+      const pCands = finalList.filter(c => c.post === pName(p));
+      return pCands.length > 1;
+    });
+    const pool = (finalList.length > 0 && activeContestablePosts.length > 0) ? activeContestablePosts : posts;
+
+    const uucPosts     = pool.filter(p => {
       const name = pName(p).toUpperCase();
       return name.includes('UUC') || name.includes('UNIVERSITY UNION COUNCILLOR');
     });
-    const assocPosts   = posts.filter(p => !uucPosts.includes(p) && (pName(p).toUpperCase().includes('ASSOCIATION') || !!p.deptRestriction));
-    const yearRepPosts = posts.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && (pName(p).toUpperCase().includes('REPRESENTATIVE') || pName(p).toUpperCase().includes('REP')));
-    const generalPosts = posts.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && !yearRepPosts.includes(p));
+    const assocPosts   = pool.filter(p => !uucPosts.includes(p) && (pName(p).toUpperCase().includes('ASSOCIATION') || !!p.deptRestriction));
+    const yearRepPosts = pool.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && (pName(p).toUpperCase().includes('REPRESENTATIVE') || pName(p).toUpperCase().includes('REP')));
+    const generalPosts = pool.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && !yearRepPosts.includes(p));
     const G = generalPosts.length;
 
     // Generate individual table schedules based on booth eligibility

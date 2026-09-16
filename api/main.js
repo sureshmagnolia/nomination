@@ -2185,7 +2185,14 @@ export default async function handler(req, res) {
       // Check 1: Nominal Roll vs Ballot Plan
       if (plan) {
         const expectedGeneral = students.length;
-        if (plan.general && plan.general.total !== expectedGeneral) {
+        if (plan.isSplit && Array.isArray(plan.generalParts) && plan.generalParts.length > 1) {
+          plan.generalParts.forEach(gp => {
+            if (gp.total !== expectedGeneral) {
+              rollCheck.pass = false;
+              rollCheck.details.push(`${gp.title || 'General Part'}: Expected ${expectedGeneral} voters, Planned ${gp.total}`);
+            }
+          });
+        } else if (plan.general && plan.general.total !== expectedGeneral) {
           rollCheck.pass = false;
           rollCheck.details.push(`General Ballots mismatch: Expected ${expectedGeneral}, Planned ${plan.general.total}`);
         }

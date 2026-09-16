@@ -789,7 +789,7 @@ export async function renderAdminBallots(container) {
 
       let col1Html = '', col2Html = '';
       sorted.forEach((p, idx) => {
-        const pCands = candidates.filter(c => c.post === p.post);
+        const pCands = candidates.filter(c => c.post === p.post).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
         const pContent = `
           <div class="post-box">
             <div class="post-title">${esc(p.post.toUpperCase())}</div>
@@ -877,7 +877,7 @@ export async function renderAdminBallots(container) {
       );
 
       filteredOthers.forEach(p => {
-        const pCands = candidates.filter(c => c.post === p.post);
+        const pCands = candidates.filter(c => c.post === p.post).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
         const prefix = isYear(p) ? 'R' : 'A';
         html += `
           <div class="ballot-container a5 page-break">
