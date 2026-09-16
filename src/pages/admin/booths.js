@@ -44,6 +44,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
   const allClasses = Object.values(classStats).sort((a, b) => a.name.localeCompare(b.name));
   let booths = initialBooths.length ? [...initialBooths] : [{ boothNumber: 1, roomName: '', classes: [] }];
   let locations = [...initialLocations];
+  let editingLocIdx = null;
   let isFirstRender = true;
 
   const refreshUI = () => {
@@ -66,26 +67,33 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         <!-- Locations Modal -->
         <div id="locationsModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
           <div class="absolute inset-0 bg-slate-900/80" id="locationsModalOverlay"></div>
-          <div class="relative bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-lg p-6 z-10">
-            <div class="flex items-center justify-between mb-4">
-              <h4 class="font-bold text-white text-lg">📍 Manage Locations</h4>
+          <div class="relative bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-lg p-6 z-10 flex flex-col max-h-[90vh]">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+              <div class="flex items-center gap-2">
+                <h4 class="font-bold text-white text-lg">📍 Manage &amp; Edit Locations</h4>
+                <span id="locationsCountBadge" class="text-xs bg-indigo-500/20 text-indigo-300 px-2.5 py-0.5 rounded-full border border-indigo-500/30 font-mono">
+                  ${locations.length} Locations
+                </span>
+              </div>
               <button id="btnCloseLocationsModal" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
             </div>
+            
             <div class="flex gap-2 mb-4">
-              <input type="text" id="newLocationInput" class="field flex-1" placeholder="Add a new room or location name...">
-              <button id="btnAddLocation" class="btn btn-secondary">Add</button>
+              <input type="text" id="newLocationInput" class="field flex-1" placeholder="Add room or location name (e.g. Room 101, Auditorium)...">
+              <button id="btnAddLocation" class="btn btn-secondary whitespace-nowrap">➕ Add</button>
             </div>
-            <div id="locationsList" class="flex flex-wrap gap-2 mb-6 min-h-[40px]">
-              ${locations.length ? locations.map((loc, i) => `
-                <span class="badge badge-valid bg-white/10 text-white border border-white/20 px-3 py-1 flex items-center gap-2">
-                  ${esc(loc)}
-                  <button class="text-red-400 hover:text-red-300 font-bold delete-location" data-idx="${i}">&times;</button>
-                </span>
-              `).join('') : '<span class="text-slate-500 text-sm">No locations added yet.</span>'}
+
+            <!-- Scrollable Locations List -->
+            <div class="flex-1 overflow-y-auto mb-4 pr-1 min-h-[140px] max-h-[360px]" id="locationsListContainer">
+              <div id="locationsList" class="space-y-2"></div>
             </div>
-            <div class="flex justify-end gap-2">
-              <button id="btnCloseLocationsModal2" class="btn btn-secondary">Close</button>
-              <button id="btnSaveLocations" class="btn btn-primary">💾 Save Locations</button>
+
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-white/10">
+              <span class="text-xs text-slate-400">💡 Click <strong>✏️ Edit</strong> or double-click to rename.</span>
+              <div class="flex gap-2">
+                <button id="btnCloseLocationsModal2" class="btn btn-secondary">Close</button>
+                <button id="btnSaveLocations" class="btn btn-primary">💾 Save Locations</button>
+              </div>
             </div>
           </div>
         </div>
@@ -129,15 +137,23 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                   <span>Booth ${i + 1}</span>
                   <span class="${b.totalStudents > 0 ? 'text-indigo-400' : ''}">${b.totalStudents} Students</span>
                 </div>
-                <select class="field text-sm py-1 mb-2 room-name-select" data-idx="${i}">
-                  <option value="">-- Assign Location --</option>
-                  ${locations.map(loc => `
-                    <option value="${esc(loc)}" 
-                      ${b.roomName === loc ? 'selected' : ''}
-                      ${booths.some((ob, oi) => oi !== i && ob.roomName === loc) ? 'disabled' : ''}
-                    >${esc(loc)}</option>
-                  `).join('')}
-                </select>
+                <div class="flex gap-1.5 items-center mb-2">
+                  <select class="field text-sm py-1 flex-1 room-name-select" data-idx="${i}">
+                    <option value="">-- Assign Location --</option>
+                    ${locations.map(loc => `
+                      <option value="${esc(loc)}" 
+                        ${b.roomName === loc ? 'selected' : ''}
+                        ${booths.some((ob, oi) => oi !== i && ob.roomName === loc) ? 'disabled' : ''}
+                      >${esc(loc)}</option>
+                    `).join('')}
+                    <option value="__ADD_NEW__">➕ Add / Manage Locations...</option>
+                  </select>
+                  ${b.roomName ? `
+                    <button type="button" class="btn btn-secondary btn-xs py-1.5 px-2 text-slate-300 hover:text-white border-white/10 quick-edit-loc-btn" data-idx="${i}" title="Edit / Rename '${esc(b.roomName)}'">
+                      ✏️
+                    </button>
+                  ` : ''}
+                </div>
                 <div class="text-xs text-slate-500 h-16 overflow-y-auto bg-black/20 rounded p-1">
                   ${b.classes.length ? b.classes.map(c => `<div class="whitespace-nowrap overflow-hidden text-ellipsis">• ${esc(c)} (${classStats[c]?.count || 0})</div>`).join('') : '<em class="opacity-30">No classes assigned</em>'}
                 </div>
@@ -298,28 +314,197 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
     main.querySelectorAll('.room-name-select').forEach(select => {
       select.addEventListener('change', (e) => {
-        booths[e.target.dataset.idx].roomName = e.target.value;
+        const val = e.target.value;
+        const boothIdx = parseInt(e.target.dataset.idx, 10);
+        if (val === '__ADD_NEW__') {
+          e.target.value = booths[boothIdx].roomName || '';
+          openModal();
+          const inp = modal.querySelector('#newLocationInput');
+          if (inp) inp.focus();
+          return;
+        }
+        booths[boothIdx].roomName = val;
         refreshUI();
       });
     });
 
+    main.querySelectorAll('.quick-edit-loc-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const boothIdx = parseInt(e.currentTarget.dataset.idx, 10);
+        const curRoom = booths[boothIdx]?.roomName;
+        if (!curRoom) return;
+        const locIdx = locations.indexOf(curRoom);
+        openModal();
+        if (locIdx !== -1) {
+          editingLocIdx = locIdx;
+          rerenderLocationsList();
+          const editInp = modal.querySelector(`.loc-edit-input[data-idx="${locIdx}"]`);
+          if (editInp) {
+            editInp.focus();
+            editInp.select();
+          }
+        }
+      });
+    });
+
     const modal = main.querySelector('#locationsModal');
-    const closeModal = () => modal.classList.add('hidden');
-    const openModal = () => modal.classList.remove('hidden');
+    const closeModal = () => {
+      editingLocIdx = null;
+      modal.classList.add('hidden');
+    };
+    const openModal = () => {
+      modal.classList.remove('hidden');
+      rerenderLocationsList();
+    };
+
+    const commitLocEdit = (idx) => {
+      const input = modal.querySelector(`.loc-edit-input[data-idx="${idx}"]`);
+      if (!input) return;
+      const newVal = input.value.trim();
+      if (!newVal) {
+        showToast('Location name cannot be blank.', 'error');
+        input.focus();
+        return;
+      }
+      const oldVal = locations[idx];
+      if (newVal === oldVal) {
+        editingLocIdx = null;
+        rerenderLocationsList();
+        return;
+      }
+      const duplicate = locations.some((l, i) => i !== idx && l.toLowerCase() === newVal.toLowerCase());
+      if (duplicate) {
+        showToast(`Location "${newVal}" already exists.`, 'error');
+        input.focus();
+        return;
+      }
+      locations[idx] = newVal;
+      let affected = 0;
+      booths.forEach(b => {
+        if (b.roomName === oldVal) {
+          b.roomName = newVal;
+          affected++;
+        }
+      });
+      editingLocIdx = null;
+      rerenderLocationsList();
+      if (affected > 0) {
+        showToast(`Renamed to "${newVal}" (updated ${affected} booth assignment). Remember to save!`, 'info');
+      } else {
+        showToast(`Renamed to "${newVal}".`, 'info');
+      }
+    };
+
     const rerenderLocationsList = () => {
+      const countBadge = modal.querySelector('#locationsCountBadge');
+      if (countBadge) countBadge.textContent = `${locations.length} Locations`;
+
       const list = modal.querySelector('#locationsList');
-      list.innerHTML = locations.length ? locations.map((loc, i) => `
-        <span class="badge badge-valid bg-white/10 text-white border border-white/20 px-3 py-1 flex items-center gap-2">
-          ${esc(loc)}
-          <button class="text-red-400 hover:text-red-300 font-bold delete-location" data-idx="${i}">&times;</button>
-        </span>
-      `).join('') : '<span class="text-slate-500 text-sm">No locations added yet.</span>';
+      if (!locations.length) {
+        list.innerHTML = '<div class="p-6 text-center text-slate-500 text-sm italic bg-black/20 rounded-xl border border-white/5">No locations added yet. Add your rooms and halls above.</div>';
+        return;
+      }
+
+      list.innerHTML = locations.map((loc, i) => {
+        const assignedBooths = booths.filter(b => b.roomName === loc);
+        if (editingLocIdx === i) {
+          return `
+            <div class="p-2.5 rounded-lg bg-indigo-950/50 border border-indigo-500/50 flex items-center gap-2">
+              <input type="text" class="field text-sm py-1 flex-1 loc-edit-input" data-idx="${i}" value="${esc(loc)}">
+              <button type="button" class="btn btn-primary btn-xs py-1 px-2.5 save-loc-edit" data-idx="${i}" title="Save rename">✓ Save</button>
+              <button type="button" class="btn btn-secondary btn-xs py-1 px-2 cancel-loc-edit" data-idx="${i}" title="Cancel">✕</button>
+            </div>
+          `;
+        }
+        return `
+          <div class="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 flex items-center justify-between gap-3 transition-colors loc-item-row" data-idx="${i}">
+            <div class="flex items-center gap-2 min-w-0 flex-1 cursor-pointer loc-label-wrap" data-idx="${i}" title="Double-click to edit">
+              <span class="text-base text-slate-400 flex-shrink-0">📍</span>
+              <span class="text-sm font-medium text-white truncate loc-text">${esc(loc)}</span>
+              ${assignedBooths.length ? assignedBooths.map(ab => `
+                <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex-shrink-0">
+                  Booth ${ab.boothNumber}
+                </span>
+              `).join('') : ''}
+            </div>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+              <button type="button" class="btn btn-secondary btn-xs py-1 px-2 text-slate-300 hover:text-white border-white/10 edit-location" data-idx="${i}" title="Rename location">
+                ✏️ Edit
+              </button>
+              <button type="button" class="btn btn-secondary btn-xs py-1 px-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 border-red-500/20 delete-location" data-idx="${i}" title="Delete location">
+                🗑️
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      list.querySelectorAll('.edit-location').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          editingLocIdx = parseInt(e.currentTarget.dataset.idx, 10);
+          rerenderLocationsList();
+          const inp = modal.querySelector(`.loc-edit-input[data-idx="${editingLocIdx}"]`);
+          if (inp) {
+            inp.focus();
+            inp.select();
+          }
+        });
+      });
+
+      list.querySelectorAll('.loc-label-wrap').forEach(wrap => {
+        wrap.addEventListener('dblclick', (e) => {
+          editingLocIdx = parseInt(e.currentTarget.dataset.idx, 10);
+          rerenderLocationsList();
+          const inp = modal.querySelector(`.loc-edit-input[data-idx="${editingLocIdx}"]`);
+          if (inp) {
+            inp.focus();
+            inp.select();
+          }
+        });
+      });
+
+      list.querySelectorAll('.save-loc-edit').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          commitLocEdit(parseInt(e.currentTarget.dataset.idx, 10));
+        });
+      });
+
+      list.querySelectorAll('.cancel-loc-edit').forEach(btn => {
+        btn.addEventListener('click', () => {
+          editingLocIdx = null;
+          rerenderLocationsList();
+        });
+      });
+
+      list.querySelectorAll('.loc-edit-input').forEach(inp => {
+        inp.addEventListener('keydown', (e) => {
+          const idx = parseInt(e.currentTarget.dataset.idx, 10);
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            commitLocEdit(idx);
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            editingLocIdx = null;
+            rerenderLocationsList();
+          }
+        });
+      });
+
       list.querySelectorAll('.delete-location').forEach(btn => {
         btn.addEventListener('click', (e) => {
-          const idx = parseInt(e.target.dataset.idx);
+          const idx = parseInt(e.currentTarget.dataset.idx, 10);
           const loc = locations[idx];
+          const assigned = booths.filter(b => b.roomName === loc);
+          if (assigned.length > 0) {
+            const boothNums = assigned.map(b => `Booth ${b.boothNumber}`).join(', ');
+            if (!confirm(`"${loc}" is currently assigned to ${boothNums}.\n\nDeleting it will remove the assignment from these booths. Proceed?`)) {
+              return;
+            }
+          }
           locations.splice(idx, 1);
           booths.forEach(b => { if (b.roomName === loc) b.roomName = ''; });
+          if (editingLocIdx === idx) editingLocIdx = null;
+          else if (editingLocIdx > idx) editingLocIdx--;
           rerenderLocationsList();
         });
       });
@@ -331,25 +516,41 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     main.querySelector('#locationsModalOverlay').addEventListener('click', closeModal);
 
     main.querySelector('#btnAddLocation').addEventListener('click', () => {
-      const val = main.querySelector('#newLocationInput').value.trim();
-      if (val && !locations.includes(val)) {
-        locations.push(val);
-        main.querySelector('#newLocationInput').value = '';
-        rerenderLocationsList();
+      const input = main.querySelector('#newLocationInput');
+      const val = input.value.trim();
+      if (!val) return;
+      if (locations.some(l => l.toLowerCase() === val.toLowerCase())) {
+        showToast(`Location "${val}" already exists.`, 'error');
+        input.focus();
+        return;
       }
+      locations.push(val);
+      input.value = '';
+      rerenderLocationsList();
+      showToast(`Added "${val}". Click "Save Locations" to persist.`, 'info');
+      const container = modal.querySelector('#locationsListContainer');
+      if (container) container.scrollTop = container.scrollHeight;
     });
+
     main.querySelector('#newLocationInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') main.querySelector('#btnAddLocation').click();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        main.querySelector('#btnAddLocation').click();
+      }
     });
 
     rerenderLocationsList();
 
     main.querySelector('#btnSaveLocations').addEventListener('click', async (e) => {
+      if (editingLocIdx !== null) {
+        commitLocEdit(editingLocIdx);
+      }
       const btn = e.target;
       setLoading(btn, true, '💾 Save Locations');
       try {
         await api.adminSaveLocations(pwd, locations);
-        showToast('Locations saved! Refresh booths to see updated room list.', 'success');
+        await api.adminSaveBooths(pwd, booths);
+        showToast('Locations and booth assignments saved successfully!', 'success');
         closeModal();
         refreshUI();
       } catch (err) {
