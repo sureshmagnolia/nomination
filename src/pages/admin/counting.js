@@ -1,6 +1,7 @@
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading, isYearEligible } from '../../utils.js';
+import { CONFIG } from '../../config.js';
 
 export async function renderAdminCounting(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -9,24 +10,26 @@ export async function renderAdminCounting(container) {
   `);
 
   try {
-    const [savedMatrix, posts, nominationsRaw, booths, nominalRoll] = await Promise.all([
+    const [savedMatrix, posts, nominationsRaw, booths, nominalRoll, settings] = await Promise.all([
       api.adminGetCountingMatrix(pwd).catch(() => null),
       api.getPosts(),
       api.adminGetNominations(pwd).catch(() => []),
       api.adminGetBooths(pwd),
-      api.getNominalRoll()
+      api.getNominalRoll(),
+      api.adminGetSettings(pwd).catch(() => ({}))
     ]);
 
     const allNoms = Array.isArray(nominationsRaw) ? nominationsRaw : [];
     const finalList = allNoms.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved');
 
-    renderCountingUI(container.querySelector('#adminMain'), pwd, savedMatrix, posts, finalList, booths, nominalRoll);
+    renderCountingUI(container.querySelector('#adminMain'), pwd, savedMatrix, posts, finalList, booths, nominalRoll, settings);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
   }
 }
 
-function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nominalRoll) {
+function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nominalRoll, settings = {}) {
+  const collegeName = settings?.collegeName || CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad';
   if (!booths.length) { main.innerHTML = `<div class="alert alert-error">❌ No booths configured.</div>`; return; }
   if (!posts.length)  { main.innerHTML = `<div class="alert alert-error">❌ No posts configured.</div>`; return; }
 
@@ -93,7 +96,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
           const pn = pName(post);
           const serial = formSerials[`${t}-${r}`];
           const cands = finalList.filter(c => c.post === pn);
-          html += buildFormHtml(booths[t].boothNumber, r + 1, pn, cands, serial);
+          html += buildFormHtml(booths[t].boothNumber, r + 1, pn, cands, serial, collegeName);
           count++;
         }
       }
@@ -239,7 +242,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
   }
 }
 
-function buildFormHtml(tableNum, roundNum, postName, candidates, serial) {
+function buildFormHtml(tableNum, roundNum, postName, candidates, serial, collegeName = CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad') {
   const pName = p => String(p.post || p.name || '');
   const rows = candidates.length
     ? candidates.map((c, i) => `<tr>

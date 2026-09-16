@@ -578,9 +578,9 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       if (!b.classes || b.classes.length === 0) return;
       const assignments = plan.boothAssignments[b.boothNumber] || { general: null, reps: [], assocs: [] };
 
-      const boothGeneralPosts = assignments.general
-        ? [{ name: 'General Union Posts', count: assignments.general.count }]
-        : [];
+      const boothGeneralPosts = (assignments.generalParts && assignments.generalParts.length > 1)
+        ? assignments.generalParts.map(gp => ({ name: gp.title || `General Union Posts - Part ${gp.partNumber}`, count: gp.count }))
+        : (assignments.general ? [{ name: assignments.general.title || 'General Union Posts', count: assignments.general.count }] : []);
       const boothRepPosts = assignments.reps.map(r => ({ name: r.post, count: r.count }));
       const boothAssocPosts = assignments.assocs.map(a => ({ name: a.post, count: a.count }));
       const allBoothPosts = [...boothGeneralPosts, ...boothRepPosts, ...boothAssocPosts];
@@ -603,28 +603,39 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             <table class="stats-table" style="flex: 1; font-size: 13px;">
               <thead>
                 <tr>
-                  <th style="width:25%; font-size:12px;">Ballot Category</th>
-                  <th style="width:20%; font-size:12px;">Serial Range</th>
+                  <th style="width:22%; font-size:12px;">Ballot Category</th>
+                  <th style="width:18%; font-size:12px;">Serial Range</th>
                   <th style="width:10%; text-align:center; font-size:12px;">Total Qty</th>
-                  <th style="width:15%; text-align:center; font-size:12px;">No. Used</th>
-                  <th style="width:15%; text-align:center; font-size:12px;">No. Returned</th>
+                  <th style="width:16%; font-size:12px;">Book IDs</th>
+                  <th style="width:11%; text-align:center; font-size:12px;">No. Used</th>
+                  <th style="width:11%; text-align:center; font-size:12px;">No. Returned</th>
                   <th style="font-size:12px;">Remarks</th>
                 </tr>
               </thead>
               <tbody>
-                ${assignments.general ? `
+                ${(assignments.generalParts && assignments.generalParts.length > 1) ? assignments.generalParts.map(gp => `
                   <tr style="font-weight:bold;">
-                    <td style="font-size:13px;">General Union Posts</td>
-                    <td style="font-size:13px;">G${assignments.general.start} - G${assignments.general.end}</td>
-                    <td style="text-align:center; font-size:14px;">${assignments.general.count}</td>
+                    <td style="font-size:13px;">${esc(gp.title || 'General Union Posts')}</td>
+                    <td style="font-size:13px;">${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.start} - ${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.end}</td>
+                    <td style="text-align:center; font-size:14px;">${gp.count}</td>
+                    <td style="font-size:11px;">${esc(gp.bookIds || '-')}</td>
                     <td></td><td></td><td></td>
                   </tr>
-                ` : ''}
+                `).join('') : (assignments.general ? `
+                  <tr style="font-weight:bold;">
+                    <td style="font-size:13px;">${esc(assignments.general.title || 'General Union Posts')}</td>
+                    <td style="font-size:13px;">${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.start} - ${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.end}</td>
+                    <td style="text-align:center; font-size:14px;">${assignments.general.count}</td>
+                    <td style="font-size:11px;">${esc(assignments.general.bookIds || '-')}</td>
+                    <td></td><td></td><td></td>
+                  </tr>
+                ` : '')}
                 ${assignments.reps.map(r => `
                   <tr>
                     <td style="font-size:13px; font-weight:bold;">${esc(r.post)}</td>
                     <td style="font-size:13px;">R${r.start} - R${r.end}</td>
                     <td style="text-align:center; font-size:14px;">${r.count}</td>
+                    <td style="font-size:11px;">${esc(r.bookIds || '-')}</td>
                     <td></td><td></td><td></td>
                   </tr>
                 `).join('')}
@@ -633,6 +644,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                     <td style="font-size:13px; font-weight:bold;">${esc(a.post)}</td>
                     <td style="font-size:13px;">A${a.start} - A${a.end}</td>
                     <td style="text-align:center; font-size:14px;">${a.count}</td>
+                    <td style="font-size:11px;">${esc(a.bookIds || '-')}</td>
                     <td></td><td></td><td></td>
                   </tr>
                 `).join('')}
