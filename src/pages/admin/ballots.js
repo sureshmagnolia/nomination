@@ -53,49 +53,100 @@ export async function renderAdminBallots(container) {
 
   const generalPosts = posts.filter(isGeneral);
 
-  // Default 2-way split preset if not configured
-  const defaultSplitBallots = [
+  const getPostIcon = (name) => {
+    const n = String(name || '').toLowerCase();
+    if (n.includes('chairman') && !n.includes('vice')) return '🏆';
+    if (n.includes('vice chairman')) return '🥈';
+    if (n.includes('joint secretary')) return '🤝';
+    if (n.includes('secretary') && !n.includes('fine arts')) return '📝';
+    if (n.includes('councillor') || n.includes('uuc')) return '🏛️';
+    if (n.includes('editor')) return '📰';
+    if (n.includes('fine arts') || n.includes('arts')) return '🎨';
+    if (n.includes('captain') || n.includes('sports')) return '⚽';
+    return '🎖️';
+  };
+
+  const defaultBallots = [
     {
       id: 'gen_1',
       partNumber: 1,
-      title: 'General Union Posts - Part 1 (Major Executive)',
+      title: 'General Union Posts - Main',
       shortCode: 'G1',
       bookPrefix: 'GB1-',
       paperSize: 'A3',
-      posts: [
-        'The Chairman',
-        'The Vice Chairman',
-        'The Secretary',
-        'The Joint Secretary',
-        'The University Union Councillor'
-      ]
+      posts: []
     },
     {
       id: 'gen_2',
       partNumber: 2,
-      title: 'General Union Posts - Part 2 (Arts, Sports & Editorial)',
+      title: 'Additional General Ballot (Arts, Sports & Editorial)',
       shortCode: 'G2',
       bookPrefix: 'GB2-',
       paperSize: 'A3',
-      posts: [
-        'The Chief Student Editor',
-        'The Secretary Fine Arts',
-        'The General Captain For Sports And Games'
-      ]
+      posts: []
     }
   ];
 
   let currentConfig = ballotConfig || {
     isSplit: false,
-    ballots: defaultSplitBallots
+    ballots: defaultBallots
   };
 
   if (!Array.isArray(currentConfig.ballots) || currentConfig.ballots.length === 0) {
-    currentConfig.ballots = defaultSplitBallots;
+    currentConfig.ballots = defaultBallots;
   }
+  if (currentConfig.ballots.length === 1) {
+    currentConfig.ballots.push({
+      id: 'gen_2',
+      partNumber: 2,
+      title: 'Additional General Ballot (Arts, Sports & Editorial)',
+      shortCode: 'G2',
+      bookPrefix: 'GB2-',
+      paperSize: 'A3',
+      posts: []
+    });
+  }
+
+  // Set of post names selected by admin to be split into Part 2
+  const splitSet = new Set();
+  if (currentConfig.isSplit && currentConfig.ballots[1] && Array.isArray(currentConfig.ballots[1].posts)) {
+    currentConfig.ballots[1].posts.forEach(p => splitSet.add(p));
+  }
+
+  const syncConfig = () => {
+    const isSplit = splitSet.size > 0;
+    currentConfig.isSplit = isSplit;
+
+    const allGenNames = generalPosts.map(p => p.post);
+    const part2Posts = allGenNames.filter(p => splitSet.has(p));
+    const part1Posts = allGenNames.filter(p => !splitSet.has(p));
+
+    currentConfig.ballots[0].posts = part1Posts;
+    currentConfig.ballots[0].shortCode = isSplit ? 'G1' : 'G';
+    currentConfig.ballots[0].bookPrefix = isSplit ? 'GB1-' : 'GB';
+
+    if (!currentConfig.ballots[1]) {
+      currentConfig.ballots[1] = {
+        id: 'gen_2',
+        partNumber: 2,
+        title: 'Additional General Ballot (Arts, Sports & Editorial)',
+        shortCode: 'G2',
+        bookPrefix: 'GB2-',
+        paperSize: 'A3',
+        posts: []
+      };
+    }
+    currentConfig.ballots[1].posts = part2Posts;
+    currentConfig.ballots[1].shortCode = 'G2';
+    currentConfig.ballots[1].bookPrefix = 'GB2-';
+  };
+
+  syncConfig();
 
   const renderUI = () => {
     const isSplit = !!currentConfig.isSplit;
+    const part1Posts = currentConfig.ballots[0].posts || [];
+    const part2Posts = (currentConfig.ballots[1] && currentConfig.ballots[1].posts) || [];
 
     main.innerHTML = `
       <div class="space-y-6 page-enter">
@@ -104,10 +155,10 @@ export async function renderAdminBallots(container) {
           <div>
             <h2 class="text-2xl font-bold text-white flex items-center gap-3">
               <span class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">🗳️</span>
-              Ballot Planning & Printing
+              Ballot Planning &amp; Printing
             </h2>
             <p class="text-slate-400 mt-1 text-sm">
-              Configure ballot layout, split general posts if needed, and generate print-ready ballots & PO accounts.
+              Select which posts to split in ballots, configure paper formats, and generate print-ready ballots &amp; PO accounts.
             </p>
           </div>
           <div class="flex items-center gap-3">
@@ -118,152 +169,216 @@ export async function renderAdminBallots(container) {
         </div>
 
         <!-- Ballot Planning & Post Split Panel -->
-        <div class="glass p-6 rounded-2xl border border-white/10 space-y-5 bg-gradient-to-b from-indigo-950/20 to-transparent">
-          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-white/10 pb-4">
+        <div class="glass p-6 rounded-2xl border border-white/10 space-y-6 bg-gradient-to-b from-indigo-950/20 to-transparent">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/10 pb-4">
             <div>
               <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                <span>⚙️</span> General Ballot Layout &amp; Post Splitter
+                <span>⚙️</span> General Ballot Post Selection &amp; Splitter
               </h3>
-              <p class="text-xs text-slate-400 mt-0.5">
-                Keep all general posts on a single A3 master ballot or split into separate numbered ballots (e.g. Executive and Arts/Sports).
+              <p class="text-xs text-slate-400 mt-1">
+                Select the specific posts you want to detach into an <strong>Additional Ballot (Part 2)</strong>. Unselected posts remain on the <strong>Main Ballot (Part 1)</strong>.
               </p>
             </div>
             
-            <!-- Mode Switcher -->
-            <div class="flex items-center bg-slate-900/80 p-1.5 rounded-xl border border-white/10 text-xs font-medium">
-              <button id="btnModeSingle" class="px-4 py-2 rounded-lg transition-all ${!isSplit ? 'bg-indigo-600 text-white shadow-lg font-bold' : 'text-slate-400 hover:text-white'}">
-                📄 Single Unified Ballot
+            <div class="flex items-center gap-2">
+              <span class="text-xs px-3 py-1.5 rounded-xl border ${isSplit ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 font-bold' : 'bg-slate-800 text-slate-400 border-white/10'}">
+                ${isSplit ? '🔀 Split Ballot Active (' + part1Posts.length + ' Main + ' + part2Posts.length + ' Split)' : '📄 Single Unified Ballot (' + part1Posts.length + ' Posts)'}
+              </span>
+            </div>
+          </div>
+
+          <!-- Quick Selection Helper Actions -->
+          <div class="flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-slate-400 font-semibold mr-1">Quick Select:</span>
+              <button id="btnQuickArtsSports" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-indigo-300 transition-all flex items-center gap-1.5">
+                <span>🎨</span> Fine Arts, Sports &amp; Editor
               </button>
-              <button id="btnModeSplit" class="px-4 py-2 rounded-lg transition-all ${isSplit ? 'bg-indigo-600 text-white shadow-lg font-bold' : 'text-slate-400 hover:text-white'}">
-                🔀 Split into Multiple Ballots
+              <button id="btnQuickCouncil" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-emerald-300 transition-all flex items-center gap-1.5">
+                <span>🏛️</span> Council &amp; Activities
+              </button>
+              <button id="btnInvertSelect" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-all">
+                ☑️ Invert Selection
+              </button>
+            </div>
+            <div>
+              <button id="btnClearSplit" class="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-300 transition-all flex items-center gap-1.5">
+                <span>🔄</span> Reset to Single Ballot (Clear Selection)
               </button>
             </div>
           </div>
 
-          ${isSplit ? `
-            <!-- Split Configuration Controls -->
-            <div class="space-y-4">
-              <div class="flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div class="flex items-center gap-2">
-                  <span class="text-slate-400">Quick Presets:</span>
-                  <button id="btnPresetExec" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-indigo-300 transition-all">
-                    ⚡ Executive + Activities Split
-                  </button>
-                  <button id="btnPreset3Way" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-emerald-300 transition-all">
-                    ⚡ 3-Way Split (Exec / Council / Sports)
-                  </button>
-                </div>
-                <button id="btnAddPart" class="btn btn-secondary py-1.5 px-3 text-xs border-dashed border-white/20 text-slate-300 hover:text-white hover:border-indigo-400">
-                  ➕ Add Additional Ballot Part
-                </button>
-              </div>
+          <!-- Post Selection Checklist -->
+          <div class="space-y-2">
+            <div class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span>General Union Posts (${generalPosts.length})</span>
+              <span class="text-slate-400 font-normal">Click a post or check the box to toggle between Main &amp; Additional ballot</span>
+            </div>
 
-              <!-- Parts Grid -->
-              <div class="grid grid-cols-1 lg:grid-cols-${Math.min(currentConfig.ballots.length, 3)} gap-4" id="partsGrid">
-                ${currentConfig.ballots.map((part, pIdx) => `
-                  <div class="bg-slate-900/60 p-4 rounded-xl border border-indigo-500/20 space-y-3 relative group" data-part-index="${pIdx}">
-                    <div class="flex justify-between items-center">
-                      <span class="text-xs font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 uppercase tracking-wider">
-                        Part ${pIdx + 1} (${esc(part.shortCode || 'G' + (pIdx + 1))})
-                      </span>
-                      ${currentConfig.ballots.length > 2 ? `
-                        <button class="text-red-400 hover:text-red-300 text-xs px-2 py-0.5 rounded hover:bg-red-500/10 btn-remove-part" data-part-index="${pIdx}" title="Remove Part">
-                          ✕ Remove
-                        </button>
-                      ` : ''}
-                    </div>
-
-                    <div class="space-y-2">
-                      <div>
-                        <label class="text-[11px] font-semibold text-slate-400 block mb-1">Ballot Title (Printed on Paper):</label>
-                        <input type="text" class="input input-sm w-full bg-slate-800/80 border-white/10 text-xs text-white part-title-input" data-part-index="${pIdx}" value="${esc(part.title)}" placeholder="e.g. General Union - Part 1" />
-                      </div>
-
-                      <div class="grid grid-cols-3 gap-2 text-[11px]">
-                        <div>
-                          <label class="text-slate-400 block mb-0.5">Series Code</label>
-                          <input type="text" class="input input-sm w-full bg-slate-800/80 border-white/10 text-xs text-white font-mono part-code-input" data-part-index="${pIdx}" value="${esc(part.shortCode || 'G' + (pIdx + 1))}" placeholder="G1" />
-                        </div>
-                        <div>
-                          <label class="text-slate-400 block mb-0.5">Book Prefix</label>
-                          <input type="text" class="input input-sm w-full bg-slate-800/80 border-white/10 text-xs text-white font-mono part-book-input" data-part-index="${pIdx}" value="${esc(part.bookPrefix || 'GB' + (pIdx + 1) + '-')}" placeholder="GB1-" />
-                        </div>
-                        <div>
-                          <label class="text-slate-400 block mb-0.5">Paper Size</label>
-                          <select class="input input-sm w-full bg-slate-800/80 border-white/10 text-xs text-white part-size-select" data-part-index="${pIdx}">
-                            <option value="A3" ${part.paperSize === 'A3' ? 'selected' : ''}>A3 (2-Col)</option>
-                            <option value="A4" ${part.paperSize === 'A4' ? 'selected' : ''}>A4 Sheet</option>
-                            <option value="A5" ${part.paperSize === 'A5' ? 'selected' : ''}>A5 Sheet</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Assigned Posts List -->
-                    <div class="pt-2 border-t border-white/5 space-y-1.5">
-                      <label class="text-[11px] font-semibold text-slate-400 block">Assigned Posts (${part.posts ? part.posts.length : 0}):</label>
-                      <div class="space-y-1 max-h-48 overflow-y-auto pr-1">
-                        ${(part.posts || []).map(postName => `
-                          <div class="flex items-center justify-between p-2 rounded bg-slate-800/60 border border-white/5 text-xs">
-                            <span class="text-slate-200 font-medium truncate" title="${esc(postName)}">${esc(postName)}</span>
-                            <select class="bg-slate-900 border border-white/10 text-[10px] text-slate-300 rounded px-1.5 py-0.5 move-post-select" data-post="${esc(postName)}" data-from-part="${pIdx}">
-                              ${currentConfig.ballots.map((targetPart, tIdx) => `
-                                <option value="${tIdx}" ${tIdx === pIdx ? 'selected' : ''}>Part ${tIdx + 1}</option>
-                              `).join('')}
-                            </select>
-                          </div>
-                        `).join('')}
-                        ${(!part.posts || part.posts.length === 0) ? `
-                          <div class="text-[11px] text-amber-400/80 italic p-2 text-center bg-amber-500/5 rounded">
-                            No posts assigned. Move posts here from other parts.
-                          </div>
-                        ` : ''}
-                      </div>
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
-
-              <!-- Unassigned Posts Warning if any -->
-              ${(() => {
-                const assigned = new Set();
-                currentConfig.ballots.forEach(b => (b.posts || []).forEach(p => assigned.add(p)));
-                const unassigned = generalPosts.filter(p => !assigned.has(p.post));
-                if (unassigned.length === 0) return '';
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              ${generalPosts.map(p => {
+                const isChecked = splitSet.has(p.post);
+                const icon = getPostIcon(p.post);
                 return `
-                  <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-center justify-between">
-                    <div>
-                      <strong>⚠️ Unassigned General Posts (${unassigned.length}):</strong> ${unassigned.map(p => esc(p.post)).join(', ')}
+                  <div class="p-3.5 rounded-xl border transition-all cursor-pointer post-select-card flex items-center justify-between select-none ${
+                    isChecked 
+                      ? 'bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 border-emerald-500/50 ring-1 ring-emerald-500/30 shadow-lg shadow-emerald-950/20' 
+                      : 'bg-slate-900/60 border-white/5 hover:border-white/20 hover:bg-slate-900/90'
+                  }" data-post-name="${esc(p.post)}">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <input type="checkbox" class="w-5 h-5 rounded cursor-pointer accent-emerald-500 post-checkbox pointer-events-none" ${isChecked ? 'checked' : ''} />
+                      <div class="min-w-0">
+                        <div class="font-bold text-sm text-white flex items-center gap-2 truncate">
+                          <span>${icon}</span>
+                          <span class="truncate">${esc(p.post)}</span>
+                        </div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">
+                          ${isChecked ? 'Split off to Additional Ballot (Part 2)' : 'Included on Main Ballot (Part 1)'}
+                        </div>
+                      </div>
                     </div>
-                    <button id="btnAutoAssign" class="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-semibold text-[11px]">
-                      Assign to Part 1
-                    </button>
+                    
+                    <div class="flex-shrink-0 ml-3">
+                      ${isChecked ? `
+                        <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 shadow-sm">
+                          📑 Part 2 (G2)
+                        </span>
+                      ` : `
+                        <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 flex items-center gap-1">
+                          📄 Main (G1)
+                        </span>
+                      `}
+                    </div>
                   </div>
                 `;
-              })()}
+              }).join('')}
+            </div>
+            ${generalPosts.length === 0 ? `
+              <div class="p-4 rounded-xl bg-slate-800/50 text-center text-xs text-slate-400 italic">
+                No general posts found. Ensure posts are created under Post Settings.
+              </div>
+            ` : ''}
+          </div>
 
-              <div class="flex justify-end pt-2">
-                <button id="btnSaveConfig" class="btn btn-primary py-2.5 px-6 text-xs font-bold shadow-lg shadow-indigo-500/20 flex items-center gap-2">
-                  💾 Save Structure &amp; Finalize Master Plan
-                </button>
+          <!-- Live Ballot Partition Preview -->
+          <div class="pt-4 border-t border-white/10 space-y-4">
+            <div class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+              <span>Live Ballot Partition Preview</span>
+              <span class="text-xs text-slate-400 font-normal">Continuous serial numbers &amp; 50-slip booklets</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Part 1: Main Ballot Card -->
+              <div class="bg-slate-900/70 p-4 rounded-xl border border-indigo-500/30 space-y-3">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="px-2.5 py-0.5 rounded text-xs font-bold bg-indigo-500/20 text-indigo-300 uppercase tracking-wider">
+                      ${isSplit ? 'Ballot Part 1 (G1)' : 'Single Unified Ballot (G)'}
+                    </span>
+                    <span class="text-xs text-slate-400">(${part1Posts.length} posts)</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 font-mono">
+                    ${isSplit ? 'Serial: G1-1... | Books: GB1-...' : 'Serial: G1... | Books: GB1...'}
+                  </div>
+                </div>
+
+                <div>
+                  <label class="text-[11px] font-semibold text-slate-400 block mb-1">Printed Title on Ballot:</label>
+                  <input type="text" id="inputPart1Title" class="input input-sm w-full bg-slate-800 border-white/10 text-xs text-white" value="${esc(currentConfig.ballots[0].title)}" placeholder="e.g. General Union Posts - Main" />
+                </div>
+
+                <div class="flex items-center justify-between text-xs">
+                  <div class="flex items-center gap-2">
+                    <span class="text-slate-400 text-[11px]">Paper:</span>
+                    <select id="selectPart1Size" class="input input-sm bg-slate-800 border-white/10 text-xs text-white py-0 px-2 h-7">
+                      <option value="A3" ${currentConfig.ballots[0].paperSize === 'A3' ? 'selected' : ''}>A3 (2-Column Standard)</option>
+                      <option value="A4" ${currentConfig.ballots[0].paperSize === 'A4' ? 'selected' : ''}>A4 Sheet</option>
+                    </select>
+                  </div>
+                  <div class="text-[11px] text-indigo-300 font-medium">
+                    All voters receive this ballot
+                  </div>
+                </div>
+
+                <div class="pt-2 border-t border-white/5">
+                  <div class="text-[11px] font-semibold text-slate-400 mb-1.5">Included Posts:</div>
+                  <div class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
+                    ${part1Posts.map(name => `
+                      <span class="px-2 py-0.5 rounded bg-slate-800 border border-white/10 text-[11px] text-slate-200 flex items-center gap-1">
+                        <span>${getPostIcon(name)}</span> ${esc(name)}
+                      </span>
+                    `).join('')}
+                    ${part1Posts.length === 0 ? '<span class="text-xs text-amber-400 italic">No posts assigned to Part 1.</span>' : ''}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Part 2: Additional Ballot Card -->
+              <div class="bg-slate-900/70 p-4 rounded-xl border ${isSplit ? 'border-emerald-500/30' : 'border-white/10 opacity-70'} space-y-3">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="px-2.5 py-0.5 rounded text-xs font-bold ${isSplit ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-500'} uppercase tracking-wider">
+                      Ballot Part 2 (G2)
+                    </span>
+                    <span class="text-xs ${isSplit ? 'text-slate-300 font-semibold' : 'text-slate-500'}">
+                      (${part2Posts.length} posts)
+                    </span>
+                  </div>
+                  <div class="text-[11px] font-mono ${isSplit ? 'text-emerald-400' : 'text-slate-500'}">
+                    ${isSplit ? 'Serial: G2-1... | Books: GB2-...' : 'Inactive'}
+                  </div>
+                </div>
+
+                ${isSplit ? `
+                  <div>
+                    <label class="text-[11px] font-semibold text-slate-400 block mb-1">Printed Title on Ballot:</label>
+                    <input type="text" id="inputPart2Title" class="input input-sm w-full bg-slate-800 border-white/10 text-xs text-white" value="${esc(currentConfig.ballots[1]?.title || 'Additional General Ballot')}" placeholder="e.g. Additional General Ballot" />
+                  </div>
+
+                  <div class="flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-2">
+                      <span class="text-slate-400 text-[11px]">Paper:</span>
+                      <select id="selectPart2Size" class="input input-sm bg-slate-800 border-white/10 text-xs text-white py-0 px-2 h-7">
+                        <option value="A3" ${(currentConfig.ballots[1]?.paperSize || 'A3') === 'A3' ? 'selected' : ''}>A3 (2-Column Standard)</option>
+                        <option value="A4" ${(currentConfig.ballots[1]?.paperSize) === 'A4' ? 'selected' : ''}>A4 Sheet</option>
+                        <option value="A5" ${(currentConfig.ballots[1]?.paperSize) === 'A5' ? 'selected' : ''}>A5 Sheet</option>
+                      </select>
+                    </div>
+                    <div class="text-[11px] text-emerald-300 font-medium">
+                      All voters receive this ballot
+                    </div>
+                  </div>
+
+                  <div class="pt-2 border-t border-white/5">
+                    <div class="text-[11px] font-semibold text-slate-400 mb-1.5">Split Posts:</div>
+                    <div class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
+                      ${part2Posts.map(name => `
+                        <span class="px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/30 text-[11px] text-emerald-200 flex items-center gap-1">
+                          <span>${getPostIcon(name)}</span> ${esc(name)}
+                        </span>
+                      `).join('')}
+                    </div>
+                  </div>
+                ` : `
+                  <div class="py-8 px-4 text-center rounded-lg bg-slate-800/30 border border-dashed border-white/10 text-slate-400 text-xs space-y-1.5">
+                    <div class="text-sm font-semibold text-slate-300 flex items-center justify-center gap-1.5">
+                      <span>📄</span> All Posts on Single Master Ballot
+                    </div>
+                    <p class="text-[11px] text-slate-500 max-w-sm mx-auto">
+                      No posts selected to split. To detach posts into an Additional Ballot, check any of the posts above.
+                    </p>
+                  </div>
+                `}
               </div>
             </div>
-          ` : `
-            <!-- Single Mode Summary -->
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-slate-900/60 border border-white/5">
-              <div class="space-y-1">
-                <div class="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                  <span>📄</span> All ${generalPosts.length} General Union Posts are printed on a single <strong>A3 Master Ballot Sheet</strong>.
-                </div>
-                <div class="text-xs text-slate-400">
-                  Continuous sequential numbering: <code>G1, G2, G3...</code> | Standard 50-slip booklets: <code>GB1, GB2...</code>
-                </div>
-              </div>
-              <button id="btnSaveConfig" class="btn btn-secondary py-2 px-4 text-xs whitespace-nowrap border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white">
-                💾 Confirm Single Mode &amp; Finalize
+
+            <!-- Save Action Button -->
+            <div class="flex justify-end pt-2">
+              <button id="btnSaveConfig" class="btn btn-primary py-2.5 px-6 text-xs font-bold shadow-lg shadow-indigo-500/20 flex items-center gap-2">
+                💾 Save Selection &amp; Finalize Master Plan
               </button>
             </div>
-          `}
+          </div>
         </div>
 
         <!-- Ballot Generation Action Cards -->
@@ -272,33 +387,49 @@ export async function renderAdminBallots(container) {
             <span>🖨️</span> Official Ballot Generation
           </h3>
           
-          <div class="grid grid-cols-1 md:grid-cols-${isSplit ? '4' : '4'} gap-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             ${isSplit ? `
-              <!-- Split General Ballots Cards -->
-              ${currentConfig.ballots.map((part, pIdx) => `
-                <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-indigo-500/50 transition-all">
-                  <div class="text-indigo-400 font-bold flex items-center justify-between">
-                    <span class="flex items-center gap-2"><span>🏆</span> Part ${pIdx + 1} (${esc(part.shortCode || 'G' + (pIdx + 1))})</span>
-                    <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono">${part.paperSize || 'A3'}</span>
-                  </div>
-                  <p class="text-xs text-slate-400 leading-relaxed truncate" title="${esc(part.title)}">
-                    ${esc(part.title)}
-                  </p>
-                  <div class="text-[11px] text-slate-500">
-                    ${(part.posts || []).length} Posts (${esc(part.posts ? part.posts.slice(0, 2).join(', ') + (part.posts.length > 2 ? '...' : '') : 'None')})
-                  </div>
-                  <button data-type="general_part:${part.id || 'gen_' + (pIdx + 1)}" class="btn btn-primary w-full py-2.5 text-xs preview-btn">
-                    🖨️ Generate Part ${pIdx + 1}
-                  </button>
+              <!-- Part 1 Ballot -->
+              <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-indigo-500/50 transition-all">
+                <div class="text-indigo-400 font-bold flex items-center justify-between">
+                  <span class="flex items-center gap-2"><span>🏆</span> Part 1 (G1)</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono">${currentConfig.ballots[0].paperSize || 'A3'}</span>
                 </div>
-              `).join('')}
+                <p class="text-xs text-slate-400 leading-relaxed truncate" title="${esc(currentConfig.ballots[0].title)}">
+                  ${esc(currentConfig.ballots[0].title)}
+                </p>
+                <div class="text-[11px] text-slate-500">
+                  ${part1Posts.length} Posts (${esc(part1Posts.slice(0, 2).join(', ') + (part1Posts.length > 2 ? '...' : ''))})
+                </div>
+                <button data-type="general_part:gen_1" class="btn btn-primary w-full py-2.5 text-xs preview-btn">
+                  🖨️ Generate Part 1 (G1)
+                </button>
+              </div>
 
+              <!-- Part 2 Ballot -->
+              <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-emerald-500/50 transition-all">
+                <div class="text-emerald-400 font-bold flex items-center justify-between">
+                  <span class="flex items-center gap-2"><span>📑</span> Part 2 (G2)</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">${currentConfig.ballots[1]?.paperSize || 'A3'}</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed truncate" title="${esc(currentConfig.ballots[1]?.title || 'Additional General Ballot')}">
+                  ${esc(currentConfig.ballots[1]?.title || 'Additional General Ballot')}
+                </p>
+                <div class="text-[11px] text-slate-500">
+                  ${part2Posts.length} Posts (${esc(part2Posts.slice(0, 2).join(', ') + (part2Posts.length > 2 ? '...' : ''))})
+                </div>
+                <button data-type="general_part:gen_2" class="btn btn-primary w-full py-2.5 text-xs preview-btn">
+                  🖨️ Generate Part 2 (G2)
+                </button>
+              </div>
+
+              <!-- All General Parts Combined -->
               <div class="glass p-6 rounded-2xl border border-white/10 space-y-4 hover:border-indigo-500/50 transition-all bg-indigo-500/5">
                 <div class="text-indigo-300 font-bold flex items-center gap-2">
-                  <span>📑</span> All General Ballots
+                  <span>📚</span> All General Ballots
                 </div>
                 <p class="text-xs text-slate-400 leading-relaxed">
-                  Batch generates all ${currentConfig.ballots.length} General Ballot parts in sequence with page breaks.
+                  Batch generates both Part 1 and Part 2 in sequence with page breaks.
                 </p>
                 <div class="text-[11px] text-indigo-400/80">
                   Combined print run for press
@@ -314,9 +445,12 @@ export async function renderAdminBallots(container) {
                   <span>🏆</span> General Union (A3)
                 </div>
                 <p class="text-xs text-slate-400 leading-relaxed">
-                  All executive union posts in 2 columns. Designed for A3 paper. Chairman &amp; Vice Chairman on top.
+                  All executive union posts in 2 columns. Designed for A3 paper.
                 </p>
-                <button data-type="general" class="btn btn-primary w-full py-3 preview-btn">🖨️ Generate General Ballot</button>
+                <div class="text-[11px] text-slate-500">
+                  ${part1Posts.length} Posts (Single Master Sheet)
+                </div>
+                <button data-type="general" class="btn btn-primary w-full py-2.5 text-xs preview-btn">🖨️ Generate General Ballot</button>
               </div>
             `}
 
@@ -328,7 +462,7 @@ export async function renderAdminBallots(container) {
               <p class="text-xs text-slate-400 leading-relaxed">
                 1st, 2nd, 3rd Year &amp; PG Reps. Designed for A5 paper (one post per page).
               </p>
-              <button data-type="year" class="btn btn-primary w-full py-3 preview-btn">🖨️ Generate Year Reps</button>
+              <button data-type="year" class="btn btn-primary w-full py-2.5 text-xs preview-btn">🖨️ Generate Year Reps</button>
             </div>
 
             <!-- Association Reps -->
@@ -339,7 +473,7 @@ export async function renderAdminBallots(container) {
               <p class="text-xs text-slate-400 leading-relaxed">
                 Departmental Association Secretaries. Designed for A5 paper (one post per page).
               </p>
-              <button data-type="assoc" class="btn btn-primary w-full py-3 preview-btn">🖨️ Generate Associations</button>
+              <button data-type="assoc" class="btn btn-primary w-full py-2.5 text-xs preview-btn">🖨️ Generate Associations</button>
             </div>
 
             <!-- Summary Report -->
@@ -348,9 +482,9 @@ export async function renderAdminBallots(container) {
                 <span>📊</span> Printing Summary
               </div>
               <p class="text-xs text-slate-400 leading-relaxed">
-                Detailed serial number ranges, part splits, and book counts for the printing company.
+                Detailed serial number ranges, book counts, and packaging breakdown for printing press.
               </p>
-              <button id="btnGenSummary" class="btn btn-secondary w-full py-3 border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📑 View Summary Report</button>
+              <button id="btnGenSummary" class="btn btn-secondary w-full py-2.5 text-xs border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📑 View Summary Report</button>
             </div>
           </div>
         </div>
@@ -361,222 +495,129 @@ export async function renderAdminBallots(container) {
   };
 
   const bindEvents = () => {
-    // Mode toggles
-    const btnModeSingle = main.querySelector('#btnModeSingle');
-    const btnModeSplit = main.querySelector('#btnModeSplit');
-
-    if (btnModeSingle) {
-      btnModeSingle.onclick = () => {
-        currentConfig.isSplit = false;
-        renderUI();
-      };
-    }
-    if (btnModeSplit) {
-      btnModeSplit.onclick = () => {
-        currentConfig.isSplit = true;
-        renderUI();
-      };
-    }
-
-    // Presets
-    const btnPresetExec = main.querySelector('#btnPresetExec');
-    if (btnPresetExec) {
-      btnPresetExec.onclick = () => {
-        currentConfig.isSplit = true;
-        currentConfig.ballots = [
-          {
-            id: 'gen_1',
-            partNumber: 1,
-            title: 'General Union Posts - Part 1 (Major Executive)',
-            shortCode: 'G1',
-            bookPrefix: 'GB1-',
-            paperSize: 'A3',
-            posts: [
-              'The Chairman',
-              'The Vice Chairman',
-              'The Secretary',
-              'The Joint Secretary',
-              'The University Union Councillor'
-            ]
-          },
-          {
-            id: 'gen_2',
-            partNumber: 2,
-            title: 'General Union Posts - Part 2 (Arts, Sports & Editorial)',
-            shortCode: 'G2',
-            bookPrefix: 'GB2-',
-            paperSize: 'A3',
-            posts: [
-              'The Chief Student Editor',
-              'The Secretary Fine Arts',
-              'The General Captain For Sports And Games'
-            ]
-          }
-        ];
-        renderUI();
-        showToast('Applied Executive + Activities Split Preset', 'info');
-      };
-    }
-
-    const btnPreset3Way = main.querySelector('#btnPreset3Way');
-    if (btnPreset3Way) {
-      btnPreset3Way.onclick = () => {
-        currentConfig.isSplit = true;
-        currentConfig.ballots = [
-          {
-            id: 'gen_1',
-            partNumber: 1,
-            title: 'General Union Posts - Part 1 (Executive Officers)',
-            shortCode: 'G1',
-            bookPrefix: 'GB1-',
-            paperSize: 'A4',
-            posts: ['The Chairman', 'The Vice Chairman', 'The Secretary', 'The Joint Secretary']
-          },
-          {
-            id: 'gen_2',
-            partNumber: 2,
-            title: 'General Union Posts - Part 2 (University Councillors)',
-            shortCode: 'G2',
-            bookPrefix: 'GB2-',
-            paperSize: 'A4',
-            posts: ['The University Union Councillor']
-          },
-          {
-            id: 'gen_3',
-            partNumber: 3,
-            title: 'General Union Posts - Part 3 (Arts, Sports & Editor)',
-            shortCode: 'G3',
-            bookPrefix: 'GB3-',
-            paperSize: 'A4',
-            posts: ['The Chief Student Editor', 'The Secretary Fine Arts', 'The General Captain For Sports And Games']
-          }
-        ];
-        renderUI();
-        showToast('Applied 3-Way Split Preset', 'info');
-      };
-    }
-
-    // Add Part
-    const btnAddPart = main.querySelector('#btnAddPart');
-    if (btnAddPart) {
-      btnAddPart.onclick = () => {
-        const nextNum = currentConfig.ballots.length + 1;
-        currentConfig.ballots.push({
-          id: `gen_${nextNum}`,
-          partNumber: nextNum,
-          title: `General Union Posts - Part ${nextNum}`,
-          shortCode: `G${nextNum}`,
-          bookPrefix: `GB${nextNum}-`,
-          paperSize: 'A3',
-          posts: []
-        });
-        renderUI();
-      };
-    }
-
-    // Remove Part
-    main.querySelectorAll('.btn-remove-part').forEach(btn => {
-      btn.onclick = () => {
-        const idx = parseInt(btn.dataset.partIndex, 10);
-        if (currentConfig.ballots.length <= 2) {
-          showToast('At least 2 parts are required for split mode. To keep all in one, switch to Single Unified Ballot.', 'warning');
-          return;
+    // Post Card / Checkbox click toggle
+    main.querySelectorAll('.post-select-card').forEach(card => {
+      card.onclick = () => {
+        const postName = card.dataset.postName;
+        if (!postName) return;
+        if (splitSet.has(postName)) {
+          splitSet.delete(postName);
+        } else {
+          splitSet.add(postName);
         }
-        const removed = currentConfig.ballots.splice(idx, 1)[0];
-        // Reallocate removed posts to part 0
-        if (removed && removed.posts && removed.posts.length > 0) {
-          currentConfig.ballots[0].posts.push(...removed.posts);
-        }
-        // Renumber parts
-        currentConfig.ballots.forEach((b, i) => {
-          b.partNumber = i + 1;
-        });
+        syncConfig();
         renderUI();
       };
     });
 
-    // Inputs inside part cards
-    main.querySelectorAll('.part-title-input').forEach(inp => {
-      inp.onchange = () => {
-        const idx = parseInt(inp.dataset.partIndex, 10);
-        if (currentConfig.ballots[idx]) currentConfig.ballots[idx].title = inp.value.trim();
-      };
-    });
-
-    main.querySelectorAll('.part-code-input').forEach(inp => {
-      inp.onchange = () => {
-        const idx = parseInt(inp.dataset.partIndex, 10);
-        if (currentConfig.ballots[idx]) currentConfig.ballots[idx].shortCode = inp.value.trim().toUpperCase();
-      };
-    });
-
-    main.querySelectorAll('.part-book-input').forEach(inp => {
-      inp.onchange = () => {
-        const idx = parseInt(inp.dataset.partIndex, 10);
-        if (currentConfig.ballots[idx]) currentConfig.ballots[idx].bookPrefix = inp.value.trim().toUpperCase();
-      };
-    });
-
-    main.querySelectorAll('.part-size-select').forEach(sel => {
-      sel.onchange = () => {
-        const idx = parseInt(sel.dataset.partIndex, 10);
-        if (currentConfig.ballots[idx]) currentConfig.ballots[idx].paperSize = sel.value;
-      };
-    });
-
-    // Move post between parts
-    main.querySelectorAll('.move-post-select').forEach(sel => {
-      sel.onchange = () => {
-        const postName = sel.dataset.post;
-        const fromIdx = parseInt(sel.dataset.fromPart, 10);
-        const toIdx = parseInt(sel.value, 10);
-        if (fromIdx === toIdx) return;
-
-        // Remove from fromIdx
-        currentConfig.ballots[fromIdx].posts = currentConfig.ballots[fromIdx].posts.filter(p => p !== postName);
-        // Add to toIdx
-        if (!currentConfig.ballots[toIdx].posts.includes(postName)) {
-          currentConfig.ballots[toIdx].posts.push(postName);
-        }
-        renderUI();
-      };
-    });
-
-    // Auto assign unassigned posts
-    const btnAutoAssign = main.querySelector('#btnAutoAssign');
-    if (btnAutoAssign) {
-      btnAutoAssign.onclick = () => {
-        const assigned = new Set();
-        currentConfig.ballots.forEach(b => (b.posts || []).forEach(p => assigned.add(p)));
+    // Quick selection buttons
+    const btnQuickArtsSports = main.querySelector('#btnQuickArtsSports');
+    if (btnQuickArtsSports) {
+      btnQuickArtsSports.onclick = () => {
+        splitSet.clear();
         generalPosts.forEach(p => {
-          if (!assigned.has(p.post)) {
-            currentConfig.ballots[0].posts.push(p.post);
-            assigned.add(p.post);
+          const n = p.post.toLowerCase();
+          if (n.includes('editor') || n.includes('arts') || n.includes('captain') || n.includes('sports')) {
+            splitSet.add(p.post);
           }
         });
+        syncConfig();
         renderUI();
+        showToast('Selected Arts, Sports & Editorial for Additional Ballot', 'info');
+      };
+    }
+
+    const btnQuickCouncil = main.querySelector('#btnQuickCouncil');
+    if (btnQuickCouncil) {
+      btnQuickCouncil.onclick = () => {
+        splitSet.clear();
+        generalPosts.forEach(p => {
+          const n = p.post.toLowerCase();
+          if (n.includes('uuc') || n.includes('councillor') || n.includes('editor') || n.includes('arts') || n.includes('captain') || n.includes('sports')) {
+            splitSet.add(p.post);
+          }
+        });
+        syncConfig();
+        renderUI();
+        showToast('Selected Council & Activities for Additional Ballot', 'info');
+      };
+    }
+
+    const btnInvertSelect = main.querySelector('#btnInvertSelect');
+    if (btnInvertSelect) {
+      btnInvertSelect.onclick = () => {
+        generalPosts.forEach(p => {
+          if (splitSet.has(p.post)) splitSet.delete(p.post);
+          else splitSet.add(p.post);
+        });
+        syncConfig();
+        renderUI();
+      };
+    }
+
+    const btnClearSplit = main.querySelector('#btnClearSplit');
+    if (btnClearSplit) {
+      btnClearSplit.onclick = () => {
+        splitSet.clear();
+        syncConfig();
+        renderUI();
+        showToast('Selection cleared. Reset to Single Unified Ballot.', 'info');
+      };
+    }
+
+    // Title and size inputs
+    const inputPart1Title = main.querySelector('#inputPart1Title');
+    if (inputPart1Title) {
+      inputPart1Title.onchange = () => {
+        currentConfig.ballots[0].title = inputPart1Title.value.trim() || 'General Union Posts - Main';
+      };
+    }
+
+    const selectPart1Size = main.querySelector('#selectPart1Size');
+    if (selectPart1Size) {
+      selectPart1Size.onchange = () => {
+        currentConfig.ballots[0].paperSize = selectPart1Size.value;
+      };
+    }
+
+    const inputPart2Title = main.querySelector('#inputPart2Title');
+    if (inputPart2Title) {
+      inputPart2Title.onchange = () => {
+        if (currentConfig.ballots[1]) {
+          currentConfig.ballots[1].title = inputPart2Title.value.trim() || 'Additional General Ballot';
+        }
+      };
+    }
+
+    const selectPart2Size = main.querySelector('#selectPart2Size');
+    if (selectPart2Size) {
+      selectPart2Size.onchange = () => {
+        if (currentConfig.ballots[1]) {
+          currentConfig.ballots[1].paperSize = selectPart2Size.value;
+        }
       };
     }
 
     // Save configuration and finalize plan
-    main.querySelectorAll('#btnSaveConfig').forEach(btn => {
-      btn.onclick = async () => {
-        const defaultText = btn.innerHTML;
+    const btnSaveConfig = main.querySelector('#btnSaveConfig');
+    if (btnSaveConfig) {
+      btnSaveConfig.onclick = async () => {
+        const defaultText = btnSaveConfig.innerHTML;
         try {
-          setLoading(btn, true, defaultText);
-          showToast('Saving ballot structure & regenerating plan...', 'info');
+          setLoading(btnSaveConfig, true, defaultText);
+          showToast('Saving ballot selection & calculating Master Plan...', 'info');
           await api.adminSaveBallotConfig(pwd, currentConfig);
           const res = await api.adminGenerateBallotPlan(pwd);
           plan = res.plan;
-          showToast('Ballot structure saved & Master Plan finalized!', 'success');
+          showToast('Ballot selection saved & Master Plan finalized!', 'success');
           renderUI();
         } catch (err) {
           showToast(`Error: ${err.message}`, 'error');
         } finally {
-          setLoading(btn, false, defaultText);
+          setLoading(btnSaveConfig, false, defaultText);
         }
       };
-    });
+    }
 
     const btnRegenPlanTop = main.querySelector('#btnRegenPlanTop');
     if (btnRegenPlanTop) {
