@@ -96,6 +96,232 @@ function isYearEligibleServer(cls, rule) {
   return true;
 }
 
+const DEFAULT_POSTS = [
+  { post: 'The Chairman', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: false, restrictedDept: '' },
+  { post: 'The Vice Chairman', femaleOnly: true, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: false, restrictedDept: '' },
+  { post: 'The Secretary', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: false, restrictedDept: '' },
+  { post: 'The Joint Secretary', femaleOnly: true, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: false, restrictedDept: '' },
+  { post: 'The Chief Student Editor', femaleOnly: false, finalYearIneligible: true, yearRestriction: '', yearRuleMode: 'EXCLUDE', yearRuleYears: '3_UG,2_PG', deptRestriction: false, restrictedDept: '' },
+  { post: 'The Secretary Fine Arts', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: false, restrictedDept: '' },
+  { post: 'The General Captain For Sports And Games', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: false, restrictedDept: '' },
+  { post: 'The University Union Councillor', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: false, restrictedDept: '' },
+  { post: 'I UG Representative', femaleOnly: false, finalYearIneligible: false, yearRestriction: '1', yearRuleMode: 'INCLUDE', yearRuleYears: '1_UG', deptRestriction: false, restrictedDept: '' },
+  { post: 'II UG Representative', femaleOnly: false, finalYearIneligible: false, yearRestriction: '2', yearRuleMode: 'INCLUDE', yearRuleYears: '2_UG', deptRestriction: false, restrictedDept: '' },
+  { post: 'III UG Representative', femaleOnly: false, finalYearIneligible: false, yearRestriction: '3', yearRuleMode: 'INCLUDE', yearRuleYears: '3_UG', deptRestriction: false, restrictedDept: '' },
+  { post: 'PG Representative', femaleOnly: false, finalYearIneligible: false, yearRestriction: 'PG', yearRuleMode: 'INCLUDE', yearRuleYears: '1_PG,2_PG', deptRestriction: false, restrictedDept: '' },
+  { post: 'Association Secretary Botany', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: true, restrictedDept: 'Botany' },
+  { post: 'Association Secretary Chemistry', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: true, restrictedDept: 'Chemistry' },
+  { post: 'Association Secretary Commerce', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: true, restrictedDept: 'Commerce' },
+  { post: 'Association Secretary Computer Science', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: true, restrictedDept: 'Computer Science' },
+  { post: 'Association Secretary Economics', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: true, restrictedDept: 'Economics' },
+  { post: 'Association Secretary English', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: true, restrictedDept: 'English' },
+  { post: 'Association Secretary Hindi', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: true, restrictedDept: 'Hindi' },
+  { post: 'Association Secretary History', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: true, restrictedDept: 'History' },
+  { post: 'Association Secretary Malayalam', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: true, restrictedDept: 'Malayalam' },
+  { post: 'Association Secretary Mathematics', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: true, restrictedDept: 'Mathematics' },
+  { post: 'Association Secretary Physics', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: true, restrictedDept: 'Physics' },
+  { post: 'Association Secretary Psychology', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: true, restrictedDept: 'Psychology' },
+  { post: 'Association Secretary Sanskrit', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: true, restrictedDept: 'Sanskrit' },
+  { post: 'Association Secretary Tamil', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: true, restrictedDept: 'Tamil' },
+  { post: 'Association Secretary Zoology', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: true, restrictedDept: 'Zoology' }
+];
+
+async function seedDefaultPostsIfEmpty() {
+  try {
+    const existing = await sql`SELECT COUNT(*)::int as count FROM posts`;
+    if ((existing[0]?.count || 0) === 0) {
+      for (const p of DEFAULT_POSTS) {
+        await sql`
+          INSERT INTO posts (
+            post, female_only, final_year_ineligible, year_restriction, dept_restriction,
+            restricted_dept, year_rule_mode, year_rule_years
+          ) VALUES (
+            ${p.post}, ${p.femaleOnly}, ${p.finalYearIneligible}, ${p.yearRestriction}, ${p.deptRestriction},
+            ${p.restrictedDept}, ${p.yearRuleMode}, ${p.yearRuleYears}
+          ) ON CONFLICT (post) DO NOTHING
+        `;
+      }
+    }
+  } catch (err) {
+    console.warn('seedDefaultPostsIfEmpty warning:', err.message);
+  }
+}
+
+let schemaEnsured = false;
+async function ensureSchema() {
+  if (schemaEnsured) return;
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS settings (
+        key VARCHAR(255) PRIMARY KEY,
+        value TEXT
+      );
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS admin_sessions (
+        token VARCHAR(255) PRIMARY KEY,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS posts (
+        post VARCHAR(255) PRIMARY KEY,
+        female_only BOOLEAN,
+        final_year_ineligible BOOLEAN,
+        year_restriction VARCHAR(50),
+        dept_restriction BOOLEAN,
+        restricted_dept VARCHAR(255),
+        year_rule_mode VARCHAR(20) DEFAULT 'ALL',
+        year_rule_years VARCHAR(255) DEFAULT ''
+      );
+    `;
+    try { await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS restricted_dept VARCHAR(255);`; } catch (_) {}
+    try { await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS year_rule_mode VARCHAR(20) DEFAULT 'ALL';`; } catch (_) {}
+    try { await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS year_rule_years VARCHAR(255) DEFAULT '';`; } catch (_) {}
+    
+    await sql`
+      CREATE TABLE IF NOT EXISTS nominal_roll (
+        serial_number VARCHAR(255) PRIMARY KEY,
+        name VARCHAR(255),
+        class VARCHAR(255),
+        admission_no VARCHAR(255),
+        dept VARCHAR(255)
+      );
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS nominations (
+        id VARCHAR(255) PRIMARY KEY,
+        post VARCHAR(255),
+        gender VARCHAR(50),
+        dob VARCHAR(50),
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        candidate_serial VARCHAR(255),
+        proposer_serial VARCHAR(255),
+        seconder_serial VARCHAR(255),
+        status VARCHAR(50) DEFAULT 'Pending',
+        withdrawal_status VARCHAR(50) DEFAULT 'None',
+        candidate_name VARCHAR(255),
+        candidate_class VARCHAR(255),
+        candidate_admission VARCHAR(255),
+        candidate_dept VARCHAR(255),
+        proposer_name VARCHAR(255),
+        proposer_class VARCHAR(255),
+        proposer_admission VARCHAR(255),
+        proposer_dept VARCHAR(255),
+        seconder_name VARCHAR(255),
+        seconder_class VARCHAR(255),
+        seconder_admission VARCHAR(255),
+        seconder_dept VARCHAR(255)
+      );
+    `;
+    await seedDefaultPostsIfEmpty();
+    schemaEnsured = true;
+  } catch (err) {
+    console.warn('ensureSchema warning:', err.message);
+  }
+}
+
+async function fetchPostsFromDb() {
+  await ensureSchema();
+  let rawPosts;
+  try {
+    rawPosts = await sql`
+      SELECT 
+        post, 
+        female_only as "femaleOnly", 
+        final_year_ineligible as "finalYearIneligible", 
+        year_restriction as "yearRestriction", 
+        dept_restriction as "deptRestriction",
+        restricted_dept as "restrictedDept",
+        year_rule_mode as "yearRuleMode",
+        year_rule_years as "yearRuleYears"
+      FROM posts
+    `;
+  } catch (err) {
+    try {
+      await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS restricted_dept VARCHAR(255);`;
+      await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS year_rule_mode VARCHAR(20) DEFAULT 'ALL';`;
+      await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS year_rule_years VARCHAR(255) DEFAULT '';`;
+      rawPosts = await sql`
+        SELECT 
+          post, 
+          female_only as "femaleOnly", 
+          final_year_ineligible as "finalYearIneligible", 
+          year_restriction as "yearRestriction", 
+          dept_restriction as "deptRestriction",
+          restricted_dept as "restrictedDept",
+          year_rule_mode as "yearRuleMode",
+          year_rule_years as "yearRuleYears"
+        FROM posts
+      `;
+    } catch (retryErr) {
+      console.warn('fetchPostsFromDb fallback to basic columns:', retryErr.message);
+      const basic = await sql`
+        SELECT 
+          post, 
+          female_only as "femaleOnly", 
+          final_year_ineligible as "finalYearIneligible", 
+          year_restriction as "yearRestriction", 
+          dept_restriction as "deptRestriction"
+        FROM posts
+      `;
+      rawPosts = basic.map(p => ({
+        ...p,
+        restrictedDept: p.deptRestriction && String(p.post || '').startsWith('Association Secretary ') ? p.post.replace('Association Secretary ', '').trim() : '',
+        yearRuleMode: p.finalYearIneligible ? 'EXCLUDE' : (p.yearRestriction ? 'INCLUDE' : 'ALL'),
+        yearRuleYears: p.finalYearIneligible ? '3_UG,2_PG' : (p.yearRestriction || '')
+      }));
+    }
+  }
+
+  if (!rawPosts || rawPosts.length === 0) {
+    await seedDefaultPostsIfEmpty();
+    try {
+      rawPosts = await sql`
+        SELECT 
+          post, 
+          female_only as "femaleOnly", 
+          final_year_ineligible as "finalYearIneligible", 
+          year_restriction as "yearRestriction", 
+          dept_restriction as "deptRestriction",
+          restricted_dept as "restrictedDept",
+          year_rule_mode as "yearRuleMode",
+          year_rule_years as "yearRuleYears"
+        FROM posts
+      `;
+    } catch (_) {
+      rawPosts = DEFAULT_POSTS;
+    }
+  }
+
+  return (rawPosts || []).map(p => {
+    let yrYears = [];
+    if (p.yearRuleYears) {
+      yrYears = Array.isArray(p.yearRuleYears) ? p.yearRuleYears : String(p.yearRuleYears).split(',').map(y => y.trim()).filter(Boolean);
+    } else {
+      if (p.finalYearIneligible) yrYears = ['3_UG', '2_PG'];
+      else if (p.yearRestriction === '1') yrYears = ['1_UG'];
+      else if (p.yearRestriction === '2') yrYears = ['2_UG'];
+      else if (p.yearRestriction === '3') yrYears = ['3_UG'];
+      else if (p.yearRestriction === 'PG') yrYears = ['1_PG', '2_PG'];
+      else if (p.yearRestriction === 'UG') yrYears = ['1_UG', '2_UG', '3_UG'];
+      else if (p.yearRestriction === '1,2') yrYears = ['1_UG', '2_UG'];
+    }
+    const yrMode = p.yearRuleMode || (p.finalYearIneligible ? 'EXCLUDE' : (p.yearRestriction ? 'INCLUDE' : 'ALL'));
+
+    return {
+      post: p.post,
+      femaleOnly: !!p.femaleOnly,
+      finalYearIneligible: !!p.finalYearIneligible,
+      yearRestriction: p.yearRestriction || '',
+      deptRestriction: !!p.deptRestriction,
+      restrictedDept: p.restrictedDept || (p.deptRestriction && String(p.post || '').startsWith('Association Secretary ') ? p.post.replace('Association Secretary ', '').trim() : ''),
+      yearRuleMode: yrMode,
+      yearRuleYears: yrYears
+    };
+  });
+}
+
 export default async function handler(req, res) {
   // CORS setup
   const origin = req.headers.origin || '*';
@@ -112,6 +338,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    await ensureSchema();
     let action;
     let body = {};
     
@@ -341,41 +568,7 @@ export default async function handler(req, res) {
     }
     
     if (action === 'getPosts' || action === 'adminGetPosts') {
-      const posts = await sql`
-        SELECT 
-          post, 
-          female_only as "femaleOnly", 
-          final_year_ineligible as "finalYearIneligible", 
-          year_restriction as "yearRestriction", 
-          dept_restriction as "deptRestriction",
-          restricted_dept as "restrictedDept",
-          year_rule_mode as "yearRuleMode",
-          year_rule_years as "yearRuleYears"
-        FROM posts
-      `;
-      const normalized = posts.map(p => {
-        let yrYears = [];
-        if (p.yearRuleYears) {
-          yrYears = String(p.yearRuleYears).split(',').map(y => y.trim()).filter(Boolean);
-        } else {
-          // Backward compatibility from legacy fields
-          if (p.finalYearIneligible) yrYears = ['3_UG', '2_PG'];
-          else if (p.yearRestriction === '1') yrYears = ['1_UG'];
-          else if (p.yearRestriction === '2') yrYears = ['2_UG'];
-          else if (p.yearRestriction === '3') yrYears = ['3_UG'];
-          else if (p.yearRestriction === 'PG') yrYears = ['1_PG', '2_PG'];
-          else if (p.yearRestriction === 'UG') yrYears = ['1_UG', '2_UG', '3_UG'];
-          else if (p.yearRestriction === '1,2') yrYears = ['1_UG', '2_UG'];
-        }
-        const yrMode = p.yearRuleMode || (p.finalYearIneligible ? 'EXCLUDE' : (p.yearRestriction ? 'INCLUDE' : 'ALL'));
-
-        return {
-          ...p,
-          restrictedDept: p.restrictedDept || (p.deptRestriction && String(p.post || '').startsWith('Association Secretary ') ? p.post.replace('Association Secretary ', '').trim() : ''),
-          yearRuleMode: yrMode,
-          yearRuleYears: yrYears
-        };
-      });
+      const normalized = await fetchPostsFromDb();
       return jsonOut(res, normalized);
     }
 
@@ -460,14 +653,14 @@ export default async function handler(req, res) {
 
     if (action === 'getValidNominations') {
       const published = await getSetting('validListPublished');
-      if (published !== 'true') return errOut(res, 'Valid list not published.');
+      if (published !== 'true') return jsonOut(res, []);
       const noms = await sql`SELECT * FROM nominations WHERE status = 'Valid'`;
       return jsonOut(res, noms.map(n => ({ post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept, status: n.status })));
     }
 
     if (action === 'getFinalNominations') {
       const published = await getSetting('finalListPublished');
-      if (published !== 'true') return errOut(res, 'Final list not published.');
+      if (published !== 'true') return jsonOut(res, { active: [], withdrawn: [] });
       const noms = await sql`SELECT * FROM nominations WHERE status = 'Valid'`;
       return jsonOut(res, {
         active: noms.filter(n => n.withdrawal_status !== 'Approved').map(n => ({ id: n.id, post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept })),
@@ -527,22 +720,12 @@ export default async function handler(req, res) {
 
     if (action === 'adminGetBallotPlan') {
       const data = await getSetting('ballotPlan');
-      if (!data) return errOut(res, 'No ballot plan generated yet.');
+      if (!data) return jsonOut(res, null);
       return jsonOut(res, JSON.parse(data));
     }
 
     if (action === 'adminGenerateBallotPlan') {
-      const postsRows = await sql`
-        SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", 
-               year_restriction as "yearRestriction", dept_restriction as "deptRestriction",
-               restricted_dept as "restrictedDept", year_rule_mode as "yearRuleMode", year_rule_years as "yearRuleYears"
-        FROM posts
-      `;
-      const posts = postsRows.map(p => ({
-        ...p,
-        yearRuleMode: p.yearRuleMode || (p.finalYearIneligible ? 'EXCLUDE' : (p.yearRestriction ? 'INCLUDE' : 'ALL')),
-        yearRuleYears: p.yearRuleYears ? String(p.yearRuleYears).split(',').map(y => y.trim()).filter(Boolean) : []
-      }));
+      const posts = await fetchPostsFromDb();
 
       const nomRows = await sql`SELECT * FROM nominations WHERE status = 'Valid'`;
       const candidates = nomRows.filter(n => n.withdrawal_status !== 'Approved');
@@ -911,10 +1094,10 @@ export default async function handler(req, res) {
       if (existing.some(n => n.post === body.post && (n.proposer_serial === body.seconderSerial || n.seconder_serial === body.seconderSerial))) {
         return errOut(res, 'Seconder has already signed a nomination for this post.');
       }
-      const postDef = await sql`SELECT female_only, final_year_ineligible, year_restriction, dept_restriction, restricted_dept, year_rule_mode, year_rule_years FROM posts WHERE post = ${body.post}`;
-      if (postDef.length) {
-        const rule = postDef[0];
-        if (rule.female_only && body.gender !== 'Female') {
+      const allPosts = await fetchPostsFromDb();
+      const rule = allPosts.find(p => p.post === body.post);
+      if (rule) {
+        if (rule.femaleOnly && body.gender !== 'Female') {
           return errOut(res, 'This post is reserved for Female candidates only.');
         }
 
@@ -935,8 +1118,8 @@ export default async function handler(req, res) {
           return errOut(res, `Seconder class (${sec[0].class || 'Unspecified'}) is ineligible under the year restriction for this post.`);
         }
 
-        if (rule.dept_restriction) {
-          const reqD = (rule.restricted_dept || (String(body.post).startsWith('Association Secretary ') ? body.post.replace('Association Secretary ', '').trim() : '')).trim();
+        if (rule.deptRestriction) {
+          const reqD = (rule.restrictedDept || (String(body.post).startsWith('Association Secretary ') ? body.post.replace('Association Secretary ', '').trim() : '')).trim();
           if (reqD) {
             const norm = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
             const nReq = norm(reqD);
@@ -1046,6 +1229,7 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminAddPost') {
+      await ensureSchema();
       const pName = (body.post || body.postName || '').trim();
       if (!pName) return errOut(res, 'Post name is required');
       const rDept = (body.restrictedDept || (body.deptRestriction && pName.startsWith('Association Secretary ') ? pName.replace('Association Secretary ', '').trim() : '')).trim();
@@ -1086,6 +1270,7 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminUpdatePost') {
+      await ensureSchema();
       const newName = (body.post || body.postName || '').trim();
       const origName = (body.originalName || newName).trim();
       if (!newName) return errOut(res, 'Post name is required');
@@ -1877,9 +2062,9 @@ export default async function handler(req, res) {
 
     if (action === 'adminInjectTestData') {
       const students = await sql`SELECT serial_number as "Nominal Roll Serial Number", name as "NAME", class as "CLASS", admission_no as "ADMISION NO", dept as "Dept" FROM nominal_roll`;
-      const posts = await sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction", restricted_dept as "restrictedDept", year_rule_mode as "yearRuleMode", year_rule_years as "yearRuleYears" FROM posts`;
+      const posts = await fetchPostsFromDb();
 
-      if (students.length < 9) return errOut(res, 'Not enough students in Nominal Roll to generate test data.');
+      if (students.length < 9) return errOut(res, 'Not enough students in Nominal Roll to generate test data. Please upload Nominal Roll first.');
       if (posts.length === 0) return errOut(res, 'No posts configured. Add posts first.');
 
       function isEligibleCandidate(student, postRule) {
