@@ -343,7 +343,7 @@ export default async function handler(req, res) {
     let action;
     let body = {};
     
-    if (req.method === 'GET') {
+    if (req.method === 'GET' || req.method === 'HEAD') {
       action = req.query.action;
       body = req.query;
     } else if (req.method === 'POST') {
