@@ -668,7 +668,7 @@ export default async function handler(req, res) {
         id: n.id, post: n.post, gender: n.gender, dob: n.dob, timestamp: n.timestamp,
         candidateSerial: n.candidate_serial, proposerSerial: n.proposer_serial, seconderSerial: n.seconder_serial,
         candidateAdmission: n.candidate_admission, proposerAdmission: n.proposer_admission, seconderAdmission: n.seconder_admission,
-        status: n.status, withdrawalStatus: n.withdrawal_status,
+        status: n.status, withdrawalStatus: n.withdrawal_status, rejectionReason: n.rejection_reason,
         candidate: { 'Nominal Roll Serial Number': n.candidate_serial, 'NAME': n.candidate_name, 'CLASS': n.candidate_class, 'ADMISION NO': n.candidate_admission, 'Dept': n.candidate_dept },
         proposer: { 'Nominal Roll Serial Number': n.proposer_serial, 'NAME': n.proposer_name, 'CLASS': n.proposer_class, 'ADMISION NO': n.proposer_admission, 'Dept': n.proposer_dept },
         seconder: { 'Nominal Roll Serial Number': n.seconder_serial, 'NAME': n.seconder_name, 'CLASS': n.seconder_class, 'ADMISION NO': n.seconder_admission, 'Dept': n.seconder_dept },
@@ -686,7 +686,7 @@ export default async function handler(req, res) {
         id: n.id, post: n.post, gender: n.gender, dob: n.dob, timestamp: n.timestamp,
         candidateSerial: n.candidate_serial, proposerSerial: n.proposer_serial, seconderSerial: n.seconder_serial,
         candidateAdmission: n.candidate_admission, proposerAdmission: n.proposer_admission, seconderAdmission: n.seconder_admission,
-        status: n.status, withdrawalStatus: n.withdrawal_status,
+        status: n.status, withdrawalStatus: n.withdrawal_status, rejectionReason: n.rejection_reason,
         candidate: { 'Nominal Roll Serial Number': n.candidate_serial, 'NAME': n.candidate_name, 'CLASS': n.candidate_class, 'ADMISION NO': n.candidate_admission, 'Dept': n.candidate_dept },
         proposer: { 'Nominal Roll Serial Number': n.proposer_serial, 'NAME': n.proposer_name, 'CLASS': n.proposer_class, 'ADMISION NO': n.proposer_admission, 'Dept': n.proposer_dept },
         seconder: { 'Nominal Roll Serial Number': n.seconder_serial, 'NAME': n.seconder_name, 'CLASS': n.seconder_class, 'ADMISION NO': n.seconder_admission, 'Dept': n.seconder_dept },
@@ -1410,7 +1410,8 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminVerifyNomination') {
-      await sql`UPDATE nominations SET status = ${body.status} WHERE id = ${body.id}`;
+      const reason = body.reason || null;
+      await sql`UPDATE nominations SET status = ${body.status}, rejection_reason = ${reason} WHERE id = ${body.id}`;
       return jsonOut(res, { ok: true });
     }
 
@@ -1675,6 +1676,10 @@ export default async function handler(req, res) {
       });
       
       if (toInsert.length > 0) {
+        // Check if uploaded data already has unique serial numbers
+        const hasValidSerials = toInsert.every(r => r.serial_number && r.serial_number.trim() && !isNaN(Number(r.serial_number))) &&
+          new Set(toInsert.map(r => r.serial_number.trim())).size === toInsert.length;
+
         // Bulk insert using concurrent Neon HTTP requests (chunked to avoid Vercel timeouts)
         const batchSize = 50;
         for (let i = 0; i < toInsert.length; i += batchSize) {
@@ -1684,16 +1689,18 @@ export default async function handler(req, res) {
           ));
         }
         
-        // Recalculate
-        await sql`UPDATE nominal_roll SET serial_number = serial_number || '_' || gen_random_uuid()::varchar`;
-        await sql`
-          WITH renumbered AS (
-            SELECT serial_number as old_serial, ROW_NUMBER() OVER (ORDER BY class ASC, name ASC) as new_serial
-            FROM nominal_roll
-          )
-          UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
-          FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
-        `;
+        // Only renumber if uploaded roll lacked valid serials or explicit forceRenumber was requested
+        if (!hasValidSerials || body.forceRenumber === true) {
+          await sql`UPDATE nominal_roll SET serial_number = serial_number || '_' || gen_random_uuid()::varchar`;
+          await sql`
+            WITH renumbered AS (
+              SELECT serial_number as old_serial, ROW_NUMBER() OVER (ORDER BY class ASC, name ASC) as new_serial
+              FROM nominal_roll
+            )
+            UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
+            FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
+          `;
+        }
       }
 
       // Automatically re-map existing nominations against newly uploaded roll
@@ -1738,22 +1745,23 @@ export default async function handler(req, res) {
         return errOut(res, 'Nominal Roll is finalized and locked. Please unfinalize with admin password before adding students.', 400);
       }
 
+      let newSerial = body.serial_number ? String(body.serial_number).trim() : '';
+      if (!newSerial) {
+        const maxSlRows = await sql`
+          SELECT COALESCE(MAX(CASE WHEN serial_number ~ '^[0-9]+$' THEN CAST(serial_number AS BIGINT) ELSE 0 END), 0) + 1 as next_sl 
+          FROM nominal_roll
+        `;
+        newSerial = String(maxSlRows[0]?.next_sl || 1);
+      }
+
       await sql`
         INSERT INTO nominal_roll (serial_number, name, class, admission_no, dept)
-        VALUES (gen_random_uuid()::varchar, ${body.name}, ${body.class}, ${body.admission_no}, ${body.dept})
-      `;
-      // Recalculate
-      await sql`WITH temp AS (SELECT serial_number FROM nominal_roll) UPDATE nominal_roll SET serial_number = serial_number || '_temp'`;
-      await sql`
-        WITH renumbered AS (
-          SELECT serial_number as old_serial, ROW_NUMBER() OVER (ORDER BY class ASC, name ASC) as new_serial
-          FROM nominal_roll
-        )
-        UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
-        FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
+        VALUES (${newSerial}, ${body.name}, ${body.class}, ${body.admission_no}, ${body.dept})
+        ON CONFLICT (serial_number) DO UPDATE SET
+          name = EXCLUDED.name, class = EXCLUDED.class, admission_no = EXCLUDED.admission_no, dept = EXCLUDED.dept
       `;
       await remapNominationsWithRoll();
-      return jsonOut(res, { ok: true });
+      return jsonOut(res, { ok: true, serial: newSerial });
     }
 
     if (action === 'adminUpdateStudent') {
@@ -1767,16 +1775,6 @@ export default async function handler(req, res) {
         SET name = ${body.name}, class = ${body.class}, admission_no = ${body.admission_no}, dept = ${body.dept}
         WHERE serial_number = ${body.old_serial}
       `;
-      // Recalculate
-      await sql`UPDATE nominal_roll SET serial_number = serial_number || '_' || gen_random_uuid()::varchar`;
-      await sql`
-        WITH renumbered AS (
-          SELECT serial_number as old_serial, ROW_NUMBER() OVER (ORDER BY class ASC, name ASC) as new_serial
-          FROM nominal_roll
-        )
-        UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
-        FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
-      `;
       await remapNominationsWithRoll();
       return jsonOut(res, { ok: true });
     }
@@ -1788,16 +1786,6 @@ export default async function handler(req, res) {
       }
 
       await sql`DELETE FROM nominal_roll WHERE serial_number = ${body.serial}`;
-      // Recalculate
-      await sql`UPDATE nominal_roll SET serial_number = serial_number || '_' || gen_random_uuid()::varchar`;
-      await sql`
-        WITH renumbered AS (
-          SELECT serial_number as old_serial, ROW_NUMBER() OVER (ORDER BY class ASC, name ASC) as new_serial
-          FROM nominal_roll
-        )
-        UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
-        FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
-      `;
       await remapNominationsWithRoll();
       return jsonOut(res, { ok: true });
     }

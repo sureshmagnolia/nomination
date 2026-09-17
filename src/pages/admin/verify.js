@@ -103,7 +103,10 @@ function renderVerifyTable(main, noms, pwd) {
           </div>
           <div class="text-[10px] text-slate-500 font-mono">Adm: ${esc(n.seconderAdmission || n.seconder?.['ADMISION NO'] || '–')}</div>
         </td>
-        <td><span class="badge badge-${(n.status || 'pending').toLowerCase()}">${esc(n.status)}</span></td>
+        <td>
+          <span class="badge badge-${(n.status || 'pending').toLowerCase()}">${esc(n.status)}</span>
+          ${n.status === 'Rejected' && n.rejectionReason ? `<div class="text-[10px] text-rose-400 mt-1 max-w-[150px] leading-tight font-medium" title="${esc(n.rejectionReason)}">⚠️ ${esc(n.rejectionReason)}</div>` : ''}
+        </td>
         <td>
           <div class="flex items-center gap-1.5">
             <button class="btn btn-primary btn-xs verify-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white" data-id="${esc(n.id)}" data-action="Valid"
@@ -240,14 +243,25 @@ function renderVerifyTable(main, noms, pwd) {
     if (!btn) return;
     const id = btn.dataset.id;
     const status = btn.dataset.action;
+
+    let reason = null;
+    if (status === 'Rejected') {
+      reason = prompt(`Please enter the statutory reason for rejecting Nomination #${id}:`, 'Serial number or eligibility requirement not met');
+      if (reason === null) return; // Returning officer cancelled prompt
+      reason = reason.trim() || 'Scrutiny criteria not satisfied';
+    }
+
     btn.disabled = true;
     const oldText = btn.textContent;
     btn.innerHTML = '<span class="spinner" style="width:1rem;height:1rem;border-width:2px;"></span>';
     
     try {
-      await api.adminVerifyNomination(pwd, id, status);
+      await api.adminVerifyNomination(pwd, id, status, reason);
       const nom = allNoms.find(n => n.id === id);
-      if (nom) nom.status = status;
+      if (nom) {
+        nom.status = status;
+        if (reason) nom.rejectionReason = reason;
+      }
       showToast(`Nomination ${id} marked as ${status}.`, 'success');
       applyFilters(); // Re-filter to keep UI consistent
     } catch (err) {

@@ -258,13 +258,16 @@ export const api = {
   adminGetNominations: (password) => get({ action: 'adminGetNominations', password }),
   adminGetFinalNominations: (password) => get({ action: 'adminGetFinalNominations', password }),
 
-  adminVerifyNomination: (password, id, status) => {
+  adminVerifyNomination: (password, id, status, reason = null) => {
     updateCache({ action: 'adminGetNominations', password }, (noms) => {
       const n = noms.find(x => x.id === id);
-      if (n) n.status = status;
+      if (n) {
+        n.status = status;
+        if (reason) n.rejectionReason = reason;
+      }
       return noms;
     });
-    bgPost({ action: 'adminVerifyNomination', password, id, status });
+    bgPost({ action: 'adminVerifyNomination', password, id, status, reason });
     return Promise.resolve({ ok: true });
   },
 
