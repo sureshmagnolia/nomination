@@ -9,21 +9,28 @@ export async function renderHome(container) {
   let year = new Date().getFullYear();
   let collegeName = CONFIG.COLLEGE_NAME;
   let shortName = CONFIG.COLLEGE_SHORT_NAME;
+  let schedule = {};
+  let sets = {};
 
   try {
-    const [schedule, sets] = await Promise.all([
+    const [fetchedSchedule, fetchedSets] = await Promise.all([
       api.getPublicSchedule().catch(() => ({})),
       api.getSettings().catch(() => ({}))
     ]);
+    if (fetchedSchedule) schedule = fetchedSchedule;
+    if (fetchedSets) sets = fetchedSets;
     if (schedule.electionYear) year = schedule.electionYear;
     if (sets.electionYear) year = sets.electionYear;
     if (sets.collegeName) collegeName = sets.collegeName;
     if (sets.collegeShortName) shortName = sets.collegeShortName;
-  } catch(e) {}
+  } catch(e) {
+    console.warn('Failed to load schedule or settings for home page:', e);
+  }
 
-  const now = new Date();
+  try {
+    const now = new Date();
 
-  // 1. Nominal Roll
+    // 1. Nominal Roll
   const isRollFinal = sets.nominalRollFinalized === 'true' || sets.isRollFinalized === 'true' || schedule.isRollFinalized === 'true';
   const isDraftRoll = !isRollFinal && (sets.draftRollPublished === 'true' || schedule.draftRollPublished === 'true');
   let rollBadge = `<span class="badge bg-slate-500/20 text-slate-400 border border-slate-500/30 text-[10px]">⏳ Unpublished</span>`;
@@ -148,6 +155,18 @@ export async function renderHome(container) {
       </footer>
     </div>
   `;
+  } catch (err) {
+    console.error('Error rendering home page:', err);
+    container.innerHTML = `
+      <div class="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <div class="glass p-8 rounded-2xl max-w-lg border border-red-500/20">
+          <h2 class="text-2xl font-bold text-white mb-2">College Union Election Portal</h2>
+          <p class="text-slate-400 mb-6">Unable to render dashboard cards right now.</p>
+          <button data-nav="/" class="btn btn-primary" onclick="window.location.reload()">Reload</button>
+        </div>
+      </div>
+    `;
+  }
 }
 
 function card(nav, icon, title, desc, badgeHtml = '') {
