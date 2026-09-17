@@ -357,6 +357,30 @@ export default async function handler(req, res) {
     // Authenticate Admin Endpoints
     await checkAdmin(adminPwd, adminToken, action);
 
+    // Cache-Control: Cache public read-only GET requests on Vercel's Edge CDN for 30s
+    // with stale-while-revalidate=60 to absorb massive traffic surges (10,000+ students)
+    const PUBLIC_CACHEABLE_ACTIONS = new Set([
+      'getNominalRoll',
+      'getPublicSchedule',
+      'getSettings',
+      'getPosts',
+      'getResults',
+      'getValidNominations',
+      'getFinalNominations',
+      'getPublicNominations'
+    ]);
+
+    const isPublicCacheable = req.method === 'GET' && 
+      PUBLIC_CACHEABLE_ACTIONS.has(action) && 
+      !adminPwd && 
+      !adminToken;
+
+    if (isPublicCacheable) {
+      res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
+    } else {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    }
+
     if (action === 'initDB') {
       await sql`
         CREATE TABLE IF NOT EXISTS settings (
@@ -2537,6 +2561,7 @@ export default async function handler(req, res) {
     console.error('API Error:', error);
     const msg = error.message || 'Internal Server Error';
     const status = msg.startsWith('UNAUTHORIZED_') ? 401 : 500;
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     return errOut(res, msg, status);
   }
 }
