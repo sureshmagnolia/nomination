@@ -41,6 +41,12 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
   const isDraft = !isFinal && settings.draftRollPublished === 'true';
   const isUnpublished = !isFinal && !isDraft;
   let students = [...nominalRoll];
+  const parseSl = (s) => {
+    const raw = String(s['Nominal Roll Serial Number'] || s.serial_number || s.SL_NO || s['SL. NO'] || '');
+    const num = parseInt(raw.replace(/\D/g, ''), 10);
+    return isNaN(num) ? 999999999 : num;
+  };
+  students.sort((a, b) => parseSl(a) - parseSl(b));
   let filterText = '';
   let showCorrections = false;
 

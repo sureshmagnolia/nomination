@@ -335,7 +335,8 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
           <tr style="background:#f0f0f0">
             <th style="border:1px solid #000;padding:6px;text-align:center;width:40px">#</th>
             <th style="border:1px solid #000;padding:6px 8px;text-align:left">Candidate Name</th>
-            <th style="border:1px solid #000;padding:6px 8px;text-align:center;width:100px">Adm. No</th>
+            <th style="border:1px solid #000;padding:6px 8px;text-align:center;width:80px">Roll Sl. No</th>
+            <th style="border:1px solid #000;padding:6px 8px;text-align:center;width:90px">Adm. No</th>
             <th style="border:1px solid #000;padding:6px 8px;text-align:left">Class</th>
             <th style="border:1px solid #000;padding:6px 8px;text-align:left">Department</th>
             ${isFinal ? '<th style="border:1px solid #000;padding:6px 8px;text-align:center;width:140px">Remarks</th>' : ''}
@@ -350,7 +351,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
 
       html += `
         <tr>
-          <td colspan="${isFinal ? '6' : '5'}" style="border:1px solid #000;padding:8px;background:#f3f4f6;font-weight:bold;text-transform:uppercase;font-size:13px">
+          <td colspan="${isFinal ? '7' : '6'}" style="border:1px solid #000;padding:8px;background:#f3f4f6;font-weight:bold;text-transform:uppercase;font-size:13px">
             POST: ${esc(post)}
             <span style="font-size:11px;font-weight:normal;float:right">
               ${noms.length} Candidate${noms.length > 1 ? 's' : ''} ${isUncontested ? '— (UNCONTESTED)' : ''}
@@ -360,11 +361,13 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
       `;
 
       noms.forEach((n, idx) => {
+        const sl  = n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || n.candidate?.serial_number || '–';
         const adm = n.candidate?.['ADMISION NO'] || n.candidateAdmission || n.candidate?.admission_no || '–';
         html += `
           <tr>
             <td style="border:1px solid #000;padding:6px;text-align:center;font-weight:bold">${idx + 1}</td>
             <td style="border:1px solid #000;padding:6px 8px;font-weight:bold">${esc(n.candidateName)}</td>
+            <td style="border:1px solid #000;padding:6px 8px;text-align:center;font-family:monospace;font-weight:bold">${esc(sl)}</td>
             <td style="border:1px solid #000;padding:6px 8px;text-align:center;font-family:monospace">${esc(adm)}</td>
             <td style="border:1px solid #000;padding:6px 8px">${esc(n.candidateClass)}</td>
             <td style="border:1px solid #000;padding:6px 8px">${esc(n.candidateDept)}</td>
@@ -508,7 +511,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
                   return `
                     <tr class="${isWinner ? 'winner-row' : ''}">
                       <td style="text-align: center; font-size: 11px;">${idx + 1}</td>
-                      <td style="font-weight: ${isWinner ? 'bold' : 'normal'};">${esc(c.candidateName)}</td>
+                      <td style="font-weight: ${isWinner ? 'bold' : 'normal'};">${esc(c.candidateName)} ${c.candidateSerial ? `<span style="font-size: 10px; font-weight: normal; color: #555;">(Roll Sl. #${esc(c.candidateSerial)})</span>` : ''}</td>
                       <td style="color: #444;">${esc(c.candidateClass)}</td>
                       <td style="text-align: center; font-weight: bold;">${res.type === 'unanimous' ? '—' : (c.votes || 0)}</td>
                       <td style="font-size: 11px; font-weight: bold; text-align: center; color: ${isWinner ? '#047857' : '#555'};">

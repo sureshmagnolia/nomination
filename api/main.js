@@ -588,7 +588,16 @@ export default async function handler(req, res) {
     }
     
     if (action === 'getNominalRoll') {
-      const roll = await sql`SELECT serial_number as "Nominal Roll Serial Number", name as "NAME", class as "CLASS", admission_no as "ADMISION NO", dept as "Dept" FROM nominal_roll`;
+      const roll = await sql`
+        SELECT serial_number as "Nominal Roll Serial Number", name as "NAME", class as "CLASS", admission_no as "ADMISION NO", dept as "Dept" 
+        FROM nominal_roll
+        ORDER BY 
+          CASE 
+            WHEN serial_number ~ '^[0-9]+$' THEN CAST(serial_number AS BIGINT) 
+            ELSE 999999999 
+          END ASC, 
+          serial_number ASC
+      `;
       return jsonOut(res, roll);
     }
     
@@ -646,10 +655,19 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminGetNominations') {
-      const noms = await sql`SELECT * FROM nominations`;
+      const noms = await sql`
+        SELECT * FROM nominations 
+        ORDER BY 
+          CASE 
+            WHEN candidate_serial ~ '^[0-9]+$' THEN CAST(candidate_serial AS BIGINT) 
+            ELSE 999999999 
+          END ASC, 
+          created_at ASC
+      `;
       return jsonOut(res, noms.map(n => ({
         id: n.id, post: n.post, gender: n.gender, dob: n.dob, timestamp: n.timestamp,
         candidateSerial: n.candidate_serial, proposerSerial: n.proposer_serial, seconderSerial: n.seconder_serial,
+        candidateAdmission: n.candidate_admission, proposerAdmission: n.proposer_admission, seconderAdmission: n.seconder_admission,
         status: n.status, withdrawalStatus: n.withdrawal_status,
         candidate: { 'Nominal Roll Serial Number': n.candidate_serial, 'NAME': n.candidate_name, 'CLASS': n.candidate_class, 'ADMISION NO': n.candidate_admission, 'Dept': n.candidate_dept },
         proposer: { 'Nominal Roll Serial Number': n.proposer_serial, 'NAME': n.proposer_name, 'CLASS': n.proposer_class, 'ADMISION NO': n.proposer_admission, 'Dept': n.proposer_dept },
@@ -667,6 +685,7 @@ export default async function handler(req, res) {
       return jsonOut(res, {
         id: n.id, post: n.post, gender: n.gender, dob: n.dob, timestamp: n.timestamp,
         candidateSerial: n.candidate_serial, proposerSerial: n.proposer_serial, seconderSerial: n.seconder_serial,
+        candidateAdmission: n.candidate_admission, proposerAdmission: n.proposer_admission, seconderAdmission: n.seconder_admission,
         status: n.status, withdrawalStatus: n.withdrawal_status,
         candidate: { 'Nominal Roll Serial Number': n.candidate_serial, 'NAME': n.candidate_name, 'CLASS': n.candidate_class, 'ADMISION NO': n.candidate_admission, 'Dept': n.candidate_dept },
         proposer: { 'Nominal Roll Serial Number': n.proposer_serial, 'NAME': n.proposer_name, 'CLASS': n.proposer_class, 'ADMISION NO': n.proposer_admission, 'Dept': n.proposer_dept },
@@ -679,17 +698,59 @@ export default async function handler(req, res) {
     if (action === 'getValidNominations') {
       const published = await getSetting('validListPublished');
       if (published !== 'true') return jsonOut(res, []);
-      const noms = await sql`SELECT * FROM nominations WHERE status = 'Valid'`;
-      return jsonOut(res, noms.map(n => ({ post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept, status: n.status })));
+      const noms = await sql`
+        SELECT * FROM nominations 
+        WHERE status = 'Valid'
+        ORDER BY 
+          CASE 
+            WHEN candidate_serial ~ '^[0-9]+$' THEN CAST(candidate_serial AS BIGINT) 
+            ELSE 999999999 
+          END ASC,
+          candidate_name ASC
+      `;
+      return jsonOut(res, noms.map(n => ({ 
+        post: n.post, 
+        candidateSerial: n.candidate_serial,
+        candidateAdmission: n.candidate_admission,
+        candidateName: n.candidate_name, 
+        candidateClass: n.candidate_class, 
+        candidateDept: n.candidate_dept, 
+        status: n.status 
+      })));
     }
 
     if (action === 'getFinalNominations') {
       const published = await getSetting('finalListPublished');
       if (published !== 'true') return jsonOut(res, { active: [], withdrawn: [] });
-      const noms = await sql`SELECT * FROM nominations WHERE status = 'Valid'`;
+      const noms = await sql`
+        SELECT * FROM nominations 
+        WHERE status = 'Valid'
+        ORDER BY 
+          CASE 
+            WHEN candidate_serial ~ '^[0-9]+$' THEN CAST(candidate_serial AS BIGINT) 
+            ELSE 999999999 
+          END ASC,
+          candidate_name ASC
+      `;
       return jsonOut(res, {
-        active: noms.filter(n => n.withdrawal_status !== 'Approved').map(n => ({ id: n.id, post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept })),
-        withdrawn: noms.filter(n => n.withdrawal_status === 'Approved').map(n => ({ id: n.id, post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept }))
+        active: noms.filter(n => n.withdrawal_status !== 'Approved').map(n => ({ 
+          id: n.id, 
+          post: n.post, 
+          candidateSerial: n.candidate_serial,
+          candidateAdmission: n.candidate_admission,
+          candidateName: n.candidate_name, 
+          candidateClass: n.candidate_class, 
+          candidateDept: n.candidate_dept 
+        })),
+        withdrawn: noms.filter(n => n.withdrawal_status === 'Approved').map(n => ({ 
+          id: n.id, 
+          post: n.post, 
+          candidateSerial: n.candidate_serial,
+          candidateAdmission: n.candidate_admission,
+          candidateName: n.candidate_name, 
+          candidateClass: n.candidate_class, 
+          candidateDept: n.candidate_dept 
+        }))
       });
     }
 
@@ -698,14 +759,48 @@ export default async function handler(req, res) {
       const isPublished = published === 'true';
       let noms;
       if (isPublished) {
-        noms = await sql`SELECT * FROM nominations WHERE status = 'Valid'`;
+        noms = await sql`
+          SELECT * FROM nominations 
+          WHERE status = 'Valid'
+          ORDER BY 
+            CASE 
+              WHEN candidate_serial ~ '^[0-9]+$' THEN CAST(candidate_serial AS BIGINT) 
+              ELSE 999999999 
+            END ASC,
+            candidate_name ASC
+        `;
       } else {
-        noms = await sql`SELECT * FROM nominations WHERE status != 'Rejected'`;
+        noms = await sql`
+          SELECT * FROM nominations 
+          WHERE status != 'Rejected'
+          ORDER BY 
+            CASE 
+              WHEN candidate_serial ~ '^[0-9]+$' THEN CAST(candidate_serial AS BIGINT) 
+              ELSE 999999999 
+            END ASC,
+            candidate_name ASC
+        `;
       }
       return jsonOut(res, {
         isPublished,
-        active: noms.filter(n => n.withdrawal_status !== 'Approved').map(n => ({ id: n.id, post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept })),
-        withdrawn: noms.filter(n => n.withdrawal_status === 'Approved').map(n => ({ id: n.id, post: n.post, candidateName: n.candidate_name, candidateClass: n.candidate_class, candidateDept: n.candidate_dept }))
+        active: noms.filter(n => n.withdrawal_status !== 'Approved').map(n => ({ 
+          id: n.id, 
+          post: n.post, 
+          candidateSerial: n.candidate_serial,
+          candidateAdmission: n.candidate_admission,
+          candidateName: n.candidate_name, 
+          candidateClass: n.candidate_class, 
+          candidateDept: n.candidate_dept 
+        })),
+        withdrawn: noms.filter(n => n.withdrawal_status === 'Approved').map(n => ({ 
+          id: n.id, 
+          post: n.post, 
+          candidateSerial: n.candidate_serial,
+          candidateAdmission: n.candidate_admission,
+          candidateName: n.candidate_name, 
+          candidateClass: n.candidate_class, 
+          candidateDept: n.candidate_dept 
+        }))
       });
     }
 
@@ -2012,7 +2107,16 @@ export default async function handler(req, res) {
       await ensureBackupTable();
 
       const [rollRows, correctionRows, postRows, nominationRows, settingRows] = await Promise.all([
-        sql`SELECT serial_number, name, class, admission_no, dept FROM nominal_roll ORDER BY serial_number ASC`,
+        sql`
+          SELECT serial_number, name, class, admission_no, dept 
+          FROM nominal_roll 
+          ORDER BY 
+            CASE 
+              WHEN serial_number ~ '^[0-9]+$' THEN CAST(serial_number AS BIGINT) 
+              ELSE 999999999 
+            END ASC, 
+            serial_number ASC
+        `,
         sql`SELECT * FROM roll_corrections ORDER BY timestamp DESC`,
         sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction", restricted_dept as "restrictedDept", year_rule_mode as "yearRuleMode", year_rule_years as "yearRuleYears" FROM posts ORDER BY id ASC`,
         sql`SELECT * FROM nominations ORDER BY created_at ASC`,

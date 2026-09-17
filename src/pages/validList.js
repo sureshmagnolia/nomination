@@ -80,8 +80,14 @@ function renderList(main, nominations) {
                     <tr class="hover:bg-white/[0.02] transition-colors">
                       <td class="text-slate-600 font-mono text-xs text-center">${i + 1}</td>
                       <td>
-                        <div class="font-bold text-white text-base">${esc(n.candidateName)}</div>
-                        <div class="text-xs text-slate-500 mt-0.5">${esc(n.candidateClass)}</div>
+                        <div class="font-bold text-white text-base flex items-center gap-2">
+                          <span>${esc(n.candidateName)}</span>
+                          ${n.candidateSerial ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" title="Electoral Roll Serial Number">Roll Sl. #${esc(n.candidateSerial)}</span>` : ''}
+                        </div>
+                        <div class="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
+                          <span>${esc(n.candidateClass)}</span>
+                          ${n.candidateAdmission ? `<span class="text-slate-500 font-mono">Adm: ${esc(n.candidateAdmission)}</span>` : ''}
+                        </div>
                       </td>
                       <td class="text-sm text-slate-400">${esc(n.candidateDept)}</td>
                     </tr>

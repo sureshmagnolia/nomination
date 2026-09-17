@@ -54,6 +54,14 @@ function renderPublicRollUI(container, nominalRoll, settings) {
 
   const students = Array.isArray(nominalRoll) ? [...nominalRoll] : [];
   
+  // Ensure strict natural numerical sorting of students by serial number
+  const parseSl = (s) => {
+    const raw = String(s['Nominal Roll Serial Number'] || s.serial_number || s.SL_NO || s['SL. NO'] || '');
+    const num = parseInt(raw.replace(/\D/g, ''), 10);
+    return isNaN(num) ? 999999999 : num;
+  };
+  students.sort((a, b) => parseSl(a) - parseSl(b));
+  
   // Extract unique departments and classes
   const allDepartments = Array.from(new Set(
     students.map(s => (s['Dept'] || s['DEPT'] || s['department'] || '').trim()).filter(Boolean)

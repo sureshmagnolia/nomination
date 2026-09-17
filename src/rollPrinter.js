@@ -370,7 +370,12 @@ export function executeRollPrint({
       return String(a['NAME']).toUpperCase().localeCompare(String(b['NAME']).toUpperCase());
     });
   } else {
-    data.sort((a, b) => (Number(a['Nominal Roll Serial Number']) || 0) - (Number(b['Nominal Roll Serial Number']) || 0));
+    const parseSl = (s) => {
+      const raw = String(s?.['Nominal Roll Serial Number'] || s?.serial_number || s?.SL_NO || s?.['SL. NO'] || '').replace(/\D/g, '');
+      const n = parseInt(raw, 10);
+      return isNaN(n) ? 999999999 : n;
+    };
+    data.sort((a, b) => parseSl(a) - parseSl(b));
   }
 
   const watermark = isFinal ? 'FINAL NOMINAL ROLL' : 'DRAFT NOMINAL ROLL';

@@ -192,7 +192,12 @@ function renderWithdrawalUI(main, allNoms, pwd) {
       <tr id="wrow-${esc(n.id)}">
         <td class="font-mono text-indigo-300 text-xs">${esc(n.id)}</td>
         <td class="text-xs font-medium text-slate-300">${esc(n.post)}</td>
-        <td class="font-bold text-white">${esc(n.candidateName || 'N/A')}</td>
+        <td class="font-bold text-white">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span>${esc(n.candidateName || 'N/A')}</span>
+            ${(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number']) ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[10px]">Sl. #${esc(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'])}</span>` : ''}
+          </div>
+        </td>
         <td class="text-xs text-slate-400">${esc(n.candidateClass || '')} / ${esc(n.candidateDept || '')}</td>
         <td>${statusBadge}</td>
         <td>
@@ -337,7 +342,12 @@ function renderWithdrawalUI(main, allNoms, pwd) {
       <tr id="drow-${esc(n.id)}">
         <td class="font-mono text-indigo-300 text-xs">${esc(n.id)}</td>
         <td class="text-xs font-medium text-slate-300">${esc(n.post)}</td>
-        <td class="font-bold text-white">${esc(n.candidateName || 'N/A')}</td>
+        <td class="font-bold text-white">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span>${esc(n.candidateName || 'N/A')}</span>
+            ${(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number']) ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[10px]">Sl. #${esc(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'])}</span>` : ''}
+          </div>
+        </td>
         <td class="text-xs text-slate-400">${esc(n.candidateClass || '')} / ${esc(n.candidateDept || '')}</td>
         <td>
           <span class="badge badge-valid">${esc(n.status)}</span>
@@ -362,7 +372,12 @@ function renderWithdrawalUI(main, allNoms, pwd) {
       <tr id="rrow-${esc(n.id)}" class="bg-amber-950/10">
         <td class="font-mono text-indigo-300 text-xs">${esc(n.id)}</td>
         <td class="text-xs font-medium text-slate-300">${esc(n.post)}</td>
-        <td class="font-bold text-white">${esc(n.candidateName || 'N/A')}</td>
+        <td class="font-bold text-white">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span>${esc(n.candidateName || 'N/A')}</span>
+            ${(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number']) ? `<span class="badge bg-amber-500/20 text-amber-300 font-mono text-[10px]">Sl. #${esc(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'])}</span>` : ''}
+          </div>
+        </td>
         <td class="text-xs text-slate-400">${esc(n.candidateClass || '')} / ${esc(n.candidateDept || '')}</td>
         <td>
           <span class="badge ${isStudent ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'} text-xs">

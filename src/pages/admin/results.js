@@ -219,6 +219,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
                             <td class="py-4">
                               <div class="flex items-center gap-2">
                                 <span class="font-bold text-white">${esc(c.candidateName)}</span>
+                                ${c.candidateSerial ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[9px]">Sl. #${esc(c.candidateSerial)}</span>` : ''}
                                 ${lead > 0 ? `<span class="bg-green-500/20 text-green-400 text-[9px] px-1.5 py-0.5 rounded font-black border border-green-500/30">LEAD: ${lead}</span>` : ''}
                               </div>
                             </td>
@@ -327,7 +328,9 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
                   return `
                     <tr class="${isWinner ? 'winner-row' : ''}">
                       <td style="text-align: center; color: #555; font-size: 12px;">${idx + 1}</td>
-                      <td style="font-weight: ${isWinner ? 'bold' : 'normal'}; font-size: 14px;">${esc(c.candidateName)}</td>
+                      <td style="font-weight: ${isWinner ? 'bold' : 'normal'}; font-size: 14px;">
+                        ${esc(c.candidateName)} ${c.candidateSerial ? `<span style="font-size: 11px; font-weight: normal; color: #555;">(Roll Sl. #${esc(c.candidateSerial)})</span>` : ''}
+                      </td>
                       <td style="text-align: center; font-weight: bold; font-size: 14px;">${res.type === 'unanimous' ? '—' : (c.votes || 0)}</td>
                       <td style="font-size: 12px; font-weight: bold;">
                         ${isWinner ? (res.type === 'unanimous' ? 'ELECTED UNANIMOUSLY' : '✓ ELECTED') : ''}

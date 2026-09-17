@@ -295,8 +295,11 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
               <div class="flex items-center gap-4">
                 <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold">${i + 1}</div>
                 <div>
-                  <div class="font-bold text-white">${esc(c.candidateName)}</div>
-                  <div class="text-xs text-slate-400">${esc(c.candidateClass)}</div>
+                  <div class="font-bold text-white flex items-center gap-2">
+                    <span>${esc(c.candidateName)}</span>
+                    ${c.candidateSerial ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-xs">Sl. #${esc(c.candidateSerial)}</span>` : ''}
+                  </div>
+                  <div class="text-xs text-slate-400 mt-0.5">${esc(c.candidateClass)}</div>
                 </div>
               </div>
               <div class="w-32">

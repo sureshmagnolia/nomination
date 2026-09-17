@@ -71,14 +71,38 @@ function renderVerifyTable(main, noms, pwd) {
     tbody.innerHTML = data.length ? data.map(n => `
       <tr id="row-${esc(n.id)}">
         <td class="font-mono text-indigo-300 text-xs">${esc(n.id)}</td>
-        <td class="text-xs max-w-[140px] leading-snug font-medium">${esc(n.post)}</td>
-        <td class="font-bold text-white">${esc(n.candidateName || n.candidate?.NAME || 'N/A')}</td>
+        <td class="text-xs max-w-[140px] leading-snug font-medium text-slate-200">${esc(n.post)}</td>
+        <td>
+          <div class="font-bold text-white flex items-center gap-1.5">
+            <span>${esc(n.candidateName || n.candidate?.NAME || 'N/A')}</span>
+            <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-[10px] px-1.5 py-0.2" title="Electoral Roll Serial Number">
+              Sl. #${esc(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || '–')}
+            </span>
+          </div>
+          <div class="text-[11px] text-slate-400 font-mono">Adm: ${esc(n.candidateAdmission || n.candidate?.['ADMISION NO'] || '–')}</div>
+        </td>
         <td class="text-xs text-slate-400">
           <div>${esc(n.candidateClass || '')}</div>
           <div class="text-[10px] opacity-60">${esc(n.candidateDept || '')}</div>
         </td>
-        <td class="text-xs">${esc(n.proposerName || n.proposer?.NAME || 'N/A')}</td>
-        <td class="text-xs">${esc(n.seconderName || n.seconder?.NAME || 'N/A')}</td>
+        <td>
+          <div class="text-xs font-medium text-slate-300 flex items-center gap-1">
+            <span>${esc(n.proposerName || n.proposer?.NAME || 'N/A')}</span>
+            <span class="badge bg-slate-800 text-slate-300 border border-white/10 font-mono text-[10px] px-1 py-0.2" title="Proposer Roll Serial">
+              #${esc(n.proposerSerial || n.proposer?.['Nominal Roll Serial Number'] || '–')}
+            </span>
+          </div>
+          <div class="text-[10px] text-slate-500 font-mono">Adm: ${esc(n.proposerAdmission || n.proposer?.['ADMISION NO'] || '–')}</div>
+        </td>
+        <td>
+          <div class="text-xs font-medium text-slate-300 flex items-center gap-1">
+            <span>${esc(n.seconderName || n.seconder?.NAME || 'N/A')}</span>
+            <span class="badge bg-slate-800 text-slate-300 border border-white/10 font-mono text-[10px] px-1 py-0.2" title="Seconder Roll Serial">
+              #${esc(n.seconderSerial || n.seconder?.['Nominal Roll Serial Number'] || '–')}
+            </span>
+          </div>
+          <div class="text-[10px] text-slate-500 font-mono">Adm: ${esc(n.seconderAdmission || n.seconder?.['ADMISION NO'] || '–')}</div>
+        </td>
         <td><span class="badge badge-${(n.status || 'pending').toLowerCase()}">${esc(n.status)}</span></td>
         <td>
           <div class="flex items-center gap-1.5">

@@ -249,6 +249,35 @@ function renderForm(container, year, collegeName, setsData = {}) {
     }
   });
 
+  // Attach search modal triggers
+  formArea.querySelectorAll('.find-serial-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const role = btn.dataset.role;
+      const label = btn.dataset.label;
+      openFindSerialModal(role, label, (serial, adm) => {
+        const input = formArea.querySelector(`#serial-${role}`);
+        if (input) {
+          input.value = serial;
+          fillDetails(formArea, role);
+        }
+        if (role === 'candidate') {
+          const authInput = formArea.querySelector('#auth-candidate');
+          if (authInput && (!authInput.value || authInput.value.trim() === '') && adm && adm !== '–') {
+            authInput.value = adm;
+            runValidation(formArea);
+          }
+        }
+      });
+    });
+  });
+
+  // Real-time listener on auth-candidate
+  const authInput = formArea.querySelector('#auth-candidate');
+  if (authInput) {
+    authInput.addEventListener('input', () => runValidation(formArea));
+    authInput.addEventListener('change', () => runValidation(formArea));
+  }
+
   // Revalidate on any change
   formArea.querySelector('#postSelect')?.addEventListener('change', () => {
     updatePostBadgeStrip(formArea);
@@ -270,22 +299,142 @@ function renderForm(container, year, collegeName, setsData = {}) {
   formArea.querySelector('#nomForm')?.addEventListener('submit', (e) => handleSubmit(e, formArea, year, collegeName));
 }
 
+function openFindSerialModal(role, roleLabel, onSelect) {
+  const existing = document.getElementById('findSerialModalContainer');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'findSerialModalContainer';
+  modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm page-enter';
+  
+  modal.innerHTML = `
+    <div class="relative bg-slate-900 border border-indigo-500/30 rounded-2xl max-w-xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-indigo-950/40">
+        <div>
+          <h3 class="font-bold text-white text-base flex items-center gap-2">
+            🔍 Find Electoral Roll Serial Number
+          </h3>
+          <p class="text-xs text-slate-400">Selecting for: <strong class="text-indigo-300 uppercase">${esc(roleLabel)}</strong></p>
+        </div>
+        <button id="closeSerialModalBtn" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+      </div>
+      
+      <div class="p-4 border-b border-white/10 space-y-2 bg-slate-900/80">
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+          <input type="text" id="serialSearchInput" class="field pl-10 w-full text-sm" placeholder="Search by Student Name, Admission No, or Class..." autofocus />
+        </div>
+        <div class="text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg flex items-center gap-2">
+          <span>⚠️</span>
+          <span><strong>Critical:</strong> An incorrect Electoral Roll Serial Number leads to automatic rejection during scrutiny. Verify your Name and Admission No.</span>
+        </div>
+      </div>
+      
+      <div id="serialSearchResults" class="p-4 overflow-y-auto space-y-2 flex-1 max-h-[50vh]">
+        <p class="text-slate-500 text-xs text-center py-6">Type a student name or admission number to search ${nominalRoll.length} students.</p>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const searchInput = modal.querySelector('#serialSearchInput');
+  const resultsBox = modal.querySelector('#serialSearchResults');
+  const closeBtn = modal.querySelector('#closeSerialModalBtn');
+
+  const close = () => modal.remove();
+  closeBtn.onclick = close;
+  modal.onclick = (e) => { if (e.target === modal) close(); };
+
+  const renderResults = () => {
+    const q = searchInput.value.trim().toLowerCase();
+    if (!q) {
+      resultsBox.innerHTML = `<p class="text-slate-500 text-xs text-center py-6">Type a student name or admission number to search ${nominalRoll.length} students.</p>`;
+      return;
+    }
+    const matches = nominalRoll.filter(s => {
+      const name = String(s['NAME'] || s.name || '').toLowerCase();
+      const adm  = String(s['ADMISION NO'] || s['ADMISSION NO'] || s.admission_no || '').toLowerCase();
+      const cls  = String(s['CLASS'] || s.class || '').toLowerCase();
+      const sl   = String(s['Nominal Roll Serial Number'] || s.serial_number || '');
+      return name.includes(q) || adm.includes(q) || cls.includes(q) || sl === q;
+    }).slice(0, 30);
+
+    if (matches.length === 0) {
+      resultsBox.innerHTML = `<p class="text-rose-400 text-xs text-center py-6">No matching student found in the published Nominal Roll for "${esc(q)}".</p>`;
+      return;
+    }
+
+    resultsBox.innerHTML = matches.map(s => {
+      const sl = String(s['Nominal Roll Serial Number'] || s.serial_number || '');
+      const name = String(s['NAME'] || s.name || '');
+      const cls  = String(s['CLASS'] || s.class || '');
+      const dept = String(s['Dept'] || s.dept || 'N/A');
+      const adm  = String(s['ADMISION NO'] || s['ADMISSION NO'] || s.admission_no || '–');
+      return `
+        <div class="glass hover:bg-white/[0.04] p-3 rounded-xl border border-white/5 flex items-center justify-between gap-3 transition-colors">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2 py-0.5">
+                Sl. #${esc(sl)}
+              </span>
+              <span class="font-bold text-white text-sm truncate">${esc(name)}</span>
+            </div>
+            <div class="text-[11px] text-slate-400 mt-1 flex flex-wrap gap-x-3">
+              <span>Adm: <strong class="text-slate-300 font-mono">${esc(adm)}</strong></span>
+              <span>Class: ${esc(cls)}</span>
+              <span>Dept: ${esc(dept)}</span>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary btn-xs shrink-0 select-serial-btn px-3 py-1 text-xs font-semibold" data-serial="${esc(sl)}" data-adm="${esc(adm)}">
+            Select #${esc(sl)}
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    resultsBox.querySelectorAll('.select-serial-btn').forEach(btn => {
+      btn.onclick = () => {
+        onSelect(btn.dataset.serial, btn.dataset.adm);
+        close();
+      };
+    });
+  };
+
+  searchInput.oninput = renderResults;
+  setTimeout(() => searchInput.focus(), 100);
+}
+
 function personBlock(role, label, isCandidate) {
   return `
-  <div class="glass rounded-xl p-4 space-y-3">
-    <h3 class="font-bold text-white text-sm uppercase tracking-wide border-b border-white/10 pb-2">${label}</h3>
+  <div class="glass rounded-xl p-4 space-y-3 border border-white/10 shadow-lg">
+    <div class="flex items-center justify-between border-b border-white/10 pb-2">
+      <h3 class="font-bold text-white text-sm uppercase tracking-wide flex items-center gap-2">
+        <span>${isCandidate ? '👤' : (role === 'proposer' ? '✍️' : '🤝')}</span>
+        ${label}
+      </h3>
+      <button type="button" class="btn btn-secondary btn-xs text-[11px] py-1 px-2.5 flex items-center gap-1.5 find-serial-btn border-indigo-500/30 text-indigo-300 hover:text-white" data-role="${role}" data-label="${label}">
+        🔍 Find Sl. No.
+      </button>
+    </div>
     <div>
-      <label class="text-xs text-slate-400">Nominal Roll Serial No.</label>
-      <input id="serial-${role}" type="number" class="field mt-1" placeholder="Enter serial number" />
+      <label class="text-xs text-slate-400 flex items-center justify-between">
+        <span>Nominal Roll Serial No. <span class="text-rose-400">*</span></span>
+        <span class="text-[10px] text-slate-500">Official voter list number</span>
+      </label>
+      <input id="serial-${role}" type="number" class="field mt-1 w-full font-mono text-base font-bold text-indigo-200" placeholder="e.g. 42" required />
     </div>
     <div id="details-${role}" class="text-xs text-slate-400 space-y-1 min-h-[3rem]"></div>
     ${isCandidate ? `
     <div class="mt-4 pt-4 border-t border-white/10">
-      <label class="text-xs font-semibold text-indigo-300 block mb-1">Your Admission Number (Auth)</label>
-      <input id="auth-candidate" type="text" class="field mt-1 border-indigo-500/30 bg-indigo-900/20" placeholder="Required for submission" />
+      <label class="text-xs font-semibold text-indigo-300 block mb-1">
+        Your Admission Number (Authentication) <span class="text-rose-400">*</span>
+      </label>
+      <input id="auth-candidate" type="text" class="field mt-1 border-indigo-500/30 bg-indigo-900/20 font-mono text-sm" placeholder="Must match candidate serial record" required />
+      <div id="auth-feedback" class="min-h-[1.25rem]"></div>
     </div>
     <div class="mt-4">
-      <label class="text-xs text-slate-400 block mb-1">Gender</label>
+      <label class="text-xs text-slate-400 block mb-1">Gender <span class="text-rose-400">*</span></label>
       <div class="flex gap-4">
         <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
           <input type="radio" name="gender" value="Male" class="accent-indigo-500" /> Male
@@ -296,7 +445,7 @@ function personBlock(role, label, isCandidate) {
       </div>
     </div>
     <div>
-      <label class="text-xs text-slate-400 block mb-1">Date of Birth</label>
+      <label class="text-xs text-slate-400 block mb-1">Date of Birth <span class="text-rose-400">*</span></label>
       <div class="flex gap-2">
         <select id="dob-day"   class="field dob-sel"><option value="">Day</option></select>
         <select id="dob-month" class="field dob-sel"><option value="">Month</option></select>
@@ -312,13 +461,34 @@ function fillDetails(formArea, role) {
   if (!box) return;
   const student = nominalRoll.find(s => String(s['Nominal Roll Serial Number'] || s.serial_number || '') === serial);
   if (!student) {
-    box.innerHTML = serial ? `<span class="text-red-400">⚠ Student not found</span>` : '';
+    box.innerHTML = serial ? `
+      <div class="bg-rose-500/10 border border-rose-500/20 text-rose-300 p-2.5 rounded-lg mt-1 text-xs">
+        ⚠️ Serial <strong>#${esc(serial)}</strong> not found in the published Nominal Roll!
+      </div>` : '';
+    runValidation(formArea);
     return;
   }
+
+  const sl = esc(student['Nominal Roll Serial Number'] || student.serial_number);
+  const name = esc(student['NAME'] || student.name || '');
+  const cls = esc(student['CLASS'] || student.class || '');
+  const dept = esc(student['Dept'] || student.dept || 'N/A');
+  const adm = esc(student['ADMISION NO'] || student['ADMISSION NO'] || student.admission_no || '–');
+
   box.innerHTML = `
-    <p><span class="text-slate-500">Name:</span> <strong class="text-slate-200">${esc(student['NAME'] || student.name || '')}</strong></p>
-    <p><span class="text-slate-500">Class:</span> ${esc(student['CLASS'] || student.class || '')}</p>
-    <p><span class="text-slate-500">Dept:</span> ${esc(student['Dept'] || student.dept || 'N/A')}</p>`;
+    <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-2.5 space-y-1 mt-1 text-xs">
+      <div class="flex items-center justify-between border-b border-indigo-500/20 pb-1 mb-1">
+        <span class="text-slate-400 font-medium">Electoral Roll Sl. No:</span>
+        <span class="badge bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 font-mono font-bold text-xs px-2 py-0.5">
+          #${sl}
+        </span>
+      </div>
+      <p><span class="text-slate-400">Name:</span> <strong class="text-white">${name}</strong></p>
+      <p><span class="text-slate-400">Class:</span> <span class="text-slate-200">${cls}</span></p>
+      <p><span class="text-slate-400">Dept:</span> <span class="text-slate-200">${dept}</span></p>
+      <p><span class="text-slate-400">Adm No:</span> <span class="text-indigo-300 font-mono font-semibold">${adm}</span></p>
+    </div>`;
+
   runValidation(formArea);
 }
 
@@ -337,6 +507,28 @@ function runValidation(formArea) {
   if (cS && cS === sS) warnings.push('Candidate and Seconder cannot be the same person.');
   if (pS && pS === sS) warnings.push('Proposer and Seconder cannot be the same person.');
 
+  // Real-time Candidate Admission check
+  const authAdmInput = formArea.querySelector('#auth-candidate');
+  const authAdm = authAdmInput?.value.trim().toLowerCase();
+  const candStudent = students[0];
+  const authFeedback = formArea.querySelector('#auth-feedback');
+
+  if (candStudent && authAdm) {
+    const actualAdm = String(candStudent['ADMISION NO'] || candStudent['ADMISSION NO'] || candStudent.admission_no || '').trim().toLowerCase();
+    if (actualAdm && authAdm !== actualAdm) {
+      warnings.push(`Authentication Failed: Entered Admission Number "${authAdmInput.value}" does NOT match Electoral Roll Serial #${candStudent['Nominal Roll Serial Number']} (${candStudent['NAME']}). A mismatched serial number will result in rejection!`);
+      if (authFeedback) {
+        authFeedback.innerHTML = `<span class="text-rose-400 text-xs font-semibold flex items-center gap-1 mt-1">❌ Mismatch with Serial #${esc(candStudent['Nominal Roll Serial Number'])}! Registered Adm No is different.</span>`;
+      }
+    } else if (actualAdm && authAdm === actualAdm) {
+      if (authFeedback) {
+        authFeedback.innerHTML = `<span class="text-emerald-400 text-xs font-semibold flex items-center gap-1 mt-1">✅ Verified: Admission No matches Electoral Roll Serial #${esc(candStudent['Nominal Roll Serial Number'])}</span>`;
+      }
+    }
+  } else if (authFeedback) {
+    authFeedback.innerHTML = '';
+  }
+
   // Eligibility (pass dynamic allPosts rules and existing noms for endorsing checks)
   const roleLabels = ['Candidate', 'Proposer', 'Seconder'];
   students.forEach((st, i) => {
@@ -346,7 +538,7 @@ function runValidation(formArea) {
   const box = formArea.querySelector('#warningBox');
   if (box) {
     if (warnings.length) {
-      box.innerHTML = '<strong class="block mb-1">⚠ Eligibility Warnings</strong>' + warnings.map(w => `<p class="text-sm">• ${esc(w)}</p>`).join('');
+      box.innerHTML = '<strong class="block mb-1">⚠ Eligibility & Serial Number Warnings</strong>' + warnings.map(w => `<p class="text-sm">• ${esc(w)}</p>`).join('');
       box.classList.remove('hidden');
     } else {
       box.classList.add('hidden');
@@ -467,20 +659,27 @@ export function buildNominationPaper(id, post, gender, dobDisplay, age, candidat
 
 function sectionBlock(label, s, gender = null, dob = null, age = null) {
   if (!s) return '';
+  const slNo = s['Nominal Roll Serial Number'] || s.serial_number || s.SL_NO || '';
+  const admNo = s['ADMISION NO'] || s['ADMISSION NO'] || s.admission_no || s.candidateAdmission || s.proposerAdmission || s.seconderAdmission || '';
   return `
-  <div class="glass rounded-lg p-4 text-sm space-y-1">
-    <h3 class="font-bold text-white uppercase text-xs tracking-widest mb-2 border-b border-white/10 pb-1">${label} Details</h3>
-    <div class="grid grid-cols-2 gap-x-4 gap-y-1">
-      <p><span class="text-slate-500">Name:</span> <strong class="text-slate-200">${esc(s['NAME'] || s.name || '')}</strong></p>
-      <p><span class="text-slate-500">Class:</span> ${esc(s['CLASS'] || s.class || '')}</p>
-      <p><span class="text-slate-500">Dept:</span> ${esc(s['Dept'] || s.dept || 'N/A')}</p>
-      <p><span class="text-slate-500">Electoral Roll No:</span> ${esc(s['Nominal Roll Serial Number'] || s.serial_number || '')}</p>
-      ${gender ? `<p><span class="text-slate-500">Gender:</span> ${esc(gender)}</p>` : ''}
-      ${dob ? `<p><span class="text-slate-500">Date of Birth:</span> ${esc(dob)}</p>` : ''}
-      ${age ? `<p class="col-span-2"><span class="text-slate-500">Age as on Notification Date:</span> ${esc(age)}</p>` : ''}
+  <div class="glass rounded-lg p-4 text-sm space-y-1 border border-white/10">
+    <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-2">
+      <h3 class="font-bold text-white uppercase text-xs tracking-widest">${label} Details</h3>
+      <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2.5 py-0.5">
+        Electoral Roll Sl. #${esc(slNo)}
+      </span>
+    </div>
+    <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+      <p><span class="text-slate-400">Name:</span> <strong class="text-white text-sm">${esc(s['NAME'] || s.name || '')}</strong></p>
+      <p><span class="text-slate-400">Admission No:</span> <strong class="text-indigo-300 font-mono">${esc(admNo || '–')}</strong></p>
+      <p><span class="text-slate-400">Class:</span> <span class="text-slate-200">${esc(s['CLASS'] || s.class || '')}</span></p>
+      <p><span class="text-slate-400">Dept:</span> <span class="text-slate-200">${esc(s['Dept'] || s.dept || 'N/A')}</span></p>
+      ${gender ? `<p><span class="text-slate-400">Gender:</span> <span class="text-slate-200">${esc(gender)}</span></p>` : ''}
+      ${dob ? `<p><span class="text-slate-400">Date of Birth:</span> <span class="text-slate-200">${esc(dob)}</span></p>` : ''}
+      ${age ? `<p class="col-span-2"><span class="text-slate-400">Age as on Notification Date:</span> <strong class="text-emerald-400">${esc(age)}</strong></p>` : ''}
     </div>
     ${label !== 'Candidate' ? `
-    <div class="flex justify-between mt-4 text-slate-500 text-xs">
+    <div class="flex justify-between mt-4 text-slate-500 text-xs pt-2 border-t border-white/5">
       <span>Date: ______ / ______ / ________</span>
       <span>Signature: _______________</span>
     </div>` : ''}
