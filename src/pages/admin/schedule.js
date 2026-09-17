@@ -21,8 +21,14 @@ export async function renderAdminSchedule(container) {
 }
 
 function renderScheduleUI(main, pwd, schedule) {
-  // Convert ISO to local datetime-local format (YYYY-MM-DDTHH:mm)
-  const toLocal = (iso) => iso ? new Date(iso).toISOString().slice(0, 16) : '';
+  // Convert ISO to local datetime-local format (YYYY-MM-DDTHH:mm) using browser local timezone
+  const toLocal = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
 
   main.innerHTML = `
     <div class="page-enter space-y-6 max-w-4xl">

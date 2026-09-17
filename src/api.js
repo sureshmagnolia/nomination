@@ -66,10 +66,18 @@ async function processQueue() {
       if (!res.ok) {
         let errMessage = `Network error: ${res.status}`;
         try { const errData = await res.json(); if (errData.error) errMessage = errData.error; } catch(e) {}
+        if (errMessage.includes('UNAUTHORIZED_SESSION') || errMessage === 'SESSION_EXPIRED') {
+          handleSessionExpired();
+          _syncQueue.length = 0;
+        }
         throw new Error(errMessage);
       }
       const data = await res.json();
-      if (data.error === 'SESSION_EXPIRED') { handleSessionExpired(); _syncQueue.length = 0; break; }
+      if (data.error === 'SESSION_EXPIRED' || (data.error && data.error.includes('UNAUTHORIZED_SESSION'))) {
+        handleSessionExpired();
+        _syncQueue.length = 0;
+        break;
+      }
       if (data.error) throw new Error(data.error);
       if (task.resolve) task.resolve(data);
     } catch (err) {
@@ -112,10 +120,16 @@ async function get(params) {
   if (!res.ok) {
     let errMessage = `Network error: ${res.status}`;
     try { const errData = await res.json(); if (errData.error) errMessage = errData.error; } catch(e) {}
+    if (errMessage.includes('UNAUTHORIZED_SESSION') || errMessage === 'SESSION_EXPIRED') {
+      handleSessionExpired();
+    }
     throw new Error(errMessage);
   }
   const data = await res.json();
-  if (data.error === 'SESSION_EXPIRED') { handleSessionExpired(); throw new Error('SESSION_EXPIRED'); }
+  if (data.error === 'SESSION_EXPIRED' || (data.error && data.error.includes('UNAUTHORIZED_SESSION'))) {
+    handleSessionExpired();
+    throw new Error('SESSION_EXPIRED');
+  }
   if (data.error) throw new Error(data.error);
 
   _cache[cacheKey] = data;
@@ -136,10 +150,16 @@ async function post(body) {
   if (!res.ok) {
     let errMessage = `Network error: ${res.status}`;
     try { const errData = await res.json(); if (errData.error) errMessage = errData.error; } catch(e) {}
+    if (errMessage.includes('UNAUTHORIZED_SESSION') || errMessage === 'SESSION_EXPIRED') {
+      handleSessionExpired();
+    }
     throw new Error(errMessage);
   }
   const data = await res.json();
-  if (data.error === 'SESSION_EXPIRED') { handleSessionExpired(); throw new Error('SESSION_EXPIRED'); }
+  if (data.error === 'SESSION_EXPIRED' || (data.error && data.error.includes('UNAUTHORIZED_SESSION'))) {
+    handleSessionExpired();
+    throw new Error('SESSION_EXPIRED');
+  }
   if (data.error) throw new Error(data.error);
   return data;
 }

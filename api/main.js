@@ -26,7 +26,7 @@ const checkAdmin = async (password, sessionToken, action) => {
     throw new Error('UNAUTHORIZED_SESSION_MISSING');
   }
 
-  const validSession = await sql`SELECT token FROM admin_sessions WHERE token = ${sessionToken}`;
+  const validSession = await sql`SELECT token FROM admin_sessions WHERE token = ${sessionToken} AND created_at > NOW() - INTERVAL '24 hours'`;
   if (validSession.length === 0) {
     throw new Error('UNAUTHORIZED_SESSION_INVALID_OR_EXPIRED');
   }
@@ -178,6 +178,7 @@ async function ensureSchema() {
     try { await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS restricted_dept VARCHAR(255);`; } catch (_) {}
     try { await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS year_rule_mode VARCHAR(20) DEFAULT 'ALL';`; } catch (_) {}
     try { await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS year_rule_years VARCHAR(255) DEFAULT '';`; } catch (_) {}
+    try { await sql`ALTER TABLE admin_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`; } catch (_) {}
     
     await sql`
       CREATE TABLE IF NOT EXISTS nominal_roll (
@@ -1985,7 +1986,7 @@ export default async function handler(req, res) {
           }
         }
         for (const s of settingItems) {
-          if (s.key === 'adminPassword' || s.key === 'adminOTP') continue;
+          if (['adminPassword', 'adminOTP', 'adminEmail'].includes(s.key)) continue;
           await setSetting(s.key, s.value);
         }
         restoredCounts.settings = settingItems.length;
@@ -2015,7 +2016,7 @@ export default async function handler(req, res) {
         sql`SELECT * FROM roll_corrections ORDER BY timestamp DESC`,
         sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction", restricted_dept as "restrictedDept", year_rule_mode as "yearRuleMode", year_rule_years as "yearRuleYears" FROM posts ORDER BY id ASC`,
         sql`SELECT * FROM nominations ORDER BY created_at ASC`,
-        sql`SELECT key, value FROM settings WHERE key NOT IN ('adminPassword', 'adminOTP')`
+        sql`SELECT key, value FROM settings WHERE key NOT IN ('adminPassword', 'adminOTP', 'adminEmail')`
       ]);
 
       const nowIso = new Date().toISOString();
