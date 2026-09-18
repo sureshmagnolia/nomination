@@ -78,6 +78,7 @@ function renderVerifyTable(main, noms, pwd) {
             <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-[10px] px-1.5 py-0.2" title="Electoral Roll Serial Number">
               Sl. #${esc(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || '–')}
             </span>
+            ${(String(n.candidateClass || '').toUpperCase().includes('RESEARCH') || String(n.candidateClass || '').toUpperCase().includes('SCHOLAR')) ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] px-1.5 py-0.2 font-semibold">⚠️ Ineligible (RS)</span>` : ''}
           </div>
           <div class="text-[11px] text-slate-400 font-mono">Adm: ${esc(n.candidateAdmission || n.candidate?.['ADMISION NO'] || '–')}</div>
         </td>

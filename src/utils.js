@@ -190,6 +190,9 @@ export function checkEligibility(student, postName, role, gender = null, allPost
 
   // 4. Candidate-only rules
   if (role === 'Candidate') {
+    if (getStudentYearLevel(cls) === 'RS') {
+      warnings.push('Research Scholars are not eligible to contest in College Union Elections.');
+    }
     // Gender restriction
     if (rule.femaleOnly && gender && gender !== 'Female') {
       warnings.push(`The post of "${postName}" is reserved for female candidates only.`);

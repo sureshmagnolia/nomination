@@ -370,15 +370,17 @@ function openFindSerialModal(role, roleLabel, onSelect) {
       const name = String(s['NAME'] || s.name || '');
       const cls  = String(s['CLASS'] || s.class || '');
       const dept = String(s['Dept'] || s.dept || 'N/A');
-      const adm  = String(s['ADMISION NO'] || s['ADMISSION NO'] || s.admission_no || '–');
+      const isRS = cls.toUpperCase().includes('RESEARCH') || cls.toUpperCase().includes('SCHOLAR');
+      const cannotSelect = role === 'candidate' && isRS;
       return `
-        <div class="glass hover:bg-white/[0.04] p-3 rounded-xl border border-white/5 flex items-center justify-between gap-3 transition-colors">
+        <div class="glass hover:bg-white/[0.04] p-3 rounded-xl border border-white/5 flex items-center justify-between gap-3 transition-colors ${cannotSelect ? 'opacity-70' : ''}">
           <div class="min-w-0">
             <div class="flex items-center gap-2">
               <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2 py-0.5">
                 Sl. #${esc(sl)}
               </span>
               <span class="font-bold text-white text-sm truncate">${esc(name)}</span>
+              ${cannotSelect ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] px-1.5 py-0.2">Cannot Contest</span>` : ''}
             </div>
             <div class="text-[11px] text-slate-400 mt-1 flex flex-wrap gap-x-3">
               <span>Adm: <strong class="text-slate-300 font-mono">${esc(adm)}</strong></span>
@@ -386,9 +388,15 @@ function openFindSerialModal(role, roleLabel, onSelect) {
               <span>Dept: ${esc(dept)}</span>
             </div>
           </div>
-          <button type="button" class="btn btn-primary btn-xs shrink-0 select-serial-btn px-3 py-1 text-xs font-semibold" data-serial="${esc(sl)}" data-adm="${esc(adm)}">
-            Select #${esc(sl)}
-          </button>
+          ${cannotSelect ? `
+            <button type="button" disabled class="btn btn-secondary btn-xs shrink-0 px-2.5 py-1 text-xs font-medium opacity-40 cursor-not-allowed" title="Research Scholars are not eligible to contest">
+              Ineligible
+            </button>
+          ` : `
+            <button type="button" class="btn btn-primary btn-xs shrink-0 select-serial-btn px-3 py-1 text-xs font-semibold" data-serial="${esc(sl)}" data-adm="${esc(adm)}">
+              Select #${esc(sl)}
+            </button>
+          `}
         </div>
       `;
     }).join('');

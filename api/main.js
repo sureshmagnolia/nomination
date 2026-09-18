@@ -1326,6 +1326,10 @@ export default async function handler(req, res) {
         }
 
         const cCls = String(cand[0].class || '').toUpperCase();
+        if (getStudentYearLevelServer(cCls) === 'RS') {
+          return errOut(res, 'Research Scholars are not eligible to contest in College Union Elections.');
+        }
+
         const pCls = String(prop[0].class || '').toUpperCase();
         const sCls = String(sec[0].class || '').toUpperCase();
         const cDept = String(cand[0].dept || '').toUpperCase();
