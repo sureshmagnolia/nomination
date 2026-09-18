@@ -39,11 +39,13 @@ export const YEAR_LEVELS = [
   { id: '2_UG', label: '2nd Year UG (II UG)', short: 'II UG' },
   { id: '3_UG', label: '3rd Year UG (III UG)', short: 'III UG' },
   { id: '1_PG', label: '1st Year PG (I PG)', short: 'I PG' },
-  { id: '2_PG', label: '2nd Year PG (II PG)', short: 'II PG' }
+  { id: '2_PG', label: '2nd Year PG (II PG)', short: 'II PG' },
+  { id: 'RS', label: 'Research Scholar (Ph.D)', short: 'RS' }
 ];
 
 export function getStudentYearLevel(cls) {
   const c = String(cls || '').toUpperCase().trim();
+  if (c.includes('RESEARCH') || c.includes('SCHOLAR') || c.includes('PHD')) return 'RS';
   const isPG = /\b(MA|MSC|MCOM|M\.SC|M\.COM|M\.A|MBA|MCA|MSW)\b/.test(c) || c.includes('POST GRADUATE') || c.includes('PG');
   const isYr1 = c.includes('1ST') || /^\s*(1|1ST|I)\b/.test(c) || /\b1ST\s+YEAR\b/.test(c) || /\bI\s+(YEAR|UG|PG|DC|DEG|BA|BSC|BCOM|MA|MSC|MCOM)\b/.test(c);
   const isYr2 = c.includes('2ND') || /^\s*(2|2ND|II)\b/.test(c) || /\b2ND\s+YEAR\b/.test(c) || /\bII\s+(YEAR|UG|PG|DC|DEG|BA|BSC|BCOM|MA|MSC|MCOM)\b/.test(c);
