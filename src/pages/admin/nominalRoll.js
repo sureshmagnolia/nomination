@@ -49,6 +49,19 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
   students.sort((a, b) => parseSl(a) - parseSl(b));
   let filterText = '';
   let showCorrections = false;
+  let adminArrangeMode = 'dept-class'; // 'dept-class' | 'serial' | 'name'
+
+  const getProgWeight = (cName) => {
+    const c = String(cName || '').toUpperCase().trim();
+    if (c.includes('RESEARCH') || c.includes('PH.D') || c.includes('PHD')) return 6000;
+    if (/^I\s+M(SC|A|COM|BA|CA)/.test(c) || /^I\s+PG/.test(c)) return 4000;
+    if (/^II\s+M(SC|A|COM|BA|CA)/.test(c) || /^II\s+PG/.test(c)) return 5000;
+    if (/^III\s+M(SC|A|COM|BA|CA)/.test(c)) return 5500;
+    if (/^I\s+(B|UG)/.test(c) || /^1ST\s+YEAR/.test(c)) return 1000;
+    if (/^II\s+(B|UG)/.test(c) || /^2ND\s+YEAR/.test(c)) return 2000;
+    if (/^III\s+(B|UG)/.test(c) || /^3RD\s+YEAR/.test(c)) return 3000;
+    return 3500;
+  };
 
   const allClasses = [...new Set(nominalRoll.map(s => String(s['CLASS']).trim()))].sort();
   const allDepts = [...new Set(nominalRoll.map(s => String(s['Dept'] || '–').trim()))].sort();
@@ -153,10 +166,36 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
 
   const refreshTable = () => {
     const filtered = students.filter(s => 
-      [s['NAME'], s['CLASS'], s['ADMISION NO'], s['Nominal Roll Serial Number']].some(v => 
+      [s['NAME'], s['CLASS'], s['ADMISION NO'] || s['ADMISSION NO'], s['Nominal Roll Serial Number'], s['Dept']].some(v => 
         String(v || '').toLowerCase().includes(filterText.toLowerCase())
       )
     );
+
+    if (adminArrangeMode === 'dept-class') {
+      filtered.sort((a, b) => {
+        const dA = String(a['Dept'] || '').trim().toUpperCase();
+        const dB = String(b['Dept'] || '').trim().toUpperCase();
+        if (dA !== dB) return dA.localeCompare(dB);
+
+        const cA = String(a['CLASS'] || '').trim().toUpperCase();
+        const cB = String(b['CLASS'] || '').trim().toUpperCase();
+        const wA = getProgWeight(cA);
+        const wB = getProgWeight(cB);
+        if (wA !== wB) return wA - wB;
+
+        if (cA !== cB) return cA.localeCompare(cB);
+
+        const sA = parseSl(a);
+        const sB = parseSl(b);
+        if (sA !== sB) return sA - sB;
+
+        return String(a['NAME'] || '').trim().toUpperCase().localeCompare(String(b['NAME'] || '').trim().toUpperCase());
+      });
+    } else if (adminArrangeMode === 'name') {
+      filtered.sort((a, b) => String(a['NAME'] || '').trim().toUpperCase().localeCompare(String(b['NAME'] || '').trim().toUpperCase()));
+    } else {
+      filtered.sort((a, b) => parseSl(a) - parseSl(b));
+    }
 
     main.innerHTML = `
       <div class="page-enter space-y-6">
@@ -254,6 +293,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
             ${isDraft ? `<button id="btnUnpublishDraftTop" class="btn btn-secondary border-rose-500/30 text-rose-300 hover:bg-rose-500/20">🚫 Unpublish Draft</button>` : ''}
             ${!isFinal ? `<button id="btnAddNew" class="btn btn-success">➕ Add Student</button>` : ''}
             <button id="btnPrintRoll" class="btn btn-secondary">🖨️ Print Roll</button>
+            ${!isFinal && students.length > 0 ? `<button id="btnFixSerialsDept" class="btn bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 text-xs py-2 px-3 flex items-center gap-1.5" title="Fix serial numbers department-by-department finishing each department at a time">🔢 Fix Sl. No (Dept-wise)</button>` : ''}
             ${!isFinal ? `<button id="btnRemapNoms" class="btn bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 text-xs py-2 px-3">🔄 Re-map Nominations</button>` : ''}
             ${!isFinal && students.length > 0 ? `<button id="btnClearRoll" class="btn bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 text-xs py-2 px-3">🗑️ Clear Roll Data</button>` : ''}
             ${!isFinal ? `<button id="btnFinalize" class="btn btn-primary">🔒 Finalize & Lock Roll</button>` : ''}
@@ -262,12 +302,19 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
           </div>
         </div>
 
-        <div class="glass rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center w-full shadow-lg mb-2">
+        <div class="glass rounded-xl p-4 flex flex-col md:flex-row gap-3 items-center w-full shadow-lg mb-2">
           <div class="relative flex-1 w-full">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
-            <input type="text" id="searchInput" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors" placeholder="Search by student name, class, admission no, or serial..." value="${esc(filterText)}">
+            <input type="text" id="searchInput" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors text-sm" placeholder="Search by student name, class, admission no, or serial..." value="${esc(filterText)}">
           </div>
-          <div class="text-slate-400 text-sm md:w-auto w-full text-right shrink-0">
+          <div class="w-full md:w-64 shrink-0">
+            <select id="adminArrangeSelect" class="field text-xs bg-slate-900 border-white/10 text-white w-full py-2">
+              <option value="dept-class" ${adminArrangeMode === 'dept-class' ? 'selected' : ''}>🏢 Arrange: Dept ➔ Class ➔ Sl. No</option>
+              <option value="serial" ${adminArrangeMode === 'serial' ? 'selected' : ''}>🔢 Arrange: Serial Number</option>
+              <option value="name" ${adminArrangeMode === 'name' ? 'selected' : ''}>🔤 Arrange: Student Name (A–Z)</option>
+            </select>
+          </div>
+          <div class="text-slate-400 text-xs md:w-auto w-full text-right shrink-0">
             Showing <strong class="text-white">${filtered.length}</strong> / ${students.length} students
           </div>
         </div>
@@ -421,6 +468,14 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
       main.querySelector('#searchInput').value = '';
       main.querySelector('#searchInput').value = val;
     };
+
+    const adminArrangeSel = main.querySelector('#adminArrangeSelect');
+    if (adminArrangeSel) {
+      adminArrangeSel.onchange = (e) => {
+        adminArrangeMode = e.target.value;
+        refreshTable();
+      };
+    }
 
     // Actions when NOT finalized (add, edit, delete, CSV upload)
     if (!isFinal) {
@@ -742,6 +797,33 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
         };
       }
 
+      // Fix Serial Numbers Department-wise On-Demand
+      if (main.querySelector('#btnFixSerialsDept')) {
+        main.querySelector('#btnFixSerialsDept').onclick = async (e) => {
+          const btn = e.currentTarget;
+          const conf = confirm(
+            "🔢 Fix Serial Numbers Department-wise?\n\n" +
+            "This will reassign continuous 1..N serial numbers finishing each department completely:\n" +
+            "• Botany (I UG -> II UG -> III UG)\n" +
+            "• Chemistry (I UG -> II UG -> III UG)\n" +
+            "• Commerce ... through Zoology\n\n" +
+            "Any existing nominations will be automatically remapped using Admission Numbers.\n\n" +
+            "Do you want to proceed?"
+          );
+          if (!conf) return;
+
+          setLoading(btn, true, 'Fixing Sl. No...');
+          try {
+            const res = await api.adminFixSerialNumbersDeptWise(pwd);
+            showToast(`🔢 Sequential Sl. No successfully assigned for ${res.count} students across all departments! ${res.remappedNominations || 0} nominations re-mapped.`, 'success');
+            await reloadRollData(main, pwd);
+          } catch (err) {
+            showToast(err.message, 'error');
+            setLoading(btn, false, '🔢 Fix Sl. No (Dept-wise)');
+          }
+        };
+      }
+
       // Re-map Nominations On-Demand
       if (main.querySelector('#btnRemapNoms')) {
         main.querySelector('#btnRemapNoms').onclick = async (e) => {
@@ -933,7 +1015,8 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
           students,
           isFinal,
           isDraft,
-          collegeName: settings.collegeName
+          collegeName: settings.collegeName,
+          initialSort: adminArrangeMode === 'dept-class' ? 'dept-class' : (adminArrangeMode === 'name' ? 'class' : 'serial')
         });
       };
     }

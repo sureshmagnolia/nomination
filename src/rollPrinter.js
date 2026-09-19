@@ -40,7 +40,7 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, in
 
   let currentDept = initialDept || (allDepartments[0] || '');
   let currentClass = initialClass || (getClassesForDept(currentDept)[0] || '');
-  let currentSort = 'serial';
+  let currentSort = 'dept-class';
   let currentColumns = '1';
   let pageBreakEachClass = true;
 
@@ -166,8 +166,9 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, in
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1.5">2. Sort Order</label>
             <select id="printSortSelect" class="field text-xs bg-slate-800 border-white/10 text-white w-full py-2">
-              <option value="serial" ${currentSort === 'serial' ? 'selected' : ''}>By Serial Number</option>
-              <option value="class" ${currentSort === 'class' ? 'selected' : ''}>By Class & Alphabetical</option>
+              <option value="dept-class" ${currentSort === 'dept-class' ? 'selected' : ''}>🏢 Dept ➔ Class ➔ Sl. No</option>
+              <option value="serial" ${currentSort === 'serial' ? 'selected' : ''}>🔢 By Serial Number</option>
+              <option value="class" ${currentSort === 'class' ? 'selected' : ''}>🎓 By Class & Alphabetical</option>
             </select>
           </div>
 
@@ -339,21 +340,50 @@ export function executeRollPrint({
   }
 
   // 2. Sorting
-  const getClassWeight = (cName) => {
-    const cls = String(cName).toUpperCase();
-    if (cls.includes('PH D') || cls.includes('PHD')) return 3000;
-    let typeWeight = 4000;
-    if (cls.match(/\b(BA|BSC|BCOM|BBA|BCA)\b/)) typeWeight = 1000;
-    else if (cls.match(/\b(MA|MSC|MCOM|MBA|MCA)\b/)) typeWeight = 2000;
-
-    let yearWeight = 900;
-    if (cls.includes('1ST YEAR') || cls.match(/\bI\b/)) yearWeight = 100;
-    else if (cls.includes('2ND YEAR') || cls.match(/\bII\b/)) yearWeight = 200;
-    else if (cls.includes('3RD YEAR') || cls.match(/\bIII\b/)) yearWeight = 300;
-    return typeWeight + yearWeight;
+  const getProgramWeight = (cName) => {
+    const c = String(cName || '').toUpperCase().trim();
+    if (c.includes('RESEARCH') || c.includes('PH.D') || c.includes('PHD')) return 6000;
+    if (/^I\s+M(SC|A|COM|BA|CA)/.test(c) || /^I\s+PG/.test(c)) return 4000;
+    if (/^II\s+M(SC|A|COM|BA|CA)/.test(c) || /^II\s+PG/.test(c)) return 5000;
+    if (/^III\s+M(SC|A|COM|BA|CA)/.test(c)) return 5500;
+    if (/^I\s+(B|UG)/.test(c) || /^1ST\s+YEAR/.test(c)) return 1000;
+    if (/^II\s+(B|UG)/.test(c) || /^2ND\s+YEAR/.test(c)) return 2000;
+    if (/^III\s+(B|UG)/.test(c) || /^3RD\s+YEAR/.test(c)) return 3000;
+    return 3500;
   };
 
-  if (sortBy === 'class') {
+  const parseSl = (s) => {
+    const raw = String(s?.['Nominal Roll Serial Number'] || s?.serial_number || s?.SL_NO || s?.['SL. NO'] || '').replace(/\D/g, '');
+    const n = parseInt(raw, 10);
+    return isNaN(n) ? 999999999 : n;
+  };
+
+  if (sortBy === 'dept-class') {
+    data.sort((a, b) => {
+      // 1. Department A-Z
+      const dA = String(a['Dept'] || a['DEPT'] || '').trim().toUpperCase();
+      const dB = String(b['Dept'] || b['DEPT'] || '').trim().toUpperCase();
+      if (dA !== dB) return dA.localeCompare(dB);
+
+      // 2. Program Level Progression: I UG -> II UG -> III UG -> I PG -> II PG -> RS
+      const cA = String(a['CLASS'] || '').trim().toUpperCase();
+      const cB = String(b['CLASS'] || '').trim().toUpperCase();
+      const wA = getProgramWeight(cA);
+      const wB = getProgramWeight(cB);
+      if (wA !== wB) return wA - wB;
+
+      // 3. Class Name
+      if (cA !== cB) return cA.localeCompare(cB);
+
+      // 4. Sl. No
+      const sA = parseSl(a);
+      const sB = parseSl(b);
+      if (sA !== sB) return sA - sB;
+
+      // 5. Name A-Z
+      return String(a['NAME'] || '').trim().toUpperCase().localeCompare(String(b['NAME'] || '').trim().toUpperCase());
+    });
+  } else if (sortBy === 'class') {
     data.sort((a, b) => {
       const dA = String(a['Dept'] || '').toUpperCase();
       const dB = String(b['Dept'] || '').toUpperCase();
@@ -362,19 +392,14 @@ export function executeRollPrint({
       const cA = String(a['CLASS'] || '').toUpperCase();
       const cB = String(b['CLASS'] || '').toUpperCase();
       if (cA !== cB) {
-        const wA = getClassWeight(cA);
-        const wB = getClassWeight(cB);
+        const wA = getProgramWeight(cA);
+        const wB = getProgramWeight(cB);
         if (wA !== wB) return wA - wB;
         return cA.localeCompare(cB);
       }
-      return String(a['NAME']).toUpperCase().localeCompare(String(b['NAME']).toUpperCase());
+      return String(a['NAME'] || '').toUpperCase().localeCompare(String(b['NAME'] || '').toUpperCase());
     });
   } else {
-    const parseSl = (s) => {
-      const raw = String(s?.['Nominal Roll Serial Number'] || s?.serial_number || s?.SL_NO || s?.['SL. NO'] || '').replace(/\D/g, '');
-      const n = parseInt(raw, 10);
-      return isNaN(n) ? 999999999 : n;
-    };
     data.sort((a, b) => parseSl(a) - parseSl(b));
   }
 
@@ -428,7 +453,7 @@ export function executeRollPrint({
                 </div>
                 <div class="meta-bar">
                   <div>Students in Class: <strong>${classStudents.length}</strong></div>
-                  <div>Sorted By: ${sortBy === 'class' ? 'Class & Alphabetical' : 'Serial Number'}</div>
+                  <div>Sorted By: ${sortBy === 'dept-class' ? 'Dept ➔ Class ➔ Sl. No' : (sortBy === 'class' ? 'Class & Alphabetical' : 'Serial Number')}</div>
                   <div>Printed: ${timestamp}</div>
                 </div>
               </div>
@@ -504,7 +529,7 @@ export function executeRollPrint({
               </div>
               <div class="meta-bar">
                 <div>Students in Class: <strong>${classStudents.length}</strong></div>
-                <div>Sorted By: ${sortBy === 'class' ? 'Class & Alphabetical' : 'Serial Number'}</div>
+                <div>Sorted By: ${sortBy === 'dept-class' ? 'Dept ➔ Class ➔ Sl. No' : (sortBy === 'class' ? 'Class & Alphabetical' : 'Serial Number')}</div>
                 <div>Printed: ${timestamp}</div>
               </div>
             </div>
@@ -566,7 +591,7 @@ export function executeRollPrint({
               </div>
               <div class="meta-bar">
                 <div>Total Students: <strong>${data.length}</strong></div>
-                <div>Sorted By: ${sortBy === 'class' ? 'Class & Alphabetical' : 'Serial Number'}</div>
+                <div>Sorted By: ${sortBy === 'dept-class' ? 'Dept ➔ Class ➔ Sl. No' : (sortBy === 'class' ? 'Class & Alphabetical' : 'Serial Number')}</div>
                 <div>Printed: ${timestamp}</div>
               </div>
             </div>
@@ -645,7 +670,7 @@ export function executeRollPrint({
             </div>
             <div class="meta-bar">
               <div>Total Students: <strong>${data.length}</strong></div>
-              <div>Sorted By: ${sortBy === 'class' ? 'Class & Alphabetical' : 'Serial Number'}</div>
+              <div>Sorted By: ${sortBy === 'dept-class' ? 'Dept ➔ Class ➔ Sl. No' : (sortBy === 'class' ? 'Class & Alphabetical' : 'Serial Number')}</div>
               <div>Printed: ${timestamp}</div>
             </div>
           </div>
@@ -704,6 +729,11 @@ export function executeRollPrint({
               page-break-after: always;
               break-after: page;
             }
+            .watermark {
+              color: rgba(0, 0, 0, 0.035) !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
           }
           * { box-sizing: border-box; }
           body {
@@ -718,20 +748,23 @@ export function executeRollPrint({
           .page-container {
             position: relative;
             margin-bottom: 20px;
+            overflow: hidden;
           }
           .watermark {
-            position: fixed;
+            position: absolute;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%) rotate(-40deg);
-            font-size: 65px;
-            color: rgba(0, 0, 0, 0.04);
+            transform: translate(-50%, -50%) rotate(-35deg);
+            font-size: 52px;
+            color: rgba(0, 0, 0, 0.035);
             font-weight: 900;
+            letter-spacing: 3px;
             pointer-events: none;
-            z-index: -1;
+            z-index: 0;
             white-space: nowrap;
             text-transform: uppercase;
-            font-family: sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            user-select: none;
           }
           .print-header {
             text-align: center;

@@ -670,6 +670,18 @@ export const api = {
     return res;
   },
 
+  adminFixSerialNumbersDeptWise: async (password) => {
+    const res = await post({ action: 'adminFixSerialNumbersDeptWise', password });
+    invalidateCache('getNominalRoll');
+    invalidateCache('adminGetNominations');
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    invalidateCache('getValidNominations');
+    invalidateCache('getFinalNominations');
+    invalidateCache('getPublicNominations');
+    return res;
+  },
+
 
   // ─── Schedule Management ───────────────────────────────────────────────────
 

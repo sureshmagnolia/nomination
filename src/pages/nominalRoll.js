@@ -80,8 +80,21 @@ function renderPublicRollUI(container, nominalRoll, settings) {
   let filterText = '';
   let selectedDept = '';
   let selectedClass = '';
+  let arrangeMode = 'dept-class'; // 'dept-class' | 'serial' | 'name'
   let currentPage = 1;
   const PAGE_SIZE = 50;
+
+  const getProgWeight = (cName) => {
+    const c = String(cName || '').toUpperCase().trim();
+    if (c.includes('RESEARCH') || c.includes('PH.D') || c.includes('PHD')) return 6000;
+    if (/^I\s+M(SC|A|COM|BA|CA)/.test(c) || /^I\s+PG/.test(c)) return 4000;
+    if (/^II\s+M(SC|A|COM|BA|CA)/.test(c) || /^II\s+PG/.test(c)) return 5000;
+    if (/^III\s+M(SC|A|COM|BA|CA)/.test(c)) return 5500;
+    if (/^I\s+(B|UG)/.test(c) || /^1ST\s+YEAR/.test(c)) return 1000;
+    if (/^II\s+(B|UG)/.test(c) || /^2ND\s+YEAR/.test(c)) return 2000;
+    if (/^III\s+(B|UG)/.test(c) || /^3RD\s+YEAR/.test(c)) return 3000;
+    return 3500;
+  };
 
   const formatSerial = (rawSerial) => {
     const num = String(rawSerial || '');
@@ -89,7 +102,7 @@ function renderPublicRollUI(container, nominalRoll, settings) {
   };
 
   const getFilteredStudents = () => {
-    return students.filter(s => {
+    const filtered = students.filter(s => {
       // Dept filter
       if (selectedDept && (s['Dept'] || '').trim().toLowerCase() !== selectedDept.toLowerCase()) {
         return false;
@@ -112,6 +125,35 @@ function renderPublicRollUI(container, nominalRoll, settings) {
       }
       return true;
     });
+
+    // Apply arrangement order
+    if (arrangeMode === 'dept-class') {
+      filtered.sort((a, b) => {
+        const dA = String(a['Dept'] || '').trim().toUpperCase();
+        const dB = String(b['Dept'] || '').trim().toUpperCase();
+        if (dA !== dB) return dA.localeCompare(dB);
+
+        const cA = String(a['CLASS'] || '').trim().toUpperCase();
+        const cB = String(b['CLASS'] || '').trim().toUpperCase();
+        const wA = getProgWeight(cA);
+        const wB = getProgWeight(cB);
+        if (wA !== wB) return wA - wB;
+
+        if (cA !== cB) return cA.localeCompare(cB);
+
+        const sA = parseSl(a);
+        const sB = parseSl(b);
+        if (sA !== sB) return sA - sB;
+
+        return String(a['NAME'] || '').trim().toUpperCase().localeCompare(String(b['NAME'] || '').trim().toUpperCase());
+      });
+    } else if (arrangeMode === 'name') {
+      filtered.sort((a, b) => String(a['NAME'] || '').trim().toUpperCase().localeCompare(String(b['NAME'] || '').trim().toUpperCase()));
+    } else {
+      filtered.sort((a, b) => parseSl(a) - parseSl(b));
+    }
+
+    return filtered;
   };
 
   // Initial Shell Render
@@ -235,25 +277,34 @@ function renderPublicRollUI(container, nominalRoll, settings) {
 
       <!-- Search & Multi-Level Filters Bar -->
       <div class="glass rounded-xl p-4 space-y-3 shadow-xl">
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 items-center">
           <!-- Text Search -->
-          <div class="relative md:col-span-5">
+          <div class="relative md:col-span-4">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
-            <input type="text" id="searchInput" class="field pl-10 w-full text-sm py-2" placeholder="Search by name, adm. no, or serial...">
+            <input type="text" id="searchInput" class="field pl-10 w-full text-sm py-2" placeholder="Search name, adm. no, serial...">
+          </div>
+
+          <!-- Arrangement / Sort Option -->
+          <div class="md:col-span-3">
+            <select id="arrangeSelect" class="field text-xs sm:text-sm py-2 w-full bg-slate-900 border-white/10 text-white font-medium" title="Arrange nominal roll by department, class, or serial">
+              <option value="dept-class" selected>🏢 Arrange: Dept ➔ Class ➔ Sl. No</option>
+              <option value="serial">🔢 Arrange: Serial Number</option>
+              <option value="name">🔤 Arrange: Student Name (A–Z)</option>
+            </select>
           </div>
 
           <!-- Department Filter -->
-          <div class="md:col-span-3">
-            <select id="deptFilter" class="field text-sm py-2 w-full bg-slate-900 border-white/10 text-white">
-              <option value="">🏢 All Departments (${allDepartments.length})</option>
+          <div class="md:col-span-2">
+            <select id="deptFilter" class="field text-xs sm:text-sm py-2 w-full bg-slate-900 border-white/10 text-white">
+              <option value="">All Depts (${allDepartments.length})</option>
               ${allDepartments.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}
             </select>
           </div>
 
           <!-- Class Filter -->
-          <div class="md:col-span-3">
-            <select id="classFilter" class="field text-sm py-2 w-full bg-slate-900 border-white/10 text-white">
-              <option value="">🎓 All Classes</option>
+          <div class="md:col-span-2">
+            <select id="classFilter" class="field text-xs sm:text-sm py-2 w-full bg-slate-900 border-white/10 text-white">
+              <option value="">All Classes</option>
             </select>
           </div>
 
@@ -442,14 +493,26 @@ function renderPublicRollUI(container, nominalRoll, settings) {
     updateTableAndPagination();
   });
 
+  // Arrange dropdown
+  const arrangeSelect = container.querySelector('#arrangeSelect');
+  if (arrangeSelect) {
+    arrangeSelect.addEventListener('change', (e) => {
+      arrangeMode = e.target.value;
+      currentPage = 1;
+      updateTableAndPagination();
+    });
+  }
+
   // Clear filters
   container.querySelector('#btnClearFilters').addEventListener('click', () => {
     filterText = '';
     selectedDept = '';
     selectedClass = '';
+    arrangeMode = 'dept-class';
     currentPage = 1;
     searchInput.value = '';
     deptSelect.value = '';
+    if (arrangeSelect) arrangeSelect.value = 'dept-class';
     populateClassDropdown('');
     updateTableAndPagination();
     showToast('Filters reset.', 'info');

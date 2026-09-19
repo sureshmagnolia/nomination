@@ -1699,7 +1699,25 @@ export default async function handler(req, res) {
           await sql`UPDATE nominal_roll SET serial_number = serial_number || '_' || gen_random_uuid()::varchar`;
           await sql`
             WITH renumbered AS (
-              SELECT serial_number as old_serial, ROW_NUMBER() OVER (ORDER BY class ASC, name ASC) as new_serial
+              SELECT serial_number as old_serial,
+                ROW_NUMBER() OVER (
+                  ORDER BY 
+                    LOWER(TRIM(dept)) ASC,
+                    CASE 
+                      WHEN UPPER(class) LIKE '%RESEARCH%' OR UPPER(class) LIKE '%PH%D%' THEN 6000
+                      WHEN UPPER(class) ~ '^I\s+M' OR UPPER(class) ~ '^I\s+PG' THEN 4000
+                      WHEN UPPER(class) ~ '^II\s+M' OR UPPER(class) ~ '^II\s+PG' THEN 5000
+                      WHEN UPPER(class) ~ '^III\s+M' THEN 5500
+                      WHEN UPPER(class) ~ '^I\s+(B|UG)' OR UPPER(class) LIKE '1ST YEAR%' THEN 1000
+                      WHEN UPPER(class) ~ '^II\s+(B|UG)' OR UPPER(class) LIKE '2ND YEAR%' THEN 2000
+                      WHEN UPPER(class) ~ '^III\s+(B|UG)' OR UPPER(class) LIKE '3RD YEAR%' THEN 3000
+                      ELSE 3500
+                    END ASC,
+                    class ASC,
+                    CASE WHEN split_part(serial_number, '_', 1) ~ '^[0-9]+$' THEN CAST(split_part(serial_number, '_', 1) AS BIGINT) ELSE 999999 END ASC,
+                    CASE WHEN admission_no ~ '^[0-9]+$' THEN CAST(admission_no AS BIGINT) ELSE 999999 END ASC,
+                    name ASC
+                ) as new_serial
               FROM nominal_roll
             )
             UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
@@ -1712,6 +1730,61 @@ export default async function handler(req, res) {
       const remapResult = await remapNominationsWithRoll();
 
       return jsonOut(res, { ok: true, count: toInsert.length, remappedNominations: remapResult.remapped, totalNominations: remapResult.total });
+    }
+
+    if (action === 'adminFixSerialNumbersDeptWise') {
+      const isRollFinal = await getSetting('isRollFinalized');
+      if (isRollFinal === 'true') {
+        return errOut(res, 'Nominal Roll is finalized and locked. Please unfinalize with admin password before modifying serial numbers.', 400);
+      }
+
+      const countRows = await sql`SELECT COUNT(*)::int as count FROM nominal_roll`;
+      const rollCount = countRows[0]?.count || 0;
+      if (rollCount === 0) {
+        return jsonOut(res, { ok: true, count: 0, message: 'Nominal roll is empty.' });
+      }
+
+      // Step 1: Temporarily suffix all serial numbers with random UUIDs to eliminate any uniqueness/primary key collisions
+      await sql`UPDATE nominal_roll SET serial_number = serial_number || '_' || gen_random_uuid()::varchar`;
+
+      // Step 2: Assign contiguous sequential numbers finishing each department at a time:
+      // Department (A-Z) -> Program Level (I UG -> II UG -> III UG -> I PG -> II PG -> RS) -> Class Name -> Serial/Adm/Name
+      await sql`
+        WITH renumbered AS (
+          SELECT serial_number as old_serial,
+            ROW_NUMBER() OVER (
+              ORDER BY 
+                LOWER(TRIM(dept)) ASC,
+                CASE 
+                  WHEN UPPER(class) LIKE '%RESEARCH%' OR UPPER(class) LIKE '%PH%D%' THEN 6000
+                  WHEN UPPER(class) ~ '^I\s+M' OR UPPER(class) ~ '^I\s+PG' THEN 4000
+                  WHEN UPPER(class) ~ '^II\s+M' OR UPPER(class) ~ '^II\s+PG' THEN 5000
+                  WHEN UPPER(class) ~ '^III\s+M' THEN 5500
+                  WHEN UPPER(class) ~ '^I\s+(B|UG)' OR UPPER(class) LIKE '1ST YEAR%' THEN 1000
+                  WHEN UPPER(class) ~ '^II\s+(B|UG)' OR UPPER(class) LIKE '2ND YEAR%' THEN 2000
+                  WHEN UPPER(class) ~ '^III\s+(B|UG)' OR UPPER(class) LIKE '3RD YEAR%' THEN 3000
+                  ELSE 3500
+                END ASC,
+                class ASC,
+                CASE WHEN split_part(serial_number, '_', 1) ~ '^[0-9]+$' THEN CAST(split_part(serial_number, '_', 1) AS BIGINT) ELSE 999999 END ASC,
+                CASE WHEN admission_no ~ '^[0-9]+$' THEN CAST(admission_no AS BIGINT) ELSE 999999 END ASC,
+                name ASC
+            ) as new_serial
+          FROM nominal_roll
+        )
+        UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
+        FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
+      `;
+
+      // Step 3: Automatically remap candidate, proposer, and seconder serial numbers in existing nominations
+      const remapResult = await remapNominationsWithRoll();
+
+      return jsonOut(res, {
+        ok: true,
+        count: rollCount,
+        remappedNominations: remapResult.remapped,
+        totalNominations: remapResult.total
+      });
     }
 
     if (action === 'adminClearNominalRoll') {
