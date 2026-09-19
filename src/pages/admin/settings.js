@@ -4,7 +4,7 @@
  */
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast } from '../../utils.js';
+import { esc, showToast, setLoading } from '../../utils.js';
 
 export async function renderSettings(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -27,18 +27,48 @@ export async function renderSettings(container) {
           <!-- College Information -->
           <div class="glass rounded-2xl p-8 space-y-6">
             <div>
-              <h4 class="font-bold text-white text-lg">College Information</h4>
-              <p class="text-slate-400 text-xs mt-1">This branding appears on the public portal and all official documents.</p>
+              <h4 class="font-bold text-white text-lg">College Information &amp; Branding</h4>
+              <p class="text-slate-400 text-xs mt-1">This branding and logo appear on the public portal and all official print documents.</p>
             </div>
             
             <div class="space-y-5">
+              <!-- College Logo Upload & Preview -->
+              <div>
+                <label class="text-xs text-slate-400 uppercase tracking-wider block mb-2">College Logo (Printed Above College Name)</label>
+                <div class="flex items-center gap-4 p-3 bg-white/5 rounded-xl border border-white/10">
+                  <div id="logoPreviewBox" class="w-20 h-20 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                    ${settings.collegeLogo
+                      ? `<img id="logoPreviewImg" src="${settings.collegeLogo}" class="w-full h-full object-contain" alt="College Logo">`
+                      : `<span id="logoPlaceholder" class="text-xs text-slate-500 text-center px-1">No Logo</span>`}
+                  </div>
+                  <div class="flex-1 space-y-2">
+                    <div class="flex flex-wrap gap-2">
+                      <label class="btn btn-secondary text-xs py-1.5 px-3 cursor-pointer">
+                        <span>📁 Choose Logo Image</span>
+                        <input type="file" id="inputCollegeLogo" accept="image/*" class="hidden">
+                      </label>
+                      <button type="button" id="btnRemoveLogo" class="btn text-xs py-1.5 px-3 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 ${settings.collegeLogo ? '' : 'hidden'}">
+                        🗑️ Remove
+                      </button>
+                    </div>
+                    <p class="text-[11px] text-slate-400">PNG, JPG, or SVG. Auto-scaled for sharp, crisp print headers.</p>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label class="text-xs text-slate-400 uppercase tracking-wider block mb-2">Full College Name</label>
                 <input type="text" id="inputCollegeName" class="field text-sm py-2.5" value="${esc(settings.collegeName)}">
               </div>
-              <div>
-                <label class="text-xs text-slate-400 uppercase tracking-wider block mb-2">Short Form (Abbreviation)</label>
-                <input type="text" id="inputCollegeShort" class="field text-sm py-2.5" value="${esc(settings.collegeShortName)}">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="text-xs text-slate-400 uppercase tracking-wider block mb-2">Short Form (Abbreviation)</label>
+                  <input type="text" id="inputCollegeShort" class="field text-sm py-2.5" value="${esc(settings.collegeShortName)}">
+                </div>
+                <div>
+                  <label class="text-xs text-slate-400 uppercase tracking-wider block mb-2">Election Year</label>
+                  <input type="text" id="inputElectionYear" class="field text-sm py-2.5" value="${esc(settings.electionYear || new Date().getFullYear().toString())}" placeholder="e.g. 2026">
+                </div>
               </div>
               <button id="btnUpdateBranding" class="btn btn-primary w-full py-3 mt-2">Save Branding</button>
             </div>
@@ -112,17 +142,88 @@ export async function renderSettings(container) {
       </div>
     `;
 
+    let currentLogoDataUrl = settings.collegeLogo || '';
+
+    const logoInput = container.querySelector('#inputCollegeLogo');
+    const logoPreviewBox = container.querySelector('#logoPreviewBox');
+    const btnRemoveLogo = container.querySelector('#btnRemoveLogo');
+
+    logoInput?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        return showToast('Please select a valid image file.', 'error');
+      }
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const img = new Image();
+        img.onload = () => {
+          // Offscreen canvas compression: max 260px wide, 130px high
+          const MAX_WIDTH = 260;
+          const MAX_HEIGHT = 130;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round(height * (MAX_WIDTH / width));
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round(width * (MAX_HEIGHT / height));
+              height = MAX_HEIGHT;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          currentLogoDataUrl = canvas.toDataURL('image/png');
+          logoPreviewBox.innerHTML = `<img id="logoPreviewImg" src="${currentLogoDataUrl}" class="w-full h-full object-contain" alt="College Logo">`;
+          btnRemoveLogo?.classList.remove('hidden');
+          showToast('Logo image selected and ready to save!', 'info');
+        };
+        img.onerror = () => showToast('Failed to parse selected image.', 'error');
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    btnRemoveLogo?.addEventListener('click', () => {
+      currentLogoDataUrl = '';
+      logoPreviewBox.innerHTML = `<span id="logoPlaceholder" class="text-xs text-slate-500 text-center px-1">No Logo</span>`;
+      btnRemoveLogo.classList.add('hidden');
+      if (logoInput) logoInput.value = '';
+      showToast('Logo cleared. Click "Save Branding" to apply.', 'info');
+    });
+
     // Handle branding update
-    container.querySelector('#btnUpdateBranding').addEventListener('click', async () => {
+    container.querySelector('#btnUpdateBranding').addEventListener('click', async (e) => {
       const collegeName = container.querySelector('#inputCollegeName').value.trim();
       const collegeShortName = container.querySelector('#inputCollegeShort').value.trim();
+      const electionYear = container.querySelector('#inputElectionYear').value.trim() || new Date().getFullYear().toString();
       if (!collegeName || !collegeShortName) return showToast('Please fill all branding fields.', 'error');
 
+      const btn = e.currentTarget;
+      setLoading(btn, true, 'Saving...');
       try {
-        await api.adminUpdateSettings(pwd, { collegeName, collegeShortName });
-        showToast('College branding updated successfully! Refresh to see changes system-wide.', 'success');
-      } catch (e) {
-        showToast(e.message, 'error');
+        await api.adminUpdateSettings(pwd, {
+          collegeName,
+          collegeShortName,
+          electionYear,
+          collegeLogo: currentLogoDataUrl
+        });
+        showToast('College branding & logo updated successfully! Refresh to see changes system-wide.', 'success');
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        setLoading(btn, false, 'Save Branding');
       }
     });
 

@@ -13,7 +13,7 @@ import { CONFIG } from './config.js';
 /**
  * Opens the interactive Print Roll modal dialog.
  */
-export function openPrintRollModal({ students, isFinal, isDraft, collegeName, initialDept = '', initialClass = '' }) {
+export function openPrintRollModal({ students, isFinal, isDraft, collegeName, collegeLogo = '', electionYear = '', initialDept = '', initialClass = '', initialSort = 'dept-class' }) {
   const existingModal = document.getElementById('printRollModalContainer');
   if (existingModal) existingModal.remove();
 
@@ -40,7 +40,7 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, in
 
   let currentDept = initialDept || (allDepartments[0] || '');
   let currentClass = initialClass || (getClassesForDept(currentDept)[0] || '');
-  let currentSort = 'dept-class';
+  let currentSort = initialSort || 'dept-class';
   let currentColumns = '1';
   let pageBreakEachClass = true;
 
@@ -292,6 +292,8 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, in
         isFinal,
         isDraft,
         collegeName: cName,
+        collegeLogo,
+        electionYear,
         scope: currentScope,
         dept: currentDept,
         className: currentClass,
@@ -315,6 +317,8 @@ export function executeRollPrint({
   isFinal,
   isDraft,
   collegeName,
+  collegeLogo = '',
+  electionYear = '',
   scope = 'all',
   dept = '',
   className = '',
@@ -322,6 +326,7 @@ export function executeRollPrint({
   pageBreakPerClass = true,
   columns = '1'
 }) {
+  const yearStr = electionYear || new Date().getFullYear().toString();
   // 1. Filter students based on scope
   let data = [...students];
   let scopeSubtitle = 'Master Nominal Roll';
@@ -444,8 +449,9 @@ export function executeRollPrint({
               <div class="watermark">${watermark}</div>
               
               <div class="print-header">
+                ${collegeLogo ? `<img src="${collegeLogo}" class="college-logo" alt="College Logo">` : ''}
                 <div class="college-name">${esc(collegeName)}</div>
-                <div class="election-title">College Union Election — ${watermark}</div>
+                <div class="election-title">College Union Election ${esc(yearStr)} — ${watermark}</div>
                 <div class="class-header">
                   <span class="badge-tag">CLASS: ${esc(cKey)}</span>
                   <span class="badge-tag">DEPARTMENT: ${esc(classDept)}</span>
@@ -521,8 +527,9 @@ export function executeRollPrint({
             <div class="watermark">${watermark}</div>
             
             <div class="print-header">
+              ${collegeLogo ? `<img src="${collegeLogo}" class="college-logo" alt="College Logo">` : ''}
               <div class="college-name">${esc(collegeName)}</div>
-              <div class="election-title">College Union Election — ${watermark}</div>
+              <div class="election-title">College Union Election ${esc(yearStr)} — ${watermark}</div>
               <div class="class-header">
                 <span class="badge-tag">CLASS: ${esc(cKey)}</span>
                 <span class="badge-tag">DEPARTMENT: ${esc(classDept)}</span>
@@ -583,8 +590,9 @@ export function executeRollPrint({
             <div class="watermark">${watermark}</div>
 
             <div class="print-header">
+              ${collegeLogo ? `<img src="${collegeLogo}" class="college-logo" alt="College Logo">` : ''}
               <div class="college-name">${esc(collegeName)}</div>
-              <div class="election-title">College Union Election — ${watermark}</div>
+              <div class="election-title">College Union Election ${esc(yearStr)} — ${watermark}</div>
               <div class="class-header">
                 <span class="badge-tag">${esc(scopeSubtitle.toUpperCase())}</span>
                 ${numPages > 1 ? `<span class="badge-tag">PAGE ${p + 1} OF ${numPages}</span>` : ''}
@@ -663,8 +671,9 @@ export function executeRollPrint({
           <div class="watermark">${watermark}</div>
 
           <div class="print-header">
+            ${collegeLogo ? `<img src="${collegeLogo}" class="college-logo" alt="College Logo">` : ''}
             <div class="college-name">${esc(collegeName)}</div>
-            <div class="election-title">College Union Election — ${watermark}</div>
+            <div class="election-title">College Union Election ${esc(yearStr)} — ${watermark}</div>
             <div class="class-header">
               <span class="badge-tag">${esc(scopeSubtitle.toUpperCase())}</span>
             </div>
@@ -765,6 +774,13 @@ export function executeRollPrint({
             text-transform: uppercase;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
             user-select: none;
+          }
+          .college-logo {
+            max-height: 55px;
+            max-width: 140px;
+            margin: 0 auto 6px auto;
+            display: block;
+            object-fit: contain;
           }
           .print-header {
             text-align: center;

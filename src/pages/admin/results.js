@@ -51,9 +51,10 @@ export async function renderAdminResults(container) {
 }
 
 function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished = false, reloadData = null) {
-  const year = schedule.electionYear || new Date().getFullYear();
+  const year = sets.electionYear || schedule.electionYear || new Date().getFullYear();
   const collegeName = sets.collegeName || 'GOVERNMENT VICTORIA COLLEGE PALAKKAD';
   const shortName = sets.collegeShortName || 'GVC';
+  const collegeLogo = sets.collegeLogo || '';
   let isLocked = sets.resultsLocked === 'true';
   let isPublic = sets.resultsPublished === 'true';
   let isCountingActive = sets.countingActive === 'true' || schedule.countingActive === 'true';
@@ -295,8 +296,9 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       </style>
       <div class="official-sheet">
         <div class="header">
-          <h1>College Union Election ${year}</h1>
+          ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:60px;max-width:140px;margin:0 auto 8px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
           <h2>${esc(collegeName)}</h2>
+          <h1>College Union Election ${year}</h1>
           <div style="font-size: 18px; margin-top: 15px; font-weight: 900; text-decoration: underline;">OFFICIAL RESULT NOTIFICATION</div>
         </div>
 

@@ -755,8 +755,8 @@ export async function renderAdminBallots(container) {
 
     const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
     const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
-
-    const year = schedule.electionYear || new Date().getFullYear().toString();
+    const collegeLogo = settings.collegeLogo || '';
+    const year = settings.electionYear || schedule.electionYear || new Date().getFullYear().toString();
     const candidates = Array.isArray(candidatesResponse) ? candidatesResponse : (candidatesResponse?.active || []);
     if (candidates.length === 0) throw new Error('No active candidates found. Please ensure candidates are nominated and verified.');
 
@@ -814,9 +814,10 @@ export async function renderAdminBallots(container) {
         <div class="ballot-container ${paperClass} page-break">
           <!-- Counterfoil -->
           <div style="border-bottom: 2px dotted #000; padding-bottom: 18px; margin-bottom: 25px; text-align: center;">
-            <h1 style="font-size: 15px; margin: 0;">COLLEGE UNION ELECTION ${year}</h1>
-            <h1 style="font-size: 17px; margin: 4px 0;">${esc(collegeName)}</h1>
-            <h2 style="font-size: 13px; margin: 0;">${esc(partTitle.toUpperCase())} - COUNTERFOIL</h2>
+            ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:40px;max-width:110px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+            <h1 style="font-size: 16px; margin: 2px 0; text-transform: uppercase;">${esc(collegeName)}</h1>
+            <h2 style="font-size: 14px; margin: 2px 0; font-weight: bold;">COLLEGE UNION ELECTION ${year}</h2>
+            <h3 style="font-size: 13px; margin: 2px 0 0 0;">${esc(partTitle.toUpperCase())} - COUNTERFOIL</h3>
             <div style="margin-top: 12px; font-weight: bold; text-align: left; display: flex; flex-direction: column; gap: 6px;">
               <div style="display: flex; justify-content: space-between;">
                 <span>SL.NO. ${prefix}____________</span>
@@ -827,9 +828,10 @@ export async function renderAdminBallots(container) {
           </div>
 
           <div class="ballot-header">
-            <h1>COLLEGE UNION ELECTION ${year}</h1>
+            ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:45px;max-width:120px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
             <h1>${esc(collegeName)}</h1>
-            <h2>${esc(partTitle.toUpperCase())}</h2>
+            <h2>COLLEGE UNION ELECTION ${year}</h2>
+            <h3>${esc(partTitle.toUpperCase())}</h3>
           </div>
           <div class="meta-row"><div>SL.NO. ${prefix}____________</div><div>Signature of PRO</div></div>
           <div class="instr-box">MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED</div>
@@ -883,8 +885,10 @@ export async function renderAdminBallots(container) {
           <div class="ballot-container a5 page-break">
             <!-- Counterfoil -->
             <div style="border-bottom: 2px dotted #000; padding-bottom: 15px; margin-bottom: 20px; text-align: center;">
-              <h1 style="font-size: 14px; margin: 0;">${esc(shortName)} ELECTION ${year}</h1>
-              <h2 style="font-size: 12px; margin: 2px 0;">OFFICIAL BALLOT (${prefix}) - COUNTERFOIL</h2>
+              ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:35px;max-width:90px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+              <h1 style="font-size: 15px; margin: 2px 0;">${esc(collegeName)}</h1>
+              <h2 style="font-size: 13px; margin: 0; font-weight: bold;">COLLEGE UNION ELECTION ${year}</h2>
+              <h3 style="font-size: 11px; margin: 2px 0 0 0;">OFFICIAL BALLOT (${prefix}) - COUNTERFOIL</h3>
               <div style="margin-top: 10px; font-weight: bold; text-align: left; display: flex; flex-direction: column; gap: 5px; font-size: 11px;">
                 <div style="display: flex; justify-content: space-between;">
                   <span>SL.NO. ${prefix}____________</span>
@@ -895,8 +899,10 @@ export async function renderAdminBallots(container) {
             </div>
 
             <div class="ballot-header">
-              <h1>${esc(shortName)} ELECTION ${year}</h1>
-              <h2 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER (${prefix})</h2>
+              ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:40px;max-width:100px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+              <h1>${esc(collegeName)}</h1>
+              <h2 style="font-size: 14px; margin: 2px 0; font-weight: bold;">COLLEGE UNION ELECTION ${year}</h2>
+              <h3 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER (${prefix})</h3>
             </div>
             <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ${prefix}____________</div><div>PRO Sign</div></div>
             <div class="post-box">
@@ -976,8 +982,9 @@ export async function renderAdminBallots(container) {
       const reportHtml = `
         <div style="padding: 40px; font-family: sans-serif; color: #333;">
           <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
-            <h1 style="margin: 0; font-size: 24px;">BALLOT PRINTING SUMMARY - ${year}</h1>
-            <h2 style="margin: 5px 0 0 0; font-size: 18px; color: #666;">${esc(collegeName)}</h2>
+            ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:55px;max-width:130px;margin:0 auto 6px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+            <h2 style="margin: 0; font-size: 18px; color: #333; font-weight: bold;">${esc(collegeName)}</h2>
+            <h1 style="margin: 6px 0 0 0; font-size: 22px;">College Union Election ${year} — Ballot Printing Summary</h1>
           </div>
 
           <p style="font-size: 14px; margin-bottom: 20px;">

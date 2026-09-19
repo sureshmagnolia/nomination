@@ -365,6 +365,8 @@ export const api = {
   
   adminUpdateSettings: (password, settings) => {
     updateCache({ action: 'adminGetSettings', password }, old => ({...old, ...settings}));
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
     bgPost({ action: 'adminUpdateSettings', password, ...settings });
     return Promise.resolve({ ok: true });
   },

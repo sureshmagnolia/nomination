@@ -540,6 +540,8 @@ function renderPublicRollUI(container, nominalRoll, settings) {
         isFinal,
         isDraft,
         collegeName,
+        collegeLogo: settings.collegeLogo,
+        electionYear: settings.electionYear,
         initialDept: selectedDept,
         initialClass: selectedClass
       });

@@ -12,11 +12,13 @@ export async function renderFindNomination(container) {
   let year = new Date().getFullYear();
   let shortName = CONFIG.COLLEGE_SHORT_NAME;
   let collegeName = CONFIG.COLLEGE_NAME;
+  let collegeLogo = '';
   try {
     const sets = await api.getSettings().catch(() => ({}));
     if (sets.electionYear) year = sets.electionYear;
     if (sets.collegeName) collegeName = sets.collegeName;
     if (sets.collegeShortName) shortName = sets.collegeShortName;
+    if (sets.collegeLogo) collegeLogo = sets.collegeLogo;
   } catch(e) {}
 
   container.innerHTML = publicLayout('Find My Nomination', `
@@ -47,7 +49,7 @@ export async function renderFindNomination(container) {
     setLoading(btn, true, '🔍 Find Nomination');
     try {
       const nom = await api.getNomination(id);
-      showNomResult(container.querySelector('#resultArea'), nom, id, year, collegeName);
+      showNomResult(container.querySelector('#resultArea'), nom, id, year, collegeName, collegeLogo);
     } catch (e) {
       container.querySelector('#resultArea').innerHTML = `<div class="alert alert-error mt-4">❌ ${esc(e.message)}</div>`;
     } finally {
@@ -56,7 +58,7 @@ export async function renderFindNomination(container) {
   });
 }
 
-function showNomResult(area, nom, id, yearValue, collegeName) {
+function showNomResult(area, nom, id, yearValue, collegeName, collegeLogo = '') {
   // Format DOB from ISO string (or YYYY-MM-DD) to DD/MM/YYYY
   let dobDisplay = nom.dob || 'N/A';
   const d = new Date(nom.dob);
@@ -72,7 +74,7 @@ function showNomResult(area, nom, id, yearValue, collegeName) {
     <div class="space-y-4">
       <div class="alert alert-success">✅ Nomination found! Status: <strong>${esc(nom.status)}</strong></div>
       <div id="printZone" class="print-zone">
-        ${buildNominationPaper(id, nom.post, nom.gender, dobDisplay, age, nom.candidate, nom.proposer, nom.seconder, nom.status, yearValue, collegeName)}
+        ${buildNominationPaper(id, nom.post, nom.gender, dobDisplay, age, nom.candidate, nom.proposer, nom.seconder, nom.status, yearValue, collegeName, collegeLogo)}
       </div>
       <div class="flex gap-3 no-print">
         <button id="printBtn" class="btn btn-success flex-1">🖨️ Print</button>

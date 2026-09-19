@@ -1016,6 +1016,8 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
           isFinal,
           isDraft,
           collegeName: settings.collegeName,
+          collegeLogo: settings.collegeLogo,
+          electionYear: settings.electionYear,
           initialSort: adminArrangeMode === 'dept-class' ? 'dept-class' : (adminArrangeMode === 'name' ? 'class' : 'serial')
         });
       };

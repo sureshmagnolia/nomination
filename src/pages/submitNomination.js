@@ -296,7 +296,7 @@ function renderForm(container, year, collegeName, setsData = {}) {
   });
 
   formArea.querySelector('#backHomeBtn')?.addEventListener('click', () => router.navigate('/'));
-  formArea.querySelector('#nomForm')?.addEventListener('submit', (e) => handleSubmit(e, formArea, year, collegeName));
+  formArea.querySelector('#nomForm')?.addEventListener('submit', (e) => handleSubmit(e, formArea, year, collegeName, setsData?.collegeLogo || ''));
 }
 
 function openFindSerialModal(role, roleLabel, onSelect) {
@@ -555,7 +555,7 @@ function runValidation(formArea) {
   return warnings;
 }
 
-async function handleSubmit(e, formArea, yearValue, collegeName) {
+async function handleSubmit(e, formArea, yearValue, collegeName, collegeLogo = '') {
   e.preventDefault();
   const warnings = runValidation(formArea);
   if (warnings.length) { showToast('Please resolve all eligibility warnings first.', 'error'); return; }
@@ -602,7 +602,7 @@ async function handleSubmit(e, formArea, yearValue, collegeName) {
 
     const result = await api.submitNomination(payload);
 
-    showPreview(formArea, result.id, { post, gender, day, month, year, dob: formattedDob, students }, yearValue, collegeName);
+    showPreview(formArea, result.id, { post, gender, day, month, year, dob: formattedDob, students }, yearValue, collegeName, collegeLogo);
     showToast(`Nomination submitted! ID: ${result.id}`, 'success');
   } catch (err) {
     showToast(`Submission failed: ${err.message}`, 'error');
@@ -611,14 +611,14 @@ async function handleSubmit(e, formArea, yearValue, collegeName) {
   }
 }
 
-function showPreview(formArea, id, { post, gender, day, month, year, dob, students }, yearValue, collegeName) {
+function showPreview(formArea, id, { post, gender, day, month, year, dob, students }, yearValue, collegeName, collegeLogo = '') {
   const [candidate, proposer, seconder] = students;
   const dobDisplay = displayDob(day, month, year);
   const age = calculateAge(dob);
 
   const preview = formArea.querySelector('#previewSection');
   formArea.querySelector('#printZone').innerHTML =
-    buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, 'Pending', yearValue, collegeName);
+    buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, 'Pending', yearValue, collegeName, collegeLogo);
 
   preview.classList.remove('hidden');
   preview.scrollIntoView({ behavior: 'smooth' });
@@ -628,13 +628,14 @@ function showPreview(formArea, id, { post, gender, day, month, year, dob, studen
   preview.querySelector('#newNomBtn')?.addEventListener('click', () => renderSubmitNomination(formArea.closest('#app')));
 }
 
-export function buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, status = '', yearValue = '2026', collegeName = null) {
+export function buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, status = '', yearValue = '2026', collegeName = null, collegeLogo = '') {
   const today = todayFormatted();
   const cName = collegeName || CONFIG.COLLEGE_NAME;
   return `
   <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-4">
     <div class="flex justify-between items-start text-sm">
       <div>
+        ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:45px;max-width:120px;margin-bottom:4px;display:block;object-fit:contain" alt="College Logo">` : ''}
         <p class="font-bold text-white text-base">${esc(cName)}</p>
         <p class="text-slate-400">College Union Election ${yearValue}</p>
       </div>

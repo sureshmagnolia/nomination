@@ -54,6 +54,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
   const year = settings.electionYear || new Date().getFullYear();
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
   const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
+  const collegeLogo = settings.collegeLogo || '';
 
   // Filter nominations
   const validList = nominations.filter(n => n.status === 'Valid');
@@ -287,7 +288,9 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
       students: nominalRoll,
       isFinal: isRollFinal,
       isDraft: isDraftRoll,
-      collegeName
+      collegeName,
+      collegeLogo,
+      electionYear: year
     });
   });
 
@@ -324,8 +327,9 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
 
     let html = `
       <div style="text-align:center;margin-bottom:25px;border-bottom:2px solid #000;padding-bottom:12px">
+        ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:55px;max-width:140px;margin:0 auto 6px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
         <div style="font-size:13px;font-weight:600;color:#333;text-transform:uppercase;letter-spacing:0.5px">${esc(collegeName)}</div>
-        <h1 style="margin:4px 0;font-size:20px;text-transform:uppercase;font-weight:800;letter-spacing:0.5px">${esc(shortName)} College Union Election ${esc(year)}</h1>
+        <h1 style="margin:4px 0;font-size:20px;text-transform:uppercase;font-weight:800;letter-spacing:0.5px">College Union Election ${esc(year)}</h1>
         <h2 style="margin:4px 0 0 0;font-size:15px;color:#111;text-transform:uppercase;font-weight:700">
           ${isFinal ? 'FINAL LIST OF ELIGIBLE CONTESTING CANDIDATES' : 'LIST OF VALID NOMINATIONS'}
         </h2>
@@ -477,8 +481,9 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
       </style>
       <div class="official-sheet">
         <div class="header">
+          ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:60px;max-width:140px;margin:0 auto 8px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
           <h2>${esc(collegeName)}</h2>
-          <h1>${esc(shortName)} College Union Election ${esc(year)}</h1>
+          <h1>College Union Election ${esc(year)}</h1>
           <div style="font-size: 16px; margin-top: 12px; font-weight: 900; text-decoration: underline;">OFFICIAL RESULT DECLARATION NOTIFICATION</div>
         </div>
 

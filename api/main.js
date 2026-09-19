@@ -626,6 +626,7 @@ export default async function handler(req, res) {
         collegeName: (await getSetting('collegeName')) || 'Government Victoria College, Palakkad',
         collegeShortName: (await getSetting('collegeShortName')) || 'GVC',
         electionYear: (await getSetting('electionYear')) || new Date().getFullYear().toString(),
+        collegeLogo: (await getSetting('collegeLogo')) || '',
         notificationDate: await getSetting('notificationDate')
       };
       if (action === 'adminGetSettings') {
@@ -1263,8 +1264,10 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminUpdateSettings') {
-      if (body.collegeName) await setSetting('collegeName', body.collegeName);
-      if (body.collegeShortName) await setSetting('collegeShortName', body.collegeShortName);
+      if (body.collegeName !== undefined) await setSetting('collegeName', body.collegeName);
+      if (body.collegeShortName !== undefined) await setSetting('collegeShortName', body.collegeShortName);
+      if (body.electionYear !== undefined) await setSetting('electionYear', body.electionYear);
+      if (body.collegeLogo !== undefined) await setSetting('collegeLogo', body.collegeLogo);
       return jsonOut(res, { ok: true });
     }
 

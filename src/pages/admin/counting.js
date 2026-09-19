@@ -30,6 +30,8 @@ export async function renderAdminCounting(container) {
 
 function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nominalRoll, settings = {}) {
   const collegeName = settings?.collegeName || CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad';
+  const electionYear = settings?.electionYear || new Date().getFullYear().toString();
+  const collegeLogo = settings?.collegeLogo || '';
   if (!booths.length) { main.innerHTML = `<div class="alert alert-error">❌ No booths configured.</div>`; return; }
   if (!posts.length)  { main.innerHTML = `<div class="alert alert-error">❌ No posts configured.</div>`; return; }
 
@@ -96,7 +98,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
           const pn = pName(post);
           const serial = formSerials[`${t}-${r}`];
           const cands = finalList.filter(c => c.post === pn).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
-          html += buildFormHtml(booths[t].boothNumber, r + 1, pn, cands, serial, collegeName);
+          html += buildFormHtml(booths[t].boothNumber, r + 1, pn, cands, serial, collegeName, electionYear, collegeLogo);
           count++;
         }
       }
@@ -248,8 +250,9 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
   }
 }
 
-function buildFormHtml(tableNum, roundNum, postName, candidates, serial, collegeName = CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad') {
+function buildFormHtml(tableNum, roundNum, postName, candidates, serial, collegeName = CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad', electionYear = '', collegeLogo = '') {
   const pName = p => String(p.post || p.name || '');
+  const yearStr = electionYear || new Date().getFullYear().toString();
   const rows = candidates.length
     ? candidates.map((c, i) => `<tr>
         <td style="text-align:center;padding:18px 8px;font-weight:bold">${i+1}</td>
@@ -263,7 +266,9 @@ function buildFormHtml(tableNum, roundNum, postName, candidates, serial, college
   return `<div class="pg">
     <div class="serial-tag">FORM #${serial}</div>
     <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:16px;padding-right:100px;">
-      <div style="font-size:11px;color:#555">${collegeName} — College Union Election</div>
+      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:45px;max-width:120px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+      <div style="font-size:13px;font-weight:bold;color:#111;text-transform:uppercase;">${esc(collegeName)}</div>
+      <div style="font-size:12px;font-weight:bold;color:#444;margin-top:2px;">College Union Election ${esc(yearStr)}</div>
       <h2 style="margin:6px 0 0;font-size:20px;text-transform:uppercase;letter-spacing:2px">Counting Form</h2>
       <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:15px;font-weight:bold">
         <span>TABLE: <u>${tableNum}</u></span><span>ROUND: <u>${roundNum}</u></span>
