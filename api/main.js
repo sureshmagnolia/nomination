@@ -26,7 +26,17 @@ const checkAdmin = async (password, sessionToken, action) => {
     throw new Error('UNAUTHORIZED_SESSION_MISSING');
   }
 
-  const validSession = await sql`SELECT token FROM admin_sessions WHERE token = ${sessionToken} AND created_at > NOW() - INTERVAL '24 hours'`;
+  let validSession = [];
+  try {
+    validSession = await sql`SELECT token FROM admin_sessions WHERE token = ${sessionToken} AND created_at > NOW() - INTERVAL '24 hours'`;
+  } catch (sessionErr) {
+    if (String(sessionErr.message).toLowerCase().includes('created_at')) {
+      try { await sql`ALTER TABLE admin_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`; } catch (_) {}
+      validSession = await sql`SELECT token FROM admin_sessions WHERE token = ${sessionToken}`;
+    } else {
+      throw sessionErr;
+    }
+  }
   if (validSession.length === 0) {
     throw new Error('UNAUTHORIZED_SESSION_INVALID_OR_EXPIRED');
   }
@@ -180,6 +190,8 @@ async function ensureSchema() {
     try { await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS year_rule_mode VARCHAR(20) DEFAULT 'ALL';`; } catch (_) {}
     try { await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS year_rule_years VARCHAR(255) DEFAULT '';`; } catch (_) {}
     try { await sql`ALTER TABLE admin_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`; } catch (_) {}
+    try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`; } catch (_) {}
+    try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`; } catch (_) {}
     
     await sql`
       CREATE TABLE IF NOT EXISTS nominal_roll (
@@ -664,10 +676,11 @@ export default async function handler(req, res) {
             WHEN candidate_serial ~ '^[0-9]+$' THEN CAST(candidate_serial AS BIGINT) 
             ELSE 999999999 
           END ASC, 
-          created_at ASC
+          timestamp ASC,
+          id ASC
       `;
       return jsonOut(res, noms.map(n => ({
-        id: n.id, post: n.post, gender: n.gender, dob: n.dob, timestamp: n.timestamp,
+        id: n.id, post: n.post, gender: n.gender, dob: n.dob, timestamp: n.timestamp || n.created_at,
         candidateSerial: n.candidate_serial, proposerSerial: n.proposer_serial, seconderSerial: n.seconder_serial,
         candidateAdmission: n.candidate_admission, proposerAdmission: n.proposer_admission, seconderAdmission: n.seconder_admission,
         status: n.status, withdrawalStatus: n.withdrawal_status, rejectionReason: n.rejection_reason,
@@ -2187,8 +2200,8 @@ export default async function handler(req, res) {
             serial_number ASC
         `,
         sql`SELECT * FROM roll_corrections ORDER BY timestamp DESC`,
-        sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction", restricted_dept as "restrictedDept", year_rule_mode as "yearRuleMode", year_rule_years as "yearRuleYears" FROM posts ORDER BY id ASC`,
-        sql`SELECT * FROM nominations ORDER BY created_at ASC`,
+        sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction", restricted_dept as "restrictedDept", year_rule_mode as "yearRuleMode", year_rule_years as "yearRuleYears" FROM posts ORDER BY post ASC`,
+        sql`SELECT * FROM nominations ORDER BY timestamp ASC`,
         sql`SELECT key, value FROM settings WHERE key NOT IN ('adminPassword', 'adminOTP', 'adminEmail')`
       ]);
 
@@ -2305,7 +2318,7 @@ export default async function handler(req, res) {
         const [curRoll, curCorr, curPosts, curNoms, curSettings] = await Promise.all([
           sql`SELECT serial_number, name, class, admission_no, dept FROM nominal_roll`,
           sql`SELECT * FROM roll_corrections`,
-          sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction", restricted_dept as "restrictedDept", year_rule_mode as "yearRuleMode", year_rule_years as "yearRuleYears" FROM posts ORDER BY id ASC`,
+          sql`SELECT post, female_only as "femaleOnly", final_year_ineligible as "finalYearIneligible", year_restriction as "yearRestriction", dept_restriction as "deptRestriction", restricted_dept as "restrictedDept", year_rule_mode as "yearRuleMode", year_rule_years as "yearRuleYears" FROM posts ORDER BY post ASC`,
           sql`SELECT * FROM nominations`,
           sql`SELECT key, value FROM settings WHERE key NOT IN ('adminPassword', 'adminOTP')`
         ]);
