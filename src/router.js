@@ -1,6 +1,6 @@
 /**
  * router.js
- * Simple hash-based SPA router.
+ * Robust hash-based SPA router.
  */
 
 const routes = {};
@@ -14,12 +14,24 @@ export const router = {
     this._resolve(path, params);
   },
   start() {
+    const resolveCurrent = (params = {}) => {
+      const hash = window.location.hash.replace(/^#/, '').trim() || defaultRoute;
+      const path = hash.split('?')[0] || defaultRoute;
+      this._resolve(path, params);
+    };
+
     window.addEventListener('popstate', (e) => {
-      const { path, params } = e.state || { path: defaultRoute, params: {} };
+      const pathFromHash = window.location.hash.replace(/^#/, '').trim().split('?')[0];
+      const path = e.state?.path || pathFromHash || defaultRoute;
+      const params = e.state?.params || {};
       this._resolve(path, params);
     });
-    const hash = window.location.hash.replace('#', '') || defaultRoute;
-    this._resolve(hash, {});
+
+    window.addEventListener('hashchange', () => {
+      resolveCurrent({});
+    });
+
+    resolveCurrent({});
   },
   _resolve(path, params) {
     const handler = routes[path] || routes[defaultRoute];

@@ -104,7 +104,7 @@ export async function renderSettings(container) {
               <p class="text-sky-200/70 text-sm mt-1">Export or restore the entire election database: Nominal Roll, Corrections, Nominations, Booths, Ballots, Counting Matrices, and Certified Results. Includes automatic pre-restore safety snapshots and 1-click rollbacks.</p>
             </div>
           </div>
-          <a href="#/admin/backup" class="btn bg-sky-600 hover:bg-sky-500 text-white font-semibold px-5 py-2.5 whitespace-nowrap shadow-lg shadow-sky-900/40">
+          <a href="#/admin/backup" data-nav="/admin/backup" class="btn bg-sky-600 hover:bg-sky-500 text-white font-semibold px-5 py-2.5 whitespace-nowrap shadow-lg shadow-sky-900/40">
             Open Backup Center &rarr;
           </a>
         </div>

@@ -83,12 +83,19 @@ router
   .on('/admin/backup',      render(renderAdminBackup))
   .setDefault('/');
 
-// Handle clicks on data-nav attributes globally (delegation)
+// Handle clicks on data-nav attributes and hash links globally (delegation)
 document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-nav]');
   if (el) {
     e.preventDefault();
     router.navigate(el.dataset.nav);
+    return;
+  }
+  const hashAnchor = e.target.closest('a[href^="#/"]');
+  if (hashAnchor) {
+    e.preventDefault();
+    const target = hashAnchor.getAttribute('href').replace(/^#/, '');
+    router.navigate(target);
   }
 });
 
