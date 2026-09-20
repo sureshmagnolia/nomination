@@ -11,6 +11,8 @@ const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_to_prevent
 const jsonOut = (res, data, status = 200) => res.status(status).json(data);
 const errOut = (res, msg, status = 400) => res.status(status).json({ error: msg });
 
+const getAuthToken = (req) => (req && req.headers ? (req.headers['x-session-token'] || req.headers['x-admin-password'] || req.headers['authorization'] || '') : '');
+
 const checkAdmin = async (password, sessionToken, action) => {
   if (!action.startsWith('admin')) return;
   if (action === 'adminSendOTP' || action === 'adminVerifyOTP' || action === 'adminLogin') return; // Auth handled in endpoint
@@ -192,6 +194,7 @@ async function ensureSchema() {
     try { await sql`ALTER TABLE admin_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`; } catch (_) {}
     try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`; } catch (_) {}
     try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`; } catch (_) {}
+    try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS rejection_reason TEXT;`; } catch (_) {}
     
     await sql`
       CREATE TABLE IF NOT EXISTS nominal_roll (
@@ -225,7 +228,34 @@ async function ensureSchema() {
         seconder_name VARCHAR(255),
         seconder_class VARCHAR(255),
         seconder_admission VARCHAR(255),
-        seconder_dept VARCHAR(255)
+        seconder_dept VARCHAR(255),
+        rejection_reason TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS roll_corrections (
+        id VARCHAR(64) PRIMARY KEY,
+        admission_no VARCHAR(255) NOT NULL,
+        student_name VARCHAR(255) NOT NULL,
+        department VARCHAR(255),
+        class_name VARCHAR(255),
+        correction_type VARCHAR(100) NOT NULL,
+        details TEXT NOT NULL,
+        contact_info VARCHAR(255),
+        status VARCHAR(50) DEFAULT 'Pending',
+        admin_notes TEXT,
+        timestamp VARCHAR(100)
+      );
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS backup_snapshots (
+        id VARCHAR(64) PRIMARY KEY,
+        snapshot_name VARCHAR(255) NOT NULL,
+        trigger_type VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        summary_json TEXT,
+        data_json TEXT
       );
     `;
     await seedDefaultPostsIfEmpty();
@@ -308,7 +338,22 @@ async function fetchPostsFromDb() {
     }
   }
 
-  return (rawPosts || []).map(p => {
+  const orderRaw = await getSetting('posts_order');
+  let orderList = [];
+  if (orderRaw) {
+    try { orderList = JSON.parse(orderRaw); } catch (_) {}
+  }
+  let sortedPosts = (rawPosts || []);
+  if (Array.isArray(orderList) && orderList.length > 0) {
+    const orderMap = new Map(orderList.map((name, idx) => [name, idx]));
+    sortedPosts = [...sortedPosts].sort((a, b) => {
+      const idxA = orderMap.has(a.post) ? orderMap.get(a.post) : 9999;
+      const idxB = orderMap.has(b.post) ? orderMap.get(b.post) : 9999;
+      return idxA - idxB;
+    });
+  }
+
+  return sortedPosts.map(p => {
     let yrYears = [];
     if (p.yearRuleYears) {
       yrYears = Array.isArray(p.yearRuleYears) ? p.yearRuleYears : String(p.yearRuleYears).split(',').map(y => y.trim()).filter(Boolean);
@@ -832,14 +877,16 @@ export default async function handler(req, res) {
     if (action === 'getResults') {
       const published = await getSetting('resultsPublished');
       const countingActive = (await getSetting('countingActive')) === 'true';
+      const locked = (await getSetting('resultsLocked')) === 'true';
       if (published !== 'true') {
-        return jsonOut(res, { results: [], published: false, countingActive });
+        return jsonOut(res, { results: [], published: false, countingActive, locked });
       }
       const data = await getSetting('results_data');
       return jsonOut(res, {
         results: data ? JSON.parse(data) : [],
         published: true,
-        countingActive
+        countingActive,
+        locked
       });
     }
 
@@ -1217,14 +1264,17 @@ export default async function handler(req, res) {
       // Wipe transactional data
       await sql`TRUNCATE TABLE nominal_roll`;
       await sql`TRUNCATE TABLE nominations`;
-      await sql`TRUNCATE TABLE ballot_plan`;
+      try { await sql`TRUNCATE TABLE roll_corrections`; } catch(_) {}
 
-      // Reset election state flags
+      // Reset election state flags and delete transactional settings
       await setSetting('isRollFinalized', 'false');
+      await setSetting('draftRollPublished', 'false');
       await setSetting('validListPublished', 'false');
       await setSetting('finalListPublished', 'false');
       await setSetting('resultsPublished', 'false');
       await setSetting('resultsLocked', 'false');
+      await setSetting('countingActive', 'false');
+      await sql`DELETE FROM settings WHERE key IN ('ballotPlan', 'general_ballot_config', 'booths_data', 'availableLocations', 'results_data', 'countingMatrix', 'posts_order')`;
 
       return jsonOut(res, { ok: true });
     }
@@ -1556,6 +1606,12 @@ export default async function handler(req, res) {
 
     if (action === 'adminDeletePost') {
       await sql`DELETE FROM posts WHERE post = ${body.postName}`;
+      return jsonOut(res, { ok: true });
+    }
+
+    if (action === 'adminReorderPosts') {
+      const order = Array.isArray(body.posts) ? body.posts : [];
+      await setSetting('posts_order', JSON.stringify(order));
       return jsonOut(res, { ok: true });
     }
 
@@ -2173,7 +2229,7 @@ export default async function handler(req, res) {
     };
 
     if (action === 'adminExportBackup') {
-      const enteredPwd = body.password || getAuthToken(req);
+      const enteredPwd = adminPwd || body.password || getAuthToken(req);
       const pwdRows = await sql`SELECT value FROM settings WHERE key = 'adminPassword'`;
       const realPwd = pwdRows.length > 0 ? pwdRows[0].value : 'admin123';
       const isPwdValid = enteredPwd === realPwd;
@@ -2398,7 +2454,7 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminRunAudit') {
-      const enteredPwd = body.password || getAuthToken(req);
+      const enteredPwd = adminPwd || body.password || getAuthToken(req);
       const pwdRows = await sql`SELECT value FROM settings WHERE key = 'adminPassword'`;
       const realPwd = pwdRows.length > 0 ? pwdRows[0].value : 'admin123';
       if (!enteredPwd || enteredPwd !== realPwd) {
