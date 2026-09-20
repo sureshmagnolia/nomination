@@ -202,9 +202,26 @@ const restoreEngine = (apiCode.includes("adminRevertSnapshot") || apiCode.includ
 assertCheck('DisasterRecovery', 'Point-in-Time Snapshot Reversion Engine', restoreEngine);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 8. CROSS-REPOSITORY PARITY & SHA256 INTEGRITY
+// 8. DEFENSIVE PROGRAMMING, PARSING SAFETY & POPUP RESILIENCE
 // ─────────────────────────────────────────────────────────────────────────────
-console.log('\n[SECTION 8] CROSS-REPOSITORY PARITY (nomination vs gcc_unionelection)');
+console.log('\n[SECTION 8] DEFENSIVE PROGRAMMING & RUNTIME CRASH-RESILIENCE AUDIT');
+
+// Check 1: Safe request body parsing in api/main.js
+const hasSafeBodyParsing = apiCode.includes("try {") && apiCode.includes("body = JSON.parse(req.body)") && apiCode.includes("Invalid JSON body");
+assertCheck('Defensive', 'Crash-Proof POST Request Body Parsing', hasSafeBodyParsing, 'Invalid JSON body rejected with 400 without crashing');
+
+// Check 2: Zero unhandled JSON.parse in api/main.js
+const apiLines = apiCode.split('\n');
+let unsafeApiParses = 0;
+apiLines.forEach((l, idx) => {
+  if (l.includes('JSON.parse(') && !l.includes('safeJsonParse')) {
+    const win = apiLines.slice(Math.max(0, idx - 8), Math.min(apiLines.length, idx + 8)).join('\n');
+    if (!win.includes('try {') || !win.includes('catch')) unsafeApiParses++;
+  }
+});
+assertCheck('Defensive', 'Zero Unhandled JSON.parse Calls in Backend API', unsafeApiParses === 0, `${unsafeApiParses} unhandled found`);
+
+// Check 3: Zero unhandled JSON.parse in frontend src
 function getFilesRecursively(dir) {
   let res = [];
   fs.readdirSync(dir).forEach(file => {
@@ -219,6 +236,50 @@ function getFilesRecursively(dir) {
 }
 
 const nomSrcFiles = getFilesRecursively(srcDir);
+
+let unsafeFrontendParses = 0;
+nomSrcFiles.filter(f => f.endsWith('.js')).forEach(f => {
+  const code = fs.readFileSync(f, 'utf8');
+  const lines = code.split('\n');
+  lines.forEach((l, idx) => {
+    if (l.includes('JSON.parse(')) {
+      const win = lines.slice(Math.max(0, idx - 15), Math.min(lines.length, idx + 15)).join('\n');
+      if (!win.includes('try {') || !win.includes('catch')) unsafeFrontendParses++;
+    }
+  });
+});
+assertCheck('Defensive', 'Zero Unhandled JSON.parse Calls in Frontend Client Code', unsafeFrontendParses === 0, `${unsafeFrontendParses} unhandled found`);
+
+// Check 4: 100% Guarded window.open against Popup Blockers
+let unguardedWindowOpens = 0;
+nomSrcFiles.filter(f => f.endsWith('.js')).forEach(f => {
+  const code = fs.readFileSync(f, 'utf8');
+  const lines = code.split('\n');
+  lines.forEach((l, idx) => {
+    if (l.includes('window.open(')) {
+      const win = lines.slice(idx, idx + 6).join('\n');
+      const guarded = win.includes('!w') || win.includes('!win') || win.includes('!printWin') || win.includes('Popup blocked') || win.includes('Pop-up blocked');
+      if (!guarded) unguardedWindowOpens++;
+    }
+  });
+});
+assertCheck('Defensive', '100% Print/Export Popup Blockers Guarded', unguardedWindowOpens === 0, `${unguardedWindowOpens} unguarded found`);
+
+// Check 5: Corrupted cache auto-invalidation in live results page
+const resultsCode = fs.readFileSync(path.join(srcDir, 'pages/results.js'), 'utf8');
+const hasCacheAutoPurge = resultsCode.includes('localStorage.removeItem(CACHE_KEY)') && resultsCode.includes('posts = null');
+assertCheck('Defensive', 'Corrupted Results Cache Auto-Purge & Fresh Network Fallback', hasCacheAutoPurge, 'Corrupt storage safely purged');
+
+// Check 6: Schema Alteration Backward-Compatibility Fallbacks
+const hasAlterFallbacks = apiCode.includes('ALTER TABLE admin_sessions ADD COLUMN IF NOT EXISTS created_at') &&
+                          apiCode.includes('ALTER TABLE backup_snapshots ADD COLUMN IF NOT EXISTS created_at') &&
+                          apiCode.includes('ALTER TABLE nominations ADD COLUMN IF NOT EXISTS rejection_reason');
+assertCheck('Defensive', 'Zero-Downtime Database Column Schema Migration Fallbacks', hasAlterFallbacks, 'All ALTER TABLE IF NOT EXISTS enforced');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 9. CROSS-REPOSITORY PARITY & SHA256 INTEGRITY
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[SECTION 9] CROSS-REPOSITORY PARITY (nomination vs gcc_unionelection)');
 let hashMismatches = 0;
 
 nomSrcFiles.forEach(f => {

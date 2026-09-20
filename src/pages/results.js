@@ -84,16 +84,24 @@ async function fetchAndRender(main, force = false) {
 
     if (!force && lastFetch && cachedData && (Date.now() - parseInt(lastFetch, 10) < REFRESH_INTERVAL)) {
       // Use cache
-      const parsed = JSON.parse(cachedData);
-      posts = parsed.posts;
-      results = parsed.results;
-      const schedule = parsed.schedule || {};
-      isCountingActive = parsed.isCountingActive || schedule.countingActive === 'true';
-      isResultsPublished = parsed.isResultsPublished || schedule.resultsPublished === 'true';
-      isResultsLocked = parsed.isResultsLocked || false;
-      const year = schedule.electionYear || new Date().getFullYear();
-      updateHeader(main, year);
-    } else {
+      try {
+        const parsed = JSON.parse(cachedData);
+        posts = parsed.posts;
+        results = parsed.results;
+        const schedule = parsed.schedule || {};
+        isCountingActive = parsed.isCountingActive || schedule.countingActive === 'true';
+        isResultsPublished = parsed.isResultsPublished || schedule.resultsPublished === 'true';
+        isResultsLocked = parsed.isResultsLocked || false;
+        const year = schedule.electionYear || new Date().getFullYear();
+        updateHeader(main, year);
+      } catch (_) {
+        localStorage.removeItem(CACHE_KEY);
+        localStorage.removeItem(CACHE_TIME_KEY);
+        posts = null;
+      }
+    }
+    
+    if (!posts) {
       // Fetch fresh
       main.innerHTML = `
         <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Fetching Live Results...</p></div>

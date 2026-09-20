@@ -234,6 +234,10 @@ export function displayDob(day, month, year) {
 // ─── Print helper ──────────────────────────────────────────────────────────────
 export function triggerPrint(htmlContent, title = 'Nomination Form') {
   const win = window.open('', '_blank');
+  if (!win) {
+    alert('Popup blocked! Please allow popups for this site to print.');
+    return;
+  }
   win.document.write(`
     <!DOCTYPE html>
     <html>

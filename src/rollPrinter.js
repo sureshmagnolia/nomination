@@ -719,6 +719,10 @@ export function executeRollPrint({
   }
 
   const printWin = window.open('', '_blank');
+  if (!printWin) {
+    alert('Popup blocked! Please allow popups for this site to print.');
+    return;
+  }
   printWin.document.write(`
     <!DOCTYPE html>
     <html>

@@ -651,6 +651,10 @@ export async function renderAdminBallots(container) {
 
   const triggerPrint = (html) => {
     const printWin = window.open('', '_blank');
+    if (!printWin) {
+      alert('Popup blocked! Please allow popups for this site to print.');
+      return;
+    }
     printWin.document.write(`
       <html>
         <head>

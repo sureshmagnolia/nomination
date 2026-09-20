@@ -11,6 +11,16 @@ const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_to_prevent
 const jsonOut = (res, data, status = 200) => res.status(status).json(data);
 const errOut = (res, msg, status = 400) => res.status(status).json({ error: msg });
 
+const safeJsonParse = (val, fallback = null) => {
+  if (val === null || val === undefined || val === '') return fallback;
+  if (typeof val !== 'string') return val;
+  try {
+    return JSON.parse(val);
+  } catch (_) {
+    return fallback;
+  }
+};
+
 const getAuthToken = (req) => (req && req.headers ? (req.headers['x-session-token'] || req.headers['x-admin-password'] || req.headers['authorization'] || '') : '');
 
 const checkAdmin = async (password, sessionToken, action) => {
@@ -195,6 +205,7 @@ async function ensureSchema() {
     try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`; } catch (_) {}
     try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`; } catch (_) {}
     try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS rejection_reason TEXT;`; } catch (_) {}
+    try { await sql`ALTER TABLE backup_snapshots ADD COLUMN IF NOT EXISTS created_at VARCHAR(100);`; } catch (_) {}
     
     await sql`
       CREATE TABLE IF NOT EXISTS nominal_roll (
@@ -402,10 +413,18 @@ export default async function handler(req, res) {
     let body = {};
     
     if (req.method === 'GET' || req.method === 'HEAD') {
-      action = req.query.action;
-      body = req.query;
+      action = req.query?.action;
+      body = req.query || {};
     } else if (req.method === 'POST') {
-      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      if (typeof req.body === 'string') {
+        try {
+          body = JSON.parse(req.body) || {};
+        } catch (_) {
+          return errOut(res, 'Invalid JSON body in request', 400);
+        }
+      } else {
+        body = req.body || {};
+      }
       action = body.action;
     }
 
@@ -866,12 +885,12 @@ export default async function handler(req, res) {
 
     if (action === 'adminGetBooths') {
       const data = await getSetting('booths_data');
-      return jsonOut(res, data ? JSON.parse(data) : []);
+      return jsonOut(res, safeJsonParse(data, []));
     }
 
     if (action === 'adminGetLocations') {
       const data = await getSetting('availableLocations');
-      return jsonOut(res, data ? JSON.parse(data) : []);
+      return jsonOut(res, safeJsonParse(data, []));
     }
 
     if (action === 'getResults') {
@@ -883,7 +902,7 @@ export default async function handler(req, res) {
       }
       const data = await getSetting('results_data');
       return jsonOut(res, {
-        results: data ? JSON.parse(data) : [],
+        results: safeJsonParse(data, []),
         published: true,
         countingActive,
         locked
@@ -892,17 +911,17 @@ export default async function handler(req, res) {
 
     if (action === 'adminGetResults') {
       const data = await getSetting('results_data');
-      return jsonOut(res, data ? JSON.parse(data) : []);
+      return jsonOut(res, safeJsonParse(data, []));
     }
 
     if (action === 'adminGetCountingMatrix') {
       const data = await getSetting('countingMatrix');
-      return jsonOut(res, data ? JSON.parse(data) : null);
+      return jsonOut(res, safeJsonParse(data, null));
     }
 
     if (action === 'adminGetBallotConfig') {
       const data = await getSetting('general_ballot_config');
-      return jsonOut(res, data ? JSON.parse(data) : null);
+      return jsonOut(res, safeJsonParse(data, null));
     }
 
     if (action === 'adminSaveBallotConfig') {
@@ -914,7 +933,7 @@ export default async function handler(req, res) {
     if (action === 'adminGetBallotPlan') {
       const data = await getSetting('ballotPlan');
       if (!data) return jsonOut(res, null);
-      return jsonOut(res, JSON.parse(data));
+      return jsonOut(res, safeJsonParse(data, null));
     }
 
     if (action === 'adminGenerateBallotPlan') {
@@ -927,7 +946,7 @@ export default async function handler(req, res) {
       const candidates = nomRows.filter(n => n.withdrawal_status !== 'Approved');
 
       const boothsDataRaw = await getSetting('booths_data');
-      const booths = boothsDataRaw ? JSON.parse(boothsDataRaw) : [];
+      const booths = safeJsonParse(boothsDataRaw, []);
       booths.sort((a, b) => Number(a.boothNumber) - Number(b.boothNumber));
 
       const students = await sql`SELECT serial_number as "Nominal Roll Serial Number", name as "NAME", class as "CLASS", admission_no as "ADMISION NO", dept as "Dept" FROM nominal_roll`;
@@ -955,7 +974,7 @@ export default async function handler(req, res) {
 
       // Retrieve Ballot Configuration for General Posts (Split or Unified)
       const rawBallotConfig = await getSetting('general_ballot_config');
-      const ballotConfig = rawBallotConfig ? JSON.parse(rawBallotConfig) : null;
+      const ballotConfig = safeJsonParse(rawBallotConfig, null);
       const isSplit = !!(ballotConfig && ballotConfig.isSplit && Array.isArray(ballotConfig.ballots) && ballotConfig.ballots.length > 1);
 
       let generalParts = [];
@@ -1064,7 +1083,7 @@ export default async function handler(req, res) {
         const partBoothResults = [];
 
         booths.forEach(b => {
-          const bClasses = (Array.isArray(b.classes) ? b.classes : JSON.parse(b.classes || '[]')).map(c => String(c).trim().toUpperCase());
+          const bClasses = (Array.isArray(b.classes) ? b.classes : safeJsonParse(b.classes, [])).map(c => String(c).trim().toUpperCase());
           const boothStudents = students.filter(s => bClasses.includes(String(s.CLASS || '').trim().toUpperCase()));
           const count = boothStudents.length;
           const start = partSl;
@@ -1113,7 +1132,7 @@ export default async function handler(req, res) {
       const yrPosts = contestablePosts.filter(p => isYear(p) && !isAssoc(p));
       yrPosts.forEach(p => {
         booths.forEach(b => {
-          const bClasses = (Array.isArray(b.classes) ? b.classes : JSON.parse(b.classes || '[]')).map(c => String(c).trim().toUpperCase());
+          const bClasses = (Array.isArray(b.classes) ? b.classes : safeJsonParse(b.classes, [])).map(c => String(c).trim().toUpperCase());
           const boothStudents = students.filter(s => bClasses.includes(String(s.CLASS || '').trim().toUpperCase()));
           const targetStudents = boothStudents.filter(s => {
             const cls = String(s.CLASS || '').toUpperCase();
@@ -1146,7 +1165,7 @@ export default async function handler(req, res) {
         dept = dept.replace(/[-\s]/g, ' ').trim();
 
         booths.forEach(b => {
-          const bClasses = (Array.isArray(b.classes) ? b.classes : JSON.parse(b.classes || '[]')).map(c => String(c).trim().toUpperCase());
+          const bClasses = (Array.isArray(b.classes) ? b.classes : safeJsonParse(b.classes, [])).map(c => String(c).trim().toUpperCase());
           const boothStudents = students.filter(s => bClasses.includes(String(s.CLASS || '').trim().toUpperCase()));
           const targetStudents = boothStudents.filter(s => {
             const sDept = String(s.Dept || '').trim().toUpperCase().replace(/[-\s]/g, ' ');
@@ -2334,7 +2353,7 @@ export default async function handler(req, res) {
         snapshotName: r.snapshotName,
         triggerType: r.triggerType,
         createdAt: r.createdAt,
-        summary: r.summaryJson ? JSON.parse(r.summaryJson) : {}
+        summary: safeJsonParse(r.summaryJson, {})
       }));
       return jsonOut(res, snapshots);
     }
@@ -2345,7 +2364,13 @@ export default async function handler(req, res) {
       if (!snapId) return errOut(res, 'Snapshot ID is required.');
       const rows = await sql`SELECT data_json FROM backup_snapshots WHERE id = ${snapId}`;
       if (!rows.length) return errOut(res, 'Snapshot not found.');
-      return jsonOut(res, JSON.parse(rows[0].data_json));
+      let parsed = null;
+      try {
+        parsed = JSON.parse(rows[0].data_json);
+      } catch (err) {
+        return errOut(res, 'Snapshot payload is corrupted or invalid JSON', 500);
+      }
+      return jsonOut(res, parsed);
     }
 
     if (action === 'adminRestoreBackup') {
@@ -2440,7 +2465,12 @@ export default async function handler(req, res) {
       const snapRows = await sql`SELECT data_json FROM backup_snapshots WHERE id = ${snapId}`;
       if (!snapRows.length) return errOut(res, 'Snapshot record not found.');
 
-      const backupPackage = JSON.parse(snapRows[0].data_json);
+      let backupPackage = null;
+      try {
+        backupPackage = JSON.parse(snapRows[0].data_json);
+      } catch (err) {
+        return errOut(res, 'Snapshot record is corrupted or invalid JSON. Revert aborted.', 500);
+      }
       const restoredCounts = await restoreDatabasePayload(backupPackage, {
         selectedModules: { nominalRoll: true, rollCorrections: true, posts: true, nominations: true, settings: true },
         restoreMode: 'full_wipe_and_replace'
@@ -2474,9 +2504,9 @@ export default async function handler(req, res) {
         getSetting('results_data')
       ]);
 
-      const plan = planRaw ? JSON.parse(planRaw) : null;
-      const matrix = matrixRaw ? JSON.parse(matrixRaw) : null;
-      const resultsData = resultsRaw ? JSON.parse(resultsRaw) : [];
+      const plan = safeJsonParse(planRaw, null);
+      const matrix = safeJsonParse(matrixRaw, null);
+      const resultsData = safeJsonParse(resultsRaw, []);
 
       // Check 1: Nominal Roll vs Ballot Plan
       if (plan) {

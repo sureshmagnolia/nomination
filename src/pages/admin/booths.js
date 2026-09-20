@@ -224,6 +224,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       area.innerHTML = buildElectoralRollHtml(booths, nominalRoll, posts, classStats, nominations, plan);
       
       const printWin = window.open('', '_blank');
+      if (!printWin) {
+        alert('Popup blocked! Please allow popups for this site to print.');
+        return;
+      }
       printWin.document.write(`
         <html>
           <head>
@@ -272,6 +276,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       area.innerHTML = buildBallotAccountHtml(booths, nominalRoll, posts, classStats, nominations, plan);
       
       const printWin = window.open('', '_blank');
+      if (!printWin) {
+        alert('Popup blocked! Please allow popups for this site to print.');
+        return;
+      }
       printWin.document.write(`
         <html>
           <head>
