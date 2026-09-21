@@ -960,8 +960,9 @@ export async function renderAdminBallots(container) {
         }
       }
 
-      const year = schedule.electionYear || new Date().getFullYear();
-      const collegeName = settings.collegeName || 'Government Victoria College Palakkad';
+      const year = settings.electionYear || schedule.electionYear || new Date().getFullYear().toString();
+      const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
+      const collegeLogo = settings.collegeLogo || '';
 
       const renderBooks = (booksOrHtml) => {
         if (!booksOrHtml || (Array.isArray(booksOrHtml) && booksOrHtml.length === 0)) return '-';
