@@ -354,10 +354,11 @@ function openFindSerialModal(role, roleLabel, onSelect) {
     }
     const matches = nominalRoll.filter(s => {
       const name = String(s['NAME'] || s.name || '').toLowerCase();
-      const adm  = String(s['ADMISION NO'] || s['ADMISSION NO'] || s.admission_no || '').toLowerCase();
+      const adm  = String(s['ADMISION NO'] || s['ADMISSION NO'] || s.admission_no || s['Admission No'] || s['Adm No'] || '').toLowerCase();
       const cls  = String(s['CLASS'] || s.class || '').toLowerCase();
+      const dept = String(s['Dept'] || s.dept || '').toLowerCase();
       const sl   = String(s['Nominal Roll Serial Number'] || s.serial_number || '');
-      return name.includes(q) || adm.includes(q) || cls.includes(q) || sl === q;
+      return name.includes(q) || adm.includes(q) || cls.includes(q) || dept.includes(q) || sl === q || sl.includes(q);
     }).slice(0, 30);
 
     if (matches.length === 0) {
@@ -366,8 +367,9 @@ function openFindSerialModal(role, roleLabel, onSelect) {
     }
 
     resultsBox.innerHTML = matches.map(s => {
-      const sl = String(s['Nominal Roll Serial Number'] || s.serial_number || '');
+      const sl   = String(s['Nominal Roll Serial Number'] || s.serial_number || '');
       const name = String(s['NAME'] || s.name || '');
+      const adm  = String(s['ADMISION NO'] || s['ADMISSION NO'] || s.admission_no || s['Admission No'] || s['Adm No'] || '–');
       const cls  = String(s['CLASS'] || s.class || '');
       const dept = String(s['Dept'] || s.dept || 'N/A');
       const isRS = cls.toUpperCase().includes('RESEARCH') || cls.toUpperCase().includes('SCHOLAR');
