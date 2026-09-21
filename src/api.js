@@ -232,8 +232,20 @@ export const api = {
   getNomination: (id, admissionNo) => get({ action: 'getNomination', id, admissionNo }),
   getValidNominations: () => get({ action: 'getValidNominations' }),
   getFinalNominations: () => get({ action: 'getFinalNominations' }),
-  submitNomination: (payload) => post({ action: 'submitNomination', ...payload }),
-  submitWithdrawal: (id, admissionNo) => post({ action: 'submitWithdrawal', id, admissionNo }),
+  submitNomination: async (payload) => {
+    const res = await post({ action: 'submitNomination', ...payload });
+    invalidateCache('adminGetNominations');
+    invalidateCache('getPublicNominations');
+    invalidateCache('getValidNominations');
+    invalidateCache('getFinalNominations');
+    return res;
+  },
+  submitWithdrawal: async (id, admissionNo) => {
+    const res = await post({ action: 'submitWithdrawal', id, admissionNo });
+    invalidateCache('adminGetNominations');
+    invalidateCache('getPublicNominations');
+    return res;
+  },
 
   // ─── Admin API ──────────────────────────────────────────────────────────────
 
@@ -255,7 +267,10 @@ export const api = {
   adminLogout: (password) => post({ action: 'adminLogout', password }),
   adminSendOTP: (password) => post({ action: 'adminSendOTP', password }),
   adminVerifyOTP: (password, otp) => post({ action: 'adminVerifyOTP', password, otp }),
-  adminGetNominations: (password) => get({ action: 'adminGetNominations', password }),
+  adminGetNominations: (password, bypassCache = false) => {
+    if (bypassCache) invalidateCache('adminGetNominations');
+    return get({ action: 'adminGetNominations', password });
+  },
   adminGetFinalNominations: (password) => get({ action: 'adminGetFinalNominations', password }),
 
   adminVerifyNomination: (password, id, status, reason = null) => {

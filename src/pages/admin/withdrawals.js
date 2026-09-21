@@ -14,7 +14,7 @@ export async function renderAdminWithdrawals(container) {
   `);
 
   try {
-    const noms = await api.adminGetNominations(pwd);
+    const noms = await api.adminGetNominations(pwd, true);
     renderWithdrawalUI(container.querySelector('#adminMain'), noms, pwd);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;

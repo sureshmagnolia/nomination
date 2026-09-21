@@ -14,7 +14,7 @@ export async function renderAdminDashboard(container) {
 
   try {
     const [noms, settings] = await Promise.all([
-      api.adminGetNominations(pwd),
+      api.adminGetNominations(pwd, true),
       api.adminGetSettings(pwd),
     ]);
 
