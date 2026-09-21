@@ -16,8 +16,8 @@ export async function renderAdminBooths(container) {
   try {
     const [nominalRoll, booths, locations, posts, nominations, plan, settings] = await Promise.all([
       api.getNominalRoll(),
-      api.adminGetBooths(pwd).catch(() => []),
-      api.adminGetLocations(pwd).catch(() => []),
+      api.adminGetBooths(pwd, true).catch(() => []),
+      api.adminGetLocations(pwd, true).catch(() => []),
       api.adminGetPosts(pwd).catch(() => []),
       api.adminGetFinalNominations(pwd).catch(() => api.getFinalNominations()).catch(() => ({ active: [] })),
       api.adminGetBallotPlan(pwd).catch(() => null),

@@ -441,20 +441,27 @@ export const api = {
 
   // ─── Booths & Locations ───────────────────────────────────────────────────────
 
-  adminGetBooths: (password) => get({ action: 'adminGetBooths', password }),
-
-  adminSaveBooths: (password, booths) => {
-    updateCache({ action: 'adminGetBooths', password }, booths);
-    bgPost({ action: 'adminSaveBooths', password, booths });
-    return Promise.resolve({ ok: true });
+  adminGetBooths: (password, bypassCache = false) => {
+    if (bypassCache) invalidateCache('adminGetBooths');
+    return get({ action: 'adminGetBooths', password });
   },
 
-  adminGetLocations: (password) => get({ action: 'adminGetLocations', password }),
+  adminSaveBooths: async (password, booths) => {
+    const res = await post({ action: 'adminSaveBooths', password, booths });
+    invalidateCache('adminGetBooths');
+    invalidateCache('adminGetBallotPlan');
+    return res;
+  },
 
-  adminSaveLocations: (password, locations) => {
-    updateCache({ action: 'adminGetLocations', password }, locations);
-    bgPost({ action: 'adminSaveLocations', password, locations });
-    return Promise.resolve({ ok: true });
+  adminGetLocations: (password, bypassCache = false) => {
+    if (bypassCache) invalidateCache('adminGetLocations');
+    return get({ action: 'adminGetLocations', password });
+  },
+
+  adminSaveLocations: async (password, locations) => {
+    const res = await post({ action: 'adminSaveLocations', password, locations });
+    invalidateCache('adminGetLocations');
+    return res;
   },
 
   // ─── Results Management ──────────────────────────────────────────────────────

@@ -1692,12 +1692,14 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminSaveBooths') {
-      await setSetting('booths_data', JSON.stringify(body.booths));
+      const bData = typeof body.booths === 'string' ? body.booths : JSON.stringify(body.booths || []);
+      await setSetting('booths_data', bData);
       return jsonOut(res, { ok: true });
     }
 
     if (action === 'adminSaveLocations') {
-      await setSetting('availableLocations', JSON.stringify(body.locations));
+      const lData = typeof body.locations === 'string' ? body.locations : JSON.stringify(body.locations || []);
+      await setSetting('availableLocations', lData);
       return jsonOut(res, { ok: true });
     }
 
