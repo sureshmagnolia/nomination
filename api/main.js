@@ -170,6 +170,25 @@ async function seedDefaultPostsIfEmpty() {
   }
 }
 
+// Settings helpers (Module Scope)
+const getSetting = async (key) => {
+  try {
+    const rows = await sql`SELECT value FROM settings WHERE key = ${key}`;
+    return rows.length > 0 ? rows[0].value : null;
+  } catch (err) {
+    console.warn(`getSetting(${key}) warning:`, err.message);
+    return null;
+  }
+};
+
+const setSetting = async (key, value) => {
+  await sql`
+    INSERT INTO settings (key, value) 
+    VALUES (${key}, ${value}) 
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+  `;
+};
+
 let schemaEnsured = false;
 async function ensureSchema() {
   if (schemaEnsured) return;
@@ -311,21 +330,26 @@ async function fetchPostsFromDb() {
       `;
     } catch (retryErr) {
       console.warn('fetchPostsFromDb fallback to basic columns:', retryErr.message);
-      const basic = await sql`
-        SELECT 
-          post, 
-          female_only as "femaleOnly", 
-          final_year_ineligible as "finalYearIneligible", 
-          year_restriction as "yearRestriction", 
-          dept_restriction as "deptRestriction"
-        FROM posts
-      `;
-      rawPosts = basic.map(p => ({
-        ...p,
-        restrictedDept: p.deptRestriction && String(p.post || '').startsWith('Association Secretary ') ? p.post.replace('Association Secretary ', '').trim() : '',
-        yearRuleMode: p.finalYearIneligible ? 'EXCLUDE' : (p.yearRestriction ? 'INCLUDE' : 'ALL'),
-        yearRuleYears: p.finalYearIneligible ? '3_UG,2_PG' : (p.yearRestriction || '')
-      }));
+      try {
+        const basic = await sql`
+          SELECT 
+            post, 
+            female_only as "femaleOnly", 
+            final_year_ineligible as "finalYearIneligible", 
+            year_restriction as "yearRestriction", 
+            dept_restriction as "deptRestriction"
+          FROM posts
+        `;
+        rawPosts = basic.map(p => ({
+          ...p,
+          restrictedDept: p.deptRestriction && String(p.post || '').startsWith('Association Secretary ') ? p.post.replace('Association Secretary ', '').trim() : '',
+          yearRuleMode: p.finalYearIneligible ? 'EXCLUDE' : (p.yearRestriction ? 'INCLUDE' : 'ALL'),
+          yearRuleYears: p.finalYearIneligible ? '3_UG,2_PG' : (p.yearRestriction || '')
+        }));
+      } catch (finalErr) {
+        console.warn('fetchPostsFromDb fallback to DEFAULT_POSTS:', finalErr.message);
+        rawPosts = DEFAULT_POSTS;
+      }
     }
   }
 
@@ -350,10 +374,7 @@ async function fetchPostsFromDb() {
   }
 
   const orderRaw = await getSetting('posts_order');
-  let orderList = [];
-  if (orderRaw) {
-    try { orderList = JSON.parse(orderRaw); } catch (_) {}
-  }
+  let orderList = safeJsonParse(orderRaw, []);
   let sortedPosts = (rawPosts || []);
   if (Array.isArray(orderList) && orderList.length > 0) {
     const orderMap = new Map(orderList.map((name, idx) => [name, idx]));
@@ -564,19 +585,6 @@ export default async function handler(req, res) {
       return jsonOut(res, { ok: true, message: 'Database initialized' });
     }
 
-    // Settings helpers
-    const getSetting = async (key) => {
-      const rows = await sql`SELECT value FROM settings WHERE key = ${key}`;
-      return rows.length > 0 ? rows[0].value : null;
-    };
-    
-    const setSetting = async (key, value) => {
-      await sql`
-        INSERT INTO settings (key, value) 
-        VALUES (${key}, ${value}) 
-        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
-      `;
-    };
 
     const remapNominationsWithRoll = async () => {
       const existingNoms = await sql`
