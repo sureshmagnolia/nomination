@@ -25,29 +25,42 @@ export async function renderAdminPosts(container) {
 
     let posts = Array.isArray(postsRes) && postsRes.length > 0 ? postsRes : CONFIG.DEFAULT_POSTS;
 
-    // Collect distinct departments from nominal roll + fallback list
-    const deptSet = new Set();
+    // 1. Collect distinct departments directly from the uploaded Nominal Roll
+    const nominalDeptSet = new Set();
     if (Array.isArray(rollRes)) {
       rollRes.forEach(r => {
-        const d = String(r.Dept || r.dept || '').trim();
-        if (d) deptSet.add(d);
+        const d = String(r.Dept || r.dept || r.DEPARTMENT || r.Department || '').trim();
+        if (d && d !== '-' && d !== '–') nominalDeptSet.add(d);
       });
     }
+
+    // 2. Collect any departments configured on existing posts
+    const existingPostDeptSet = new Set();
+    if (Array.isArray(posts)) {
+      posts.forEach(p => {
+        const d = (p.restrictedDept || (p.deptRestriction && String(p.post || '').startsWith('Association Secretary ') ? p.post.replace('Association Secretary ', '').trim() : '')).trim();
+        if (d && d !== '-' && d !== '–') existingPostDeptSet.add(d);
+      });
+    }
+
     const defaultDepts = [
       'Botany', 'Chemistry', 'Commerce', 'Computer Science', 'Economics',
       'English', 'Hindi', 'History', 'Malayalam', 'Mathematics',
       'Physics', 'Psychology', 'Sanskrit', 'Tamil', 'Zoology'
     ];
-    defaultDepts.forEach(d => deptSet.add(d));
-    const allDepartments = Array.from(deptSet).filter(Boolean).sort();
 
-    renderPostsPage(container.querySelector('#adminMain'), posts, allDepartments, pwd);
+    const hasNominalRoll = nominalDeptSet.size > 0;
+    const nominalDepts = hasNominalRoll ? Array.from(nominalDeptSet).sort() : defaultDepts;
+    const otherDepts = Array.from(existingPostDeptSet).filter(d => !nominalDeptSet.has(d) && (!hasNominalRoll ? !defaultDepts.includes(d) : true)).sort();
+    const allDepartments = Array.from(new Set([...nominalDepts, ...otherDepts])).sort();
+
+    renderPostsPage(container.querySelector('#adminMain'), posts, { nominalDepts, otherDepts, allDepartments, hasNominalRoll }, pwd);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
   }
 }
 
-function renderPostsPage(main, posts, allDepartments, pwd) {
+function renderPostsPage(main, posts, deptInfo, pwd) {
   main.innerHTML = `
     <div class="page-enter space-y-6">
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -188,11 +201,23 @@ function renderPostsPage(main, posts, allDepartments, pwd) {
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Select from Known College Departments</label>
+              <label class="block text-[11px] text-slate-400 mb-1">
+                ${deptInfo.hasNominalRoll ? `Departments from Nominal Roll (${deptInfo.nominalDepts.length})` : 'Select from Known College Departments'}
+              </label>
               <select id="pfDeptSelect" class="field">
                 <option value="">-- Choose Department --</option>
-                ${allDepartments.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}
-                <option value="__custom__">Custom / Other Department...</option>
+                ${deptInfo.hasNominalRoll ? `
+                  <optgroup label="📋 Departments from Nominal Roll (${deptInfo.nominalDepts.length})">
+                    ${deptInfo.nominalDepts.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}
+                  </optgroup>
+                  ${deptInfo.otherDepts.length > 0 ? `
+                  <optgroup label="🏢 Other Configured Departments">
+                    ${deptInfo.otherDepts.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}
+                  </optgroup>` : ''}
+                ` : `
+                  ${deptInfo.allDepartments.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}
+                `}
+                <option value="__custom__">✏️ Custom / Other Department...</option>
               </select>
             </div>
             <div>
@@ -252,7 +277,7 @@ function renderPostsPage(main, posts, allDepartments, pwd) {
     </div>`;
 
   renderPostRows(main, posts, pwd);
-  wirePostForm(main, posts, allDepartments, pwd);
+  wirePostForm(main, posts, deptInfo.allDepartments, pwd);
 }
 
 function renderPostRows(main, posts, pwd, filterQuery = '') {
@@ -328,7 +353,9 @@ function renderPostRows(main, posts, pwd, filterQuery = '') {
         await api.adminDeletePost(pwd, name);
         showToast(`Post "${name}" deleted.`, 'success');
         const updated = await api.adminGetPosts(pwd);
-        renderPostRows(main, updated, pwd, main.querySelector('#filterPostsInput').value);
+        posts.length = 0;
+        posts.push(...updated);
+        renderPostRows(main, posts, pwd, main.querySelector('#filterPostsInput').value);
       } catch (e) {
         showToast(`Failed: ${e.message}`, 'error');
         btn.disabled = false;
@@ -699,8 +726,28 @@ function wirePostForm(main, posts, allDepartments, pwd) {
 
       formWrap.classList.add('hidden');
       const updated = await api.adminGetPosts(pwd);
-      posts = updated;
-      renderPostRows(main, updated, pwd, filterInput.value);
+      posts.length = 0;
+      posts.push(...updated);
+
+      // Reset filter so the newly saved/renamed post is not hidden by a stale search query
+      const filterInput = main.querySelector('#filterPostsInput');
+      if (filterInput) filterInput.value = '';
+
+      renderPostRows(main, posts, pwd, '');
+
+      // Highlight the saved/updated post row with a smooth pulse effect
+      const rows = Array.from(main.querySelectorAll('#postsBody tr'));
+      const targetRow = rows.find(tr => {
+        const nameEl = tr.querySelector('td:nth-child(2) span');
+        return nameEl && nameEl.textContent.trim().toLowerCase() === postName.toLowerCase();
+      });
+      if (targetRow) {
+        targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetRow.classList.add('bg-indigo-500/30', 'transition-all', 'duration-500');
+        setTimeout(() => {
+          targetRow.classList.remove('bg-indigo-500/30');
+        }, 3500);
+      }
     } catch (e) {
       showToast(`Failed: ${e.message}`, 'error');
     } finally {

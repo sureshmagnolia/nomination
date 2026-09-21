@@ -63,8 +63,8 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
     return 3500;
   };
 
-  const allClasses = [...new Set(nominalRoll.map(s => String(s['CLASS']).trim()))].sort();
-  const allDepts = [...new Set(nominalRoll.map(s => String(s['Dept'] || '–').trim()))].sort();
+  const allClasses = [...new Set(nominalRoll.map(s => String(s['CLASS']).trim()).filter(Boolean))].sort();
+  const allDepts = [...new Set(nominalRoll.map(s => String(s['Dept'] || '').trim()).filter(d => d && d !== '-' && d !== '–'))].sort();
 
   // ── Upload Panel (injected above the table) ───────────────────────────────
   const uploadPanelHtml = isFinal ? `

@@ -1603,28 +1603,77 @@ export default async function handler(req, res) {
         else if (yrYears === '1_UG,2_UG') yrRestr = '1,2';
       }
 
+      // 1. If post name was changed, delete any old record for origName so we don't leave duplicate or stale entries
+      if (origName && origName.toLowerCase() !== newName.toLowerCase()) {
+        await sql`DELETE FROM posts WHERE LOWER(TRIM(post)) = LOWER(TRIM(${origName}))`;
+        await sql`UPDATE nominations SET post = ${newName} WHERE post = ${origName} OR LOWER(TRIM(post)) = LOWER(TRIM(${origName}))`;
+      }
+
+      // 2. Perform atomic UPSERT for newName - guarantees the post is saved even if it was previously an unseeded default
       await sql`
-        UPDATE posts 
-        SET 
-          post = ${newName},
-          female_only = ${!!body.femaleOnly}, 
-          final_year_ineligible = ${isFinalIneligible || !!body.finalYearIneligible}, 
-          year_restriction = ${yrRestr}, 
-          dept_restriction = ${!!body.deptRestriction},
-          restricted_dept = ${rDept || null},
-          year_rule_mode = ${yrMode},
-          year_rule_years = ${yrYears}
-        WHERE post = ${origName}
+        INSERT INTO posts (
+          post, female_only, final_year_ineligible, year_restriction, dept_restriction,
+          restricted_dept, year_rule_mode, year_rule_years
+        ) VALUES (
+          ${newName}, ${!!body.femaleOnly}, ${isFinalIneligible || !!body.finalYearIneligible},
+          ${yrRestr}, ${!!body.deptRestriction}, ${rDept || null},
+          ${yrMode}, ${yrYears}
+        )
+        ON CONFLICT (post) DO UPDATE SET
+          female_only = EXCLUDED.female_only,
+          final_year_ineligible = EXCLUDED.final_year_ineligible,
+          year_restriction = EXCLUDED.year_restriction,
+          dept_restriction = EXCLUDED.dept_restriction,
+          restricted_dept = EXCLUDED.restricted_dept,
+          year_rule_mode = EXCLUDED.year_rule_mode,
+          year_rule_years = EXCLUDED.year_rule_years
       `;
 
-      if (origName !== newName) {
-        await sql`UPDATE nominations SET post = ${newName} WHERE post = ${origName}`;
+      // 3. Keep posts_order setting array in sync so the renamed post preserves its exact position
+      try {
+        const orderRaw = await getSetting('posts_order');
+        if (orderRaw) {
+          let orderList = safeJsonParse(orderRaw, []);
+          if (Array.isArray(orderList) && orderList.length > 0) {
+            let changed = false;
+            if (origName && origName.toLowerCase() !== newName.toLowerCase()) {
+              const idx = orderList.findIndex(p => p.toLowerCase() === origName.toLowerCase());
+              if (idx !== -1) {
+                orderList[idx] = newName;
+                changed = true;
+              } else if (!orderList.includes(newName)) {
+                orderList.push(newName);
+                changed = true;
+              }
+            } else if (!orderList.includes(newName)) {
+              orderList.push(newName);
+              changed = true;
+            }
+            if (changed) {
+              await setSetting('posts_order', JSON.stringify(orderList));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('posts_order sync warning:', err.message);
       }
+
       return jsonOut(res, { ok: true });
     }
 
     if (action === 'adminDeletePost') {
-      await sql`DELETE FROM posts WHERE post = ${body.postName}`;
+      const pName = (body.postName || body.post || '').trim();
+      await sql`DELETE FROM posts WHERE LOWER(TRIM(post)) = LOWER(TRIM(${pName}))`;
+      try {
+        const orderRaw = await getSetting('posts_order');
+        if (orderRaw) {
+          let orderList = safeJsonParse(orderRaw, []);
+          if (Array.isArray(orderList) && orderList.length > 0) {
+            orderList = orderList.filter(p => p !== pName && p.toLowerCase() !== pName.toLowerCase());
+            await setSetting('posts_order', JSON.stringify(orderList));
+          }
+        }
+      } catch (_) {}
       return jsonOut(res, { ok: true });
     }
 
