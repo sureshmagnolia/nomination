@@ -40,7 +40,7 @@ export async function renderHome(container) {
     rollDesc = 'Finalized nominal roll verified by Returning Officer.';
   } else if (isDraftRoll) {
     rollBadge = `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px]">📋 Draft Published</span>`;
-    rollDesc = 'Draft nominal roll published for corrections & claims.';
+    rollDesc = 'Draft nominal roll published for student verification.';
   }
 
   // 2. Submit Nomination

@@ -6,7 +6,6 @@
 import { api } from '../api.js';
 import { esc, showToast } from '../utils.js';
 import { CONFIG } from '../config.js';
-import { openPrintRollModal } from '../rollPrinter.js';
 
 export async function renderNominalRoll(container) {
   container.innerHTML = `
@@ -158,75 +157,6 @@ function renderPublicRollUI(container, nominalRoll, settings) {
 
   // Initial Shell Render
   container.innerHTML = `
-    <!-- Correction Request Modal -->
-    <div id="correctionModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-      <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" id="correctionModalOverlay"></div>
-      <div class="relative bg-slate-900 rounded-2xl border border-amber-500/30 shadow-2xl w-full max-w-lg p-6 z-10 space-y-4 max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between border-b border-white/10 pb-3">
-          <div class="flex items-center gap-2.5">
-            <span class="text-2xl">📝</span>
-            <div>
-              <h4 class="font-bold text-white text-lg leading-tight">Draft Roll Correction Request</h4>
-              <p class="text-xs text-amber-400/90">Submit request for errors or missing details</p>
-            </div>
-          </div>
-          <button id="btnCloseCorrectionModal" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
-        </div>
-
-        <form id="correctionForm" class="space-y-3.5 text-sm">
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Admission Number <span class="text-rose-400">*</span></label>
-            <input type="text" id="corrAdmNo" class="field text-sm" placeholder="e.g. 260556" required>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Student Full Name <span class="text-rose-400">*</span></label>
-            <input type="text" id="corrName" class="field text-sm" placeholder="Full name as in college records" required>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Class</label>
-              <input type="text" id="corrClass" class="field text-sm" placeholder="e.g. 1st Year B.Sc Botany">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Department</label>
-              <input type="text" id="corrDept" class="field text-sm" placeholder="e.g. Botany">
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Type of Correction <span class="text-rose-400">*</span></label>
-            <select id="corrType" class="field text-sm bg-slate-800">
-              <option value="Spelling Error in Name">Spelling Error in Name</option>
-              <option value="Incorrect Class / Year">Incorrect Class / Year</option>
-              <option value="Incorrect Department">Incorrect Department</option>
-              <option value="Wrong Admission Number">Wrong Admission Number</option>
-              <option value="Missing Name in Roll">Missing Name from Nominal Roll</option>
-              <option value="Other Discrepancy">Other Discrepancy</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Correction Details / Explanation <span class="text-rose-400">*</span></label>
-            <textarea id="corrDetails" rows="3" class="field text-sm" placeholder="Describe the mistake and the correct information clearly..." required></textarea>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Contact Phone / Email (Optional)</label>
-            <input type="text" id="corrContact" class="field text-sm" placeholder="For the Returning Officer to reach you if needed">
-          </div>
-
-          <div class="flex justify-end gap-2 pt-2 border-t border-white/10">
-            <button type="button" id="btnCancelCorrection" class="btn btn-secondary">Cancel</button>
-            <button type="submit" id="btnSubmitCorrection" class="btn btn-primary bg-amber-600 hover:bg-amber-500 text-white font-medium">
-              Submit Request
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
     <div class="page-enter space-y-6">
       <!-- Header -->
       <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -244,34 +174,16 @@ function renderPublicRollUI(container, nominalRoll, settings) {
           </div>
           <p class="text-slate-400 text-sm mt-0.5">${esc(collegeName)} — College Union Election</p>
         </div>
-        
-        <div class="flex flex-wrap items-center gap-2">
-          ${isDraft ? `
-            <button id="btnOpenCorrection" class="btn btn-sm btn-primary bg-amber-600 hover:bg-amber-500 text-white font-medium flex items-center gap-1.5 shadow-lg shadow-amber-900/20">
-              ✏️ Submit Edit / Correction Request
-            </button>
-          ` : ''}
-
-          <button id="btnOpenPrintModal" class="btn btn-secondary btn-sm flex items-center gap-1.5 shadow-md hover:border-indigo-400">
-            <span>🖨️</span>
-            <span>Print Roll</span>
-          </button>
-        </div>
       </div>
 
       ${isDraft ? `
         <!-- Draft Notice Banner -->
-        <div class="glass rounded-xl p-4 border border-amber-500/30 bg-amber-500/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-amber-200 text-sm shadow-lg">
-          <div class="flex items-start gap-3">
-            <span class="text-2xl">⚠️</span>
-            <div>
-              <strong class="text-amber-100 font-semibold block mb-0.5">DRAFT NOMINAL ROLL PUBLISHED</strong>
-              Serial numbers shown as <strong>D1, D2, D3...</strong> are provisional and subject to change upon finalization. Students are advised to verify their Name, Class, and Department.
-            </div>
+        <div class="glass rounded-xl p-4 border border-amber-500/30 bg-amber-500/10 flex items-start gap-3 text-amber-200 text-sm shadow-lg">
+          <span class="text-2xl">⚠️</span>
+          <div>
+            <strong class="text-amber-100 font-semibold block mb-0.5">DRAFT NOMINAL ROLL PUBLISHED</strong>
+            Serial numbers shown as <strong>D1, D2, D3...</strong> are provisional and subject to change upon finalization. Students are advised to verify their Name, Class, and Department.
           </div>
-          <button id="btnOpenCorrectionBanner" class="btn btn-sm btn-secondary border-amber-400/40 text-amber-200 hover:bg-amber-500 hover:text-white shrink-0">
-            Request Changes
-          </button>
         </div>
       ` : ''}
 
@@ -531,64 +443,5 @@ function renderPublicRollUI(container, nominalRoll, settings) {
     }
   });
 
-  // Print Roll via interactive Print Modal (All, Department, Class filtering)
-  const printBtn = container.querySelector('#btnOpenPrintModal');
-  if (printBtn) {
-    printBtn.onclick = () => {
-      openPrintRollModal({
-        students,
-        isFinal,
-        isDraft,
-        collegeName,
-        collegeLogo: settings.collegeLogo,
-        electionYear: settings.electionYear,
-        initialDept: selectedDept,
-        initialClass: selectedClass
-      });
-    };
-  }
-
-  // Correction Request Modal Events
-  const modal = container.querySelector('#correctionModal');
-  const openModal = () => modal?.classList.remove('hidden');
-  const closeModal = () => modal?.classList.add('hidden');
-
-  container.querySelector('#btnOpenCorrection')?.addEventListener('click', openModal);
-  container.querySelector('#btnOpenCorrectionBanner')?.addEventListener('click', openModal);
-  container.querySelector('#btnCloseCorrectionModal')?.addEventListener('click', closeModal);
-  container.querySelector('#btnCancelCorrection')?.addEventListener('click', closeModal);
-  container.querySelector('#correctionModalOverlay')?.addEventListener('click', closeModal);
-
-  // Submit Correction Form
-  const corrForm = container.querySelector('#correctionForm');
-  if (corrForm) {
-    corrForm.onsubmit = async (e) => {
-      e.preventDefault();
-      const submitBtn = container.querySelector('#btnSubmitCorrection');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting...';
-
-      const payload = {
-        admissionNo: container.querySelector('#corrAdmNo').value.trim(),
-        studentName: container.querySelector('#corrName').value.trim(),
-        className: container.querySelector('#corrClass').value.trim(),
-        department: container.querySelector('#corrDept').value.trim(),
-        correctionType: container.querySelector('#corrType').value,
-        details: container.querySelector('#corrDetails').value.trim(),
-        contactInfo: container.querySelector('#corrContact').value.trim(),
-      };
-
-      try {
-        await api.submitRollCorrection(payload);
-        closeModal();
-        showToast('Your correction request has been submitted successfully to the Returning Officer.', 'success');
-        corrForm.reset();
-      } catch (err) {
-        showToast(err.message, 'error');
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit Request';
-      }
-    };
-  }
 }
+

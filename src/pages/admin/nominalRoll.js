@@ -50,6 +50,8 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
   let filterText = '';
   let showCorrections = false;
   let adminArrangeMode = 'dept-class'; // 'dept-class' | 'serial' | 'name'
+  let currentPage = 1;
+  const PAGE_SIZE = 50;
 
   const getProgWeight = (cName) => {
     const c = String(cName || '').toUpperCase().trim();
@@ -197,6 +199,49 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
       filtered.sort((a, b) => parseSl(a) - parseSl(b));
     }
 
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    const endIndex = Math.min(startIndex + PAGE_SIZE, filtered.length);
+    const pageStudents = filtered.slice(startIndex, endIndex);
+
+    let buttonsHTML = '';
+    if (totalPages > 1) {
+      buttonsHTML = `
+        <button class="btn btn-sm btn-secondary px-2.5 py-1 text-xs pg-btn" data-page="1" ${currentPage === 1 ? 'disabled style="opacity:0.35;cursor:not-allowed;"' : ''} title="First Page">« First</button>
+        <button class="btn btn-sm btn-secondary px-2.5 py-1 text-xs pg-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled style="opacity:0.35;cursor:not-allowed;"' : ''} title="Previous Page">‹ Prev</button>
+      `;
+
+      const windowSize = 2;
+      let pagesToShow = [];
+      for (let p = 1; p <= totalPages; p++) {
+        if (p === 1 || p === totalPages || (p >= currentPage - windowSize && p <= currentPage + windowSize)) {
+          pagesToShow.push(p);
+        }
+      }
+
+      let lastP = 0;
+      pagesToShow.forEach(p => {
+        if (lastP && p - lastP > 1) {
+          buttonsHTML += `<span class="px-1 text-slate-500 font-bold">…</span>`;
+        }
+        const isActive = p === currentPage;
+        buttonsHTML += `
+          <button class="btn btn-sm px-3 py-1 text-xs font-mono rounded-lg pg-btn transition-colors ${isActive ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'btn-secondary text-slate-300 hover:text-white'}" data-page="${p}">
+            ${p}
+          </button>
+        `;
+        lastP = p;
+      });
+
+      buttonsHTML += `
+        <button class="btn btn-sm btn-secondary px-2.5 py-1 text-xs pg-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled style="opacity:0.35;cursor:not-allowed;"' : ''} title="Next Page">Next ›</button>
+        <button class="btn btn-sm btn-secondary px-2.5 py-1 text-xs pg-btn" data-page="${totalPages}" ${currentPage === totalPages ? 'disabled style="opacity:0.35;cursor:not-allowed;"' : ''} title="Last Page">Last »</button>
+      `;
+    }
+
     main.innerHTML = `
       <div class="page-enter space-y-6">
         ${uploadPanelHtml}
@@ -315,7 +360,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
             </select>
           </div>
           <div class="text-slate-400 text-xs md:w-auto w-full text-right shrink-0">
-            Showing <strong class="text-white">${filtered.length}</strong> / ${students.length} students
+            Showing <strong class="text-white">${filtered.length ? startIndex + 1 : 0}</strong> to <strong class="text-white">${endIndex}</strong> of <strong class="text-white">${filtered.length}</strong> students
           </div>
         </div>
 
@@ -330,8 +375,8 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
                 <th>Department</th>
                 ${!isFinal ? '<th>Actions</th>' : ''}
               </tr></thead>
-              <tbody>
-                ${filtered.length ? filtered.map(s => `
+              <tbody id="adminRollTableBody">
+                ${pageStudents.length ? pageStudents.map(s => `
                   <tr>
                     <td class="text-center font-bold font-mono ${isDraft ? 'text-amber-400' : 'text-indigo-400'}">${isDraft ? 'D' : ''}${esc(s['Nominal Roll Serial Number'])}</td>
                     <td class="font-mono text-xs">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
@@ -348,6 +393,14 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
                 `).join('') : `<tr><td colspan="${!isFinal ? '6' : '5'}" class="text-center py-10 text-slate-500">No students found matching your search.</td></tr>`}
               </tbody>
             </table>
+          </div>
+
+          <!-- Pagination Controls Footer -->
+          <div id="adminPaginationBar" class="p-4 border-t border-white/10 bg-black/20 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+            <div id="adminPaginationInfo">Page <strong class="text-white">${currentPage}</strong> of <strong class="text-white">${totalPages}</strong> (${filtered.length} total students)</div>
+            <div id="adminPaginationControls" class="flex items-center gap-1 flex-wrap justify-center">
+              ${totalPages > 1 ? buttonsHTML : ''}
+            </div>
           </div>
         </div>
       </div>
@@ -461,6 +514,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
     // Search
     main.querySelector('#searchInput').oninput = (e) => {
       filterText = e.target.value;
+      currentPage = 1;
       refreshTable();
       main.querySelector('#searchInput').focus();
       // Move cursor to end
@@ -473,7 +527,23 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
     if (adminArrangeSel) {
       adminArrangeSel.onchange = (e) => {
         adminArrangeMode = e.target.value;
+        currentPage = 1;
         refreshTable();
+      };
+    }
+
+    // Pagination button clicks
+    const pgControls = main.querySelector('#adminPaginationControls');
+    if (pgControls) {
+      pgControls.onclick = (e) => {
+        const btn = e.target.closest('.pg-btn');
+        if (!btn || btn.disabled) return;
+        const targetPage = Number(btn.dataset.page);
+        if (targetPage && targetPage !== currentPage) {
+          currentPage = targetPage;
+          refreshTable();
+          main.querySelector('#adminRollTableBody')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
       };
     }
 
