@@ -54,9 +54,9 @@ export async function renderAdminResultsEntry(container) {
       api.adminGetBooths(pwd).catch(() => []),
       api.getPosts(),
       api.adminGetNominations(pwd).catch(() => []),
-      api.adminGetResults(pwd).catch(() => []),
-      api.adminGetCountingMatrix(pwd).catch(() => null),
-      api.adminGetSettings(pwd).catch(() => ({}))
+      api.adminGetResults(pwd, true).catch(() => []),
+      api.adminGetCountingMatrix(pwd, true).catch(() => null),
+      api.adminGetSettings(pwd, true).catch(() => ({}))
     ]);
     const allNoms  = Array.isArray(nominationsRaw) ? nominationsRaw : [];
     const finalList = allNoms.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved');
@@ -76,7 +76,8 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       <div class="text-center py-20 bg-white/5 rounded-2xl border border-white/10">
         <div class="text-5xl mb-4">⚠️</div>
         <h3 class="text-xl font-bold text-white mb-2">Matrix Not Set</h3>
-        <p class="text-slate-400 mb-6">The Counting Matrix must be generated and saved in the "Counting Setup" page before you can enter results.</p>
+        <p class="text-slate-400 mb-6 max-w-md mx-auto">The Counting Matrix must be generated and saved in the "Counting Setup" page before you can enter results.</p>
+        <a href="#/admin/counting" class="btn btn-primary px-8 inline-block">Go to Counting Setup</a>
       </div>
     `;
     return;

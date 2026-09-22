@@ -550,11 +550,11 @@ export const api = {
 
   adminSaveResults: (password, results) => {
     // We queue the network save, invalidate the results cache since it's hard to append optimally here
-    bgPost({ action: 'adminSaveResults', password, results }).then(() => {
+    return bgPost({ action: 'adminSaveResults', password, results }).then((res) => {
       invalidateCache('getResults');
       invalidateCache('adminGetResults');
+      return res;
     });
-    return Promise.resolve({ ok: true });
   },
 
   adminInjectTestData: (password) => {
@@ -568,12 +568,17 @@ export const api = {
 
   // ─── Counting Matrix Persistence ─────────────────────────────────────────────
 
-  adminGetCountingMatrix: (password) => get({ action: 'adminGetCountingMatrix', password }),
+  adminGetCountingMatrix: (password, force = false) => {
+    if (force) invalidateCache('adminGetCountingMatrix');
+    return get({ action: 'adminGetCountingMatrix', password });
+  },
 
-  adminSaveCountingMatrix: (password, matrixData) => {
+  adminSaveCountingMatrix: async (password, matrixData) => {
     updateCache({ action: 'adminGetCountingMatrix', password }, matrixData);
-    bgPost({ action: 'adminSaveCountingMatrix', password, matrixData });
-    return Promise.resolve({ ok: true });
+    const res = await post({ action: 'adminSaveCountingMatrix', password, matrixData, matrix: matrixData });
+    invalidateCache('adminGetCountingMatrix');
+    updateCache({ action: 'adminGetCountingMatrix', password }, matrixData);
+    return res;
   },
 
   adminGenerateBallotPlan: async (password) => {

@@ -11,7 +11,7 @@ export async function renderAdminCounting(container) {
 
   try {
     const [savedMatrix, posts, nominationsRaw, booths, nominalRoll, settings] = await Promise.all([
-      api.adminGetCountingMatrix(pwd).catch(() => null),
+      api.adminGetCountingMatrix(pwd, true).catch(() => null),
       api.getPosts(),
       api.adminGetNominations(pwd).catch(() => []),
       api.adminGetBooths(pwd),

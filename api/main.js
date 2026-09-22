@@ -2019,7 +2019,12 @@ export default async function handler(req, res) {
       if (isLocked === 'true') {
         return errOut(res, 'Results are locked and frozen. No further vote entries are allowed.');
       }
-      await setSetting('countingMatrix', JSON.stringify(body.matrix));
+      const dataToSave = body.matrixData || body.matrix;
+      if (!dataToSave) {
+        return errOut(res, 'No matrix data provided to save.', 400);
+      }
+      const stringified = typeof dataToSave === 'string' ? dataToSave : JSON.stringify(dataToSave);
+      await setSetting('countingMatrix', stringified);
       return jsonOut(res, { ok: true });
     }
 
