@@ -910,3 +910,576 @@ export function printCampusMasterDirectory(boothsList, settings = {}, schedule =
 </html>`);
   w.document.close();
 }
+
+/**
+ * Print a blank official nomination form for physical manual submission
+ */
+export function printBlankNominationForm(settings = {}) {
+  const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
+  const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
+  const year = settings.electionYear || new Date().getFullYear();
+  const collegeLogo = settings.collegeLogo || '';
+
+  const w = window.open('', '_blank');
+  if (!w) {
+    alert('Pop-up blocker prevented opening the print window. Please allow pop-ups for this site.');
+    return;
+  }
+
+  w.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Blank Nomination Paper - ${esc(shortName)} Election ${esc(year)}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 8mm 12mm 8mm 12mm;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Times New Roman', Times, Georgia, serif;
+      color: #000;
+      background: #fff;
+      font-size: 10.5pt;
+      line-height: 1.35;
+      margin: 0;
+      padding: 0;
+    }
+    .form-container {
+      width: 100%;
+      max-width: 186mm;
+      margin: 0 auto;
+    }
+    .header-box {
+      border-bottom: 2px solid #000;
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .college-name {
+      font-size: 14pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+    .college-sub {
+      font-size: 9.5pt;
+      text-align: center;
+      font-style: italic;
+    }
+    .election-title {
+      font-size: 11pt;
+      font-weight: bold;
+      text-align: center;
+      margin-top: 1px;
+    }
+    .form-title-badge {
+      border: 1.5px solid #000;
+      text-align: center;
+      padding: 3px;
+      font-size: 12pt;
+      font-weight: bold;
+      letter-spacing: 1px;
+      margin: 6px 0;
+      background: #f4f4f4;
+    }
+    .form-note {
+      font-size: 8.5pt;
+      text-align: center;
+      font-style: italic;
+      color: #333;
+      margin-top: -3px;
+      margin-bottom: 6px;
+    }
+    .post-box {
+      border: 1px solid #000;
+      padding: 5px 8px;
+      margin-bottom: 6px;
+      font-size: 10pt;
+      background: #fafafa;
+    }
+    .section-title {
+      font-size: 10pt;
+      font-weight: bold;
+      background: #eee;
+      border: 1px solid #000;
+      padding: 2.5px 6px;
+      margin-top: 6px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+    .fields-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .fields-table td {
+      padding: 3px 4px;
+      font-size: 9.5pt;
+      vertical-align: middle;
+    }
+    .line-fill {
+      border-bottom: 1px dotted #222;
+      display: inline-block;
+      min-height: 14px;
+    }
+    .box-check {
+      display: inline-block;
+      width: 11px;
+      height: 11px;
+      border: 1px solid #000;
+      margin-right: 2px;
+      vertical-align: middle;
+    }
+    .consent-box {
+      border: 1px solid #000;
+      padding: 5px 8px;
+      font-size: 8.5pt;
+      line-height: 1.35;
+      background: #fafafa;
+      margin-top: 6px;
+    }
+    .sign-table {
+      width: 100%;
+      margin-top: 8px;
+      border-collapse: collapse;
+    }
+    .sign-table td {
+      text-align: center;
+      font-size: 9pt;
+      vertical-align: bottom;
+      padding: 0 4px;
+    }
+    .sign-line {
+      border-top: 1px dashed #000;
+      margin-bottom: 2px;
+      padding-top: 2px;
+    }
+    .receipt-slip {
+      margin-top: 8px;
+      border-top: 1.5px dashed #000;
+      padding-top: 4px;
+    }
+    .receipt-header {
+      font-size: 9pt;
+      font-weight: bold;
+      text-align: center;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+    @media print {
+      body { margin: 0; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <div class="header-box">
+      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:48px;max-width:90px;object-fit:contain;" alt="Logo">` : '<div style="width:50px;"></div>'}
+      <div style="flex:1;text-align:center;">
+        <div class="college-name">${esc(collegeName)}</div>
+        <div class="college-sub">(Affiliated to the University of Calicut)</div>
+        <div class="election-title">COLLEGE UNION ELECTIONS ${esc(year)}–${Number(year) + 1}</div>
+      </div>
+      <div style="width:80px;text-align:right;font-size:8pt;border:1px solid #777;padding:3px;">
+        <div>Sl. No:</div>
+        <div style="font-size:7pt;color:#555;margin-top:2px;">(Office Use)</div>
+      </div>
+    </div>
+
+    <div class="form-title-badge">NOMINATION PAPER</div>
+    <div class="form-note">(To be filled in by the Candidate in Black or Blue Ballpoint Pen in Block Letters)</div>
+
+    <div class="post-box">
+      <strong>Post Applied For:</strong> 
+      <span class="line-fill" style="width:70%;"></span>
+      <div style="font-size:8pt;color:#444;margin-top:3px;">
+        (Check if applicable: <span class="box-check"></span> Female Reserved Post &nbsp;&nbsp;&nbsp; <span class="box-check"></span> Class Representative &nbsp;&nbsp;&nbsp; <span class="box-check"></span> Association Secretary)
+      </div>
+    </div>
+
+    <!-- 1. CANDIDATE DETAILS -->
+    <div class="section-title">1. Particulars of the Candidate</div>
+    <table class="fields-table">
+      <tr>
+        <td style="width:30%;">Full Name (Capital Letters):</td>
+        <td colspan="3"><span class="line-fill" style="width:100%;"></span></td>
+      </tr>
+      <tr>
+        <td style="width:25%;">Admission Number:</td>
+        <td style="width:25%;"><span class="line-fill" style="width:90%;"></span></td>
+        <td style="width:25%;">Electoral Roll Sl. No.:</td>
+        <td style="width:25%;"><span class="line-fill" style="width:90%;"></span></td>
+      </tr>
+      <tr>
+        <td>Class &amp; Semester:</td>
+        <td><span class="line-fill" style="width:90%;"></span></td>
+        <td>Department / Subject:</td>
+        <td><span class="line-fill" style="width:90%;"></span></td>
+      </tr>
+      <tr>
+        <td>Date of Birth:</td>
+        <td><span class="line-fill" style="width:90%;">[ &nbsp;&nbsp;&nbsp; ] / [ &nbsp;&nbsp;&nbsp; ] / [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</span></td>
+        <td>Gender:</td>
+        <td>
+          <span class="box-check"></span> Male &nbsp;&nbsp;
+          <span class="box-check"></span> Female &nbsp;&nbsp;
+          <span class="box-check"></span> TG
+        </td>
+      </tr>
+      <tr>
+        <td>Mobile Phone No.:</td>
+        <td><span class="line-fill" style="width:90%;"></span></td>
+        <td>Email ID:</td>
+        <td><span class="line-fill" style="width:90%;"></span></td>
+      </tr>
+    </table>
+
+    <!-- 2. PROPOSER DETAILS -->
+    <div class="section-title">2. Particulars of the Proposer</div>
+    <table class="fields-table">
+      <tr>
+        <td style="width:30%;">Full Name of Proposer:</td>
+        <td colspan="3"><span class="line-fill" style="width:100%;"></span></td>
+      </tr>
+      <tr>
+        <td style="width:25%;">Admission Number:</td>
+        <td style="width:25%;"><span class="line-fill" style="width:90%;"></span></td>
+        <td style="width:25%;">Electoral Roll Sl. No.:</td>
+        <td style="width:25%;"><span class="line-fill" style="width:90%;"></span></td>
+      </tr>
+      <tr>
+        <td>Class &amp; Department:</td>
+        <td><span class="line-fill" style="width:90%;"></span></td>
+        <td>Signature of Proposer:</td>
+        <td><span class="line-fill" style="width:90%;"></span></td>
+      </tr>
+    </table>
+
+    <!-- 3. SECONDER DETAILS -->
+    <div class="section-title">3. Particulars of the Seconder</div>
+    <table class="fields-table">
+      <tr>
+        <td style="width:30%;">Full Name of Seconder:</td>
+        <td colspan="3"><span class="line-fill" style="width:100%;"></span></td>
+      </tr>
+      <tr>
+        <td style="width:25%;">Admission Number:</td>
+        <td style="width:25%;"><span class="line-fill" style="width:90%;"></span></td>
+        <td style="width:25%;">Electoral Roll Sl. No.:</td>
+        <td style="width:25%;"><span class="line-fill" style="width:90%;"></span></td>
+      </tr>
+      <tr>
+        <td>Class &amp; Department:</td>
+        <td><span class="line-fill" style="width:90%;"></span></td>
+        <td>Signature of Seconder:</td>
+        <td><span class="line-fill" style="width:90%;"></span></td>
+      </tr>
+    </table>
+
+    <!-- 4. CONSENT & STATUTORY DECLARATION -->
+    <div class="section-title">4. Statutory Consent &amp; Declaration of Candidate</div>
+    <div class="consent-box">
+      I agree, if elected, to serve on the body to which I am proposed as a candidate. I hereby solemnly declare that:
+      (1) I am a regular, full-time student of this College with minimum 75% attendance and no academic backlogs.
+      (2) I satisfy all eligibility norms and age criteria prescribed by the Lyngdoh Committee &amp; University Election Bye-laws.
+      (3) I have not been convicted of any criminal offence or subjected to any disciplinary action.
+      (4) I am not a Research Scholar (Ph.D.).
+    </div>
+
+    <table class="sign-table">
+      <tr>
+        <td style="width:35%;">
+          <div>Date: _____ / _____ / 2026</div>
+          <div style="font-size:8pt;color:#555;">Place: ${esc(shortName)} Campus</div>
+        </td>
+        <td style="width:30%;">
+          <div style="height:22px;"></div>
+          <div class="sign-line">Signature of Candidate</div>
+          <div style="font-size:7.5pt;color:#666;">(Sign in front of Returning Officer)</div>
+        </td>
+        <td style="width:35%;">
+          <div style="height:22px;"></div>
+          <div class="sign-line">Returning Officer / Scrutiny Member</div>
+          <div style="font-size:7.5pt;color:#666;">(Signature on Verification)</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- 5. RECEIPT SLIP -->
+    <div class="receipt-slip">
+      <div style="text-align:center;font-size:7.5pt;color:#555;margin-bottom:2px;">✂ &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash; (Cut along dotted line and hand over to Candidate) &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;</div>
+      <div class="receipt-header">OFFICIAL RECEIPT &mdash; NOMINATION PAPER (${esc(shortName)} ELECTIONS ${esc(year)})</div>
+      <div style="font-size:8.5pt;line-height:1.35;">
+        Received the nomination paper of Sri/Smt <span class="line-fill" style="width:38%;"></span> 
+        (Adm. No. <span class="line-fill" style="width:14%;"></span>) 
+        for the post of <span class="line-fill" style="width:28%;"></span> 
+        on Date: _____/_____/2026 at Time: _____ : _____ AM/PM. Receipt Sl. No.: ____________
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:8pt;">
+        <div>Candidate Sl. No.: ____________</div>
+        <div style="text-align:right;">
+          <div style="border-top:1px dashed #000;display:inline-block;padding-top:2px;width:150px;text-align:center;">Signature of Receiving Officer</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 400);
+    };
+  </script>
+</body>
+</html>`);
+  w.document.close();
+}
+
+/**
+ * Print a blank official withdrawal notice form for physical manual submission
+ */
+export function printBlankWithdrawalForm(settings = {}) {
+  const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
+  const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
+  const year = settings.electionYear || new Date().getFullYear();
+  const collegeLogo = settings.collegeLogo || '';
+
+  const w = window.open('', '_blank');
+  if (!w) {
+    alert('Pop-up blocker prevented opening the print window. Please allow pop-ups for this site.');
+    return;
+  }
+
+  w.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Blank Withdrawal Form - ${esc(shortName)} Election ${esc(year)}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 12mm 16mm;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Times New Roman', Times, Georgia, serif;
+      color: #000;
+      background: #fff;
+      font-size: 11pt;
+      line-height: 1.5;
+      margin: 0;
+      padding: 0;
+    }
+    .form-container {
+      width: 100%;
+      max-width: 175mm;
+      margin: 0 auto;
+    }
+    .header-box {
+      border-bottom: 2px solid #000;
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .college-name {
+      font-size: 15pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    .college-sub {
+      font-size: 10pt;
+      text-align: center;
+      font-style: italic;
+    }
+    .election-title {
+      font-size: 11pt;
+      font-weight: bold;
+      text-align: center;
+      margin-top: 2px;
+    }
+    .form-title-badge {
+      border: 1.5px solid #000;
+      text-align: center;
+      padding: 6px;
+      font-size: 13pt;
+      font-weight: bold;
+      letter-spacing: 1px;
+      margin: 14px 0;
+      background: #f4f4f4;
+    }
+    .recipient-box {
+      font-size: 10.5pt;
+      line-height: 1.4;
+      margin-bottom: 12px;
+    }
+    .fields-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+    }
+    .fields-table td {
+      padding: 6px 4px;
+      font-size: 10.5pt;
+      vertical-align: middle;
+    }
+    .line-fill {
+      border-bottom: 1px dotted #222;
+      display: inline-block;
+      min-height: 16px;
+    }
+    .decl-box {
+      border: 1px solid #000;
+      padding: 12px 14px;
+      font-size: 10.5pt;
+      line-height: 1.6;
+      background: #fafafa;
+      margin: 16px 0;
+    }
+    .sign-table {
+      width: 100%;
+      margin-top: 24px;
+      border-collapse: collapse;
+    }
+    .sign-table td {
+      text-align: center;
+      font-size: 10pt;
+      vertical-align: bottom;
+      padding: 0 8px;
+    }
+    .sign-line {
+      border-top: 1px dashed #000;
+      margin-bottom: 4px;
+      padding-top: 4px;
+    }
+    .office-section {
+      margin-top: 24px;
+      border-top: 1.5px dashed #000;
+      padding-top: 10px;
+    }
+    .office-title {
+      font-size: 10pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    @media print {
+      body { margin: 0; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <div class="header-box">
+      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:48px;max-width:90px;object-fit:contain;" alt="Logo">` : '<div style="width:40px;"></div>'}
+      <div style="flex:1;text-align:center;">
+        <div class="college-name">${esc(collegeName)}</div>
+        <div class="college-sub">(Affiliated to the University of Calicut)</div>
+        <div class="election-title">COLLEGE UNION ELECTIONS ${esc(year)}–${Number(year) + 1}</div>
+      </div>
+      <div style="width:40px;"></div>
+    </div>
+
+    <div class="form-title-badge">NOTICE OF WITHDRAWAL OF CANDIDATURE</div>
+
+    <div class="recipient-box">
+      <strong>To:</strong><br>
+      The Returning Officer,<br>
+      College Union Elections ${esc(year)}–${Number(year) + 1},<br>
+      ${esc(collegeName)}.
+    </div>
+
+    <table class="fields-table">
+      <tr>
+        <td style="width:35%;">1. Full Name of Candidate:</td>
+        <td style="width:65%;"><span class="line-fill" style="width:100%;"></span></td>
+      </tr>
+      <tr>
+        <td>2. Admission Number:</td>
+        <td><span class="line-fill" style="width:100%;"></span></td>
+      </tr>
+      <tr>
+        <td>3. Electoral Roll Serial Number:</td>
+        <td><span class="line-fill" style="width:100%;"></span></td>
+      </tr>
+      <tr>
+        <td>4. Class, Semester &amp; Dept:</td>
+        <td><span class="line-fill" style="width:100%;"></span></td>
+      </tr>
+      <tr>
+        <td>5. Nomination Form / Ref ID (if known):</td>
+        <td><span class="line-fill" style="width:100%;"></span></td>
+      </tr>
+      <tr>
+        <td>6. Post Nominated For:</td>
+        <td><span class="line-fill" style="width:100%;"></span></td>
+      </tr>
+    </table>
+
+    <div class="decl-box">
+      I, <span class="line-fill" style="width:45%;"></span>, a validly nominated candidate for the post of <span class="line-fill" style="width:40%;"></span> in the College Union Elections for the academic year ${esc(year)}–${Number(year) + 1}, do hereby give notice that I voluntarily <strong>WITHDRAW</strong> my candidature for the said post.
+      <br><br>
+      I declare that this decision is taken of my own free will, without any coercion or undue influence.
+    </div>
+
+    <table class="sign-table">
+      <tr>
+        <td style="width:40%;">
+          <div>Date: _____ / _____ / 2026</div>
+          <div style="margin-top:4px;">Time: _____ : _____ AM/PM</div>
+        </td>
+        <td style="width:20%;"></td>
+        <td style="width:40%;">
+          <div style="height:35px;"></div>
+          <div class="sign-line">Signature of Candidate</div>
+        </td>
+      </tr>
+    </table>
+
+    <div style="margin-top:20px;border:1px solid #777;padding:8px 10px;font-size:9.5pt;">
+      <strong>Attestation / Witness by Faculty Advisor / Tutor / Proposer:</strong><br>
+      <div style="margin-top:4px;">I hereby attest that the candidate has signed this notice of withdrawal in my presence.</div>
+      <div style="display:flex;justify-content:space-between;margin-top:12px;">
+        <div>Name: <span class="line-fill" style="width:140px;"></span> Desig/Dept: <span class="line-fill" style="width:100px;"></span></div>
+        <div>Signature: <span class="line-fill" style="width:130px;"></span></div>
+      </div>
+    </div>
+
+    <!-- Office Endorsement Section -->
+    <div class="office-section">
+      <div class="office-title">OFFICE OF THE RETURNING OFFICER &mdash; ENDORSEMENT &amp; RECEIPT</div>
+      <div style="font-size:9.5pt;line-height:1.4;">
+        This notice of withdrawal was delivered to me at my office on Date: _____ / _____ / 2026 at Time: _____ : _____ AM/PM by the candidate in person.
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:16px;font-size:9.5pt;">
+        <div>
+          Action: [ &nbsp; ] Accepted &amp; Candidature Struck Off &nbsp;&nbsp;&nbsp; [ &nbsp; ] Rejected (Time-barred)
+        </div>
+        <div style="text-align:right;">
+          <div style="border-top:1px dashed #000;display:inline-block;padding-top:2px;width:180px;text-align:center;">
+            Returning Officer &amp; College Seal
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 400);
+    };
+  </script>
+</body>
+</html>`);
+  w.document.close();
+}

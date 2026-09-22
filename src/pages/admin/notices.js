@@ -36,9 +36,13 @@ async function loadAdminNoticesData(main, pwd) {
 
     const settings = noticesData.settings || {};
     const schedule = noticesData.schedule || {};
-    let notices = Array.isArray(noticesData.notices) ? noticesData.notices : [];
     const booths = Array.isArray(noticesData.booths) ? noticesData.booths : [];
     const locations = Array.isArray(noticesData.locations) ? noticesData.locations : [];
+    let notices = Array.isArray(noticesData.notices) ? noticesData.notices : [];
+
+    if (notices.length === 0) {
+      notices = getDefaultStatutoryNotices(settings, schedule, booths);
+    }
 
     // Calculate class statistics from nominal roll
     const classMap = {};

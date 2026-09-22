@@ -4,10 +4,12 @@
  * University Student Union Election Statutes and Lyngdoh Committee norms.
  */
 
+import { CONFIG } from './config.js';
+
 export function getDefaultStatutoryNotices(settings = {}, schedule = {}, booths = []) {
   const year = settings.electionYear || new Date().getFullYear().toString();
-  const collegeName = settings.collegeName || 'Government Victoria College, Palakkad';
-  const shortName = settings.collegeShortName || 'GVC';
+  const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME || 'Government Victoria College, Palakkad';
+  const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME || 'GVC';
   const todayStr = new Date().toISOString().split('T')[0];
 
   const formatDate = (iso, fallback = 'To be notified') => {
@@ -49,46 +51,73 @@ export function getDefaultStatutoryNotices(settings = {}, schedule = {}, booths 
   return [
     {
       id: 'statutory_notice_election_notification',
-      title: `Official Election Notification — College Union Elections ${year}`,
-      refNo: `${shortName}/ELEC/${year}/NOTIF-01`,
-      date: schedule.notificationDate ? formatDateOnly(schedule.notificationDate) : todayStr,
+      title: `ELECTION NOTIFICATION 2026`,
+      refNo: `190115/DSW-ASST-2/2026/Admn`,
+      date: `29-09-2026`,
       category: 'Statutory Notification',
       pinned: true,
       isPublished: true,
       signatoryName: 'Returning Officer',
-      signatoryTitle: `Returning Officer & Principal / Associate Professor, ${collegeName}`,
-      content: `### ELECTION NOTIFICATION
-**Sub:** Conduct of College Union Elections for the Academic Year ${year} — reg.
+      signatoryTitle: `Returning Officer, ${collegeName}`,
+      content: `In accordance with the University of Calicut Notification U.O.No. 12646/2026/Admn (File Ref.No.190115/DSW-ASST-2/2026/Admn) dated 11-09-2026, it is hereby notified for the information of all students that the election to the College Union for the academic year 2026-2027 will be conducted as per the schedule mandated by the University. The election will be held for the following posts:
 
-It is hereby notified under the provisions of the University Statutes and the guidelines framed by the Lyngdoh Committee as accepted by the Hon'ble Supreme Court of India, that the elections to the **College Union and its affiliated Departmental Associations of ${collegeName}** for the academic year **${year}** will be conducted as per the schedule below:
+### Main Office Bearers
+- **THE CHAIRMAN**
+- **THE VICE CHAIRMAN**
+- **THE SECRETARY**
+- **THE JOINT SECRETARY**
+- **THE CHIEF STUDENT EDITOR**
+- **THE SECRETARY FINE ARTS**
+- **THE GENERAL CAPTAIN FOR SPORTS AND GAMES**
+- **THE UNIVERSITY UNION COUNCILLOR (2 Posts)**
+
+### Class Representatives
+- **I UG REPRESENTATIVE**
+- **II UG REPRESENTATIVE**
+- **III UG REPRESENTATIVE**
+- **PG REPRESENTATIVE**
+
+### Association Secretaries
+- **ASSOCIATION SECRETARY BOTANY**
+- **ASSOCIATION SECRETARY CHEMISTRY**
+- **ASSOCIATION SECRETARY COMMERCE**
+- **ASSOCIATION SECRETARY COMPUTER SCIENCE**
+- **ASSOCIATION SECRETARY ECONOMICS**
+- **ASSOCIATION SECRETARY ENGLISH**
+- **ASSOCIATION SECRETARY HINDI**
+- **ASSOCIATION SECRETARY HISTORY**
+- **ASSOCIATION SECRETARY MALAYALAM**
+- **ASSOCIATION SECRETARY MATHEMATICS**
+- **ASSOCIATION SECRETARY PHYSICS**
+- **ASSOCIATION SECRETARY PSYCHOLOGY**
+- **ASSOCIATION SECRETARY SANSKRIT**
+- **ASSOCIATION SECRETARY TAMIL**
+- **ASSOCIATION SECRETARY ZOOLOGY**
 
 ---
 
-#### 📅 Official Election Calendar & Timings
+### Official Election Schedule (Academic Year 2026–2027)
 
-| Sl. No. | Stage of Election | Date & Time |
-| :---: | :--- | :--- |
-| **1** | Publication of Preliminary Electoral Roll (Draft Nominal Roll) | ${formatDate(schedule.draftRollStart, 'As scheduled')} |
-| **2** | Last date and hour for filing Claims & Objections | ${formatDate(schedule.draftRollEnd, 'As scheduled')} |
-| **3** | Publication of Final Electoral Roll (Final Nominal Roll) | ${formatDate(schedule.finalRollStart, 'As scheduled')} |
-| **4** | Commencing of Filing of Nominations | ${formatDate(schedule.nominationStart, 'As scheduled')} |
-| **5** | Last date and hour for Receipt of Nomination Papers | ${formatDate(schedule.nominationDeadline, 'As scheduled')} |
-| **6** | Scrutiny of Nominations & Publication of Valid List | ${formatDate(schedule.validListStart, 'As scheduled')} |
-| **7** | Last date and hour for Withdrawal of Candidature | ${formatDate(schedule.withdrawalEnd, 'As scheduled')} |
-| **8** | Publication of Final List of Contesting Candidates | ${formatDate(schedule.finalListStart, 'As scheduled')} |
-| **9** | **Date and Hours of Polling** | **${formatDate(schedule.pollingStart, 'To be announced')} to ${formatDate(schedule.pollingEnd, 'To be announced')}** |
-| **10** | **Scrutiny & Counting of Votes / Declaration of Results** | **${formatDate(schedule.resultsStart, 'Immediately following poll')}** |
+| Activity | Date | Day | Time |
+| :--- | :---: | :---: | :---: |
+| Publication of the Preliminary Electoral Roll | 23-09-2026 | Wednesday | 11:00 AM |
+| Last date and time for correction/addition/deletion in the Preliminary Electoral Roll | 25-09-2026 | Friday | 4:00 PM |
+| Publication of the Final Electoral Roll | 28-09-2026 | Monday | 4:00 PM |
+| Date of Notification of the Election for the Academic Year 2026–27 | 29-09-2026 | Tuesday | 4:00 PM |
+| Last Date and Time for Submission of Nominations | 01-10-2026 | Thursday | Until 12:00 Noon |
+| Date and Time for Scrutiny of Nominations | 01-10-2026 | Thursday | 2:00 PM |
+| Date and Time for Publication of the List of Valid Nominations | 01-10-2026 | Thursday | 5:00 PM |
+| Last Date and Time for Withdrawal of Nominations | 05-10-2026 | Monday | Until 12:00 Noon |
+| Date and Time for Publication of the Final List of Nominations | 05-10-2026 | Monday | 5:00 PM |
+| Date and Time for Polling – Presidential Mode &amp; Union Office Bearers Election | 15-10-2026 | Thursday | 9:30 AM to 12:30 PM |
+| Date and Time for Counting of Votes &amp; Declaration of Results | 15-10-2026 | Thursday | From 2:00 PM onwards |
 
 ---
 
-#### ⚖️ Statutory Eligibility Norms (Lyngdoh Committee Guidelines)
-1. **Age Limit**:
-   - Undergraduate (UG) students must be between **17 and 22 years** of age as on the date of notification.
-   - Postgraduate (PG) students must not exceed **24–25 years** of age.
-   - **Research Scholars are barred from contesting** for any College Union or Departmental post under statutory university election rules.
-2. **Academic Standing**: The candidate must be a regular full-time enrolled student of the college, having no academic arrears and with a minimum aggregate attendance of **75%**.
-3. **Disciplinary Clearance**: Candidates must not have any previous criminal records, disciplinary proceedings, or campus trial sanctions pending against them.
-4. **Election Expenditure**: Election expenses for every candidate shall strictly not exceed the permissible ceiling of ₹5,000/- as mandated by Supreme Court directives.`
+All students are directed to strictly adhere to the Lyngdoh Committee recommendations and the University's code of conduct. Nomination forms and related documents are available at the college election portal.
+
+**Returning Officer**  
+*(College Seal)*`
     },
 
     {

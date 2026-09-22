@@ -12,6 +12,7 @@ import {
   setLoading, showToast, todayFormatted, triggerPrint,
   formatYearRuleDescription
 } from '../utils.js';
+import { printBlankNominationForm } from '../noticesPrinter.js';
 
 let nominalRoll = [];
 let allPosts = [];      // [{post, femaleOnly, finalYearIneligible, yearRestriction, deptRestriction}]
@@ -102,10 +103,16 @@ function renderForm(container, year, collegeName, setsData = {}) {
           <button id="viewRollBtn" class="btn btn-primary">📜 View Nominal Roll</button>
           <button id="backBtn" class="btn btn-secondary">← Back to Home</button>
         </div>
+        <div class="mt-8 pt-4 border-t border-white/5 text-center">
+          <button type="button" class="btn-blank-nom-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
+            <span>📄</span> Need to fill manually? Print Blank Nomination Form
+          </button>
+        </div>
       </div>
     `;
     formArea.querySelector('#viewRollBtn').onclick = () => router.navigate('/nominal-roll');
     formArea.querySelector('#backBtn').onclick = () => router.navigate('/');
+    formArea.querySelectorAll('.btn-blank-nom-trigger').forEach(b => b.onclick = () => triggerBlankNominationAlert(setsData));
     return;
   }
 
@@ -129,9 +136,15 @@ function renderForm(container, year, collegeName, setsData = {}) {
           <h3 class="text-2xl font-bold text-white mb-3">Nomination Window Closed</h3>
           <p class="text-slate-400 mb-6 leading-relaxed">Nomination submission has been officially closed by the Returning Officer.</p>
           <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
+          <div class="mt-8 pt-4 border-t border-white/5 text-center">
+            <button type="button" class="btn-blank-nom-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
+              <span>📄</span> Need to fill manually? Print Blank Nomination Form
+            </button>
+          </div>
         </div>
       `;
       formArea.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
+      formArea.querySelectorAll('.btn-blank-nom-trigger').forEach(b => b.onclick = () => triggerBlankNominationAlert(setsData));
       return;
     }
 
@@ -147,9 +160,15 @@ function renderForm(container, year, collegeName, setsData = {}) {
             Nomination submissions are scheduled to open on <strong>${start.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })}</strong>.
           </p>
           <button id="pendingBackBtn" class="btn btn-secondary">← Back to Home</button>
+          <div class="mt-8 pt-4 border-t border-white/5 text-center">
+            <button type="button" class="btn-blank-nom-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
+              <span>📄</span> Need to fill manually? Print Blank Nomination Form
+            </button>
+          </div>
         </div>
       `;
       formArea.querySelector('#pendingBackBtn').onclick = () => router.navigate('/');
+      formArea.querySelectorAll('.btn-blank-nom-trigger').forEach(b => b.onclick = () => triggerBlankNominationAlert(setsData));
       return;
     }
 
@@ -163,9 +182,15 @@ function renderForm(container, year, collegeName, setsData = {}) {
           <h3 class="text-2xl font-bold text-white mb-3">Nomination Window Closed</h3>
           <p class="text-slate-400 mb-6 leading-relaxed">The official deadline for filing nominations was <strong>${deadline.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })}</strong>.</p>
           <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
+          <div class="mt-8 pt-4 border-t border-white/5 text-center">
+            <button type="button" class="btn-blank-nom-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
+              <span>📄</span> Need to fill manually? Print Blank Nomination Form
+            </button>
+          </div>
         </div>
       `;
       formArea.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
+      formArea.querySelectorAll('.btn-blank-nom-trigger').forEach(b => b.onclick = () => triggerBlankNominationAlert(setsData));
       return;
     }
   }
@@ -204,6 +229,13 @@ function renderForm(container, year, collegeName, setsData = {}) {
       <div class="flex gap-3">
         <button type="button" id="backHomeBtn" class="btn btn-secondary">← Back</button>
         <button type="submit" id="submitBtn" class="btn btn-primary flex-1">Generate &amp; Preview Nomination</button>
+      </div>
+
+      <!-- Inconspicuous blank form option -->
+      <div class="mt-6 pt-4 border-t border-white/5 text-center">
+        <button type="button" class="btn-blank-nom-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
+          <span>📄</span> Need to fill manually? Print Blank Nomination Form
+        </button>
       </div>
     </form>
 
@@ -319,6 +351,26 @@ function renderForm(container, year, collegeName, setsData = {}) {
 
   formArea.querySelector('#backHomeBtn')?.addEventListener('click', () => router.navigate('/'));
   formArea.querySelector('#nomForm')?.addEventListener('submit', (e) => handleSubmit(e, formArea, year, collegeName, setsData?.collegeLogo || ''));
+
+  // Wire up blank nomination printing
+  formArea.querySelectorAll('.btn-blank-nom-trigger').forEach(btn => {
+    btn.addEventListener('click', () => triggerBlankNominationAlert(setsData));
+  });
+}
+
+function triggerBlankNominationAlert(setsData = {}) {
+  const proceed = confirm(
+    "⚠️ NOTICE: BLANK NOMINATION FORM\n\n" +
+    "You are requesting a BLANK Nomination Form for manual physical submission.\n\n" +
+    "• This form must be hand-filled neatly in black or blue ballpoint ink in block letters.\n" +
+    "• Proposer and Seconder signatures and Electoral Roll Serial Numbers are mandatory.\n" +
+    "• The candidate must sign the statutory consent declaration in person before the Returning Officer.\n" +
+    "• Physical submission must be completed before the official deadline.\n\n" +
+    "Do you want to proceed and print the blank form?"
+  );
+  if (proceed) {
+    printBlankNominationForm(setsData);
+  }
 }
 
 function openFindSerialModal(role, roleLabel, onSelect) {

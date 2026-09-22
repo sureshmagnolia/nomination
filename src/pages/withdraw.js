@@ -6,6 +6,7 @@ import { api } from '../api.js';
 import { router } from '../router.js';
 import { esc, setLoading, showToast, triggerPrint, todayFormatted } from '../utils.js';
 import { CONFIG } from '../config.js';
+import { printBlankWithdrawalForm } from '../noticesPrinter.js';
 
 export async function renderWithdraw(container) {
   let year = new Date().getFullYear();
@@ -58,9 +59,15 @@ export async function renderWithdraw(container) {
             Withdrawal of candidature will open only after the <strong>Valid Nominations List</strong> is officially published by the Returning Officer.
           </p>
           <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
+          <div class="mt-8 pt-4 border-t border-white/5 text-center">
+            <button type="button" class="btn-blank-with-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
+              <span>📄</span> Need to submit physically? Print Blank Withdrawal Form
+            </button>
+          </div>
         </div>
       `;
       area.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
+      area.querySelectorAll('.btn-blank-with-trigger').forEach(b => b.onclick = () => triggerBlankWithdrawalAlert(sets));
       return;
     }
 
@@ -76,9 +83,15 @@ export async function renderWithdraw(container) {
             <h3 class="text-2xl font-bold text-white mb-3">Withdrawal Window Closed</h3>
             <p class="text-slate-400 mb-6">Withdrawal of candidature has been officially closed by the Returning Officer.</p>
             <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
+            <div class="mt-8 pt-4 border-t border-white/5 text-center">
+              <button type="button" class="btn-blank-with-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
+                <span>📄</span> Need to submit physically? Print Blank Withdrawal Form
+              </button>
+            </div>
           </div>
         `;
         area.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
+        area.querySelectorAll('.btn-blank-with-trigger').forEach(b => b.onclick = () => triggerBlankWithdrawalAlert(sets));
         return;
       }
 
@@ -89,9 +102,15 @@ export async function renderWithdraw(container) {
             <h3 class="text-2xl font-bold text-white mb-3">Withdrawal Window Pending</h3>
             <p class="text-slate-400 mb-6">The withdrawal window is scheduled to open on <strong>${new Date(start).toLocaleString()}</strong>.</p>
             <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
+            <div class="mt-8 pt-4 border-t border-white/5 text-center">
+              <button type="button" class="btn-blank-with-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
+                <span>📄</span> Need to submit physically? Print Blank Withdrawal Form
+              </button>
+            </div>
           </div>
         `;
         area.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
+        area.querySelectorAll('.btn-blank-with-trigger').forEach(b => b.onclick = () => triggerBlankWithdrawalAlert(sets));
         return;
       }
       if (end && now > end) {
@@ -101,9 +120,15 @@ export async function renderWithdraw(container) {
             <h3 class="text-2xl font-bold text-white mb-3">Withdrawal Window Closed</h3>
             <p class="text-slate-400 mb-6">The official deadline for withdrawal requests was <strong>${new Date(end).toLocaleString()}</strong>.</p>
             <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
+            <div class="mt-8 pt-4 border-t border-white/5 text-center">
+              <button type="button" class="btn-blank-with-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
+                <span>📄</span> Need to submit physically? Print Blank Withdrawal Form
+              </button>
+            </div>
           </div>
         `;
         area.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
+        area.querySelectorAll('.btn-blank-with-trigger').forEach(b => b.onclick = () => triggerBlankWithdrawalAlert(sets));
         return;
       }
     }
@@ -127,8 +152,17 @@ export async function renderWithdraw(container) {
           <button id="fetchBtn" class="btn btn-primary w-full">Fetch Nomination Details</button>
         </div>
         <div id="nominationDetails" class="mt-8"></div>
+
+        <!-- Inconspicuous blank form option -->
+        <div class="mt-8 pt-4 border-t border-white/5 text-center">
+          <button type="button" class="btn-blank-with-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
+            <span>📄</span> Need to submit physically? Print Blank Withdrawal Form
+          </button>
+        </div>
       </div>
     `;
+
+    area.querySelectorAll('.btn-blank-with-trigger').forEach(b => b.onclick = () => triggerBlankWithdrawalAlert(sets));
 
     const fetchBtn = area.querySelector('#fetchBtn');
     fetchBtn.addEventListener('click', async () => {
@@ -198,7 +232,9 @@ function showDetails(area, nom, id, adm, collegeName = null) {
         <div class="print-zone mt-4">
           ${buildWithdrawalPaper(id, nom, collegeName)}
         </div>`;
-      area.querySelector('#printWithdrawal').addEventListener('click', triggerPrint);
+      area.querySelector('#printWithdrawal').addEventListener('click', () => {
+        triggerPrint(area.querySelector('.print-zone').innerHTML, 'Withdrawal Form');
+      });
       showToast('Withdrawal request submitted!', 'success');
     } catch (e) {
       showToast(`Failed: ${e.message}`, 'error');
@@ -206,7 +242,20 @@ function showDetails(area, nom, id, adm, collegeName = null) {
     }
   });
 
+}
 
+function triggerBlankWithdrawalAlert(sets = {}) {
+  const proceed = confirm(
+    "⚠️ NOTICE: BLANK WITHDRAWAL FORM\n\n" +
+    "You are requesting a BLANK Notice of Withdrawal Form for manual physical submission.\n\n" +
+    "• This form must be hand-filled neatly, dated, and signed by the candidate.\n" +
+    "• It must be submitted in person to the Returning Officer before the withdrawal deadline.\n" +
+    "• Withdrawal of candidature, once accepted by the Returning Officer, is final and irreversible.\n\n" +
+    "Do you want to proceed and print the blank form?"
+  );
+  if (proceed) {
+    printBlankWithdrawalForm(sets);
+  }
 }
 
 function buildWithdrawalPaper(id, nom, collegeName = null) {
