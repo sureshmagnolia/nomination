@@ -10,7 +10,7 @@ import {
   checkEligibility, generateCaptcha, populateDobSelects,
   buildDobString, displayDob, calculateAge, esc,
   setLoading, showToast, todayFormatted, triggerPrint,
-  formatYearRuleDescription
+  formatYearRuleDescription, sortPosts
 } from '../utils.js';
 import { printBlankNominationForm } from '../noticesPrinter.js';
 
@@ -195,7 +195,8 @@ function renderForm(container, year, collegeName, setsData = {}) {
     }
   }
 
-  const postOptions = allPosts.map(p => `<option value="${esc(p.post)}">${esc(p.post)}</option>`).join('');
+  const sortedPosts = sortPosts(allPosts);
+  const postOptions = sortedPosts.map(p => `<option value="${esc(p.post)}">${esc(p.post)}</option>`).join('');
 
   formArea.innerHTML = `
     <div id="warningBox" class="hidden alert alert-warning mb-4"></div>

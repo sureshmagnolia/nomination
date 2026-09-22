@@ -3,7 +3,7 @@
  * Public dashboard to view live election results.
  */
 import { api } from '../api.js';
-import { esc } from '../utils.js';
+import { esc, sortPosts } from '../utils.js';
 import { router } from '../router.js';
 
 const CACHE_KEY = 'election_results_cache';
@@ -180,8 +180,10 @@ async function fetchAndRender(main, force = false) {
       return;
     }
 
+    const sortedPosts = sortPosts(posts);
+
     const agg = {};
-    posts.forEach(p => {
+    sortedPosts.forEach(p => {
       const name = p.post || p.name; // Robust naming check
       agg[name] = {};
     });
@@ -198,7 +200,7 @@ async function fetchAndRender(main, force = false) {
     let html = '';
 
     // ── Leaderboard (General & Reps only) ──────────────────────────────────
-    const leaderboardPosts = posts.filter(p => {
+    const leaderboardPosts = sortedPosts.filter(p => {
       const name = p.post || p.name;
       return !p.deptRestriction && !name.toUpperCase().includes('ASSOCIATION');
     });
@@ -264,7 +266,7 @@ async function fetchAndRender(main, force = false) {
 
     html += '<div class="space-y-12">';
     
-    posts.forEach(post => {
+    sortedPosts.forEach(post => {
       const name = post.post || post.name;
       const pAgg = agg[name];
       if (!pAgg) return;

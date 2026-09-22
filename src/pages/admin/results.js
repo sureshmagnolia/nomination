@@ -4,7 +4,7 @@
  */
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast } from '../../utils.js';
+import { esc, showToast, sortPosts } from '../../utils.js';
 
 export async function renderAdminResults(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -68,7 +68,8 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   });
 
   // 2. Determine Winners
-  const postResults = posts.map(p => {
+  const sortedPosts = sortPosts(posts);
+  const postResults = sortedPosts.map(p => {
     const postCandidates = candidates.filter(c => c.post === p.post);
     const postAgg = agg[p.post] || {};
     

@@ -8,7 +8,7 @@
  */
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast, setLoading } from '../../utils.js';
+import { esc, showToast, setLoading, comparePosts, sortPosts } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 import { openPrintRollModal } from '../../rollPrinter.js';
 
@@ -316,12 +316,8 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
       grouped[n.post].push(n);
     });
 
-    // Use official post order from postsData
-    const orderedPostNames = postsData.map(p => p.post || p.name).filter(name => grouped[name]);
-    // Add any remaining posts not in postsData
-    Object.keys(grouped).forEach(name => {
-      if (!orderedPostNames.includes(name)) orderedPostNames.push(name);
-    });
+    // Use official post order and ensure Association Secretaries are alphabetically sorted
+    const orderedPostNames = Object.keys(grouped).sort(comparePosts);
 
     // Sort candidates alphabetically within each post
     orderedPostNames.forEach(post => {
@@ -432,7 +428,8 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
       agg[p][c] += Number(r.Votes || r.votes) || 0;
     });
 
-    const postResults = postsData.map(p => {
+    const sortedPostsData = sortPosts(postsData);
+    const postResults = sortedPostsData.map(p => {
       const postName = p.post || p.name;
       const postCandidates = finalList.filter(c => c.post === postName);
       if (postCandidates.length === 0) return { post: postName, type: 'no-candidates', candidates: [] };

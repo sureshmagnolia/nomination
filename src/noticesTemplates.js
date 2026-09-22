@@ -20,7 +20,7 @@ export function getDefaultStatutoryNotices(settings = {}, schedule = {}, booths 
   const assocSecPosts = configuredPosts.filter(p => {
     const pName = String(p.post || '').trim().toLowerCase();
     return pName.startsWith('association secretary') || (p.deptRestriction && pName.includes('secretary')) || p.deptRestriction || p.restrictedDept;
-  });
+  }).sort((a, b) => String(a.post || '').localeCompare(String(b.post || '')));
 
   // Class Representatives: year/class representative posts
   const classRepPosts = configuredPosts.filter(p => {

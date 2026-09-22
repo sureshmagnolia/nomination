@@ -392,3 +392,90 @@ export function getProgWeight(className) {
   if (/^III\s+(B|UG)/i.test(c) || /3RD\s+YEAR/i.test(c)) return 3000;
   return 3500;
 }
+
+// ─── Post Classification & Alphabetical Association Secretary Sorting ────────
+export function isAssocPost(postOrRule) {
+  const p = typeof postOrRule === 'string' ? postOrRule : (postOrRule?.post || postOrRule?.name || '');
+  const u = String(p).toUpperCase().trim();
+  return u.startsWith('ASSOCIATION SECRETARY') || 
+         u.includes('ASSOCIATION') || 
+         Boolean(postOrRule?.deptRestriction) || 
+         Boolean(postOrRule?.restrictedDept);
+}
+
+export function isYearRepPost(postOrRule) {
+  if (isAssocPost(postOrRule)) return false;
+  const p = typeof postOrRule === 'string' ? postOrRule : (postOrRule?.post || postOrRule?.name || '');
+  const u = String(p).toUpperCase().trim();
+  if (u.includes('UUC') || u.includes('UNIVERSITY UNION COUNCILLOR')) return false;
+  return u.includes('REPRESENTATIVE') || u.includes('REP');
+}
+
+export function getPostOrderRank(postOrRule) {
+  const p = typeof postOrRule === 'string' ? postOrRule : (postOrRule?.post || postOrRule?.name || '');
+  const u = String(p).toUpperCase().trim();
+
+  // Major Executive Posts (Ranks 1 - 20)
+  if (u === 'THE CHAIRMAN' || u === 'CHAIRMAN') return 1;
+  if (u.includes('VICE CHAIRMAN') || u.includes('VICE-CHAIRMAN')) return 2;
+  if (u === 'THE SECRETARY' || u === 'SECRETARY' || u === 'GENERAL SECRETARY') return 3;
+  if (u.includes('JOINT SECRETARY')) return 4;
+  if (u.includes('STUDENT EDITOR') || u.includes('CHIEF STUDENT EDITOR')) return 5;
+  if (u.includes('FINE ARTS') || u.includes('ARTS CLUB')) return 6;
+  if (u.includes('GENERAL CAPTAIN') || u.includes('SPORTS')) return 7;
+  if (u.includes('UNIVERSITY UNION COUNCILLOR') || u.includes('UUC')) return 8;
+
+  // Other general campus-wide union posts (Rank 50)
+  if (!isYearRepPost(postOrRule) && !isAssocPost(postOrRule)) return 50;
+
+  // Class / Year Representatives (Rank 100 - 150)
+  if (isYearRepPost(postOrRule)) {
+    if (u.includes('I UG') || u.includes('1ST UG') || u.includes('1_UG') || u.includes('1ST YEAR UG')) return 101;
+    if (u.includes('II UG') || u.includes('2ND UG') || u.includes('2_UG') || u.includes('2ND YEAR UG')) return 102;
+    if (u.includes('III UG') || u.includes('3RD UG') || u.includes('3_UG') || u.includes('3RD YEAR UG')) return 103;
+    if (u.includes('I PG') || u.includes('1ST PG') || u.includes('1_PG')) return 104;
+    if (u.includes('II PG') || u.includes('2ND PG') || u.includes('2_PG')) return 105;
+    if (u.includes('PG')) return 106;
+    return 120;
+  }
+
+  // Association Secretaries (Rank 200 - Always Alphabetically Sorted by Dept / Post Name)
+  return 200;
+}
+
+export function getAssocPostSortKey(postOrRule) {
+  const p = typeof postOrRule === 'string' ? postOrRule : (postOrRule?.post || postOrRule?.name || '');
+  let s = String(p).trim();
+  const prefixRegex = /^ASSOCIATION\s+SECRETARY\s*(FOR\s*|\s*-\s*|\s*:\s*|\s+OF\s*)?/i;
+  s = s.replace(prefixRegex, '').trim();
+  return s.toLowerCase();
+}
+
+export function comparePosts(a, b) {
+  const rankA = getPostOrderRank(a);
+  const rankB = getPostOrderRank(b);
+
+  if (rankA !== rankB) {
+    return rankA - rankB;
+  }
+
+  // If both are Association Secretaries (rank 200), sort strictly ALPHABETICALLY
+  if (rankA === 200 && rankB === 200) {
+    const keyA = getAssocPostSortKey(a);
+    const keyB = getAssocPostSortKey(b);
+    if (keyA !== keyB) return keyA.localeCompare(keyB);
+    const nameA = typeof a === 'string' ? a : (a?.post || a?.name || '');
+    const nameB = typeof b === 'string' ? b : (b?.post || b?.name || '');
+    return String(nameA).localeCompare(String(nameB));
+  }
+
+  const nameA = typeof a === 'string' ? a : (a?.post || a?.name || '');
+  const nameB = typeof b === 'string' ? b : (b?.post || b?.name || '');
+  return String(nameA).localeCompare(String(nameB));
+}
+
+export function sortPosts(postsList) {
+  if (!Array.isArray(postsList)) return [];
+  return [...postsList].sort(comparePosts);
+}
+

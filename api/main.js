@@ -423,6 +423,73 @@ async function ensureSchema() {
   }
 }
 
+function isAssocPost(p) {
+  const name = typeof p === 'string' ? p : (p?.post || p?.name || '');
+  const n = String(name).trim().toLowerCase();
+  return n.startsWith('association secretary') || n.includes('association secretary') || (p && typeof p === 'object' && (p.deptRestriction || p.restrictedDept));
+}
+
+function isYearRepPost(p) {
+  const name = typeof p === 'string' ? p : (p?.post || p?.name || '');
+  const n = String(name).trim().toLowerCase();
+  return !isAssocPost(p) && (n.includes('representative') || n.includes('rep') || (p && typeof p === 'object' && (p.yearRestriction || p.yearRuleMode === 'INCLUDE')));
+}
+
+function getAssocPostSortKey(p) {
+  const name = typeof p === 'string' ? p : (p?.post || p?.name || '');
+  let s = String(name).trim();
+  const prefix = /^association\s+secretary\s*(of\s+)?(the\s+)?/i;
+  s = s.replace(prefix, '').trim();
+  return s.toUpperCase();
+}
+
+function getPostOrderRank(p) {
+  const name = typeof p === 'string' ? p : (p?.post || p?.name || '');
+  const n = String(name).trim().toLowerCase();
+  
+  if (isAssocPost(p)) return 300;
+  if (isYearRepPost(p)) {
+    if (n.includes('i ug') || n.includes('1 ug') || n.includes('first')) return 201;
+    if (n.includes('ii ug') || n.includes('2 ug') || n.includes('second')) return 202;
+    if (n.includes('iii ug') || n.includes('3 ug') || n.includes('third')) return 203;
+    if (n.includes('pg')) return 204;
+    return 205;
+  }
+  
+  // Executive / General posts
+  if (n.includes('chairman') && !n.includes('vice')) return 1;
+  if (n.includes('vice chairman') || n.includes('vice-chairman')) return 2;
+  if (n.includes('general secretary') || (n.includes('secretary') && !n.includes('joint') && !n.includes('fine') && !n.includes('association'))) return 3;
+  if (n.includes('joint secretary') || n.includes('joint-secretary')) return 4;
+  if (n.includes('student editor') || n.includes('magazine') || n.includes('editor')) return 5;
+  if (n.includes('fine arts') || n.includes('arts')) return 6;
+  if (n.includes('general captain') || n.includes('sports')) return 7;
+  if (n.includes('university union councillor') || n.includes('uuc') || n.includes('councillor')) return 8;
+  
+  return 100;
+}
+
+function comparePosts(a, b) {
+  const rankA = getPostOrderRank(a);
+  const rankB = getPostOrderRank(b);
+  if (rankA !== rankB) return rankA - rankB;
+  
+  if (isAssocPost(a) && isAssocPost(b)) {
+    const keyA = getAssocPostSortKey(a);
+    const keyB = getAssocPostSortKey(b);
+    if (keyA !== keyB) return keyA.localeCompare(keyB);
+  }
+  
+  const nameA = typeof a === 'string' ? a : (a?.post || a?.name || '');
+  const nameB = typeof b === 'string' ? b : (b?.post || b?.name || '');
+  return String(nameA).localeCompare(String(nameB));
+}
+
+function sortPosts(list) {
+  if (!Array.isArray(list)) return [];
+  return [...list].sort(comparePosts);
+}
+
 async function fetchPostsFromDb() {
   await ensureSchema();
   let rawPosts;
@@ -511,7 +578,19 @@ async function fetchPostsFromDb() {
       const idxB = orderMap.has(b.post) ? orderMap.get(b.post) : 9999;
       return idxA - idxB;
     });
+  } else {
+    sortedPosts = sortPosts(sortedPosts);
   }
+
+  // Guarantee Association Secretaries are always strictly alphabetically sorted A-Z
+  const nonAssoc = sortedPosts.filter(p => !isAssocPost(p));
+  const assoc = sortedPosts.filter(isAssocPost).sort((a, b) => {
+    const keyA = getAssocPostSortKey(a);
+    const keyB = getAssocPostSortKey(b);
+    if (keyA !== keyB) return keyA.localeCompare(keyB);
+    return String(a.post || '').localeCompare(String(b.post || ''));
+  });
+  sortedPosts = [...nonAssoc, ...assoc];
 
   return sortedPosts.map(p => {
     let yrYears = [];
@@ -1040,6 +1119,11 @@ export default async function handler(req, res) {
           const assocSec = freshPosts.filter(p => {
             const pName = String(p.post || '').trim().toLowerCase();
             return pName.startsWith('association secretary') || (p.deptRestriction && pName.includes('secretary')) || p.deptRestriction || p.restrictedDept;
+          }).sort((a, b) => {
+            const keyA = getAssocPostSortKey(a);
+            const keyB = getAssocPostSortKey(b);
+            if (keyA !== keyB) return keyA.localeCompare(keyB);
+            return String(a.post || '').localeCompare(String(b.post || ''));
           });
           const classRep = freshPosts.filter(p => {
             const pName = String(p.post || '').trim().toLowerCase();
@@ -1412,7 +1496,12 @@ All students are directed to strictly adhere to the University Code of Conduct, 
 
       // 3. Assocs
       const assocResults = [];
-      const aPosts = contestablePosts.filter(isAssoc);
+      const aPosts = contestablePosts.filter(isAssoc).sort((a, b) => {
+        const keyA = getAssocPostSortKey(a);
+        const keyB = getAssocPostSortKey(b);
+        if (keyA !== keyB) return keyA.localeCompare(keyB);
+        return String(a.post || '').localeCompare(String(b.post || ''));
+      });
       aPosts.forEach(p => {
         const prefix = 'Association Secretary';
         let dept = String(p.restrictedDept || p.post || '').toUpperCase();
@@ -1441,6 +1530,17 @@ All students are directed to strictly adhere to the University Code of Conduct, 
             assocSl += count;
           }
         });
+      });
+
+      booths.forEach(b => {
+        if (Array.isArray(boothMap[b.boothNumber]?.assocs)) {
+          boothMap[b.boothNumber].assocs.sort((a, b) => {
+            const keyA = getAssocPostSortKey(a.post);
+            const keyB = getAssocPostSortKey(b.post);
+            if (keyA !== keyB) return keyA.localeCompare(keyB);
+            return String(a.post || '').localeCompare(String(b.post || ''));
+          });
+        }
       });
 
       const plan = {

@@ -894,7 +894,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                     <td></td><td></td><td></td>
                   </tr>
                 `).join('')}
-                ${assignments.assocs.map(a => `
+                ${(assignments.assocs || []).slice().sort((a, b) => String(a.post || '').localeCompare(String(b.post || ''))).map(a => `
                   <tr>
                     <td style="font-size:12px; font-weight:bold;">${esc(a.post)}</td>
                     <td style="font-size:12px;">A${a.start} - A${a.end}</td>

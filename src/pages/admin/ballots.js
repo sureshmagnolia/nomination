@@ -4,7 +4,7 @@
  */
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast, setLoading } from '../../utils.js';
+import { esc, showToast, setLoading, comparePosts, sortPosts } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 
 export async function renderAdminBallots(container) {
@@ -29,7 +29,7 @@ export async function renderAdminBallots(container) {
       api.adminGetBallotConfig(pwd).catch(() => null),
       api.adminGetBallotPlan(pwd).catch(() => null)
     ]);
-    posts = fetchedPosts;
+    posts = sortPosts(fetchedPosts);
     ballotConfig = fetchedConfig;
     plan = fetchedPlan;
   } catch (err) {
@@ -874,7 +874,7 @@ export async function renderAdminBallots(container) {
     }
 
     // 2. Year Rep & Association Ballots (A5, One post per page)
-    const otherPosts = contestablePosts.filter(p => isYear(p) || isAssoc(p));
+    const otherPosts = contestablePosts.filter(p => isYear(p) || isAssoc(p)).sort(comparePosts);
     if (filterType === 'all' || filterType === 'year' || filterType === 'assoc') {
       const filteredOthers = otherPosts.filter(p => 
         (filterType === 'all') || 
@@ -1116,7 +1116,7 @@ export async function renderAdminBallots(container) {
               </tr>
             </thead>
             <tbody>
-              ${(masterPlan.assocs?.results || []).map(s => `
+              ${(masterPlan.assocs?.results || []).slice().sort((a, b) => String(a.post || '').localeCompare(String(b.post || ''))).map(s => `
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${esc(s.post)}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">B${s.booth}</td>

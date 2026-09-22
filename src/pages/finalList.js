@@ -4,7 +4,7 @@
  */
 import { api } from '../api.js';
 import { router } from '../router.js';
-import { esc } from '../utils.js';
+import { esc, comparePosts } from '../utils.js';
 import { CONFIG } from '../config.js';
 
 export async function renderFinalList(container) {
@@ -47,12 +47,14 @@ function renderList(main, nominations, year) {
     return;
   }
   
-  // Group by post
+  // Group by post and sort posts (Association Secretaries alphabetically sorted)
   const byPost = {};
   nominations.forEach(n => {
     if (!byPost[n.post]) byPost[n.post] = [];
     byPost[n.post].push(n);
   });
+
+  const sortedPosts = Object.keys(byPost).sort(comparePosts);
 
   main.innerHTML = `
     <div class="page-enter space-y-10">
@@ -62,7 +64,10 @@ function renderList(main, nominations, year) {
       </div>
       
       <div class="space-y-12">
-        ${Object.entries(byPost).map(([post, noms]) => `
+        ${sortedPosts.map(post => {
+          const noms = byPost[post] || [];
+          noms.sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
+          return `
           <div class="glass rounded-2xl overflow-hidden shadow-2xl border border-white/5">
             <div class="px-6 py-4 bg-gradient-to-r from-emerald-500/10 to-indigo-500/5 border-b border-white/10 flex justify-between items-center">
               <h3 class="font-bold text-emerald-400 text-sm uppercase tracking-widest">${esc(post)}</h3>
@@ -105,7 +110,8 @@ function renderList(main, nominations, year) {
               </table>
             </div>
           </div>
-        `).join('')}
+        `;
+        }).join('')}
       </div>
     </div>`;
 }

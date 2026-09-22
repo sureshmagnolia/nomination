@@ -6,7 +6,7 @@
 import { api } from '../../api.js';
 import { CONFIG } from '../../config.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast, setLoading, YEAR_LEVELS, formatYearRuleDescription } from '../../utils.js';
+import { esc, showToast, setLoading, YEAR_LEVELS, formatYearRuleDescription, sortPosts } from '../../utils.js';
 
 export async function renderAdminPosts(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -297,7 +297,9 @@ function renderPostRows(main, posts, pwd, filterQuery = '') {
     return;
   }
 
-  tbody.innerHTML = filtered.map((p, i) => {
+  const sorted = sortPosts(filtered);
+
+  tbody.innerHTML = sorted.map((p, i) => {
     // Year Policy badge
     const yearDesc = formatYearRuleDescription(p);
     let yearBadge = '<span class="text-slate-500 text-xs">— All Years —</span>';

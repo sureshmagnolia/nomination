@@ -172,7 +172,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       const name = pName(p).toUpperCase();
       return name.includes('UUC') || name.includes('UNIVERSITY UNION COUNCILLOR');
     });
-    const assocPosts   = pool.filter(p => !uucPosts.includes(p) && (pName(p).toUpperCase().includes('ASSOCIATION') || !!p.deptRestriction));
+    const assocPosts   = pool.filter(p => !uucPosts.includes(p) && (pName(p).toUpperCase().includes('ASSOCIATION') || !!p.deptRestriction)).sort((a, b) => pName(a).localeCompare(pName(b)));
     const yearRepPosts = pool.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && (pName(p).toUpperCase().includes('REPRESENTATIVE') || pName(p).toUpperCase().includes('REP')));
     const generalPosts = pool.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && !yearRepPosts.includes(p));
     const G = generalPosts.length;
