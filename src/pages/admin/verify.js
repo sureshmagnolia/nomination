@@ -600,12 +600,12 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
   };
 
   const openNomDetail = (nomId) => {
-    const nom = allNoms.find(n => n.id === nomId);
+    const nom = allNoms.find(n => String(n.id) === String(nomId));
     if (!nom) return;
     currentDetailNomId = nom.id;
 
     // Track active position in filtered list
-    const idx = activeFilteredList.findIndex(n => n.id === nom.id);
+    const idx = activeFilteredList.findIndex(n => String(n.id) === String(nom.id));
     const total = activeFilteredList.length;
     counterText.textContent = total > 0 ? `${idx + 1} / ${total}` : '1 / 1';
     btnPrev.disabled = idx <= 0;
@@ -779,7 +779,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
 
     // If modal is open, refresh counter & navigation
     if (currentDetailNomId) {
-      const idx = activeFilteredList.findIndex(n => n.id === currentDetailNomId);
+      const idx = activeFilteredList.findIndex(n => String(n.id) === String(currentDetailNomId));
       const total = activeFilteredList.length;
       counterText.textContent = total > 0 ? `${idx + 1} / ${total}` : '1 / 1';
       btnPrev.disabled = idx <= 0;
@@ -900,12 +900,12 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
   });
 
   btnPrev.addEventListener('click', () => {
-    const idx = activeFilteredList.findIndex(n => n.id === currentDetailNomId);
+    const idx = activeFilteredList.findIndex(n => String(n.id) === String(currentDetailNomId));
     if (idx > 0) openNomDetail(activeFilteredList[idx - 1].id);
   });
 
   btnNext.addEventListener('click', () => {
-    const idx = activeFilteredList.findIndex(n => n.id === currentDetailNomId);
+    const idx = activeFilteredList.findIndex(n => String(n.id) === String(currentDetailNomId));
     if (idx !== -1 && idx < activeFilteredList.length - 1) openNomDetail(activeFilteredList[idx + 1].id);
   });
 
@@ -920,8 +920,8 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     else if (e.key === 'ArrowRight' && !btnNext.disabled) btnNext.click();
   });
 
-  // Main Table Row Delegation
-  main.querySelector('#nomTableBody').addEventListener('click', async (e) => {
+  // Main List Delegation (Cards & Table)
+  main.querySelector('#nomListView')?.addEventListener('click', async (e) => {
     // Open full form review modal
     const viewBtn = e.target.closest('.view-nom-btn');
     if (viewBtn) {
@@ -952,7 +952,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
 
     let reason = null;
     if (status === 'Rejected') {
-      const nom = allNoms.find(n => n.id === id);
+      const nom = allNoms.find(n => String(n.id) === String(id));
       const violations = getNominationRuleViolations(nom, allPosts, allNoms, settings);
       const defaultReason = violations.length > 0 ? violations[0].message : 'Serial number or eligibility requirement not met';
       reason = prompt(`Please enter the statutory reason for rejecting Nomination #${id}:`, defaultReason);
@@ -966,7 +966,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     
     try {
       await api.adminVerifyNomination(pwd, id, status, reason);
-      const nom = allNoms.find(n => n.id === id);
+      const nom = allNoms.find(n => String(n.id) === String(id));
       if (nom) {
         nom.status = status;
         nom.rejectionReason = reason;
