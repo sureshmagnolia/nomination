@@ -254,6 +254,7 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
 function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
   const allNoms = Array.isArray(noms) ? [...noms] : [];
   const allPosts = Array.isArray(posts) ? [...posts] : [];
+  let nomViewMode = 'cards'; // 'cards' (card type for phone & mobile ease) | 'table'
 
   main.innerHTML = `
     <div class="page-enter space-y-4">
@@ -288,11 +289,20 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
             <option value="passed">✓ All Rules Passed</option>
           </select>
         </div>
+        <div class="flex items-center rounded-lg bg-black/40 p-1 border border-white/10 shrink-0 self-end md:self-center">
+          <button type="button" id="btnNomModeCards" class="btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${nomViewMode === 'cards' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}" title="Card View (Optimized for Mobile/Phone)">
+            <span>📇</span> <span>Cards</span>
+          </button>
+          <button type="button" id="btnNomModeTable" class="btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${nomViewMode === 'table' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}" title="Table View">
+            <span>📑</span> <span>Table</span>
+          </button>
+        </div>
       </div>
 
-      <!-- Table of Nominations -->
-      <div class="glass rounded-xl overflow-hidden shadow-2xl">
-        <div class="overflow-x-auto">
+      <!-- Nominations List View (Cards or Table) -->
+      <div class="glass rounded-xl overflow-hidden shadow-2xl" id="nomListView">
+        <div id="nomCardsContainer" class="${nomViewMode === 'cards' ? '' : 'hidden'} p-3.5 sm:p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5"></div>
+        <div id="nomTableContainer" class="${nomViewMode === 'table' ? '' : 'hidden'} overflow-x-auto">
           <table class="data-table" id="nomTable">
             <thead><tr>
               <th>Nom. ID</th>
@@ -412,6 +422,8 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
 
   const renderRows = (data) => {
     const tbody = main.querySelector('#nomTableBody');
+    const cardsDiv = main.querySelector('#nomCardsContainer');
+
     tbody.innerHTML = data.length ? data.map(n => {
       const violations = getNominationRuleViolations(n, allPosts, allNoms, settings);
       const isRS = String(n.candidateClass || '').toUpperCase().includes('RESEARCH') || String(n.candidateClass || '').toUpperCase().includes('SCHOLAR');
@@ -489,6 +501,102 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
         </td>
       </tr>`;
     }).join('') : `<tr><td colspan="8" class="text-center text-slate-500 py-12">No nominations found matching those criteria.</td></tr>`;
+
+    // 2. Render Cards (for mobile & card mode)
+    if (cardsDiv) {
+      cardsDiv.innerHTML = data.length ? data.map(n => {
+        const violations = getNominationRuleViolations(n, allPosts, allNoms, settings);
+        const isRS = String(n.candidateClass || '').toUpperCase().includes('RESEARCH') || String(n.candidateClass || '').toUpperCase().includes('SCHOLAR');
+        return `
+          <div class="bg-slate-900/80 backdrop-blur-md p-4 rounded-xl border ${violations.length ? 'border-rose-500/40 bg-rose-950/10' : 'border-white/10'} hover:border-indigo-500/40 transition-all flex flex-col justify-between space-y-3.5 shadow-xl">
+            <!-- Top Header: ID, Post, Status -->
+            <div class="space-y-2.5">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <button type="button" class="view-nom-btn font-mono text-xs text-indigo-300 bg-indigo-500/20 hover:bg-indigo-500/30 px-2 py-0.5 rounded border border-indigo-500/30 font-bold inline-flex items-center gap-1" data-id="${esc(n.id)}" title="Click to view full form">
+                    <span>📄</span> #${esc(n.id)}
+                  </button>
+                  <span class="text-xs font-semibold text-slate-200 ml-1.5">${esc(n.post)}</span>
+                </div>
+                <span class="badge badge-${(n.status || 'pending').toLowerCase()} font-bold text-xs shrink-0">${esc(n.status)}</span>
+              </div>
+
+              <!-- Candidate Info -->
+              <div class="bg-black/30 p-3 rounded-lg border border-white/5 space-y-1">
+                <div class="font-bold text-white text-base flex items-center gap-1.5 flex-wrap">
+                  <span class="hover:text-indigo-300 cursor-pointer view-nom-btn" data-id="${esc(n.id)}">${esc(n.candidateName || n.candidate?.NAME || 'N/A')}</span>
+                  <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-[10px] px-1.5 py-0.2" title="Electoral Roll Serial Number">
+                    Sl. #${esc(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || '–')}
+                  </span>
+                  ${isRS ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] px-1.5 py-0.2 font-semibold">⚠️ Ineligible (RS)</span>` : ''}
+                </div>
+                <div class="text-xs text-slate-300 flex items-center gap-2 flex-wrap">
+                  <span class="font-mono text-slate-400">Adm: <strong class="text-slate-200">${esc(n.candidateAdmission || n.candidate?.['ADMISION NO'] || '–')}</strong></span>
+                  <span class="text-slate-500">•</span>
+                  <span>${esc(n.candidateClass || '')} (${esc(n.candidateDept || '')})</span>
+                </div>
+              </div>
+
+              <!-- Proposer & Seconder -->
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="bg-black/20 p-2 rounded border border-white/5 space-y-0.5">
+                  <div class="text-[10px] uppercase font-bold text-slate-400">Proposer</div>
+                  <div class="font-medium text-slate-200 truncate">${esc(n.proposerName || n.proposer?.NAME || 'N/A')}</div>
+                  <div class="text-[10px] font-mono text-slate-400">Sl. #${esc(n.proposerSerial || n.proposer?.['Nominal Roll Serial Number'] || '–')} • Adm: ${esc(n.proposerAdmission || n.proposer?.['ADMISION NO'] || '–')}</div>
+                </div>
+                <div class="bg-black/20 p-2 rounded border border-white/5 space-y-0.5">
+                  <div class="text-[10px] uppercase font-bold text-slate-400">Seconder</div>
+                  <div class="font-medium text-slate-200 truncate">${esc(n.seconderName || n.seconder?.NAME || 'N/A')}</div>
+                  <div class="text-[10px] font-mono text-slate-400">Sl. #${esc(n.seconderSerial || n.seconder?.['Nominal Roll Serial Number'] || '–')} • Adm: ${esc(n.seconderAdmission || n.seconder?.['ADMISION NO'] || '–')}</div>
+                </div>
+              </div>
+
+              <!-- Scrutiny Audit & Violations -->
+              <div>
+                ${violations.length > 0 ? `
+                  <button type="button" class="view-nom-btn w-full badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs px-2.5 py-1.5 font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(violations.map(v => v.message).join(' | '))}">
+                    <span>⚠️ ${violations.length} Rule Violation${violations.length > 1 ? 's' : ''} Flagged</span>
+                  </button>
+                ` : `
+                  <div class="badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs px-2.5 py-1 flex items-center justify-center gap-1.5 font-medium">
+                    <span>✓</span> All Statutory Rules Passed
+                  </div>
+                `}
+                ${n.status === 'Rejected' && n.rejectionReason ? `
+                  <div class="text-xs text-rose-400 mt-1.5 bg-rose-500/10 border border-rose-500/20 p-2 rounded font-medium">
+                    ⚠️ ${esc(n.rejectionReason)}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+
+            <!-- Touch-friendly Action Buttons for Phone -->
+            <div class="space-y-2 pt-2 border-t border-white/10">
+              <button type="button" class="btn btn-secondary btn-sm w-full view-nom-btn bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 py-2 flex items-center justify-center gap-1.5 font-bold text-xs" data-id="${esc(n.id)}">
+                <span>📄</span> <span>View Full Nomination Paper</span>
+              </button>
+              <div class="flex items-center gap-2">
+                <button type="button" class="btn btn-primary btn-sm flex-1 verify-btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 text-xs" data-id="${esc(n.id)}" data-action="Valid" ${n.status === 'Valid' ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>
+                  ✅ Valid
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm flex-1 verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 font-bold py-2 text-xs" data-id="${esc(n.id)}" data-action="Rejected" ${n.status === 'Rejected' ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>
+                  ❌ Reject
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm delete-nom-btn bg-red-900/20 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/30 px-3 py-2 text-xs font-bold" data-id="${esc(n.id)}" data-candidate="${esc(n.candidateName || n.candidate?.NAME || '')}" data-post="${esc(n.post)}" title="Delete Nomination">
+                  🗑️
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('') : `
+        <div class="col-span-full text-center text-slate-500 py-12">
+          <div class="text-3xl mb-2">🔍</div>
+          <p class="text-slate-300 font-medium text-sm">No nominations found</p>
+          <p class="text-xs text-slate-500 mt-1">Try broadening your search term or filter.</p>
+        </div>
+      `;
+    }
   };
 
   const openNomDetail = (nomId) => {
@@ -681,6 +789,31 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
 
   main.querySelector('#nomSearch').addEventListener('input', applyFilters);
   main.querySelector('#statusFilter').addEventListener('change', applyFilters);
+
+  const updateNomViewUI = () => {
+    const cardsDiv = main.querySelector('#nomCardsContainer');
+    const tableDiv = main.querySelector('#nomTableContainer');
+    const btnC = main.querySelector('#btnNomModeCards');
+    const btnT = main.querySelector('#btnNomModeTable');
+    if (cardsDiv) cardsDiv.classList.toggle('hidden', nomViewMode !== 'cards');
+    if (tableDiv) tableDiv.classList.toggle('hidden', nomViewMode !== 'table');
+    if (btnC) btnC.className = `btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${nomViewMode === 'cards' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}`;
+    if (btnT) btnT.className = `btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${nomViewMode === 'table' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}`;
+  };
+
+  main.querySelector('#btnNomModeCards')?.addEventListener('click', () => {
+    if (nomViewMode !== 'cards') {
+      nomViewMode = 'cards';
+      updateNomViewUI();
+    }
+  });
+
+  main.querySelector('#btnNomModeTable')?.addEventListener('click', () => {
+    if (nomViewMode !== 'table') {
+      nomViewMode = 'table';
+      updateNomViewUI();
+    }
+  });
 
   // Refresh List button
   main.querySelector('#btnRefreshVerify')?.addEventListener('click', async () => {

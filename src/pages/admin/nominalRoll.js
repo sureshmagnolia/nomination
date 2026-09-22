@@ -52,6 +52,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
   let adminArrangeMode = 'dept-class'; // 'dept-class' | 'serial' | 'name'
   let currentPage = 1;
   const PAGE_SIZE = 50;
+  let adminViewMode = 'cards'; // 'cards' (card type for phone & mobile ease) | 'table'
 
   const getProgWeight = (cName) => {
     const c = String(cName || '').toUpperCase().trim();
@@ -289,7 +290,35 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
               <span id="corrChevron" class="text-slate-400 text-sm">▼ View Requests</span>
             </div>
             <div id="correctionsPanelBody" class="p-4 space-y-3 bg-black/20 border-t border-amber-500/20 hidden">
-              <div class="overflow-x-auto">
+              <!-- Mobile Card View for Corrections -->
+              <div class="md:hidden space-y-3">
+                ${corrections.map(c => `
+                  <div class="glass p-3.5 rounded-xl border border-amber-500/30 space-y-2 bg-slate-900/80">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="badge ${c.status === 'Resolved' ? 'badge-valid' : (c.status === 'Dismissed' ? 'bg-slate-700 text-slate-400' : 'badge-pending')} text-[10px]">
+                        ${esc(c.status)}
+                      </span>
+                      <span class="text-slate-400 font-mono text-[10px]">${c.timestamp ? new Date(c.timestamp).toLocaleDateString() : '–'}</span>
+                    </div>
+                    <div>
+                      <div class="font-bold text-white text-sm">${esc(c.student_name)}</div>
+                      <div class="text-xs text-indigo-300 font-mono mt-0.5">Adm: <strong>${esc(c.admission_no)}</strong> • ${esc(c.class_name || '–')} (${esc(c.department || '–')})</div>
+                    </div>
+                    <div class="text-xs bg-black/40 p-2.5 rounded-lg border border-white/10 space-y-1">
+                      <div class="text-amber-300 font-semibold text-[11px]">📝 ${esc(c.correction_type)}</div>
+                      <div class="text-slate-300 leading-relaxed">${esc(c.details)}</div>
+                    </div>
+                    ${c.contact_info ? `<div class="text-[11px] text-slate-400">📞 Contact: ${esc(c.contact_info)}</div>` : ''}
+                    <div class="flex gap-2 pt-1.5 border-t border-white/10">
+                      ${c.status !== 'Resolved' ? `<button class="btn btn-xs btn-success flex-1 resolve-corr py-1.5 font-medium" data-id="${esc(c.id)}">✅ Resolve</button>` : ''}
+                      ${c.status !== 'Dismissed' ? `<button class="btn btn-xs btn-secondary flex-1 dismiss-corr py-1.5 font-medium" data-id="${esc(c.id)}">✕ Dismiss</button>` : ''}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+
+              <!-- Desktop Table View for Corrections -->
+              <div class="hidden md:block overflow-x-auto">
                 <table class="data-table text-xs">
                   <thead><tr>
                     <th>Date</th>
@@ -352,48 +381,114 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
             <input type="text" id="searchInput" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors text-sm" placeholder="Search by student name, class, admission no, or serial..." value="${esc(filterText)}">
           </div>
-          <div class="w-full md:w-64 shrink-0">
+          <div class="w-full md:w-60 shrink-0">
             <select id="adminArrangeSelect" class="field text-xs bg-slate-900 border-white/10 text-white w-full py-2">
               <option value="dept-class" ${adminArrangeMode === 'dept-class' ? 'selected' : ''}>🏢 Arrange: Dept ➔ Class ➔ Sl. No</option>
               <option value="serial" ${adminArrangeMode === 'serial' ? 'selected' : ''}>🔢 Arrange: Serial Number</option>
               <option value="name" ${adminArrangeMode === 'name' ? 'selected' : ''}>🔤 Arrange: Student Name (A–Z)</option>
             </select>
           </div>
+          <div class="flex items-center rounded-lg bg-black/40 p-1 border border-white/10 shrink-0 self-end md:self-center">
+            <button type="button" id="btnModeCards" class="btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${adminViewMode === 'cards' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}" title="Card View (Optimized for Mobile/Phone)">
+              <span>📇</span> <span>Cards</span>
+            </button>
+            <button type="button" id="btnModeTable" class="btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${adminViewMode === 'table' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}" title="Table View">
+              <span>📑</span> <span>Table</span>
+            </button>
+          </div>
           <div class="text-slate-400 text-xs md:w-auto w-full text-right shrink-0">
             Showing <strong class="text-white">${filtered.length ? startIndex + 1 : 0}</strong> to <strong class="text-white">${endIndex}</strong> of <strong class="text-white">${filtered.length}</strong> students
           </div>
         </div>
 
-        <div class="glass rounded-xl overflow-hidden shadow-2xl">
-          <div class="overflow-x-auto">
-            <table class="data-table">
-              <thead><tr>
-                <th class="w-24 text-center">${isDraft ? 'Draft Sl. No' : 'Sl. No'}</th>
-                <th>Admission No</th>
-                <th>Name</th>
-                <th>Class</th>
-                <th>Department</th>
-                ${!isFinal ? '<th>Actions</th>' : ''}
-              </tr></thead>
-              <tbody id="adminRollTableBody">
-                ${pageStudents.length ? pageStudents.map(s => `
-                  <tr>
-                    <td class="text-center font-bold font-mono ${isDraft ? 'text-amber-400' : 'text-indigo-400'}">${isDraft ? 'D' : ''}${esc(s['Nominal Roll Serial Number'])}</td>
-                    <td class="font-mono text-xs">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
-                    <td class="text-white font-medium">${esc(s['NAME'])}</td>
-                    <td class="text-slate-300 text-sm">${esc(s['CLASS'])}</td>
-                    <td class="text-slate-400 text-xs">${esc(s['Dept'] || '–')}</td>
-                    ${!isFinal ? `
-                      <td>
-                        <button class="text-indigo-400 hover:text-indigo-300 edit-student mr-3" data-serial="${esc(s['Nominal Roll Serial Number'])}" data-name="${esc(s['NAME'])}" data-class="${esc(s['CLASS'])}" data-adm="${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '')}" data-dept="${esc(s['Dept'] || '')}">Edit</button>
-                        <button class="text-rose-400 hover:text-rose-300 delete-student" data-serial="${s['Nominal Roll Serial Number']}">Delete</button>
-                      </td>
-                    ` : ''}
-                  </tr>
-                `).join('') : `<tr><td colspan="${!isFinal ? '6' : '5'}" class="text-center py-10 text-slate-500">No students found matching your search.</td></tr>`}
-              </tbody>
-            </table>
-          </div>
+        <div class="glass rounded-xl overflow-hidden shadow-2xl" id="adminRollListView">
+          ${adminViewMode === 'cards' ? `
+            <!-- Card View (Mobile-First Responsive Grid) -->
+            <div class="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" id="adminRollCards">
+              ${pageStudents.length ? pageStudents.map(s => `
+                <div class="bg-slate-900/70 backdrop-blur-md p-4 rounded-xl border border-white/10 hover:border-indigo-500/40 transition-all flex flex-col justify-between space-y-3 shadow-lg">
+                  <div class="space-y-2.5">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="badge ${isDraft ? 'badge-pending text-amber-300 border border-amber-500/30' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'} font-mono font-bold text-xs py-1 px-2.5">
+                        ${isDraft ? 'Draft Sl. D' : 'Sl. #'}${esc(s['Nominal Roll Serial Number'])}
+                      </span>
+                      <span class="font-mono text-xs text-slate-300 bg-black/40 px-2 py-0.5 rounded border border-white/10">
+                        Adm: <strong class="text-indigo-300">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</strong>
+                      </span>
+                    </div>
+                    
+                    <div>
+                      <h4 class="text-white font-bold text-base leading-snug break-words">${esc(s['NAME'])}</h4>
+                      <div class="text-slate-300 text-xs mt-2 space-y-1">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          <span class="text-slate-400 font-medium">🎓 Class:</span>
+                          <span class="text-slate-200 font-medium">${esc(s['CLASS'])}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          <span class="text-slate-400 font-medium">🏢 Dept:</span>
+                          <span class="text-slate-300">${esc(s['Dept'] || '–')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  ${!isFinal ? `
+                    <div class="flex items-center gap-2 pt-2.5 border-t border-white/10">
+                      <button type="button" class="btn btn-sm btn-secondary text-indigo-300 hover:text-white edit-student flex-1 py-1.5 text-xs flex items-center justify-center gap-1.5 font-medium border-indigo-500/30 hover:border-indigo-400"
+                        data-serial="${esc(s['Nominal Roll Serial Number'])}"
+                        data-name="${esc(s['NAME'])}"
+                        data-class="${esc(s['CLASS'])}"
+                        data-adm="${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '')}"
+                        data-dept="${esc(s['Dept'] || '')}">
+                        ✏️ Edit
+                      </button>
+                      <button type="button" class="btn btn-sm bg-rose-500/15 text-rose-300 hover:bg-rose-600 hover:text-white border border-rose-500/30 delete-student flex-1 py-1.5 text-xs flex items-center justify-center gap-1.5 font-medium"
+                        data-serial="${s['Nominal Roll Serial Number']}">
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  ` : ''}
+                </div>
+              `).join('') : `
+                <div class="col-span-full text-center py-12 text-slate-500">
+                  <div class="text-3xl mb-2">🔍</div>
+                  <p class="text-slate-300 font-medium text-sm">No students found</p>
+                  <p class="text-xs text-slate-500 mt-1">Try broadening your search term.</p>
+                </div>
+              `}
+            </div>
+          ` : `
+            <!-- Table View (Desktop Table) -->
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead><tr>
+                  <th class="w-24 text-center">${isDraft ? 'Draft Sl. No' : 'Sl. No'}</th>
+                  <th>Admission No</th>
+                  <th>Name</th>
+                  <th>Class</th>
+                  <th>Department</th>
+                  ${!isFinal ? '<th>Actions</th>' : ''}
+                </tr></thead>
+                <tbody id="adminRollTableBody">
+                  ${pageStudents.length ? pageStudents.map(s => `
+                    <tr>
+                      <td class="text-center font-bold font-mono ${isDraft ? 'text-amber-400' : 'text-indigo-400'}">${isDraft ? 'D' : ''}${esc(s['Nominal Roll Serial Number'])}</td>
+                      <td class="font-mono text-xs">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
+                      <td class="text-white font-medium">${esc(s['NAME'])}</td>
+                      <td class="text-slate-300 text-sm">${esc(s['CLASS'])}</td>
+                      <td class="text-slate-400 text-xs">${esc(s['Dept'] || '–')}</td>
+                      ${!isFinal ? `
+                        <td>
+                          <button class="text-indigo-400 hover:text-indigo-300 edit-student mr-3" data-serial="${esc(s['Nominal Roll Serial Number'])}" data-name="${esc(s['NAME'])}" data-class="${esc(s['CLASS'])}" data-adm="${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '')}" data-dept="${esc(s['Dept'] || '')}">Edit</button>
+                          <button class="text-rose-400 hover:text-rose-300 delete-student" data-serial="${s['Nominal Roll Serial Number']}">Delete</button>
+                        </td>
+                      ` : ''}
+                    </tr>
+                  `).join('') : `<tr><td colspan="${!isFinal ? '6' : '5'}" class="text-center py-10 text-slate-500">No students found matching your search.</td></tr>`}
+                </tbody>
+              </table>
+            </div>
+          `}
 
           <!-- Pagination Controls Footer -->
           <div id="adminPaginationBar" class="p-4 border-t border-white/10 bg-black/20 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
@@ -532,6 +627,26 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
       };
     }
 
+    // View Mode Toggles
+    const btnCards = main.querySelector('#btnModeCards');
+    if (btnCards) {
+      btnCards.onclick = () => {
+        if (adminViewMode !== 'cards') {
+          adminViewMode = 'cards';
+          refreshTable();
+        }
+      };
+    }
+    const btnTable = main.querySelector('#btnModeTable');
+    if (btnTable) {
+      btnTable.onclick = () => {
+        if (adminViewMode !== 'table') {
+          adminViewMode = 'table';
+          refreshTable();
+        }
+      };
+    }
+
     // Pagination button clicks
     const pgControls = main.querySelector('#adminPaginationControls');
     if (pgControls) {
@@ -542,7 +657,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
         if (targetPage && targetPage !== currentPage) {
           currentPage = targetPage;
           refreshTable();
-          main.querySelector('#adminRollTableBody')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          main.querySelector('#adminRollListView')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
       };
     }

@@ -55,7 +55,8 @@ function renderWithdrawalUI(main, allNoms, pwd) {
           </div>
         </div>
         <div class="glass rounded-xl overflow-hidden shadow-2xl">
-          <div class="overflow-x-auto">
+          <div id="withdrawalCardsContainer" class="md:hidden space-y-3 p-3"></div>
+          <div class="hidden md:block overflow-x-auto">
             <table class="data-table">
               <thead><tr>
                 <th>Nom. ID</th>
@@ -95,7 +96,8 @@ function renderWithdrawalUI(main, allNoms, pwd) {
           </div>
 
           <div class="glass rounded-xl overflow-hidden shadow-2xl">
-            <div class="overflow-x-auto">
+            <div id="directCardsContainer" class="md:hidden space-y-3 p-3"></div>
+            <div class="hidden md:block overflow-x-auto">
               <table class="data-table">
                 <thead><tr>
                   <th>Nom. ID</th>
@@ -129,7 +131,8 @@ function renderWithdrawalUI(main, allNoms, pwd) {
           </div>
 
           <div class="glass rounded-xl overflow-hidden shadow-2xl border border-amber-500/20">
-            <div class="overflow-x-auto">
+            <div id="restoreCardsContainer" class="md:hidden space-y-3 p-3"></div>
+            <div class="hidden md:block overflow-x-auto">
               <table class="data-table">
                 <thead><tr>
                   <th>Nom. ID</th>
@@ -225,6 +228,55 @@ function renderWithdrawalUI(main, allNoms, pwd) {
         </td>
       </tr>`;
     }).join('') : `<tr><td colspan="6" class="text-center text-slate-500 py-12">No withdrawal requests found.</td></tr>`;
+
+    const cardsDiv = main.querySelector('#withdrawalCardsContainer');
+    if (cardsDiv) {
+      cardsDiv.innerHTML = data.length ? data.map(n => {
+        const isApproved = n.withdrawalStatus === 'Approved';
+        const isPending  = n.withdrawalStatus === 'Pending' || n.withdrawalStatus === 'Requested';
+        const isRejected = n.withdrawalStatus === 'Rejected';
+
+        let statusBadge = `<span class="badge badge-pending">Pending</span>`;
+        if (isApproved) statusBadge = `<span class="badge badge-valid">Approved (Withdrawn)</span>`;
+        else if (isRejected) statusBadge = `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/30">Rejected (Active)</span>`;
+
+        return `
+          <div class="glass p-3.5 rounded-xl border border-white/10 space-y-2 bg-slate-900/80">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-mono text-xs text-indigo-300 font-bold bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30">#${esc(n.id)}</span>
+              ${statusBadge}
+            </div>
+            <div>
+              <div class="font-bold text-white text-base">${esc(n.candidateName || 'N/A')}</div>
+              <div class="text-xs text-indigo-300 font-semibold">${esc(n.post)}</div>
+              <div class="text-xs text-slate-400 mt-0.5">${esc(n.candidateClass || '')} / ${esc(n.candidateDept || '')}</div>
+            </div>
+            <div class="pt-2 border-t border-white/10">
+              ${isApproved ? `
+                <button class="btn btn-sm w-full unapprove-btn py-1.5 text-xs font-semibold" data-id="${esc(n.id)}"
+                  style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.4);"
+                  title="Undo approval and restore candidate to active Valid list">
+                  ↺ Restore Approval
+                </button>
+              ` : isPending ? `
+                <div class="flex gap-2">
+                  <button class="btn btn-primary btn-sm flex-1 approve-btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 text-xs" data-id="${esc(n.id)}">
+                    ✅ Approve
+                  </button>
+                  <button class="btn btn-sm flex-1 reject-btn bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 font-bold py-1.5 text-xs" data-id="${esc(n.id)}">
+                    ❌ Reject
+                  </button>
+                </div>
+              ` : `
+                <button class="btn btn-sm w-full approve-btn text-xs bg-slate-700/50 hover:bg-emerald-600/30 text-slate-300 hover:text-emerald-300 border border-white/10 py-1.5" data-id="${esc(n.id)}">
+                  Approve
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+      }).join('') : `<div class="text-center text-slate-500 py-8">No withdrawal requests found.</div>`;
+    }
   };
 
   const applyRequestSearch = () => {
@@ -362,6 +414,29 @@ function renderWithdrawalUI(main, allNoms, pwd) {
           </button>
         </td>
       </tr>`).join('') : `<tr><td colspan="6" class="text-center text-slate-500 py-8">No active valid nominations found.</td></tr>`;
+
+    const cardsDiv = main.querySelector('#directCardsContainer');
+    if (cardsDiv) {
+      cardsDiv.innerHTML = data.length ? data.map(n => `
+        <div class="glass p-3.5 rounded-xl border border-white/10 space-y-2 bg-slate-900/80">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-mono text-xs text-indigo-300 font-bold bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30">#${esc(n.id)}</span>
+            <span class="badge badge-valid">${esc(n.status)}</span>
+          </div>
+          <div>
+            <div class="font-bold text-white text-base">${esc(n.candidateName || 'N/A')}</div>
+            <div class="text-xs text-indigo-300 font-semibold">${esc(n.post)}</div>
+            <div class="text-xs text-slate-400 mt-0.5">${esc(n.candidateClass || '')} / ${esc(n.candidateDept || '')}</div>
+          </div>
+          <div class="pt-2 border-t border-white/10">
+            <button class="btn btn-sm w-full direct-withdraw-btn py-1.5 text-xs font-bold" data-id="${esc(n.id)}"
+              style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3);">
+              ⚡ Withdraw Now
+            </button>
+          </div>
+        </div>
+      `).join('') : `<div class="text-center text-slate-500 py-8">No active valid nominations found.</div>`;
+    }
   };
 
   const renderWithdrawnRows = (data) => {
@@ -395,6 +470,34 @@ function renderWithdrawalUI(main, allNoms, pwd) {
         </td>
       </tr>`;
     }).join('') : `<tr><td colspan="6" class="text-center text-slate-500 py-8">No withdrawn nominations found.</td></tr>`;
+
+    const cardsDiv = main.querySelector('#restoreCardsContainer');
+    if (cardsDiv) {
+      cardsDiv.innerHTML = data.length ? data.map(n => {
+        const isStudent = withRequests.some(r => r.id === n.id);
+        return `
+          <div class="glass p-3.5 rounded-xl border border-amber-500/30 space-y-2 bg-slate-900/80">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-mono text-xs text-indigo-300 font-bold bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30">#${esc(n.id)}</span>
+              <span class="badge ${isStudent ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'} text-xs">
+                ${isStudent ? 'Student Request' : 'Admin Direct'}
+              </span>
+            </div>
+            <div>
+              <div class="font-bold text-white text-base">${esc(n.candidateName || 'N/A')}</div>
+              <div class="text-xs text-amber-300 font-semibold">${esc(n.post)}</div>
+              <div class="text-xs text-slate-400 mt-0.5">${esc(n.candidateClass || '')} / ${esc(n.candidateDept || '')}</div>
+            </div>
+            <div class="pt-2 border-t border-white/10">
+              <button class="btn btn-sm w-full restore-withdraw-btn flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold" data-id="${esc(n.id)}"
+                style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.35);">
+                ↺ Restore Candidate
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('') : `<div class="text-center text-slate-500 py-8">No withdrawn candidates to restore.</div>`;
+    }
   };
 
   const applyDirectSearch = () => {
