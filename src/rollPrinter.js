@@ -10,6 +10,39 @@
 import { esc, compareSl, getProgWeight, getStudentDeptClassKey } from './utils.js';
 import { CONFIG } from './config.js';
 
+const STORAGE_KEY = 'gcc_nominal_roll_last_print_options';
+
+function loadLastPrintState() {
+  try {
+    const raw = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) ||
+                (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(STORAGE_KEY));
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    // ignore
+  }
+  return {
+    scope: null,
+    dept: null,
+    className: null,
+    sortBy: null,
+    columns: null,
+    pageBreakPerClass: null
+  };
+}
+
+const lastPrintState = loadLastPrintState();
+
+function saveLastPrintState(patch) {
+  Object.assign(lastPrintState, patch);
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, JSON.stringify(lastPrintState));
+  } catch (e) {
+    try {
+      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(STORAGE_KEY, JSON.stringify(lastPrintState));
+    } catch (_) {}
+  }
+}
+
 /**
  * Opens the interactive Print Roll modal dialog.
  */
@@ -38,25 +71,41 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, co
     });
   };
 
-  // Determine initial scope
-  let currentScope = 'all';
-  if (initialClass) currentScope = 'class';
-  else if (initialDept) currentScope = 'dept';
+  // Determine initial scope & dropdown values from last saved state or initial props
+  let currentScope = initialClass ? 'class' : (initialDept ? 'dept' : (lastPrintState.scope || 'all'));
 
-  let currentDept = initialDept || (allDepartments[0] || '');
-  let currentClass = initialClass || (getClassesForDept(currentDept)[0] || '');
-  let currentSort = initialSort || 'dept-class';
-  let currentColumns = '1';
-  let pageBreakEachClass = true;
+  let currentDept = initialDept || (lastPrintState.dept && allDepartments.includes(lastPrintState.dept) ? lastPrintState.dept : (allDepartments[0] || ''));
+
+  const classesForInitialDept = getClassesForDept(currentScope === 'dept' ? currentDept : (currentDept || ''));
+  let currentClass = initialClass || (lastPrintState.className && classesForInitialDept.includes(lastPrintState.className) ? lastPrintState.className : (classesForInitialDept[0] || ''));
+
+  let currentSort = lastPrintState.sortBy || initialSort || 'dept-class';
+  let currentColumns = lastPrintState.columns || '1';
+  let pageBreakEachClass = (lastPrintState.pageBreakPerClass !== null && lastPrintState.pageBreakPerClass !== undefined)
+    ? lastPrintState.pageBreakPerClass
+    : true;
 
   const modalEl = document.createElement('div');
   modalEl.id = 'printRollModalContainer';
   modalEl.className = 'fixed inset-0 z-50 flex items-center justify-center p-4';
 
+  const cleanupModal = () => {
+    window.removeEventListener('keydown', handleKeyDown);
+    modalEl.remove();
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      cleanupModal();
+    }
+  };
+  window.addEventListener('keydown', handleKeyDown);
+
   const renderModalContent = () => {
     const classesForCurrentDept = getClassesForDept(currentScope === 'dept' ? currentDept : (currentDept || ''));
     if (!classesForCurrentDept.includes(currentClass)) {
       currentClass = classesForCurrentDept[0] || '';
+      saveLastPrintState({ className: currentClass });
     }
 
     // Compute preview count
@@ -226,15 +275,16 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, co
       </div>
     `;
 
-    // Bind events
-    modalEl.querySelector('#btnClosePrintModal').onclick = () => modalEl.remove();
-    modalEl.querySelector('#btnCancelPrintModal').onclick = () => modalEl.remove();
-    modalEl.querySelector('#printModalBackdrop').onclick = () => modalEl.remove();
+    // Bind events - only manual dismissals close the modal
+    modalEl.querySelector('#btnClosePrintModal').onclick = cleanupModal;
+    modalEl.querySelector('#btnCancelPrintModal').onclick = cleanupModal;
+    modalEl.querySelector('#printModalBackdrop').onclick = cleanupModal;
 
     // Scope button clicks
     modalEl.querySelectorAll('.scope-btn').forEach(btn => {
       btn.onclick = () => {
         currentScope = btn.dataset.scope;
+        saveLastPrintState({ scope: currentScope });
         renderModalContent();
       };
     });
@@ -244,6 +294,7 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, co
     if (deptSel) {
       deptSel.onchange = (e) => {
         currentDept = e.target.value;
+        saveLastPrintState({ dept: currentDept });
         renderModalContent();
       };
     }
@@ -253,6 +304,7 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, co
     if (classDeptSel) {
       classDeptSel.onchange = (e) => {
         currentDept = e.target.value;
+        saveLastPrintState({ dept: currentDept });
         renderModalContent();
       };
     }
@@ -262,6 +314,7 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, co
     if (classSel) {
       classSel.onchange = (e) => {
         currentClass = e.target.value;
+        saveLastPrintState({ className: currentClass });
         renderModalContent();
       };
     }
@@ -271,6 +324,7 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, co
     if (sortSel) {
       sortSel.onchange = (e) => {
         currentSort = e.target.value;
+        saveLastPrintState({ sortBy: currentSort });
       };
     }
 
@@ -279,6 +333,7 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, co
     if (colSel) {
       colSel.onchange = (e) => {
         currentColumns = e.target.value;
+        saveLastPrintState({ columns: currentColumns });
       };
     }
 
@@ -287,27 +342,54 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, co
     if (pbCheck) {
       pbCheck.onchange = (e) => {
         pageBreakEachClass = e.target.checked;
+        saveLastPrintState({ pageBreakPerClass: pageBreakEachClass });
       };
     }
 
-    // Execute Print button
-    modalEl.querySelector('#btnExecutePrint').onclick = () => {
-      executeRollPrint({
-        students,
-        isFinal,
-        isDraft,
-        collegeName: cName,
-        collegeLogo,
-        electionYear,
-        scope: currentScope,
-        dept: currentDept,
-        className: currentClass,
-        sortBy: currentSort,
-        pageBreakPerClass: pageBreakEachClass,
-        columns: currentColumns
-      });
-      modalEl.remove();
-    };
+    // Execute Print button - does NOT close modal automatically
+    const btnExecute = modalEl.querySelector('#btnExecutePrint');
+    if (btnExecute) {
+      btnExecute.onclick = () => {
+        saveLastPrintState({
+          scope: currentScope,
+          dept: currentDept,
+          className: currentClass,
+          sortBy: currentSort,
+          columns: currentColumns,
+          pageBreakPerClass: pageBreakEachClass
+        });
+
+        executeRollPrint({
+          students,
+          isFinal,
+          isDraft,
+          collegeName: cName,
+          collegeLogo,
+          electionYear,
+          scope: currentScope,
+          dept: currentDept,
+          className: currentClass,
+          sortBy: currentSort,
+          pageBreakPerClass: pageBreakEachClass,
+          columns: currentColumns
+        });
+
+        // Modal intentionally stays open until user manually closes it.
+        // Provide visual confirmation feedback on the print button.
+        const originalHtml = btnExecute.innerHTML;
+        btnExecute.innerHTML = `<span>✅ Print View Opened!</span><span class="badge bg-white/20 text-white text-[10px] px-1.5">${targetStudents.length}</span>`;
+        btnExecute.classList.remove('bg-indigo-600', 'hover:bg-indigo-500');
+        btnExecute.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+
+        setTimeout(() => {
+          if (document.body.contains(btnExecute)) {
+            btnExecute.innerHTML = originalHtml;
+            btnExecute.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
+            btnExecute.classList.add('bg-indigo-600', 'hover:bg-indigo-500');
+          }
+        }, 2200);
+      };
+    }
   };
 
   renderModalContent();
