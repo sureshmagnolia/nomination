@@ -136,7 +136,13 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     nominalRoll.forEach(s => {
       const c = String(s['CLASS'] || '').trim();
       const d = String(s['Dept']  || '').trim().toUpperCase();
-      if (c && d) classToDept[c] = d;
+      if (c && d) {
+        classToDept[c] = d;
+        const u = c.toUpperCase();
+        if (u.includes('RESEARCH') || u.includes('SCHOLAR') || u.includes('PHD') || u.includes('PH.D')) {
+          classToDept[`RESEARCH SCHOLAR - ${s['Dept']}`] = d;
+        }
+      }
     });
 
     const boothDepts = booths.map(b => new Set((b.classes || []).map(c => classToDept[c] || '').filter(Boolean)));

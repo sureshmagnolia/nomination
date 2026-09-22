@@ -1199,6 +1199,18 @@ export default async function handler(req, res) {
         boothMap[b.boothNumber] = { general: null, generalParts: [], reps: [], assocs: [] };
       });
 
+      const isStudentInBoothServer = (s, bClasses) => {
+        if (!bClasses || !bClasses.length) return false;
+        const rawClass = String(s.CLASS || '').trim().toUpperCase();
+        if (bClasses.includes(rawClass)) return true;
+        const dept = String(s.Dept || '').trim().toUpperCase();
+        if (rawClass.includes('RESEARCH') || rawClass.includes('SCHOLAR') || rawClass.includes('PHD') || rawClass.includes('PH.D')) {
+          const deptKey = `RESEARCH SCHOLAR - ${dept}`.toUpperCase();
+          return bClasses.includes(deptKey);
+        }
+        return false;
+      };
+
       // 1. General Posts (Single or Split Parts)
       const genPartsResults = [];
       generalParts.forEach(gp => {
@@ -1208,7 +1220,7 @@ export default async function handler(req, res) {
 
         booths.forEach(b => {
           const bClasses = (Array.isArray(b.classes) ? b.classes : safeJsonParse(b.classes, [])).map(c => String(c).trim().toUpperCase());
-          const boothStudents = students.filter(s => bClasses.includes(String(s.CLASS || '').trim().toUpperCase()));
+          const boothStudents = students.filter(s => isStudentInBoothServer(s, bClasses));
           const count = boothStudents.length;
           const start = partSl;
           const end = start + count - 1;
@@ -1257,7 +1269,7 @@ export default async function handler(req, res) {
       yrPosts.forEach(p => {
         booths.forEach(b => {
           const bClasses = (Array.isArray(b.classes) ? b.classes : safeJsonParse(b.classes, [])).map(c => String(c).trim().toUpperCase());
-          const boothStudents = students.filter(s => bClasses.includes(String(s.CLASS || '').trim().toUpperCase()));
+          const boothStudents = students.filter(s => isStudentInBoothServer(s, bClasses));
           const targetStudents = boothStudents.filter(s => {
             const cls = String(s.CLASS || '').toUpperCase();
             if (cls.includes('PH D') || cls.includes('PH.D')) return false;
@@ -1290,7 +1302,7 @@ export default async function handler(req, res) {
 
         booths.forEach(b => {
           const bClasses = (Array.isArray(b.classes) ? b.classes : safeJsonParse(b.classes, [])).map(c => String(c).trim().toUpperCase());
-          const boothStudents = students.filter(s => bClasses.includes(String(s.CLASS || '').trim().toUpperCase()));
+          const boothStudents = students.filter(s => isStudentInBoothServer(s, bClasses));
           const targetStudents = boothStudents.filter(s => {
             const sDept = String(s.Dept || '').trim().toUpperCase().replace(/[-\s]/g, ' ');
             const sCls  = String(s.CLASS || '').trim().toUpperCase().replace(/[-\s]/g, ' ');

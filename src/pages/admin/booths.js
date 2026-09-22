@@ -16,13 +16,26 @@ export async function renderAdminBooths(container) {
   try {
     const [nominalRoll, booths, locations, posts, nominations, plan, settings] = await Promise.all([
       api.getNominalRoll(),
-      api.adminGetBooths(pwd, true).catch(() => []),
-      api.adminGetLocations(pwd, true).catch(() => []),
+      api.adminGetBooths(pwd, true).catch(err => { console.error('GetBooths error:', err); return null; }),
+      api.adminGetLocations(pwd, true).catch(err => { console.error('GetLocations error:', err); return null; }),
       api.adminGetPosts(pwd).catch(() => []),
       api.adminGetFinalNominations(pwd).catch(() => api.getFinalNominations()).catch(() => ({ active: [] })),
       api.adminGetBallotPlan(pwd).catch(() => null),
       api.adminGetSettings(pwd).catch(() => ({}))
     ]);
+
+    if (booths === null || locations === null) {
+      container.querySelector('#adminMain').innerHTML = `
+        <div class="alert alert-error max-w-xl mx-auto my-8 p-6 text-center">
+          <p class="font-bold text-lg text-white mb-2">❌ Error Connecting to Server</p>
+          <p class="text-sm text-slate-300 mb-4">Could not retrieve existing polling booth and location data from the server. To protect your data from being overwritten, interface initialization has been paused.</p>
+          <button id="btnRetryLoadBooths" class="btn btn-primary px-6">🔄 Retry Connection</button>
+        </div>
+      `;
+      container.querySelector('#btnRetryLoadBooths')?.addEventListener('click', () => renderAdminBooths(container));
+      return;
+    }
+
     renderBoothsUI(container.querySelector('#adminMain'), pwd, nominalRoll, booths, locations, posts, nominations, plan, settings);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
@@ -30,19 +43,51 @@ export async function renderAdminBooths(container) {
 }
 
 function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations, posts, nominations, plan, settings) {
+  // Helper for identifying distinct class key (e.g. Research Scholars by Dept)
+  const getStudentClassKey = (s) => {
+    const c = String(s['CLASS'] || 'Unknown').trim();
+    const dept = String(s['Dept'] || 'Unknown').trim();
+    const upper = c.toUpperCase();
+    if (upper.includes('RESEARCH') || upper.includes('SCHOLAR') || upper.includes('PH.D') || upper.includes('PHD')) {
+      return `RESEARCH SCHOLAR - ${dept}`;
+    }
+    return c;
+  };
+
+  const isStudentInBooth = (s, boothClasses) => {
+    if (!boothClasses || !boothClasses.length) return false;
+    const key = getStudentClassKey(s);
+    const raw = String(s['CLASS'] || '').trim();
+    return boothClasses.includes(key) || boothClasses.includes(raw);
+  };
+
   // 1. Process Nominal Roll to get classes and sizes
   const classStats = {};
   nominalRoll.forEach(student => {
-    const c = String(student['CLASS'] || 'Unknown').trim();
+    const key = getStudentClassKey(student);
     const dept = String(student['Dept'] || 'Unknown').trim();
-    if (!classStats[c]) {
-      classStats[c] = { name: c, dept: dept, count: 0 };
+    if (!classStats[key]) {
+      classStats[key] = { name: key, dept: dept, count: 0 };
     }
-    classStats[c].count++;
+    classStats[key].count++;
   });
   
-  const allClasses = Object.values(classStats).sort((a, b) => a.name.localeCompare(b.name));
+  const allClasses = Object.values(classStats).sort((a, b) => a.dept.localeCompare(b.dept) || a.name.localeCompare(b.name));
   let booths = initialBooths.length ? [...initialBooths] : [{ boothNumber: 1, roomName: '', classes: [] }];
+  
+  // Migrate legacy generic 'RESEARCH SCHOLAR' entries to department-specific classes if applicable
+  booths.forEach(b => {
+    if (b.classes && b.classes.includes('RESEARCH SCHOLAR')) {
+      b.classes = b.classes.filter(c => c !== 'RESEARCH SCHOLAR');
+      const bDepts = new Set(b.classes.map(c => classStats[c]?.dept).filter(Boolean));
+      Object.keys(classStats).filter(k => k.startsWith('RESEARCH SCHOLAR - ')).forEach(rKey => {
+        if (bDepts.has(classStats[rKey].dept)) {
+          b.classes.push(rKey);
+        }
+      });
+    }
+  });
+
   let locations = [...initialLocations];
   let editingLocIdx = null;
   let isFirstRender = true;
@@ -53,7 +98,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     const unallocated = [];
     
     allClasses.forEach(cls => {
-      const assignedBooth = booths.find(b => b.classes.includes(cls.name));
+      const assignedBooth = booths.find(b => b.classes && b.classes.includes(cls.name));
       if (assignedBooth) {
         assignedBooth.totalStudents += cls.count;
       } else {
@@ -121,12 +166,19 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
         <!-- Booth Configuration -->
         <div class="glass rounded-xl p-5 border-l-4 border-l-indigo-500">
-          <div class="flex justify-between items-center mb-4">
-            <h4 class="font-bold text-white">Booth Setup</h4>
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h4 class="font-bold text-white text-base">Booth Setup</h4>
+              <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] px-2 py-0.5 font-medium flex items-center gap-1">
+                <span>🛡️</span> <span>Database Persisted</span>
+              </span>
+            </div>
             <div class="flex gap-2 items-center">
-              <label class="text-sm text-slate-300 mb-0">Total Booths:</label>
-              <input type="number" id="numBoothsInput" class="field w-20 py-1" min="1" max="20" value="${booths.length}">
-              <button id="btnUpdateBoothCount" class="btn btn-secondary btn-sm">Update</button>
+              <label class="text-sm text-slate-300 mb-0 whitespace-nowrap">Total Booths:</label>
+              <input type="number" id="numBoothsInput" class="field w-20 py-1 font-mono text-center font-bold" min="1" max="50" value="${booths.length}">
+              <button id="btnUpdateBoothCount" class="btn btn-primary btn-sm bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center gap-1 px-3">
+                <span>🔢</span> <span>Update & Save</span>
+              </button>
             </div>
           </div>
           
@@ -212,11 +264,23 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     isFirstRender = false;
 
     // --- Listeners ---
-    main.querySelector('#btnClearAll').addEventListener('click', () => {
-      if (confirm('Clear all class allotments? Room locations will be kept.')) {
-        booths.forEach(b => b.classes = []);
-        refreshUI();
+    main.querySelector('#btnClearAll').addEventListener('click', async () => {
+      const assignedCount = booths.reduce((acc, b) => acc + (b.classes ? b.classes.length : 0), 0);
+      if (assignedCount === 0) {
+        showToast('All classes are already unassigned.', 'info');
+        return;
       }
+      if (!confirm(`⚠️ CONFIRM CLEAR ALL CLASS ALLOTMENTS\n\nAre you sure you want to unassign all ${assignedCount} class allotment(s) across all booths?\n\nRoom locations and booth counts will be kept intact.\n\nProceed?`)) {
+        return;
+      }
+      booths.forEach(b => b.classes = []);
+      try {
+        await api.adminSaveBooths(pwd, booths);
+        showToast('✅ All class allotments cleared and saved to database.', 'success');
+      } catch (err) {
+        showToast(`Failed to update database: ${err.message}`, 'error');
+      }
+      refreshUI();
     });
 
     main.querySelector('#btnPrintRolls').addEventListener('click', () => {
@@ -308,20 +372,50 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       setTimeout(() => { printWin.print(); }, 500);
     });
 
-    main.querySelector('#btnUpdateBoothCount').addEventListener('click', () => {
+    main.querySelector('#btnUpdateBoothCount').addEventListener('click', async () => {
       const num = parseInt(main.querySelector('#numBoothsInput').value, 10);
-      if (num > 0 && num <= 50) {
-        if (num > booths.length) {
-          for (let i = booths.length; i < num; i++) booths.push({ boothNumber: i + 1, roomName: '', classes: [] });
-        } else if (num < booths.length) {
-          booths = booths.slice(0, num);
-        }
-        refreshUI();
+      if (isNaN(num) || num < 1 || num > 50) {
+        showToast('Please enter a valid booth count between 1 and 50.', 'error');
+        return;
       }
+      if (num === booths.length) {
+        showToast(`Booth count is already set to ${num}.`, 'info');
+        return;
+      }
+
+      // If reducing count, check if any booths will lose assigned classes or locations
+      if (num < booths.length) {
+        const affectedBooths = booths.slice(num);
+        const hasAssignedClasses = affectedBooths.some(b => b.classes && b.classes.length > 0);
+        const hasAssignedRooms = affectedBooths.some(b => b.roomName && b.roomName.trim());
+        let warningMsg = `⚠️ CONFIRM BOOTH COUNT REDUCTION\n\nYou are reducing total booths from ${booths.length} to ${num}.\n`;
+        if (hasAssignedClasses || hasAssignedRooms) {
+          warningMsg += `\nWarning: Booth(s) ${num + 1} to ${booths.length} will be removed. Any assigned classes will return to unallocated status.\n`;
+        }
+        warningMsg += `\nDo you want to proceed and save this change to the database?`;
+        if (!confirm(warningMsg)) return;
+      } else {
+        if (!confirm(`Confirm setting total polling booths to ${num} and saving to database?`)) return;
+      }
+
+      if (num > booths.length) {
+        for (let i = booths.length; i < num; i++) booths.push({ boothNumber: i + 1, roomName: '', classes: [] });
+      } else if (num < booths.length) {
+        booths = booths.slice(0, num);
+      }
+
+      try {
+        await api.adminSaveBooths(pwd, booths);
+        await api.adminSaveLocations(pwd, locations);
+        showToast(`✅ Total booths updated to ${num} and saved to database!`, 'success');
+      } catch (err) {
+        showToast(`Failed to persist to database: ${err.message}`, 'error');
+      }
+      refreshUI();
     });
 
     main.querySelectorAll('.room-name-select').forEach(select => {
-      select.addEventListener('change', (e) => {
+      select.addEventListener('change', async (e) => {
         const val = e.target.value;
         const boothIdx = parseInt(e.target.dataset.idx, 10);
         if (val === '__ADD_NEW__') {
@@ -331,7 +425,24 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           if (inp) inp.focus();
           return;
         }
+
+        // If unassigning an already assigned location, prompt for confirmation
+        if (!val && booths[boothIdx].roomName) {
+          const oldRoom = booths[boothIdx].roomName;
+          if (!confirm(`Remove assigned room location "${oldRoom}" from Booth ${boothIdx + 1}?`)) {
+            e.target.value = oldRoom;
+            return;
+          }
+        }
+
         booths[boothIdx].roomName = val;
+        try {
+          await api.adminSaveBooths(pwd, booths);
+          await api.adminSaveLocations(pwd, locations);
+          showToast(`✅ Booth ${boothIdx + 1} location saved as "${val || 'Unassigned'}".`, 'success');
+        } catch (err) {
+          showToast(`Failed to save location: ${err.message}`, 'error');
+        }
         refreshUI();
       });
     });
@@ -357,15 +468,20 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
     const modal = main.querySelector('#locationsModal');
     const closeModal = () => {
+      const newInp = modal.querySelector('#newLocationInput');
+      if (newInp && newInp.value.trim()) {
+        if (!confirm('You have entered an unadded location. Discard it?')) return;
+      }
       editingLocIdx = null;
       modal.classList.add('hidden');
+      refreshUI();
     };
     const openModal = () => {
       modal.classList.remove('hidden');
       rerenderLocationsList();
     };
 
-    const commitLocEdit = (idx) => {
+    const commitLocEdit = async (idx) => {
       const input = modal.querySelector(`.loc-edit-input[data-idx="${idx}"]`);
       if (!input) return;
       const newVal = input.value.trim();
@@ -386,20 +502,32 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         input.focus();
         return;
       }
+
+      // If this location is assigned to any booths, confirm renaming
+      const affected = booths.filter(b => b.roomName === oldVal).length;
+      if (affected > 0) {
+        if (!confirm(`Confirm renaming location "${oldVal}" to "${newVal}"?\n\nThis will update ${affected} booth assignment(s).`)) {
+          input.value = oldVal;
+          return;
+        }
+      }
+
       locations[idx] = newVal;
-      let affected = 0;
       booths.forEach(b => {
         if (b.roomName === oldVal) {
           b.roomName = newVal;
-          affected++;
         }
       });
       editingLocIdx = null;
       rerenderLocationsList();
-      if (affected > 0) {
-        showToast(`Renamed to "${newVal}" (updated ${affected} booth assignment). Remember to save!`, 'info');
-      } else {
-        showToast(`Renamed to "${newVal}".`, 'info');
+      try {
+        await api.adminSaveLocations(pwd, locations);
+        if (affected > 0) {
+          await api.adminSaveBooths(pwd, booths);
+        }
+        showToast(`✅ Renamed to "${newVal}" and saved to database.`, 'success');
+      } catch (err) {
+        showToast(`Failed to save rename: ${err.message}`, 'error');
       }
     };
 
@@ -499,21 +627,32 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       });
 
       list.querySelectorAll('.delete-location').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', async (e) => {
           const idx = parseInt(e.currentTarget.dataset.idx, 10);
           const loc = locations[idx];
           const assigned = booths.filter(b => b.roomName === loc);
+          let confirmMsg = `Delete location "${loc}"?`;
           if (assigned.length > 0) {
             const boothNums = assigned.map(b => `Booth ${b.boothNumber}`).join(', ');
-            if (!confirm(`"${loc}" is currently assigned to ${boothNums}.\n\nDeleting it will remove the assignment from these booths. Proceed?`)) {
-              return;
-            }
+            confirmMsg = `⚠️ WARNING: "${loc}" is currently assigned to ${boothNums}.\n\nDeleting it will remove the room assignment from these booths.\n\nAre you sure you want to delete "${loc}"?`;
           }
+          if (!confirm(confirmMsg)) return;
+
           locations.splice(idx, 1);
           booths.forEach(b => { if (b.roomName === loc) b.roomName = ''; });
           if (editingLocIdx === idx) editingLocIdx = null;
           else if (editingLocIdx > idx) editingLocIdx--;
           rerenderLocationsList();
+
+          try {
+            await api.adminSaveLocations(pwd, locations);
+            if (assigned.length > 0) {
+              await api.adminSaveBooths(pwd, booths);
+            }
+            showToast(`🗑️ Location "${loc}" deleted and updated in database.`, 'success');
+          } catch (err) {
+            showToast(`Failed to delete location: ${err.message}`, 'error');
+          }
         });
       });
     };
@@ -523,7 +662,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     main.querySelector('#btnCloseLocationsModal2').addEventListener('click', closeModal);
     main.querySelector('#locationsModalOverlay').addEventListener('click', closeModal);
 
-    main.querySelector('#btnAddLocation').addEventListener('click', () => {
+    main.querySelector('#btnAddLocation').addEventListener('click', async () => {
       const input = main.querySelector('#newLocationInput');
       const val = input.value.trim();
       if (!val) return;
@@ -535,7 +674,12 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       locations.push(val);
       input.value = '';
       rerenderLocationsList();
-      showToast(`Added "${val}". Click "Save Locations" to persist.`, 'info');
+      try {
+        await api.adminSaveLocations(pwd, locations);
+        showToast(`✅ Added "${val}" and saved to database.`, 'success');
+      } catch (err) {
+        showToast(`Failed to save location: ${err.message}`, 'error');
+      }
       const container = modal.querySelector('#locationsListContainer');
       if (container) container.scrollTop = container.scrollHeight;
     });
@@ -551,14 +695,14 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
     main.querySelector('#btnSaveLocations').addEventListener('click', async (e) => {
       if (editingLocIdx !== null) {
-        commitLocEdit(editingLocIdx);
+        await commitLocEdit(editingLocIdx);
       }
       const btn = e.target;
       setLoading(btn, true, '💾 Save Locations');
       try {
         await api.adminSaveLocations(pwd, locations);
         await api.adminSaveBooths(pwd, booths);
-        showToast('Locations and booth assignments saved successfully!', 'success');
+        showToast('✅ Locations and booth assignments saved to database successfully!', 'success');
         closeModal();
         refreshUI();
       } catch (err) {
@@ -569,23 +713,43 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     });
 
     main.querySelectorAll('.class-booth-select').forEach(select => {
-      select.addEventListener('change', (e) => {
+      select.addEventListener('change', async (e) => {
         const clsName = e.target.dataset.class;
         const newBoothIdx = e.target.value;
+        const currentAssignedBooth = booths.find(b => b.classes && b.classes.includes(clsName));
+
+        // If unassigning an already assigned class, prompt for confirmation
+        if (newBoothIdx === '' && currentAssignedBooth) {
+          if (!confirm(`Unassign class "${clsName}" from Booth ${currentAssignedBooth.boothNumber}?`)) {
+            e.target.value = String(booths.indexOf(currentAssignedBooth));
+            return;
+          }
+        }
+
         booths.forEach(b => { b.classes = b.classes.filter(c => c !== clsName); });
         if (newBoothIdx !== '') {
           booths[parseInt(newBoothIdx, 10)].classes.push(clsName);
+        }
+        try {
+          await api.adminSaveBooths(pwd, booths);
+          showToast(`Class "${clsName}" assigned to ${newBoothIdx !== '' ? `Booth ${parseInt(newBoothIdx, 10) + 1}` : 'Unassigned'} and saved.`, 'info');
+        } catch (err) {
+          showToast(`Failed to save class assignment: ${err.message}`, 'error');
         }
         refreshUI();
       });
     });
 
     main.querySelector('#btnSaveBooths').addEventListener('click', async (e) => {
+      if (!confirm(`💾 CONFIRM SAVE CONFIGURATION\n\nSave ${booths.length} Polling Booth(s) and ${locations.length} Location(s) to the database?`)) {
+        return;
+      }
       const btn = e.target;
       setLoading(btn, true, '💾 Save Configuration');
       try {
+        await api.adminSaveLocations(pwd, locations);
         await api.adminSaveBooths(pwd, booths);
-        showToast('Booth configuration saved successfully!', 'success');
+        showToast('✅ Booth and location configuration saved to database successfully!', 'success');
       } catch (err) {
         showToast(`Failed to save: ${err.message}`, 'error');
       } finally {
@@ -609,10 +773,23 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       }
     });
 
-    main.querySelector('#btnAutoAllot').addEventListener('click', () => {
+    main.querySelector('#btnAutoAllot').addEventListener('click', async () => {
+      const assignedCount = booths.reduce((acc, b) => acc + (b.classes ? b.classes.length : 0), 0);
+      let confirmMsg = `⚡ CONFIRM AUTO ALLOTMENT\n\nThis will automatically distribute classes across Booths 1 to ${booths.length}, keeping departments intact and attaching Research Scholars to their respective departments.\n\nProceed?`;
+      if (assignedCount > 0) {
+        confirmMsg = `⚠️ CONFIRM AUTO ALLOTMENT OVERWRITE\n\n${assignedCount} class allotment(s) are currently configured.\nAuto-allotment will replace current assignments to keep each department together and align Research Scholars with their department.\n\nAre you sure you want to proceed?`;
+      }
+      if (!confirm(confirmMsg)) {
+        return;
+      }
       autoAllot();
+      try {
+        await api.adminSaveBooths(pwd, booths);
+        showToast('✅ Auto allotment complete and saved to database!', 'success');
+      } catch (err) {
+        showToast(`Auto allotted in memory (Failed to save to database: ${err.message})`, 'error');
+      }
       refreshUI();
-      showToast('Auto allotment complete. Please review and save.', 'info');
     });
   };
 
@@ -630,7 +807,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
     sortedBooths.forEach((b) => {
       if (!b.classes || b.classes.length === 0) return;
-      const boothStudents = students.filter(s => b.classes.includes(String(s.CLASS).trim()));
+      const boothStudents = students.filter(s => isStudentInBooth(s, b.classes));
       const totalVoters = boothStudents.length;
       const boothClasses = b.classes.map(cn => classStats[cn]).filter(Boolean);
       
@@ -907,36 +1084,50 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
   const autoAllot = () => {
     booths.forEach(b => { b.classes = []; b.totalStudents = 0; });
+    const numBooths = booths.length;
+    if (numBooths === 0) return;
+
+    // Group all classes by Department (Research Scholars are grouped with their department!)
     const depts = {};
     allClasses.forEach(cls => {
       if (!depts[cls.dept]) depts[cls.dept] = { name: cls.dept, total: 0, classes: [] };
       depts[cls.dept].classes.push(cls);
       depts[cls.dept].total += cls.count;
     });
-    const numBooths = booths.length;
+
     const totalStudents = nominalRoll.length;
     const mean = totalStudents / numBooths;
-    const maxTolerance = mean * 1.25;
+    // Capacity threshold before splitting a department across booths
+    // Ordinarily, we keep the entire department together in 1 booth unless the department itself exceeds single booth capacity
+    const maxTolerance = Math.max(mean * 1.35, 120);
+
+    // Sort departments largest first for optimal bin packing
     const deptList = Object.values(depts).sort((a, b) => b.total - a.total);
 
     deptList.forEach(dept => {
+      // Sort booths by current voter count ascending (emptiest booth first)
       booths.sort((a, b) => a.totalStudents - b.totalStudents);
-      const targetBooth = booths[0];
-      if (targetBooth.totalStudents + dept.total > maxTolerance && dept.classes.length > 1) {
-        booths.sort((a, b) => a.totalStudents - b.totalStudents);
-        const splitBooth1 = booths[0];
-        const splitBooth2 = booths.length > 1 ? booths[1] : booths[0];
+      const emptiestBooth = booths[0];
+
+      // A department should only be split if it exceeds single booth capacity in ordinary circumstances
+      const deptExceedsSingleBooth = numBooths > 1 && dept.total > maxTolerance;
+
+      if (!deptExceedsSingleBooth) {
+        // Ordinarily, keep ALL voters and classes of this department together in 1 booth!
+        dept.classes.forEach(cls => emptiestBooth.classes.push(cls.name));
+        emptiestBooth.totalStudents += dept.total;
+      } else {
+        // Department is exceptionally large (exceeds single booth capacity). Split across booths:
+        // Sort classes: keep Research Scholars together with PG/senior classes
         const sortedClasses = [...dept.classes].sort((a, b) => b.count - a.count);
         sortedClasses.forEach(cls => {
-          const currentBooth = splitBooth1.totalStudents <= splitBooth2.totalStudents ? splitBooth1 : splitBooth2;
-          currentBooth.classes.push(cls.name);
-          currentBooth.totalStudents += cls.count;
+          booths.sort((a, b) => a.totalStudents - b.totalStudents);
+          booths[0].classes.push(cls.name);
+          booths[0].totalStudents += cls.count;
         });
-      } else {
-        dept.classes.forEach(cls => targetBooth.classes.push(cls.name));
-        targetBooth.totalStudents += dept.total;
       }
     });
+
     booths.sort((a, b) => a.boothNumber - b.boothNumber);
   };
 
