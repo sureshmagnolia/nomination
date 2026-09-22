@@ -12,24 +12,39 @@ function formatMarkdown(text) {
   if (!text) return '';
   let html = esc(text);
 
+  // Auto-group posts into 2 columns if not already inside :::columns
+  if (!html.includes(':::columns') && html.includes('### Main Office Bearers') && html.includes('### Association Secretaries')) {
+    const postPattern = /(### Main Office Bearers[\s\S]*?)(### Association Secretaries[\s\S]*?)(?=(?:\n---|\n\||$))/i;
+    html = html.replace(postPattern, (match, col1, col2) => {
+      return `:::columns\n${col1.trim()}\n:::split:::\n${col2.trim()}\n:::\n`;
+    });
+  }
+
   // Headers
-  html = html.replace(/^### (.*$)/gim, '<h3 style="font-size:16px;font-weight:bold;margin:14px 0 6px 0;color:#111827;border-bottom:1px solid #e5e7eb;padding-bottom:4px;">$1</h3>');
-  html = html.replace(/^#### (.*$)/gim, '<h4 style="font-size:14px;font-weight:bold;margin:12px 0 4px 0;color:#374151;">$1</h4>');
-  html = html.replace(/^## (.*$)/gim, '<h2 style="font-size:18px;font-weight:bold;margin:16px 0 8px 0;color:#111827;">$1</h2>');
+  html = html.replace(/^### (.*$)/gim, '<h3 style="font-size:11.5px;font-weight:bold;margin:4px 0 2px 0;color:#111827;border-bottom:1px solid #e5e7eb;padding-bottom:1px;text-transform:uppercase;">$1</h3>');
+  html = html.replace(/^#### (.*$)/gim, '<h4 style="font-size:10.5px;font-weight:bold;margin:3px 0 2px 0;color:#374151;">$1</h4>');
+  html = html.replace(/^## (.*$)/gim, '<h2 style="font-size:12.5px;font-weight:bold;margin:5px 0 2px 0;color:#111827;">$1</h2>');
 
   // Bold and Italic
   html = html.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
   html = html.replace(/\*(.*?)\*/gim, '<em>$1</em>');
 
   // Horizontal Rule
-  html = html.replace(/^---$/gim, '<hr style="border:none;border-top:1px dashed #d1d5db;margin:12px 0;">');
+  html = html.replace(/^---$/gim, '<hr style="border:none;border-top:1px dashed #d1d5db;margin:5px 0;">');
 
   // Unordered list items
-  html = html.replace(/^\s*• (.*$)/gim, '<li style="margin-left:20px;margin-bottom:4px;">$1</li>');
-  html = html.replace(/^\s*\- (.*$)/gim, '<li style="margin-left:20px;margin-bottom:4px;">$1</li>');
+  html = html.replace(/^\s*• (.*$)/gim, '<li style="margin-left:14px;margin-bottom:1.5px;font-size:9.5px;line-height:1.25;">$1</li>');
+  html = html.replace(/^\s*\- (.*$)/gim, '<li style="margin-left:14px;margin-bottom:1.5px;font-size:9.5px;line-height:1.25;">$1</li>');
 
   // Ordered list items
-  html = html.replace(/^\s*(\d+)\.\s+(.*$)/gim, '<div style="margin-left:15px;margin-bottom:4px;"><strong>$1.</strong> $2</div>');
+  html = html.replace(/^\s*(\d+)\.\s+(.*$)/gim, '<div style="margin-left:12px;margin-bottom:2px;font-size:10px;"><strong>$1.</strong> $2</div>');
+
+  // Two columns conversion
+  if (html.includes(':::columns')) {
+    html = html.replace(/:::columns([\s\S]*?):::split:::([\s\S]*?):::/gi, (match, col1, col2) => {
+      return `<div class="notice-two-columns" style="display:flex;gap:14px;margin:3px 0;align-items:flex-start;">\n<div style="flex:1;min-width:0;">\n${col1.trim()}\n</div>\n<div style="flex:1;min-width:0;">\n${col2.trim()}\n</div>\n</div>`;
+    });
+  }
 
   // Tables (detect markdown table lines)
   const lines = html.split('\n');
@@ -42,7 +57,7 @@ function formatMarkdown(text) {
     if (line.startsWith('|') && line.endsWith('|')) {
       if (!inTable) {
         inTable = true;
-        tableHtml = '<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:12px;">';
+        tableHtml = '<table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:9px;">';
       }
       if (line.includes(':---') || line.includes('---:')) {
         continue; // separator
@@ -50,9 +65,9 @@ function formatMarkdown(text) {
       const cols = line.split('|').slice(1, -1).map(c => c.trim());
       const isHeader = !tableHtml.includes('<tbody>');
       if (isHeader && !tableHtml.includes('<thead>')) {
-        tableHtml += '<thead><tr style="background:#f3f4f6;border-bottom:1.5px solid #000;">' + cols.map(c => `<th style="border:1px solid #9ca3af;padding:6px 8px;text-align:left;">${c}</th>`).join('') + '</tr></thead><tbody>';
+        tableHtml += '<thead><tr style="background:#f3f4f6;border-bottom:1.5px solid #000;">' + cols.map(c => `<th style="border:1px solid #9ca3af;padding:2px 5px;text-align:left;font-size:9.5px;">${c}</th>`).join('') + '</tr></thead><tbody>';
       } else {
-        tableHtml += '<tr style="border-bottom:1px solid #e5e7eb;">' + cols.map(c => `<td style="border:1px solid #d1d5db;padding:5px 8px;">${c}</td>`).join('') + '</tr>';
+        tableHtml += '<tr style="border-bottom:1px solid #e5e7eb;">' + cols.map(c => `<td style="border:1px solid #d1d5db;padding:1.5px 5px;line-height:1.2;">${c}</td>`).join('') + '</tr>';
       }
     } else {
       if (inTable) {
@@ -70,9 +85,9 @@ function formatMarkdown(text) {
   }
 
   return newLines.map(l => {
-    if (l.startsWith('<h') || l.startsWith('<hr') || l.startsWith('<li') || l.startsWith('<div') || l.startsWith('<table')) return l;
-    if (!l.trim()) return '<div style="height:8px;"></div>';
-    return `<p style="margin:6px 0;line-height:1.5;">${l}</p>`;
+    if (l.startsWith('<h') || l.startsWith('<hr') || l.startsWith('<li') || l.startsWith('<div') || l.startsWith('</div') || l.startsWith('<table') || l.startsWith('</table') || l.startsWith('<thead') || l.startsWith('<tbody') || l.startsWith('<tr')) return l;
+    if (!l.trim()) return '<div style="height:3px;"></div>';
+    return `<p style="margin:2.5px 0;line-height:1.32;">${l}</p>`;
   }).join('\n');
 }
 
@@ -99,7 +114,7 @@ export function printOfficialNotice(notice, settings = {}) {
   <meta charset="utf-8">
   <title>${esc(notice.refNo || 'Notice')} - ${esc(notice.title)}</title>
   <style>
-    @page { size: A4; margin: 15mm; }
+    @page { size: A4 portrait; margin: 8mm 12mm 6mm 12mm; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -107,23 +122,23 @@ export function printOfficialNotice(notice, settings = {}) {
       font-family: 'Times New Roman', Times, Georgia, serif;
       color: #111;
       background: #fff;
-      font-size: 13px;
-      line-height: 1.5;
+      font-size: 11px;
+      line-height: 1.35;
     }
     .page-container {
       max-width: 800px;
       margin: 0 auto;
-      padding: 10px;
+      padding: 0;
     }
     .header-table {
       width: 100%;
       border-collapse: collapse;
-      border-bottom: 2px solid #000;
-      padding-bottom: 8px;
-      margin-bottom: 12px;
+      border-bottom: 1.5px solid #000;
+      padding-bottom: 4px;
+      margin-bottom: 5px;
     }
     .college-name {
-      font-size: 19px;
+      font-size: 16px;
       font-weight: bold;
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -131,32 +146,32 @@ export function printOfficialNotice(notice, settings = {}) {
       color: #000;
     }
     .sub-header {
-      font-size: 12px;
+      font-size: 10.5px;
       font-weight: bold;
       letter-spacing: 0.5px;
       text-transform: uppercase;
       color: #374151;
-      margin-top: 3px;
+      margin-top: 1px;
     }
     .meta-bar {
       display: flex;
       justify-content: space-between;
-      border-bottom: 1px solid #ccc;
-      padding: 6px 0;
-      margin-bottom: 14px;
+      border-bottom: 1px solid #ddd;
+      padding: 2.5px 0;
+      margin-bottom: 5px;
       font-family: Arial, sans-serif;
-      font-size: 11px;
+      font-size: 9.5px;
       color: #333;
     }
     .notice-title-box {
       text-align: center;
-      margin: 14px 0 18px 0;
+      margin: 5px 0 6px 0;
       border: 1.5px solid #000;
-      padding: 8px 12px;
+      padding: 4px 8px;
       background: #fafafa;
     }
     .notice-title {
-      font-size: 15px;
+      font-size: 12.5px;
       font-weight: bold;
       text-transform: uppercase;
       margin: 0;
@@ -164,33 +179,34 @@ export function printOfficialNotice(notice, settings = {}) {
     }
     .category-tag {
       font-family: Arial, sans-serif;
-      font-size: 10px;
+      font-size: 8.5px;
       font-weight: bold;
       text-transform: uppercase;
       color: #4b5563;
-      margin-top: 3px;
+      margin-top: 1px;
     }
     .content-area {
-      font-size: 13px;
+      font-size: 11px;
       text-align: justify;
-      margin-bottom: 30px;
+      margin-bottom: 6px;
+      line-height: 1.35;
     }
     .signature-area {
-      margin-top: 40px;
+      margin-top: 8px;
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
       page-break-inside: avoid;
     }
     .seal-box {
-      width: 130px;
-      height: 80px;
+      width: 100px;
+      height: 42px;
       border: 1px dashed #999;
       display: flex;
       align-items: center;
       justify-content: center;
       font-family: Arial, sans-serif;
-      font-size: 10px;
+      font-size: 8.5px;
       color: #777;
       text-align: center;
     }
@@ -199,24 +215,29 @@ export function printOfficialNotice(notice, settings = {}) {
       font-family: 'Times New Roman', Times, serif;
     }
     .signatory-name {
-      font-size: 14px;
+      font-size: 11.5px;
       font-weight: bold;
       margin: 0;
     }
     .signatory-title {
-      font-size: 12px;
+      font-size: 10px;
       color: #333;
-      margin-top: 3px;
+      margin-top: 1px;
       max-width: 320px;
     }
     .footer-note {
-      margin-top: 25px;
+      margin-top: 6px;
       border-top: 1px solid #e5e7eb;
-      padding-top: 6px;
+      padding-top: 2px;
       font-family: Arial, sans-serif;
-      font-size: 9px;
+      font-size: 8px;
       color: #6b7280;
       text-align: center;
+    }
+    @media print {
+      body { margin: 0; padding: 0; }
+      .page-container { max-width: 100%; margin: 0; padding: 0; }
+      .signature-area { page-break-inside: avoid; }
     }
   </style>
 </head>

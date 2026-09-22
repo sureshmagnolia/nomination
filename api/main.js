@@ -1108,13 +1108,15 @@ export default async function handler(req, res) {
 
       let parsedNotices = safeJsonParse(noticesRaw, []);
 
-      // Auto-sanitize notice #1 if it contains obsolete Lyngdoh norms or is missing the configured posts
+      // Auto-sanitize notice #1 if it contains obsolete Lyngdoh norms, old reference header, or is missing the configured posts
       const statNotif = parsedNotices.find(n => n.id === 'statutory_notice_election_notification');
       if (statNotif) {
         const text = String(statNotif.content || '');
         const hasLyngdoh = text.toLowerCase().includes('lyngdoh');
-        const missingPosts = !text.includes('### Main Office Bearers') || !text.includes('### Association Secretaries');
-        if (hasLyngdoh || missingPosts) {
+        const hasOldRef = text.includes('UNIVERSITY REGULATION & ELECTION NOTIFICATION') || text.includes('Reference: University of Calicut Order');
+        const missingPosts = !text.includes('Main Office Bearers') || !text.includes('Association Secretaries');
+        const missingColumns = !text.includes(':::columns');
+        if (hasLyngdoh || hasOldRef || missingPosts || missingColumns) {
           const freshPosts = Array.isArray(postsList) && postsList.length > 0 ? postsList : [];
           const assocSec = freshPosts.filter(p => {
             const pName = String(p.post || '').trim().toLowerCase();
@@ -1148,29 +1150,26 @@ export default async function handler(req, res) {
           const yr = electionYearSetting || status?.electionYear || '2026';
           const nxtYr = String(parseInt(yr, 10) + 1);
           const cName = colName || 'College Union';
+          const sName = colShort || 'CUE';
 
           statNotif.title = `ELECTION NOTIFICATION ${yr}`;
-          statNotif.refNo = `U.O.No. 12646/2026/Admn (File Ref.No.190115/DSW-ASST-2/2026/Admn)`;
+          statNotif.refNo = `${sName}/ELEC/${yr}/NOTIF-01`;
           statNotif.date = `29-09-2026`;
           statNotif.signatoryTitle = `Returning Officer, ${cName}`;
-          statNotif.content = `### UNIVERSITY REGULATION & ELECTION NOTIFICATION
-**Reference:** University of Calicut Order **U.O.No. 12646/2026/Admn** dated **11.09.2026** (File Ref.No. **190115/DSW-ASST-2/2026/Admn**), Department of Students' Welfare.  
-**Read:** Orders of the Hon'ble Vice-Chancellor dated 11.09.2026 approving the College Union Election Schedule for the Academic Year ${yr}–${nxtYr}.
-
----
-
-In pursuance of the University of Calicut Order cited above and in accordance with the provisions of the Calicut University Act and College Union Election Statutes, it is hereby notified for the information of all students and electors of **${cName}** that the election to the College Union for the Academic Year **${yr}–${nxtYr}** will be conducted as per the statutory schedule mandated by the University.
+          statNotif.content = `In accordance with the provisions of the Calicut University Act and College Union Election Statutes, it is hereby notified for the information of all students and electors of **${cName}** that the election to the College Union for the Academic Year **${yr}–${nxtYr}** will be conducted as per the statutory schedule mandated by the University.
 
 The election will be held for the following posts:
 
+:::columns
 ### Main Office Bearers
 ${mText}
 
 ### Class Representatives
 ${cText}
-
+:::split:::
 ### Association Secretaries
 ${aText}
+:::
 
 ---
 

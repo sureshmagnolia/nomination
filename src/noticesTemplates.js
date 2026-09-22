@@ -102,31 +102,27 @@ export function getDefaultStatutoryNotices(settings = {}, schedule = {}, booths 
     {
       id: 'statutory_notice_election_notification',
       title: `ELECTION NOTIFICATION ${year}`,
-      refNo: `U.O.No. 12646/2026/Admn (File Ref.No.190115/DSW-ASST-2/2026/Admn)`,
+      refNo: `${shortName}/ELEC/${year}/NOTIF-01`,
       date: `29-09-2026`,
       category: 'Statutory Notification',
       pinned: true,
       isPublished: true,
       signatoryName: settings.returningOfficerName || 'Returning Officer',
       signatoryTitle: settings.returningOfficerDesignation || `Returning Officer, ${collegeName}`,
-      content: `### UNIVERSITY REGULATION & ELECTION NOTIFICATION
-**Reference:** University of Calicut Order **U.O.No. 12646/2026/Admn** dated **11.09.2026** (File Ref.No. **190115/DSW-ASST-2/2026/Admn**), Department of Students' Welfare.  
-**Read:** Orders of the Hon'ble Vice-Chancellor dated 11.09.2026 approving the College Union Election Schedule for the Academic Year ${year}–${nextYear}.
-
----
-
-In pursuance of the University of Calicut Order cited above and in accordance with the provisions of the Calicut University Act and College Union Election Statutes, it is hereby notified for the information of all students and electors of **${collegeName}** that the election to the College Union for the Academic Year **${year}–${nextYear}** will be conducted as per the statutory schedule mandated by the University.
+      content: `In accordance with the provisions of the Calicut University Act and College Union Election Statutes, it is hereby notified for the information of all students and electors of **${collegeName}** that the election to the College Union for the Academic Year **${year}–${nextYear}** will be conducted as per the statutory schedule mandated by the University.
 
 The election will be held for the following posts:
 
+:::columns
 ### Main Office Bearers
 ${mainOfficeListText}
 
 ### Class Representatives
 ${classRepListText}
-
+:::split:::
 ### Association Secretaries
 ${assocSecListText}
+:::
 
 ---
 

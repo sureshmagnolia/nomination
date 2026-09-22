@@ -44,13 +44,15 @@ async function loadAdminNoticesData(main, pwd) {
     if (notices.length === 0) {
       notices = getDefaultStatutoryNotices(settings, schedule, booths, posts);
     } else {
-      // Auto-sanitize Notice #1 on the client if it contains obsolete Lyngdoh or is missing posts
+      // Auto-sanitize Notice #1 on the client if it contains obsolete Lyngdoh, old reference header, or is missing posts/columns
       const n1 = notices.find(n => n.id === 'statutory_notice_election_notification');
       if (n1) {
         const text = String(n1.content || '');
         const hasLyngdoh = text.toLowerCase().includes('lyngdoh');
+        const hasOldRef = text.includes('UNIVERSITY REGULATION & ELECTION NOTIFICATION') || text.includes('Reference: University of Calicut Order');
         const missingPosts = !text.includes('Main Office Bearers') && !text.includes('Class Representatives');
-        if (hasLyngdoh || missingPosts) {
+        const missingColumns = !text.includes(':::columns');
+        if (hasLyngdoh || hasOldRef || missingPosts || missingColumns) {
           const fresh = getDefaultStatutoryNotices(settings, schedule, booths, posts).find(t => t.id === 'statutory_notice_election_notification');
           if (fresh) {
             Object.assign(n1, fresh);
