@@ -601,12 +601,7 @@ export const api = {
 
   adminRunAudit: (password) => post({ action: 'adminRunAudit', password }),
 
-  // ─── Official Notices & Polling Posters ─────────────────────────────────────
-
-  getPublicNotices: (force = false) => {
-    if (force) invalidateCache('getPublicNotices');
-    return get({ action: 'getPublicNotices' });
-  },
+  // ─── Official Notices & Polling Posters (Admin Only) ───────────────────────
 
   adminGetNotices: (password, force = false) => {
     if (force) invalidateCache('adminGetNotices');
@@ -616,21 +611,18 @@ export const api = {
   adminSaveNotices: async (password, notices) => {
     const res = await post({ action: 'adminSaveNotices', password, notices });
     invalidateCache('adminGetNotices');
-    invalidateCache('getPublicNotices');
     return res;
   },
 
   adminSaveNotice: async (password, notice) => {
     const res = await post({ action: 'adminSaveNotice', password, notice });
     invalidateCache('adminGetNotices');
-    invalidateCache('getPublicNotices');
     return res;
   },
 
   adminDeleteNotice: async (password, id) => {
     const res = await post({ action: 'adminDeleteNotice', password, id });
     invalidateCache('adminGetNotices');
-    invalidateCache('getPublicNotices');
     return res;
   },
 

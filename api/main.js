@@ -594,8 +594,7 @@ export default async function handler(req, res) {
       'getResults',
       'getValidNominations',
       'getFinalNominations',
-      'getPublicNominations',
-      'getPublicNotices'
+      'getPublicNominations'
     ]);
 
     const isPublicCacheable = req.method === 'GET' && 
@@ -1012,33 +1011,6 @@ export default async function handler(req, res) {
     if (action === 'adminGetLocations') {
       const data = await getSetting('availableLocations');
       return jsonOut(res, safeJsonParse(data, []));
-    }
-
-    if (action === 'getPublicNotices') {
-      const [noticesRaw, boothsRaw, locationsRaw, status, colName, colShort, colLogo] = await Promise.all([
-        getSetting('official_notices'),
-        getSetting('booths_data'),
-        getSetting('availableLocations'),
-        getFullElectionStatus(),
-        getSetting('collegeName'),
-        getSetting('collegeShortName'),
-        getSetting('collegeLogo')
-      ]);
-
-      const allNotices = safeJsonParse(noticesRaw, []);
-      const publishedNotices = allNotices.filter(n => n.isPublished !== false && n.isPublished !== 'false');
-
-      return jsonOut(res, {
-        notices: publishedNotices,
-        booths: safeJsonParse(boothsRaw, []),
-        locations: safeJsonParse(locationsRaw, []),
-        schedule: status,
-        settings: {
-          collegeName: colName || 'Government Victoria College, Palakkad',
-          collegeShortName: colShort || 'GVC',
-          collegeLogo: colLogo || ''
-        }
-      });
     }
 
     if (action === 'adminGetNotices') {

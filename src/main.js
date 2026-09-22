@@ -32,7 +32,6 @@ import { renderAdminDirectNomination } from './pages/admin/directNomination.js';
 import { renderAdminAudit }          from './pages/admin/audit.js';
 import { renderSettings }            from './pages/admin/settings.js';
 import { renderAdminBackup }         from './pages/admin/backup.js';
-import { renderNotices }             from './pages/notices.js';
 import { renderAdminNotices }        from './pages/admin/notices.js';
 
 // ─── Background decoration ────────────────────────────────────────────────────
@@ -65,7 +64,10 @@ router
   .on('/withdraw',          render(renderWithdraw))
   .on('/results',           render(renderResults))
   .on('/nominal-roll',      render(renderNominalRoll))
-  .on('/notices',           render(renderNotices))
+  .on('/notices',           () => {
+    const pwd = sessionStorage.getItem('adminPassword');
+    router.navigate(pwd ? '/admin/notices' : '/admin');
+  })
   .on('/admin',             render(renderAdminLogin))
   .on('/admin/dashboard',   render(renderAdminDashboard))
   .on('/admin/verify',      render(renderAdminVerify))

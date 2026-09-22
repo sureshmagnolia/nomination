@@ -139,8 +139,7 @@ export async function renderHome(container) {
           </p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          ${card('/notices', '📢', 'Notices & Booth Info', 'Find where to vote, polling booth allotments, and official notifications.', `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px]">📢 Official Board</span>`)}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           ${card('/nominal-roll', '📜', 'Nominal Roll', rollDesc, rollBadge)}
           ${card('/submit', '📝', 'Submit Nomination', nomDesc, nomBadge)}
           ${card('/find',   '🔍', 'Find My Nomination', 'Retrieve and print your submitted nomination form.', findBadge)}

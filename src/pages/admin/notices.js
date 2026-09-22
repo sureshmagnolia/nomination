@@ -90,11 +90,8 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
           <button id="btnDraftNewNotice" class="btn btn-primary btn-sm flex items-center gap-1.5 shadow-lg shadow-indigo-500/20">
             <span>➕</span> Draft New Notice
           </button>
-          <button id="btnLoadTemplates" class="btn btn-secondary btn-sm flex items-center gap-1.5" title="Auto-populate official Kerala College Union statutory notices">
+          <button id="btnLoadTemplates" class="btn btn-secondary btn-sm flex items-center gap-1.5" title="Auto-populate official statutory notices">
             <span>⚡</span> Load Statutory Templates
-          </button>
-          <button id="btnOpenPublicPortal" class="btn btn-secondary btn-sm flex items-center gap-1.5" title="View student-facing notices board">
-            <span>🌐</span> View Public Board
           </button>
         </div>
       </div>
@@ -104,7 +101,7 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
         <div class="glass rounded-xl p-4 border border-white/10">
           <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Notices</div>
           <div class="text-2xl font-bold text-white mt-1">${notices.length}</div>
-          <div class="text-xs text-indigo-400 mt-0.5">${publishedCount} Live on Portal</div>
+          <div class="text-xs text-indigo-400 mt-0.5">${publishedCount} Finalized</div>
         </div>
 
         <div class="glass rounded-xl p-4 border border-white/10">
@@ -290,18 +287,25 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
             <div>
               <h4 class="font-bold text-white text-base">Class-to-Booth Alphabetical Quick Reference</h4>
-              <p class="text-slate-400 text-xs mt-0.5">Alphabetical class lookup for campus help desk and entrance queue volunteers.</p>
+              <p class="text-slate-400 text-xs mt-0.5">Alphabetical class lookup for campus help desk, polling officers, and queue control.</p>
+            </div>
+            <div class="w-full sm:w-72">
+              <input type="text" id="classIndexSearch" class="field text-xs w-full py-1.5 px-3" placeholder="🔍 Search class, dept, or booth...">
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div id="classIndexGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             ${Object.values(classMap).sort((a, b) => a.name.localeCompare(b.name)).map(cls => {
               const assignedBooth = booths.find(b => {
                 const bClasses = Array.isArray(b.classes) ? b.classes : [];
                 return bClasses.includes(cls.name);
               });
+              const boothNum = assignedBooth ? assignedBooth.boothNumber : '';
               return `
-                <div class="glass p-3.5 rounded-xl border border-white/10 flex items-center justify-between">
+                <div class="glass p-3.5 rounded-xl border border-white/10 flex items-center justify-between class-index-card" 
+                     data-name="${esc(cls.name)}" 
+                     data-dept="${esc(cls.dept)}"
+                     data-booth="${esc(boothNum)}">
                   <div>
                     <div class="font-bold text-white text-xs">${esc(cls.name)}</div>
                     <div class="text-[10px] text-slate-400 mt-0.5">${esc(cls.dept)} • ${cls.count} Voters</div>
@@ -321,6 +325,9 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                 </div>
               `;
             }).join('')}
+          </div>
+          <div id="classIndexNoResults" class="p-8 text-center text-slate-500 italic hidden">
+            No classes matching your search criteria.
           </div>
         </div>
 
@@ -388,7 +395,7 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
             <div class="flex items-center gap-6 pt-2 border-t border-white/10">
               <label class="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" id="editNoticePublished" class="w-4 h-4 rounded text-indigo-600">
-                <span class="text-slate-300 font-semibold">Publish immediately to Student Portal</span>
+                <span class="text-slate-300 font-semibold">Mark as Final (Ready for Printing &amp; Public Display)</span>
               </label>
 
               <label class="flex items-center gap-2 cursor-pointer">
@@ -475,10 +482,20 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
     });
   });
 
-  // Open Public Portal button
-  main.querySelector('#btnOpenPublicPortal')?.addEventListener('click', () => {
-    const w = window.open('#/notices', '_blank');
-    if (!w) alert('Pop-up blocked! Please allow pop-ups for this site to view the public portal.');
+  // Search filter in Tab 3 (Class-to-Booth index)
+  main.querySelector('#classIndexSearch')?.addEventListener('input', (e) => {
+    const q = (e.target.value || '').toLowerCase().trim();
+    let visibleCount = 0;
+    main.querySelectorAll('.class-index-card').forEach(card => {
+      const name = (card.dataset.name || '').toLowerCase();
+      const dept = (card.dataset.dept || '').toLowerCase();
+      const booth = (card.dataset.booth || '').toLowerCase();
+      const match = !q || name.includes(q) || dept.includes(q) || booth.includes(q);
+      card.style.display = match ? '' : 'none';
+      if (match) visibleCount++;
+    });
+    const emptyState = main.querySelector('#classIndexNoResults');
+    if (emptyState) emptyState.classList.toggle('hidden', visibleCount > 0);
   });
 
   // Load Statutory Templates Button
