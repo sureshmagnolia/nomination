@@ -1095,10 +1095,7 @@ export function printBlankNominationForm(settings = {}) {
 
     <div class="post-box">
       <strong>Post Applied For:</strong> 
-      <span class="line-fill" style="width:70%;"></span>
-      <div style="font-size:8pt;color:#444;margin-top:3px;">
-        (Check if applicable: <span class="box-check"></span> Female Reserved Post &nbsp;&nbsp;&nbsp; <span class="box-check"></span> Class Representative &nbsp;&nbsp;&nbsp; <span class="box-check"></span> Association Secretary)
-      </div>
+      <span class="line-fill" style="width:75%;"></span>
     </div>
 
     <!-- 1. CANDIDATE DETAILS -->
@@ -1187,24 +1184,18 @@ export function printBlankNominationForm(settings = {}) {
       (1) I am a regular, full-time student of this College with minimum 75% attendance and no academic backlogs.
       (2) I satisfy all eligibility norms and age criteria prescribed by the Lyngdoh Committee &amp; University Election Bye-laws.
       (3) I have not been convicted of any criminal offence or subjected to any disciplinary action.
-      (4) I am not a Research Scholar (Ph.D.).
     </div>
 
     <table class="sign-table">
       <tr>
-        <td style="width:35%;">
-          <div>Date: _____ / _____ / 2026</div>
-          <div style="font-size:8pt;color:#555;">Place: ${esc(shortName)} Campus</div>
+        <td style="width:50%;text-align:left;padding-left:12px;">
+          <div>Date: _____ / _____ / ${esc(year)}</div>
+          <div style="font-size:8pt;color:#555;margin-top:3px;">Place: ${esc(shortName)} Campus</div>
         </td>
-        <td style="width:30%;">
+        <td style="width:50%;">
           <div style="height:22px;"></div>
-          <div class="sign-line">Signature of Candidate</div>
+          <div class="sign-line" style="width:230px;margin:0 auto 2px auto;">Signature of Candidate</div>
           <div style="font-size:7.5pt;color:#666;">(Sign in front of Returning Officer)</div>
-        </td>
-        <td style="width:35%;">
-          <div style="height:22px;"></div>
-          <div class="sign-line">Returning Officer / Scrutiny Member</div>
-          <div style="font-size:7.5pt;color:#666;">(Signature on Verification)</div>
         </td>
       </tr>
     </table>
