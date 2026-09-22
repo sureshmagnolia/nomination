@@ -43,6 +43,21 @@ async function loadAdminNoticesData(main, pwd) {
 
     if (notices.length === 0) {
       notices = getDefaultStatutoryNotices(settings, schedule, booths, posts);
+    } else {
+      // Auto-sanitize Notice #1 on the client if it contains obsolete Lyngdoh or is missing posts
+      const n1 = notices.find(n => n.id === 'statutory_notice_election_notification');
+      if (n1) {
+        const text = String(n1.content || '');
+        const hasLyngdoh = text.toLowerCase().includes('lyngdoh');
+        const missingPosts = !text.includes('Main Office Bearers') && !text.includes('Class Representatives');
+        if (hasLyngdoh || missingPosts) {
+          const fresh = getDefaultStatutoryNotices(settings, schedule, booths, posts).find(t => t.id === 'statutory_notice_election_notification');
+          if (fresh) {
+            Object.assign(n1, fresh);
+            api.adminSaveNotice(pwd, n1).catch(console.error);
+          }
+        }
+      }
     }
 
     // Calculate class statistics from nominal roll
@@ -94,6 +109,9 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
         <div class="flex flex-wrap items-center gap-2">
           <button id="btnDraftNewNotice" class="btn btn-primary btn-sm flex items-center gap-1.5 shadow-lg shadow-indigo-500/20">
             <span>➕</span> Draft New Notice
+          </button>
+          <button id="btnRefreshNoticeOne" class="btn bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 btn-sm flex items-center gap-1.5" title="Re-sync Election Notification #1 with current Election Posts and University Regulation U.O.No. 12646/2026/Admn">
+            <span>🔄</span> Refresh Notification Posts
           </button>
           <button id="btnLoadTemplates" class="btn btn-secondary btn-sm flex items-center gap-1.5" title="Auto-populate official statutory notices">
             <span>⚡</span> Load Statutory Templates
@@ -525,6 +543,23 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
         showToast('Error loading templates: ' + e.message, 'error');
         setLoading(main.querySelector('#btnLoadTemplates'), false, '⚡ Load Statutory Templates');
       }
+    }
+  });
+
+  // Refresh Election Notification #1 with Latest Posts & University Order
+  main.querySelector('#btnRefreshNoticeOne')?.addEventListener('click', async () => {
+    try {
+      const btn = main.querySelector('#btnRefreshNoticeOne');
+      setLoading(btn, true, 'Refreshing...');
+      const freshTemplate = getDefaultStatutoryNotices(settings, schedule, booths, posts).find(t => t.id === 'statutory_notice_election_notification');
+      if (freshTemplate) {
+        await api.adminSaveNotice(pwd, freshTemplate);
+        showToast('Election Notification #1 refreshed with latest posts and University Regulation!', 'success');
+        await loadAdminNoticesData(main, pwd);
+      }
+    } catch (e) {
+      showToast('Error refreshing notice: ' + e.message, 'error');
+      setLoading(main.querySelector('#btnRefreshNoticeOne'), false, '🔄 Refresh Notification Posts');
     }
   });
 

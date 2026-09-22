@@ -7,7 +7,7 @@
  *   3. No Voter Signature/Remarks on Draft/Final Nominal Roll (reserved for Marked Copy in Booths)
  *   4. Sole official signatory: Returning Officer (aligned right)
  */
-import { esc } from './utils.js';
+import { esc, compareSl, getProgWeight, getStudentDeptClassKey } from './utils.js';
 import { CONFIG } from './config.js';
 
 /**
@@ -28,9 +28,14 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, co
     return Array.from(new Set(
       students
         .filter(s => !dept || (s['Dept'] || '').trim().toLowerCase() === dept.toLowerCase())
-        .map(s => (s['CLASS'] || s['Class'] || '').trim())
+        .map(s => getStudentDeptClassKey(s))
         .filter(Boolean)
-    )).sort((a, b) => a.localeCompare(b));
+    )).sort((a, b) => {
+      const wA = getProgWeight(a);
+      const wB = getProgWeight(b);
+      if (wA !== wB) return wA - wB;
+      return a.localeCompare(b);
+    });
   };
 
   // Determine initial scope
@@ -64,7 +69,7 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, co
       targetStudents = students.filter(s => (s['Dept'] || '').trim().toLowerCase() === currentDept.toLowerCase());
       scopeDesc = `Department of ${currentDept} (${targetStudents.length} students)`;
     } else if (currentScope === 'class') {
-      targetStudents = students.filter(s => (s['CLASS'] || '').trim().toLowerCase() === currentClass.toLowerCase());
+      targetStudents = students.filter(s => getStudentDeptClassKey(s).toLowerCase() === currentClass.toLowerCase());
       scopeDesc = `Class: ${currentClass} (${targetStudents.length} students)`;
     }
 
@@ -335,7 +340,7 @@ export function executeRollPrint({
     data = data.filter(s => (s['Dept'] || '').trim().toLowerCase() === dept.toLowerCase());
     scopeSubtitle = `Department of ${dept}`;
   } else if (scope === 'class' && className) {
-    data = data.filter(s => (s['CLASS'] || '').trim().toLowerCase() === className.toLowerCase());
+    data = data.filter(s => getStudentDeptClassKey(s).toLowerCase() === className.toLowerCase());
     scopeSubtitle = `Class: ${className}`;
   }
 
@@ -345,24 +350,6 @@ export function executeRollPrint({
   }
 
   // 2. Sorting
-  const getProgramWeight = (cName) => {
-    const c = String(cName || '').toUpperCase().trim();
-    if (c.includes('RESEARCH') || c.includes('PH.D') || c.includes('PHD')) return 6000;
-    if (/^I\s+M(SC|A|COM|BA|CA)/.test(c) || /^I\s+PG/.test(c)) return 4000;
-    if (/^II\s+M(SC|A|COM|BA|CA)/.test(c) || /^II\s+PG/.test(c)) return 5000;
-    if (/^III\s+M(SC|A|COM|BA|CA)/.test(c)) return 5500;
-    if (/^I\s+(B|UG)/.test(c) || /^1ST\s+YEAR/.test(c)) return 1000;
-    if (/^II\s+(B|UG)/.test(c) || /^2ND\s+YEAR/.test(c)) return 2000;
-    if (/^III\s+(B|UG)/.test(c) || /^3RD\s+YEAR/.test(c)) return 3000;
-    return 3500;
-  };
-
-  const parseSl = (s) => {
-    const raw = String(s?.['Nominal Roll Serial Number'] || s?.serial_number || s?.SL_NO || s?.['SL. NO'] || '').replace(/\D/g, '');
-    const n = parseInt(raw, 10);
-    return isNaN(n) ? 999999999 : n;
-  };
-
   if (sortBy === 'dept-class') {
     data.sort((a, b) => {
       // 1. Department A-Z
@@ -370,11 +357,11 @@ export function executeRollPrint({
       const dB = String(b['Dept'] || b['DEPT'] || '').trim().toUpperCase();
       if (dA !== dB) return dA.localeCompare(dB);
 
-      // 2. Program Level Progression: I UG -> II UG -> III UG -> I PG -> II PG -> RS
-      const cA = String(a['CLASS'] || '').trim().toUpperCase();
-      const cB = String(b['CLASS'] || '').trim().toUpperCase();
-      const wA = getProgramWeight(cA);
-      const wB = getProgramWeight(cB);
+      // 2. Program Level Progression: I UG -> II UG -> III UG -> I PG -> II PG -> RS (6000 at dept end)
+      const cA = getStudentDeptClassKey(a).toUpperCase();
+      const cB = getStudentDeptClassKey(b).toUpperCase();
+      const wA = getProgWeight(cA);
+      const wB = getProgWeight(cB);
       if (wA !== wB) return wA - wB;
 
       // 3. Class Name
@@ -385,10 +372,8 @@ export function executeRollPrint({
       const nB = String(b['NAME'] || '').trim().toUpperCase();
       if (nA !== nB) return nA.localeCompare(nB);
 
-      // 5. Sl. No
-      const sA = parseSl(a);
-      const sB = parseSl(b);
-      return sA - sB;
+      // 5. Sl. No (natural alphanumeric: handles 124, 124a, 124b)
+      return compareSl(a, b);
     });
   } else if (sortBy === 'class') {
     data.sort((a, b) => {
@@ -396,18 +381,21 @@ export function executeRollPrint({
       const dB = String(b['Dept'] || '').toUpperCase();
       if (dA !== dB) return dA.localeCompare(dB);
 
-      const cA = String(a['CLASS'] || '').toUpperCase();
-      const cB = String(b['CLASS'] || '').toUpperCase();
+      const cA = getStudentDeptClassKey(a).toUpperCase();
+      const cB = getStudentDeptClassKey(b).toUpperCase();
       if (cA !== cB) {
-        const wA = getProgramWeight(cA);
-        const wB = getProgramWeight(cB);
+        const wA = getProgWeight(cA);
+        const wB = getProgWeight(cB);
         if (wA !== wB) return wA - wB;
         return cA.localeCompare(cB);
       }
-      return String(a['NAME'] || '').toUpperCase().localeCompare(String(b['NAME'] || '').toUpperCase());
+      const nA = String(a['NAME'] || '').toUpperCase();
+      const nB = String(b['NAME'] || '').toUpperCase();
+      if (nA !== nB) return nA.localeCompare(nB);
+      return compareSl(a, b);
     });
   } else {
-    data.sort((a, b) => parseSl(a) - parseSl(b));
+    data.sort((a, b) => compareSl(a, b));
   }
 
   const watermark = isFinal ? 'FINAL NOMINAL ROLL' : 'DRAFT NOMINAL ROLL';
@@ -418,27 +406,54 @@ export function executeRollPrint({
 
   // Case A: Page-break per class (either single class, or multi-class with pageBreakPerClass)
   if (scope === 'class' || (pageBreakPerClass && scope !== 'single_table')) {
-    // Group by Class
+    // Group by (Dept, Class) so each department's research scholars form their own separate class group at the end of that department!
     const groups = {};
+    const groupOrder = [];
+
     data.forEach(s => {
-      const c = String(s['CLASS'] || 'UNSPECIFIED CLASS').toUpperCase();
-      if (!groups[c]) groups[c] = [];
-      groups[c].push(s);
+      const sDept = String(s['Dept'] || s['DEPT'] || 'GENERAL').trim();
+      const clsKey = getStudentDeptClassKey(s);
+      const groupKey = `${sDept}___${clsKey}`;
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          dept: sDept,
+          clsName: clsKey,
+          students: []
+        };
+        groupOrder.push(groupKey);
+      }
+      groups[groupKey].students.push(s);
     });
 
-    const classKeys = Object.keys(groups);
+    if (sortBy === 'dept-class' || sortBy === 'class') {
+      groupOrder.sort((gA, gB) => {
+        const itemA = groups[gA];
+        const itemB = groups[gB];
+        if (itemA.dept.toUpperCase() !== itemB.dept.toUpperCase()) {
+          return itemA.dept.toUpperCase().localeCompare(itemB.dept.toUpperCase());
+        }
+        const wA = getProgWeight(itemA.clsName);
+        const wB = getProgWeight(itemB.clsName);
+        if (wA !== wB) return wA - wB;
+        return itemA.clsName.localeCompare(itemB.clsName);
+      });
+    }
 
-    classKeys.forEach((cKey, idx) => {
-      const classStudents = groups[cKey];
-      // Ensure names in each nominal roll Class are sorted alphabetically based on their name
+    groupOrder.forEach((gKey, idx) => {
+      const group = groups[gKey];
+      const classStudents = group.students;
+      const cKey = group.clsName;
+      const classDept = group.dept || (scope === 'dept' ? dept : '–');
+      const isLastClass = idx === groupOrder.length - 1;
+
+      // Ensure names in each nominal roll Class are sorted alphabetically based on their name, tie-broken by serial
       classStudents.sort((a, b) => {
         const nA = String(a['NAME'] || '').trim().toUpperCase();
         const nB = String(b['NAME'] || '').trim().toUpperCase();
         if (nA !== nB) return nA.localeCompare(nB);
-        return parseSl(a) - parseSl(b);
+        return compareSl(a, b);
       });
-      const classDept = classStudents[0]['Dept'] || (scope === 'dept' ? dept : '–');
-      const isLastClass = idx === classKeys.length - 1;
 
       if (columns === '2') {
         // 2 Columns Mode: Chunk by ~70 students per page (35 per column)
@@ -630,7 +645,7 @@ export function executeRollPrint({
                         <td class="col-sl font-mono font-bold">${formatSl(esc(s['Nominal Roll Serial Number']))}</td>
                         <td class="col-adm font-mono">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
                         <td class="font-semibold">${esc(s['NAME'])}</td>
-                        <td class="text-xs">${esc(s['CLASS'])}</td>
+                        <td class="text-xs">${esc(getStudentDeptClassKey(s))}</td>
                       </tr>
                     `).join('')}
                   </tbody>
@@ -653,7 +668,7 @@ export function executeRollPrint({
                         <td class="col-sl font-mono font-bold">${formatSl(esc(s['Nominal Roll Serial Number']))}</td>
                         <td class="col-adm font-mono">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
                         <td class="font-semibold">${esc(s['NAME'])}</td>
-                        <td class="text-xs">${esc(s['CLASS'])}</td>
+                        <td class="text-xs">${esc(getStudentDeptClassKey(s))}</td>
                       </tr>
                     `).join('')}
                   </tbody>
@@ -709,7 +724,7 @@ export function executeRollPrint({
                   <td class="col-sl font-mono font-bold">${formatSl(esc(s['Nominal Roll Serial Number']))}</td>
                   <td class="col-adm font-mono">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
                   <td class="font-semibold">${esc(s['NAME'])}</td>
-                  <td>${esc(s['CLASS'])}</td>
+                  <td>${esc(getStudentDeptClassKey(s))}</td>
                   <td>${esc(s['Dept'] || '–')}</td>
                 </tr>
               `).join('')}

@@ -807,6 +807,7 @@ export default async function handler(req, res) {
         ORDER BY 
           CASE 
             WHEN serial_number ~ '^[0-9]+$' THEN CAST(serial_number AS BIGINT) 
+            WHEN regexp_replace(serial_number, '^D', '', 'i') ~ '^[0-9]+[a-zA-Z]*$' THEN CAST(regexp_replace(regexp_replace(serial_number, '^D', '', 'i'), '[^0-9]', '', 'g') AS BIGINT)
             ELSE 999999999 
           END ASC, 
           serial_number ASC
@@ -1026,8 +1027,98 @@ export default async function handler(req, res) {
         fetchPostsFromDb()
       ]);
 
+      let parsedNotices = safeJsonParse(noticesRaw, []);
+
+      // Auto-sanitize notice #1 if it contains obsolete Lyngdoh norms or is missing the configured posts
+      const statNotif = parsedNotices.find(n => n.id === 'statutory_notice_election_notification');
+      if (statNotif) {
+        const text = String(statNotif.content || '');
+        const hasLyngdoh = text.toLowerCase().includes('lyngdoh');
+        const missingPosts = !text.includes('### Main Office Bearers') || !text.includes('### Association Secretaries');
+        if (hasLyngdoh || missingPosts) {
+          const freshPosts = Array.isArray(postsList) && postsList.length > 0 ? postsList : [];
+          const assocSec = freshPosts.filter(p => {
+            const pName = String(p.post || '').trim().toLowerCase();
+            return pName.startsWith('association secretary') || (p.deptRestriction && pName.includes('secretary')) || p.deptRestriction || p.restrictedDept;
+          });
+          const classRep = freshPosts.filter(p => {
+            const pName = String(p.post || '').trim().toLowerCase();
+            return !assocSec.includes(p) && (pName.includes('representative') || pName.includes('rep') || p.yearRestriction);
+          });
+          const mainOffice = freshPosts.filter(p => !assocSec.includes(p) && !classRep.includes(p));
+
+          const fmt = (p) => {
+            const pN = String(p.post || '').trim().toUpperCase();
+            const notes = [];
+            if (pN.includes('UNIVERSITY UNION COUNCILLOR') && !pN.includes('POST')) notes.push('2 Posts');
+            if (p.femaleOnly && !pN.includes('WOMEN') && !pN.includes('FEMALE') && !pN.includes('LADY')) notes.push('Reserved for Women');
+            if (p.finalYearIneligible) notes.push('Final Year Ineligible');
+            if (p.deptRestriction && p.restrictedDept && !pN.includes(p.restrictedDept.toUpperCase())) notes.push(`Dept: ${p.restrictedDept}`);
+            return `- **${pN}**${notes.length ? ` *(${notes.join(', ')})*` : ''}`;
+          };
+
+          const mText = mainOffice.length ? mainOffice.map(fmt).join('\n') : '- **THE CHAIRMAN**\n- **THE VICE CHAIRMAN** *(Reserved for Women)*\n- **THE SECRETARY**\n- **THE JOINT SECRETARY** *(Reserved for Women)*\n- **THE CHIEF STUDENT EDITOR** *(Final Year Ineligible)*\n- **THE SECRETARY FINE ARTS**\n- **THE GENERAL CAPTAIN FOR SPORTS AND GAMES**\n- **THE UNIVERSITY UNION COUNCILLOR** *(2 Posts)*';
+          const cText = classRep.length ? classRep.map(fmt).join('\n') : '- **I UG REPRESENTATIVE**\n- **II UG REPRESENTATIVE**\n- **III UG REPRESENTATIVE**\n- **PG REPRESENTATIVE**';
+          const aText = assocSec.length ? assocSec.map(fmt).join('\n') : '- **ASSOCIATION SECRETARY BOTANY**\n- **ASSOCIATION SECRETARY CHEMISTRY**\n- **ASSOCIATION SECRETARY COMMERCE**\n- **ASSOCIATION SECRETARY COMPUTER SCIENCE**\n- **ASSOCIATION SECRETARY ECONOMICS**\n- **ASSOCIATION SECRETARY ENGLISH**\n- **ASSOCIATION SECRETARY HINDI**\n- **ASSOCIATION SECRETARY HISTORY**\n- **ASSOCIATION SECRETARY MALAYALAM**\n- **ASSOCIATION SECRETARY MATHEMATICS**\n- **ASSOCIATION SECRETARY PHYSICS**\n- **ASSOCIATION SECRETARY PSYCHOLOGY**\n- **ASSOCIATION SECRETARY SANSKRIT**\n- **ASSOCIATION SECRETARY TAMIL**\n- **ASSOCIATION SECRETARY ZOOLOGY**';
+
+          const yr = electionYearSetting || status?.electionYear || '2026';
+          const nxtYr = String(parseInt(yr, 10) + 1);
+          const cName = colName || 'College Union';
+
+          statNotif.title = `ELECTION NOTIFICATION ${yr}`;
+          statNotif.refNo = `U.O.No. 12646/2026/Admn (File Ref.No.190115/DSW-ASST-2/2026/Admn)`;
+          statNotif.date = `29-09-2026`;
+          statNotif.signatoryTitle = `Returning Officer, ${cName}`;
+          statNotif.content = `### UNIVERSITY REGULATION & ELECTION NOTIFICATION
+**Reference:** University of Calicut Order **U.O.No. 12646/2026/Admn** dated **11.09.2026** (File Ref.No. **190115/DSW-ASST-2/2026/Admn**), Department of Students' Welfare.  
+**Read:** Orders of the Hon'ble Vice-Chancellor dated 11.09.2026 approving the College Union Election Schedule for the Academic Year ${yr}–${nxtYr}.
+
+---
+
+In pursuance of the University of Calicut Order cited above and in accordance with the provisions of the Calicut University Act and College Union Election Statutes, it is hereby notified for the information of all students and electors of **${cName}** that the election to the College Union for the Academic Year **${yr}–${nxtYr}** will be conducted as per the statutory schedule mandated by the University.
+
+The election will be held for the following posts:
+
+### Main Office Bearers
+${mText}
+
+### Class Representatives
+${cText}
+
+### Association Secretaries
+${aText}
+
+---
+
+### Official Election Schedule (Academic Year ${yr}–${nxtYr})
+
+| Activity | Date | Day | Time |
+| :--- | :---: | :---: | :---: |
+| Publication of the Preliminary Electoral Roll | 23-09-2026 | Wednesday | 11:00 AM |
+| Last date and time for correction/addition/deletion in the Preliminary Electoral Roll | 25-09-2026 | Friday | 4:00 PM |
+| Publication of the Final Electoral Roll | 28-09-2026 | Monday | 4:00 PM |
+| Date of Notification of the Election for the Academic Year 2026–27 | 29-09-2026 | Tuesday | 4:00 PM |
+| Last Date and Time for Submission of Nominations | 01-10-2026 | Thursday | Until 12:00 Noon |
+| Date and Time for Scrutiny of Nominations | 01-10-2026 | Thursday | 2:00 PM |
+| Date and Time for Publication of the List of Valid Nominations | 01-10-2026 | Thursday | 5:00 PM |
+| Last Date and Time for Withdrawal of Nominations | 05-10-2026 | Monday | Until 12:00 Noon |
+| Date and Time for Publication of the Final List of Nominations | 05-10-2026 | Monday | 5:00 PM |
+| Date and Time for Polling – Presidential Mode &amp; Union Office Bearers Election | 15-10-2026 | Thursday | 9:30 AM to 12:30 PM |
+| Date and Time for Counting of Votes &amp; Declaration of Results | 15-10-2026 | Thursday | From 2:00 PM onwards |
+
+---
+
+All students are directed to strictly adhere to the University Code of Conduct, the Calicut University Student Union Election Bye-laws, and campus discipline rules. Nomination forms and related documents are available at the college election portal.
+
+**Returning Officer**  
+*(College Seal)*`;
+
+          await setSetting('official_notices', JSON.stringify(parsedNotices));
+        }
+      }
+
       return jsonOut(res, {
-        notices: safeJsonParse(noticesRaw, []),
+        notices: parsedNotices,
         booths: safeJsonParse(boothsRaw, []),
         locations: safeJsonParse(locationsRaw, []),
         posts: postsList || [],
@@ -2190,7 +2281,7 @@ export default async function handler(req, res) {
     if (action === 'adminFixSerialNumbersDeptWise') {
       const isRollFinal = await getSetting('isRollFinalized');
       if (isRollFinal === 'true') {
-        return errOut(res, 'Nominal Roll is finalized and locked. Please unfinalize with admin password before modifying serial numbers.', 400);
+        return errOut(res, 'Nominal Roll is finalized and locked. Re-serialising is strictly prohibited on the Final Electoral Roll.', 400);
       }
 
       const countRows = await sql`SELECT COUNT(*)::int as count FROM nominal_roll`;
@@ -2274,18 +2365,78 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminAddStudent') {
-      const isRollFinal = await getSetting('isRollFinalized');
-      if (isRollFinal === 'true') {
-        return errOut(res, 'Nominal Roll is finalized and locked. Please unfinalize with admin password before adding students.', 400);
-      }
-
+      const isRollFinal = (await getSetting('isRollFinalized')) === 'true';
       let newSerial = body.serial_number ? String(body.serial_number).trim() : '';
-      if (!newSerial) {
-        const maxSlRows = await sql`
-          SELECT COALESCE(MAX(CASE WHEN serial_number ~ '^[0-9]+$' THEN CAST(serial_number AS BIGINT) ELSE 0 END), 0) + 1 as next_sl 
-          FROM nominal_roll
-        `;
-        newSerial = String(maxSlRows[0]?.next_sl || 1);
+
+      if (isRollFinal) {
+        // Final Roll addition: Assign serial number with suffix 'a' (or 'b', 'c'...) after the preceding student,
+        // without altering any existing serial numbers!
+        if (!newSerial) {
+          const dept = String(body.dept || '').trim();
+          const cls = String(body.class || '').trim();
+          const newName = String(body.name || '').trim().toUpperCase();
+
+          // Fetch existing students in this department and class
+          const classStudents = await sql`
+            SELECT serial_number, name, class, dept 
+            FROM nominal_roll 
+            WHERE LOWER(TRIM(dept)) = LOWER(TRIM(${dept})) 
+              AND LOWER(TRIM(class)) = LOWER(TRIM(${cls}))
+          `;
+
+          // Sort classStudents alphabetically by name
+          classStudents.sort((a, b) => String(a.name || '').trim().toUpperCase().localeCompare(String(b.name || '').trim().toUpperCase()));
+
+          // Find student immediately preceding the alphabetical insertion point
+          let prevStudent = null;
+          for (let i = 0; i < classStudents.length; i++) {
+            if (newName.localeCompare(String(classStudents[i].name || '').trim().toUpperCase()) < 0) {
+              break;
+            }
+            prevStudent = classStudents[i];
+          }
+
+          let baseSerial = '';
+          if (prevStudent) {
+            baseSerial = String(prevStudent.serial_number || '').trim();
+          } else if (classStudents.length > 0) {
+            // New student is alphabetically before the first student of this class
+            const firstSl = String(classStudents[0].serial_number || '').trim();
+            const firstNum = parseInt(firstSl.replace(/\D/g, ''), 10) || 1;
+            baseSerial = String(Math.max(1, firstNum - 1));
+          } else {
+            const maxSlRows = await sql`
+              SELECT COALESCE(MAX(CASE WHEN serial_number ~ '^[0-9]+$' THEN CAST(serial_number AS BIGINT) ELSE 0 END), 0) as max_sl 
+              FROM nominal_roll
+            `;
+            baseSerial = String(maxSlRows[0]?.max_sl || 1);
+          }
+
+          const baseNumMatch = baseSerial.match(/^(\d+)/);
+          const baseNum = baseNumMatch ? baseNumMatch[1] : baseSerial;
+
+          // Find existing serials with baseNum prefix (e.g. 124, 124a, 124b...)
+          const existingSerials = (await sql`
+            SELECT serial_number FROM nominal_roll WHERE serial_number LIKE ${baseNum + '%'}
+          `).map(r => String(r.serial_number).trim().toLowerCase());
+
+          let suffixChar = 'a';
+          let candidate = `${baseNum}${suffixChar}`;
+          while (existingSerials.includes(candidate.toLowerCase())) {
+            suffixChar = String.fromCharCode(suffixChar.charCodeAt(0) + 1);
+            candidate = `${baseNum}${suffixChar}`;
+          }
+          newSerial = candidate;
+        }
+      } else {
+        // Draft roll addition: default to next contiguous number if not provided
+        if (!newSerial) {
+          const maxSlRows = await sql`
+            SELECT COALESCE(MAX(CASE WHEN serial_number ~ '^[0-9]+$' THEN CAST(serial_number AS BIGINT) ELSE 0 END), 0) + 1 as next_sl 
+            FROM nominal_roll
+          `;
+          newSerial = String(maxSlRows[0]?.next_sl || 1);
+        }
       }
 
       await sql`
@@ -2295,15 +2446,10 @@ export default async function handler(req, res) {
           name = EXCLUDED.name, class = EXCLUDED.class, admission_no = EXCLUDED.admission_no, dept = EXCLUDED.dept
       `;
       await remapNominationsWithRoll();
-      return jsonOut(res, { ok: true, serial: newSerial });
+      return jsonOut(res, { ok: true, serial: newSerial, isFinalAddition: isRollFinal });
     }
 
     if (action === 'adminUpdateStudent') {
-      const isRollFinal = await getSetting('isRollFinalized');
-      if (isRollFinal === 'true') {
-        return errOut(res, 'Nominal Roll is finalized and locked. Please unfinalize with admin password before editing students.', 400);
-      }
-
       await sql`
         UPDATE nominal_roll
         SET name = ${body.name}, class = ${body.class}, admission_no = ${body.admission_no}, dept = ${body.dept}
@@ -2314,14 +2460,10 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminDeleteStudent') {
-      const isRollFinal = await getSetting('isRollFinalized');
-      if (isRollFinal === 'true') {
-        return errOut(res, 'Nominal Roll is finalized and locked. Please unfinalize with admin password before deleting students.', 400);
-      }
-
+      // Deletions allowed on both draft and final roll without shifting other serial numbers
       await sql`DELETE FROM nominal_roll WHERE serial_number = ${body.serial}`;
       await remapNominationsWithRoll();
-      return jsonOut(res, { ok: true });
+      return jsonOut(res, { ok: true, deletedSerial: body.serial });
     }
 
     if (action === 'adminPublishDraftRoll') {

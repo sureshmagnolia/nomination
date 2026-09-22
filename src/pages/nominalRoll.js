@@ -4,7 +4,7 @@
  * Features 50-per-page pagination, Department filter, and Class filter.
  */
 import { api } from '../api.js';
-import { esc, showToast } from '../utils.js';
+import { esc, showToast, compareSl, getProgWeight, getStudentDeptClassKey } from '../utils.js';
 import { CONFIG } from '../config.js';
 
 export async function renderNominalRoll(container) {
@@ -52,14 +52,7 @@ function renderPublicRollUI(container, nominalRoll, settings) {
   }
 
   const students = Array.isArray(nominalRoll) ? [...nominalRoll] : [];
-  
-  // Ensure strict natural numerical sorting of students by serial number
-  const parseSl = (s) => {
-    const raw = String(s['Nominal Roll Serial Number'] || s.serial_number || s.SL_NO || s['SL. NO'] || '');
-    const num = parseInt(raw.replace(/\D/g, ''), 10);
-    return isNaN(num) ? 999999999 : num;
-  };
-  students.sort((a, b) => parseSl(a) - parseSl(b));
+  students.sort((a, b) => compareSl(a, b));
   
   // Extract unique departments and classes
   const allDepartments = Array.from(new Set(
@@ -70,9 +63,14 @@ function renderPublicRollUI(container, nominalRoll, settings) {
     return Array.from(new Set(
       students
         .filter(s => !dept || (s['Dept'] || '').trim().toLowerCase() === dept.toLowerCase())
-        .map(s => (s['CLASS'] || s['Class'] || '').trim())
+        .map(s => getStudentDeptClassKey(s))
         .filter(Boolean)
-    )).sort((a, b) => a.localeCompare(b));
+    )).sort((a, b) => {
+      const wA = getProgWeight(a);
+      const wB = getProgWeight(b);
+      if (wA !== wB) return wA - wB;
+      return a.localeCompare(b);
+    });
   };
 
   // State
@@ -82,18 +80,6 @@ function renderPublicRollUI(container, nominalRoll, settings) {
   let arrangeMode = 'dept-class'; // 'dept-class' | 'serial' | 'name'
   let currentPage = 1;
   const PAGE_SIZE = 50;
-
-  const getProgWeight = (cName) => {
-    const c = String(cName || '').toUpperCase().trim();
-    if (c.includes('RESEARCH') || c.includes('PH.D') || c.includes('PHD')) return 6000;
-    if (/^I\s+M(SC|A|COM|BA|CA)/.test(c) || /^I\s+PG/.test(c)) return 4000;
-    if (/^II\s+M(SC|A|COM|BA|CA)/.test(c) || /^II\s+PG/.test(c)) return 5000;
-    if (/^III\s+M(SC|A|COM|BA|CA)/.test(c)) return 5500;
-    if (/^I\s+(B|UG)/.test(c) || /^1ST\s+YEAR/.test(c)) return 1000;
-    if (/^II\s+(B|UG)/.test(c) || /^2ND\s+YEAR/.test(c)) return 2000;
-    if (/^III\s+(B|UG)/.test(c) || /^3RD\s+YEAR/.test(c)) return 3000;
-    return 3500;
-  };
 
   const formatSerial = (rawSerial) => {
     const num = String(rawSerial || '');
@@ -107,7 +93,7 @@ function renderPublicRollUI(container, nominalRoll, settings) {
         return false;
       }
       // Class filter
-      if (selectedClass && (s['CLASS'] || '').trim().toLowerCase() !== selectedClass.toLowerCase()) {
+      if (selectedClass && getStudentDeptClassKey(s).toLowerCase() !== selectedClass.toLowerCase()) {
         return false;
       }
       // Search text filter
@@ -116,6 +102,7 @@ function renderPublicRollUI(container, nominalRoll, settings) {
         const match = [
           s['NAME'],
           s['CLASS'],
+          getStudentDeptClassKey(s),
           s['ADMISION NO'] || s['ADMISSION NO'],
           s['Nominal Roll Serial Number'],
           s['Dept']
@@ -132,8 +119,8 @@ function renderPublicRollUI(container, nominalRoll, settings) {
         const dB = String(b['Dept'] || '').trim().toUpperCase();
         if (dA !== dB) return dA.localeCompare(dB);
 
-        const cA = String(a['CLASS'] || '').trim().toUpperCase();
-        const cB = String(b['CLASS'] || '').trim().toUpperCase();
+        const cA = getStudentDeptClassKey(a).toUpperCase();
+        const cB = getStudentDeptClassKey(b).toUpperCase();
         const wA = getProgWeight(cA);
         const wB = getProgWeight(cB);
         if (wA !== wB) return wA - wB;
@@ -145,14 +132,17 @@ function renderPublicRollUI(container, nominalRoll, settings) {
         const nB = String(b['NAME'] || '').trim().toUpperCase();
         if (nA !== nB) return nA.localeCompare(nB);
 
-        const sA = parseSl(a);
-        const sB = parseSl(b);
-        return sA - sB;
+        return compareSl(a, b);
       });
     } else if (arrangeMode === 'name') {
-      filtered.sort((a, b) => String(a['NAME'] || '').trim().toUpperCase().localeCompare(String(b['NAME'] || '').trim().toUpperCase()));
+      filtered.sort((a, b) => {
+        const nA = String(a['NAME'] || '').trim().toUpperCase();
+        const nB = String(b['NAME'] || '').trim().toUpperCase();
+        if (nA !== nB) return nA.localeCompare(nB);
+        return compareSl(a, b);
+      });
     } else {
-      filtered.sort((a, b) => parseSl(a) - parseSl(b));
+      filtered.sort((a, b) => compareSl(a, b));
     }
 
     return filtered;
@@ -312,7 +302,7 @@ function renderPublicRollUI(container, nominalRoll, settings) {
           <td class="text-center font-bold font-mono ${isDraft ? 'text-amber-400' : 'text-indigo-400'}">${esc(formatSerial(s['Nominal Roll Serial Number']))}</td>
           <td class="font-mono text-xs text-slate-300">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
           <td class="text-white font-medium">${esc(s['NAME'])}</td>
-          <td class="text-slate-300 text-sm">${esc(s['CLASS'])}</td>
+          <td class="text-slate-300 text-sm">${esc(getStudentDeptClassKey(s))}</td>
           <td class="text-slate-400 text-xs">${esc(s['Dept'] || '–')}</td>
         </tr>
       `).join('');

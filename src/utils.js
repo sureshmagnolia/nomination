@@ -346,3 +346,49 @@ export function showToast(message, type = 'info') {
   document.body.appendChild(toast);
   setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 400); }, 3500);
 }
+
+// ─── Electoral Roll Serial Parsing & Natural Alphanumeric Comparison (supports 1, 2, 124a, 124b, D10) ─────
+export function parseSl(s) {
+  const raw = String(s?.['Nominal Roll Serial Number'] || s?.serial_number || s?.SL_NO || s?.['SL. NO'] || '').trim();
+  const digits = raw.replace(/^D/i, '').replace(/[^0-9]/g, '');
+  const num = parseInt(digits, 10);
+  const suffixMatch = raw.match(/[a-zA-Z]+$/);
+  const suffix = suffixMatch ? suffixMatch[0].toLowerCase() : '';
+  return {
+    num: isNaN(num) ? 999999999 : num,
+    suffix,
+    raw: raw.toLowerCase()
+  };
+}
+
+export function compareSl(a, b) {
+  const pA = parseSl(a);
+  const pB = parseSl(b);
+  if (pA.num !== pB.num) return pA.num - pB.num;
+  if (pA.suffix !== pB.suffix) return pA.suffix.localeCompare(pB.suffix);
+  return pA.raw.localeCompare(pB.raw);
+}
+
+// ─── Department-Scoped Class Identification for Research Scholars ────────────
+export function getStudentDeptClassKey(student) {
+  const rawClass = String(student?.['CLASS'] || student?.class || 'UNSPECIFIED').trim();
+  const dept = String(student?.['Dept'] || student?.dept || '').trim();
+  const isRS = rawClass.toUpperCase().includes('RESEARCH') || rawClass.toUpperCase().includes('SCHOLAR') || rawClass.toUpperCase().includes('PHD');
+  if (isRS) {
+    return dept ? `RESEARCH SCHOLAR - ${dept}` : 'RESEARCH SCHOLAR';
+  }
+  return rawClass;
+}
+
+// ─── Program Level Progression Weight (RS placed at the end of each department) ───
+export function getProgWeight(className) {
+  const c = String(className || '').toUpperCase().trim();
+  if (c.includes('RESEARCH') || c.includes('SCHOLAR') || c.includes('PHD')) return 6000;
+  if (/^I\s+M/i.test(c) || /^I\s+PG/i.test(c) || /1ST\s+YEAR\s+PG/i.test(c)) return 4000;
+  if (/^II\s+M/i.test(c) || /^II\s+PG/i.test(c) || /2ND\s+YEAR\s+PG/i.test(c)) return 5000;
+  if (/^III\s+M/i.test(c)) return 5500;
+  if (/^I\s+(B|UG)/i.test(c) || /1ST\s+YEAR/i.test(c)) return 1000;
+  if (/^II\s+(B|UG)/i.test(c) || /2ND\s+YEAR/i.test(c)) return 2000;
+  if (/^III\s+(B|UG)/i.test(c) || /3RD\s+YEAR/i.test(c)) return 3000;
+  return 3500;
+}
