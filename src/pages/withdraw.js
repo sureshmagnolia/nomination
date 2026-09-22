@@ -64,29 +64,48 @@ export async function renderWithdraw(container) {
       return;
     }
 
-    if (start && now < start) {
-      area.innerHTML = `
-        <div class="glass p-12 text-center rounded-2xl border border-amber-500/20 max-w-2xl mx-auto page-enter">
-          <div class="text-6xl mb-6">📅</div>
-          <h3 class="text-2xl font-bold text-white mb-3">Withdrawal Window Pending</h3>
-          <p class="text-slate-400 mb-6">The withdrawal window is scheduled to open on <strong>${new Date(start).toLocaleString()}</strong>.</p>
-          <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
-        </div>
-      `;
-      area.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
-      return;
-    }
-    if (end && now > end) {
-      area.innerHTML = `
-        <div class="glass p-12 text-center rounded-2xl border border-rose-500/20 max-w-2xl mx-auto page-enter">
-          <div class="text-6xl mb-6">⏳</div>
-          <h3 class="text-2xl font-bold text-white mb-3">Withdrawal Window Closed</h3>
-          <p class="text-slate-400 mb-6">The official deadline for withdrawal requests was <strong>${new Date(end).toLocaleString()}</strong>.</p>
-          <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
-        </div>
-      `;
-      area.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
-      return;
+    const withOverride = schedule.withdrawalOverride || 'AUTO';
+    const isForceOpen = withOverride === 'FORCE_OPEN';
+    const isForceClosed = withOverride === 'FORCE_CLOSED';
+
+    if (!isForceOpen) {
+      if (isForceClosed) {
+        area.innerHTML = `
+          <div class="glass p-12 text-center rounded-2xl border border-rose-500/20 max-w-2xl mx-auto page-enter">
+            <div class="text-6xl mb-6">🛑</div>
+            <h3 class="text-2xl font-bold text-white mb-3">Withdrawal Window Closed</h3>
+            <p class="text-slate-400 mb-6">Withdrawal of candidature has been officially closed by the Returning Officer.</p>
+            <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
+          </div>
+        `;
+        area.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
+        return;
+      }
+
+      if (start && now < start) {
+        area.innerHTML = `
+          <div class="glass p-12 text-center rounded-2xl border border-amber-500/20 max-w-2xl mx-auto page-enter">
+            <div class="text-6xl mb-6">📅</div>
+            <h3 class="text-2xl font-bold text-white mb-3">Withdrawal Window Pending</h3>
+            <p class="text-slate-400 mb-6">The withdrawal window is scheduled to open on <strong>${new Date(start).toLocaleString()}</strong>.</p>
+            <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
+          </div>
+        `;
+        area.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
+        return;
+      }
+      if (end && now > end) {
+        area.innerHTML = `
+          <div class="glass p-12 text-center rounded-2xl border border-rose-500/20 max-w-2xl mx-auto page-enter">
+            <div class="text-6xl mb-6">⏳</div>
+            <h3 class="text-2xl font-bold text-white mb-3">Withdrawal Window Closed</h3>
+            <p class="text-slate-400 mb-6">The official deadline for withdrawal requests was <strong>${new Date(end).toLocaleString()}</strong>.</p>
+            <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
+          </div>
+        `;
+        area.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
+        return;
+      }
     }
 
     area.innerHTML = `

@@ -717,7 +717,21 @@ export const api = {
     invalidateCache('getPublicSchedule');
     invalidateCache('getSettings');
     invalidateCache('adminGetSettings');
+    invalidateCache('getValidNominations');
+    invalidateCache('getFinalNominations');
+    invalidateCache('getResults');
     return res || { ok: true };
+  },
+
+  adminSetStageOverride: async (password, stage, mode) => {
+    const res = await post({ action: 'adminSetStageOverride', password, stage, mode });
+    invalidateCache('getPublicSchedule');
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    invalidateCache('getValidNominations');
+    invalidateCache('getFinalNominations');
+    invalidateCache('getResults');
+    return res;
   },
 
   // ─── Backup & Restore Suite ─────────────────────────────────────────────────

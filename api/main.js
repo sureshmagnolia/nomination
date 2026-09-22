@@ -189,6 +189,134 @@ const setSetting = async (key, value) => {
   `;
 };
 
+// Stage Evaluation Helper: Manual Override trumps Schedule; AUTO follows Date/Time
+function evaluateStageStatus(overrideMode, legacyFlag, scheduledStart, scheduledEnd) {
+  if (overrideMode === 'FORCE_OPEN' || overrideMode === 'FORCE_PUBLISHED') return true;
+  if (overrideMode === 'FORCE_CLOSED' || overrideMode === 'FORCE_UNPUBLISHED') return false;
+
+  const now = new Date();
+  const hasStart = scheduledStart && typeof scheduledStart === 'string' && scheduledStart.trim();
+  const hasEnd = scheduledEnd && typeof scheduledEnd === 'string' && scheduledEnd.trim();
+
+  if (hasStart || hasEnd) {
+    if (hasStart && hasEnd) {
+      const s = new Date(scheduledStart);
+      const e = new Date(scheduledEnd);
+      if (!isNaN(s.getTime()) && !isNaN(e.getTime())) {
+        return now >= s && now <= e;
+      }
+    } else if (hasStart) {
+      const s = new Date(scheduledStart);
+      if (!isNaN(s.getTime())) {
+        return now >= s;
+      }
+    } else if (hasEnd) {
+      const e = new Date(scheduledEnd);
+      if (!isNaN(e.getTime())) {
+        return now <= e;
+      }
+    }
+  }
+
+  return legacyFlag === 'true' || legacyFlag === true;
+}
+
+async function getFullElectionStatus() {
+  const [
+    draftRollOverride, draftRollStart, draftRollEnd, legacyDraftPub,
+    finalRollOverride, finalRollStart, finalRollEnd, legacyRollFinal,
+    nomOverride, nomStart, nomDeadline,
+    validListOverride, validListStart, validListEnd, legacyValidPub,
+    withOverride, withStart, withEnd,
+    finalListOverride, finalListStart, finalListEnd, legacyFinalPub,
+    pollingOverride, pollingStart, pollingEnd,
+    resultsOverride, resultsStart, resultsEnd, legacyResPub,
+    countingActive, resultsLocked,
+    electionYear, notificationDate
+  ] = await Promise.all([
+    getSetting('draftRollOverride'), getSetting('draftRollStart'), getSetting('draftRollEnd'), getSetting('draftRollPublished'),
+    getSetting('finalRollOverride'), getSetting('finalRollStart'), getSetting('finalRollEnd'), getSetting('isRollFinalized'),
+    getSetting('nominationOverride'), getSetting('nominationStart'), getSetting('nominationDeadline'),
+    getSetting('validListOverride'), getSetting('validListStart'), getSetting('validListEnd'), getSetting('validListPublished'),
+    getSetting('withdrawalOverride'), getSetting('withdrawalStart'), getSetting('withdrawalEnd'),
+    getSetting('finalListOverride'), getSetting('finalListStart'), getSetting('finalListEnd'), getSetting('finalListPublished'),
+    getSetting('pollingOverride'), getSetting('pollingStart'), getSetting('pollingEnd'),
+    getSetting('resultsOverride'), getSetting('resultsStart'), getSetting('resultsEnd'), getSetting('resultsPublished'),
+    getSetting('countingActive'), getSetting('resultsLocked'),
+    getSetting('electionYear'), getSetting('notificationDate')
+  ]);
+
+  const isFinalRollActive = evaluateStageStatus(finalRollOverride || 'AUTO', legacyRollFinal || 'false', finalRollStart, finalRollEnd);
+  const isDraftRollActive = evaluateStageStatus(draftRollOverride || 'AUTO', legacyDraftPub || 'false', draftRollStart, draftRollEnd);
+  const isNomActive       = evaluateStageStatus(nomOverride || 'AUTO', 'false', nomStart, nomDeadline);
+  const isValidListActive = evaluateStageStatus(validListOverride || 'AUTO', legacyValidPub || 'false', validListStart, validListEnd);
+  const isWithActive      = evaluateStageStatus(withOverride || 'AUTO', 'false', withStart, withEnd);
+  const isFinalListActive = evaluateStageStatus(finalListOverride || 'AUTO', legacyFinalPub || 'false', finalListStart, finalListEnd);
+  const isPollingActive   = evaluateStageStatus(pollingOverride || 'AUTO', 'false', pollingStart, pollingEnd);
+  const isResultsActive   = evaluateStageStatus(resultsOverride || 'AUTO', legacyResPub || 'false', resultsStart, resultsEnd);
+
+  return {
+    electionYear: electionYear || new Date().getFullYear().toString(),
+    notificationDate: notificationDate || '',
+
+    // 1. Draft Roll
+    draftRollStart: draftRollStart || '',
+    draftRollEnd: draftRollEnd || '',
+    draftRollOverride: draftRollOverride || 'AUTO',
+    isDraftRollActive,
+    draftRollPublished: (isDraftRollActive || isFinalRollActive) ? 'true' : 'false',
+
+    // 2. Final Roll
+    finalRollStart: finalRollStart || '',
+    finalRollEnd: finalRollEnd || '',
+    finalRollOverride: finalRollOverride || 'AUTO',
+    isFinalRollActive,
+    isRollFinalized: isFinalRollActive ? 'true' : 'false',
+    nominalRollFinalized: isFinalRollActive ? 'true' : 'false',
+
+    // 3. Nomination Window
+    nominationStart: nomStart || '',
+    nominationDeadline: nomDeadline || '',
+    nominationOverride: nomOverride || 'AUTO',
+    isNominationActive: isNomActive,
+
+    // 4. Valid List
+    validListStart: validListStart || '',
+    validListEnd: validListEnd || '',
+    validListOverride: validListOverride || 'AUTO',
+    isValidListActive,
+    validListPublished: isValidListActive ? 'true' : 'false',
+
+    // 5. Withdrawal Window
+    withdrawalStart: withStart || '',
+    withdrawalEnd: withEnd || '',
+    withdrawalOverride: withOverride || 'AUTO',
+    isWithdrawalActive: isWithActive,
+
+    // 6. Final List
+    finalListStart: finalListStart || '',
+    finalListEnd: finalListEnd || '',
+    finalListOverride: finalListOverride || 'AUTO',
+    isFinalListActive,
+    finalListPublished: isFinalListActive ? 'true' : 'false',
+
+    // 7. Polling Window
+    pollingStart: pollingStart || '',
+    pollingEnd: pollingEnd || '',
+    pollingOverride: pollingOverride || 'AUTO',
+    isPollingActive,
+
+    // 8. Results & Counting
+    resultsStart: resultsStart || '',
+    resultsEnd: resultsEnd || '',
+    resultsOverride: resultsOverride || 'AUTO',
+    isResultsActive,
+    resultsPublished: isResultsActive ? 'true' : 'false',
+    countingActive: countingActive || 'false',
+    resultsLocked: resultsLocked || 'false'
+  };
+}
+
 let schemaEnsured = false;
 async function ensureSchema() {
   if (schemaEnsured) return;
@@ -692,26 +820,17 @@ export default async function handler(req, res) {
     }
 
     if (action === 'getSettings' || action === 'adminGetSettings') {
-      const rollFinal = (await getSetting('isRollFinalized')) || 'false';
-      const draftPub  = (await getSetting('draftRollPublished')) || 'false';
+      const status = await getFullElectionStatus();
+      const [colName, colShort, colLogo] = await Promise.all([
+        getSetting('collegeName'),
+        getSetting('collegeShortName'),
+        getSetting('collegeLogo')
+      ]);
       const obj = {
-        validListPublished: (await getSetting('validListPublished')) || 'false',
-        finalListPublished: (await getSetting('finalListPublished')) || 'false',
-        resultsPublished: (await getSetting('resultsPublished')) || 'false',
-        resultsLocked: (await getSetting('resultsLocked')) || 'false',
-        countingActive: (await getSetting('countingActive')) || 'false',
-        nominationStart: (await getSetting('nominationStart')) || '',
-        nominationDeadline: (await getSetting('nominationDeadline')) || '',
-        withdrawalStart: (await getSetting('withdrawalStart')) || '',
-        withdrawalEnd: (await getSetting('withdrawalEnd')) || '',
-        isRollFinalized: rollFinal,
-        nominalRollFinalized: rollFinal,
-        draftRollPublished: draftPub,
-        collegeName: (await getSetting('collegeName')) || 'Government Victoria College, Palakkad',
-        collegeShortName: (await getSetting('collegeShortName')) || 'GVC',
-        electionYear: (await getSetting('electionYear')) || new Date().getFullYear().toString(),
-        collegeLogo: (await getSetting('collegeLogo')) || '',
-        notificationDate: await getSetting('notificationDate')
+        ...status,
+        collegeName: colName || 'Government Victoria College, Palakkad',
+        collegeShortName: colShort || 'GVC',
+        collegeLogo: colLogo || ''
       };
       if (action === 'adminGetSettings') {
         const rows = await sql`SELECT value FROM settings WHERE key = 'adminEmail'`;
@@ -721,23 +840,8 @@ export default async function handler(req, res) {
     }
 
     if (action === 'getPublicSchedule') {
-      const rollFinal = (await getSetting('isRollFinalized')) || 'false';
-      const draftPub  = (await getSetting('draftRollPublished')) || 'false';
-      return jsonOut(res, {
-        nominationStart: (await getSetting('nominationStart')) || '',
-        nominationDeadline: (await getSetting('nominationDeadline')) || '',
-        withdrawalStart: (await getSetting('withdrawalStart')) || '',
-        withdrawalEnd: (await getSetting('withdrawalEnd')) || '',
-        notificationDate: (await getSetting('notificationDate')) || '',
-        electionYear: (await getSetting('electionYear')) || new Date().getFullYear().toString(),
-        countingActive: (await getSetting('countingActive')) || 'false',
-        resultsPublished: (await getSetting('resultsPublished')) || 'false',
-        isRollFinalized: rollFinal,
-        nominalRollFinalized: rollFinal,
-        draftRollPublished: draftPub,
-        validListPublished: (await getSetting('validListPublished')) || 'false',
-        finalListPublished: (await getSetting('finalListPublished')) || 'false'
-      });
+      const status = await getFullElectionStatus();
+      return jsonOut(res, status);
     }
 
     if (action === 'adminGetNominations') {
@@ -783,8 +887,12 @@ export default async function handler(req, res) {
     }
 
     if (action === 'getValidNominations') {
-      const published = await getSetting('validListPublished');
-      if (published !== 'true') return jsonOut(res, []);
+      const validOverride = (await getSetting('validListOverride')) || 'AUTO';
+      const legacyPublished = await getSetting('validListPublished');
+      const validStart = await getSetting('validListStart');
+      const validEnd = await getSetting('validListEnd');
+      const published = evaluateStageStatus(validOverride, legacyPublished, validStart, validEnd);
+      if (!published) return jsonOut(res, []);
       const noms = await sql`
         SELECT * FROM nominations 
         WHERE status = 'Valid'
@@ -807,8 +915,12 @@ export default async function handler(req, res) {
     }
 
     if (action === 'getFinalNominations') {
-      const published = await getSetting('finalListPublished');
-      if (published !== 'true') return jsonOut(res, { active: [], withdrawn: [] });
+      const finalOverride = (await getSetting('finalListOverride')) || 'AUTO';
+      const legacyPublished = await getSetting('finalListPublished');
+      const finalStart = await getSetting('finalListStart');
+      const finalEnd = await getSetting('finalListEnd');
+      const published = evaluateStageStatus(finalOverride, legacyPublished, finalStart, finalEnd);
+      if (!published) return jsonOut(res, { active: [], withdrawn: [] });
       const noms = await sql`
         SELECT * FROM nominations 
         WHERE status = 'Valid'
@@ -902,10 +1014,14 @@ export default async function handler(req, res) {
     }
 
     if (action === 'getResults') {
-      const published = await getSetting('resultsPublished');
+      const resOverride = (await getSetting('resultsOverride')) || 'AUTO';
+      const legacyPublished = await getSetting('resultsPublished');
+      const resultsStart = await getSetting('resultsStart');
+      const resultsEnd = await getSetting('resultsEnd');
+      const published = evaluateStageStatus(resOverride, legacyPublished, resultsStart, resultsEnd);
       const countingActive = (await getSetting('countingActive')) === 'true';
       const locked = (await getSetting('resultsLocked')) === 'true';
-      if (published !== 'true') {
+      if (!published) {
         return jsonOut(res, { results: [], published: false, countingActive, locked });
       }
       const data = await getSetting('results_data');
@@ -1341,16 +1457,88 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminSaveSchedule') {
-      await setSetting('nominationStart', body.nominationStart || '');
-      await setSetting('nominationDeadline', body.nominationDeadline || '');
-      await setSetting('withdrawalStart', body.withdrawalStart || '');
-      await setSetting('withdrawalEnd', body.withdrawalEnd || '');
-      await setSetting('notificationDate', body.notificationDate || '');
-      await setSetting('electionYear', body.electionYear || new Date().getFullYear().toString());
+      // General
+      if (body.electionYear !== undefined) await setSetting('electionYear', body.electionYear || new Date().getFullYear().toString());
+      if (body.notificationDate !== undefined) await setSetting('notificationDate', body.notificationDate || '');
+
+      // 1. Draft Roll
+      if (body.draftRollStart !== undefined) await setSetting('draftRollStart', body.draftRollStart || '');
+      if (body.draftRollEnd !== undefined) await setSetting('draftRollEnd', body.draftRollEnd || '');
+      if (body.draftRollOverride !== undefined) await setSetting('draftRollOverride', body.draftRollOverride || 'AUTO');
+
+      // 2. Final Roll
+      if (body.finalRollStart !== undefined) await setSetting('finalRollStart', body.finalRollStart || '');
+      if (body.finalRollEnd !== undefined) await setSetting('finalRollEnd', body.finalRollEnd || '');
+      if (body.finalRollOverride !== undefined) await setSetting('finalRollOverride', body.finalRollOverride || 'AUTO');
+
+      // 3. Nomination Window
+      if (body.nominationStart !== undefined) await setSetting('nominationStart', body.nominationStart || '');
+      if (body.nominationDeadline !== undefined) await setSetting('nominationDeadline', body.nominationDeadline || '');
+      if (body.nominationOverride !== undefined) await setSetting('nominationOverride', body.nominationOverride || 'AUTO');
+
+      // 4. Valid List
+      if (body.validListStart !== undefined) await setSetting('validListStart', body.validListStart || '');
+      if (body.validListEnd !== undefined) await setSetting('validListEnd', body.validListEnd || '');
+      if (body.validListOverride !== undefined) await setSetting('validListOverride', body.validListOverride || 'AUTO');
+
+      // 5. Withdrawal Window
+      if (body.withdrawalStart !== undefined) await setSetting('withdrawalStart', body.withdrawalStart || '');
+      if (body.withdrawalEnd !== undefined) await setSetting('withdrawalEnd', body.withdrawalEnd || '');
+      if (body.withdrawalOverride !== undefined) await setSetting('withdrawalOverride', body.withdrawalOverride || 'AUTO');
+
+      // 6. Final List
+      if (body.finalListStart !== undefined) await setSetting('finalListStart', body.finalListStart || '');
+      if (body.finalListEnd !== undefined) await setSetting('finalListEnd', body.finalListEnd || '');
+      if (body.finalListOverride !== undefined) await setSetting('finalListOverride', body.finalListOverride || 'AUTO');
+
+      // 7. Polling Window
+      if (body.pollingStart !== undefined) await setSetting('pollingStart', body.pollingStart || '');
+      if (body.pollingEnd !== undefined) await setSetting('pollingEnd', body.pollingEnd || '');
+      if (body.pollingOverride !== undefined) await setSetting('pollingOverride', body.pollingOverride || 'AUTO');
+
+      // 8. Results & Counting
+      if (body.resultsStart !== undefined) await setSetting('resultsStart', body.resultsStart || '');
+      if (body.resultsEnd !== undefined) await setSetting('resultsEnd', body.resultsEnd || '');
+      if (body.resultsOverride !== undefined) await setSetting('resultsOverride', body.resultsOverride || 'AUTO');
       if (body.countingActive !== undefined) {
         await setSetting('countingActive', body.countingActive === true || body.countingActive === 'true' ? 'true' : 'false');
       }
+
       return jsonOut(res, { ok: true });
+    }
+
+    if (action === 'adminSetStageOverride') {
+      const stage = body.stage;
+      const mode = body.mode; // 'AUTO' | 'FORCE_OPEN' | 'FORCE_CLOSED'
+      if (!stage || !mode) return errOut(res, 'Stage and mode are required.');
+
+      await setSetting(`${stage}Override`, mode);
+
+      if (stage === 'draftRoll') {
+        if (mode === 'FORCE_OPEN') await setSetting('draftRollPublished', 'true');
+        else if (mode === 'FORCE_CLOSED') await setSetting('draftRollPublished', 'false');
+      } else if (stage === 'finalRoll') {
+        if (mode === 'FORCE_OPEN') {
+          await setSetting('isRollFinalized', 'true');
+          await setSetting('draftRollPublished', 'true');
+        } else if (mode === 'FORCE_CLOSED') {
+          await setSetting('isRollFinalized', 'false');
+        }
+      } else if (stage === 'validList') {
+        if (mode === 'FORCE_OPEN') await setSetting('validListPublished', 'true');
+        else if (mode === 'FORCE_CLOSED') {
+          await setSetting('validListPublished', 'false');
+          await setSetting('finalListPublished', 'false');
+        }
+      } else if (stage === 'finalList') {
+        if (mode === 'FORCE_OPEN') await setSetting('finalListPublished', 'true');
+        else if (mode === 'FORCE_CLOSED') await setSetting('finalListPublished', 'false');
+      } else if (stage === 'results') {
+        if (mode === 'FORCE_OPEN') await setSetting('resultsPublished', 'true');
+        else if (mode === 'FORCE_CLOSED') await setSetting('resultsPublished', 'false');
+      }
+
+      return jsonOut(res, { ok: true, stage, mode });
     }
 
     if (action === 'adminUpdateSettings') {
@@ -1362,16 +1550,26 @@ export default async function handler(req, res) {
     }
 
     if (action === 'submitNomination') {
-      const isRollFinal = (await getSetting('isRollFinalized')) === 'true' || (await getSetting('nominalRollFinalized')) === 'true';
+      const rollOverride = (await getSetting('finalRollOverride')) || 'AUTO';
+      const legacyRollFinal = (await getSetting('isRollFinalized')) === 'true' || (await getSetting('nominalRollFinalized')) === 'true';
+      const finalRollStart = await getSetting('finalRollStart');
+      const isRollFinal = evaluateStageStatus(rollOverride, legacyRollFinal ? 'true' : 'false', finalRollStart);
+
       if (!isRollFinal && !body.password) {
         return errOut(res, 'Nominations can only be submitted after the Final Nominal Roll is published by the Returning Officer.');
       }
 
-      // Schedule window check
+      // Schedule window and override check
       const now = new Date();
+      const nomOverride = (await getSetting('nominationOverride')) || 'AUTO';
       const nomStart = await getSetting('nominationStart');
       const nomEnd = await getSetting('nominationDeadline');
-      if (!body.password) {
+      const isNomActive = evaluateStageStatus(nomOverride, 'false', nomStart, nomEnd);
+
+      if (!isNomActive && !body.password) {
+        if (nomOverride === 'FORCE_CLOSED') {
+          return errOut(res, 'Nomination submission window has been manually closed by the Returning Officer.');
+        }
         if (nomStart && nomStart.trim()) {
           const startDate = new Date(nomStart);
           if (!isNaN(startDate.getTime()) && now < startDate) {
@@ -1384,6 +1582,7 @@ export default async function handler(req, res) {
             return errOut(res, 'Nomination submission window has closed.');
           }
         }
+        return errOut(res, 'Nomination submission window is currently closed.');
       }
 
       // Basic Identity Rules
@@ -1474,16 +1673,27 @@ export default async function handler(req, res) {
     }
 
     if (action === 'submitWithdrawal') {
-      const validPublished = (await getSetting('validListPublished')) === 'true';
+      const validOverride = (await getSetting('validListOverride')) || 'AUTO';
+      const validLegacy = (await getSetting('validListPublished')) === 'true';
+      const validStart = await getSetting('validListStart');
+      const validEnd = await getSetting('validListEnd');
+      const validPublished = evaluateStageStatus(validOverride, validLegacy ? 'true' : 'false', validStart, validEnd);
+
       if (!validPublished && !body.password) {
         return errOut(res, 'Withdrawals can only be submitted after the Valid Nominations List is published.');
       }
 
-      // Schedule window check
+      // Schedule window and override check
       const now = new Date();
+      const withOverride = (await getSetting('withdrawalOverride')) || 'AUTO';
       const withStart = await getSetting('withdrawalStart');
       const withEnd = await getSetting('withdrawalEnd');
-      if (!body.password) {
+      const isWithActive = evaluateStageStatus(withOverride, 'false', withStart, withEnd);
+
+      if (!isWithActive && !body.password) {
+        if (withOverride === 'FORCE_CLOSED') {
+          return errOut(res, 'Withdrawal window has been manually closed by the Returning Officer.');
+        }
         if (withStart && withStart.trim()) {
           const startDate = new Date(withStart);
           if (!isNaN(startDate.getTime()) && now < startDate) {
@@ -1496,6 +1706,7 @@ export default async function handler(req, res) {
             return errOut(res, 'Withdrawal window has closed.');
           }
         }
+        return errOut(res, 'Withdrawal window is currently closed.');
       }
 
       const id = body.id;
@@ -1531,22 +1742,27 @@ export default async function handler(req, res) {
 
     if (action === 'adminPublishValidList') {
       await setSetting('validListPublished', 'true');
+      await setSetting('validListOverride', 'FORCE_OPEN');
       return jsonOut(res, { ok: true });
     }
 
     if (action === 'adminPublishFinalList') {
       await setSetting('finalListPublished', 'true');
+      await setSetting('finalListOverride', 'FORCE_OPEN');
       return jsonOut(res, { ok: true });
     }
 
     if (action === 'adminUnpublishValidList') {
       await setSetting('validListPublished', 'false');
       await setSetting('finalListPublished', 'false');
+      await setSetting('validListOverride', 'FORCE_CLOSED');
+      await setSetting('finalListOverride', 'FORCE_CLOSED');
       return jsonOut(res, { ok: true });
     }
 
     if (action === 'adminUnpublishFinalList') {
       await setSetting('finalListPublished', 'false');
+      await setSetting('finalListOverride', 'FORCE_CLOSED');
       return jsonOut(res, { ok: true });
     }
 
@@ -1714,6 +1930,7 @@ export default async function handler(req, res) {
       const current = await getSetting('resultsPublished');
       const next = current === 'true' ? 'false' : 'true';
       await setSetting('resultsPublished', next);
+      await setSetting('resultsOverride', next === 'true' ? 'FORCE_OPEN' : 'FORCE_CLOSED');
       return jsonOut(res, { ok: true, published: next === 'true', resultsPublished: next });
     }
 
@@ -1743,11 +1960,13 @@ export default async function handler(req, res) {
 
     if (action === 'adminPublishResults') {
       await setSetting('resultsPublished', 'true');
+      await setSetting('resultsOverride', 'FORCE_OPEN');
       return jsonOut(res, { ok: true, published: true, resultsPublished: 'true' });
     }
 
     if (action === 'adminUnpublishResults') {
       await setSetting('resultsPublished', 'false');
+      await setSetting('resultsOverride', 'FORCE_CLOSED');
       return jsonOut(res, { ok: true, published: false, resultsPublished: 'false' });
     }
 
@@ -2020,11 +2239,13 @@ export default async function handler(req, res) {
 
     if (action === 'adminPublishDraftRoll') {
       await setSetting('draftRollPublished', 'true');
+      await setSetting('draftRollOverride', 'FORCE_OPEN');
       return jsonOut(res, { ok: true, draftRollPublished: 'true' });
     }
 
     if (action === 'adminUnpublishDraftRoll') {
       await setSetting('draftRollPublished', 'false');
+      await setSetting('draftRollOverride', 'FORCE_CLOSED');
       return jsonOut(res, { ok: true, draftRollPublished: 'false' });
     }
 
@@ -2040,6 +2261,7 @@ export default async function handler(req, res) {
 
       await setSetting('isRollFinalized', 'true');
       await setSetting('draftRollPublished', 'true');
+      await setSetting('finalRollOverride', 'FORCE_OPEN');
       return jsonOut(res, { ok: true, isRollFinalized: 'true' });
     }
 
@@ -2053,16 +2275,26 @@ export default async function handler(req, res) {
 
       await setSetting('isRollFinalized', 'false');
       await setSetting('draftRollPublished', 'true');
+      await setSetting('finalRollOverride', 'FORCE_CLOSED');
       return jsonOut(res, { ok: true, isRollFinalized: 'false' });
     }
 
     if (action === 'submitRollCorrection') {
-      const draftPub = await getSetting('draftRollPublished');
-      const isFinal = await getSetting('isRollFinalized');
-      if (isFinal === 'true') {
+      const draftOverride = (await getSetting('draftRollOverride')) || 'AUTO';
+      const legacyDraft = await getSetting('draftRollPublished');
+      const draftStart = await getSetting('draftRollStart');
+      const draftEnd = await getSetting('draftRollEnd');
+      const isDraftOpen = evaluateStageStatus(draftOverride, legacyDraft, draftStart, draftEnd);
+
+      const rollOverride = (await getSetting('finalRollOverride')) || 'AUTO';
+      const legacyFinal = await getSetting('isRollFinalized');
+      const finalStart = await getSetting('finalRollStart');
+      const isFinal = evaluateStageStatus(rollOverride, legacyFinal, finalStart);
+
+      if (isFinal) {
         return errOut(res, 'The Nominal Roll has been finalized. Correction requests are no longer accepted.');
       }
-      if (draftPub !== 'true') {
+      if (!isDraftOpen) {
         return errOut(res, 'The Draft Nominal Roll is not currently open for correction requests.');
       }
       if (!body.admissionNo || !body.studentName || !body.details) {

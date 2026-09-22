@@ -77,9 +77,14 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
           <h3 class="text-xl font-bold text-white">Publish & Print Lists</h3>
           <p class="text-slate-400 text-sm">Control public visibility, audit election pipeline stages, and generate official signed documents.</p>
         </div>
-        <button id="btnRefreshPublish" class="btn btn-secondary btn-sm flex items-center gap-2 shrink-0">
-          <span>🔄</span> Refresh State
-        </button>
+        <div class="flex items-center gap-2 shrink-0">
+          <button data-nav="/admin/schedule" class="btn btn-primary btn-sm flex items-center gap-1.5">
+            <span>📅</span> Schedule & Timings
+          </button>
+          <button id="btnRefreshPublish" class="btn btn-secondary btn-sm flex items-center gap-2">
+            <span>🔄</span> Refresh State
+          </button>
+        </div>
       </div>
 
       <!-- Election Pipeline Overview Bar -->
