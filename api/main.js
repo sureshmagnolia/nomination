@@ -2338,37 +2338,39 @@ All students are directed to strictly adhere to the University Code of Conduct, 
           ));
         }
         
-        // Only renumber if uploaded roll lacked valid serials or explicit forceRenumber was requested
-        if (!hasValidSerials || body.forceRenumber === true) {
-          await sql`UPDATE nominal_roll SET serial_number = serial_number || '_' || gen_random_uuid()::varchar`;
-          await sql`
-            WITH renumbered AS (
-              SELECT serial_number as old_serial,
-                ROW_NUMBER() OVER (
-                  ORDER BY 
-                    LOWER(TRIM(dept)) ASC,
-                    CASE 
-                      WHEN UPPER(class) LIKE '%RESEARCH%' OR UPPER(class) LIKE '%PH%D%' THEN 6000
-                      WHEN UPPER(class) ~ '^I\s+M' OR UPPER(class) ~ '^I\s+PG' THEN 4000
-                      WHEN UPPER(class) ~ '^II\s+M' OR UPPER(class) ~ '^II\s+PG' THEN 5000
-                      WHEN UPPER(class) ~ '^III\s+M' THEN 5500
-                      WHEN UPPER(class) ~ '^I\s+(B|UG)' OR UPPER(class) LIKE '1ST YEAR%' THEN 1000
-                      WHEN UPPER(class) ~ '^II\s+(B|UG)' OR UPPER(class) LIKE '2ND YEAR%' THEN 2000
-                      WHEN UPPER(class) ~ '^III\s+(B|UG)' OR UPPER(class) LIKE '3RD YEAR%' THEN 3000
-                      ELSE 3500
-                    END ASC,
-                    class ASC,
-                    LOWER(TRIM(name)) ASC,
-                    name ASC,
-                    CASE WHEN split_part(serial_number, '_', 1) ~ '^[0-9]+$' THEN CAST(split_part(serial_number, '_', 1) AS BIGINT) ELSE 999999 END ASC,
-                    CASE WHEN admission_no ~ '^[0-9]+$' THEN CAST(admission_no AS BIGINT) ELSE 999999 END ASC
-                ) as new_serial
-              FROM nominal_roll
-            )
-            UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
-            FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
-          `;
-        }
+        // Always assign contiguous sequential 1..N serial numbers strictly following canonical sort order:
+        // Department (A-Z) -> Progression (1st UG -> 2nd UG -> 3rd UG -> 4th UG -> 1st PG -> 2nd PG -> RS) -> Class Name -> Student Name
+        await sql`UPDATE nominal_roll SET serial_number = serial_number || '_' || gen_random_uuid()::varchar`;
+        await sql`
+          WITH renumbered AS (
+            SELECT serial_number as old_serial,
+              ROW_NUMBER() OVER (
+                ORDER BY 
+                  LOWER(TRIM(dept)) ASC,
+                  CASE 
+                    WHEN UPPER(class) LIKE '%RESEARCH%' OR UPPER(class) LIKE '%SCHOLAR%' OR UPPER(class) ~ 'PH\.?\s*D' THEN 6000
+                    WHEN (UPPER(class) ~ '(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)' OR UPPER(class) ~ '^(I|II|III|[1-3](ST|ND|RD)?)\s*(YEAR\s*)?(M|PG)\b')
+                     AND (UPPER(class) ~ '(^|[^A-Z])(2ND|II|SECOND)([^A-Z]|$)' OR UPPER(class) ~ '2ND\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[34]|S[34]|[34](RD|TH)\s*SEM)([^A-Z]|$)') THEN 5000
+                    WHEN (UPPER(class) ~ '(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)' OR UPPER(class) ~ '^(I|II|III|[1-3](ST|ND|RD)?)\s*(YEAR\s*)?(M|PG)\b')
+                     AND (UPPER(class) ~ '(^|[^A-Z])(3RD|III|THIRD)([^A-Z]|$)' OR UPPER(class) ~ '3RD\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[56]|S[56]|[56](TH)\s*SEM)([^A-Z]|$)') THEN 5500
+                    WHEN UPPER(class) ~ '(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)' OR UPPER(class) ~ '^(I|II|III|[1-3](ST|ND|RD)?)\s*(YEAR\s*)?(M|PG)\b' THEN 4000
+                    WHEN UPPER(class) ~ '(^|[^A-Z])(1ST|I|FIRST)([^A-Z]|$)' OR UPPER(class) ~ '1ST\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[12]|S[12]|[12](ST|ND)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^I\s+(B|UG)' THEN 1000
+                    WHEN UPPER(class) ~ '(^|[^A-Z])(2ND|II|SECOND)([^A-Z]|$)' OR UPPER(class) ~ '2ND\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[34]|S[34]|[34](RD|TH)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^II\s+(B|UG)' THEN 2000
+                    WHEN UPPER(class) ~ '(^|[^A-Z])(3RD|III|THIRD)([^A-Z]|$)' OR UPPER(class) ~ '3RD\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[56]|S[56]|[56](TH)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^III\s+(B|UG)' THEN 3000
+                    WHEN UPPER(class) ~ '(^|[^A-Z])(4TH|IV|FOURTH)([^A-Z]|$)' OR UPPER(class) ~ '4TH\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[78]|S[78]|[78](TH)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^IV\s+(B|UG)' THEN 3500
+                    ELSE 3800
+                  END ASC,
+                  LOWER(TRIM(class)) ASC,
+                  LOWER(TRIM(name)) ASC,
+                  name ASC,
+                  CASE WHEN split_part(serial_number, '_', 1) ~ '^[0-9]+$' THEN CAST(split_part(serial_number, '_', 1) AS BIGINT) ELSE 999999 END ASC,
+                  CASE WHEN admission_no ~ '^[0-9]+$' THEN CAST(admission_no AS BIGINT) ELSE 999999 END ASC
+              ) as new_serial
+            FROM nominal_roll
+          )
+          UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
+          FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
+        `;
       }
 
       // Automatically re-map existing nominations against newly uploaded roll
@@ -2393,7 +2395,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       await sql`UPDATE nominal_roll SET serial_number = serial_number || '_' || gen_random_uuid()::varchar`;
 
       // Step 2: Assign contiguous sequential numbers finishing each department at a time:
-      // Department (A-Z) -> Program Level (I UG -> II UG -> III UG -> I PG -> II PG -> RS) -> Class Name -> Serial/Adm/Name
+      // Department (A-Z) -> Program Level (I UG -> II UG -> III UG -> 4th UG -> I PG -> II PG -> RS) -> Class Name -> Student Name
       await sql`
         WITH renumbered AS (
           SELECT serial_number as old_serial,
@@ -2401,16 +2403,19 @@ All students are directed to strictly adhere to the University Code of Conduct, 
               ORDER BY 
                 LOWER(TRIM(dept)) ASC,
                 CASE 
-                  WHEN UPPER(class) LIKE '%RESEARCH%' OR UPPER(class) LIKE '%PH%D%' THEN 6000
-                  WHEN UPPER(class) ~ '^I\s+M' OR UPPER(class) ~ '^I\s+PG' THEN 4000
-                  WHEN UPPER(class) ~ '^II\s+M' OR UPPER(class) ~ '^II\s+PG' THEN 5000
-                  WHEN UPPER(class) ~ '^III\s+M' THEN 5500
-                  WHEN UPPER(class) ~ '^I\s+(B|UG)' OR UPPER(class) LIKE '1ST YEAR%' THEN 1000
-                  WHEN UPPER(class) ~ '^II\s+(B|UG)' OR UPPER(class) LIKE '2ND YEAR%' THEN 2000
-                  WHEN UPPER(class) ~ '^III\s+(B|UG)' OR UPPER(class) LIKE '3RD YEAR%' THEN 3000
-                  ELSE 3500
+                  WHEN UPPER(class) LIKE '%RESEARCH%' OR UPPER(class) LIKE '%SCHOLAR%' OR UPPER(class) ~ 'PH\.?\s*D' THEN 6000
+                  WHEN (UPPER(class) ~ '(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)' OR UPPER(class) ~ '^(I|II|III|[1-3](ST|ND|RD)?)\s*(YEAR\s*)?(M|PG)\b')
+                   AND (UPPER(class) ~ '(^|[^A-Z])(2ND|II|SECOND)([^A-Z]|$)' OR UPPER(class) ~ '2ND\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[34]|S[34]|[34](RD|TH)\s*SEM)([^A-Z]|$)') THEN 5000
+                  WHEN (UPPER(class) ~ '(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)' OR UPPER(class) ~ '^(I|II|III|[1-3](ST|ND|RD)?)\s*(YEAR\s*)?(M|PG)\b')
+                   AND (UPPER(class) ~ '(^|[^A-Z])(3RD|III|THIRD)([^A-Z]|$)' OR UPPER(class) ~ '3RD\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[56]|S[56]|[56](TH)\s*SEM)([^A-Z]|$)') THEN 5500
+                  WHEN UPPER(class) ~ '(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)' OR UPPER(class) ~ '^(I|II|III|[1-3](ST|ND|RD)?)\s*(YEAR\s*)?(M|PG)\b' THEN 4000
+                  WHEN UPPER(class) ~ '(^|[^A-Z])(1ST|I|FIRST)([^A-Z]|$)' OR UPPER(class) ~ '1ST\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[12]|S[12]|[12](ST|ND)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^I\s+(B|UG)' THEN 1000
+                  WHEN UPPER(class) ~ '(^|[^A-Z])(2ND|II|SECOND)([^A-Z]|$)' OR UPPER(class) ~ '2ND\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[34]|S[34]|[34](RD|TH)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^II\s+(B|UG)' THEN 2000
+                  WHEN UPPER(class) ~ '(^|[^A-Z])(3RD|III|THIRD)([^A-Z]|$)' OR UPPER(class) ~ '3RD\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[56]|S[56]|[56](TH)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^III\s+(B|UG)' THEN 3000
+                  WHEN UPPER(class) ~ '(^|[^A-Z])(4TH|IV|FOURTH)([^A-Z]|$)' OR UPPER(class) ~ '4TH\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[78]|S[78]|[78](TH)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^IV\s+(B|UG)' THEN 3500
+                  ELSE 3800
                 END ASC,
-                class ASC,
+                LOWER(TRIM(class)) ASC,
                 LOWER(TRIM(name)) ASC,
                 name ASC,
                 CASE WHEN split_part(serial_number, '_', 1) ~ '^[0-9]+$' THEN CAST(split_part(serial_number, '_', 1) AS BIGINT) ELSE 999999 END ASC,
@@ -2528,13 +2533,54 @@ All students are directed to strictly adhere to the University Code of Conduct, 
           newSerial = candidate;
         }
       } else {
-        // Draft roll addition: default to next contiguous number if not provided
+        // Draft roll addition: if serial not explicitly specified, insert and re-sequence in canonical order
         if (!newSerial) {
-          const maxSlRows = await sql`
-            SELECT COALESCE(MAX(CASE WHEN serial_number ~ '^[0-9]+$' THEN CAST(serial_number AS BIGINT) ELSE 0 END), 0) + 1 as next_sl 
-            FROM nominal_roll
+          const tempSl = 'temp_' + crypto.randomUUID();
+          await sql`
+            INSERT INTO nominal_roll (serial_number, name, class, admission_no, dept)
+            VALUES (${tempSl}, ${body.name}, ${body.class}, ${body.admission_no}, ${body.dept})
           `;
-          newSerial = String(maxSlRows[0]?.next_sl || 1);
+          await sql`UPDATE nominal_roll SET serial_number = serial_number || '_' || gen_random_uuid()::varchar`;
+          await sql`
+            WITH renumbered AS (
+              SELECT serial_number as old_serial,
+                ROW_NUMBER() OVER (
+                  ORDER BY 
+                    LOWER(TRIM(dept)) ASC,
+                    CASE 
+                      WHEN UPPER(class) LIKE '%RESEARCH%' OR UPPER(class) LIKE '%SCHOLAR%' OR UPPER(class) ~ 'PH\.?\s*D' THEN 6000
+                      WHEN (UPPER(class) ~ '(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)' OR UPPER(class) ~ '^(I|II|III|[1-3](ST|ND|RD)?)\s*(YEAR\s*)?(M|PG)\b')
+                       AND (UPPER(class) ~ '(^|[^A-Z])(2ND|II|SECOND)([^A-Z]|$)' OR UPPER(class) ~ '2ND\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[34]|S[34]|[34](RD|TH)\s*SEM)([^A-Z]|$)') THEN 5000
+                      WHEN (UPPER(class) ~ '(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)' OR UPPER(class) ~ '^(I|II|III|[1-3](ST|ND|RD)?)\s*(YEAR\s*)?(M|PG)\b')
+                       AND (UPPER(class) ~ '(^|[^A-Z])(3RD|III|THIRD)([^A-Z]|$)' OR UPPER(class) ~ '3RD\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[56]|S[56]|[56](TH)\s*SEM)([^A-Z]|$)') THEN 5500
+                      WHEN UPPER(class) ~ '(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)' OR UPPER(class) ~ '^(I|II|III|[1-3](ST|ND|RD)?)\s*(YEAR\s*)?(M|PG)\b' THEN 4000
+                      WHEN UPPER(class) ~ '(^|[^A-Z])(1ST|I|FIRST)([^A-Z]|$)' OR UPPER(class) ~ '1ST\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[12]|S[12]|[12](ST|ND)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^I\s+(B|UG)' THEN 1000
+                      WHEN UPPER(class) ~ '(^|[^A-Z])(2ND|II|SECOND)([^A-Z]|$)' OR UPPER(class) ~ '2ND\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[34]|S[34]|[34](RD|TH)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^II\s+(B|UG)' THEN 2000
+                      WHEN UPPER(class) ~ '(^|[^A-Z])(3RD|III|THIRD)([^A-Z]|$)' OR UPPER(class) ~ '3RD\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[56]|S[56]|[56](TH)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^III\s+(B|UG)' THEN 3000
+                      WHEN UPPER(class) ~ '(^|[^A-Z])(4TH|IV|FOURTH)([^A-Z]|$)' OR UPPER(class) ~ '4TH\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[78]|S[78]|[78](TH)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^IV\s+(B|UG)' THEN 3500
+                      ELSE 3800
+                    END ASC,
+                    LOWER(TRIM(class)) ASC,
+                    LOWER(TRIM(name)) ASC,
+                    name ASC,
+                    CASE WHEN split_part(serial_number, '_', 1) ~ '^[0-9]+$' THEN CAST(split_part(serial_number, '_', 1) AS BIGINT) ELSE 999999 END ASC,
+                    CASE WHEN admission_no ~ '^[0-9]+$' THEN CAST(admission_no AS BIGINT) ELSE 999999 END ASC
+                ) as new_serial
+              FROM nominal_roll
+            )
+            UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
+            FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
+          `;
+          const addedRow = await sql`
+            SELECT serial_number FROM nominal_roll 
+            WHERE LOWER(TRIM(name)) = LOWER(TRIM(${body.name})) 
+              AND LOWER(TRIM(class)) = LOWER(TRIM(${body.class}))
+              AND LOWER(TRIM(dept)) = LOWER(TRIM(${body.dept}))
+            ORDER BY CAST(serial_number AS BIGINT) DESC LIMIT 1
+          `;
+          newSerial = addedRow[0]?.serial_number || '1';
+          await remapNominationsWithRoll();
+          return jsonOut(res, { ok: true, serial: newSerial, isFinalAddition: false });
         }
       }
 

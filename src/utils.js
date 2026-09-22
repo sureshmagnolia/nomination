@@ -383,14 +383,48 @@ export function getStudentDeptClassKey(student) {
 // ─── Program Level Progression Weight (RS placed at the end of each department) ───
 export function getProgWeight(className) {
   const c = String(className || '').toUpperCase().trim();
-  if (c.includes('RESEARCH') || c.includes('SCHOLAR') || c.includes('PHD')) return 6000;
-  if (/^I\s+M/i.test(c) || /^I\s+PG/i.test(c) || /1ST\s+YEAR\s+PG/i.test(c)) return 4000;
-  if (/^II\s+M/i.test(c) || /^II\s+PG/i.test(c) || /2ND\s+YEAR\s+PG/i.test(c)) return 5000;
-  if (/^III\s+M/i.test(c)) return 5500;
-  if (/^I\s+(B|UG)/i.test(c) || /1ST\s+YEAR/i.test(c)) return 1000;
-  if (/^II\s+(B|UG)/i.test(c) || /2ND\s+YEAR/i.test(c)) return 2000;
-  if (/^III\s+(B|UG)/i.test(c) || /3RD\s+YEAR/i.test(c)) return 3000;
-  return 3500;
+  
+  // 1. Research Scholars (end of department)
+  if (c.includes('RESEARCH') || c.includes('SCHOLAR') || c.includes('PHD') || c.includes('PH.D') || c.includes('PH D')) {
+    return 6000;
+  }
+  
+  // 2. Post-Graduate (PG) Classes: Check PG indicators first
+  const isPg = /(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)/i.test(c) ||
+               /^(I|II|III|1ST|2ND|3RD|1|2|3)\s*(YEAR\s*)?(M|PG)\b/i.test(c);
+  
+  if (isPg) {
+    // PG 2nd Year
+    if (/(^|[^A-Z])(2ND|II|SECOND)([^A-Z]|$)/i.test(c) || /2ND\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[34]|S[34]|[34](RD|TH)\s*SEM)([^A-Z]|$)/i.test(c)) {
+      return 5000;
+    }
+    // PG 3rd Year (e.g. 3-year MCA)
+    if (/(^|[^A-Z])(3RD|III|THIRD)([^A-Z]|$)/i.test(c) || /3RD\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[56]|S[56]|[56](TH)\s*SEM)([^A-Z]|$)/i.test(c)) {
+      return 5500;
+    }
+    // PG 1st Year (or general PG default)
+    return 4000;
+  }
+  
+  // 3. Under-Graduate (UG) Classes
+  // 1st Year UG
+  if (/(^|[^A-Z])(1ST|I|FIRST)([^A-Z]|$)/i.test(c) || /1ST\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[12]|S[12]|[12](ST|ND)\s*SEM)([^A-Z]|$)/i.test(c) || /^I\s+(B|UG)/i.test(c)) {
+    return 1000;
+  }
+  // 2nd Year UG
+  if (/(^|[^A-Z])(2ND|II|SECOND)([^A-Z]|$)/i.test(c) || /2ND\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[34]|S[34]|[34](RD|TH)\s*SEM)([^A-Z]|$)/i.test(c) || /^II\s+(B|UG)/i.test(c)) {
+    return 2000;
+  }
+  // 3rd Year UG
+  if (/(^|[^A-Z])(3RD|III|THIRD)([^A-Z]|$)/i.test(c) || /3RD\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[56]|S[56]|[56](TH)\s*SEM)([^A-Z]|$)/i.test(c) || /^III\s+(B|UG)/i.test(c)) {
+    return 3000;
+  }
+  // 4th Year UG (FYUGP)
+  if (/(^|[^A-Z])(4TH|IV|FOURTH)([^A-Z]|$)/i.test(c) || /4TH\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[78]|S[78]|[78](TH)\s*SEM)([^A-Z]|$)/i.test(c) || /^IV\s+(B|UG)/i.test(c)) {
+    return 3500;
+  }
+  
+  return 3800;
 }
 
 // ─── Post Classification & Alphabetical Association Secretary Sorting ────────
