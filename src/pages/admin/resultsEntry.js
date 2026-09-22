@@ -211,15 +211,18 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       // Re-apply any optimistic updates from the sync queue on top of server data
       mergeQueueIntoResults(allResults);
       renderFormGrid(booths[info.t].boothNumber, info.postName, s, info.r + 1);
+      renderLedger(main, allResults, allFormSerialsMeta);
     } catch (e) {
       mergeQueueIntoResults(allResults);
       renderFormGrid(booths[info.t].boothNumber, info.postName, s, info.r + 1);
+      renderLedger(main, allResults, allFormSerialsMeta);
     } finally {
       setLoading(btnSerial, false, 'Load Form');
     }
   };
 
   btnSerial.addEventListener('click', loadBySerial);
+  txtSerial.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); loadBySerial(); } });
   txtSerial.addEventListener('keypress', (e) => { if (e.key === 'Enter') loadBySerial(); });
 
   main.querySelector('#btnLoadForm').addEventListener('click', async () => {
@@ -248,9 +251,11 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       allResults.push(...freshResults);
       mergeQueueIntoResults(allResults);
       renderFormGrid(tableNum, postName, foundSerial, foundRound);
+      renderLedger(main, allResults, allFormSerialsMeta);
     } catch (e) {
       mergeQueueIntoResults(allResults);
       renderFormGrid(tableNum, postName, foundSerial, foundRound);
+      renderLedger(main, allResults, allFormSerialsMeta);
     } finally {
       setLoading(main.querySelector('#btnLoadForm'), false, 'Load');
     }
@@ -487,14 +492,18 @@ function renderLedger(main, allResults, allFormSerialsMeta) {
     `;
   }
 
-  const chipClass = (st) => {
-    const base = 'w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold select-none transition-all border cursor-pointer';
+  const currentSerial = String(main.querySelector('#txtSerial')?.value || '').trim();
+  const chipClass = (st, s) => {
+    let base = 'w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold select-none transition-all border cursor-pointer';
+    if (currentSerial && String(s) === currentSerial) {
+      base += ' ring-2 ring-indigo-400 ring-offset-1 ring-offset-slate-900 shadow-md shadow-indigo-500/40 font-extrabold scale-105';
+    }
     switch (st) {
       case 'server':
       case 'success':
         return `${base} bg-green-500/20 text-green-400 border-green-500/40 hover:bg-green-500/40`;
       case 'syncing':
-        return `${base} bg-blue-500/20 text-blue-300 border-blue-500/40 animate-pulse cursor-default`;
+        return `${base} bg-blue-500/20 text-blue-300 border-blue-500/40 animate-pulse`;
       case 'pending':
       case 'retry':
         return `${base} bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/40`;
@@ -507,52 +516,53 @@ function renderLedger(main, allResults, allFormSerialsMeta) {
 
   const chipTitle = (s, st, meta) => {
     const info = meta[String(s)] || {};
-    const base = `Form #${s} | T-${info.tableNum || '?'} | ${info.postName || '?'}`;
-    const action = st === 'syncing' ? '' : ' | Dbl-click to load';
+    const base = `Form #${s} | Table ${info.tableNum || '?'} | ${info.postName || '?'}`;
+    const action = ' | Click to load form';
     if (st === 'error') {
       const item = syncQueue.find(i => String(i.serial) === String(s));
-      return `${base} | ❌ Failed${action} (${item?.errorMsg || ''})`;
+      return `${base} | ❌ Failed (Click to retry & load) (${item?.errorMsg || ''})`;
     }
     if (st === 'pending') return `${base} | ⏳ Not entered yet${action}`;
     if (st === 'server') return `${base} | ☁️ In DB${action}`;
     if (st === 'success') return `${base} | ✅ Saved${action}`;
-    if (st === 'syncing') return `${base} | 🔵 Syncing...`;
+    if (st === 'syncing') return `${base} | 🔵 Syncing...${action}`;
     return base + action;
   };
 
   grid.innerHTML = allSerials.map(s => {
     const st = statusMap[String(s)] || 'not-entered';
     const qItem = syncQueue.find(i => String(i.serial) === String(s));
-    return `<button class="${chipClass(st)}"
+    return `<button class="${chipClass(st, s)}"
       title="${chipTitle(s, st, allFormSerialsMeta)}"
       data-serial="${s}"
       ${st === 'error' && qItem ? `data-id="${qItem.id}"` : ''}
     >${s}</button>`;
   }).join('');
 
-  // Single-click: retry failed chips only
-  grid.querySelectorAll('.retry-btn').forEach(chip => {
+  // Single-click on any chip: load that form for result entry (and retry if failed)
+  grid.querySelectorAll('button[data-serial]').forEach(chip => {
     chip.addEventListener('click', () => {
       const id = chip.dataset.id;
-      const item = syncQueue.find(i => i.id === id);
-      if (item) {
-        item.status = 'retry';
-        renderLedger(main, allResults, allFormSerialsMeta);
-        processQueue(main, allResults, allFormSerialsMeta);
+      if (id) {
+        const item = syncQueue.find(i => i.id === id);
+        if (item) {
+          item.status = 'retry';
+          renderLedger(main, allResults, allFormSerialsMeta);
+          processQueue(main, allResults, allFormSerialsMeta);
+        }
       }
-    });
-  });
 
-  // Double-click any chip: load that form into the serial input
-  grid.querySelectorAll('button[data-serial]').forEach(chip => {
-    chip.addEventListener('dblclick', () => {
       const serial = chip.dataset.serial;
       const txtSerial = main.querySelector('#txtSerial');
-      if (txtSerial) {
+      const btnLoad = main.querySelector('#btnLoadBySerial');
+      if (txtSerial && serial) {
         txtSerial.value = serial;
-        // Scroll to top of left panel so user sees the form load
+        if (btnLoad) {
+          btnLoad.click();
+        } else {
+          txtSerial.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
+        }
         main.querySelector('#entryFormArea')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        txtSerial.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
       }
     });
   });
@@ -580,14 +590,20 @@ function renderLedger(main, allResults, allFormSerialsMeta) {
         `;
       }).join('');
 
-      // Click a pending row to pre-fill the serial input
+      // Click a pending row to load the form
       pendingList.querySelectorAll('.pending-row').forEach(row => {
         row.addEventListener('click', () => {
           const serial = row.dataset.serial;
           const txtSerial = main.querySelector('#txtSerial');
-          if (txtSerial) {
+          const btnLoad = main.querySelector('#btnLoadBySerial');
+          if (txtSerial && serial) {
             txtSerial.value = serial;
-            txtSerial.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
+            if (btnLoad) {
+              btnLoad.click();
+            } else {
+              txtSerial.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
+            }
+            main.querySelector('#entryFormArea')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
         });
       });
