@@ -188,11 +188,14 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
 
         if (cA !== cB) return cA.localeCompare(cB);
 
+        // Sort names in each class alphabetically based on their name
+        const nA = String(a['NAME'] || '').trim().toUpperCase();
+        const nB = String(b['NAME'] || '').trim().toUpperCase();
+        if (nA !== nB) return nA.localeCompare(nB);
+
         const sA = parseSl(a);
         const sB = parseSl(b);
-        if (sA !== sB) return sA - sB;
-
-        return String(a['NAME'] || '').trim().toUpperCase().localeCompare(String(b['NAME'] || '').trim().toUpperCase());
+        return sA - sB;
       });
     } else if (adminArrangeMode === 'name') {
       filtered.sort((a, b) => String(a['NAME'] || '').trim().toUpperCase().localeCompare(String(b['NAME'] || '').trim().toUpperCase()));
@@ -383,7 +386,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
           </div>
           <div class="w-full md:w-60 shrink-0">
             <select id="adminArrangeSelect" class="field text-xs bg-slate-900 border-white/10 text-white w-full py-2">
-              <option value="dept-class" ${adminArrangeMode === 'dept-class' ? 'selected' : ''}>🏢 Arrange: Dept ➔ Class ➔ Sl. No</option>
+              <option value="dept-class" ${adminArrangeMode === 'dept-class' ? 'selected' : ''}>🏢 Arrange: Dept ➔ Class ➔ Name (A-Z)</option>
               <option value="serial" ${adminArrangeMode === 'serial' ? 'selected' : ''}>🔢 Arrange: Serial Number</option>
               <option value="name" ${adminArrangeMode === 'name' ? 'selected' : ''}>🔤 Arrange: Student Name (A–Z)</option>
             </select>

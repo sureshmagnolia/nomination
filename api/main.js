@@ -1014,20 +1014,22 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminGetNotices') {
-      const [noticesRaw, boothsRaw, locationsRaw, status, colName, colShort, colLogo] = await Promise.all([
+      const [noticesRaw, boothsRaw, locationsRaw, status, colName, colShort, colLogo, postsList] = await Promise.all([
         getSetting('official_notices'),
         getSetting('booths_data'),
         getSetting('availableLocations'),
         getFullElectionStatus(),
         getSetting('collegeName'),
         getSetting('collegeShortName'),
-        getSetting('collegeLogo')
+        getSetting('collegeLogo'),
+        fetchPostsFromDb()
       ]);
 
       return jsonOut(res, {
         notices: safeJsonParse(noticesRaw, []),
         booths: safeJsonParse(boothsRaw, []),
         locations: safeJsonParse(locationsRaw, []),
+        posts: postsList || [],
         schedule: status,
         settings: {
           collegeName: colName || 'Government Victoria College, Palakkad',
@@ -2164,9 +2166,10 @@ export default async function handler(req, res) {
                       ELSE 3500
                     END ASC,
                     class ASC,
+                    LOWER(TRIM(name)) ASC,
+                    name ASC,
                     CASE WHEN split_part(serial_number, '_', 1) ~ '^[0-9]+$' THEN CAST(split_part(serial_number, '_', 1) AS BIGINT) ELSE 999999 END ASC,
-                    CASE WHEN admission_no ~ '^[0-9]+$' THEN CAST(admission_no AS BIGINT) ELSE 999999 END ASC,
-                    name ASC
+                    CASE WHEN admission_no ~ '^[0-9]+$' THEN CAST(admission_no AS BIGINT) ELSE 999999 END ASC
                 ) as new_serial
               FROM nominal_roll
             )
@@ -2216,9 +2219,10 @@ export default async function handler(req, res) {
                   ELSE 3500
                 END ASC,
                 class ASC,
+                LOWER(TRIM(name)) ASC,
+                name ASC,
                 CASE WHEN split_part(serial_number, '_', 1) ~ '^[0-9]+$' THEN CAST(split_part(serial_number, '_', 1) AS BIGINT) ELSE 999999 END ASC,
-                CASE WHEN admission_no ~ '^[0-9]+$' THEN CAST(admission_no AS BIGINT) ELSE 999999 END ASC,
-                name ASC
+                CASE WHEN admission_no ~ '^[0-9]+$' THEN CAST(admission_no AS BIGINT) ELSE 999999 END ASC
             ) as new_serial
           FROM nominal_roll
         )

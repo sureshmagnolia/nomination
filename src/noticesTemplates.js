@@ -6,11 +6,43 @@
 
 import { CONFIG } from './config.js';
 
-export function getDefaultStatutoryNotices(settings = {}, schedule = {}, booths = []) {
+export function getDefaultStatutoryNotices(settings = {}, schedule = {}, booths = [], posts = []) {
   const year = settings.electionYear || new Date().getFullYear().toString();
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME || 'Government Victoria College, Palakkad';
   const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME || 'GVC';
   const todayStr = new Date().toISOString().split('T')[0];
+
+  // Dynamic extraction of posts configured by the admin
+  const configuredPosts = Array.isArray(posts) && posts.length > 0 ? posts : (CONFIG.DEFAULT_POSTS || []);
+
+  // Association Secretaries: strictly based on admin-configured posts
+  const assocSecPosts = configuredPosts.filter(p => {
+    const pName = String(p.post || '').trim().toLowerCase();
+    return pName.startsWith('association secretary') || (p.deptRestriction && pName.includes('secretary')) || p.deptRestriction;
+  });
+
+  // Class Representatives: based on admin-configured posts
+  const classRepPosts = configuredPosts.filter(p => {
+    const pName = String(p.post || '').trim().toLowerCase();
+    return !assocSecPosts.includes(p) && (pName.includes('representative') || pName.includes('rep') || p.yearRestriction);
+  });
+
+  // Main Office Bearers: all other executive posts
+  const mainOfficePosts = configuredPosts.filter(p => !assocSecPosts.includes(p) && !classRepPosts.includes(p));
+
+  const formatPostLine = (p) => `- **${String(p.post || '').trim().toUpperCase()}**`;
+
+  const mainOfficeListText = mainOfficePosts.length > 0
+    ? mainOfficePosts.map(formatPostLine).join('\n')
+    : `- **THE CHAIRMAN**\n- **THE VICE CHAIRMAN**\n- **THE SECRETARY**\n- **THE JOINT SECRETARY**\n- **THE CHIEF STUDENT EDITOR**\n- **THE SECRETARY FINE ARTS**\n- **THE GENERAL CAPTAIN FOR SPORTS AND GAMES**\n- **THE UNIVERSITY UNION COUNCILLOR (2 Posts)**`;
+
+  const classRepListText = classRepPosts.length > 0
+    ? classRepPosts.map(formatPostLine).join('\n')
+    : `- **I UG REPRESENTATIVE**\n- **II UG REPRESENTATIVE**\n- **III UG REPRESENTATIVE**\n- **PG REPRESENTATIVE**`;
+
+  const assocSecListText = assocSecPosts.length > 0
+    ? assocSecPosts.map(formatPostLine).join('\n')
+    : `- **ASSOCIATION SECRETARY BOTANY**\n- **ASSOCIATION SECRETARY CHEMISTRY**\n- **ASSOCIATION SECRETARY COMMERCE**\n- **ASSOCIATION SECRETARY COMPUTER SCIENCE**\n- **ASSOCIATION SECRETARY ECONOMICS**\n- **ASSOCIATION SECRETARY ENGLISH**\n- **ASSOCIATION SECRETARY HINDI**\n- **ASSOCIATION SECRETARY HISTORY**\n- **ASSOCIATION SECRETARY MALAYALAM**\n- **ASSOCIATION SECRETARY MATHEMATICS**\n- **ASSOCIATION SECRETARY PHYSICS**\n- **ASSOCIATION SECRETARY PSYCHOLOGY**\n- **ASSOCIATION SECRETARY SANSKRIT**\n- **ASSOCIATION SECRETARY TAMIL**\n- **ASSOCIATION SECRETARY ZOOLOGY**`;
 
   const formatDate = (iso, fallback = 'To be notified') => {
     if (!iso) return fallback;
@@ -62,37 +94,13 @@ export function getDefaultStatutoryNotices(settings = {}, schedule = {}, booths 
       content: `In accordance with the University of Calicut Notification U.O.No. 12646/2026/Admn (File Ref.No.190115/DSW-ASST-2/2026/Admn) dated 11-09-2026, it is hereby notified for the information of all students that the election to the College Union for the academic year 2026-2027 will be conducted as per the schedule mandated by the University. The election will be held for the following posts:
 
 ### Main Office Bearers
-- **THE CHAIRMAN**
-- **THE VICE CHAIRMAN**
-- **THE SECRETARY**
-- **THE JOINT SECRETARY**
-- **THE CHIEF STUDENT EDITOR**
-- **THE SECRETARY FINE ARTS**
-- **THE GENERAL CAPTAIN FOR SPORTS AND GAMES**
-- **THE UNIVERSITY UNION COUNCILLOR (2 Posts)**
+${mainOfficeListText}
 
 ### Class Representatives
-- **I UG REPRESENTATIVE**
-- **II UG REPRESENTATIVE**
-- **III UG REPRESENTATIVE**
-- **PG REPRESENTATIVE**
+${classRepListText}
 
 ### Association Secretaries
-- **ASSOCIATION SECRETARY BOTANY**
-- **ASSOCIATION SECRETARY CHEMISTRY**
-- **ASSOCIATION SECRETARY COMMERCE**
-- **ASSOCIATION SECRETARY COMPUTER SCIENCE**
-- **ASSOCIATION SECRETARY ECONOMICS**
-- **ASSOCIATION SECRETARY ENGLISH**
-- **ASSOCIATION SECRETARY HINDI**
-- **ASSOCIATION SECRETARY HISTORY**
-- **ASSOCIATION SECRETARY MALAYALAM**
-- **ASSOCIATION SECRETARY MATHEMATICS**
-- **ASSOCIATION SECRETARY PHYSICS**
-- **ASSOCIATION SECRETARY PSYCHOLOGY**
-- **ASSOCIATION SECRETARY SANSKRIT**
-- **ASSOCIATION SECRETARY TAMIL**
-- **ASSOCIATION SECRETARY ZOOLOGY**
+${assocSecListText}
 
 ---
 

@@ -38,10 +38,11 @@ async function loadAdminNoticesData(main, pwd) {
     const schedule = noticesData.schedule || {};
     const booths = Array.isArray(noticesData.booths) ? noticesData.booths : [];
     const locations = Array.isArray(noticesData.locations) ? noticesData.locations : [];
+    const posts = Array.isArray(noticesData.posts) && noticesData.posts.length > 0 ? noticesData.posts : (CONFIG.DEFAULT_POSTS || []);
     let notices = Array.isArray(noticesData.notices) ? noticesData.notices : [];
 
     if (notices.length === 0) {
-      notices = getDefaultStatutoryNotices(settings, schedule, booths);
+      notices = getDefaultStatutoryNotices(settings, schedule, booths, posts);
     }
 
     // Calculate class statistics from nominal roll
@@ -66,14 +67,14 @@ async function loadAdminNoticesData(main, pwd) {
       });
     });
 
-    renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap);
+    renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts);
   } catch (err) {
     console.error('Error loading admin notices:', err);
     main.innerHTML = `<div class="alert alert-error">❌ ${esc(err.message || 'Failed to load notices')}</div>`;
   }
 }
 
-function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap) {
+function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts = []) {
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
   const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
   const year = settings.electionYear || new Date().getFullYear();
@@ -420,10 +421,10 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
   `;
 
   // Attach event handlers
-  attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths);
+  attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts);
 }
 
-function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths) {
+function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts = []) {
   // Navigation Tabs: Posters vs Notices vs Index
   const tabPosters = main.querySelector('#adminTabPosters');
   const tabNotices = main.querySelector('#adminTabNotices');
@@ -504,7 +505,7 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
 
   // Load Statutory Templates Button
   main.querySelector('#btnLoadTemplates')?.addEventListener('click', async () => {
-    const defaultTemplates = getDefaultStatutoryNotices(settings, schedule, booths);
+    const defaultTemplates = getDefaultStatutoryNotices(settings, schedule, booths, posts);
     if (confirm(`Load ${defaultTemplates.length} standard statutory notices (Election Notification, Booth Allotments, Code of Conduct, Voter Guidelines, Counting Notice)? Any existing notices with same IDs will be updated.`)) {
       try {
         const btn = main.querySelector('#btnLoadTemplates');

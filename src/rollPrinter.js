@@ -166,7 +166,7 @@ export function openPrintRollModal({ students, isFinal, isDraft, collegeName, co
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1.5">2. Sort Order</label>
             <select id="printSortSelect" class="field text-xs bg-slate-800 border-white/10 text-white w-full py-2">
-              <option value="dept-class" ${currentSort === 'dept-class' ? 'selected' : ''}>🏢 Dept ➔ Class ➔ Sl. No</option>
+              <option value="dept-class" ${currentSort === 'dept-class' ? 'selected' : ''}>🏢 Dept ➔ Class ➔ Name (A-Z)</option>
               <option value="serial" ${currentSort === 'serial' ? 'selected' : ''}>🔢 By Serial Number</option>
               <option value="class" ${currentSort === 'class' ? 'selected' : ''}>🎓 By Class & Alphabetical</option>
             </select>
@@ -380,13 +380,15 @@ export function executeRollPrint({
       // 3. Class Name
       if (cA !== cB) return cA.localeCompare(cB);
 
-      // 4. Sl. No
+      // 4. Name A-Z within Class
+      const nA = String(a['NAME'] || '').trim().toUpperCase();
+      const nB = String(b['NAME'] || '').trim().toUpperCase();
+      if (nA !== nB) return nA.localeCompare(nB);
+
+      // 5. Sl. No
       const sA = parseSl(a);
       const sB = parseSl(b);
-      if (sA !== sB) return sA - sB;
-
-      // 5. Name A-Z
-      return String(a['NAME'] || '').trim().toUpperCase().localeCompare(String(b['NAME'] || '').trim().toUpperCase());
+      return sA - sB;
     });
   } else if (sortBy === 'class') {
     data.sort((a, b) => {
@@ -428,6 +430,13 @@ export function executeRollPrint({
 
     classKeys.forEach((cKey, idx) => {
       const classStudents = groups[cKey];
+      // Ensure names in each nominal roll Class are sorted alphabetically based on their name
+      classStudents.sort((a, b) => {
+        const nA = String(a['NAME'] || '').trim().toUpperCase();
+        const nB = String(b['NAME'] || '').trim().toUpperCase();
+        if (nA !== nB) return nA.localeCompare(nB);
+        return parseSl(a) - parseSl(b);
+      });
       const classDept = classStudents[0]['Dept'] || (scope === 'dept' ? dept : '–');
       const isLastClass = idx === classKeys.length - 1;
 

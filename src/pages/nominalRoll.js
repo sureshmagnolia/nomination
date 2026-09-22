@@ -140,11 +140,14 @@ function renderPublicRollUI(container, nominalRoll, settings) {
 
         if (cA !== cB) return cA.localeCompare(cB);
 
+        // Sort names in each class alphabetically based on their name
+        const nA = String(a['NAME'] || '').trim().toUpperCase();
+        const nB = String(b['NAME'] || '').trim().toUpperCase();
+        if (nA !== nB) return nA.localeCompare(nB);
+
         const sA = parseSl(a);
         const sB = parseSl(b);
-        if (sA !== sB) return sA - sB;
-
-        return String(a['NAME'] || '').trim().toUpperCase().localeCompare(String(b['NAME'] || '').trim().toUpperCase());
+        return sA - sB;
       });
     } else if (arrangeMode === 'name') {
       filtered.sort((a, b) => String(a['NAME'] || '').trim().toUpperCase().localeCompare(String(b['NAME'] || '').trim().toUpperCase()));
@@ -199,7 +202,7 @@ function renderPublicRollUI(container, nominalRoll, settings) {
           <!-- Arrangement / Sort Option -->
           <div class="md:col-span-3">
             <select id="arrangeSelect" class="field text-xs sm:text-sm py-2 w-full bg-slate-900 border-white/10 text-white font-medium" title="Arrange nominal roll by department, class, or serial">
-              <option value="dept-class" selected>🏢 Arrange: Dept ➔ Class ➔ Sl. No</option>
+              <option value="dept-class" selected>🏢 Arrange: Dept ➔ Class ➔ Name (A-Z)</option>
               <option value="serial">🔢 Arrange: Serial Number</option>
               <option value="name">🔤 Arrange: Student Name (A–Z)</option>
             </select>
