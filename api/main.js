@@ -1014,7 +1014,7 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminGetNotices') {
-      const [noticesRaw, boothsRaw, locationsRaw, status, colName, colShort, colLogo, postsList] = await Promise.all([
+      const [noticesRaw, boothsRaw, locationsRaw, status, colName, colShort, colLogo, electionYearSetting, postsList] = await Promise.all([
         getSetting('official_notices'),
         getSetting('booths_data'),
         getSetting('availableLocations'),
@@ -1022,6 +1022,7 @@ export default async function handler(req, res) {
         getSetting('collegeName'),
         getSetting('collegeShortName'),
         getSetting('collegeLogo'),
+        getSetting('electionYear'),
         fetchPostsFromDb()
       ]);
 
@@ -1032,8 +1033,9 @@ export default async function handler(req, res) {
         posts: postsList || [],
         schedule: status,
         settings: {
-          collegeName: colName || 'Government Victoria College, Palakkad',
-          collegeShortName: colShort || 'GVC',
+          collegeName: colName || '',
+          collegeShortName: colShort || '',
+          electionYear: electionYearSetting || status?.electionYear || '',
           collegeLogo: colLogo || ''
         }
       });

@@ -576,11 +576,11 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
     main.querySelector('#editModalHeading').textContent = notice ? 'Edit Official Notice' : 'Draft New Official Notice';
     main.querySelector('#editNoticeId').value = notice ? notice.id : '';
     main.querySelector('#editNoticeTitle').value = notice ? notice.title : '';
-    main.querySelector('#editNoticeRef').value = notice ? (notice.refNo || '') : `${settings.collegeShortName || 'GVC'}/ELEC/${settings.electionYear || 2026}/NOTIF-${String(notices.length + 1).padStart(2, '0')}`;
+    main.querySelector('#editNoticeRef').value = notice ? (notice.refNo || '') : `${settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME || 'CUE'}/ELEC/${settings.electionYear || new Date().getFullYear()}/NOTIF-${String(notices.length + 1).padStart(2, '0')}`;
     main.querySelector('#editNoticeDate').value = notice ? (notice.date || '') : new Date().toISOString().split('T')[0];
     main.querySelector('#editNoticeCategory').value = notice ? (notice.category || 'Statutory Notification') : 'Statutory Notification';
-    main.querySelector('#editNoticeSignatory').value = notice ? (notice.signatoryName || '') : 'Returning Officer';
-    main.querySelector('#editNoticeSignTitle').value = notice ? (notice.signatoryTitle || '') : `Returning Officer, ${settings.collegeName || 'Government Victoria College'}`;
+    main.querySelector('#editNoticeSignatory').value = notice ? (notice.signatoryName || '') : (settings.returningOfficerName || 'Returning Officer');
+    main.querySelector('#editNoticeSignTitle').value = notice ? (notice.signatoryTitle || '') : (settings.returningOfficerDesignation || `Returning Officer, ${settings.collegeName || CONFIG.COLLEGE_NAME || 'College Union'}`);
     main.querySelector('#editNoticeContent').value = notice ? (notice.content || '') : '';
     main.querySelector('#editNoticePublished').checked = notice ? (notice.isPublished !== false && notice.isPublished !== 'false') : true;
     main.querySelector('#editNoticePinned').checked = notice ? !!notice.pinned : false;

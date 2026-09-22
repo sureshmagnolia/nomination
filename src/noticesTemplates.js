@@ -1,40 +1,58 @@
 /**
  * noticesTemplates.js
  * Pre-defined statutory election notification templates complying with
- * University Student Union Election Statutes and Lyngdoh Committee norms.
+ * University Student Union Election Statutes.
  */
 
 import { CONFIG } from './config.js';
 
 export function getDefaultStatutoryNotices(settings = {}, schedule = {}, booths = [], posts = []) {
-  const year = settings.electionYear || new Date().getFullYear().toString();
-  const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME || 'Government Victoria College, Palakkad';
-  const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME || 'GVC';
+  const year = String(settings.electionYear || '').trim() || (schedule && schedule.electionYear) || new Date().getFullYear().toString();
+  const nextYear = (parseInt(year, 10) + 1).toString();
+  const collegeName = String(settings.collegeName || '').trim() || CONFIG.COLLEGE_NAME || 'College Union';
+  const shortName = String(settings.collegeShortName || '').trim() || CONFIG.COLLEGE_SHORT_NAME || 'CUE';
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // Dynamic extraction of posts configured by the admin
+  // Dynamic extraction of posts configured by the admin in Manage Election Posts
   const configuredPosts = Array.isArray(posts) && posts.length > 0 ? posts : (CONFIG.DEFAULT_POSTS || []);
 
-  // Association Secretaries: strictly based on admin-configured posts
+  // Association Secretaries: department-specific posts
   const assocSecPosts = configuredPosts.filter(p => {
     const pName = String(p.post || '').trim().toLowerCase();
-    return pName.startsWith('association secretary') || (p.deptRestriction && pName.includes('secretary')) || p.deptRestriction;
+    return pName.startsWith('association secretary') || (p.deptRestriction && pName.includes('secretary')) || p.deptRestriction || p.restrictedDept;
   });
 
-  // Class Representatives: based on admin-configured posts
+  // Class Representatives: year/class representative posts
   const classRepPosts = configuredPosts.filter(p => {
     const pName = String(p.post || '').trim().toLowerCase();
     return !assocSecPosts.includes(p) && (pName.includes('representative') || pName.includes('rep') || p.yearRestriction);
   });
 
-  // Main Office Bearers: all other executive posts
+  // Main Office Bearers: executive & campus-wide union posts
   const mainOfficePosts = configuredPosts.filter(p => !assocSecPosts.includes(p) && !classRepPosts.includes(p));
 
-  const formatPostLine = (p) => `- **${String(p.post || '').trim().toUpperCase()}**`;
+  const formatPostLine = (p) => {
+    const postName = String(p.post || '').trim().toUpperCase();
+    const notes = [];
+    if (postName.includes('UNIVERSITY UNION COUNCILLOR') && !postName.includes('POST')) {
+      notes.push('2 Posts');
+    }
+    if (p.femaleOnly && !postName.includes('WOMEN') && !postName.includes('FEMALE') && !postName.includes('LADY')) {
+      notes.push('Reserved for Women');
+    }
+    if (p.finalYearIneligible) {
+      notes.push('Final Year Ineligible');
+    }
+    if (p.deptRestriction && p.restrictedDept && !postName.includes(p.restrictedDept.toUpperCase())) {
+      notes.push(`Dept: ${p.restrictedDept}`);
+    }
+    const noteStr = notes.length > 0 ? ` *(${notes.join(', ')})*` : '';
+    return `- **${postName}**${noteStr}`;
+  };
 
   const mainOfficeListText = mainOfficePosts.length > 0
     ? mainOfficePosts.map(formatPostLine).join('\n')
-    : `- **THE CHAIRMAN**\n- **THE VICE CHAIRMAN**\n- **THE SECRETARY**\n- **THE JOINT SECRETARY**\n- **THE CHIEF STUDENT EDITOR**\n- **THE SECRETARY FINE ARTS**\n- **THE GENERAL CAPTAIN FOR SPORTS AND GAMES**\n- **THE UNIVERSITY UNION COUNCILLOR (2 Posts)**`;
+    : `- **THE CHAIRMAN**\n- **THE VICE CHAIRMAN** *(Reserved for Women)*\n- **THE SECRETARY**\n- **THE JOINT SECRETARY** *(Reserved for Women)*\n- **THE CHIEF STUDENT EDITOR** *(Final Year Ineligible)*\n- **THE SECRETARY FINE ARTS**\n- **THE GENERAL CAPTAIN FOR SPORTS AND GAMES**\n- **THE UNIVERSITY UNION COUNCILLOR** *(2 Posts)*`;
 
   const classRepListText = classRepPosts.length > 0
     ? classRepPosts.map(formatPostLine).join('\n')
@@ -83,15 +101,23 @@ export function getDefaultStatutoryNotices(settings = {}, schedule = {}, booths 
   return [
     {
       id: 'statutory_notice_election_notification',
-      title: `ELECTION NOTIFICATION 2026`,
-      refNo: `190115/DSW-ASST-2/2026/Admn`,
+      title: `ELECTION NOTIFICATION ${year}`,
+      refNo: `U.O.No. 12646/2026/Admn (File Ref.No.190115/DSW-ASST-2/2026/Admn)`,
       date: `29-09-2026`,
       category: 'Statutory Notification',
       pinned: true,
       isPublished: true,
-      signatoryName: 'Returning Officer',
-      signatoryTitle: `Returning Officer, ${collegeName}`,
-      content: `In accordance with the University of Calicut Notification U.O.No. 12646/2026/Admn (File Ref.No.190115/DSW-ASST-2/2026/Admn) dated 11-09-2026, it is hereby notified for the information of all students that the election to the College Union for the academic year 2026-2027 will be conducted as per the schedule mandated by the University. The election will be held for the following posts:
+      signatoryName: settings.returningOfficerName || 'Returning Officer',
+      signatoryTitle: settings.returningOfficerDesignation || `Returning Officer, ${collegeName}`,
+      content: `### UNIVERSITY REGULATION & ELECTION NOTIFICATION
+**Reference:** University of Calicut Order **U.O.No. 12646/2026/Admn** dated **11.09.2026** (File Ref.No. **190115/DSW-ASST-2/2026/Admn**), Department of Students' Welfare.  
+**Read:** Orders of the Hon'ble Vice-Chancellor dated 11.09.2026 approving the College Union Election Schedule for the Academic Year ${year}–${nextYear}.
+
+---
+
+In pursuance of the University of Calicut Order cited above and in accordance with the provisions of the Calicut University Act and College Union Election Statutes, it is hereby notified for the information of all students and electors of **${collegeName}** that the election to the College Union for the Academic Year **${year}–${nextYear}** will be conducted as per the statutory schedule mandated by the University.
+
+The election will be held for the following posts:
 
 ### Main Office Bearers
 ${mainOfficeListText}
@@ -104,7 +130,7 @@ ${assocSecListText}
 
 ---
 
-### Official Election Schedule (Academic Year 2026–2027)
+### Official Election Schedule (Academic Year ${year}–${nextYear})
 
 | Activity | Date | Day | Time |
 | :--- | :---: | :---: | :---: |
@@ -122,7 +148,7 @@ ${assocSecListText}
 
 ---
 
-All students are directed to strictly adhere to the Lyngdoh Committee recommendations and the University's code of conduct. Nomination forms and related documents are available at the college election portal.
+All students are directed to strictly adhere to the University Code of Conduct, the Calicut University Student Union Election Bye-laws, and campus discipline rules. Nomination forms and related documents are available at the college election portal.
 
 **Returning Officer**  
 *(College Seal)*`
