@@ -32,6 +32,8 @@ import { renderAdminDirectNomination } from './pages/admin/directNomination.js';
 import { renderAdminAudit }          from './pages/admin/audit.js';
 import { renderSettings }            from './pages/admin/settings.js';
 import { renderAdminBackup }         from './pages/admin/backup.js';
+import { renderNotices }             from './pages/notices.js';
+import { renderAdminNotices }        from './pages/admin/notices.js';
 
 // ─── Background decoration ────────────────────────────────────────────────────
 const app = document.getElementById('app');
@@ -63,6 +65,7 @@ router
   .on('/withdraw',          render(renderWithdraw))
   .on('/results',           render(renderResults))
   .on('/nominal-roll',      render(renderNominalRoll))
+  .on('/notices',           render(renderNotices))
   .on('/admin',             render(renderAdminLogin))
   .on('/admin/dashboard',   render(renderAdminDashboard))
   .on('/admin/verify',      render(renderAdminVerify))
@@ -71,6 +74,7 @@ router
   .on('/admin/posts',       render(renderAdminPosts))
   .on('/admin/ballots',     render(renderAdminBallots))
   .on('/admin/booths',      render(renderAdminBooths))
+  .on('/admin/notices',     render(renderAdminNotices))
   .on('/admin/counting',    render(renderAdminCounting))
   .on('/admin/results-entry', render(renderAdminResultsEntry))
   .on('/admin/results',       render(renderAdminResults))

@@ -594,7 +594,8 @@ export default async function handler(req, res) {
       'getResults',
       'getValidNominations',
       'getFinalNominations',
-      'getPublicNominations'
+      'getPublicNominations',
+      'getPublicNotices'
     ]);
 
     const isPublicCacheable = req.method === 'GET' && 
@@ -1011,6 +1012,57 @@ export default async function handler(req, res) {
     if (action === 'adminGetLocations') {
       const data = await getSetting('availableLocations');
       return jsonOut(res, safeJsonParse(data, []));
+    }
+
+    if (action === 'getPublicNotices') {
+      const [noticesRaw, boothsRaw, locationsRaw, status, colName, colShort, colLogo] = await Promise.all([
+        getSetting('official_notices'),
+        getSetting('booths_data'),
+        getSetting('availableLocations'),
+        getFullElectionStatus(),
+        getSetting('collegeName'),
+        getSetting('collegeShortName'),
+        getSetting('collegeLogo')
+      ]);
+
+      const allNotices = safeJsonParse(noticesRaw, []);
+      const publishedNotices = allNotices.filter(n => n.isPublished !== false && n.isPublished !== 'false');
+
+      return jsonOut(res, {
+        notices: publishedNotices,
+        booths: safeJsonParse(boothsRaw, []),
+        locations: safeJsonParse(locationsRaw, []),
+        schedule: status,
+        settings: {
+          collegeName: colName || 'Government Victoria College, Palakkad',
+          collegeShortName: colShort || 'GVC',
+          collegeLogo: colLogo || ''
+        }
+      });
+    }
+
+    if (action === 'adminGetNotices') {
+      const [noticesRaw, boothsRaw, locationsRaw, status, colName, colShort, colLogo] = await Promise.all([
+        getSetting('official_notices'),
+        getSetting('booths_data'),
+        getSetting('availableLocations'),
+        getFullElectionStatus(),
+        getSetting('collegeName'),
+        getSetting('collegeShortName'),
+        getSetting('collegeLogo')
+      ]);
+
+      return jsonOut(res, {
+        notices: safeJsonParse(noticesRaw, []),
+        booths: safeJsonParse(boothsRaw, []),
+        locations: safeJsonParse(locationsRaw, []),
+        schedule: status,
+        settings: {
+          collegeName: colName || 'Government Victoria College, Palakkad',
+          collegeShortName: colShort || 'GVC',
+          collegeLogo: colLogo || ''
+        }
+      });
     }
 
     if (action === 'getResults') {
@@ -1928,6 +1980,46 @@ export default async function handler(req, res) {
     if (action === 'adminSaveLocations') {
       const lData = typeof body.locations === 'string' ? body.locations : JSON.stringify(body.locations || []);
       await setSetting('availableLocations', lData);
+      return jsonOut(res, { ok: true });
+    }
+
+    if (action === 'adminSaveNotices') {
+      const noticesData = Array.isArray(body.notices) ? body.notices : [];
+      await setSetting('official_notices', JSON.stringify(noticesData));
+      return jsonOut(res, { ok: true, count: noticesData.length });
+    }
+
+    if (action === 'adminSaveNotice') {
+      const notice = body.notice;
+      if (!notice || !notice.title) return errOut(res, 'Notice title is required', 400);
+      const existingRaw = await getSetting('official_notices');
+      let list = safeJsonParse(existingRaw, []);
+      if (!Array.isArray(list)) list = [];
+
+      const idx = list.findIndex(n => String(n.id) === String(notice.id));
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...notice, updatedAt: new Date().toISOString() };
+      } else {
+        const newNotice = {
+          ...notice,
+          id: notice.id || ('notice_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4)),
+          createdAt: new Date().toISOString()
+        };
+        list.unshift(newNotice);
+      }
+      await setSetting('official_notices', JSON.stringify(list));
+      return jsonOut(res, { ok: true, notice: idx >= 0 ? list[idx] : list[0] });
+    }
+
+    if (action === 'adminDeleteNotice') {
+      const id = body.id;
+      if (!id) return errOut(res, 'Notice ID is required', 400);
+      const existingRaw = await getSetting('official_notices');
+      let list = safeJsonParse(existingRaw, []);
+      if (Array.isArray(list)) {
+        list = list.filter(n => String(n.id) !== String(id));
+        await setSetting('official_notices', JSON.stringify(list));
+      }
       return jsonOut(res, { ok: true });
     }
 
