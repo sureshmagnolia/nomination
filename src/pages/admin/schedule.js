@@ -172,6 +172,24 @@ function renderScheduleHub(main, pwd, schedule) {
         </div>
       </div>
 
+      <!-- University Revised Schedule Fast-Preset Banner -->
+      <div class="glass rounded-2xl p-5 border border-sky-500/30 bg-gradient-to-r from-sky-500/10 via-indigo-500/10 to-transparent flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="badge bg-sky-500/20 text-sky-300 border border-sky-500/40 text-xs font-bold">University Order</span>
+            <h4 class="text-sm font-bold text-white tracking-wide">Calicut University Revised Schedule (U.O. 13009/2026/Admn)</h4>
+          </div>
+          <p class="text-xs text-slate-300 max-w-2xl leading-relaxed">
+            Order dated 22.09.2026. (Draft Roll: 24.09 11 AM, Claims Deadline: 25.09 4 PM, Final Roll: 28.09 4 PM, Nominations: 29.09 to 05.10 12 Noon, Polling: 15.10). Click to auto-fill all schedule fields below. You can freely modify any dates as needed.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button type="button" id="btnApplyCUOrder" class="btn bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition-all">
+            <span>📋</span> Apply CU Revised Schedule
+          </button>
+        </div>
+      </div>
+
       <!-- General Statutory Foundation -->
       <div class="glass rounded-2xl p-6 border-l-4 border-l-indigo-500 space-y-4">
         <h4 class="text-sm font-bold uppercase tracking-wider text-indigo-300">🏛️ General Statutory Framework</h4>
@@ -217,8 +235,9 @@ function renderScheduleHub(main, pwd, schedule) {
                 <input type="datetime-local" id="draftRollStart" class="field w-full text-xs font-mono" value="${toLocal(schedule.draftRollStart)}">
               </div>
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Claims / Objections Deadline</label>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Claims / Objections Deadline (Corrections)</label>
                 <input type="datetime-local" id="draftRollEnd" class="field w-full text-xs font-mono" value="${toLocal(schedule.draftRollEnd)}">
+                <p class="text-[11px] text-amber-300/80 mt-1">📌 Dynamically displayed on Draft Nominal Roll footnote as the statutory deadline for corrections.</p>
               </div>
             </div>
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-2">
@@ -750,6 +769,30 @@ function renderScheduleHub(main, pwd, schedule) {
       setLoading(triggerBtn, false, '💾 Save All Schedules');
     }
   };
+
+  main.querySelector('#btnApplyCUOrder')?.addEventListener('click', () => {
+    const setVal = (id, val) => {
+      const el = main.querySelector(`#${id}`);
+      if (el) el.value = val;
+    };
+    setVal('electionYear', '2026');
+    setVal('notificationDate', '2026-09-29');
+    setVal('draftRollStart', '2026-09-24T11:00');
+    setVal('draftRollEnd', '2026-09-25T16:00');
+    setVal('finalRollStart', '2026-09-28T16:00');
+    setVal('nominationStart', '2026-09-29T16:00');
+    setVal('nominationDeadline', '2026-10-05T12:00');
+    setVal('validListStart', '2026-10-05T17:00');
+    setVal('withdrawalStart', '2026-10-05T17:00');
+    setVal('withdrawalEnd', '2026-10-06T12:00');
+    setVal('finalListStart', '2026-10-06T17:00');
+    setVal('pollingStart', '2026-10-15T09:30');
+    setVal('pollingEnd', '2026-10-15T12:30');
+    setVal('resultsStart', '2026-10-15T14:00');
+
+    updateBadgesAndPipeline();
+    showToast('Applied Calicut University Revised Schedule (U.O. 13009/2026/Admn)! Click "Save All Schedules" to save.', 'success');
+  });
 
   main.querySelector('#btnSaveScheduleTop')?.addEventListener('click', (e) => saveAll(e.currentTarget));
   main.querySelector('#btnSaveScheduleBottom')?.addEventListener('click', (e) => saveAll(e.currentTarget));

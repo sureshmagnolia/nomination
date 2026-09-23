@@ -7,7 +7,7 @@
  *   3. No Voter Signature/Remarks on Draft/Final Nominal Roll (reserved for Marked Copy in Booths)
  *   4. Sole official signatory: Returning Officer (aligned right)
  */
-import { esc, compareSl, getProgWeight, getStudentDeptClassKey } from './utils.js';
+import { esc, compareSl, getProgWeight, getStudentDeptClassKey, formatCorrectionDeadline } from './utils.js';
 import { CONFIG } from './config.js';
 
 const STORAGE_KEY = 'gcc_nominal_roll_last_print_options';
@@ -46,11 +46,12 @@ function saveLastPrintState(patch) {
 /**
  * Opens the interactive Print Roll modal dialog.
  */
-export function openPrintRollModal({ students, isFinal, isDraft, collegeName, collegeLogo = '', electionYear = '', initialDept = '', initialClass = '', initialSort = 'dept-class' }) {
+export function openPrintRollModal({ students, isFinal, isDraft, collegeName, collegeLogo = '', electionYear = '', draftRollEnd = '', initialDept = '', initialClass = '', initialSort = 'dept-class' }) {
   const existingModal = document.getElementById('printRollModalContainer');
   if (existingModal) existingModal.remove();
 
   const cName = collegeName || CONFIG.COLLEGE_NAME || 'College Union Election';
+  const correctionDeadline = formatCorrectionDeadline(draftRollEnd);
 
   // Extract unique departments and classes
   const allDepartments = Array.from(new Set(
@@ -618,7 +619,7 @@ export function executeRollPrint({
                 <div class="print-footer">
                   ${isDraft ? `
                     <div class="draft-footnote">
-                      <strong>NOTE:</strong> Any corrections or changes may be intimated to the Returning Officer (RO) in written form duly forwarded by the HoD of the department, before <strong>28th September 11:00 AM</strong>.
+                      <strong>NOTE:</strong> Any corrections or changes may be intimated to the Returning Officer (RO) in written form duly forwarded by the HoD of the department, before <strong>${esc(correctionDeadline)}</strong>.
                     </div>
                   ` : ''}
                   <div class="sig-box">
@@ -674,7 +675,7 @@ export function executeRollPrint({
             <div class="print-footer">
               ${isDraft ? `
                 <div class="draft-footnote">
-                  <strong>NOTE:</strong> Any corrections or changes may be intimated to the Returning Officer (RO) in written form duly forwarded by the HoD of the department, before <strong>28th September 11:00 AM</strong>.
+                  <strong>NOTE:</strong> Any corrections or changes may be intimated to the Returning Officer (RO) in written form duly forwarded by the HoD of the department, before <strong>${esc(correctionDeadline)}</strong>.
                 </div>
               ` : ''}
               <div class="sig-box">
@@ -772,7 +773,7 @@ export function executeRollPrint({
               <div class="print-footer">
                 ${isDraft ? `
                   <div class="draft-footnote">
-                    <strong>NOTE:</strong> Any corrections or changes may be intimated to the Returning Officer (RO) in written form duly forwarded by the HoD of the department, before <strong>28th September 11:00 AM</strong>.
+                    <strong>NOTE:</strong> Any corrections or changes may be intimated to the Returning Officer (RO) in written form duly forwarded by the HoD of the department, before <strong>${esc(correctionDeadline)}</strong>.
                   </div>
                 ` : ''}
                 <div class="sig-box">
@@ -831,7 +832,7 @@ export function executeRollPrint({
           <div class="print-footer">
             ${isDraft ? `
               <div class="draft-footnote">
-                <strong>NOTE:</strong> Any corrections or changes may be intimated to the Returning Officer (RO) in written form duly forwarded by the HoD of the department, before <strong>28th September 11:00 AM</strong>.
+                <strong>NOTE:</strong> Any corrections or changes may be intimated to the Returning Officer (RO) in written form duly forwarded by the HoD of the department, before <strong>${esc(correctionDeadline)}</strong>.
               </div>
             ` : ''}
             <div class="sig-box">

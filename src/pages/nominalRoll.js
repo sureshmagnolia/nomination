@@ -4,7 +4,7 @@
  * Features 50-per-page pagination, Department filter, and Class filter.
  */
 import { api } from '../api.js';
-import { esc, showToast, compareSl, getProgWeight, getStudentDeptClassKey } from '../utils.js';
+import { esc, showToast, compareSl, getProgWeight, getStudentDeptClassKey, formatCorrectionDeadline } from '../utils.js';
 import { CONFIG } from '../config.js';
 
 export async function renderNominalRoll(container) {
@@ -261,7 +261,7 @@ function renderPublicRollUI(container, nominalRoll, settings) {
           <div class="space-y-1">
             <div class="font-bold text-amber-100 uppercase tracking-wider text-xs">Statutory Footnote / Notice to Students:</div>
             <p class="leading-relaxed">
-              Any corrections or changes may be intimated to the Returning Officer (RO) in written form duly forwarded by the HoD of the department, before <strong>28th September 11:00 AM</strong>.
+              Any corrections or changes may be intimated to the Returning Officer (RO) in written form duly forwarded by the HoD of the department, before <strong>${esc(formatCorrectionDeadline(settings.draftRollEnd))}</strong>.
             </p>
           </div>
         </div>

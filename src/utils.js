@@ -513,3 +513,35 @@ export function sortPosts(postsList) {
   return [...postsList].sort(comparePosts);
 }
 
+/**
+ * Formats a date string (ISO or local) into a human-readable statutory deadline,
+ * e.g. "25th September, 04:00 PM".
+ */
+export function formatCorrectionDeadline(dateStr) {
+  if (!dateStr) return '25th September, 04:00 PM';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr);
+
+    const day = d.getDate();
+    const getOrdinal = (n) => {
+      const s = ['th', 'st', 'nd', 'rd'];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    };
+    const dayOrdinal = getOrdinal(day);
+    const month = d.toLocaleDateString('en-IN', { month: 'long' });
+
+    let hours = d.getHours();
+    const minutes = d.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
+
+    return `${dayOrdinal} ${month}, ${timeStr}`;
+  } catch (_) {
+    return '25th September, 04:00 PM';
+  }
+}
+

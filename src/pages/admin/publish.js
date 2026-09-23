@@ -295,7 +295,8 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
       isDraft: isDraftRoll,
       collegeName,
       collegeLogo,
-      electionYear: year
+      electionYear: year,
+      draftRollEnd: settings.draftRollEnd
     });
   });
 
