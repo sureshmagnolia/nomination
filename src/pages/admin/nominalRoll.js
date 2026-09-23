@@ -43,11 +43,29 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
   let students = [...nominalRoll];
   students.sort((a, b) => compareSl(a, b));
   let filterText = '';
+  let selectedDept = '';
+  let selectedClass = '';
   let showCorrections = false;
   let adminArrangeMode = 'dept-class'; // 'dept-class' | 'serial' | 'name'
   let currentPage = 1;
   const PAGE_SIZE = 50;
   let adminViewMode = 'cards'; // 'cards' (card type for phone & mobile ease) | 'table'
+
+  const allDepts = [...new Set(nominalRoll.map(s => String(s['Dept'] || '').trim()).filter(d => d && d !== '-' && d !== '–'))].sort();
+
+  const getAvailableClasses = (dept) => {
+    return Array.from(new Set(
+      students
+        .filter(s => !dept || (s['Dept'] || '').trim().toLowerCase() === dept.toLowerCase())
+        .map(s => getStudentDeptClassKey(s))
+        .filter(Boolean)
+    )).sort((a, b) => {
+      const wA = getProgWeight(a);
+      const wB = getProgWeight(b);
+      if (wA !== wB) return wA - wB;
+      return a.localeCompare(b);
+    });
+  };
 
   const allClasses = [...new Set(nominalRoll.map(s => getStudentDeptClassKey(s)).filter(Boolean))].sort((a, b) => {
     const wA = getProgWeight(a);
@@ -55,7 +73,6 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
     if (wA !== wB) return wA - wB;
     return a.localeCompare(b);
   });
-  const allDepts = [...new Set(nominalRoll.map(s => String(s['Dept'] || '').trim()).filter(d => d && d !== '-' && d !== '–'))].sort();
 
   // ── Upload Panel (injected above the table) ───────────────────────────────
   const uploadPanelHtml = isFinal ? `
@@ -156,11 +173,40 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
 
 
   const refreshTable = () => {
-    const filtered = students.filter(s => 
-      [s['NAME'], s['CLASS'], s['ADMISION NO'] || s['ADMISSION NO'], s['Nominal Roll Serial Number'], s['Dept']].some(v => 
-        String(v || '').toLowerCase().includes(filterText.toLowerCase())
-      )
-    );
+    const availableClasses = getAvailableClasses(selectedDept);
+    if (selectedClass && !availableClasses.includes(selectedClass) && !allClasses.includes(selectedClass)) {
+      selectedClass = '';
+    }
+
+    const filtered = students.filter(s => {
+      // Department filter
+      if (selectedDept && String(s['Dept'] || '').trim().toLowerCase() !== selectedDept.toLowerCase()) {
+        return false;
+      }
+      // Class filter
+      if (selectedClass) {
+        const studentClsKey = getStudentDeptClassKey(s).toLowerCase();
+        const rawCls = String(s['CLASS'] || '').trim().toLowerCase();
+        const targetCls = selectedClass.toLowerCase();
+        if (studentClsKey !== targetCls && rawCls !== targetCls) {
+          return false;
+        }
+      }
+      // Search text filter
+      if (filterText) {
+        const q = filterText.toLowerCase();
+        const match = [
+          s['NAME'],
+          s['CLASS'],
+          getStudentDeptClassKey(s),
+          s['ADMISION NO'] || s['ADMISSION NO'],
+          s['Nominal Roll Serial Number'],
+          s['Dept']
+        ].some(v => String(v || '').toLowerCase().includes(q));
+        if (!match) return false;
+      }
+      return true;
+    });
 
     if (adminArrangeMode === 'dept-class') {
       filtered.sort((a, b) => {
@@ -374,28 +420,61 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
           </div>
         </div>
 
-        <div class="glass rounded-xl p-4 flex flex-col md:flex-row gap-3 items-center w-full shadow-lg mb-2">
-          <div class="relative flex-1 w-full">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
-            <input type="text" id="searchInput" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors text-sm" placeholder="Search by student name, class, admission no, or serial..." value="${esc(filterText)}">
+        <div class="glass rounded-xl p-4 space-y-3 shadow-lg mb-2">
+          <!-- Top Row: Search input + View Mode toggles + Count -->
+          <div class="flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <div class="relative flex-1 w-full">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
+              <input type="text" id="searchInput" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors text-sm" placeholder="Search by student name, admission no, or serial..." value="${esc(filterText)}">
+            </div>
+            <div class="flex items-center gap-3 shrink-0 self-end sm:self-center">
+              <div class="flex items-center rounded-lg bg-black/40 p-1 border border-white/10 shrink-0">
+                <button type="button" id="btnModeCards" class="btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${adminViewMode === 'cards' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}" title="Card View (Optimized for Mobile/Phone)">
+                  <span>📇</span> <span>Cards</span>
+                </button>
+                <button type="button" id="btnModeTable" class="btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${adminViewMode === 'table' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}" title="Table View">
+                  <span>📑</span> <span>Table</span>
+                </button>
+              </div>
+              <div class="text-slate-400 text-xs text-right whitespace-nowrap">
+                Showing <strong class="text-white">${filtered.length ? startIndex + 1 : 0}</strong>–<strong class="text-white">${endIndex}</strong> of <strong class="text-white">${filtered.length}</strong>
+              </div>
+            </div>
           </div>
-          <div class="w-full md:w-60 shrink-0">
-            <select id="adminArrangeSelect" class="field text-xs bg-slate-900 border-white/10 text-white w-full py-2">
-              <option value="dept-class" ${adminArrangeMode === 'dept-class' ? 'selected' : ''}>🏢 Arrange: Dept ➔ Class ➔ Name (A-Z)</option>
-              <option value="serial" ${adminArrangeMode === 'serial' ? 'selected' : ''}>🔢 Arrange: Serial Number</option>
-              <option value="name" ${adminArrangeMode === 'name' ? 'selected' : ''}>🔤 Arrange: Student Name (A–Z)</option>
-            </select>
-          </div>
-          <div class="flex items-center rounded-lg bg-black/40 p-1 border border-white/10 shrink-0 self-end md:self-center">
-            <button type="button" id="btnModeCards" class="btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${adminViewMode === 'cards' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}" title="Card View (Optimized for Mobile/Phone)">
-              <span>📇</span> <span>Cards</span>
-            </button>
-            <button type="button" id="btnModeTable" class="btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${adminViewMode === 'table' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}" title="Table View">
-              <span>📑</span> <span>Table</span>
-            </button>
-          </div>
-          <div class="text-slate-400 text-xs md:w-auto w-full text-right shrink-0">
-            Showing <strong class="text-white">${filtered.length ? startIndex + 1 : 0}</strong> to <strong class="text-white">${endIndex}</strong> of <strong class="text-white">${filtered.length}</strong> students
+
+          <!-- Bottom Row: Department Filter + Class Filter + Arrange Order + Reset -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-2.5 items-center pt-1 border-t border-white/5">
+            <!-- Department Filter -->
+            <div class="md:col-span-3">
+              <select id="adminDeptFilter" class="field text-xs bg-slate-900 border-white/10 text-white w-full py-2" title="Filter by Department">
+                <option value="">🏢 All Depts (${allDepts.length})</option>
+                ${allDepts.map(d => `<option value="${esc(d)}" ${selectedDept.toLowerCase() === d.toLowerCase() ? 'selected' : ''}>${esc(d)}</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- Class Filter -->
+            <div class="md:col-span-4">
+              <select id="adminClassFilter" class="field text-xs bg-slate-900 border-white/10 text-white w-full py-2 font-medium" title="Filter by Class">
+                <option value="">🎓 All Classes (${availableClasses.length})</option>
+                ${availableClasses.map(c => `<option value="${esc(c)}" ${selectedClass.toLowerCase() === c.toLowerCase() ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- Arrangement Select -->
+            <div class="md:col-span-4">
+              <select id="adminArrangeSelect" class="field text-xs bg-slate-900 border-white/10 text-white w-full py-2">
+                <option value="dept-class" ${adminArrangeMode === 'dept-class' ? 'selected' : ''}>🏢 Sort: Dept ➔ Class ➔ Name (A-Z)</option>
+                <option value="serial" ${adminArrangeMode === 'serial' ? 'selected' : ''}>🔢 Sort: Serial Number</option>
+                <option value="name" ${adminArrangeMode === 'name' ? 'selected' : ''}>🔤 Sort: Student Name (A–Z)</option>
+              </select>
+            </div>
+
+            <!-- Reset Filters Button -->
+            <div class="md:col-span-1 flex justify-end">
+              <button type="button" id="btnAdminClearFilters" class="btn btn-secondary text-xs px-2.5 py-2 w-full text-slate-400 hover:text-white flex items-center justify-center gap-1 ${filterText || selectedDept || selectedClass ? 'text-amber-300 border-amber-500/30' : ''}" title="Reset search and filters">
+                ✕ Reset
+              </button>
+            </div>
           </div>
         </div>
 
@@ -605,21 +684,60 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
     `;
 
     // Search
-    main.querySelector('#searchInput').oninput = (e) => {
-      filterText = e.target.value;
-      currentPage = 1;
-      refreshTable();
-      main.querySelector('#searchInput').focus();
-      // Move cursor to end
-      const val = main.querySelector('#searchInput').value;
-      main.querySelector('#searchInput').value = '';
-      main.querySelector('#searchInput').value = val;
-    };
+    const searchInp = main.querySelector('#searchInput');
+    if (searchInp) {
+      searchInp.oninput = (e) => {
+        filterText = e.target.value;
+        currentPage = 1;
+        refreshTable();
+        const freshInput = main.querySelector('#searchInput');
+        if (freshInput) {
+          freshInput.focus();
+          const val = freshInput.value;
+          freshInput.value = '';
+          freshInput.value = val;
+        }
+      };
+    }
 
+    // Department Filter
+    const adminDeptSel = main.querySelector('#adminDeptFilter');
+    if (adminDeptSel) {
+      adminDeptSel.onchange = (e) => {
+        selectedDept = e.target.value;
+        selectedClass = '';
+        currentPage = 1;
+        refreshTable();
+      };
+    }
+
+    // Class Filter
+    const adminClassSel = main.querySelector('#adminClassFilter');
+    if (adminClassSel) {
+      adminClassSel.onchange = (e) => {
+        selectedClass = e.target.value;
+        currentPage = 1;
+        refreshTable();
+      };
+    }
+
+    // Arrange Select
     const adminArrangeSel = main.querySelector('#adminArrangeSelect');
     if (adminArrangeSel) {
       adminArrangeSel.onchange = (e) => {
         adminArrangeMode = e.target.value;
+        currentPage = 1;
+        refreshTable();
+      };
+    }
+
+    // Clear Filters
+    const btnClearFilters = main.querySelector('#btnAdminClearFilters');
+    if (btnClearFilters) {
+      btnClearFilters.onclick = () => {
+        filterText = '';
+        selectedDept = '';
+        selectedClass = '';
         currentPage = 1;
         refreshTable();
       };
