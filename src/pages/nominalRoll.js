@@ -175,7 +175,7 @@ function renderPublicRollUI(container, nominalRoll, settings) {
           <span class="text-2xl">⚠️</span>
           <div>
             <strong class="text-amber-100 font-semibold block mb-0.5">DRAFT NOMINAL ROLL PUBLISHED</strong>
-            Serial numbers shown as <strong>D1, D2, D3...</strong> are provisional and subject to change upon finalization. Students are advised to verify their Name, Class, and Department.
+            Serial numbers shown as <strong>D1, D2, D3...</strong> are provisional and subject to change upon finalization. Students are advised to verify their Details and any changes may be intimated to the RO in writing duly forwarded by the HoD.
           </div>
         </div>
       ` : ''}
