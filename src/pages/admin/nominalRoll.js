@@ -572,6 +572,19 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
             </div>
           </div>
         </div>
+
+        ${isDraft ? `
+          <!-- Draft Nominal Roll Statutory Footnote -->
+          <div class="glass rounded-xl p-4 sm:p-5 border border-amber-500/40 bg-amber-500/10 flex items-start gap-3.5 shadow-xl text-amber-200 text-xs sm:text-sm">
+            <span class="text-2xl shrink-0">📌</span>
+            <div class="space-y-1">
+              <div class="font-bold text-amber-100 uppercase tracking-wider text-xs">Statutory Footnote / Notice to Students:</div>
+              <p class="leading-relaxed">
+                Any corrections or changes may be intimated to the Returning Officer (RO) in written form duly forwarded by the HoD of the department, before <strong>28th September 11:00 AM</strong>.
+              </p>
+            </div>
+          </div>
+        ` : ''}
       </div>
 
       <!-- Add / Edit Student Modal -->

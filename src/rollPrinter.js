@@ -616,6 +616,11 @@ export function executeRollPrint({
 
               ${isLastPageOfClass ? `
                 <div class="print-footer">
+                  ${isDraft ? `
+                    <div class="draft-footnote">
+                      <strong>NOTE:</strong> Any corrections or changes may be intimated to the Returning Officer (RO) in written form duly forwarded by the HoD of the department, before <strong>28th September 11:00 AM</strong>.
+                    </div>
+                  ` : ''}
                   <div class="sig-box">
                     <div class="sig-line"></div>
                     <div>Returning Officer</div>
@@ -667,6 +672,11 @@ export function executeRollPrint({
             </table>
 
             <div class="print-footer">
+              ${isDraft ? `
+                <div class="draft-footnote">
+                  <strong>NOTE:</strong> Any corrections or changes may be intimated to the Returning Officer (RO) in written form duly forwarded by the HoD of the department, before <strong>28th September 11:00 AM</strong>.
+                </div>
+              ` : ''}
               <div class="sig-box">
                 <div class="sig-line"></div>
                 <div>Returning Officer</div>
@@ -760,6 +770,11 @@ export function executeRollPrint({
 
             ${isLastPage ? `
               <div class="print-footer">
+                ${isDraft ? `
+                  <div class="draft-footnote">
+                    <strong>NOTE:</strong> Any corrections or changes may be intimated to the Returning Officer (RO) in written form duly forwarded by the HoD of the department, before <strong>28th September 11:00 AM</strong>.
+                  </div>
+                ` : ''}
                 <div class="sig-box">
                   <div class="sig-line"></div>
                   <div>Returning Officer</div>
@@ -814,6 +829,11 @@ export function executeRollPrint({
           </table>
 
           <div class="print-footer">
+            ${isDraft ? `
+              <div class="draft-footnote">
+                <strong>NOTE:</strong> Any corrections or changes may be intimated to the Returning Officer (RO) in written form duly forwarded by the HoD of the department, before <strong>28th September 11:00 AM</strong>.
+              </div>
+            ` : ''}
             <div class="sig-box">
               <div class="sig-line"></div>
               <div>Returning Officer</div>
@@ -971,18 +991,32 @@ export function executeRollPrint({
           .text-xs { font-size: 9.5px; }
           
           .print-footer {
-            margin-top: 25px;
+            margin-top: 20px;
             padding-top: 10px;
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
             align-items: flex-end;
             page-break-inside: avoid;
+            gap: 20px;
+          }
+          .draft-footnote {
+            flex: 1;
+            font-size: 9.5px;
+            line-height: 1.4;
+            color: #1f2937;
+            border: 1px solid #9ca3af;
+            background: #f9fafb;
+            padding: 6px 10px;
+            border-radius: 4px;
+            text-align: left;
           }
           .sig-box {
             text-align: center;
             font-weight: 700;
             font-size: 11px;
             width: 160px;
+            margin-left: auto;
+            flex-shrink: 0;
           }
           .sig-line {
             border-bottom: 1px dashed #4b5563;
