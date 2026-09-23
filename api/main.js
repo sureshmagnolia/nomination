@@ -1687,51 +1687,64 @@ All students are directed to strictly adhere to the University Code of Conduct, 
     }
 
     if (action === 'adminSaveSchedule') {
+      const updates = {};
+
       // General
-      if (body.electionYear !== undefined) await setSetting('electionYear', body.electionYear || new Date().getFullYear().toString());
-      if (body.notificationDate !== undefined) await setSetting('notificationDate', body.notificationDate || '');
+      if (body.electionYear !== undefined) updates.electionYear = body.electionYear || new Date().getFullYear().toString();
+      if (body.notificationDate !== undefined) updates.notificationDate = body.notificationDate || '';
 
       // 1. Draft Roll
-      if (body.draftRollStart !== undefined) await setSetting('draftRollStart', body.draftRollStart || '');
-      if (body.draftRollEnd !== undefined) await setSetting('draftRollEnd', body.draftRollEnd || '');
-      if (body.draftRollOverride !== undefined) await setSetting('draftRollOverride', body.draftRollOverride || 'AUTO');
+      if (body.draftRollStart !== undefined) updates.draftRollStart = body.draftRollStart || '';
+      if (body.draftRollEnd !== undefined) updates.draftRollEnd = body.draftRollEnd || '';
+      if (body.draftRollOverride !== undefined) updates.draftRollOverride = body.draftRollOverride || 'AUTO';
 
       // 2. Final Roll
-      if (body.finalRollStart !== undefined) await setSetting('finalRollStart', body.finalRollStart || '');
-      if (body.finalRollEnd !== undefined) await setSetting('finalRollEnd', body.finalRollEnd || '');
-      if (body.finalRollOverride !== undefined) await setSetting('finalRollOverride', body.finalRollOverride || 'AUTO');
+      if (body.finalRollStart !== undefined) updates.finalRollStart = body.finalRollStart || '';
+      if (body.finalRollEnd !== undefined) updates.finalRollEnd = body.finalRollEnd || '';
+      if (body.finalRollOverride !== undefined) updates.finalRollOverride = body.finalRollOverride || 'AUTO';
 
       // 3. Nomination Window
-      if (body.nominationStart !== undefined) await setSetting('nominationStart', body.nominationStart || '');
-      if (body.nominationDeadline !== undefined) await setSetting('nominationDeadline', body.nominationDeadline || '');
-      if (body.nominationOverride !== undefined) await setSetting('nominationOverride', body.nominationOverride || 'AUTO');
+      if (body.nominationStart !== undefined) updates.nominationStart = body.nominationStart || '';
+      if (body.nominationDeadline !== undefined) updates.nominationDeadline = body.nominationDeadline || '';
+      if (body.nominationOverride !== undefined) updates.nominationOverride = body.nominationOverride || 'AUTO';
 
       // 4. Valid List
-      if (body.validListStart !== undefined) await setSetting('validListStart', body.validListStart || '');
-      if (body.validListEnd !== undefined) await setSetting('validListEnd', body.validListEnd || '');
-      if (body.validListOverride !== undefined) await setSetting('validListOverride', body.validListOverride || 'AUTO');
+      if (body.validListStart !== undefined) updates.validListStart = body.validListStart || '';
+      if (body.validListEnd !== undefined) updates.validListEnd = body.validListEnd || '';
+      if (body.validListOverride !== undefined) updates.validListOverride = body.validListOverride || 'AUTO';
 
       // 5. Withdrawal Window
-      if (body.withdrawalStart !== undefined) await setSetting('withdrawalStart', body.withdrawalStart || '');
-      if (body.withdrawalEnd !== undefined) await setSetting('withdrawalEnd', body.withdrawalEnd || '');
-      if (body.withdrawalOverride !== undefined) await setSetting('withdrawalOverride', body.withdrawalOverride || 'AUTO');
+      if (body.withdrawalStart !== undefined) updates.withdrawalStart = body.withdrawalStart || '';
+      if (body.withdrawalEnd !== undefined) updates.withdrawalEnd = body.withdrawalEnd || '';
+      if (body.withdrawalOverride !== undefined) updates.withdrawalOverride = body.withdrawalOverride || 'AUTO';
 
       // 6. Final List
-      if (body.finalListStart !== undefined) await setSetting('finalListStart', body.finalListStart || '');
-      if (body.finalListEnd !== undefined) await setSetting('finalListEnd', body.finalListEnd || '');
-      if (body.finalListOverride !== undefined) await setSetting('finalListOverride', body.finalListOverride || 'AUTO');
+      if (body.finalListStart !== undefined) updates.finalListStart = body.finalListStart || '';
+      if (body.finalListEnd !== undefined) updates.finalListEnd = body.finalListEnd || '';
+      if (body.finalListOverride !== undefined) updates.finalListOverride = body.finalListOverride || 'AUTO';
 
       // 7. Polling Window
-      if (body.pollingStart !== undefined) await setSetting('pollingStart', body.pollingStart || '');
-      if (body.pollingEnd !== undefined) await setSetting('pollingEnd', body.pollingEnd || '');
-      if (body.pollingOverride !== undefined) await setSetting('pollingOverride', body.pollingOverride || 'AUTO');
+      if (body.pollingStart !== undefined) updates.pollingStart = body.pollingStart || '';
+      if (body.pollingEnd !== undefined) updates.pollingEnd = body.pollingEnd || '';
+      if (body.pollingOverride !== undefined) updates.pollingOverride = body.pollingOverride || 'AUTO';
 
       // 8. Results & Counting
-      if (body.resultsStart !== undefined) await setSetting('resultsStart', body.resultsStart || '');
-      if (body.resultsEnd !== undefined) await setSetting('resultsEnd', body.resultsEnd || '');
-      if (body.resultsOverride !== undefined) await setSetting('resultsOverride', body.resultsOverride || 'AUTO');
+      if (body.resultsStart !== undefined) updates.resultsStart = body.resultsStart || '';
+      if (body.resultsEnd !== undefined) updates.resultsEnd = body.resultsEnd || '';
+      if (body.resultsOverride !== undefined) updates.resultsOverride = body.resultsOverride || 'AUTO';
       if (body.countingActive !== undefined) {
-        await setSetting('countingActive', body.countingActive === true || body.countingActive === 'true' ? 'true' : 'false');
+        updates.countingActive = body.countingActive === true || body.countingActive === 'true' ? 'true' : 'false';
+      }
+
+      const entries = Object.entries(updates);
+      if (entries.length > 0) {
+        const keys = entries.map(e => e[0]);
+        const vals = entries.map(e => String(e[1]));
+        await sql`
+          INSERT INTO settings (key, value)
+          SELECT * FROM UNNEST(${keys}::text[], ${vals}::text[])
+          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+        `;
       }
 
       return jsonOut(res, { ok: true });
