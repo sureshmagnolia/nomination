@@ -1592,16 +1592,21 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       }
       
       try {
-        await resend.emails.send({
+        const sendRes = await resend.emails.send({
           from: 'Election Admin <onboarding@resend.dev>',
           to: adminEmail,
           subject: 'Your Admin Login OTP',
           text: `Your OTP for the Election Admin Portal is: ${otp}`
         });
+        if (sendRes?.error) {
+          console.error('[adminSendOTP Resend Error]:', sendRes.error);
+          return errOut(res, `Failed to send OTP: ${sendRes.error.message || 'Check Resend configuration'}`);
+        }
         const masked = adminEmail.replace(/^(..)(.*)(@.*)$/, '$1***$3');
         return jsonOut(res, { ok: true, email: masked });
       } catch (err) {
-        return errOut(res, 'Failed to send OTP email. Please check your Resend configuration.');
+        console.error('[adminSendOTP Exception]:', err);
+        return errOut(res, `Failed to send OTP email: ${err.message || 'Please check your Resend configuration.'}`);
       }
     }
 
