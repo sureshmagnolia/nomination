@@ -942,96 +942,140 @@ export function printBlankNominationForm(settings = {}) {
   const year = settings.electionYear || new Date().getFullYear();
   const collegeLogo = settings.collegeLogo || '';
 
-  const fillLine = (width = '70%') => `<span class="dotted-line" style="display:inline-block;border-bottom:1px dotted #000;width:${width};height:16px;vertical-align:bottom;"></span>`;
+  const fillLine = () => `<span class="dotted-line" style="flex:1;display:inline-block;border-bottom:1px dotted #000;height:18px;vertical-align:bottom;margin-left:6px;"></span>`;
 
   const html = `
-  <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-4">
-    <div class="flex justify-between items-start text-sm pb-3 border-b border-white/10">
+  <div class="print-paper border border-slate-700 rounded-xl p-6 bg-slate-900 text-slate-200 space-y-3">
+    <div class="flex justify-between items-start text-sm pb-2 border-b border-white/10">
       <div>
         ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:45px;max-width:120px;margin-bottom:4px;display:block;object-fit:contain" alt="College Logo">` : ''}
         <p class="font-bold text-white text-base">${esc(collegeName)}</p>
-        <p class="text-slate-400">College Union Election ${esc(year)}</p>
+        <p class="text-slate-400 text-xs">College Union Election ${esc(year)}</p>
       </div>
       <div class="text-right space-y-1">
-        <p class="text-slate-400 text-xs">Date: _____ / _____ / ________</p>
-        <span class="badge border border-slate-500 font-mono text-xs px-2 py-0.5">MANUAL PHYSICAL SUBMISSION</span>
+        <p class="text-slate-400 text-xs">Date: _____ / _____ / 202___</p>
+        <span class="badge border border-slate-500 font-mono text-xs px-2 py-0.5">NOMINATION PAPER</span>
       </div>
     </div>
-    <h2 class="text-center font-bold text-xl text-white border-y border-white/10 py-3">NOMINATION PAPER</h2>
-    <p class="text-sm flex items-center">
-      <span class="font-semibold text-slate-400 w-40 inline-block shrink-0">Post Applied For:</span> 
-      ${fillLine('70%')}
-    </p>
+    <h2 class="text-center font-bold text-lg text-white border-y border-white/10 py-1.5 uppercase tracking-widest">NOMINATION PAPER</h2>
+    
+    <div class="text-sm flex items-baseline">
+      <span class="font-bold text-white shrink-0">Post Applied For:</span> 
+      ${fillLine()}
+    </div>
 
-    <div class="space-y-3">
+    <div class="space-y-2.5">
       <!-- Candidate Details -->
-      <div class="glass rounded-lg p-4 text-sm space-y-1 border border-white/10">
-        <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-2">
+      <div class="glass rounded-lg p-3.5 text-xs space-y-2 border border-white/10">
+        <div class="flex items-center justify-between border-b border-white/10 pb-1.5 mb-2">
           <h3 class="font-bold text-white uppercase text-xs tracking-widest">Candidate Details</h3>
           <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2.5 py-0.5">
-            Electoral Roll Sl. #: <span style="display:inline-block;width:60px;border-bottom:1px dotted #333;">&nbsp;</span>
+            Electoral Roll Sl. #: <span class="dotted-line" style="display:inline-block;width:90px;height:14px;border-bottom:1px dotted #000;margin-left:4px;">&nbsp;</span>
           </span>
         </div>
-        <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-          <p><span class="text-slate-400">Name:</span> ${fillLine('75%')}</p>
-          <p><span class="text-slate-400">Admission No:</span> ${fillLine('60%')}</p>
-          <p><span class="text-slate-400">Class:</span> ${fillLine('75%')}</p>
-          <p><span class="text-slate-400">Dept:</span> ${fillLine('75%')}</p>
-          <p><span class="text-slate-400">Gender:</span> ${fillLine('70%')}</p>
-          <p><span class="text-slate-400">Date of Birth:</span> ${fillLine('60%')}</p>
+        <div class="grid grid-cols-2 gap-x-8 gap-y-3">
+          <div class="col-span-2 flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Name:</span>
+            ${fillLine()}
+          </div>
+          <div class="flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Admission No:</span>
+            ${fillLine()}
+          </div>
+          <div class="flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Class:</span>
+            ${fillLine()}
+          </div>
+          <div class="flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Dept:</span>
+            ${fillLine()}
+          </div>
+          <div class="flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Gender:</span>
+            ${fillLine()}
+          </div>
+          <div class="col-span-2 flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Date of Birth:</span>
+            <span class="dotted-line" style="width:180px;display:inline-block;border-bottom:1px dotted #000;height:18px;margin-left:6px;"></span>
+            <span class="text-slate-500 text-[11px] ml-2">(DD / MM / YYYY)</span>
+          </div>
         </div>
       </div>
 
       <!-- Proposer Details -->
-      <div class="glass rounded-lg p-4 text-sm space-y-1 border border-white/10">
-        <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-2">
+      <div class="glass rounded-lg p-3.5 text-xs space-y-2 border border-white/10">
+        <div class="flex items-center justify-between border-b border-white/10 pb-1.5 mb-2">
           <h3 class="font-bold text-white uppercase text-xs tracking-widest">Proposer Details</h3>
           <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2.5 py-0.5">
-            Electoral Roll Sl. #: <span style="display:inline-block;width:60px;border-bottom:1px dotted #333;">&nbsp;</span>
+            Electoral Roll Sl. #: <span class="dotted-line" style="display:inline-block;width:90px;height:14px;border-bottom:1px dotted #000;margin-left:4px;">&nbsp;</span>
           </span>
         </div>
-        <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-          <p><span class="text-slate-400">Name:</span> ${fillLine('75%')}</p>
-          <p><span class="text-slate-400">Admission No:</span> ${fillLine('60%')}</p>
-          <p><span class="text-slate-400">Class:</span> ${fillLine('75%')}</p>
-          <p><span class="text-slate-400">Dept:</span> ${fillLine('75%')}</p>
+        <div class="grid grid-cols-2 gap-x-8 gap-y-3">
+          <div class="col-span-2 flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Name:</span>
+            ${fillLine()}
+          </div>
+          <div class="flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Admission No:</span>
+            ${fillLine()}
+          </div>
+          <div class="flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Class:</span>
+            ${fillLine()}
+          </div>
+          <div class="col-span-2 flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Dept:</span>
+            ${fillLine()}
+          </div>
         </div>
-        <div class="flex justify-between mt-4 text-slate-500 text-xs pt-2 border-t border-white/5">
-          <span>Date: ______ / ______ / ________</span>
-          <span>Signature: _______________________</span>
+        <div class="flex justify-between mt-3.5 pt-2 text-slate-500 text-xs border-t border-white/5">
+          <span>Date: _____ / _____ / 202___</span>
+          <span>Signature: _________________________________________</span>
         </div>
       </div>
 
       <!-- Seconder Details -->
-      <div class="glass rounded-lg p-4 text-sm space-y-1 border border-white/10">
-        <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-2">
+      <div class="glass rounded-lg p-3.5 text-xs space-y-2 border border-white/10">
+        <div class="flex items-center justify-between border-b border-white/10 pb-1.5 mb-2">
           <h3 class="font-bold text-white uppercase text-xs tracking-widest">Seconder Details</h3>
           <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2.5 py-0.5">
-            Electoral Roll Sl. #: <span style="display:inline-block;width:60px;border-bottom:1px dotted #333;">&nbsp;</span>
+            Electoral Roll Sl. #: <span class="dotted-line" style="display:inline-block;width:90px;height:14px;border-bottom:1px dotted #000;margin-left:4px;">&nbsp;</span>
           </span>
         </div>
-        <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-          <p><span class="text-slate-400">Name:</span> ${fillLine('75%')}</p>
-          <p><span class="text-slate-400">Admission No:</span> ${fillLine('60%')}</p>
-          <p><span class="text-slate-400">Class:</span> ${fillLine('75%')}</p>
-          <p><span class="text-slate-400">Dept:</span> ${fillLine('75%')}</p>
+        <div class="grid grid-cols-2 gap-x-8 gap-y-3">
+          <div class="col-span-2 flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Name:</span>
+            ${fillLine()}
+          </div>
+          <div class="flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Admission No:</span>
+            ${fillLine()}
+          </div>
+          <div class="flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Class:</span>
+            ${fillLine()}
+          </div>
+          <div class="col-span-2 flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Dept:</span>
+            ${fillLine()}
+          </div>
         </div>
-        <div class="flex justify-between mt-4 text-slate-500 text-xs pt-2 border-t border-white/5">
-          <span>Date: ______ / ______ / ________</span>
-          <span>Signature: _______________________</span>
+        <div class="flex justify-between mt-3.5 pt-2 text-slate-500 text-xs border-t border-white/5">
+          <span>Date: _____ / _____ / 202___</span>
+          <span>Signature: _________________________________________</span>
         </div>
       </div>
     </div>
 
     <!-- Consent of Candidate -->
-    <div class="border-t border-white/10 pt-6 text-center space-y-3">
-      <h3 class="font-bold text-white">Consent of Candidate</h3>
-      <p class="text-sm text-slate-400">I agree, if elected, to serve on the body to which I am proposed as a candidate.</p>
-      <div class="flex justify-around mt-6 text-sm text-slate-400">
-        <p>Signature: _______________________</p>
-        <p>Date: ______ / ______ / ________</p>
+    <div class="border-t border-white/10 pt-3.5 text-center space-y-2">
+      <h3 class="font-bold text-white uppercase text-xs tracking-wider">Consent of Candidate</h3>
+      <p class="text-xs text-slate-400">I agree, if elected, to serve on the body to which I am proposed as a candidate.</p>
+      <div class="flex justify-around mt-4 text-xs text-slate-400">
+        <span>Signature of Candidate: _________________________________</span>
+        <span>Date: _____ / _____ / 202___</span>
       </div>
-      <p class="text-xs text-slate-500 italic mb-4">(To be signed in front of the Returning Officer)</p>
+      <p class="text-xs text-slate-500 italic mt-2">(To be signed in front of the Returning Officer)</p>
     </div>
   </div>`;
 
