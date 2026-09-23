@@ -244,20 +244,20 @@ export function triggerPrint(htmlContent, title = 'Nomination Form') {
       <head>
         <title>${title}</title>
         <style>
-          @page { size: A4 portrait; margin: 10mm 14mm; }
+          @page { size: A4 portrait; margin: 6mm 10mm; }
           * { box-sizing: border-box; }
           body {
             font-family: Arial, sans-serif;
             color: black !important;
             background: white !important;
             font-size: 11pt;
-            line-height: 1.45;
+            line-height: 1.4;
             margin: 0;
             padding: 0;
           }
           /* Reset dark theme classes to clean B&W for printing */
           * { color: black !important; background: transparent !important; border-color: #333 !important; }
-          .print-paper { width: 100%; margin: 0 auto; padding: 14px 18px; }
+          .print-paper { width: 100%; margin: 0 auto; padding: 15px 18px 18px 18px; }
           .border { border: 1px solid #333; }
           .border-b { border-bottom: 1px solid #333; }
           .border-y { border-top: 1px solid #333; border-bottom: 1px solid #333; }
@@ -266,7 +266,7 @@ export function triggerPrint(htmlContent, title = 'Nomination Form') {
           .p-8 { padding: 1.25rem 1.5rem; }
           .p-4 { padding: 0.85rem 1rem; }
           .p-3 { padding: 0.65rem 0.85rem; }
-          .p-3\.5 { padding: 0.75rem 1rem; }
+          .p-3\.5 { padding: 11px 15px 13px 15px; }
           .pt-6 { padding-top: 1.25rem; }
           .pb-1 { padding-bottom: 0.25rem; }
           .pb-1\.5 { padding-bottom: 0.35rem; }
@@ -282,9 +282,9 @@ export function triggerPrint(htmlContent, title = 'Nomination Form') {
           .mb-1\.5 { margin-bottom: 0.35rem; }
           .mb-2 { margin-bottom: 0.5rem; }
           .space-y-4 > * + * { margin-top: 0.85rem; }
-          .space-y-3 > * + * { margin-top: 0.65rem; }
-          .space-y-2\.5 > * + * { margin-top: 0.55rem; }
-          .space-y-2 > * + * { margin-top: 0.45rem; }
+          .space-y-3 > * + * { margin-top: 0.8rem; }
+          .space-y-2\.5 > * + * { margin-top: 0.7rem; }
+          .space-y-2 > * + * { margin-top: 0.55rem; }
           .space-y-1 > * + * { margin-top: 0.25rem; }
           .flex { display: flex; }
           .flex-1 { flex: 1 1 0%; }
@@ -320,10 +320,10 @@ export function triggerPrint(htmlContent, title = 'Nomination Form') {
           .gap-y-1\.5 { row-gap: 0.375rem; }
           .gap-y-2 { row-gap: 0.5rem; }
           .gap-y-2\.5 { row-gap: 0.65rem; }
-          .gap-y-3 { row-gap: 0.75rem; }
+          .gap-y-3 { row-gap: 0.82rem; }
           .italic { font-style: italic; }
           .badge { border: 1px solid #000; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
-          .dotted-line { display: inline-block; border-bottom: 1px dotted #000 !important; height: 18px; vertical-align: bottom; }
+          .dotted-line { display: inline-block; border-bottom: 1.5px dotted #000 !important; height: 24px; vertical-align: bottom; }
           h2, h3, p { margin: 0; }
           @media print {
             .print-paper { page-break-inside: avoid !important; break-inside: avoid !important; }
