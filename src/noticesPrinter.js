@@ -4,7 +4,7 @@
  * Individual Polling Booth Door Posters, and Campus Master Directory Posters.
  */
 
-import { esc } from './utils.js';
+import { esc, triggerPrint } from './utils.js';
 import { CONFIG } from './config.js';
 
 // Markdown-to-HTML formatter for notice text
@@ -934,6 +934,7 @@ export function printCampusMasterDirectory(boothsList, settings = {}, schedule =
 
 /**
  * Print a blank official nomination form for physical manual submission
+ * Exactly matches the structure, styling, and sections of the generated nomination paper.
  */
 export function printBlankNominationForm(settings = {}) {
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
@@ -941,315 +942,100 @@ export function printBlankNominationForm(settings = {}) {
   const year = settings.electionYear || new Date().getFullYear();
   const collegeLogo = settings.collegeLogo || '';
 
-  const w = window.open('', '_blank');
-  if (!w) {
-    alert('Pop-up blocker prevented opening the print window. Please allow pop-ups for this site.');
-    return;
-  }
+  const fillLine = (width = '70%') => `<span class="dotted-line" style="display:inline-block;border-bottom:1px dotted #000;width:${width};height:16px;vertical-align:bottom;"></span>`;
 
-  w.document.write(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Blank Nomination Paper - ${esc(shortName)} Election ${esc(year)}</title>
-  <style>
-    @page {
-      size: A4 portrait;
-      margin: 8mm 12mm 8mm 12mm;
-    }
-    * { box-sizing: border-box; }
-    body {
-      font-family: 'Times New Roman', Times, Georgia, serif;
-      color: #000;
-      background: #fff;
-      font-size: 10.5pt;
-      line-height: 1.35;
-      margin: 0;
-      padding: 0;
-    }
-    .form-container {
-      width: 100%;
-      max-width: 186mm;
-      margin: 0 auto;
-    }
-    .header-box {
-      border-bottom: 2px solid #000;
-      padding-bottom: 4px;
-      margin-bottom: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .college-name {
-      font-size: 14pt;
-      font-weight: bold;
-      text-transform: uppercase;
-      text-align: center;
-      letter-spacing: 0.5px;
-    }
-    .college-sub {
-      font-size: 9.5pt;
-      text-align: center;
-      font-style: italic;
-    }
-    .election-title {
-      font-size: 11pt;
-      font-weight: bold;
-      text-align: center;
-      margin-top: 1px;
-    }
-    .form-title-badge {
-      border: 1.5px solid #000;
-      text-align: center;
-      padding: 3px;
-      font-size: 12pt;
-      font-weight: bold;
-      letter-spacing: 1px;
-      margin: 6px 0;
-      background: #f4f4f4;
-    }
-    .form-note {
-      font-size: 8.5pt;
-      text-align: center;
-      font-style: italic;
-      color: #333;
-      margin-top: -3px;
-      margin-bottom: 6px;
-    }
-    .post-box {
-      border: 1px solid #000;
-      padding: 5px 8px;
-      margin-bottom: 6px;
-      font-size: 10pt;
-      background: #fafafa;
-    }
-    .section-title {
-      font-size: 10pt;
-      font-weight: bold;
-      background: #eee;
-      border: 1px solid #000;
-      padding: 2.5px 6px;
-      margin-top: 6px;
-      margin-bottom: 4px;
-      text-transform: uppercase;
-    }
-    .fields-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .fields-table td {
-      padding: 3px 4px;
-      font-size: 9.5pt;
-      vertical-align: middle;
-    }
-    .line-fill {
-      border-bottom: 1px dotted #222;
-      display: inline-block;
-      min-height: 14px;
-    }
-    .box-check {
-      display: inline-block;
-      width: 11px;
-      height: 11px;
-      border: 1px solid #000;
-      margin-right: 2px;
-      vertical-align: middle;
-    }
-    .consent-box {
-      border: 1px solid #000;
-      padding: 5px 8px;
-      font-size: 8.5pt;
-      line-height: 1.35;
-      background: #fafafa;
-      margin-top: 6px;
-    }
-    .sign-table {
-      width: 100%;
-      margin-top: 8px;
-      border-collapse: collapse;
-    }
-    .sign-table td {
-      text-align: center;
-      font-size: 9pt;
-      vertical-align: bottom;
-      padding: 0 4px;
-    }
-    .sign-line {
-      border-top: 1px dashed #000;
-      margin-bottom: 2px;
-      padding-top: 2px;
-    }
-    .receipt-slip {
-      margin-top: 8px;
-      border-top: 1.5px dashed #000;
-      padding-top: 4px;
-    }
-    .receipt-header {
-      font-size: 9pt;
-      font-weight: bold;
-      text-align: center;
-      text-transform: uppercase;
-      margin-bottom: 3px;
-    }
-    @media print {
-      body { margin: 0; padding: 0; }
-    }
-  </style>
-</head>
-<body>
-  <div class="form-container">
-    <div class="header-box">
-      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:48px;max-width:90px;object-fit:contain;" alt="Logo">` : '<div style="width:50px;"></div>'}
-      <div style="flex:1;text-align:center;">
-        <div class="college-name">${esc(collegeName)}</div>
-        <div class="college-sub">(Affiliated to the University of Calicut)</div>
-        <div class="election-title">COLLEGE UNION ELECTIONS ${esc(year)}–${Number(year) + 1}</div>
+  const html = `
+  <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-4">
+    <div class="flex justify-between items-start text-sm pb-3 border-b border-white/10">
+      <div>
+        ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:45px;max-width:120px;margin-bottom:4px;display:block;object-fit:contain" alt="College Logo">` : ''}
+        <p class="font-bold text-white text-base">${esc(collegeName)}</p>
+        <p class="text-slate-400">College Union Election ${esc(year)}</p>
       </div>
-      <div style="width:80px;text-align:right;font-size:8pt;border:1px solid #777;padding:3px;">
-        <div>Sl. No:</div>
-        <div style="font-size:7pt;color:#555;margin-top:2px;">(Office Use)</div>
+      <div class="text-right space-y-1">
+        <p class="text-slate-400 text-xs">Date: _____ / _____ / ________</p>
+        <span class="badge border border-slate-500 font-mono text-xs px-2 py-0.5">MANUAL PHYSICAL SUBMISSION</span>
       </div>
     </div>
+    <h2 class="text-center font-bold text-xl text-white border-y border-white/10 py-3">NOMINATION PAPER</h2>
+    <p class="text-sm flex items-center">
+      <span class="font-semibold text-slate-400 w-40 inline-block shrink-0">Post Applied For:</span> 
+      ${fillLine('70%')}
+    </p>
 
-    <div class="form-title-badge">NOMINATION PAPER</div>
-    <div class="form-note">(To be filled in by the Candidate in Black or Blue Ballpoint Pen in Block Letters)</div>
-
-    <div class="post-box">
-      <strong>Post Applied For:</strong> 
-      <span class="line-fill" style="width:75%;"></span>
-    </div>
-
-    <!-- 1. CANDIDATE DETAILS -->
-    <div class="section-title">1. Particulars of the Candidate</div>
-    <table class="fields-table">
-      <tr>
-        <td style="width:30%;">Full Name (Capital Letters):</td>
-        <td colspan="3"><span class="line-fill" style="width:100%;"></span></td>
-      </tr>
-      <tr>
-        <td style="width:25%;">Admission Number:</td>
-        <td style="width:25%;"><span class="line-fill" style="width:90%;"></span></td>
-        <td style="width:25%;">Electoral Roll Sl. No.:</td>
-        <td style="width:25%;"><span class="line-fill" style="width:90%;"></span></td>
-      </tr>
-      <tr>
-        <td>Class &amp; Semester:</td>
-        <td><span class="line-fill" style="width:90%;"></span></td>
-        <td>Department / Subject:</td>
-        <td><span class="line-fill" style="width:90%;"></span></td>
-      </tr>
-      <tr>
-        <td>Date of Birth:</td>
-        <td><span class="line-fill" style="width:90%;">[ &nbsp;&nbsp;&nbsp; ] / [ &nbsp;&nbsp;&nbsp; ] / [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</span></td>
-        <td>Gender:</td>
-        <td>
-          <span class="box-check"></span> Male &nbsp;&nbsp;
-          <span class="box-check"></span> Female &nbsp;&nbsp;
-          <span class="box-check"></span> TG
-        </td>
-      </tr>
-      <tr>
-        <td>Mobile Phone No.:</td>
-        <td><span class="line-fill" style="width:90%;"></span></td>
-        <td>Email ID:</td>
-        <td><span class="line-fill" style="width:90%;"></span></td>
-      </tr>
-    </table>
-
-    <!-- 2. PROPOSER DETAILS -->
-    <div class="section-title">2. Particulars of the Proposer</div>
-    <table class="fields-table">
-      <tr>
-        <td style="width:30%;">Full Name of Proposer:</td>
-        <td colspan="3"><span class="line-fill" style="width:100%;"></span></td>
-      </tr>
-      <tr>
-        <td style="width:25%;">Admission Number:</td>
-        <td style="width:25%;"><span class="line-fill" style="width:90%;"></span></td>
-        <td style="width:25%;">Electoral Roll Sl. No.:</td>
-        <td style="width:25%;"><span class="line-fill" style="width:90%;"></span></td>
-      </tr>
-      <tr>
-        <td>Class &amp; Department:</td>
-        <td><span class="line-fill" style="width:90%;"></span></td>
-        <td>Signature of Proposer:</td>
-        <td><span class="line-fill" style="width:90%;"></span></td>
-      </tr>
-    </table>
-
-    <!-- 3. SECONDER DETAILS -->
-    <div class="section-title">3. Particulars of the Seconder</div>
-    <table class="fields-table">
-      <tr>
-        <td style="width:30%;">Full Name of Seconder:</td>
-        <td colspan="3"><span class="line-fill" style="width:100%;"></span></td>
-      </tr>
-      <tr>
-        <td style="width:25%;">Admission Number:</td>
-        <td style="width:25%;"><span class="line-fill" style="width:90%;"></span></td>
-        <td style="width:25%;">Electoral Roll Sl. No.:</td>
-        <td style="width:25%;"><span class="line-fill" style="width:90%;"></span></td>
-      </tr>
-      <tr>
-        <td>Class &amp; Department:</td>
-        <td><span class="line-fill" style="width:90%;"></span></td>
-        <td>Signature of Seconder:</td>
-        <td><span class="line-fill" style="width:90%;"></span></td>
-      </tr>
-    </table>
-
-    <!-- 4. CONSENT & STATUTORY DECLARATION -->
-    <div class="section-title">4. Statutory Consent &amp; Declaration of Candidate</div>
-    <div class="consent-box">
-      I agree, if elected, to serve on the body to which I am proposed as a candidate. I hereby solemnly declare that:
-      (1) I am a regular, full-time student of this College with minimum 75% attendance and no academic backlogs.
-      (2) I satisfy all eligibility norms and age criteria prescribed by the Lyngdoh Committee &amp; University Election Bye-laws.
-      (3) I have not been convicted of any criminal offence or subjected to any disciplinary action.
-    </div>
-
-    <table class="sign-table">
-      <tr>
-        <td style="width:50%;text-align:left;padding-left:12px;">
-          <div>Date: _____ / _____ / ${esc(year)}</div>
-          <div style="font-size:8pt;color:#555;margin-top:3px;">Place: ${esc(shortName)} Campus</div>
-        </td>
-        <td style="width:50%;">
-          <div style="height:22px;"></div>
-          <div class="sign-line" style="width:230px;margin:0 auto 2px auto;">Signature of Candidate</div>
-          <div style="font-size:7.5pt;color:#666;">(Sign in front of Returning Officer)</div>
-        </td>
-      </tr>
-    </table>
-
-    <!-- 5. RECEIPT SLIP -->
-    <div class="receipt-slip">
-      <div style="text-align:center;font-size:7.5pt;color:#555;margin-bottom:2px;">✂ &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash; (Cut along dotted line and hand over to Candidate) &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;</div>
-      <div class="receipt-header">OFFICIAL RECEIPT &mdash; NOMINATION PAPER (${esc(shortName)} ELECTIONS ${esc(year)})</div>
-      <div style="font-size:8.5pt;line-height:1.35;">
-        Received the nomination paper of Sri/Smt <span class="line-fill" style="width:38%;"></span> 
-        (Adm. No. <span class="line-fill" style="width:14%;"></span>) 
-        for the post of <span class="line-fill" style="width:28%;"></span> 
-        on Date: _____/_____/2026 at Time: _____ : _____ AM/PM. Receipt Sl. No.: ____________
+    <div class="space-y-3">
+      <!-- Candidate Details -->
+      <div class="glass rounded-lg p-4 text-sm space-y-1 border border-white/10">
+        <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-2">
+          <h3 class="font-bold text-white uppercase text-xs tracking-widest">Candidate Details</h3>
+          <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2.5 py-0.5">
+            Electoral Roll Sl. #: <span style="display:inline-block;width:60px;border-bottom:1px dotted #333;">&nbsp;</span>
+          </span>
+        </div>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+          <p><span class="text-slate-400">Name:</span> ${fillLine('75%')}</p>
+          <p><span class="text-slate-400">Admission No:</span> ${fillLine('60%')}</p>
+          <p><span class="text-slate-400">Class:</span> ${fillLine('75%')}</p>
+          <p><span class="text-slate-400">Dept:</span> ${fillLine('75%')}</p>
+          <p><span class="text-slate-400">Gender:</span> ${fillLine('70%')}</p>
+          <p><span class="text-slate-400">Date of Birth:</span> ${fillLine('60%')}</p>
+        </div>
       </div>
-      <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:8pt;">
-        <div>Candidate Sl. No.: ____________</div>
-        <div style="text-align:right;">
-          <div style="border-top:1px dashed #000;display:inline-block;padding-top:2px;width:150px;text-align:center;">Signature of Receiving Officer</div>
+
+      <!-- Proposer Details -->
+      <div class="glass rounded-lg p-4 text-sm space-y-1 border border-white/10">
+        <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-2">
+          <h3 class="font-bold text-white uppercase text-xs tracking-widest">Proposer Details</h3>
+          <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2.5 py-0.5">
+            Electoral Roll Sl. #: <span style="display:inline-block;width:60px;border-bottom:1px dotted #333;">&nbsp;</span>
+          </span>
+        </div>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+          <p><span class="text-slate-400">Name:</span> ${fillLine('75%')}</p>
+          <p><span class="text-slate-400">Admission No:</span> ${fillLine('60%')}</p>
+          <p><span class="text-slate-400">Class:</span> ${fillLine('75%')}</p>
+          <p><span class="text-slate-400">Dept:</span> ${fillLine('75%')}</p>
+        </div>
+        <div class="flex justify-between mt-4 text-slate-500 text-xs pt-2 border-t border-white/5">
+          <span>Date: ______ / ______ / ________</span>
+          <span>Signature: _______________________</span>
+        </div>
+      </div>
+
+      <!-- Seconder Details -->
+      <div class="glass rounded-lg p-4 text-sm space-y-1 border border-white/10">
+        <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-2">
+          <h3 class="font-bold text-white uppercase text-xs tracking-widest">Seconder Details</h3>
+          <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2.5 py-0.5">
+            Electoral Roll Sl. #: <span style="display:inline-block;width:60px;border-bottom:1px dotted #333;">&nbsp;</span>
+          </span>
+        </div>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+          <p><span class="text-slate-400">Name:</span> ${fillLine('75%')}</p>
+          <p><span class="text-slate-400">Admission No:</span> ${fillLine('60%')}</p>
+          <p><span class="text-slate-400">Class:</span> ${fillLine('75%')}</p>
+          <p><span class="text-slate-400">Dept:</span> ${fillLine('75%')}</p>
+        </div>
+        <div class="flex justify-between mt-4 text-slate-500 text-xs pt-2 border-t border-white/5">
+          <span>Date: ______ / ______ / ________</span>
+          <span>Signature: _______________________</span>
         </div>
       </div>
     </div>
-  </div>
 
-  <script>
-    window.onload = function() {
-      setTimeout(function() {
-        window.print();
-      }, 400);
-    };
-  </script>
-</body>
-</html>`);
-  w.document.close();
+    <!-- Consent of Candidate -->
+    <div class="border-t border-white/10 pt-6 text-center space-y-3">
+      <h3 class="font-bold text-white">Consent of Candidate</h3>
+      <p class="text-sm text-slate-400">I agree, if elected, to serve on the body to which I am proposed as a candidate.</p>
+      <div class="flex justify-around mt-6 text-sm text-slate-400">
+        <p>Signature: _______________________</p>
+        <p>Date: ______ / ______ / ________</p>
+      </div>
+      <p class="text-xs text-slate-500 italic mb-4">(To be signed in front of the Returning Officer)</p>
+    </div>
+  </div>`;
+
+  triggerPrint(html, `Blank Nomination Paper - ${esc(shortName)} Election ${esc(year)}`);
 }
 
 /**

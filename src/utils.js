@@ -305,6 +305,7 @@ export function triggerPrint(htmlContent, title = 'Nomination Form') {
           .gap-y-1 { row-gap: 0.25rem; }
           .italic { font-style: italic; }
           .badge { border: 1px solid #000; padding: 2px 6px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
+          .dotted-line { display: inline-block; border-bottom: 1px dotted #000 !important; height: 16px; vertical-align: bottom; }
           h2, h3, p { margin: 0; }
         </style>
       </head>
