@@ -136,8 +136,8 @@ export function printOfficialNotice(notice, settings = {}) {
       flex-direction: column;
       position: relative;
     }
-    .watermark {
-      position: absolute;
+    .watermark-global {
+      position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
@@ -288,8 +288,8 @@ export function printOfficialNotice(notice, settings = {}) {
   </style>
 </head>
 <body>
+  ${collegeLogo ? `<div class="watermark-global" style="background-image: url('${collegeLogo}');"></div>` : ''}
   <div class="page-container">
-    ${collegeLogo ? `<div class="watermark" style="background-image: url('${collegeLogo}');"></div>` : ''}
     <table class="header-table">
       <tr>
         ${collegeLogo ? `
