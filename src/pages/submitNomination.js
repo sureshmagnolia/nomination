@@ -718,13 +718,13 @@ export function buildNominationPaper(id, post, gender, dobDisplay, age, candidat
   <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-4" style="page-break-before: always; margin-top: 20px;">
     <div class="flex justify-between items-start text-sm border-b border-white/10 pb-4">
       <div>
-        ${collegeLogo ? \`<img src="\${collegeLogo}" style="max-height:45px;max-width:120px;margin-bottom:4px;display:block;object-fit:contain" alt="College Logo">\` : ''}
-        <p class="font-bold text-white text-base">\${esc(cName)}</p>
-        <p class="text-slate-400">College Union Election \${yearValue}</p>
+        ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:45px;max-width:120px;margin-bottom:4px;display:block;object-fit:contain" alt="College Logo">` : ''}
+        <p class="font-bold text-white text-base">${esc(cName)}</p>
+        <p class="text-slate-400">College Union Election ${yearValue}</p>
       </div>
       <div class="text-right text-xs text-slate-400">
         <p>Supporting Document</p>
-        <p class="font-mono mt-1">Ref ID: \${esc(id)}</p>
+        <p class="font-mono mt-1">Ref ID: ${esc(id)}</p>
       </div>
     </div>
     
@@ -732,12 +732,12 @@ export function buildNominationPaper(id, post, gender, dobDisplay, age, candidat
     
     <div class="my-6 text-base leading-relaxed space-y-6 text-slate-300">
       <p class="text-justify" style="line-height: 1.8;">
-        This is to certify that <strong class="text-white">\${esc(candName)}</strong> (Admission No: <strong class="text-white">\${esc(candAdmNo)}</strong>, Nominal Roll Sl. No: <strong class="text-white">\${esc(candSlNo)}</strong>), a student of <strong class="text-white">\${esc(candClass)}</strong> class in this department, has no academic arrears and maintains the necessary minimum attendance as prescribed by the University election rules and bylaws to contest in the College Union Election \${yearValue}.
+        This is to certify that <strong class="text-white">${esc(candName)}</strong> (Admission No: <strong class="text-white">${esc(candAdmNo)}</strong>, Nominal Roll Sl. No: <strong class="text-white">${esc(candSlNo)}</strong>), a student of <strong class="text-white">${esc(candClass)}</strong> class in this department, has no academic arrears and maintains the necessary minimum attendance as prescribed by the University election rules and bylaws to contest in the College Union Election ${yearValue}.
       </p>
       
       <div class="flex justify-between text-sm text-slate-400" style="margin-top: 80px;">
         <div class="space-y-3">
-          <p>Date: ______ / ______ / \${yearValue}</p>
+          <p>Date: ______ / ______ / ${yearValue}</p>
           <p>Place: ____________________</p>
         </div>
         <div class="text-center space-y-2">
