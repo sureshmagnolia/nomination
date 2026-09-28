@@ -411,6 +411,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
               <button id="btnAddNew" class="btn btn-success bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-900/30" title="Add a student to the Final Nominal Roll. A suffixed serial number (e.g. 124a) will be inserted alphabetically after the preceding voter without altering any other voter's serial number.">➕ Add Voter (Final Roll)</button>
             `}
             <button id="btnPrintRoll" class="btn btn-secondary">🖨️ Print Roll</button>
+            <button id="btnExportCSV" class="btn btn-secondary border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20">📥 Export CSV/Excel</button>
             ${!isFinal && students.length > 0 ? `<button id="btnFixSerialsDept" class="btn bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 text-xs py-2 px-3 flex items-center gap-1.5 font-semibold" title="Re-serialise Draft Electoral Roll contiguous 1..N based on Department, Class (RS at end), and Student Name A-Z">🔢 Re-serialise Draft Roll</button>` : ''}
             ${!isFinal ? `<button id="btnRemapNoms" class="btn bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 text-xs py-2 px-3">🔄 Re-map Nominations</button>` : ''}
             ${!isFinal && students.length > 0 ? `<button id="btnClearRoll" class="btn bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 text-xs py-2 px-3">🗑️ Clear Roll Data</button>` : ''}
@@ -1347,6 +1348,44 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
           draftRollEnd: settings.draftRollEnd,
           initialSort: adminArrangeMode === 'dept-class' ? 'dept-class' : (adminArrangeMode === 'name' ? 'class' : 'serial')
         });
+      };
+    }
+
+    // Export CSV
+    if (main.querySelector('#btnExportCSV')) {
+      main.querySelector('#btnExportCSV').onclick = () => {
+        if (!students || students.length === 0) {
+          return showToast('No data to export.', 'warning');
+        }
+        
+        const headers = ['Nominal Roll Serial Number', 'NAME', 'CLASS', 'ADMISION NO', 'Dept'];
+        const csvRows = [headers.join(',')];
+        
+        const exportStudents = [...students];
+        exportStudents.sort((a, b) => compareSl(a, b));
+        
+        exportStudents.forEach(s => {
+          const row = [
+            s['Nominal Roll Serial Number'] || '',
+            s['NAME'] || '',
+            s['CLASS'] || '',
+            s['ADMISION NO'] || s['ADMISSION NO'] || '',
+            s['Dept'] || ''
+          ];
+          csvRows.push(row.map(cell => {
+            const str = String(cell ?? '');
+            return str.includes(',') || str.includes('"') ? `"${str.replace(/"/g, '""')}"` : str;
+          }).join(','));
+        });
+        
+        const blob = new Blob([csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Nominal_Roll_${isFinal ? 'Final' : (isDraft ? 'Draft' : 'Unpublished')}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Nominal Roll exported as CSV.', 'success');
       };
     }
 
