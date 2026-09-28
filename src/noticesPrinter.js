@@ -30,14 +30,14 @@ function formatMarkdown(text) {
   html = html.replace(/\*(.*?)\*/gim, '<em>$1</em>');
 
   // Horizontal Rule
-  html = html.replace(/^---$/gim, '<hr style="border:none;border-top:1px dashed #d1d5db;margin:5px 0;">');
+  html = html.replace(/^---$/gim, '<hr class="notice-hr">');
 
   // Unordered list items
-  html = html.replace(/^\s*• (.*$)/gim, '<li style="margin-left:14px;margin-bottom:1.5px;font-size:9.5px;line-height:1.25;">$1</li>');
-  html = html.replace(/^\s*\- (.*$)/gim, '<li style="margin-left:14px;margin-bottom:1.5px;font-size:9.5px;line-height:1.25;">$1</li>');
+  html = html.replace(/^\s*• (.*$)/gim, '<li>$1</li>');
+  html = html.replace(/^\s*\- (.*$)/gim, '<li>$1</li>');
 
   // Ordered list items
-  html = html.replace(/^\s*(\d+)\.\s+(.*$)/gim, '<div style="margin-left:12px;margin-bottom:2px;font-size:10px;"><strong>$1.</strong> $2</div>');
+  html = html.replace(/^\s*(\d+)\.\s+(.*$)/gim, '<div class="ordered-list-item"><strong>$1.</strong> $2</div>');
 
   // Two columns conversion
   if (html.includes(':::columns')) {
@@ -86,8 +86,8 @@ function formatMarkdown(text) {
 
   return newLines.map(l => {
     if (l.startsWith('<h') || l.startsWith('<hr') || l.startsWith('<li') || l.startsWith('<div') || l.startsWith('</div') || l.startsWith('<table') || l.startsWith('</table') || l.startsWith('<thead') || l.startsWith('<tbody') || l.startsWith('<tr')) return l;
-    if (!l.trim()) return '<div style="height:3px;"></div>';
-    return `<p style="margin:2.5px 0;line-height:1.32;">${l}</p>`;
+    if (!l.trim()) return '<div class="spacer"></div>';
+    return `<p>${l}</p>`;
   }).join('\n');
 }
 
@@ -191,40 +191,73 @@ export function printOfficialNotice(notice, settings = {}) {
       margin-top: 1px;
     }
     .content-area {
-      font-size: 14px;
+      font-size: 16px;
       text-align: justify;
       line-height: 1.6;
       flex-grow: 1;
       overflow: hidden;
       padding-top: 15px;
     }
-    .content-area p, .content-area ul, .content-area ol {
+    .content-area p {
       margin-bottom: 12px;
       margin-top: 0;
     }
+    .content-area ul, .content-area ol {
+      margin-bottom: 12px;
+      margin-top: 0;
+      padding-left: 0;
+      list-style-type: none;
+    }
+    .content-area li {
+      margin-left: 20px;
+      margin-bottom: 4px;
+      font-size: 0.85em;
+      line-height: 1.4;
+      position: relative;
+    }
+    .content-area li::before {
+      content: '•';
+      position: absolute;
+      left: -15px;
+      font-weight: bold;
+    }
     .content-area h3, .content-area h4 {
-      margin-top: 18px;
-      margin-bottom: 8px;
+      margin-top: 24px;
+      margin-bottom: 10px;
+      font-size: 1.1em;
+    }
+    .content-area hr.notice-hr {
+      border: none;
+      border-top: 1px dashed #aaa;
+      margin: 25px 0;
+    }
+    .content-area .spacer {
+      height: 10px;
+    }
+    .content-area .ordered-list-item {
+      margin-left: 15px;
+      margin-bottom: 4px;
+      font-size: 0.9em;
     }
     .signature-area {
-      margin-top: auto;
+      margin-top: 60px;
       display: flex;
       justify-content: flex-end;
       align-items: flex-end;
       page-break-inside: avoid;
-      padding-bottom: 15px;
+      padding-bottom: 20px;
     }
     .signatory-box {
       text-align: right;
       font-family: 'Times New Roman', Times, serif;
     }
     .signatory-name {
-      font-size: 14px;
+      font-size: 16px;
       font-weight: bold;
       margin: 0;
     }
     .signatory-title {
-      font-size: 12px;
+      font-size: 14px;
       color: #333;
       margin-top: 4px;
       max-width: 320px;
