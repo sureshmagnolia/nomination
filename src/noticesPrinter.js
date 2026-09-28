@@ -193,36 +193,40 @@ export function printOfficialNotice(notice, settings = {}) {
     .content-area {
       font-size: 14px;
       text-align: justify;
-      line-height: 1.5;
+      line-height: 1.6;
       flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-evenly;
       overflow: hidden;
+      padding-top: 15px;
     }
-    .content-area > * {
-      margin: 0;
+    .content-area p, .content-area ul, .content-area ol {
+      margin-bottom: 12px;
+      margin-top: 0;
+    }
+    .content-area h3, .content-area h4 {
+      margin-top: 18px;
+      margin-bottom: 8px;
     }
     .signature-area {
-      margin-top: 8px;
+      margin-top: auto;
       display: flex;
       justify-content: flex-end;
       align-items: flex-end;
       page-break-inside: avoid;
+      padding-bottom: 15px;
     }
     .signatory-box {
       text-align: right;
       font-family: 'Times New Roman', Times, serif;
     }
     .signatory-name {
-      font-size: 11.5px;
+      font-size: 14px;
       font-weight: bold;
       margin: 0;
     }
     .signatory-title {
-      font-size: 10px;
+      font-size: 12px;
       color: #333;
-      margin-top: 1px;
+      margin-top: 4px;
       max-width: 320px;
     }
     .footer-note {
