@@ -663,6 +663,26 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
   // Publish / Unpublish Final List
   main.querySelector('#publishFinalBtn')?.addEventListener('click', async (e) => {
     const btn = e.currentTarget;
+    
+    // U.O.No. 13078/2026/Admn - Section K: Simultaneous Contesting Check
+    const candCounts = {};
+    const multipleCandidates = [];
+    finalList.forEach(n => {
+      const id = n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || n.candidate?.serial_number;
+      if (!id) return;
+      if (candCounts[id]) {
+        if (candCounts[id] === 1) multipleCandidates.push(n.candidateName);
+        candCounts[id]++;
+      } else {
+        candCounts[id] = 1;
+      }
+    });
+
+    if (multipleCandidates.length > 0) {
+      alert(`Cannot publish Final List!\n\nThe following candidates are still validly nominated for more than one post:\n\n- ${multipleCandidates.join('\n- ')}\n\nAs per University rules, candidates must withdraw all but one nomination. Please go to 'Review Nominations' and reject the excess nominations before publishing.`);
+      return;
+    }
+
     if (!confirm('Are you sure you want to publish the final nominations list?')) return;
     setLoading(btn, true, 'Publishing...');
     try {

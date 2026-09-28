@@ -126,7 +126,11 @@ ${assocSecListText}
 
 ---
 
-All students are directed to strictly adhere to the University Code of Conduct, the Calicut University Student Union Election Bye-laws, and campus discipline rules. Nomination forms and related documents are available at the college election portal.`
+All students are directed to strictly adhere to the University Code of Conduct, the Calicut University Student Union Election Bye-laws, and campus discipline rules. Nomination forms and related documents are available at the college election portal.
+
+> **Statutory Definition (As per U.O.No. 13078/2026/Admn Section I):**
+> **Office Bearers** comprise the Chairperson, Vice-Chairperson, Secretary, and Joint Secretary.
+> **Executive Members** comprise the University Union Councillor(s), Fine Arts Secretary, General Captain, Student Editor, Class/Year Representatives, and Association Secretaries.`
     },
 
     {

@@ -1828,8 +1828,8 @@ All students are directed to strictly adhere to the University Code of Conduct, 
 
       // Strict Election Integrity Rules enforced on the Server
       const existing = await sql`SELECT post, candidate_serial, proposer_serial, seconder_serial FROM nominations WHERE status != 'Rejected'`;
-      if (existing.some(n => n.candidate_serial === body.candidateSerial)) {
-        return errOut(res, 'Candidate is already nominated for a post.');
+      if (existing.some(n => n.candidate_serial === body.candidateSerial && n.post === body.post)) {
+        return errOut(res, 'Candidate has already submitted a nomination for this specific post.');
       }
       if (existing.some(n => n.post === body.post && (n.proposer_serial === body.proposerSerial || n.seconder_serial === body.proposerSerial))) {
         return errOut(res, 'Proposer has already signed a nomination for this post.');
