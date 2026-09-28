@@ -419,7 +419,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
           transform: translate(-50%, -50%);
           width: 450px;
           height: 450px;
-          opacity: 0.05;
+          opacity: 0.1;
           pointer-events: none;
           z-index: -1;
           background-size: contain;
@@ -581,7 +581,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
               transform: translate(-50%, -50%);
               width: 500px;
               height: 500px;
-              opacity: 0.05;
+              opacity: 0.1;
               pointer-events: none;
               z-index: -1;
               background-size: contain;

@@ -1031,7 +1031,7 @@ export function executeRollPrint({
             transform: translate(-50%, -50%);
             width: 500px;
             height: 500px;
-            opacity: 0.05;
+            opacity: 0.1;
             pointer-events: none;
             z-index: -9999;
             background-size: contain;

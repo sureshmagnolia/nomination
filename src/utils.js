@@ -265,7 +265,7 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
             transform: translate(-50%, -50%);
             width: 450px;
             height: 450px;
-            opacity: 0.06;
+            opacity: 0.1;
             pointer-events: none;
             z-index: -1;
             background-size: contain;
