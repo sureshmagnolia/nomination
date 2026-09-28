@@ -1186,7 +1186,7 @@ export function printBlankNominationForm(settings = {}) {
         </div>
         <div class="text-center space-y-2">
           <p>_______________________</p>
-          <p class="font-bold text-white">Signature of the HoD</p>
+          <p class="font-bold text-white">Name & Signature of the HoD</p>
           <p>Department of _________________</p>
           <p class="text-xs italic">(Office Seal)</p>
         </div>
