@@ -1158,7 +1158,6 @@ export function printBlankNominationForm(settings = {}) {
       </div>
       <p class="text-xs text-slate-500 italic mt-2">(To be signed in front of the Returning Officer)</p>
     </div>
-    </div>
   </div>
   
   <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-4" style="page-break-before: always; margin-top: 20px;">
