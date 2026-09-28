@@ -134,6 +134,21 @@ export function printOfficialNotice(notice, settings = {}) {
       height: 100vh;
       display: flex;
       flex-direction: column;
+      position: relative;
+    }
+    .watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 450px;
+      height: 450px;
+      opacity: 0.06;
+      pointer-events: none;
+      z-index: -1;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
     }
     .header-table {
       width: 100%;
@@ -274,6 +289,7 @@ export function printOfficialNotice(notice, settings = {}) {
 </head>
 <body>
   <div class="page-container">
+    ${collegeLogo ? `<div class="watermark" style="background-image: url('${collegeLogo}');"></div>` : ''}
     <table class="header-table">
       <tr>
         ${collegeLogo ? `
