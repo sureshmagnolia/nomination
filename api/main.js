@@ -1173,24 +1173,6 @@ ${aText}
 
 ---
 
-### Official Election Schedule (Academic Year ${yr}–${nxtYr})
-
-| Activity | Date | Day | Time |
-| :--- | :---: | :---: | :---: |
-| Publication of the Preliminary Electoral Roll | 23-09-2026 | Wednesday | 11:00 AM |
-| Last date and time for correction/addition/deletion in the Preliminary Electoral Roll | 25-09-2026 | Friday | 4:00 PM |
-| Publication of the Final Electoral Roll | 28-09-2026 | Monday | 4:00 PM |
-| Date of Notification of the Election for the Academic Year 2026–27 | 29-09-2026 | Tuesday | 4:00 PM |
-| Last Date and Time for Submission of Nominations | 01-10-2026 | Thursday | Until 12:00 Noon |
-| Date and Time for Scrutiny of Nominations | 01-10-2026 | Thursday | 2:00 PM |
-| Date and Time for Publication of the List of Valid Nominations | 01-10-2026 | Thursday | 5:00 PM |
-| Last Date and Time for Withdrawal of Nominations | 05-10-2026 | Monday | Until 12:00 Noon |
-| Date and Time for Publication of the Final List of Nominations | 05-10-2026 | Monday | 5:00 PM |
-| Date and Time for Polling – Presidential Mode &amp; Union Office Bearers Election | 15-10-2026 | Thursday | 9:30 AM to 12:30 PM |
-| Date and Time for Counting of Votes &amp; Declaration of Results | 15-10-2026 | Thursday | From 2:00 PM onwards |
-
----
-
 All students are directed to strictly adhere to the University Code of Conduct, the Calicut University Student Union Election Bye-laws, and campus discipline rules. Nomination forms and related documents are available at the college election portal.
 
 **Returning Officer**  
