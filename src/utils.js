@@ -232,7 +232,7 @@ export function displayDob(day, month, year) {
 }
 
 // ─── Print helper ──────────────────────────────────────────────────────────────
-export function triggerPrint(htmlContent, title = 'Nomination Form') {
+export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLogo = '') {
   const win = window.open('', '_blank');
   if (!win) {
     alert('Popup blocked! Please allow popups for this site to print.');
@@ -257,7 +257,21 @@ export function triggerPrint(htmlContent, title = 'Nomination Form') {
           }
           /* Reset dark theme classes to clean B&W for printing */
           * { color: black !important; background: transparent !important; border-color: #333 !important; }
-          .print-paper { width: 100%; margin: 0 auto; padding: 15px 18px 18px 18px; }
+          .print-paper { width: 100%; margin: 0 auto; padding: 15px 18px 18px 18px; position: relative; }
+          .watermark-global {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 450px;
+            height: 450px;
+            opacity: 0.06;
+            pointer-events: none;
+            z-index: -1;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+          }
           .border { border: 1px solid #333; }
           .border-b { border-bottom: 1px solid #333; }
           .border-y { border-top: 1px solid #333; border-bottom: 1px solid #333; }
@@ -331,6 +345,7 @@ export function triggerPrint(htmlContent, title = 'Nomination Form') {
         </style>
       </head>
       <body>
+        ${watermarkLogo ? `<div class="watermark-global" style="background-image: url('${watermarkLogo}');"></div>` : ''}
         ${htmlContent}
         <script>
           window.onload = function() {

@@ -112,7 +112,8 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         .serial-tag{position:absolute;top:10px;right:10px;border:2px solid #000;padding:5px 12px;font-family:monospace;font-size:18px;font-weight:bold}
         table{width:100%;border-collapse:collapse;margin-bottom:18px}
         th,td{border:1.5px solid #000;padding:8px}th{background:#eee}
-      </style></head><body>${html}<script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`);
+        .watermark-global{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:450px;height:450px;opacity:0.06;pointer-events:none;z-index:-1;background-size:contain;background-repeat:no-repeat;background-position:center;}
+      </style></head><body>${collegeLogo ? `<div class="watermark-global" style="background-image: url('${collegeLogo}');"></div>` : ''}${html}<script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`);
       w.document.close();
     });
   };

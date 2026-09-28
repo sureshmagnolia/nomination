@@ -410,7 +410,24 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
     w.document.write(`<!DOCTYPE html><html><head><title>${isFinal ? 'Final List' : 'Valid List'} - ${esc(shortName)} Election ${esc(year)}</title><style>
       @page{size:A4;margin:15mm}
       body{font-family:Arial,sans-serif;line-height:1.4;margin:0;padding:10px;}
-    </style></head><body>${html}<script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`);
+    </style>
+      <style>
+        .watermark-global {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 450px;
+          height: 450px;
+          opacity: 0.05;
+          pointer-events: none;
+          z-index: -1;
+          background-size: contain;
+          background-repeat: no-repeat;
+          background-position: center;
+        }
+      </style>
+    </head><body>${collegeLogo ? `<div class="watermark-global" style="background-image: url('${collegeLogo}');"></div>` : ''}${html}<script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`);
     w.document.close();
   };
 
@@ -554,8 +571,27 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
     printWin.document.write(`
       <!DOCTYPE html>
       <html>
-        <head><title>Official Results Declaration - ${esc(shortName)} Election ${esc(year)}</title></head>
+        <head>
+          <title>Official Results Declaration - ${esc(shortName)} Election ${esc(year)}</title>
+          <style>
+            .watermark-global {
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: 500px;
+              height: 500px;
+              opacity: 0.05;
+              pointer-events: none;
+              z-index: -1;
+              background-size: contain;
+              background-repeat: no-repeat;
+              background-position: center;
+            }
+          </style>
+        </head>
         <body>
+          ${collegeLogo ? `<div class="watermark-global" style="background-image: url('${collegeLogo}');"></div>` : ''}
           ${printHtml}
           <script>window.addEventListener('load', () => setTimeout(() => window.print(), 500));<\/script>
         </body>

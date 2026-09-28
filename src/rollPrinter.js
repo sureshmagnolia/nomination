@@ -1024,9 +1024,24 @@ export function executeRollPrint({
             margin-bottom: 6px;
             height: 40px;
           }
+          .watermark-global {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 500px;
+            height: 500px;
+            opacity: 0.05;
+            pointer-events: none;
+            z-index: -9999;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+          }
         </style>
       </head>
       <body>
+        ${collegeLogo ? `<div class="watermark-global" style="background-image: url('${collegeLogo}');"></div>` : ''}
         ${bodyContent}
         <script>
           window.onload = function() {

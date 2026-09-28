@@ -276,8 +276,22 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   main.querySelector('#btnPrintOfficial').addEventListener('click', () => {
     const printHtml = `
       <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; padding: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; padding: 20px; position: relative; }
         .official-sheet { max-w: 850px; margin: 0 auto; padding: 40px; border: 1px solid #ddd; background: white; }
+        .watermark-global {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 500px;
+          height: 500px;
+          opacity: 0.05;
+          pointer-events: none;
+          z-index: -1;
+          background-size: contain;
+          background-repeat: no-repeat;
+          background-position: center;
+        }
         .header { text-align: center; border-bottom: 3px double #000; padding-bottom: 20px; margin-bottom: 30px; }
         .header h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
         .header h2 { margin: 5px 0 0 0; font-size: 16px; color: #444; font-weight: 600; }
@@ -368,6 +382,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       <html>
         <head><title>Election Results ${year}</title></head>
         <body>
+          ${collegeLogo ? `<div class="watermark-global" style="background-image: url('${collegeLogo}');"></div>` : ''}
           ${printHtml}
           <script>
             window.addEventListener('load', () => {

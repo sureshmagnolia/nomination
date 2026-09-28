@@ -484,6 +484,20 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
       size: A4 portrait;
       margin: 8mm;
     }
+    .watermark-global {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 450px;
+      height: 450px;
+      opacity: 0.06;
+      pointer-events: none;
+      z-index: -1;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
     * {
       box-sizing: border-box;
     }
@@ -711,6 +725,7 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
   </style>
 </head>
 <body>
+  ${collegeLogo ? `<div class="watermark-global" style="background-image: url('${collegeLogo}');"></div>` : ''}
   ${postersHtml}
   <script>
     window.onload = function() {
@@ -775,6 +790,20 @@ export function printCampusMasterDirectory(boothsList, settings = {}, schedule =
     @page {
       size: A4 portrait;
       margin: 10mm;
+    }
+    .watermark-global {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 450px;
+      height: 450px;
+      opacity: 0.06;
+      pointer-events: none;
+      z-index: -1;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
     }
     * {
       box-sizing: border-box;
@@ -915,6 +944,7 @@ export function printCampusMasterDirectory(boothsList, settings = {}, schedule =
   </style>
 </head>
 <body>
+  ${collegeLogo ? `<div class="watermark-global" style="background-image: url('${collegeLogo}');"></div>` : ''}
   <div class="master-container">
     <div>
       <div class="master-header">
@@ -1130,7 +1160,7 @@ export function printBlankNominationForm(settings = {}) {
     </div>
   </div>`;
 
-  triggerPrint(html, `Blank Nomination Paper - ${esc(shortName)} Election ${esc(year)}`);
+  triggerPrint(html, `Blank Nomination Paper - ${esc(shortName)} Election ${esc(year)}`, collegeLogo);
 }
 
 /**
@@ -1157,6 +1187,20 @@ export function printBlankWithdrawalForm(settings = {}) {
     @page {
       size: A4 portrait;
       margin: 12mm 16mm;
+    }
+    .watermark-global {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 450px;
+      height: 450px;
+      opacity: 0.06;
+      pointer-events: none;
+      z-index: -1;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
     }
     * { box-sizing: border-box; }
     body {
@@ -1270,6 +1314,7 @@ export function printBlankWithdrawalForm(settings = {}) {
   </style>
 </head>
 <body>
+  ${collegeLogo ? `<div class="watermark-global" style="background-image: url('${collegeLogo}');"></div>` : ''}
   <div class="form-container">
     <div class="header-box">
       ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:48px;max-width:90px;object-fit:contain;" alt="Logo">` : '<div style="width:40px;"></div>'}
