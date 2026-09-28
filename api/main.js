@@ -1153,7 +1153,7 @@ export default async function handler(req, res) {
           const sName = colShort || 'CUE';
 
           statNotif.title = `ELECTION NOTIFICATION ${yr}`;
-          statNotif.refNo = `${sName}/ELEC/${yr}/NOTIF-01`;
+          statNotif.refNo = `${sName}/ELEC/${yr}/NOTIF-01 (Ref: U.O.No. 12646/2026/Admn)`;
           statNotif.date = `29-09-2026`;
           statNotif.signatoryTitle = `Returning Officer, ${cName}`;
           statNotif.content = `In accordance with the provisions of the Calicut University Act and College Union Election Statutes, it is hereby notified for the information of all students and electors of **${cName}** that the election to the College Union for the Academic Year **${yr}–${nxtYr}** will be conducted as per the statutory schedule mandated by the University.
@@ -1173,10 +1173,7 @@ ${aText}
 
 ---
 
-All students are directed to strictly adhere to the University Code of Conduct, the Calicut University Student Union Election Bye-laws, and campus discipline rules. Nomination forms and related documents are available at the college election portal.
-
-**Returning Officer**  
-*(College Seal)*`;
+All students are directed to strictly adhere to the University Code of Conduct, the Calicut University Student Union Election Bye-laws, and campus discipline rules. Nomination forms and related documents are available at the college election portal.`;
 
           await setSetting('official_notices', JSON.stringify(parsedNotices));
         }

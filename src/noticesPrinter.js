@@ -273,11 +273,10 @@ export function printOfficialNotice(notice, settings = {}) {
 
     <div class="signature-area">
       <div class="seal-box">
-        [ College Official Seal ]
       </div>
       <div class="signatory-box">
         <div style="height: 35px;"></div>
-        <p class="signatory-name">${esc(notice.signatoryName || 'Returning Officer')}</p>
+        ${notice.signatoryName && notice.signatoryName !== 'Returning Officer' ? `<p class="signatory-name">${esc(notice.signatoryName)}</p>` : ''}
         <p class="signatory-title">${esc(notice.signatoryTitle || `Returning Officer, ${collegeName}`)}</p>
       </div>
     </div>

@@ -102,7 +102,7 @@ export function getDefaultStatutoryNotices(settings = {}, schedule = {}, booths 
     {
       id: 'statutory_notice_election_notification',
       title: `ELECTION NOTIFICATION ${year}`,
-      refNo: `${shortName}/ELEC/${year}/NOTIF-01`,
+      refNo: `${shortName}/ELEC/${year}/NOTIF-01 (Ref: U.O.No. 12646/2026/Admn)`,
       date: `29-09-2026`,
       category: 'Statutory Notification',
       pinned: true,
@@ -126,10 +126,7 @@ ${assocSecListText}
 
 ---
 
-All students are directed to strictly adhere to the University Code of Conduct, the Calicut University Student Union Election Bye-laws, and campus discipline rules. Nomination forms and related documents are available at the college election portal.
-
-**Returning Officer**  
-*(College Seal)*`
+All students are directed to strictly adhere to the University Code of Conduct, the Calicut University Student Union Election Bye-laws, and campus discipline rules. Nomination forms and related documents are available at the college election portal.`
     },
 
     {
