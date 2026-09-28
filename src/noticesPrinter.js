@@ -124,11 +124,16 @@ export function printOfficialNotice(notice, settings = {}) {
       background: #fff;
       font-size: 11px;
       line-height: 1.35;
+      height: 100%;
     }
     .page-container {
       max-width: 800px;
       margin: 0 auto;
-      padding: 0;
+      padding: 10mm; /* Added padding to act as page margins */
+      box-sizing: border-box;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
     .header-table {
       width: 100%;
@@ -186,29 +191,24 @@ export function printOfficialNotice(notice, settings = {}) {
       margin-top: 1px;
     }
     .content-area {
-      font-size: 11px;
+      font-size: 14px;
       text-align: justify;
-      margin-bottom: 6px;
-      line-height: 1.35;
+      line-height: 1.5;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-evenly;
+      overflow: hidden;
+    }
+    .content-area > * {
+      margin: 0;
     }
     .signature-area {
       margin-top: 8px;
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: flex-end;
       page-break-inside: avoid;
-    }
-    .seal-box {
-      width: 100px;
-      height: 42px;
-      border: 1px dashed #999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: Arial, sans-serif;
-      font-size: 8.5px;
-      color: #777;
-      text-align: center;
     }
     .signatory-box {
       text-align: right;
@@ -226,17 +226,11 @@ export function printOfficialNotice(notice, settings = {}) {
       max-width: 320px;
     }
     .footer-note {
-      margin-top: 6px;
-      border-top: 1px solid #e5e7eb;
-      padding-top: 2px;
-      font-family: Arial, sans-serif;
-      font-size: 8px;
-      color: #6b7280;
-      text-align: center;
+      display: none;
     }
     @media print {
-      body { margin: 0; padding: 0; }
-      .page-container { max-width: 100%; margin: 0; padding: 0; }
+      body { margin: 0; padding: 0; height: 100vh; overflow: hidden; }
+      .page-container { max-width: 100%; margin: 0; padding: 0; height: 100vh; page-break-after: avoid; }
       .signature-area { page-break-inside: avoid; }
     }
   </style>
@@ -272,22 +266,28 @@ export function printOfficialNotice(notice, settings = {}) {
     </div>
 
     <div class="signature-area">
-      <div class="seal-box">
-      </div>
       <div class="signatory-box">
         <div style="height: 35px;"></div>
         ${notice.signatoryName && notice.signatoryName !== 'Returning Officer' ? `<p class="signatory-name">${esc(notice.signatoryName)}</p>` : ''}
         <p class="signatory-title">${esc(notice.signatoryTitle || `Returning Officer, ${collegeName}`)}</p>
       </div>
     </div>
-
-    <div class="footer-note">
-      This is an official election document published by authority of the Returning Officer under University Statutes.
-    </div>
   </div>
 
   <script>
     window.onload = function() {
+      // Auto adjust font size to prevent overflow
+      const container = document.querySelector('.page-container');
+      const content = document.querySelector('.content-area');
+      let fontSize = 18; // Start with a large font size
+      content.style.fontSize = fontSize + 'px';
+      
+      // Keep shrinking font size until the content fits exactly without scrolling
+      while (container.scrollHeight > window.innerHeight && fontSize > 8) {
+        fontSize -= 0.5;
+        content.style.fontSize = fontSize + 'px';
+      }
+
       setTimeout(function() {
         window.print();
       }, 400);
