@@ -257,7 +257,7 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
           }
           /* Reset dark theme classes to clean B&W for printing */
           * { color: black !important; background: transparent !important; border-color: #333 !important; }
-          .print-paper { width: 100%; margin: 0 auto; padding: 14px 18px 12px 18px; position: relative; }
+          .print-paper { width: 100%; margin: 0 auto; padding: 12px 16px 10px 16px; position: relative; }
           .watermark-global {
             position: fixed;
             top: 50%;
@@ -277,40 +277,55 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
           .border-y { border-top: 1px solid #333; border-bottom: 1px solid #333; }
           .border-t { border-top: 1px solid #333; }
           .rounded-lg, .rounded-xl { border-radius: 4px; }
-          .p-8 { padding: 1.5rem 1.75rem; }
-          .p-4 { padding: 0.85rem 1rem; }
-          .p-3 { padding: 0.65rem 0.85rem; }
-          .p-3\.5 { padding: 11px 15px 13px 15px; }
-          .p-2\.5 { padding: 0.5rem 0.65rem; }
+          .p-8 { padding: 1.25rem 1.5rem; }
+          .p-5 { padding: 1rem 1.25rem; }
+          .p-4 { padding: 0.75rem 0.9rem; }
+          .p-3\.5 { padding: 10px 14px 11px 14px; }
+          .p-3 { padding: 0.6rem 0.8rem; }
+          .p-2\.5 { padding: 0.45rem 0.6rem; }
           .p-2 { padding: 0.35rem 0.5rem; }
           .pt-6 { padding-top: 1.25rem; }
-          .pb-0\.5 { padding-bottom: 0.125rem; }
-          .pb-1 { padding-bottom: 0.25rem; }
-          .pb-1\.5 { padding-bottom: 0.375rem; }
-          .pb-2 { padding-bottom: 0.5rem; }
+          .pt-4 { padding-top: 0.85rem; }
+          .pt-3 { padding-top: 0.65rem; }
+          .pt-2\.5 { padding-top: 0.55rem; }
+          .pt-2 { padding-top: 0.45rem; }
+          .pt-1\.5 { padding-top: 0.35rem; }
+          .pt-1 { padding-top: 0.2rem; }
+          .pb-0\.5 { padding-bottom: 0.1rem; }
+          .pb-1 { padding-bottom: 0.2rem; }
+          .pb-1\.5 { padding-bottom: 0.3rem; }
+          .pb-2 { padding-bottom: 0.45rem; }
+          .pb-2\.5 { padding-bottom: 0.55rem; }
           .pb-3 { padding-bottom: 0.75rem; }
-          .pt-1 { padding-top: 0.25rem; }
-          .pt-1\.5 { padding-top: 0.375rem; }
-          .pt-2 { padding-top: 0.5rem; }
-          .mt-1 { margin-top: 0.25rem; }
-          .mt-1\.5 { margin-top: 0.375rem; }
-          .mt-2 { margin-top: 0.5rem; }
-          .mt-3 { margin-top: 0.75rem; }
+          .py-1 { padding-top: 0.2rem; padding-bottom: 0.2rem; }
+          .py-1\.5 { padding-top: 0.3rem; padding-bottom: 0.3rem; }
+          .py-2 { padding-top: 0.45rem; padding-bottom: 0.45rem; }
+          .mt-1 { margin-top: 0.2rem; }
+          .mt-1\.5 { margin-top: 0.3rem; }
+          .mt-2 { margin-top: 0.45rem; }
+          .mt-2\.5 { margin-top: 0.55rem; }
+          .mt-3 { margin-top: 0.65rem; }
           .mt-3\.5 { margin-top: 0.85rem; }
-          .mt-4 { margin-top: 1rem; }
+          .mt-4 { margin-top: 0.85rem; }
           .mt-6 { margin-top: 1.25rem; }
-          .mb-0\.5 { margin-bottom: 0.125rem; }
-          .mb-1 { margin-bottom: 0.25rem; }
-          .mb-1\.5 { margin-bottom: 0.35rem; }
-          .mb-2 { margin-bottom: 0.5rem; }
+          .mb-0\.5 { margin-bottom: 0.1rem; }
+          .mb-1 { margin-bottom: 0.2rem; }
+          .mb-1\.5 { margin-bottom: 0.3rem; }
+          .mb-2 { margin-bottom: 0.45rem; }
+          .my-2 { margin-top: 0.45rem; margin-bottom: 0.45rem; }
+          .my-2\.5 { margin-top: 0.55rem; margin-bottom: 0.55rem; }
+          .my-3 { margin-top: 0.65rem; margin-bottom: 0.65rem; }
+          .ml-1 { margin-left: 0.25rem; }
+          .ml-1\.5 { margin-left: 0.375rem; }
           .ml-2 { margin-left: 0.5rem; }
           .ml-3 { margin-left: 0.75rem; }
           .ml-4 { margin-left: 1rem; }
           .space-y-4 > * + * { margin-top: 0.85rem; }
-          .space-y-3 > * + * { margin-top: 0.75rem; }
-          .space-y-2\.5 > * + * { margin-top: 0.65rem; }
-          .space-y-2 > * + * { margin-top: 0.5rem; }
-          .space-y-1\.5 > * + * { margin-top: 0.375rem; }
+          .space-y-3\.5 > * + * { margin-top: 0.75rem; }
+          .space-y-3 > * + * { margin-top: 0.65rem; }
+          .space-y-2\.5 > * + * { margin-top: 0.55rem; }
+          .space-y-2 > * + * { margin-top: 0.45rem; }
+          .space-y-1\.5 > * + * { margin-top: 0.35rem; }
           .space-y-1 > * + * { margin-top: 0.25rem; }
           .space-y-0\.5 > * + * { margin-top: 0.125rem; }
           .flex { display: flex; }
@@ -330,8 +345,12 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
           .text-lg { font-size: 1.2rem; }
           .text-xl { font-size: 1.35rem; }
           .text-3xl { font-size: 1.875rem; }
+          .text-\[8pt\] { font-size: 8pt; }
+          .text-\[9\.5px\] { font-size: 9.5px; }
+          .text-\[10px\] { font-size: 10px; }
           .font-bold { font-weight: bold; }
           .font-semibold { font-weight: 600; }
+          .font-medium { font-weight: 500; }
           .font-mono { font-family: monospace; }
           .uppercase { text-transform: uppercase; }
           .tracking-wide { letter-spacing: 0.025em; }
@@ -346,22 +365,23 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
           .col-span-2 { grid-column: span 2; }
           .col-span-3 { grid-column: span 3; }
           .gap-2 { gap: 0.5rem; }
-          .gap-2\.5 { gap: 0.625rem; }
-          .gap-3 { gap: 0.75rem; }
+          .gap-2\.5 { gap: 0.6rem; }
+          .gap-3 { gap: 0.7rem; }
           .gap-x-3 { column-gap: 0.75rem; }
-          .gap-x-4 { column-gap: 1rem; }
-          .gap-x-6 { column-gap: 1.5rem; }
-          .gap-x-8 { column-gap: 2rem; }
+          .gap-x-4 { column-gap: 0.9rem; }
+          .gap-x-5 { column-gap: 1.15rem; }
+          .gap-x-6 { column-gap: 1.35rem; }
+          .gap-x-8 { column-gap: 1.85rem; }
           .gap-y-1 { row-gap: 0.25rem; }
-          .gap-y-1\.5 { row-gap: 0.375rem; }
-          .gap-y-2 { row-gap: 0.5rem; }
-          .gap-y-2\.5 { row-gap: 0.65rem; }
+          .gap-y-1\.5 { row-gap: 0.35rem; }
+          .gap-y-2 { row-gap: 0.45rem; }
+          .gap-y-2\.5 { row-gap: 0.55rem; }
           .gap-y-3 { row-gap: 0.82rem; }
           .italic { font-style: italic; }
-          .leading-normal { line-height: 1.5; }
+          .leading-normal { line-height: 1.45; }
           .leading-snug { line-height: 1.375; }
           .badge { border: 1px solid #000; padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; font-weight: bold; }
-          .dotted-line { display: inline-block; border-bottom: 1.5px dotted #000 !important; height: 20px; vertical-align: bottom; }
+          .dotted-line { display: inline-block; border-bottom: 1.5px dotted #000 !important; height: 22px; vertical-align: bottom; }
           h2, h3, p { margin: 0; }
           @media print {
             .print-paper { page-break-inside: avoid !important; break-inside: avoid !important; }

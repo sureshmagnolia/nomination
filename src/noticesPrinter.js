@@ -1026,20 +1026,20 @@ export function printBlankNominationForm(settings = {}) {
 
   const fillLine = (width = 'flex:1') => {
     if (width.startsWith('flex')) {
-      return `<span class="dotted-line" style="flex:1;display:inline-block;border-bottom:1.5px dotted #000;height:22px;vertical-align:bottom;margin-left:6px;"></span>`;
+      return `<span class="dotted-line" style="flex:1;display:inline-block;border-bottom:1.5px dotted #000;height:23px;vertical-align:bottom;margin-left:6px;"></span>`;
     }
-    return `<span class="dotted-line" style="width:${width};display:inline-block;border-bottom:1.5px dotted #000;height:22px;vertical-align:bottom;margin-left:6px;"></span>`;
+    return `<span class="dotted-line" style="width:${width};display:inline-block;border-bottom:1.5px dotted #000;height:23px;vertical-align:bottom;margin-left:6px;"></span>`;
   };
 
   const html = `
-  <div class="print-paper border border-slate-700 rounded-xl p-4 bg-slate-900 text-slate-200 space-y-3">
-    <div class="flex justify-between items-start text-sm pb-1.5 border-b border-white/10">
+  <div class="print-paper border border-slate-700 rounded-xl p-3.5 bg-slate-900 text-slate-200 space-y-2.5">
+    <div class="flex justify-between items-start text-sm pb-1 border-b border-white/10">
       <div>
         ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:44px;max-width:110px;margin-bottom:2px;display:block;object-fit:contain" alt="College Logo">` : ''}
         <p class="font-bold text-white text-base">${esc(collegeName)}</p>
         <p class="text-slate-400 text-xs">College Union Election ${esc(year)}</p>
       </div>
-      <div class="text-right space-y-1">
+      <div class="text-right space-y-0.5">
         <p class="text-slate-400 text-xs">Date: _____ / _____ / 202___</p>
         <span class="badge border border-slate-500 font-mono text-xs px-2.5 py-0.5">NOMINATION PAPER</span>
       </div>
@@ -1056,8 +1056,8 @@ export function printBlankNominationForm(settings = {}) {
       <div class="glass rounded-lg p-3 text-xs space-y-2 border border-white/10">
         <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-1">
           <h3 class="font-bold text-white uppercase text-xs tracking-wider">Candidate Details</h3>
-          <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2.5 py-0.5">
-            Electoral Roll Sl. #: <span class="dotted-line" style="display:inline-block;width:85px;height:18px;border-bottom:1.5px dotted #000;margin-left:4px;">&nbsp;</span>
+          <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2 py-0.5">
+            Electoral Roll Sl. #: <span class="dotted-line" style="display:inline-block;width:80px;height:18px;border-bottom:1.5px dotted #000;margin-left:4px;">&nbsp;</span>
           </span>
         </div>
         <div class="space-y-2">
@@ -1094,8 +1094,8 @@ export function printBlankNominationForm(settings = {}) {
       <div class="glass rounded-lg p-3 text-xs space-y-2 border border-white/10">
         <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-1">
           <h3 class="font-bold text-white uppercase text-xs tracking-wider">Proposer Details</h3>
-          <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2.5 py-0.5">
-            Electoral Roll Sl. #: <span class="dotted-line" style="display:inline-block;width:85px;height:18px;border-bottom:1.5px dotted #000;margin-left:4px;">&nbsp;</span>
+          <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2 py-0.5">
+            Electoral Roll Sl. #: <span class="dotted-line" style="display:inline-block;width:80px;height:18px;border-bottom:1.5px dotted #000;margin-left:4px;">&nbsp;</span>
           </span>
         </div>
         <div class="space-y-2">
@@ -1103,7 +1103,7 @@ export function printBlankNominationForm(settings = {}) {
             <span class="text-slate-400 font-semibold shrink-0">Name:</span>
             ${fillLine('flex:1')}
           </div>
-          <div class="grid grid-cols-3 gap-x-4">
+          <div class="grid grid-cols-3 gap-x-5">
             <div class="flex items-baseline">
               <span class="text-slate-400 font-semibold shrink-0">Adm No:</span>
               ${fillLine('flex:1')}
@@ -1119,7 +1119,7 @@ export function printBlankNominationForm(settings = {}) {
           </div>
           <div class="flex justify-between items-end pt-1.5 text-slate-400 text-xs border-t border-white/5">
             <span>Date: _____ / _____ / 202___</span>
-            <span><strong>Signature of Proposer:</strong> <span class="dotted-line" style="width:230px;border-bottom:1.5px solid #000;height:18px;margin-left:4px;">&nbsp;</span></span>
+            <span><strong>Signature of Proposer:</strong> <span class="dotted-line" style="width:230px;border-bottom:1.5px solid #000;height:20px;margin-left:4px;">&nbsp;</span></span>
           </div>
         </div>
       </div>
@@ -1128,8 +1128,8 @@ export function printBlankNominationForm(settings = {}) {
       <div class="glass rounded-lg p-3 text-xs space-y-2 border border-white/10">
         <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-1">
           <h3 class="font-bold text-white uppercase text-xs tracking-wider">Seconder Details</h3>
-          <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2.5 py-0.5">
-            Electoral Roll Sl. #: <span class="dotted-line" style="display:inline-block;width:85px;height:18px;border-bottom:1.5px dotted #000;margin-left:4px;">&nbsp;</span>
+          <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2 py-0.5">
+            Electoral Roll Sl. #: <span class="dotted-line" style="display:inline-block;width:80px;height:18px;border-bottom:1.5px dotted #000;margin-left:4px;">&nbsp;</span>
           </span>
         </div>
         <div class="space-y-2">
@@ -1137,7 +1137,7 @@ export function printBlankNominationForm(settings = {}) {
             <span class="text-slate-400 font-semibold shrink-0">Name:</span>
             ${fillLine('flex:1')}
           </div>
-          <div class="grid grid-cols-3 gap-x-4">
+          <div class="grid grid-cols-3 gap-x-5">
             <div class="flex items-baseline">
               <span class="text-slate-400 font-semibold shrink-0">Adm No:</span>
               ${fillLine('flex:1')}
@@ -1153,29 +1153,30 @@ export function printBlankNominationForm(settings = {}) {
           </div>
           <div class="flex justify-between items-end pt-1.5 text-slate-400 text-xs border-t border-white/5">
             <span>Date: _____ / _____ / 202___</span>
-            <span><strong>Signature of Seconder:</strong> <span class="dotted-line" style="width:230px;border-bottom:1.5px solid #000;height:18px;margin-left:4px;">&nbsp;</span></span>
+            <span><strong>Signature of Seconder:</strong> <span class="dotted-line" style="width:230px;border-bottom:1.5px solid #000;height:20px;margin-left:4px;">&nbsp;</span></span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Consent of Candidate -->
-    <div class="border-t border-white/10 pt-2.5 text-center space-y-1">
+    <div class="border-t border-white/10 pt-2 text-center space-y-1">
       <h3 class="font-bold text-white uppercase text-xs tracking-wider">Consent of Candidate</h3>
       <p class="text-xs text-slate-400">"I agree, if elected, to serve on the body to which I am proposed as a candidate."</p>
-      <div class="flex justify-around mt-2 text-xs text-slate-400">
-        <span><strong>Signature of Candidate:</strong> <span class="dotted-line" style="width:230px;border-bottom:1.5px solid #000;height:18px;margin-left:4px;">&nbsp;</span></span>
+      <div class="flex justify-around mt-1.5 text-xs text-slate-400">
+        <span><strong>Signature of Candidate:</strong> <span class="dotted-line" style="width:230px;border-bottom:1.5px solid #000;height:20px;margin-left:4px;">&nbsp;</span></span>
         <span><strong>Date:</strong> _____ / _____ / 202___</span>
       </div>
       <p class="text-[10px] text-slate-500 italic mt-0.5">(To be signed in front of the Returning Officer)</p>
     </div>
 
     <!-- Tear-off Dotted Line -->
-    <div class="relative my-2.5 text-center">
-      <div class="border-t-2 border-dashed border-slate-500 w-full absolute top-1/2"></div>
-      <span class="relative bg-slate-900 px-3 text-[8pt] text-slate-400 font-sans font-bold uppercase" style="white-space: nowrap;">
+    <div style="display:flex;align-items:center;margin:10px 0;">
+      <div style="flex:1;border-top:1.5px dashed #444;"></div>
+      <span style="padding:0 8px;font-size:8pt;font-weight:bold;text-transform:uppercase;white-space:nowrap;letter-spacing:0.02em;">
         ✂ Tear-off Acknowledgement Slip (To be signed &amp; returned to Candidate by Returning Officer) ✂
       </span>
+      <div style="flex:1;border-top:1.5px dashed #444;"></div>
     </div>
 
     <!-- RO Acknowledgement Slip -->
@@ -1186,7 +1187,7 @@ export function printBlankNominationForm(settings = {}) {
           <p class="text-[10px] text-slate-400">${esc(collegeName)} • College Union Election ${esc(year)}</p>
         </div>
         <div class="text-right font-mono text-[10px] text-slate-400">
-          <p>Receipt No: <span class="dotted-line" style="width:110px;height:14px;">&nbsp;</span></p>
+          <p>Receipt No: <span class="dotted-line" style="width:110px;height:15px;">&nbsp;</span></p>
         </div>
       </div>
       <div class="text-slate-300 text-xs leading-normal space-y-1">
@@ -1205,12 +1206,12 @@ export function printBlankNominationForm(settings = {}) {
           <span class="shrink-0 ml-2">at _____ : _____ AM/PM</span>
         </div>
       </div>
-      <div class="flex justify-between items-end pt-2 text-xs text-slate-400">
+      <div class="flex justify-between items-end pt-1.5 text-xs text-slate-400">
         <div>
           <p class="italic text-[9.5px] text-slate-500">(To be handed over to the candidate as official proof of submission)</p>
         </div>
         <div class="text-center">
-          <div style="border-top:1.5px dashed #000;width:230px;margin-bottom:3px;"></div>
+          <div style="border-top:1.5px dashed #000;width:220px;margin-top:18px;margin-bottom:3px;"></div>
           <p class="font-bold text-white text-[10px]">Signature &amp; Seal of Returning Officer</p>
         </div>
       </div>
