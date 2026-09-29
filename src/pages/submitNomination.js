@@ -751,10 +751,10 @@ export function buildNominationPaper(id, post, gender, dobDisplay, age, candidat
   </div>`;
 
   return `
-  <div class="print-paper border border-slate-700 rounded-xl p-4 bg-slate-900 text-slate-200 space-y-2">
-    <div class="flex justify-between items-start text-sm pb-1 border-b border-white/10">
+  <div class="print-paper border border-slate-700 rounded-xl p-4 bg-slate-900 text-slate-200 space-y-3">
+    <div class="flex justify-between items-start text-sm pb-1.5 border-b border-white/10">
       <div>
-        ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:40px;max-width:110px;margin-bottom:2px;display:block;object-fit:contain" alt="College Logo">` : ''}
+        ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:44px;max-width:110px;margin-bottom:2px;display:block;object-fit:contain" alt="College Logo">` : ''}
         <p class="font-bold text-white text-base">${esc(cName)}</p>
         <p class="text-slate-400 text-xs">College Union Election ${yearValue}</p>
       </div>
@@ -765,17 +765,15 @@ export function buildNominationPaper(id, post, gender, dobDisplay, age, candidat
     </div>
     <h2 class="text-center font-bold text-base text-white border-y border-white/10 py-1 uppercase tracking-wider">NOMINATION PAPER</h2>
     <p class="text-xs"><span class="font-semibold text-slate-400 w-36 inline-block">Post Applied For:</span> <strong class="text-white text-sm">${esc(post)}</strong></p>
-    <div class="space-y-2">
+    <div class="space-y-2.5">
       ${sectionBlock('Candidate', candidate, gender, dobDisplay, age)}
-      <div class="grid grid-cols-2 gap-2.5">
-        ${sectionBlock('Proposer', proposer)}
-        ${sectionBlock('Seconder', seconder)}
-      </div>
+      ${sectionBlock('Proposer', proposer)}
+      ${sectionBlock('Seconder', seconder)}
     </div>
-    <div class="border-t border-white/10 pt-2 text-center space-y-1">
+    <div class="border-t border-white/10 pt-2.5 text-center space-y-1">
       <h3 class="font-bold text-white text-xs uppercase tracking-wide">Consent of Candidate</h3>
       <p class="text-xs text-slate-300">"I agree, if elected, to serve on the body to which I am proposed as a candidate."</p>
-      <div class="flex justify-around mt-1.5 text-xs text-slate-400">
+      <div class="flex justify-around mt-2 text-xs text-slate-400">
         <p>Signature: _______________________</p>
         <p>Date: ______ / ______ / ________</p>
       </div>
@@ -786,16 +784,16 @@ export function buildNominationPaper(id, post, gender, dobDisplay, age, candidat
     </div>
 
     <!-- Tear-off Dotted Line -->
-    <div class="relative my-2 text-center">
+    <div class="relative my-2.5 text-center">
       <div class="border-t-2 border-dashed border-slate-500 w-full absolute top-1/2"></div>
-      <span class="relative bg-slate-900 px-3 text-[9px] text-slate-400 font-mono uppercase tracking-wider">
+      <span class="relative bg-slate-900 px-3 text-[8pt] text-slate-400 font-sans font-bold uppercase" style="white-space: nowrap;">
         ✂ Tear-off Acknowledgement Slip (To be signed &amp; returned to Candidate by Returning Officer) ✂
       </span>
     </div>
 
     <!-- RO Acknowledgement Slip -->
-    <div class="border border-white/20 rounded-lg p-2.5 bg-white/[0.03] space-y-1 text-xs">
-      <div class="flex justify-between items-start border-b border-white/10 pb-0.5">
+    <div class="border border-white/20 rounded-lg p-3 bg-white/[0.03] space-y-1.5 text-xs">
+      <div class="flex justify-between items-start border-b border-white/10 pb-1">
         <div>
           <p class="font-bold text-white text-xs uppercase tracking-wide">RECEIPT / ACKNOWLEDGEMENT SLIP</p>
           <p class="text-[10px] text-slate-400">${esc(cName)} • College Union Election ${yearValue}</p>
@@ -804,16 +802,21 @@ export function buildNominationPaper(id, post, gender, dobDisplay, age, candidat
           <p>Ref ID: <strong class="text-indigo-300 font-bold">${esc(id)}</strong></p>
         </div>
       </div>
-      <p class="text-slate-300 text-[11px] leading-snug">
-        Received the nomination paper of <strong>${esc(candName)}</strong> (Roll Sl. #${esc(candSlNo)}, Adm No: ${esc(candAdmNo)}, Class: ${esc(candClass)}) for the post of <strong>${esc(post)}</strong> on _____ / _____ / ${yearValue} at _____ : _____ AM/PM.
-      </p>
-      <div class="flex justify-between items-end pt-1 text-[10px] text-slate-400">
+      <div class="text-slate-300 text-xs leading-normal space-y-1">
+        <p>
+          Received nomination paper of Candidate: <strong class="text-white">${esc(candName)}</strong> (Roll Sl. #${esc(candSlNo)}, Adm No: <strong class="text-indigo-300 font-mono">${esc(candAdmNo)}</strong>, Class: ${esc(candClass)})
+        </p>
+        <p>
+          for the post of: <strong class="text-white">${esc(post)}</strong> on _____ / _____ / ${yearValue} at _____ : _____ AM/PM.
+        </p>
+      </div>
+      <div class="flex justify-between items-end pt-2 text-xs text-slate-400">
         <div>
           <p>Candidate: <strong class="text-white">${esc(candName)}</strong></p>
-          <p class="italic text-[9px] text-slate-500">(Keep this receipt safely as proof of submission)</p>
+          <p class="italic text-[9.5px] text-slate-500">(Keep this receipt safely as proof of submission)</p>
         </div>
-        <div class="text-right">
-          <p class="text-slate-500 mb-0.5">_________________________________________</p>
+        <div class="text-center">
+          <div style="border-top:1.5px dashed #000;width:230px;margin-bottom:3px;"></div>
           <p class="font-bold text-white text-[10px]">Signature &amp; Seal of Returning Officer</p>
         </div>
       </div>
@@ -826,28 +829,52 @@ function sectionBlock(label, s, gender = null, dob = null, age = null) {
   if (!s) return '';
   const slNo = s['Nominal Roll Serial Number'] || s.serial_number || s.SL_NO || '';
   const admNo = s['ADMISION NO'] || s['ADMISSION NO'] || s.admission_no || s.candidateAdmission || s.proposerAdmission || s.seconderAdmission || '';
+
+  if (label === 'Candidate') {
+    return `
+    <div class="glass rounded-lg p-3 text-xs space-y-2 border border-white/10">
+      <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-1">
+        <h3 class="font-bold text-white uppercase text-xs tracking-wider">Candidate Details</h3>
+        <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2.5 py-0.5">
+          Roll Sl. #${esc(slNo)}
+        </span>
+      </div>
+      <div class="space-y-1.5">
+        <p><span class="text-slate-400">Name:</span> <strong class="text-white text-xs">${esc(s['NAME'] || s.name || '')}</strong></p>
+        <div class="grid grid-cols-2 gap-x-6 gap-y-1">
+          <p><span class="text-slate-400">Admission No:</span> <strong class="text-indigo-300 font-mono">${esc(admNo || '–')}</strong></p>
+          <p><span class="text-slate-400">Class:</span> <span class="text-slate-200">${esc(s['CLASS'] || s.class || '')}</span></p>
+          <p><span class="text-slate-400">Dept:</span> <span class="text-slate-200">${esc(s['Dept'] || s.dept || 'N/A')}</span></p>
+          ${gender ? `<p><span class="text-slate-400">Gender:</span> <span class="text-slate-200">${esc(gender)}</span></p>` : ''}
+        </div>
+        <div class="flex items-center gap-6">
+          ${dob ? `<p><span class="text-slate-400">DOB:</span> <span class="text-slate-200">${esc(dob)}</span></p>` : ''}
+          ${age ? `<p><span class="text-slate-400">Age:</span> <strong class="text-emerald-400">${esc(age)}</strong></p>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }
+
   return `
-  <div class="glass rounded-lg p-2.5 text-xs space-y-1 border border-white/10">
-    <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-1.5">
-      <h3 class="font-bold text-white uppercase text-[11px] tracking-wider">${label} Details</h3>
-      <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-[10px] px-2 py-0.5">
+  <div class="glass rounded-lg p-3 text-xs space-y-2 border border-white/10">
+    <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-1">
+      <h3 class="font-bold text-white uppercase text-xs tracking-wider">${label} Details</h3>
+      <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-xs px-2.5 py-0.5">
         Roll Sl. #${esc(slNo)}
       </span>
     </div>
-    <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+    <div class="space-y-1.5">
       <p><span class="text-slate-400">Name:</span> <strong class="text-white text-xs">${esc(s['NAME'] || s.name || '')}</strong></p>
-      <p><span class="text-slate-400">Adm No:</span> <strong class="text-indigo-300 font-mono">${esc(admNo || '–')}</strong></p>
-      <p><span class="text-slate-400">Class:</span> <span class="text-slate-200">${esc(s['CLASS'] || s.class || '')}</span></p>
-      <p><span class="text-slate-400">Dept:</span> <span class="text-slate-200">${esc(s['Dept'] || s.dept || 'N/A')}</span></p>
-      ${gender ? `<p><span class="text-slate-400">Gender:</span> <span class="text-slate-200">${esc(gender)}</span></p>` : ''}
-      ${dob ? `<p><span class="text-slate-400">DOB:</span> <span class="text-slate-200">${esc(dob)}</span></p>` : ''}
-      ${age ? `<p class="col-span-2"><span class="text-slate-400">Age:</span> <strong class="text-emerald-400">${esc(age)}</strong></p>` : ''}
+      <div class="grid grid-cols-3 gap-x-4">
+        <p><span class="text-slate-400">Adm No:</span> <strong class="text-indigo-300 font-mono">${esc(admNo || '–')}</strong></p>
+        <p><span class="text-slate-400">Class:</span> <span class="text-slate-200">${esc(s['CLASS'] || s.class || '')}</span></p>
+        <p><span class="text-slate-400">Dept:</span> <span class="text-slate-200">${esc(s['Dept'] || s.dept || 'N/A')}</span></p>
+      </div>
+      <div class="flex justify-between items-end pt-1 text-slate-400 text-xs border-t border-white/5">
+        <span>Date: _____ / _____ / 202___</span>
+        <span>Signature: _________________________________________</span>
+      </div>
     </div>
-    ${label !== 'Candidate' ? `
-    <div class="flex justify-between mt-2 text-slate-500 text-[10px] pt-1 border-t border-white/5">
-      <span>Date: ___/___/____</span>
-      <span>Signature: ________________</span>
-    </div>` : ''}
   </div>`;
 }
 

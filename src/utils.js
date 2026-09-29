@@ -244,20 +244,20 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
       <head>
         <title>${title}</title>
         <style>
-          @page { size: A4 portrait; margin: 5mm 8mm; }
+          @page { size: A4 portrait; margin: 6mm 10mm; }
           * { box-sizing: border-box; }
           body {
             font-family: Arial, sans-serif;
             color: black !important;
             background: white !important;
-            font-size: 9.5pt;
+            font-size: 10pt;
             line-height: 1.35;
             margin: 0;
             padding: 0;
           }
           /* Reset dark theme classes to clean B&W for printing */
           * { color: black !important; background: transparent !important; border-color: #333 !important; }
-          .print-paper { width: 100%; margin: 0 auto; padding: 8px 12px; position: relative; }
+          .print-paper { width: 100%; margin: 0 auto; padding: 14px 18px 12px 18px; position: relative; }
           .watermark-global {
             position: fixed;
             top: 50%;
@@ -277,7 +277,7 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
           .border-y { border-top: 1px solid #333; border-bottom: 1px solid #333; }
           .border-t { border-top: 1px solid #333; }
           .rounded-lg, .rounded-xl { border-radius: 4px; }
-          .p-8 { padding: 1.25rem 1.5rem; }
+          .p-8 { padding: 1.5rem 1.75rem; }
           .p-4 { padding: 0.85rem 1rem; }
           .p-3 { padding: 0.65rem 0.85rem; }
           .p-3\.5 { padding: 11px 15px 13px 15px; }
@@ -286,23 +286,33 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
           .pt-6 { padding-top: 1.25rem; }
           .pb-0\.5 { padding-bottom: 0.125rem; }
           .pb-1 { padding-bottom: 0.25rem; }
-          .pb-1\.5 { padding-bottom: 0.35rem; }
+          .pb-1\.5 { padding-bottom: 0.375rem; }
           .pb-2 { padding-bottom: 0.5rem; }
           .pb-3 { padding-bottom: 0.75rem; }
+          .pt-1 { padding-top: 0.25rem; }
+          .pt-1\.5 { padding-top: 0.375rem; }
+          .pt-2 { padding-top: 0.5rem; }
           .mt-1 { margin-top: 0.25rem; }
+          .mt-1\.5 { margin-top: 0.375rem; }
           .mt-2 { margin-top: 0.5rem; }
           .mt-3 { margin-top: 0.75rem; }
           .mt-3\.5 { margin-top: 0.85rem; }
           .mt-4 { margin-top: 1rem; }
           .mt-6 { margin-top: 1.25rem; }
+          .mb-0\.5 { margin-bottom: 0.125rem; }
           .mb-1 { margin-bottom: 0.25rem; }
           .mb-1\.5 { margin-bottom: 0.35rem; }
           .mb-2 { margin-bottom: 0.5rem; }
+          .ml-2 { margin-left: 0.5rem; }
+          .ml-3 { margin-left: 0.75rem; }
+          .ml-4 { margin-left: 1rem; }
           .space-y-4 > * + * { margin-top: 0.85rem; }
-          .space-y-3 > * + * { margin-top: 0.8rem; }
-          .space-y-2\.5 > * + * { margin-top: 0.7rem; }
-          .space-y-2 > * + * { margin-top: 0.55rem; }
+          .space-y-3 > * + * { margin-top: 0.75rem; }
+          .space-y-2\.5 > * + * { margin-top: 0.65rem; }
+          .space-y-2 > * + * { margin-top: 0.5rem; }
+          .space-y-1\.5 > * + * { margin-top: 0.375rem; }
           .space-y-1 > * + * { margin-top: 0.25rem; }
+          .space-y-0\.5 > * + * { margin-top: 0.125rem; }
           .flex { display: flex; }
           .flex-1 { flex: 1 1 0%; }
           .shrink-0 { flex-shrink: 0; }
@@ -311,26 +321,30 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
           .items-start { align-items: flex-start; }
           .items-center { align-items: center; }
           .items-baseline { align-items: baseline; }
+          .items-end { align-items: flex-end; }
           .text-center { text-align: center; }
           .text-right { text-align: right; }
-          .text-xs { font-size: 0.82rem; }
-          .text-sm { font-size: 0.92rem; }
-          .text-base { font-size: 1rem; }
-          .text-lg { font-size: 1.15rem; }
-          .text-xl { font-size: 1.25rem; }
+          .text-xs { font-size: 0.85rem; }
+          .text-sm { font-size: 0.95rem; }
+          .text-base { font-size: 1.05rem; }
+          .text-lg { font-size: 1.2rem; }
+          .text-xl { font-size: 1.35rem; }
           .text-3xl { font-size: 1.875rem; }
           .font-bold { font-weight: bold; }
           .font-semibold { font-weight: 600; }
           .font-mono { font-family: monospace; }
           .uppercase { text-transform: uppercase; }
           .tracking-wide { letter-spacing: 0.025em; }
+          .tracking-wider { letter-spacing: 0.05em; }
           .tracking-widest { letter-spacing: 0.08em; }
           .w-40 { width: 10rem; }
           .w-36 { width: 9rem; }
           .inline-block { display: inline-block; }
           .grid { display: grid; }
           .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+          .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
           .col-span-2 { grid-column: span 2; }
+          .col-span-3 { grid-column: span 3; }
           .gap-2 { gap: 0.5rem; }
           .gap-2\.5 { gap: 0.625rem; }
           .gap-3 { gap: 0.75rem; }
@@ -344,8 +358,10 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
           .gap-y-2\.5 { row-gap: 0.65rem; }
           .gap-y-3 { row-gap: 0.82rem; }
           .italic { font-style: italic; }
-          .badge { border: 1px solid #000; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
-          .dotted-line { display: inline-block; border-bottom: 1.5px dotted #000 !important; height: 24px; vertical-align: bottom; }
+          .leading-normal { line-height: 1.5; }
+          .leading-snug { line-height: 1.375; }
+          .badge { border: 1px solid #000; padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; font-weight: bold; }
+          .dotted-line { display: inline-block; border-bottom: 1.5px dotted #000 !important; height: 20px; vertical-align: bottom; }
           h2, h3, p { margin: 0; }
           @media print {
             .print-paper { page-break-inside: avoid !important; break-inside: avoid !important; }
