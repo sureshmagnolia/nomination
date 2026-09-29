@@ -1158,6 +1158,40 @@ export function printBlankNominationForm(settings = {}) {
       </div>
       <p class="text-xs text-slate-500 italic mt-2">(To be signed in front of the Returning Officer)</p>
     </div>
+
+    <!-- Tear-off Dotted Line -->
+    <div class="relative my-3 text-center">
+      <div class="border-t-2 border-dashed border-slate-500 w-full absolute top-1/2"></div>
+      <span class="relative bg-slate-900 px-3 text-[10px] text-slate-400 font-mono uppercase tracking-wider">
+        ✂ Tear-off Acknowledgement Slip (To be signed &amp; returned to Candidate by Returning Officer) ✂
+      </span>
+    </div>
+
+    <!-- RO Acknowledgement Slip -->
+    <div class="border border-white/20 rounded-lg p-3 bg-white/[0.03] space-y-1.5 text-xs">
+      <div class="flex justify-between items-start border-b border-white/10 pb-1">
+        <div>
+          <p class="font-bold text-white text-xs uppercase tracking-wide">RECEIPT / ACKNOWLEDGEMENT SLIP</p>
+          <p class="text-[10px] text-slate-400">${esc(collegeName)} • College Union Election ${esc(year)}</p>
+        </div>
+        <div class="text-right font-mono text-[10px] text-slate-400">
+          <p>Receipt No: _________________</p>
+        </div>
+      </div>
+      <div class="text-slate-300 text-[11px] leading-snug space-y-1">
+        <p>Received nomination paper of Candidate: <span class="dotted-line" style="width:230px;height:16px;">&nbsp;</span> (Roll Sl. #: <span class="dotted-line" style="width:60px;height:16px;">&nbsp;</span>, Adm No: <span class="dotted-line" style="width:70px;height:16px;">&nbsp;</span>)</p>
+        <p>for the post of: <span class="dotted-line" style="width:250px;height:16px;">&nbsp;</span> on _____ / _____ / 202___ at _____ : _____ AM/PM.</p>
+      </div>
+      <div class="flex justify-between items-end pt-2 text-[10px] text-slate-400">
+        <div>
+          <p class="italic text-[9px] text-slate-500">(To be handed over to the candidate as official proof of submission)</p>
+        </div>
+        <div class="text-right">
+          <p class="text-slate-500 mb-0.5">_________________________________________</p>
+          <p class="font-bold text-white text-[10px]">Signature &amp; Seal of Returning Officer</p>
+        </div>
+      </div>
+    </div>
   </div>
   
   <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-4" style="page-break-before: always; margin-top: 20px;">

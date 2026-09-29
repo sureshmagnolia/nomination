@@ -777,10 +777,44 @@ export function buildNominationPaper(id, post, gender, dobDisplay, age, candidat
         <p>Signature: _______________________</p>
         <p>Date: ______ / ______ / ________</p>
       </div>
-      <p class="text-xs text-slate-500 italic mb-4">(To be signed in front of the Returning Officer)</p>
+      <p class="text-xs text-slate-500 italic mb-2">(To be signed in front of the Returning Officer)</p>
     </div>
-    <div class="border-t border-white/10 pt-2 text-right">
+    <div class="border-t border-white/10 pt-1 text-right">
       <p class="text-[10px] text-slate-500 font-mono">Ref ID: ${esc(id)}</p>
+    </div>
+
+    <!-- Tear-off Dotted Line -->
+    <div class="relative my-3 text-center">
+      <div class="border-t-2 border-dashed border-slate-500 w-full absolute top-1/2"></div>
+      <span class="relative bg-slate-900 px-3 text-[10px] text-slate-400 font-mono uppercase tracking-wider">
+        ✂ Tear-off Acknowledgement Slip (To be signed &amp; returned to Candidate by Returning Officer) ✂
+      </span>
+    </div>
+
+    <!-- RO Acknowledgement Slip -->
+    <div class="border border-white/20 rounded-lg p-3 bg-white/[0.03] space-y-1.5 text-xs">
+      <div class="flex justify-between items-start border-b border-white/10 pb-1">
+        <div>
+          <p class="font-bold text-white text-xs uppercase tracking-wide">RECEIPT / ACKNOWLEDGEMENT SLIP</p>
+          <p class="text-[10px] text-slate-400">${esc(cName)} • College Union Election ${yearValue}</p>
+        </div>
+        <div class="text-right font-mono text-[10px] text-slate-400">
+          <p>Ref ID: <strong class="text-indigo-300 font-bold">${esc(id)}</strong></p>
+        </div>
+      </div>
+      <p class="text-slate-300 text-[11px] leading-snug">
+        Received the nomination paper of <strong>${esc(candName)}</strong> (Roll Sl. #${esc(candSlNo)}, Adm No: ${esc(candAdmNo)}, Class: ${esc(candClass)}) for the post of <strong>${esc(post)}</strong> on _____ / _____ / ${yearValue} at _____ : _____ AM/PM.
+      </p>
+      <div class="flex justify-between items-end pt-2 text-[10px] text-slate-400">
+        <div>
+          <p>Candidate: <strong class="text-white">${esc(candName)}</strong></p>
+          <p class="italic text-[9px] text-slate-500">(Keep this receipt safely as proof of submission)</p>
+        </div>
+        <div class="text-right">
+          <p class="text-slate-500 mb-0.5">_________________________________________</p>
+          <p class="font-bold text-white text-[10px]">Signature &amp; Seal of Returning Officer</p>
+        </div>
+      </div>
     </div>
   </div>
   ${certHtml}`;
