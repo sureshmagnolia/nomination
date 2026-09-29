@@ -244,20 +244,20 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
       <head>
         <title>${title}</title>
         <style>
-          @page { size: A4 portrait; margin: 6mm 10mm; }
+          @page { size: A4 portrait; margin: 5mm 8mm; }
           * { box-sizing: border-box; }
           body {
             font-family: Arial, sans-serif;
             color: black !important;
             background: white !important;
-            font-size: 11pt;
-            line-height: 1.4;
+            font-size: 9.5pt;
+            line-height: 1.35;
             margin: 0;
             padding: 0;
           }
           /* Reset dark theme classes to clean B&W for printing */
           * { color: black !important; background: transparent !important; border-color: #333 !important; }
-          .print-paper { width: 100%; margin: 0 auto; padding: 15px 18px 18px 18px; position: relative; }
+          .print-paper { width: 100%; margin: 0 auto; padding: 8px 12px; position: relative; }
           .watermark-global {
             position: fixed;
             top: 50%;
@@ -281,7 +281,10 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
           .p-4 { padding: 0.85rem 1rem; }
           .p-3 { padding: 0.65rem 0.85rem; }
           .p-3\.5 { padding: 11px 15px 13px 15px; }
+          .p-2\.5 { padding: 0.5rem 0.65rem; }
+          .p-2 { padding: 0.35rem 0.5rem; }
           .pt-6 { padding-top: 1.25rem; }
+          .pb-0\.5 { padding-bottom: 0.125rem; }
           .pb-1 { padding-bottom: 0.25rem; }
           .pb-1\.5 { padding-bottom: 0.35rem; }
           .pb-2 { padding-bottom: 0.5rem; }
@@ -323,10 +326,15 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
           .tracking-wide { letter-spacing: 0.025em; }
           .tracking-widest { letter-spacing: 0.08em; }
           .w-40 { width: 10rem; }
+          .w-36 { width: 9rem; }
           .inline-block { display: inline-block; }
           .grid { display: grid; }
           .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
           .col-span-2 { grid-column: span 2; }
+          .gap-2 { gap: 0.5rem; }
+          .gap-2\.5 { gap: 0.625rem; }
+          .gap-3 { gap: 0.75rem; }
+          .gap-x-3 { column-gap: 0.75rem; }
           .gap-x-4 { column-gap: 1rem; }
           .gap-x-6 { column-gap: 1.5rem; }
           .gap-x-8 { column-gap: 2rem; }
