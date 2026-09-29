@@ -55,8 +55,8 @@ export async function renderAdminBallots(container) {
 
   const getPostIcon = (name) => {
     const n = String(name || '').toLowerCase();
-    if (n.includes('chairman') && !n.includes('vice')) return '🏆';
-    if (n.includes('vice chairman')) return '🥈';
+    if (n.includes('chair') && !n.includes('vice')) return '🏆';
+    if (n.includes('vice') && n.includes('chair')) return '🥈';
     if (n.includes('joint secretary')) return '🤝';
     if (n.includes('secretary') && !n.includes('fine arts')) return '📝';
     if (n.includes('councillor') || n.includes('uuc')) return '🏛️';
@@ -780,16 +780,7 @@ export async function renderAdminBallots(container) {
       const prefix = partConfig.shortCode === 'G' ? 'G' : (partConfig.shortCode || 'G1') + '-';
       const partTitle = partConfig.title || 'OFFICIAL BALLOT PAPER (GENERAL)';
 
-      const sorted = [...partPosts].sort((a, b) => {
-        const aL = a.post.toLowerCase(), bL = b.post.toLowerCase();
-        if (aL.includes('chairman') && !aL.includes('vice')) return -1;
-        if (bL.includes('chairman') && !bL.includes('vice')) return 1;
-        if (aL.includes('vice chairman')) return -1;
-        if (bL.includes('vice chairman')) return 1;
-        if (aL.includes('university union councillor') || aL.includes('uuc')) return 1;
-        if (bL.includes('university union councillor') || bL.includes('uuc')) return -1;
-        return 0;
-      });
+      const sorted = [...partPosts].sort((a, b) => comparePosts(a, b));
 
       let col1Html = '', col2Html = '';
       sorted.forEach((p, idx) => {

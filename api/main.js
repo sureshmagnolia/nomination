@@ -457,8 +457,8 @@ function getPostOrderRank(p) {
   }
   
   // Executive / General posts
-  if (n.includes('chairman') && !n.includes('vice')) return 1;
-  if (n.includes('vice chairman') || n.includes('vice-chairman')) return 2;
+  if (n.includes('chair') && !n.includes('vice')) return 1;
+  if (n.includes('vice') && n.includes('chair')) return 2;
   if (n.includes('general secretary') || (n.includes('secretary') && !n.includes('joint') && !n.includes('fine') && !n.includes('association'))) return 3;
   if (n.includes('joint secretary') || n.includes('joint-secretary')) return 4;
   if (n.includes('student editor') || n.includes('magazine') || n.includes('editor')) return 5;
@@ -1131,7 +1131,7 @@ export default async function handler(req, res) {
             const pName = String(p.post || '').trim().toLowerCase();
             return !assocSec.includes(p) && (pName.includes('representative') || pName.includes('rep') || p.yearRestriction);
           });
-          const mainOffice = freshPosts.filter(p => !assocSec.includes(p) && !classRep.includes(p));
+          const mainOffice = sortPosts(freshPosts.filter(p => !assocSec.includes(p) && !classRep.includes(p)));
 
           const fmt = (p) => {
             const pN = String(p.post || '').trim().toUpperCase();

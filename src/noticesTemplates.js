@@ -5,6 +5,7 @@
  */
 
 import { CONFIG } from './config.js';
+import { sortPosts } from './utils.js';
 
 export function getDefaultStatutoryNotices(settings = {}, schedule = {}, booths = [], posts = []) {
   const year = String(settings.electionYear || '').trim() || (schedule && schedule.electionYear) || new Date().getFullYear().toString();
@@ -29,7 +30,7 @@ export function getDefaultStatutoryNotices(settings = {}, schedule = {}, booths 
   });
 
   // Main Office Bearers: executive & campus-wide union posts
-  const mainOfficePosts = configuredPosts.filter(p => !assocSecPosts.includes(p) && !classRepPosts.includes(p));
+  const mainOfficePosts = sortPosts(configuredPosts.filter(p => !assocSecPosts.includes(p) && !classRepPosts.includes(p)));
 
   const formatPostLine = (p) => {
     const postName = String(p.post || '').trim().toUpperCase();
