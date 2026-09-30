@@ -253,7 +253,8 @@ async function getFullElectionStatus() {
   const isWithActive      = evaluateStageStatus(withOverride || 'AUTO', 'false', withStart, withEnd);
   const isFinalListActive = evaluateStageStatus(finalListOverride || 'AUTO', legacyFinalPub || 'false', finalListStart, finalListEnd);
   const isPollingActive   = evaluateStageStatus(pollingOverride || 'AUTO', 'false', pollingStart, pollingEnd);
-  const isResultsActive   = evaluateStageStatus(resultsOverride || 'AUTO', legacyResPub || 'false', resultsStart, resultsEnd);
+  // Results strictly go live ONLY on manual push/publish by the Admin. No automatic scheduled live.
+  const isResultsActive   = (resultsOverride === 'FORCE_OPEN' || legacyResPub === 'true') && resultsOverride !== 'FORCE_CLOSED';
 
   return {
     electionYear: electionYear || new Date().getFullYear().toString(),
@@ -306,10 +307,10 @@ async function getFullElectionStatus() {
     pollingOverride: pollingOverride || 'AUTO',
     isPollingActive,
 
-    // 8. Results & Counting
+    // 8. Results & Counting (Manual Push Only - No auto-scheduled live)
     resultsStart: resultsStart || '',
     resultsEnd: resultsEnd || '',
-    resultsOverride: resultsOverride || 'AUTO',
+    resultsOverride: resultsOverride || (isResultsActive ? 'FORCE_OPEN' : 'FORCE_CLOSED'),
     isResultsActive,
     resultsPublished: isResultsActive ? 'true' : 'false',
     countingActive: countingActive || 'false',
@@ -798,6 +799,7 @@ export default async function handler(req, res) {
       await sql`INSERT INTO settings (key, value) VALUES ('validListPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('finalListPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('resultsPublished', 'false') ON CONFLICT (key) DO NOTHING;`;
+      await sql`INSERT INTO settings (key, value) VALUES ('resultsOverride', 'FORCE_CLOSED') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('resultsLocked', 'false') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('countingActive', 'false') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('nominationStart', '') ON CONFLICT (key) DO NOTHING;`;
@@ -1210,11 +1212,10 @@ All students are directed to strictly adhere to the University Code of Conduct, 
     }
 
     if (action === 'getResults') {
-      const resOverride = (await getSetting('resultsOverride')) || 'AUTO';
+      const resOverride = (await getSetting('resultsOverride')) || 'FORCE_CLOSED';
       const legacyPublished = await getSetting('resultsPublished');
-      const resultsStart = await getSetting('resultsStart');
-      const resultsEnd = await getSetting('resultsEnd');
-      const published = evaluateStageStatus(resOverride, legacyPublished, resultsStart, resultsEnd);
+      // Results strictly go live ONLY on manual push/publish by the Admin. No automatic scheduled live.
+      const published = (resOverride === 'FORCE_OPEN' || legacyPublished === 'true') && resOverride !== 'FORCE_CLOSED';
       const countingActive = (await getSetting('countingActive')) === 'true';
       const locked = (await getSetting('resultsLocked')) === 'true';
       if (!published) {
@@ -1727,10 +1728,14 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       if (body.pollingEnd !== undefined) updates.pollingEnd = body.pollingEnd || '';
       if (body.pollingOverride !== undefined) updates.pollingOverride = body.pollingOverride || 'AUTO';
 
-      // 8. Results & Counting
+      // 8. Results & Counting (Manual Push Only - No auto-scheduled live)
       if (body.resultsStart !== undefined) updates.resultsStart = body.resultsStart || '';
       if (body.resultsEnd !== undefined) updates.resultsEnd = body.resultsEnd || '';
-      if (body.resultsOverride !== undefined) updates.resultsOverride = body.resultsOverride || 'AUTO';
+      if (body.resultsOverride !== undefined) {
+        const rOv = body.resultsOverride;
+        updates.resultsOverride = rOv === 'FORCE_OPEN' ? 'FORCE_OPEN' : 'FORCE_CLOSED';
+        updates.resultsPublished = rOv === 'FORCE_OPEN' ? 'true' : 'false';
+      }
       if (body.countingActive !== undefined) {
         updates.countingActive = body.countingActive === true || body.countingActive === 'true' ? 'true' : 'false';
       }
@@ -1776,8 +1781,13 @@ All students are directed to strictly adhere to the University Code of Conduct, 
         if (mode === 'FORCE_OPEN') await setSetting('finalListPublished', 'true');
         else if (mode === 'FORCE_CLOSED') await setSetting('finalListPublished', 'false');
       } else if (stage === 'results') {
-        if (mode === 'FORCE_OPEN') await setSetting('resultsPublished', 'true');
-        else if (mode === 'FORCE_CLOSED') await setSetting('resultsPublished', 'false');
+        if (mode === 'FORCE_OPEN') {
+          await setSetting('resultsPublished', 'true');
+          await setSetting('resultsOverride', 'FORCE_OPEN');
+        } else {
+          await setSetting('resultsPublished', 'false');
+          await setSetting('resultsOverride', 'FORCE_CLOSED');
+        }
       }
 
       return jsonOut(res, { ok: true, stage, mode });

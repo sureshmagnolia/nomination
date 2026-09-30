@@ -55,7 +55,27 @@ function renderScheduleHub(main, pwd, schedule) {
   };
 
   // Helper to compute stage status badge and description
-  const computeStageMeta = (override, startIso, endIso, legacyActive) => {
+  const computeStageMeta = (override, startIso, endIso, legacyActive, stageId = '') => {
+    // 8. Results is strictly manual push only — never auto-scheduled live
+    if (stageId === 'results') {
+      const isLive = (override === 'FORCE_OPEN' || legacyActive === 'true' || legacyActive === true) && override !== 'FORCE_CLOSED';
+      if (isLive) {
+        return {
+          badge: '<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold animate-pulse">📢 RESULTS ARE LIVE (Manually Pushed)</span>',
+          statusText: 'Published publicly to student portal via Admin Manual Push',
+          color: 'emerald',
+          isActive: true
+        };
+      } else {
+        return {
+          badge: '<span class="badge bg-slate-700 text-slate-300 border border-slate-600 text-xs font-bold">🔒 RESULTS HIDDEN (Manual Push Only)</span>',
+          statusText: 'Offline. Results will ONLY go live when Admin manually clicks Push Results Live.',
+          color: 'slate',
+          isActive: false
+        };
+      }
+    }
+
     const now = new Date();
     const s = startIso ? new Date(startIso) : null;
     const e = endIso ? new Date(endIso) : null;
@@ -508,7 +528,7 @@ function renderScheduleHub(main, pwd, schedule) {
                 <span class="text-xl">📊</span>
                 <h4 class="font-bold text-white text-base">8. Vote Counting & Official Results Declaration</h4>
               </div>
-              <p class="text-slate-400 text-xs mt-0.5">Control "Counting in Progress" live ticker and scheduled or instant release of election results.</p>
+              <p class="text-slate-400 text-xs mt-0.5">Strictly Manual Release: Results go live ONLY when manually pushed by Admin / Returning Officer. No automatic scheduled release.</p>
             </div>
             <div id="badge_results"></div>
           </div>
@@ -516,8 +536,9 @@ function renderScheduleHub(main, pwd, schedule) {
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             <div class="lg:col-span-7 space-y-4">
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Scheduled Results Release Date & Time</label>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Scheduled Results Release Date & Time (Display Notice)</label>
                 <input type="datetime-local" id="resultsStart" class="field w-full text-xs font-mono" value="${toLocal(schedule.resultsStart)}">
+                <p class="text-[11px] text-slate-400 mt-1">📅 For election calendar & notice display only. Results will NOT auto-publish on this date/time. Release requires Admin manual push.</p>
               </div>
               <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-between gap-3">
                 <div>
@@ -530,18 +551,18 @@ function renderScheduleHub(main, pwd, schedule) {
                 </label>
               </div>
             </div>
-            <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-2">
-              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Real-Time Override:</div>
+            <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-3">
+              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Real-Time Live Push:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override ${schedule.resultsOverride === 'FORCE_OPEN' ? 'bg-emerald-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="results" data-mode="FORCE_OPEN">
-                  ⚡ Force Publish Results
+                <button type="button" class="btn btn-sm btn-override ${schedule.resultsPublished === 'true' || schedule.resultsOverride === 'FORCE_OPEN' ? 'bg-emerald-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="results" data-mode="FORCE_OPEN">
+                  📢 Push Results Live (Manual)
                 </button>
-                <button type="button" class="btn btn-sm btn-override ${schedule.resultsOverride === 'FORCE_CLOSED' ? 'bg-rose-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="results" data-mode="FORCE_CLOSED">
-                  🛑 Force Hide Results
+                <button type="button" class="btn btn-sm btn-override ${schedule.resultsPublished !== 'true' && schedule.resultsOverride !== 'FORCE_OPEN' ? 'bg-rose-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="results" data-mode="FORCE_CLOSED">
+                  🔒 Keep Results Hidden / Offline
                 </button>
-                <button type="button" class="btn btn-sm btn-override ${(!schedule.resultsOverride || schedule.resultsOverride === 'AUTO') ? 'bg-indigo-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="results" data-mode="AUTO">
-                  🔄 Auto (Schedule)
-                </button>
+              </div>
+              <div class="text-[11px] text-amber-300/90 font-medium bg-amber-500/10 p-2 rounded border border-amber-500/20">
+                🛡️ Safety Guarantee: Results cannot go live automatically on schedule. Only manual push will publish them to students.
               </div>
             </div>
           </div>
@@ -572,7 +593,7 @@ function renderScheduleHub(main, pwd, schedule) {
     withdrawal: schedule.withdrawalOverride || 'AUTO',
     finalList: schedule.finalListOverride || 'AUTO',
     polling: schedule.pollingOverride || 'AUTO',
-    results: schedule.resultsOverride || 'AUTO'
+    results: (schedule.resultsPublished === 'true' || schedule.resultsOverride === 'FORCE_OPEN') ? 'FORCE_OPEN' : 'FORCE_CLOSED'
   };
 
   const updateBadgesAndPipeline = () => {
@@ -653,7 +674,7 @@ function renderScheduleHub(main, pwd, schedule) {
 
     // 1. Update individual card badges
     stages.forEach(st => {
-      const meta = computeStageMeta(st.override, st.start, st.end, st.legacy);
+      const meta = computeStageMeta(st.override, st.start, st.end, st.legacy, st.id);
       const bEl = main.querySelector(`#badge_${st.id}`);
       if (bEl) bEl.innerHTML = meta.badge;
 
@@ -675,7 +696,7 @@ function renderScheduleHub(main, pwd, schedule) {
     const qGrid = main.querySelector('#quickPipelineGrid');
     if (qGrid) {
       qGrid.innerHTML = stages.map((st, i) => {
-        const meta = computeStageMeta(st.override, st.start, st.end, st.legacy);
+        const meta = computeStageMeta(st.override, st.start, st.end, st.legacy, st.id);
         const bg = meta.isActive ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-white/10 bg-white/5';
         const txtCol = meta.isActive ? 'text-emerald-400' : 'text-slate-400';
         return `
@@ -711,6 +732,9 @@ function renderScheduleHub(main, pwd, schedule) {
       try {
         await api.adminSetStageOverride(pwd, stage, mode);
         overrides[stage] = mode;
+        if (stage === 'results') {
+          schedule.resultsPublished = mode === 'FORCE_OPEN' ? 'true' : 'false';
+        }
         showToast(`${stage.toUpperCase()} override updated to ${mode}!`, 'success');
         updateBadgesAndPipeline();
       } catch (err) {
