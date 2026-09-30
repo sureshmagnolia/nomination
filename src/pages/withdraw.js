@@ -6,7 +6,7 @@ import { api } from '../api.js';
 import { router } from '../router.js';
 import { esc, setLoading, showToast, triggerPrint, todayFormatted } from '../utils.js';
 import { CONFIG } from '../config.js';
-import { printBlankWithdrawalForm } from '../noticesPrinter.js';
+import { printBlankWithdrawalForm, buildWithdrawalPaper } from '../noticesPrinter.js';
 
 export async function renderWithdraw(container) {
   let year = new Date().getFullYear();
@@ -177,7 +177,7 @@ export async function renderWithdraw(container) {
       setLoading(fetchBtn, true, 'Fetch Nomination Details');
       try {
         const nom = await api.getNomination(id, adm);
-        showDetails(area.querySelector('#nominationDetails'), nom, id, adm, collegeName);
+        showDetails(area.querySelector('#nominationDetails'), nom, id, adm, collegeName, year, sets?.collegeLogo || '');
       } catch (e) {
         area.querySelector('#nominationDetails').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
       } finally {
@@ -190,7 +190,7 @@ export async function renderWithdraw(container) {
   }
 }
 
-function showDetails(area, nom, id, adm, collegeName = null) {
+function showDetails(area, nom, id, adm, collegeName = null, year = null, collegeLogo = '') {
   if (nom.status !== 'Valid') {
     area.innerHTML = `<div class="alert alert-warning">⚠ This nomination has status <strong>${esc(nom.status)}</strong>. Only <strong>Valid</strong> nominations can be withdrawn.</div>`;
     return;
@@ -230,10 +230,10 @@ function showDetails(area, nom, id, adm, collegeName = null) {
           <button id="printWithdrawal" class="btn btn-secondary">🖨️ Print Withdrawal Form</button>
         </div>
         <div class="print-zone mt-4">
-          ${buildWithdrawalPaper(id, nom, collegeName)}
+          ${buildWithdrawalPaper(id, nom, collegeName, year, false, collegeLogo)}
         </div>`;
       area.querySelector('#printWithdrawal').addEventListener('click', () => {
-        triggerPrint(area.querySelector('.print-zone').innerHTML, 'Withdrawal Form');
+        triggerPrint(buildWithdrawalPaper(id, nom, collegeName, year, false, collegeLogo), 'Withdrawal Form', collegeLogo);
       });
       showToast('Withdrawal request submitted!', 'success');
     } catch (e) {
@@ -256,50 +256,6 @@ function triggerBlankWithdrawalAlert(sets = {}) {
   if (proceed) {
     printBlankWithdrawalForm(sets);
   }
-}
-
-function buildWithdrawalPaper(id, nom, collegeName = null) {
-  const today = todayFormatted();
-  const name = nom.candidate?.NAME || nom.candidateName || 'N/A';
-  const cls  = nom.candidate?.CLASS || nom.candidateClass || 'N/A';
-  const dept = nom.candidate?.Dept || nom.candidateDept || 'N/A';
-  const cName = collegeName || CONFIG.COLLEGE_NAME;
-
-  return `
-  <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-5">
-    <div class="flex justify-between text-sm">
-      <div>
-        <p class="font-bold text-white text-base">${esc(cName)}</p>
-        <p class="text-slate-400">College Union Election — Withdrawal Form</p>
-      </div>
-      <p class="text-slate-400 text-xs">Date: ${today}</p>
-    </div>
-    <h2 class="text-center font-bold text-xl text-white border-y border-white/10 py-3">WITHDRAWAL OF NOMINATION</h2>
-    <div class="space-y-2 text-sm">
-      <p><span class="text-slate-400 w-40 inline-block">Nomination ID:</span> <strong class="font-mono text-indigo-300 text-lg">${esc(id)}</strong></p>
-      <p><span class="text-slate-400 w-40 inline-block">Post:</span> <strong class="text-white">${esc(nom.post)}</strong></p>
-      <p><span class="text-slate-400 w-40 inline-block">Candidate Name:</span> ${esc(name)}</p>
-      <p><span class="text-slate-400 w-40 inline-block">Class:</span> ${esc(cls)}</p>
-      <p><span class="text-slate-400 w-40 inline-block">Department:</span> ${esc(dept)}</p>
-    </div>
-    <p class="text-sm text-slate-300 border border-white/10 rounded-lg p-4">
-      I, <strong>${esc(name)}</strong>, hereby withdraw my nomination for the post of <strong>${esc(nom.post)}</strong> in the College Union Election.
-    </p>
-    <div class="flex justify-around mt-8 text-sm text-slate-400">
-      <div class="text-center">
-        <p class="mb-8">___________________________</p>
-        <p>Signature of Candidate</p>
-      </div>
-      <div class="text-center">
-        <p class="mb-8">______ / ______ / ________</p>
-        <p>Date</p>
-      </div>
-      <div class="text-center">
-        <p class="mb-8">___________________________</p>
-        <p>Returning Officer</p>
-      </div>
-    </div>
-  </div>`;
 }
 
 function publicLayout(title, bodyHtml, yearValue = '2026', shortName = null) {

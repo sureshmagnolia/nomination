@@ -4,7 +4,7 @@
  * Individual Polling Booth Door Posters, and Campus Master Directory Posters.
  */
 
-import { esc, triggerPrint } from './utils.js';
+import { esc, triggerPrint, todayFormatted } from './utils.js';
 import { CONFIG } from './config.js';
 
 // Markdown-to-HTML formatter for notice text
@@ -1255,7 +1255,89 @@ export function printBlankNominationForm(settings = {}) {
 }
 
 /**
+ * Renders the clean official withdrawal paper layout for both filled (official) and blank forms.
+ * Matches the exact portal format without any Faculty Advisor/Tutor/Proposer attestation.
+ */
+export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year = null, isBlank = false, collegeLogo = '') {
+  const today = todayFormatted();
+  const cName = collegeName || CONFIG.COLLEGE_NAME;
+  const y = year || new Date().getFullYear();
+  const name = isBlank ? '' : (nom.candidate?.NAME || nom.candidateName || nom.name || '');
+  const cls  = isBlank ? '' : (nom.candidate?.CLASS || nom.candidateClass || nom.class || '');
+  const dept = isBlank ? '' : (nom.candidate?.Dept || nom.candidateDept || nom.dept || '');
+  const post = isBlank ? '' : (nom.post || '');
+  const nomId = isBlank ? '' : id;
+
+  const fillDotted = (width = '240px') => `<span class="dotted-line" style="display:inline-block;width:${width};height:20px;vertical-align:bottom;border-bottom:1.5px dotted #000 !important;">&nbsp;</span>`;
+
+  return `
+  <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-6" style="max-width: 185mm; margin: 0 auto; box-sizing: border-box;">
+    <div class="flex justify-between items-start text-sm border-b border-white/10 pb-4">
+      <div>
+        ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:48px;max-width:120px;margin-bottom:6px;display:block;object-fit:contain" alt="Logo">` : ''}
+        <p class="font-bold text-white text-base">${esc(cName)}</p>
+        <p class="text-slate-400">College Union Election ${esc(y)} — Withdrawal Form</p>
+      </div>
+      <div class="text-right text-xs text-slate-400">
+        <p>Date: ${today}</p>
+        ${nomId ? `<p class="font-mono text-indigo-300 font-bold mt-1 text-sm">ID: ${esc(nomId)}</p>` : ''}
+      </div>
+    </div>
+
+    <h2 class="text-center font-bold text-xl text-white border-y border-white/10 py-3 uppercase tracking-wide">
+      WITHDRAWAL OF NOMINATION
+    </h2>
+
+    <div class="space-y-3.5 text-sm">
+      <p class="flex items-baseline">
+        <span class="text-slate-400 w-44 inline-block font-semibold shrink-0">Nomination ID:</span>
+        ${isBlank ? fillDotted('220px') : `<strong class="font-mono text-indigo-300 text-lg">${esc(nomId)}</strong>`}
+      </p>
+      <p class="flex items-baseline">
+        <span class="text-slate-400 w-44 inline-block font-semibold shrink-0">Post:</span>
+        ${isBlank ? fillDotted('300px') : `<strong class="text-white">${esc(post)}</strong>`}
+      </p>
+      <p class="flex items-baseline">
+        <span class="text-slate-400 w-44 inline-block font-semibold shrink-0">Candidate Name:</span>
+        ${isBlank ? fillDotted('300px') : `<span class="font-bold text-white">${esc(name)}</span>`}
+      </p>
+      <p class="flex items-baseline">
+        <span class="text-slate-400 w-44 inline-block font-semibold shrink-0">Class:</span>
+        ${isBlank ? fillDotted('250px') : `<span>${esc(cls)}</span>`}
+      </p>
+      <p class="flex items-baseline">
+        <span class="text-slate-400 w-44 inline-block font-semibold shrink-0">Department:</span>
+        ${isBlank ? fillDotted('250px') : `<span>${esc(dept)}</span>`}
+      </p>
+    </div>
+
+    <p class="text-sm text-slate-300 border border-white/10 rounded-lg p-4 bg-white/5 leading-relaxed">
+      ${isBlank 
+        ? `I, ${fillDotted('240px')}, hereby withdraw my nomination for the post of ${fillDotted('220px')} in the College Union Election.`
+        : `I, <strong>${esc(name)}</strong>, hereby withdraw my nomination for the post of <strong>${esc(post)}</strong> in the College Union Election.`
+      }
+    </p>
+
+    <div class="flex justify-around mt-12 pt-8 text-sm text-slate-400">
+      <div class="text-center" style="width: 200px;">
+        <p class="mb-8">___________________________</p>
+        <p class="font-semibold text-white">Signature of Candidate</p>
+      </div>
+      <div class="text-center" style="width: 140px;">
+        <p class="mb-8">______ / ______ / ________</p>
+        <p>Date</p>
+      </div>
+      <div class="text-center" style="width: 200px;">
+        <p class="mb-8">___________________________</p>
+        <p class="font-semibold text-white">Returning Officer</p>
+      </div>
+    </div>
+  </div>`;
+}
+
+/**
  * Print a blank official withdrawal notice form for physical manual submission
+ * Uses the exact same format as the portal withdrawal notice without any attestation box.
  */
 export function printBlankWithdrawalForm(settings = {}) {
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
@@ -1263,252 +1345,6 @@ export function printBlankWithdrawalForm(settings = {}) {
   const year = settings.electionYear || new Date().getFullYear();
   const collegeLogo = settings.collegeLogo || '';
 
-  const w = window.open('', '_blank');
-  if (!w) {
-    alert('Pop-up blocker prevented opening the print window. Please allow pop-ups for this site.');
-    return;
-  }
-
-  w.document.write(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Blank Withdrawal Form - ${esc(shortName)} Election ${esc(year)}</title>
-  <style>
-    @page {
-      size: A4 portrait;
-      margin: 12mm 16mm;
-    }
-    .watermark-global {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 450px;
-      height: 450px;
-      opacity: 0.1;
-      pointer-events: none;
-      z-index: -1;
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-    }
-    * { box-sizing: border-box; }
-    body {
-      font-family: 'Times New Roman', Times, Georgia, serif;
-      color: #000;
-      background: #fff;
-      font-size: 11pt;
-      line-height: 1.5;
-      margin: 0;
-      padding: 0;
-    }
-    .form-container {
-      width: 100%;
-      max-width: 175mm;
-      margin: 0 auto;
-    }
-    .header-box {
-      border-bottom: 2px solid #000;
-      padding-bottom: 6px;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .college-name {
-      font-size: 15pt;
-      font-weight: bold;
-      text-transform: uppercase;
-      text-align: center;
-    }
-    .college-sub {
-      font-size: 10pt;
-      text-align: center;
-      font-style: italic;
-    }
-    .election-title {
-      font-size: 11pt;
-      font-weight: bold;
-      text-align: center;
-      margin-top: 2px;
-    }
-    .form-title-badge {
-      border: 1.5px solid #000;
-      text-align: center;
-      padding: 6px;
-      font-size: 13pt;
-      font-weight: bold;
-      letter-spacing: 1px;
-      margin: 14px 0;
-      background: #f4f4f4;
-    }
-    .recipient-box {
-      font-size: 10.5pt;
-      line-height: 1.4;
-      margin-bottom: 12px;
-    }
-    .fields-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 10px 0;
-    }
-    .fields-table td {
-      padding: 6px 4px;
-      font-size: 10.5pt;
-      vertical-align: middle;
-    }
-    .line-fill {
-      border-bottom: 1px dotted #222;
-      display: inline-block;
-      min-height: 16px;
-    }
-    .decl-box {
-      border: 1px solid #000;
-      padding: 12px 14px;
-      font-size: 10.5pt;
-      line-height: 1.6;
-      background: #fafafa;
-      margin: 16px 0;
-    }
-    .sign-table {
-      width: 100%;
-      margin-top: 24px;
-      border-collapse: collapse;
-    }
-    .sign-table td {
-      text-align: center;
-      font-size: 10pt;
-      vertical-align: bottom;
-      padding: 0 8px;
-    }
-    .sign-line {
-      border-top: 1px dashed #000;
-      margin-bottom: 4px;
-      padding-top: 4px;
-    }
-    .office-section {
-      margin-top: 24px;
-      border-top: 1.5px dashed #000;
-      padding-top: 10px;
-    }
-    .office-title {
-      font-size: 10pt;
-      font-weight: bold;
-      text-transform: uppercase;
-      text-align: center;
-      margin-bottom: 8px;
-    }
-    @media print {
-      body { margin: 0; padding: 0; }
-    }
-  </style>
-</head>
-<body>
-  ${collegeLogo ? `<div class="watermark-global" style="background-image: url('${collegeLogo}');"></div>` : ''}
-  <div class="form-container">
-    <div class="header-box">
-      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:48px;max-width:90px;object-fit:contain;" alt="Logo">` : '<div style="width:40px;"></div>'}
-      <div style="flex:1;text-align:center;">
-        <div class="college-name">${esc(collegeName)}</div>
-        <div class="college-sub">(Affiliated to the University of Calicut)</div>
-        <div class="election-title">COLLEGE UNION ELECTIONS ${esc(year)}–${Number(year) + 1}</div>
-      </div>
-      <div style="width:40px;"></div>
-    </div>
-
-    <div class="form-title-badge">NOTICE OF WITHDRAWAL OF CANDIDATURE</div>
-
-    <div class="recipient-box">
-      <strong>To:</strong><br>
-      The Returning Officer,<br>
-      College Union Elections ${esc(year)}–${Number(year) + 1},<br>
-      ${esc(collegeName)}.
-    </div>
-
-    <table class="fields-table">
-      <tr>
-        <td style="width:35%;">1. Full Name of Candidate:</td>
-        <td style="width:65%;"><span class="line-fill" style="width:100%;"></span></td>
-      </tr>
-      <tr>
-        <td>2. Admission Number:</td>
-        <td><span class="line-fill" style="width:100%;"></span></td>
-      </tr>
-      <tr>
-        <td>3. Electoral Roll Serial Number:</td>
-        <td><span class="line-fill" style="width:100%;"></span></td>
-      </tr>
-      <tr>
-        <td>4. Class, Semester &amp; Dept:</td>
-        <td><span class="line-fill" style="width:100%;"></span></td>
-      </tr>
-      <tr>
-        <td>5. Nomination Form / Ref ID (if known):</td>
-        <td><span class="line-fill" style="width:100%;"></span></td>
-      </tr>
-      <tr>
-        <td>6. Post Nominated For:</td>
-        <td><span class="line-fill" style="width:100%;"></span></td>
-      </tr>
-    </table>
-
-    <div class="decl-box">
-      I, <span class="line-fill" style="width:45%;"></span>, a validly nominated candidate for the post of <span class="line-fill" style="width:40%;"></span> in the College Union Elections for the academic year ${esc(year)}–${Number(year) + 1}, do hereby give notice that I voluntarily <strong>WITHDRAW</strong> my candidature for the said post.
-      <br><br>
-      I declare that this decision is taken of my own free will, without any coercion or undue influence.
-    </div>
-
-    <table class="sign-table">
-      <tr>
-        <td style="width:40%;">
-          <div>Date: _____ / _____ / 2026</div>
-          <div style="margin-top:4px;">Time: _____ : _____ AM/PM</div>
-        </td>
-        <td style="width:20%;"></td>
-        <td style="width:40%;">
-          <div style="height:35px;"></div>
-          <div class="sign-line">Signature of Candidate</div>
-        </td>
-      </tr>
-    </table>
-
-    <div style="margin-top:20px;border:1px solid #777;padding:8px 10px;font-size:9.5pt;">
-      <strong>Attestation / Witness by Faculty Advisor / Tutor / Proposer:</strong><br>
-      <div style="margin-top:4px;">I hereby attest that the candidate has signed this notice of withdrawal in my presence.</div>
-      <div style="display:flex;justify-content:space-between;margin-top:12px;">
-        <div>Name: <span class="line-fill" style="width:140px;"></span> Desig/Dept: <span class="line-fill" style="width:100px;"></span></div>
-        <div>Signature: <span class="line-fill" style="width:130px;"></span></div>
-      </div>
-    </div>
-
-    <!-- Office Endorsement Section -->
-    <div class="office-section">
-      <div class="office-title">OFFICE OF THE RETURNING OFFICER &mdash; ENDORSEMENT &amp; RECEIPT</div>
-      <div style="font-size:9.5pt;line-height:1.4;">
-        This notice of withdrawal was delivered to me at my office on Date: _____ / _____ / 2026 at Time: _____ : _____ AM/PM by the candidate in person.
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:16px;font-size:9.5pt;">
-        <div>
-          Action: [ &nbsp; ] Accepted &amp; Candidature Struck Off &nbsp;&nbsp;&nbsp; [ &nbsp; ] Rejected (Time-barred)
-        </div>
-        <div style="text-align:right;">
-          <div style="border-top:1px dashed #000;display:inline-block;padding-top:2px;width:180px;text-align:center;">
-            Returning Officer &amp; College Seal
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    window.onload = function() {
-      setTimeout(function() {
-        window.print();
-      }, 400);
-    };
-  </script>
-</body>
-</html>`);
-  w.document.close();
+  const html = buildWithdrawalPaper('', {}, collegeName, year, true, collegeLogo);
+  triggerPrint(html, `Blank Withdrawal Form - ${esc(shortName)} Election ${esc(year)}`, collegeLogo);
 }
