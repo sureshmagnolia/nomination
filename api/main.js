@@ -120,8 +120,8 @@ function isYearEligibleServer(cls, rule) {
 }
 
 const DEFAULT_POSTS = [
-  { post: 'The Chairman', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: false, restrictedDept: '' },
-  { post: 'The Vice Chairman', femaleOnly: true, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: false, restrictedDept: '' },
+  { post: 'The Chairperson', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: false, restrictedDept: '' },
+  { post: 'The Vice Chairperson', femaleOnly: true, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: false, restrictedDept: '' },
   { post: 'The Secretary', femaleOnly: false, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: false, restrictedDept: '' },
   { post: 'The Joint Secretary', femaleOnly: true, finalYearIneligible: false, yearRestriction: '', yearRuleMode: 'ALL', yearRuleYears: '', deptRestriction: false, restrictedDept: '' },
   { post: 'The Chief Student Editor', femaleOnly: false, finalYearIneligible: true, yearRestriction: '', yearRuleMode: 'EXCLUDE', yearRuleYears: '3_UG,2_PG', deptRestriction: false, restrictedDept: '' },
@@ -416,6 +416,13 @@ async function ensureSchema() {
         data_json TEXT
       );
     `;
+    // Auto-migrate any legacy Chairman/Vice Chairman records to Chairperson/Vice Chairperson
+    try {
+      await sql`UPDATE posts SET post = 'The Chairperson' WHERE post IN ('The Chairman', 'Chairman');`;
+      await sql`UPDATE posts SET post = 'The Vice Chairperson' WHERE post IN ('The Vice Chairman', 'Vice Chairman');`;
+      await sql`UPDATE nominations SET post = 'The Chairperson' WHERE post IN ('The Chairman', 'Chairman');`;
+      await sql`UPDATE nominations SET post = 'The Vice Chairperson' WHERE post IN ('The Vice Chairman', 'Vice Chairman');`;
+    } catch (_) {}
     await seedDefaultPostsIfEmpty();
     schemaEnsured = true;
   } catch (err) {
@@ -592,6 +599,14 @@ async function fetchPostsFromDb() {
   });
   sortedPosts = [...nonAssoc, ...assoc];
 
+  const normalizeChair = (name) => {
+    if (!name) return '';
+    const s = String(name).trim();
+    if (s === 'The Chairman' || s === 'Chairman') return 'The Chairperson';
+    if (s === 'The Vice Chairman' || s === 'Vice Chairman') return 'The Vice Chairperson';
+    return s;
+  };
+
   return sortedPosts.map(p => {
     let yrYears = [];
     if (p.yearRuleYears) {
@@ -608,7 +623,7 @@ async function fetchPostsFromDb() {
     const yrMode = p.yearRuleMode || (p.finalYearIneligible ? 'EXCLUDE' : (p.yearRestriction ? 'INCLUDE' : 'ALL'));
 
     return {
-      post: p.post,
+      post: normalizeChair(p.post),
       femaleOnly: !!p.femaleOnly,
       finalYearIneligible: !!p.finalYearIneligible,
       yearRestriction: p.yearRestriction || '',
@@ -1143,7 +1158,7 @@ export default async function handler(req, res) {
             return `- **${pN}**${notes.length ? ` *(${notes.join(', ')})*` : ''}`;
           };
 
-          const mText = mainOffice.length ? mainOffice.map(fmt).join('\n') : '- **THE CHAIRMAN**\n- **THE VICE CHAIRMAN** *(Reserved for Women)*\n- **THE SECRETARY**\n- **THE JOINT SECRETARY** *(Reserved for Women)*\n- **THE CHIEF STUDENT EDITOR** *(Final Year Ineligible)*\n- **THE SECRETARY FINE ARTS**\n- **THE GENERAL CAPTAIN FOR SPORTS AND GAMES**\n- **THE UNIVERSITY UNION COUNCILLOR** *(2 Posts)*';
+          const mText = mainOffice.length ? mainOffice.map(fmt).join('\n') : '- **THE CHAIRPERSON**\n- **THE VICE CHAIRPERSON** *(Reserved for Women)*\n- **THE SECRETARY**\n- **THE JOINT SECRETARY** *(Reserved for Women)*\n- **THE CHIEF STUDENT EDITOR** *(Final Year Ineligible)*\n- **THE SECRETARY FINE ARTS**\n- **THE GENERAL CAPTAIN FOR SPORTS AND GAMES**\n- **THE UNIVERSITY UNION COUNCILLOR** *(2 Posts)*';
           const cText = classRep.length ? classRep.map(fmt).join('\n') : '- **I UG REPRESENTATIVE**\n- **II UG REPRESENTATIVE**\n- **III UG REPRESENTATIVE**\n- **PG REPRESENTATIVE**';
           const aText = assocSec.length ? assocSec.map(fmt).join('\n') : '- **ASSOCIATION SECRETARY BOTANY**\n- **ASSOCIATION SECRETARY CHEMISTRY**\n- **ASSOCIATION SECRETARY COMMERCE**\n- **ASSOCIATION SECRETARY COMPUTER SCIENCE**\n- **ASSOCIATION SECRETARY ECONOMICS**\n- **ASSOCIATION SECRETARY ENGLISH**\n- **ASSOCIATION SECRETARY HINDI**\n- **ASSOCIATION SECRETARY HISTORY**\n- **ASSOCIATION SECRETARY MALAYALAM**\n- **ASSOCIATION SECRETARY MATHEMATICS**\n- **ASSOCIATION SECRETARY PHYSICS**\n- **ASSOCIATION SECRETARY PSYCHOLOGY**\n- **ASSOCIATION SECRETARY SANSKRIT**\n- **ASSOCIATION SECRETARY TAMIL**\n- **ASSOCIATION SECRETARY ZOOLOGY**';
 

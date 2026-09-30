@@ -637,7 +637,7 @@ function wirePostForm(main, posts, allDepartments, pwd) {
 
     // Auto-detect female
     const valL = val.toLowerCase();
-    if (valL.includes('vice chair') || valL.includes('vice-chair') || val.includes('Vice Chairman') || val.includes('Joint Secretary') || valL.includes('lady') || valL.includes('female')) {
+    if (valL.includes('vice chair') || valL.includes('vice-chair') || val.includes('Vice Chairperson') || val.includes('Vice Chairman') || val.includes('Joint Secretary') || valL.includes('lady') || valL.includes('female')) {
       pfFemale.checked = true;
     }
 

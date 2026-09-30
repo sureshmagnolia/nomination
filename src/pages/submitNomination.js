@@ -62,9 +62,14 @@ export async function renderSubmitNomination(container) {
     if (nominalRoll.length === 0) throw new Error('Nominal roll is empty. Please contact the admin.');
 
     // Use database posts if available, otherwise fall back to config defaults
-    allPosts = Array.isArray(postsData) && postsData.length > 0
+    const rawPosts = Array.isArray(postsData) && postsData.length > 0
       ? postsData
       : CONFIG.DEFAULT_POSTS;
+    allPosts = rawPosts.map(p => {
+      if (p.post === 'The Chairman' || p.post === 'Chairman') return { ...p, post: 'The Chairperson' };
+      if (p.post === 'The Vice Chairman' || p.post === 'Vice Chairman') return { ...p, post: 'The Vice Chairperson' };
+      return p;
+    });
 
     renderForm(container, year, collegeName, setsData || {});
   } catch (e) {

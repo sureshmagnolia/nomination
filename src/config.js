@@ -17,8 +17,8 @@ export const CONFIG = {
   // Posts are now managed dynamically via the Admin → Manage Posts page.
   // This array is used only as a fallback if the API hasn't loaded yet.
   DEFAULT_POSTS: [
-    { post: 'The Chairman',                         femaleOnly: false, finalYearIneligible: false, yearRestriction: '',   yearRuleMode: 'ALL',     yearRuleYears: [],                   deptRestriction: false, restrictedDept: '' },
-    { post: 'The Vice Chairman',                    femaleOnly: true,  finalYearIneligible: false, yearRestriction: '',   yearRuleMode: 'ALL',     yearRuleYears: [],                   deptRestriction: false, restrictedDept: '' },
+    { post: 'The Chairperson',                     femaleOnly: false, finalYearIneligible: false, yearRestriction: '',   yearRuleMode: 'ALL',     yearRuleYears: [],                   deptRestriction: false, restrictedDept: '' },
+    { post: 'The Vice Chairperson',                femaleOnly: true,  finalYearIneligible: false, yearRestriction: '',   yearRuleMode: 'ALL',     yearRuleYears: [],                   deptRestriction: false, restrictedDept: '' },
     { post: 'The Secretary',                        femaleOnly: false, finalYearIneligible: false, yearRestriction: '',   yearRuleMode: 'ALL',     yearRuleYears: [],                   deptRestriction: false, restrictedDept: '' },
     { post: 'The Joint Secretary',                  femaleOnly: true,  finalYearIneligible: false, yearRestriction: '',   yearRuleMode: 'ALL',     yearRuleYears: [],                   deptRestriction: false, restrictedDept: '' },
     { post: 'The Chief Student Editor',             femaleOnly: false, finalYearIneligible: true,  yearRestriction: '',   yearRuleMode: 'EXCLUDE', yearRuleYears: ['3_UG', '2_PG'],     deptRestriction: false, restrictedDept: '' },

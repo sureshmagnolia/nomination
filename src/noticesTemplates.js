@@ -53,7 +53,7 @@ export function getDefaultStatutoryNotices(settings = {}, schedule = {}, booths 
 
   const mainOfficeListText = mainOfficePosts.length > 0
     ? mainOfficePosts.map(formatPostLine).join('\n')
-    : `- **THE CHAIRMAN**\n- **THE VICE CHAIRMAN** *(Reserved for Women)*\n- **THE SECRETARY**\n- **THE JOINT SECRETARY** *(Reserved for Women)*\n- **THE CHIEF STUDENT EDITOR** *(Final Year Ineligible)*\n- **THE SECRETARY FINE ARTS**\n- **THE GENERAL CAPTAIN FOR SPORTS AND GAMES**\n- **THE UNIVERSITY UNION COUNCILLOR** *(2 Posts)*`;
+    : `- **THE CHAIRPERSON**\n- **THE VICE CHAIRPERSON** *(Reserved for Women)*\n- **THE SECRETARY**\n- **THE JOINT SECRETARY** *(Reserved for Women)*\n- **THE CHIEF STUDENT EDITOR** *(Final Year Ineligible)*\n- **THE SECRETARY FINE ARTS**\n- **THE GENERAL CAPTAIN FOR SPORTS AND GAMES**\n- **THE UNIVERSITY UNION COUNCILLOR** *(2 Posts)*`;
 
   const classRepListText = classRepPosts.length > 0
     ? classRepPosts.map(formatPostLine).join('\n')
@@ -161,7 +161,7 @@ ${boothSummaryText}
 
 #### 🗳️ Ballots Issued at Polling Booths:
 Every eligible elector registered on the Final Nominal Roll will receive the following official ballot papers from the Presiding Officer:
-1. **White / Main General Ballot Paper**: For General Union Executive Posts (Chairman, Vice Chairman, Secretary, Joint Secretary, UUC, Chief Student Editor, General Captain, Fine Arts Secretary).
+1. **White / Main General Ballot Paper**: For General Union Executive Posts (Chairperson, Vice Chairperson, Secretary, Joint Secretary, UUC, Chief Student Editor, General Captain, Fine Arts Secretary).
 2. **Colored Departmental Ballot Paper**: For your respective Department Association Secretary.
 3. **Year Representative Ballot Paper**: For your respective Year Representative (I UG / II UG / III UG / PG Representative).
 

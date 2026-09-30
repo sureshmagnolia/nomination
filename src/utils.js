@@ -591,9 +591,24 @@ export function comparePosts(a, b) {
   return String(nameA).localeCompare(String(nameB));
 }
 
+export function normalizePostName(name) {
+  if (!name) return '';
+  const s = String(name).trim();
+  if (s === 'The Chairman' || s === 'Chairman') return 'The Chairperson';
+  if (s === 'The Vice Chairman' || s === 'Vice Chairman') return 'The Vice Chairperson';
+  return s;
+}
+
 export function sortPosts(postsList) {
   if (!Array.isArray(postsList)) return [];
-  return [...postsList].sort(comparePosts);
+  const normalized = postsList.map(p => {
+    if (typeof p === 'string') return normalizePostName(p);
+    if (p && typeof p === 'object' && p.post) {
+      return { ...p, post: normalizePostName(p.post) };
+    }
+    return p;
+  });
+  return [...normalized].sort(comparePosts);
 }
 
 /**

@@ -165,9 +165,9 @@ In **Settings**, configure:
 
 ### 5. Review Election Posts & Eligibility
 1. In the Admin sidebar, click **🏛️ Manage Posts** (`/#/admin/posts`).
-2. The standard posts (Chairman, Vice Chairman, Secretary, UUC, Magazine Editor, Association Secretaries, etc.) are pre-seeded.
+2. The standard posts (Chairperson, Vice Chairperson, Secretary, UUC, Magazine Editor, Association Secretaries, etc.) are pre-seeded.
 3. Review post restrictions:
-   - **Female Only:** (e.g. Vice Chairman, Joint Secretary).
+   - **Female Only:** (e.g. Vice Chairperson, Joint Secretary).
    - **Final Year Ineligible:** (e.g. Magazine Editor).
    - **Year Specific:** (e.g. I UG Rep, II UG Rep, III UG Rep, PG Rep).
    - **Department Restrictions:** (e.g. Association Secretaries).
