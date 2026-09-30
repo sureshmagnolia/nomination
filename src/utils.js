@@ -320,6 +320,8 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
           .ml-2 { margin-left: 0.5rem; }
           .ml-3 { margin-left: 0.75rem; }
           .ml-4 { margin-left: 1rem; }
+          .space-y-6 > * + * { margin-top: 1.35rem; }
+          .space-y-5 > * + * { margin-top: 1.15rem; }
           .space-y-4 > * + * { margin-top: 0.85rem; }
           .space-y-3\.5 > * + * { margin-top: 0.75rem; }
           .space-y-3 > * + * { margin-top: 0.65rem; }
@@ -356,8 +358,12 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
           .tracking-wide { letter-spacing: 0.025em; }
           .tracking-wider { letter-spacing: 0.05em; }
           .tracking-widest { letter-spacing: 0.08em; }
+          .w-52 { width: 13rem; }
+          .w-48 { width: 12rem; }
+          .w-44 { width: 11rem; }
           .w-40 { width: 10rem; }
           .w-36 { width: 9rem; }
+          .border-dashed { border-style: dashed !important; }
           .inline-block { display: inline-block; }
           .grid { display: grid; }
           .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
@@ -378,6 +384,8 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
           .gap-y-2\.5 { row-gap: 0.55rem; }
           .gap-y-3 { row-gap: 0.82rem; }
           .italic { font-style: italic; }
+          .leading-loose { line-height: 2; }
+          .leading-relaxed { line-height: 1.68; }
           .leading-normal { line-height: 1.45; }
           .leading-snug { line-height: 1.375; }
           .badge { border: 1px solid #000; padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; font-weight: bold; }

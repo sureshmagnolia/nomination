@@ -1259,7 +1259,7 @@ export function printBlankNominationForm(settings = {}) {
  * Matches the exact portal format without any Faculty Advisor/Tutor/Proposer attestation.
  */
 export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year = null, isBlank = false, collegeLogo = '') {
-  const today = todayFormatted();
+  const today = isBlank ? '' : todayFormatted();
   const cName = collegeName || CONFIG.COLLEGE_NAME;
   const y = year || new Date().getFullYear();
   const name = isBlank ? '' : (nom.candidate?.NAME || nom.candidateName || nom.name || '');
@@ -1268,68 +1268,110 @@ export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year
   const post = isBlank ? '' : (nom.post || '');
   const nomId = isBlank ? '' : id;
 
-  const fillDotted = (width = '240px') => `<span class="dotted-line" style="display:inline-block;width:${width};height:20px;vertical-align:bottom;border-bottom:1.5px dotted #000 !important;">&nbsp;</span>`;
+  const fillDotted = (width = '320px') => `<span class="dotted-line" style="display:inline-block;width:${width};height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;">&nbsp;</span>`;
 
   return `
-  <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-6" style="max-width: 185mm; margin: 0 auto; box-sizing: border-box;">
-    <div class="flex justify-between items-start text-sm border-b border-white/10 pb-4">
+  <div class="print-paper border border-slate-700 rounded-xl p-6 bg-slate-900 text-slate-200 space-y-4" style="max-width: 185mm; margin: 0 auto; box-sizing: border-box;">
+    <!-- Header -->
+    <div class="flex justify-between items-start text-sm border-b border-white/10 pb-3">
       <div>
         ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:48px;max-width:120px;margin-bottom:6px;display:block;object-fit:contain" alt="Logo">` : ''}
         <p class="font-bold text-white text-base">${esc(cName)}</p>
-        <p class="text-slate-400">College Union Election ${esc(y)} — Withdrawal Form</p>
+        <p class="text-slate-400 text-xs">College Union Election ${esc(y)} — Notice of Withdrawal</p>
       </div>
-      <div class="text-right text-xs text-slate-400">
-        <p>Date: ${today}</p>
-        ${nomId ? `<p class="font-mono text-indigo-300 font-bold mt-1 text-sm">ID: ${esc(nomId)}</p>` : ''}
+      <div class="text-right text-xs text-slate-400 space-y-1.5">
+        <p>Date: ${isBlank ? `_____ / _____ / ${esc(y)}` : today}</p>
+        ${nomId ? `<p class="font-mono text-indigo-300 font-bold text-sm">ID: ${esc(nomId)}</p>` : `<p>Nom. Ref: ${fillDotted('120px')}</p>`}
       </div>
     </div>
 
-    <h2 class="text-center font-bold text-xl text-white border-y border-white/10 py-3 uppercase tracking-wide">
-      WITHDRAWAL OF NOMINATION
+    <!-- Title -->
+    <h2 class="text-center font-bold text-lg text-white border-y border-white/10 py-2 uppercase tracking-wide">
+      NOTICE OF WITHDRAWAL OF CANDIDATURE
     </h2>
 
-    <div class="space-y-3.5 text-sm">
-      <p class="flex items-baseline">
-        <span class="text-slate-400 w-44 inline-block font-semibold shrink-0">Nomination ID:</span>
-        ${isBlank ? fillDotted('220px') : `<strong class="font-mono text-indigo-300 text-lg">${esc(nomId)}</strong>`}
-      </p>
-      <p class="flex items-baseline">
-        <span class="text-slate-400 w-44 inline-block font-semibold shrink-0">Post:</span>
-        ${isBlank ? fillDotted('300px') : `<strong class="text-white">${esc(post)}</strong>`}
-      </p>
-      <p class="flex items-baseline">
-        <span class="text-slate-400 w-44 inline-block font-semibold shrink-0">Candidate Name:</span>
-        ${isBlank ? fillDotted('300px') : `<span class="font-bold text-white">${esc(name)}</span>`}
-      </p>
-      <p class="flex items-baseline">
-        <span class="text-slate-400 w-44 inline-block font-semibold shrink-0">Class:</span>
-        ${isBlank ? fillDotted('250px') : `<span>${esc(cls)}</span>`}
-      </p>
-      <p class="flex items-baseline">
-        <span class="text-slate-400 w-44 inline-block font-semibold shrink-0">Department:</span>
-        ${isBlank ? fillDotted('250px') : `<span>${esc(dept)}</span>`}
-      </p>
+    <!-- Particulars -->
+    <div class="space-y-3 text-sm">
+      <div class="flex items-baseline">
+        <span class="text-slate-400 w-44 font-semibold shrink-0">Nomination ID:</span>
+        ${isBlank ? fillDotted('320px') : `<strong class="font-mono text-indigo-300 text-base">${esc(nomId)}</strong>`}
+      </div>
+      <div class="flex items-baseline">
+        <span class="text-slate-400 w-44 font-semibold shrink-0">Post Contested:</span>
+        ${isBlank ? fillDotted('320px') : `<strong class="text-white">${esc(post)}</strong>`}
+      </div>
+      <div class="flex items-baseline">
+        <span class="text-slate-400 w-44 font-semibold shrink-0">Candidate Name:</span>
+        ${isBlank ? fillDotted('320px') : `<span class="font-bold text-white">${esc(name)}</span>`}
+      </div>
+      <div class="flex items-baseline">
+        <span class="text-slate-400 w-44 font-semibold shrink-0">Class &amp; Semester:</span>
+        ${isBlank ? fillDotted('320px') : `<span>${esc(cls)}</span>`}
+      </div>
+      <div class="flex items-baseline">
+        <span class="text-slate-400 w-44 font-semibold shrink-0">Department:</span>
+        ${isBlank ? fillDotted('320px') : `<span>${esc(dept)}</span>`}
+      </div>
     </div>
 
-    <p class="text-sm text-slate-300 border border-white/10 rounded-lg p-4 bg-white/5 leading-relaxed">
+    <!-- Candidate Declaration -->
+    <div class="text-sm text-slate-300 border border-white/10 rounded-lg p-4 bg-white/5" style="line-height: 1.85;">
       ${isBlank 
-        ? `I, ${fillDotted('240px')}, hereby withdraw my nomination for the post of ${fillDotted('220px')} in the College Union Election.`
-        : `I, <strong>${esc(name)}</strong>, hereby withdraw my nomination for the post of <strong>${esc(post)}</strong> in the College Union Election.`
+        ? `I, ${fillDotted('250px')}, a validly nominated candidate for the post of ${fillDotted('230px')} in the College Union Election ${esc(y)}, do hereby give notice that I voluntarily <strong>WITHDRAW</strong> my candidature for the said post.<br><br>I declare that this decision is made of my own free will, without any coercion or undue influence.`
+        : `I, <strong class="text-white">${esc(name)}</strong>, a validly nominated candidate for the post of <strong class="text-white">${esc(post)}</strong> in the College Union Election ${esc(y)}, do hereby give notice that I voluntarily <strong>WITHDRAW</strong> my candidature for the said post.<br><br>I declare that this decision is made of my own free will, without any coercion or undue influence.`
       }
-    </p>
+    </div>
 
-    <div class="flex justify-around mt-12 pt-8 text-sm text-slate-400">
-      <div class="text-center" style="width: 200px;">
-        <p class="mb-8">___________________________</p>
-        <p class="font-semibold text-white">Signature of Candidate</p>
+    <!-- Candidate Signature Section -->
+    <div class="flex justify-between items-end pt-2 text-sm text-slate-400">
+      <div class="space-y-1.5" style="line-height: 1.6;">
+        <p>Date: _____ / _____ / ${esc(y)}</p>
+        <p>Time: _____ : _____ AM / PM</p>
+        <p>Place: ___________________________</p>
       </div>
-      <div class="text-center" style="width: 140px;">
-        <p class="mb-8">______ / ______ / ________</p>
-        <p>Date</p>
+      <div class="text-center" style="width: 240px;">
+        <div style="height: 42px;"></div>
+        <div style="border-top: 1.5px solid #000; margin-bottom: 3px;"></div>
+        <p class="font-bold text-white text-xs">Signature of Candidate</p>
+        ${!isBlank && name ? `<p class="text-xs text-slate-400">(${esc(name)})</p>` : `<p class="text-[11px] text-slate-500">(Name: ______________________)</p>`}
       </div>
-      <div class="text-center" style="width: 200px;">
-        <p class="mb-8">___________________________</p>
-        <p class="font-semibold text-white">Returning Officer</p>
+    </div>
+
+    <!-- Tear-off / Office Endorsement Separator -->
+    <div style="display:flex;align-items:center;margin:14px 0 10px 0;">
+      <div style="flex:1;border-top:1.5px dashed #555;"></div>
+      <span style="padding:0 8px;font-size:8pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.03em;">
+        ✂ Office Endorsement &amp; Receipt of Withdrawal ✂
+      </span>
+      <div style="flex:1;border-top:1.5px dashed #555;"></div>
+    </div>
+
+    <!-- Office of the Returning Officer — Endorsement & Receipt -->
+    <div class="border border-white/20 rounded-lg p-3.5 bg-white/[0.03] space-y-2.5 text-xs">
+      <div class="flex justify-between items-center border-b border-white/10 pb-1.5">
+        <span class="font-bold text-white uppercase tracking-wider text-[11px]">OFFICE OF THE RETURNING OFFICER — ENDORSEMENT &amp; RECEIPT</span>
+        <span class="text-slate-400">Receipt Ref: ${isBlank ? fillDotted('120px') : `<strong class="font-mono text-indigo-300">${esc(nomId)}/WD</strong>`}</span>
+      </div>
+      <p class="text-slate-300" style="line-height: 1.7;">
+        This notice of withdrawal was delivered to me at my office on <span style="white-space:nowrap;">Date: <strong>_____ / _____ / ${esc(y)}</strong></span> at <span style="white-space:nowrap;">Time: <strong>_____ : _____ AM/PM</strong></span> by the candidate in person.
+      </p>
+      <div class="flex justify-between items-center text-slate-300 pt-0.5" style="line-height: 1.6;">
+        <div>
+          <strong>Decision / Action:</strong> &nbsp;&nbsp;
+          <span>[ &nbsp; ] Accepted &amp; Candidature Struck Off</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          <span>[ &nbsp; ] Rejected (Time-barred / Invalid)</span>
+        </div>
+      </div>
+      <div class="flex justify-between items-end pt-2 text-slate-400">
+        <div>
+          <p>Date: _____ / _____ / ${esc(y)}</p>
+          <p class="italic text-[10px] text-slate-500 mt-0.5">(College Seal)</p>
+        </div>
+        <div class="text-center" style="width: 220px;">
+          <div style="border-top:1.5px dashed #000;margin-top:20px;margin-bottom:3px;"></div>
+          <p class="font-bold text-white text-[11px]">Returning Officer</p>
+          <p class="text-[9.5px] text-slate-400">${esc(cName)}</p>
+        </div>
       </div>
     </div>
   </div>`;
