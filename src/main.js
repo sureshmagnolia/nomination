@@ -63,6 +63,7 @@ router
   .on('/final-list',        render(renderFinalList))
   .on('/withdraw',          render(renderWithdraw))
   .on('/results',           render(renderResults))
+  .on('/trends',            render((app) => renderResults(app, { initialTab: 'trends' })))
   .on('/nominal-roll',      render(renderNominalRoll))
   .on('/notices',           () => {
     const pwd = sessionStorage.getItem('adminPassword');

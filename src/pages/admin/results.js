@@ -224,6 +224,9 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           <button id="btnAdminRefreshResults" class="btn btn-secondary px-4 text-xs flex items-center gap-1.5">
             <span>🔄</span> Refresh Now
           </button>
+          <a href="#/trends" target="_blank" class="btn btn-secondary px-3.5 text-xs flex items-center gap-1.5 font-bold text-sky-300 border-sky-500/30 hover:bg-sky-500/10">
+            <span>🎯</span> Counting Trends Screen
+          </a>
           <button id="btnPrintOfficial" class="btn btn-primary px-5 text-xs flex items-center gap-1.5 font-bold">
             <span>🖨️</span> Print Official Result Sheet
           </button>
