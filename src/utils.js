@@ -278,7 +278,9 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
           .border-t { border-top: 1px solid #333; }
           .rounded-lg, .rounded-xl { border-radius: 4px; }
           .p-8 { padding: 1.25rem 1.5rem; }
-          .p-5 { padding: 1rem 1.25rem; }
+          .p-7 { padding: 1.15rem 1.4rem; }
+          .p-6 { padding: 1rem 1.25rem; }
+          .p-5 { padding: 0.85rem 1.1rem; }
           .p-4 { padding: 0.75rem 0.9rem; }
           .p-3\.5 { padding: 10px 14px 11px 14px; }
           .p-3 { padding: 0.6rem 0.8rem; }

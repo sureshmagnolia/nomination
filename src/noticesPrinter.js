@@ -1290,35 +1290,58 @@ export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year
       NOTICE OF WITHDRAWAL OF CANDIDATURE
     </h2>
 
-    <!-- Particulars -->
-    <div class="space-y-3.5 text-sm">
-      <div class="flex items-baseline">
-        <span class="text-slate-400 w-48 font-semibold shrink-0">${isBlank ? 'Nomination ID (if known):' : 'Nomination ID:'}</span>
-        ${isBlank ? fillDotted('300px') : `<strong class="font-mono text-indigo-300 text-base">${esc(nomId)}</strong>`}
+    <!-- Particulars (Relaxed & Full-Width) -->
+    <div class="space-y-4 text-sm" style="margin: 20px 0 24px 0;">
+      <div class="flex items-baseline" style="padding: 2px 0;">
+        <span class="text-slate-400 font-semibold shrink-0" style="width: 215px; font-size: 13.5px;">${isBlank ? 'Nomination ID (if known):' : 'Nomination ID:'}</span>
+        ${isBlank ? `<span class="dotted-line" style="flex:1;display:inline-block;height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-left:8px;">&nbsp;</span>` : `<strong class="font-mono text-indigo-300 text-base font-bold">${esc(nomId)}</strong>`}
       </div>
-      <div class="flex items-baseline">
-        <span class="text-slate-400 w-48 font-semibold shrink-0">Post Contested:</span>
-        ${isBlank ? fillDotted('300px') : `<strong class="text-white">${esc(post)}</strong>`}
+      <div class="flex items-baseline" style="padding: 2px 0;">
+        <span class="text-slate-400 font-semibold shrink-0" style="width: 215px; font-size: 13.5px;">Post Contested:</span>
+        ${isBlank ? `<span class="dotted-line" style="flex:1;display:inline-block;height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-left:8px;">&nbsp;</span>` : `<strong class="text-white text-base font-bold">${esc(post)}</strong>`}
       </div>
-      <div class="flex items-baseline">
-        <span class="text-slate-400 w-48 font-semibold shrink-0">Candidate Name:</span>
-        ${isBlank ? fillDotted('300px') : `<span class="font-bold text-white">${esc(name)}</span>`}
+      <div class="flex items-baseline" style="padding: 2px 0;">
+        <span class="text-slate-400 font-semibold shrink-0" style="width: 215px; font-size: 13.5px;">Candidate Name:</span>
+        ${isBlank ? `<span class="dotted-line" style="flex:1;display:inline-block;height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-left:8px;">&nbsp;</span>` : `<span class="font-bold text-white text-base">${esc(name)}</span>`}
       </div>
-      <div class="flex items-baseline">
-        <span class="text-slate-400 w-48 font-semibold shrink-0">Class &amp; Semester:</span>
-        ${isBlank ? fillDotted('300px') : `<span>${esc(cls)}</span>`}
+      <div class="flex items-baseline" style="padding: 2px 0;">
+        <span class="text-slate-400 font-semibold shrink-0" style="width: 215px; font-size: 13.5px;">Class &amp; Semester:</span>
+        ${isBlank ? `<span class="dotted-line" style="flex:1;display:inline-block;height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-left:8px;">&nbsp;</span>` : `<span>${esc(cls)}</span>`}
       </div>
-      <div class="flex items-baseline">
-        <span class="text-slate-400 w-48 font-semibold shrink-0">Department:</span>
-        ${isBlank ? fillDotted('300px') : `<span>${esc(dept)}</span>`}
+      <div class="flex items-baseline" style="padding: 2px 0;">
+        <span class="text-slate-400 font-semibold shrink-0" style="width: 215px; font-size: 13.5px;">Department:</span>
+        ${isBlank ? `<span class="dotted-line" style="flex:1;display:inline-block;height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-left:8px;">&nbsp;</span>` : `<span>${esc(dept)}</span>`}
       </div>
     </div>
 
-    <!-- Candidate Declaration -->
-    <div class="text-sm text-slate-300 border border-white/10 rounded-lg p-4 bg-white/5" style="line-height: 1.9;">
+    <!-- Candidate Declaration (Relaxed & Structured) -->
+    <div class="text-sm text-slate-300 border border-white/10 rounded-xl p-5 bg-white/5" style="padding: 18px 22px; margin-bottom: 22px;">
       ${isBlank 
-        ? `I, ${fillDotted('250px')}, a validly nominated candidate for the post of ${fillDotted('230px')} in the College Union Election ${esc(y)}, do hereby give notice that I voluntarily <strong>WITHDRAW</strong> my candidature for the said post.<br><br>I declare that this decision is made of my own free will, without any coercion or undue influence.`
-        : `I, <strong class="text-white">${esc(name)}</strong>, a validly nominated candidate for the post of <strong class="text-white">${esc(post)}</strong> in the College Union Election ${esc(y)}, do hereby give notice that I voluntarily <strong>WITHDRAW</strong> my candidature for the said post.<br><br>I declare that this decision is made of my own free will, without any coercion or undue influence.`
+        ? `<div class="space-y-3" style="line-height: 2.0; font-size: 13.5px;">
+             <div class="flex items-baseline">
+               <span class="shrink-0 font-medium">I,</span>
+               <span class="dotted-line" style="flex:1;display:inline-block;height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin: 0 6px;">&nbsp;</span>
+               <span class="shrink-0 font-medium">,</span>
+             </div>
+             <div class="flex items-baseline">
+               <span class="shrink-0 font-medium">a validly nominated candidate for the post of</span>
+               <span class="dotted-line" style="flex:1;display:inline-block;height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-left:8px;">&nbsp;</span>
+             </div>
+             <div style="line-height: 1.75; margin-top: 4px;">
+               in the College Union Election ${esc(y)}, do hereby give notice that I voluntarily <strong>WITHDRAW</strong> my candidature for the said post.
+             </div>
+             <div style="line-height: 1.75; margin-top: 14px; color: #cbd5e1;">
+               I declare that this decision is made of my own free will, without any coercion or undue influence.
+             </div>
+           </div>`
+        : `<div style="line-height: 1.85; font-size: 13.5px;">
+             <p>
+               I, <strong class="text-white font-bold">${esc(name)}</strong>, a validly nominated candidate for the post of <strong class="text-white font-bold">${esc(post)}</strong> in the College Union Election ${esc(y)}, do hereby give notice that I voluntarily <strong>WITHDRAW</strong> my candidature for the said post.
+             </p>
+             <p style="margin-top: 14px; color: #cbd5e1;">
+               I declare that this decision is made of my own free will, without any coercion or undue influence.
+             </p>
+           </div>`
       }
     </div>
 
