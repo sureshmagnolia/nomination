@@ -35,14 +35,6 @@ export async function renderResults(container) {
   const timerEl = container.querySelector('#cacheTimer');
   const btnRefresh = container.querySelector('#btnRefresh');
   const updateTimer = () => {
-    const isAdmin = !!(localStorage.getItem('adminPwd') || sessionStorage.getItem('adminPwd'));
-    if (isAdmin) {
-      timerEl.textContent = '👑 Admin Live Feed';
-      timerEl.classList.add('text-amber-400');
-      btnRefresh.disabled = false;
-      btnRefresh.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-      return;
-    }
     const lastFetch = localStorage.getItem(CACHE_TIME_KEY);
     if (!lastFetch) { 
       timerEl.textContent = ''; 
@@ -70,19 +62,6 @@ export async function renderResults(container) {
   const timerInterval = setInterval(updateTimer, 1000);
   updateTimer();
 
-  // If viewing as admin, poll every 4 seconds for live updates
-  const adminPollInterval = setInterval(() => {
-    if (!document.body.contains(container) || !container.querySelector('#resultsMain')) {
-      clearInterval(timerInterval);
-      clearInterval(adminPollInterval);
-      return;
-    }
-    const isAdmin = !!(localStorage.getItem('adminPwd') || sessionStorage.getItem('adminPwd'));
-    if (isAdmin) {
-      fetchAndRender(container.querySelector('#resultsMain'), true);
-    }
-  }, 4000);
-
   container.querySelector('#backToHome').addEventListener('click', () => router.navigate('/'));
   
   btnRefresh.addEventListener('click', (e) => {
@@ -100,11 +79,10 @@ async function fetchAndRender(main, force = false) {
   try {
     const lastFetch = localStorage.getItem(CACHE_TIME_KEY);
     const cachedData = localStorage.getItem(CACHE_KEY);
-    const hasAdminCreds = !!(localStorage.getItem('adminPwd') || sessionStorage.getItem('adminPwd'));
     
-    let posts, results, isCountingActive = false, isResultsPublished = false, isResultsLocked = false, isAdminView = false;
+    let posts, results, isCountingActive = false, isResultsPublished = false, isResultsLocked = false;
 
-    if (!force && !hasAdminCreds && lastFetch && cachedData && (Date.now() - parseInt(lastFetch, 10) < REFRESH_INTERVAL)) {
+    if (!force && lastFetch && cachedData && (Date.now() - parseInt(lastFetch, 10) < REFRESH_INTERVAL)) {
       // Use cache
       try {
         const parsed = JSON.parse(cachedData);
@@ -114,7 +92,6 @@ async function fetchAndRender(main, force = false) {
         isCountingActive = parsed.isCountingActive || schedule.countingActive === 'true';
         isResultsPublished = parsed.isResultsPublished || schedule.resultsPublished === 'true';
         isResultsLocked = parsed.isResultsLocked || false;
-        isAdminView = parsed.isAdminView || false;
         const year = schedule.electionYear || new Date().getFullYear();
         updateHeader(main, year);
       } catch (_) {
@@ -126,11 +103,9 @@ async function fetchAndRender(main, force = false) {
     
     if (!posts) {
       // Fetch fresh
-      if (!main.querySelector('#resultsGrid')) {
-        main.innerHTML = `
-          <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Fetching Live Results...</p></div>
-        `;
-      }
+      main.innerHTML = `
+        <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Fetching Live Results...</p></div>
+      `;
       if (force) {
         // If the user manually clicked refresh, bypass in-memory cache
         api.invalidateCache('getResults');
@@ -151,11 +126,10 @@ async function fetchAndRender(main, force = false) {
       isCountingActive = (rawResults && rawResults.countingActive === true) || schedule?.countingActive === 'true' || sets?.countingActive === 'true';
       isResultsPublished = (rawResults && rawResults.published === true) || schedule?.resultsPublished === 'true' || sets?.resultsPublished === 'true';
       isResultsLocked = (rawResults && rawResults.locked === true) || sets?.resultsLocked === 'true';
-      isAdminView = (rawResults && rawResults.isAdmin === true) || hasAdminCreds;
 
       // Save to cache
       localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ posts, results, schedule, isCountingActive, isResultsPublished, isResultsLocked, isAdminView }));
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ posts, results, schedule, isCountingActive, isResultsPublished, isResultsLocked }));
       
       const year = schedule?.electionYear || sets?.electionYear || new Date().getFullYear();
       updateHeader(main, year);
@@ -166,7 +140,7 @@ async function fetchAndRender(main, force = false) {
       if (header) header.textContent = `Live Election Results ${year}`;
     }
 
-    if (results.length === 0 || (!isResultsPublished && !isAdminView)) {
+    if (results.length === 0 || !isResultsPublished) {
       if (isCountingActive) {
         main.innerHTML = `
           <div class="text-center py-20 bg-amber-500/10 rounded-2xl border border-amber-500/30 page-enter shadow-2xl">
@@ -225,23 +199,6 @@ async function fetchAndRender(main, force = false) {
 
     let html = '';
 
-    if (isAdminView && !isResultsPublished) {
-      html += `
-        <div class="glass p-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="text-xl">👑</span>
-              <span class="font-bold text-amber-300 text-sm uppercase tracking-wide">Administrator Live Preview</span>
-              <span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">HIDDEN FROM STUDENTS</span>
-            </div>
-            <p class="text-slate-300 text-xs mt-1">You are viewing real-time vote totals. Public students currently see "Counting in Progress". When you are ready, click Publish to release results to everyone.</p>
-          </div>
-          <button id="btnAdminPublishFromResults" class="btn btn-primary btn-sm shrink-0 flex items-center gap-1.5 font-bold shadow-lg">
-            <span>📢</span> Push Results Live to Public
-          </button>
-        </div>
-      `;
-    }
 
     // ── Leaderboard (General & Reps only) ──────────────────────────────────
     const leaderboardPosts = sortedPosts.filter(p => {
@@ -420,24 +377,6 @@ async function fetchAndRender(main, force = false) {
       main.innerHTML = html;
     }
 
-    main.querySelector('#btnAdminPublishFromResults')?.addEventListener('click', async (e) => {
-      const btn = e.currentTarget;
-      if (!confirm('Publish election results to the public portal? Once published, all students will immediately see live results.')) return;
-      btn.disabled = true;
-      btn.textContent = 'Publishing...';
-      try {
-        const pwd = localStorage.getItem('adminPwd') || sessionStorage.getItem('adminPwd');
-        await api.adminPublishResults(pwd);
-        api.invalidateCache('getResults');
-        api.invalidateCache('getPublicSchedule');
-        api.invalidateCache('getSettings');
-        fetchAndRender(main, true);
-      } catch (err) {
-        alert(err.message);
-        btn.disabled = false;
-        btn.innerHTML = '<span>📢</span> Push Results Live to Public';
-      }
-    });
 
   } catch (err) {
     main.innerHTML = `<div class="alert alert-error">❌ Failed to load results: ${esc(err.message)}</div>`;

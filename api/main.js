@@ -1214,31 +1214,20 @@ All students are directed to strictly adhere to the University Code of Conduct, 
     if (action === 'getResults') {
       const resOverride = (await getSetting('resultsOverride')) || 'FORCE_CLOSED';
       const legacyPublished = await getSetting('resultsPublished');
-      // Results strictly go live ONLY on manual push/publish by the Admin. No automatic scheduled live.
+      // Results strictly go live to the public ONLY on manual push by the Admin.
       const published = (resOverride === 'FORCE_OPEN' || legacyPublished === 'true') && resOverride !== 'FORCE_CLOSED';
       const countingActive = (await getSetting('countingActive')) === 'true';
       const locked = (await getSetting('resultsLocked')) === 'true';
 
-      // Verify if requester is an authenticated administrator
-      let isAdmin = false;
-      if (adminPwd && adminToken) {
-        try {
-          await checkAdmin(adminPwd, adminToken, 'adminCheck');
-          isAdmin = true;
-        } catch (_) {
-          isAdmin = false;
-        }
-      }
-
-      if (!published && !isAdmin) {
-        return jsonOut(res, { results: [], published: false, isAdmin: false, countingActive, locked });
+      // Public view is strictly hidden until admin manually pushes it live
+      if (!published) {
+        return jsonOut(res, { results: [], published: false, countingActive, locked });
       }
 
       const data = await getSetting('results_data');
       return jsonOut(res, {
         results: safeJsonParse(data, []),
-        published,
-        isAdmin,
+        published: true,
         countingActive,
         locked
       });
