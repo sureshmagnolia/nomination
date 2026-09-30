@@ -1268,10 +1268,10 @@ export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year
   const post = isBlank ? '' : (nom.post || '');
   const nomId = isBlank ? '' : id;
 
-  const fillDotted = (width = '320px') => `<span class="dotted-line" style="display:inline-block;width:${width};height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;">&nbsp;</span>`;
+  const fillDotted = (width = '300px') => `<span class="dotted-line" style="display:inline-block;width:${width};height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;">&nbsp;</span>`;
 
   return `
-  <div class="print-paper border border-slate-700 rounded-xl p-6 bg-slate-900 text-slate-200 space-y-4" style="max-width: 185mm; margin: 0 auto; box-sizing: border-box;">
+  <div class="print-paper border border-slate-700 rounded-xl p-7 bg-slate-900 text-slate-200 space-y-5" style="max-width: 185mm; margin: 0 auto; box-sizing: border-box;">
     <!-- Header -->
     <div class="flex justify-between items-start text-sm border-b border-white/10 pb-3">
       <div>
@@ -1281,41 +1281,41 @@ export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year
       </div>
       <div class="text-right text-xs text-slate-400 space-y-1.5">
         <p>Date: ${isBlank ? `_____ / _____ / ${esc(y)}` : today}</p>
-        ${nomId ? `<p class="font-mono text-indigo-300 font-bold text-sm">ID: ${esc(nomId)}</p>` : `<p>Nom. Ref: ${fillDotted('120px')}</p>`}
+        ${nomId ? `<p class="font-mono text-indigo-300 font-bold text-sm">ID: ${esc(nomId)}</p>` : `<p>Nom. ID (if known): ${fillDotted('110px')}</p>`}
       </div>
     </div>
 
     <!-- Title -->
-    <h2 class="text-center font-bold text-lg text-white border-y border-white/10 py-2 uppercase tracking-wide">
+    <h2 class="text-center font-bold text-lg text-white border-y border-white/10 py-2.5 uppercase tracking-wide">
       NOTICE OF WITHDRAWAL OF CANDIDATURE
     </h2>
 
     <!-- Particulars -->
-    <div class="space-y-3 text-sm">
+    <div class="space-y-3.5 text-sm">
       <div class="flex items-baseline">
-        <span class="text-slate-400 w-44 font-semibold shrink-0">Nomination ID:</span>
-        ${isBlank ? fillDotted('320px') : `<strong class="font-mono text-indigo-300 text-base">${esc(nomId)}</strong>`}
+        <span class="text-slate-400 w-48 font-semibold shrink-0">${isBlank ? 'Nomination ID (if known):' : 'Nomination ID:'}</span>
+        ${isBlank ? fillDotted('300px') : `<strong class="font-mono text-indigo-300 text-base">${esc(nomId)}</strong>`}
       </div>
       <div class="flex items-baseline">
-        <span class="text-slate-400 w-44 font-semibold shrink-0">Post Contested:</span>
-        ${isBlank ? fillDotted('320px') : `<strong class="text-white">${esc(post)}</strong>`}
+        <span class="text-slate-400 w-48 font-semibold shrink-0">Post Contested:</span>
+        ${isBlank ? fillDotted('300px') : `<strong class="text-white">${esc(post)}</strong>`}
       </div>
       <div class="flex items-baseline">
-        <span class="text-slate-400 w-44 font-semibold shrink-0">Candidate Name:</span>
-        ${isBlank ? fillDotted('320px') : `<span class="font-bold text-white">${esc(name)}</span>`}
+        <span class="text-slate-400 w-48 font-semibold shrink-0">Candidate Name:</span>
+        ${isBlank ? fillDotted('300px') : `<span class="font-bold text-white">${esc(name)}</span>`}
       </div>
       <div class="flex items-baseline">
-        <span class="text-slate-400 w-44 font-semibold shrink-0">Class &amp; Semester:</span>
-        ${isBlank ? fillDotted('320px') : `<span>${esc(cls)}</span>`}
+        <span class="text-slate-400 w-48 font-semibold shrink-0">Class &amp; Semester:</span>
+        ${isBlank ? fillDotted('300px') : `<span>${esc(cls)}</span>`}
       </div>
       <div class="flex items-baseline">
-        <span class="text-slate-400 w-44 font-semibold shrink-0">Department:</span>
-        ${isBlank ? fillDotted('320px') : `<span>${esc(dept)}</span>`}
+        <span class="text-slate-400 w-48 font-semibold shrink-0">Department:</span>
+        ${isBlank ? fillDotted('300px') : `<span>${esc(dept)}</span>`}
       </div>
     </div>
 
     <!-- Candidate Declaration -->
-    <div class="text-sm text-slate-300 border border-white/10 rounded-lg p-4 bg-white/5" style="line-height: 1.85;">
+    <div class="text-sm text-slate-300 border border-white/10 rounded-lg p-4 bg-white/5" style="line-height: 1.9;">
       ${isBlank 
         ? `I, ${fillDotted('250px')}, a validly nominated candidate for the post of ${fillDotted('230px')} in the College Union Election ${esc(y)}, do hereby give notice that I voluntarily <strong>WITHDRAW</strong> my candidature for the said post.<br><br>I declare that this decision is made of my own free will, without any coercion or undue influence.`
         : `I, <strong class="text-white">${esc(name)}</strong>, a validly nominated candidate for the post of <strong class="text-white">${esc(post)}</strong> in the College Union Election ${esc(y)}, do hereby give notice that I voluntarily <strong>WITHDRAW</strong> my candidature for the said post.<br><br>I declare that this decision is made of my own free will, without any coercion or undue influence.`
@@ -1323,54 +1323,47 @@ export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year
     </div>
 
     <!-- Candidate Signature Section -->
-    <div class="flex justify-between items-end pt-2 text-sm text-slate-400">
-      <div class="space-y-1.5" style="line-height: 1.6;">
+    <div class="flex justify-between items-end pt-3 text-sm text-slate-400">
+      <div class="space-y-2" style="line-height: 1.7;">
         <p>Date: _____ / _____ / ${esc(y)}</p>
         <p>Time: _____ : _____ AM / PM</p>
         <p>Place: ___________________________</p>
       </div>
       <div class="text-center" style="width: 240px;">
-        <div style="height: 42px;"></div>
-        <div style="border-top: 1.5px solid #000; margin-bottom: 3px;"></div>
+        <div style="height: 45px;"></div>
+        <div style="border-top: 1.5px solid #000; margin-bottom: 4px;"></div>
         <p class="font-bold text-white text-xs">Signature of Candidate</p>
         ${!isBlank && name ? `<p class="text-xs text-slate-400">(${esc(name)})</p>` : `<p class="text-[11px] text-slate-500">(Name: ______________________)</p>`}
       </div>
     </div>
 
     <!-- Tear-off / Office Endorsement Separator -->
-    <div style="display:flex;align-items:center;margin:14px 0 10px 0;">
+    <div style="display:flex;align-items:center;margin:18px 0 14px 0;">
       <div style="flex:1;border-top:1.5px dashed #555;"></div>
-      <span style="padding:0 8px;font-size:8pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.03em;">
+      <span style="padding:0 10px;font-size:8pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.04em;">
         ✂ Office Endorsement &amp; Receipt of Withdrawal ✂
       </span>
       <div style="flex:1;border-top:1.5px dashed #555;"></div>
     </div>
 
-    <!-- Office of the Returning Officer — Endorsement & Receipt -->
-    <div class="border border-white/20 rounded-lg p-3.5 bg-white/[0.03] space-y-2.5 text-xs">
-      <div class="flex justify-between items-center border-b border-white/10 pb-1.5">
-        <span class="font-bold text-white uppercase tracking-wider text-[11px]">OFFICE OF THE RETURNING OFFICER — ENDORSEMENT &amp; RECEIPT</span>
-        <span class="text-slate-400">Receipt Ref: ${isBlank ? fillDotted('120px') : `<strong class="font-mono text-indigo-300">${esc(nomId)}/WD</strong>`}</span>
+    <!-- Office of the Returning Officer — Endorsement & Receipt (Relaxed layout) -->
+    <div class="border border-white/20 rounded-xl p-5 bg-white/[0.03] space-y-4 text-xs" style="padding: 16px 20px;">
+      <div class="flex justify-between items-center border-b border-white/10 pb-2">
+        <span class="font-bold text-white uppercase tracking-wider text-[11.5px]">OFFICE OF THE RETURNING OFFICER — ENDORSEMENT &amp; RECEIPT</span>
+        <span class="text-slate-400">Receipt Ref: ${isBlank ? fillDotted('130px') : `<strong class="font-mono text-indigo-300 font-bold">${esc(nomId)}/WD</strong>`}</span>
       </div>
-      <p class="text-slate-300" style="line-height: 1.7;">
-        This notice of withdrawal was delivered to me at my office on <span style="white-space:nowrap;">Date: <strong>_____ / _____ / ${esc(y)}</strong></span> at <span style="white-space:nowrap;">Time: <strong>_____ : _____ AM/PM</strong></span> by the candidate in person.
+      <p class="text-slate-300" style="line-height: 1.85; font-size: 12.5px;">
+        This notice of withdrawal of candidature was delivered to me at my office on <span style="white-space:nowrap;">Date: <strong>_____ / _____ / ${esc(y)}</strong></span> at <span style="white-space:nowrap;">Time: <strong>_____ : _____ AM/PM</strong></span> by the candidate in person.
       </p>
-      <div class="flex justify-between items-center text-slate-300 pt-0.5" style="line-height: 1.6;">
-        <div>
-          <strong>Decision / Action:</strong> &nbsp;&nbsp;
-          <span>[ &nbsp; ] Accepted &amp; Candidature Struck Off</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          <span>[ &nbsp; ] Rejected (Time-barred / Invalid)</span>
+      <div class="flex justify-between items-end pt-3 text-slate-400">
+        <div class="space-y-1">
+          <p style="font-size: 12px;">Date: _____ / _____ / ${esc(y)}</p>
+          <p class="italic text-[10.5px] text-slate-500 pt-2">(College Seal)</p>
         </div>
-      </div>
-      <div class="flex justify-between items-end pt-2 text-slate-400">
-        <div>
-          <p>Date: _____ / _____ / ${esc(y)}</p>
-          <p class="italic text-[10px] text-slate-500 mt-0.5">(College Seal)</p>
-        </div>
-        <div class="text-center" style="width: 220px;">
-          <div style="border-top:1.5px dashed #000;margin-top:20px;margin-bottom:3px;"></div>
-          <p class="font-bold text-white text-[11px]">Returning Officer</p>
-          <p class="text-[9.5px] text-slate-400">${esc(cName)}</p>
+        <div class="text-center" style="width: 240px;">
+          <div style="border-top: 1.5px dashed #000; margin-top: 32px; margin-bottom: 4px;"></div>
+          <p class="font-bold text-white text-xs">Returning Officer</p>
+          <p class="text-[10px] text-slate-400">${esc(cName)}</p>
         </div>
       </div>
     </div>
