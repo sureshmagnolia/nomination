@@ -468,7 +468,8 @@ export const api = {
 
   getResults: (force = false) => {
     if (force) invalidateCache('getResults');
-    return get({ action: 'getResults' });
+    const pwd = localStorage.getItem('adminPwd') || sessionStorage.getItem('adminPwd');
+    return get({ action: 'getResults', ...(pwd ? { password: pwd } : {}) });
   },
 
   adminGetResults: (password, force = false) => {

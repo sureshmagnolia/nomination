@@ -9,10 +9,13 @@ import { esc, showToast, sortPosts } from '../../utils.js';
 export async function renderAdminResults(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
   renderAdminLayout(container, 'results', `
-    <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Aggregating results...</p></div>
+    <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Aggregating live results...</p></div>
   `);
 
-  async function loadData(force = false) {
+  let isLivePolling = true;
+  let pollTimer = null;
+
+  async function loadData(force = false, silent = false) {
     const main = container.querySelector('#adminMain');
     if (!main) return;
     if (force) {
@@ -41,16 +44,34 @@ export async function renderAdminResults(container) {
         api.getPublicSchedule().catch(() => ({})),
         api.adminGetSettings(pwd).catch(() => ({}))
       ]);
-      renderResultsUI(main, pwd, posts, candidatesResp.active || [], results, schedule, sets, candidatesResp.isPublished, loadData);
+      const scrollPos = container.closest('.overflow-auto')?.scrollTop || window.scrollY;
+      renderResultsUI(main, pwd, posts, candidatesResp.active || [], results, schedule, sets, candidatesResp.isPublished, loadData, isLivePolling, (val) => {
+        isLivePolling = val;
+      });
+      if (silent && scrollPos) {
+        container.closest('.overflow-auto')?.scrollTo({ top: scrollPos, behavior: 'instant' });
+      }
     } catch (e) {
-      main.innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
+      if (!silent) main.innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
     }
   }
+
+  // Live auto-polling every 4 seconds
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(() => {
+    if (!document.body.contains(container) || !container.querySelector('#adminMain')) {
+      clearInterval(pollTimer);
+      return;
+    }
+    if (isLivePolling) {
+      loadData(true, true);
+    }
+  }, 4000);
 
   await loadData(false);
 }
 
-function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished = false, reloadData = null) {
+function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished = false, reloadData = null, isLivePolling = true, setLivePolling = null) {
   const year = sets.electionYear || schedule.electionYear || new Date().getFullYear();
   const collegeName = sets.collegeName || 'GOVERNMENT VICTORIA COLLEGE PALAKKAD';
   const shortName = sets.collegeShortName || 'GVC';
@@ -121,6 +142,29 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
         </div>
       ` : ''}
 
+      <!-- Admin Real-Time Status & Live Publication Control Banner -->
+      <div class="glass p-4 rounded-2xl border ${isPublic ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-amber-500/40 bg-amber-500/10'} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+        <div class="flex items-start sm:items-center gap-3">
+          <span class="text-3xl">${isPublic ? '🌐' : '👁️‍🗨️'}</span>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-white text-sm uppercase tracking-wider">${isPublic ? 'Results are Publicly Live' : 'Admin Live Monitoring Mode'}</span>
+              <span class="badge ${isPublic ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'} text-[10px] font-bold">
+                ${isPublic ? '📢 VISIBLE TO STUDENTS' : '🔒 HIDDEN FROM STUDENTS • ADMIN LIVE ONLY'}
+              </span>
+            </div>
+            <p class="text-slate-300 text-xs mt-1">
+              ${isPublic ? 'All students and electors can currently view live vote counts and winners on the public portal.' : 'You can see all votes live as entries are recorded. Public visitors see "Counting in Progress" until you click Publish.'}
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button id="btnPublishBanner" class="btn btn-sm ${isPublic ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'btn-primary'} font-bold shadow-lg flex items-center gap-1.5">
+            <span>${isPublic ? '🔒' : '📢'}</span> ${isPublic ? 'Hide from Public' : 'Push Live to Public'}
+          </button>
+        </div>
+      </div>
+
       <!-- Control Panels: Lock/Freeze, Live Counting, and Public Visibility -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="p-4 rounded-xl border ${isCountingActive ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-500/10 border-slate-500/30'} flex items-center justify-between">
@@ -153,8 +197,8 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           <div class="flex items-center gap-3">
             <span class="text-2xl">${isPublic ? '🌐' : '👁️‍🗨️'}</span>
             <div>
-              <div class="font-bold text-sm text-white">${isPublic ? 'Public View: Published' : 'Public View: Hidden'}</div>
-              <div class="text-xs text-slate-400">${isPublic ? 'Results visible to public' : 'Only admins see results'}</div>
+              <div class="font-bold text-sm text-white">${isPublic ? 'Public View: Live' : 'Public View: Hidden'}</div>
+              <div class="text-xs text-slate-400">${isPublic ? 'Results visible to everyone' : 'Only admin sees live counts'}</div>
             </div>
           </div>
           <button id="btnTogglePublic" class="btn btn-sm ${isPublic ? 'bg-rose-500/80 hover:bg-rose-600 text-white font-bold' : 'btn-success font-bold'}">
@@ -165,14 +209,22 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
 
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/5 p-6 rounded-2xl border border-white/10">
         <div>
-          <h2 class="text-xl font-bold text-white tracking-tight">Vote Counting Overview</h2>
-          <p class="text-slate-400 text-sm">Post-wise breakdown of votes and leading candidates.</p>
+          <div class="flex items-center gap-2">
+            <h2 class="text-xl font-bold text-white tracking-tight">Vote Counting Overview</h2>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Admin Live Stream
+            </span>
+          </div>
+          <p class="text-slate-400 text-sm mt-0.5">Real-time tally of counting matrix entries and leading candidates.</p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
-          <button id="btnAdminRefreshResults" class="btn btn-secondary px-5 flex items-center gap-2">
-            <span>🔄</span> Refresh Results
+          <button id="btnToggleAutoRefresh" class="btn btn-secondary px-3.5 text-xs flex items-center gap-1.5 font-mono">
+            <span>${isLivePolling ? '🟢' : '⏸️'}</span> Live Polling: ${isLivePolling ? 'ON (4s)' : 'PAUSED'}
           </button>
-          <button id="btnPrintOfficial" class="btn btn-primary px-6 flex items-center gap-2">
+          <button id="btnAdminRefreshResults" class="btn btn-secondary px-4 text-xs flex items-center gap-1.5">
+            <span>🔄</span> Refresh Now
+          </button>
+          <button id="btnPrintOfficial" class="btn btn-primary px-5 text-xs flex items-center gap-1.5 font-bold">
             <span>🖨️</span> Print Official Result Sheet
           </button>
         </div>
@@ -409,8 +461,29 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       } catch (err) {
         showToast(`Refresh failed: ${err.message}`, 'error');
         btnAdminRefresh.disabled = false;
-        btnAdminRefresh.innerHTML = '<span>🔄</span> Refresh Results';
+        btnAdminRefresh.innerHTML = '<span>🔄</span> Refresh Now';
       }
+    };
+  }
+
+  // ── Auto-Refresh Toggle ────────────────────────────────────────────────────
+  const btnAuto = main.querySelector('#btnToggleAutoRefresh');
+  if (btnAuto && setLivePolling) {
+    btnAuto.onclick = () => {
+      const nextVal = !isLivePolling;
+      setLivePolling(nextVal);
+      showToast(nextVal ? '🟢 Live auto-polling active (updating every 4s).' : '⏸️ Live auto-polling paused.', 'info');
+      btnAuto.innerHTML = `<span>${nextVal ? '🟢' : '⏸️'}</span> Live Polling: ${nextVal ? 'ON (4s)' : 'PAUSED'}`;
+      if (nextVal && reloadData) reloadData(true);
+    };
+  }
+
+  // ── Publish / Hide from Top Banner ──────────────────────────────────────────
+  const btnTopBanner = main.querySelector('#btnPublishBanner');
+  if (btnTopBanner) {
+    btnTopBanner.onclick = () => {
+      const btnPublic = main.querySelector('#btnTogglePublic');
+      if (btnPublic) btnPublic.click();
     };
   }
 

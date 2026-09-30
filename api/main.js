@@ -1218,13 +1218,27 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       const published = (resOverride === 'FORCE_OPEN' || legacyPublished === 'true') && resOverride !== 'FORCE_CLOSED';
       const countingActive = (await getSetting('countingActive')) === 'true';
       const locked = (await getSetting('resultsLocked')) === 'true';
-      if (!published) {
-        return jsonOut(res, { results: [], published: false, countingActive, locked });
+
+      // Verify if requester is an authenticated administrator
+      let isAdmin = false;
+      if (adminPwd && adminToken) {
+        try {
+          await checkAdmin(adminPwd, adminToken, 'adminCheck');
+          isAdmin = true;
+        } catch (_) {
+          isAdmin = false;
+        }
       }
+
+      if (!published && !isAdmin) {
+        return jsonOut(res, { results: [], published: false, isAdmin: false, countingActive, locked });
+      }
+
       const data = await getSetting('results_data');
       return jsonOut(res, {
         results: safeJsonParse(data, []),
-        published: true,
+        published,
+        isAdmin,
         countingActive,
         locked
       });
