@@ -3,6 +3,10 @@
  * Public dashboard to view live election results, with both:
  * 1. Standard Results View (detailed breakdown, progress bars, departmental tables)
  * 2. Counting Trends Dashboard (responsive screen-adaptive cards, rolling odometer digit animations, color themes & test data simulation)
+ * 
+ * Rules:
+ * - Admin view updates live in real-time as new data is entered (NO 5-min timer).
+ * - 5-minute timer lock applies ONLY to public student view when unlocked/published by admin.
  */
 import { api } from '../api.js';
 import { esc, sortPosts } from '../utils.js';
@@ -10,7 +14,7 @@ import { router } from '../router.js';
 
 const CACHE_KEY = 'election_results_cache';
 const CACHE_TIME_KEY = 'election_results_last_fetch';
-const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const PUBLIC_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes (for public electors only)
 
 const CARD_THEMES = [
   { bg: 'bg-sky-950/25', border: 'border-t-4 border-sky-500', text: 'text-sky-400', leadBg: 'bg-sky-600', badge: 'bg-sky-500/20 text-sky-300 border-sky-500/30' },
@@ -148,6 +152,9 @@ const DEFAULT_TEST_TRENDS = [
 ];
 
 export async function renderResults(container, options = {}) {
+  const adminPwd = localStorage.getItem('adminPwd') || sessionStorage.getItem('adminPwd');
+  const isAdmin = !!adminPwd;
+
   let activeTab = options.initialTab || (window.location.hash.includes('trends') ? 'trends' : 'standard');
   let testData = null;
   let previousTrendsState = {};
@@ -233,14 +240,33 @@ export async function renderResults(container, options = {}) {
   }
 
   function updateTimer() {
+    // 1. ADMIN VIEW: NO 5-MINUTE TIMER LOCK. Updates real-time live as data is entered.
+    if (isAdmin) {
+      timerEl.innerHTML = `<span class="inline-flex items-center gap-1.5 text-amber-300 font-bold"><span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> 👑 Admin Live Stream (Real-Time)</span>`;
+      btnRefresh.disabled = false;
+      btnRefresh.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+      return;
+    }
+
+    // 2. PUBLIC VIEW: If results not published yet, no 5-min timer needed (results are locked/hidden).
+    const isPublished = cachedPayload?.isResultsPublished;
+    if (!isPublished) {
+      timerEl.textContent = '🔒 Results Not Yet Released';
+      timerEl.classList.remove('text-green-400');
+      btnRefresh.disabled = false;
+      btnRefresh.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+      return;
+    }
+
+    // 3. PUBLIC VIEW (UNLOCKED / PUBLISHED): Enforce the 5-minute timer lock to rate-limit traffic.
     const lastFetch = localStorage.getItem(CACHE_TIME_KEY);
     if (!lastFetch) { 
       timerEl.textContent = ''; 
       btnRefresh.disabled = false;
-      btnRefresh.classList.remove('opacity-50', 'cursor-not-allowed');
+      btnRefresh.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
       return; 
     }
-    const nextUpdate = parseInt(lastFetch, 10) + REFRESH_INTERVAL;
+    const nextUpdate = parseInt(lastFetch, 10) + PUBLIC_REFRESH_INTERVAL;
     const remaining = Math.max(0, nextUpdate - Date.now());
     if (remaining <= 0) {
       timerEl.textContent = 'Live Update Available';
@@ -260,7 +286,25 @@ export async function renderResults(container, options = {}) {
   const timerInterval = setInterval(updateTimer, 1000);
   updateTimer();
 
-  container.querySelector('#backToHome').addEventListener('click', () => router.navigate('/'));
+  // If viewing as administrator, auto-poll every 3.5 seconds so as new counting entries are submitted,
+  // the Results / Counting Trends views automatically update live on screen without page refresh.
+  let adminLivePoll = null;
+  if (isAdmin) {
+    adminLivePoll = setInterval(() => {
+      if (!document.body.contains(container) || !container.querySelector('#resultsMain')) {
+        clearInterval(adminLivePoll);
+        clearInterval(timerInterval);
+        return;
+      }
+      loadData(true, true); // silent live background update
+    }, 3500);
+  }
+
+  container.querySelector('#backToHome').addEventListener('click', () => {
+    if (adminLivePoll) clearInterval(adminLivePoll);
+    clearInterval(timerInterval);
+    router.navigate('/');
+  });
 
   tabBtnStandard.addEventListener('click', () => {
     activeTab = 'standard';
@@ -327,36 +371,47 @@ export async function renderResults(container, options = {}) {
     loadData(true);
   });
 
-  async function loadData(force = false) {
+  async function loadData(force = false, silent = false) {
     try {
-      const lastFetch = localStorage.getItem(CACHE_TIME_KEY);
-      const cached = localStorage.getItem(CACHE_KEY);
+      // Public visitors use localStorage cache during the 5-minute interval; Admins ALWAYS bypass it
+      if (!isAdmin && !force) {
+        const lastFetch = localStorage.getItem(CACHE_TIME_KEY);
+        const cached = localStorage.getItem(CACHE_KEY);
 
-      if (!force && lastFetch && cached && (Date.now() - parseInt(lastFetch, 10) < REFRESH_INTERVAL)) {
-        try {
-          cachedPayload = JSON.parse(cached);
-          renderCurrentView();
-          return;
-        } catch (_) {
-          localStorage.removeItem(CACHE_KEY);
-          localStorage.removeItem(CACHE_TIME_KEY);
+        if (lastFetch && cached && (Date.now() - parseInt(lastFetch, 10) < PUBLIC_REFRESH_INTERVAL)) {
+          try {
+            cachedPayload = JSON.parse(cached);
+            renderCurrentView();
+            return;
+          } catch (_) {
+            localStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem(CACHE_TIME_KEY);
+          }
         }
       }
 
-      resultsMain.innerHTML = `
-        <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Fetching Live Results...</p></div>
-      `;
+      if (!silent && !resultsMain.querySelector('#trendsGrid') && !resultsMain.querySelector('.candidates-container')) {
+        resultsMain.innerHTML = `
+          <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Fetching Live Results...</p></div>
+        `;
+      }
 
-      if (force) {
+      if (force || isAdmin) {
         api.invalidateCache('getResults');
+        api.invalidateCache('adminGetResults');
         api.invalidateCache('getPosts');
         api.invalidateCache('getPublicSchedule');
         api.invalidateCache('getSettings');
       }
 
+      // If viewing as admin, fetch via adminGetResults to see live tallies instantly
+      const resultsPromise = isAdmin
+        ? api.adminGetResults(adminPwd, true).catch(() => api.getResults(true).catch(() => ({ results: [], published: false })))
+        : api.getResults(force).catch(() => ({ results: [], published: false, countingActive: false }));
+
       const [posts, rawResults, schedule, sets] = await Promise.all([
         api.getPosts(),
-        api.getResults(force).catch(() => ({ results: [], published: false, countingActive: false })),
+        resultsPromise,
         api.getPublicSchedule().catch(() => ({})),
         api.getSettings().catch(() => ({}))
       ]);
@@ -368,15 +423,21 @@ export async function renderResults(container, options = {}) {
       const year = schedule?.electionYear || sets?.electionYear || new Date().getFullYear();
 
       cachedPayload = { posts, results, schedule, isCountingActive, isResultsPublished, isResultsLocked, year };
-      localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
-      localStorage.setItem(CACHE_KEY, JSON.stringify(cachedPayload));
+      
+      // Store cache for public users only
+      if (!isAdmin) {
+        localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+        localStorage.setItem(CACHE_KEY, JSON.stringify(cachedPayload));
+      }
 
       const titleEl = container.querySelector('#pageTitle');
       if (titleEl) titleEl.innerHTML = `<span>📊</span> Live Election Results ${year}`;
 
       renderCurrentView();
     } catch (err) {
-      resultsMain.innerHTML = `<div class="alert alert-error">❌ Failed to load results: ${esc(err.message)}</div>`;
+      if (!silent) {
+        resultsMain.innerHTML = `<div class="alert alert-error">❌ Failed to load results: ${esc(err.message)}</div>`;
+      }
     }
   }
 
@@ -385,13 +446,13 @@ export async function renderResults(container, options = {}) {
     if (!cachedPayload && !testData) return;
 
     if (activeTab === 'standard') {
-      renderStandardView(resultsMain, cachedPayload);
+      renderStandardView(resultsMain, cachedPayload, isAdmin);
     } else {
-      renderTrendsView(resultsMain, cachedPayload, testData);
+      renderTrendsView(resultsMain, cachedPayload, testData, isAdmin);
     }
   }
 
-  function renderTrendsView(main, payload, overrideTestData) {
+  function renderTrendsView(main, payload, overrideTestData, isViewerAdmin) {
     if (overrideTestData && overrideTestData.length > 0) {
       renderTrendsCards(main, overrideTestData, previousTrendsState, Object.keys(previousTrendsState).length === 0);
       previousTrendsState = JSON.parse(JSON.stringify(overrideTestData));
@@ -400,7 +461,9 @@ export async function renderResults(container, options = {}) {
 
     const { results, isResultsPublished, isCountingActive } = payload || {};
 
-    if (!isResultsPublished || !results || results.length === 0) {
+    // For public users: strictly hide until released by Returning Officer
+    // For admins: allow viewing live trends stream directly
+    if ((!isResultsPublished && !isViewerAdmin) || !results || results.length === 0) {
       main.innerHTML = `
         <div class="glass p-8 sm:p-12 rounded-3xl border border-sky-500/20 text-center max-w-2xl mx-auto shadow-2xl mt-4">
           <div class="w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center mx-auto mb-5 text-3xl animate-pulse">
@@ -440,7 +503,7 @@ export async function renderResults(container, options = {}) {
 
   // Initial load
   updateTabButtons();
-  await loadData();
+  await loadData(false);
 }
 
 /**
@@ -678,10 +741,12 @@ function updateRollingCounter(container, oldValue, newValue, isFirstLoad = false
 /**
  * Standard View Renderer (detailed tables, leading candidate leaderboard, progress bars)
  */
-function renderStandardView(main, payload) {
+function renderStandardView(main, payload, isViewerAdmin) {
   const { posts, results, isCountingActive, isResultsPublished, isResultsLocked } = payload || {};
 
-  if (!results || results.length === 0 || !isResultsPublished) {
+  // For public visitors: strictly hide until released by Returning Officer
+  // For admins: allow viewing live breakdown stream
+  if ((!results || results.length === 0 || !isResultsPublished) && !isViewerAdmin) {
     if (isCountingActive) {
       main.innerHTML = `
         <div class="text-center py-20 bg-amber-500/10 rounded-2xl border border-amber-500/30 page-enter shadow-2xl">
@@ -727,7 +792,7 @@ function renderStandardView(main, payload) {
     agg[name] = {};
   });
 
-  results.forEach(r => {
+  (results || []).forEach(r => {
     const pName = r.Post;
     if (!agg[pName]) agg[pName] = {};
     if (!agg[pName][r.CandidateId]) {
@@ -737,6 +802,18 @@ function renderStandardView(main, payload) {
   });
 
   let html = '';
+
+  if (isViewerAdmin && !isResultsPublished) {
+    html += `
+      <div class="p-3 mb-6 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span>👑</span>
+          <span>ADMIN LIVE STREAM • Unreleased data visible only to authenticated administrator</span>
+        </div>
+        <span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px]">Real-Time Feed</span>
+      </div>
+    `;
+  }
 
   // Leaderboard (General & Reps only)
   const leaderboardPosts = sortedPosts.filter(p => {

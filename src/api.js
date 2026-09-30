@@ -471,8 +471,8 @@ export const api = {
     return get({ action: 'getResults' });
   },
 
-  adminGetResults: (password, force = false) => {
-    if (force) invalidateCache('adminGetResults');
+  adminGetResults: (password, force = true) => {
+    invalidateCache('adminGetResults');
     return get({ action: 'adminGetResults', password });
   },
 
@@ -549,8 +549,11 @@ export const api = {
   },
 
   adminSaveResults: (password, results) => {
-    // We queue the network save, invalidate the results cache since it's hard to append optimally here
-    return bgPost({ action: 'adminSaveResults', password, results }).then((res) => {
+    localStorage.removeItem('election_results_cache');
+    localStorage.removeItem('election_results_last_fetch');
+    invalidateCache('getResults');
+    invalidateCache('adminGetResults');
+    return post({ action: 'adminSaveResults', password, results }).then((res) => {
       invalidateCache('getResults');
       invalidateCache('adminGetResults');
       return res;
@@ -574,9 +577,13 @@ export const api = {
   },
 
   adminSaveCountingMatrix: async (password, matrixData) => {
+    localStorage.removeItem('election_results_cache');
+    localStorage.removeItem('election_results_last_fetch');
     updateCache({ action: 'adminGetCountingMatrix', password }, matrixData);
     const res = await post({ action: 'adminSaveCountingMatrix', password, matrixData, matrix: matrixData });
     invalidateCache('adminGetCountingMatrix');
+    invalidateCache('adminGetResults');
+    invalidateCache('getResults');
     updateCache({ action: 'adminGetCountingMatrix', password }, matrixData);
     return res;
   },

@@ -56,7 +56,7 @@ export async function renderAdminResults(container) {
     }
   }
 
-  // Live auto-polling every 4 seconds
+  // Live auto-polling every 3 seconds for instant updates as new data is entered
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(() => {
     if (!document.body.contains(container) || !container.querySelector('#adminMain')) {
@@ -66,9 +66,9 @@ export async function renderAdminResults(container) {
     if (isLivePolling) {
       loadData(true, true);
     }
-  }, 4000);
+  }, 3000);
 
-  await loadData(false);
+  await loadData(true);
 }
 
 function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished = false, reloadData = null, isLivePolling = true, setLivePolling = null) {
