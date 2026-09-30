@@ -783,18 +783,22 @@ export function buildNominationPaper(id, post, gender, dobDisplay, age, candidat
       ${sectionBlock('Proposer', proposer)}
       ${sectionBlock('Seconder', seconder)}
     </div>
-    <div class="border-t border-white/10 pt-2 text-center space-y-1">
-      <h3 class="font-bold text-white text-xs uppercase tracking-wide">Consent of Candidate</h3>
-      <p class="text-xs text-slate-300">"I agree, if elected, to serve on the body to which I am proposed as a candidate."</p>
-      <div class="flex justify-around mt-2 text-xs text-slate-400">
-        <span><strong>Signature of Candidate:</strong> <span class="dotted-line" style="width:230px;border-bottom:1.5px solid #000;height:20px;margin-left:4px;">&nbsp;</span></span>
-        <span><strong>Date:</strong> _____ / _____ / 202___</span>
+    <div class="border-t border-white/10 pt-2 text-center">
+      <h3 class="font-bold text-white text-xs uppercase tracking-wide mb-1">Consent of Candidate</h3>
+      <p class="text-xs text-slate-300 mb-2">"I agree, if elected, to serve on the body to which I am proposed as a candidate."</p>
+      <div class="flex justify-around items-start text-xs text-slate-400 mt-2">
+        <div class="text-center">
+          <div><strong>Signature of Candidate:</strong> <span class="dotted-line" style="width:230px;border-bottom:1.5px solid #000;height:20px;margin-left:4px;">&nbsp;</span></div>
+          <div class="text-[9.5px] text-slate-500 italic mt-1">(To be signed in front of the Returning Officer)</div>
+        </div>
+        <div class="pt-0.5">
+          <span><strong>Date:</strong> _____ / _____ / 202___</span>
+        </div>
       </div>
-      <p class="text-[10px] text-slate-500 italic mt-0.5">(To be signed in front of the Returning Officer)</p>
     </div>
 
-    <!-- Tear-off Dotted Line -->
-    <div style="display:flex;align-items:center;margin:10px 0;">
+    <!-- Tear-off Dotted Line (Generous buffer so tearing never impairs candidate signature) -->
+    <div style="display:flex;align-items:center;margin:26px 0 16px 0;">
       <div style="flex:1;border-top:1.5px dashed #444;"></div>
       <span style="padding:0 8px;font-size:8pt;font-weight:bold;text-transform:uppercase;white-space:nowrap;letter-spacing:0.02em;">
         ✂ Tear-off Acknowledgement Slip (To be signed &amp; returned to Candidate by Returning Officer) ✂

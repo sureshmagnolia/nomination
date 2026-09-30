@@ -1155,20 +1155,24 @@ export function printBlankNominationForm(settings = {}) {
     </div>
 
     <!-- Consent of Candidate -->
-    <div class="border-t border-white/10 text-center" style="padding-top: 10px; margin: 10px 0 8px 0;">
-      <h3 class="font-bold text-white uppercase tracking-wider" style="font-size: 12px; margin-bottom: 4px;">Consent of Candidate</h3>
+    <div class="border-t border-white/10 text-center" style="padding-top: 10px; margin-top: 8px; margin-bottom: 4px;">
+      <h3 class="font-bold text-white uppercase tracking-wider" style="font-size: 12px; margin-bottom: 3px;">Consent of Candidate</h3>
       <p class="text-slate-400 italic" style="font-size: 11.5px; margin-bottom: 8px;">"I agree, if elected, to serve on the body to which I am proposed as a candidate."</p>
-      <div class="flex justify-around text-slate-400" style="font-size: 12px; margin-top: 6px;">
-        <span><strong>Signature of Candidate:</strong> <span class="dotted-line" style="width:240px;border-bottom:1.5px solid #000;height:22px;margin-left:6px;">&nbsp;</span></span>
-        <span><strong>Date:</strong> _____ / _____ / 202___</span>
+      <div class="flex justify-around items-start text-slate-400" style="font-size: 12px; margin-top: 6px;">
+        <div class="text-center">
+          <div><strong>Signature of Candidate:</strong> <span class="dotted-line" style="width:240px;border-bottom:1.5px solid #000;height:22px;margin-left:6px;">&nbsp;</span></div>
+          <div class="text-slate-500 italic" style="font-size: 9.5px; margin-top: 4px;">(To be signed in front of the Returning Officer)</div>
+        </div>
+        <div style="padding-top: 2px;">
+          <span><strong>Date:</strong> _____ / _____ / 202___</span>
+        </div>
       </div>
-      <p class="text-slate-500 italic" style="font-size: 10px; margin-top: 4px;">(To be signed in front of the Returning Officer)</p>
     </div>
 
-    <!-- Tear-off Dotted Line -->
-    <div style="display:flex;align-items:center;margin:10px 0 8px 0;">
+    <!-- Tear-off Dotted Line (Generous buffer so tearing never impairs candidate signature) -->
+    <div style="display:flex;align-items:center;margin: 28px 0 16px 0;">
       <div style="flex:1;border-top:1.5px dashed #444;"></div>
-      <span style="padding:0 8px;font-size:8pt;font-weight:bold;text-transform:uppercase;white-space:nowrap;letter-spacing:0.02em;">
+      <span style="padding:0 10px;font-size:8pt;font-weight:bold;text-transform:uppercase;white-space:nowrap;letter-spacing:0.02em;">
         ✂ Tear-off Acknowledgement Slip (To be signed &amp; returned to Candidate by Returning Officer) ✂
       </span>
       <div style="flex:1;border-top:1.5px dashed #444;"></div>
