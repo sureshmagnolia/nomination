@@ -3,6 +3,8 @@
  * Robust hash-based SPA router.
  */
 
+const routes = {};
+let defaultRoute = '/';
 let currentCleanup = null;
 
 export const router = {
