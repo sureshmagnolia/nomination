@@ -354,6 +354,10 @@ async function ensureSchema() {
     try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`; } catch (_) {}
     try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS rejection_reason TEXT;`; } catch (_) {}
     try { await sql`ALTER TABLE backup_snapshots ADD COLUMN IF NOT EXISTS created_at VARCHAR(100);`; } catch (_) {}
+    // Allow candidates to submit nominations for different posts:
+    // Drop single-post unique index if present and enforce uniqueness per (candidate_serial, post)
+    try { await sql`DROP INDEX IF EXISTS unq_candidate_active;`; } catch (_) {}
+    try { await sql`CREATE UNIQUE INDEX IF NOT EXISTS unq_candidate_post_active ON nominations (candidate_serial, post) WHERE status != 'Rejected';`; } catch (_) {}
     
     await sql`
       CREATE TABLE IF NOT EXISTS nominal_roll (
@@ -769,7 +773,9 @@ export default async function handler(req, res) {
           rejection_reason TEXT
         );
       `;
-      await sql`CREATE UNIQUE INDEX IF NOT EXISTS unq_candidate_active ON nominations (candidate_serial) WHERE status != 'Rejected'`;
+      // unq_candidate_active dropped to allow nominations across multiple posts; uniqueness enforced per (candidate_serial, post)
+      try { await sql`DROP INDEX IF EXISTS unq_candidate_active;`; } catch (_) {}
+      await sql`CREATE UNIQUE INDEX IF NOT EXISTS unq_candidate_post_active ON nominations (candidate_serial, post) WHERE status != 'Rejected'`;
       await sql`
         CREATE TABLE IF NOT EXISTS roll_corrections (
           id VARCHAR(64) PRIMARY KEY,
