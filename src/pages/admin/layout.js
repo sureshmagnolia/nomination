@@ -95,15 +95,69 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
 
     <!-- Main content -->
     <div class="flex-1 flex flex-col min-h-screen overflow-auto">
-      <header class="no-print border-b border-white/10 glass px-6 py-3 flex items-center justify-between flex-shrink-0">
-        <h2 class="font-semibold text-white capitalize">${activeSection.replace(/-/g,' ')}</h2>
-        <span class="text-xs text-slate-500">Logged in as Admin</span>
+      <header class="no-print border-b border-white/10 glass px-6 py-2.5 flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center gap-3">
+          <h2 class="font-semibold text-white capitalize text-base">${activeSection.replace(/-/g,' ')}</h2>
+          <div id="adminGlobalSyncBadge"></div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-slate-500 hidden sm:inline">Logged in as Admin</span>
+        </div>
       </header>
       <main id="adminMain" class="flex-1 p-6 overflow-auto">
         ${contentHtml}
       </main>
     </div>
   </div>`;
+
+  // Live Admin Sync Status badge subscription
+  const syncBadgeEl = container.querySelector('#adminGlobalSyncBadge');
+  if (syncBadgeEl && api.subscribeAdminSync) {
+    const unsub = api.subscribeAdminSync((state) => {
+      if (!syncBadgeEl || !document.body.contains(syncBadgeEl)) return;
+      const { count = 0, isSyncing = false, isOnline = true } = state || {};
+
+      if (isSyncing) {
+        syncBadgeEl.innerHTML = `
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+            <span class="spinner" style="width:10px;height:10px;border-width:2px;"></span>
+            Syncing ${count > 0 ? `(${count})` : ''}...
+          </span>
+        `;
+      } else if (count > 0 || !isOnline) {
+        syncBadgeEl.innerHTML = `
+          <div class="flex items-center gap-1.5">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${isOnline ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' : 'bg-rose-500/10 text-rose-300 border border-rose-500/20'}">
+              <span class="w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-amber-400 animate-pulse' : 'bg-rose-400'}"></span>
+              ${!isOnline ? 'Offline' : ''} ${count > 0 ? `${count} Queued` : 'No Internet'}
+            </span>
+            ${isOnline && count > 0 ? `
+              <button id="btnHeaderAdminSync" class="btn btn-xs py-0.5 px-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-full flex items-center gap-1 text-[11px] shadow-sm">
+                <span>⚡</span> Sync Now
+              </button>
+            ` : ''}
+          </div>
+        `;
+        syncBadgeEl.querySelector('#btnHeaderAdminSync')?.addEventListener('click', async () => {
+          showToast('Syncing all changes to server...', 'info');
+          try {
+            await api.syncAdminNow();
+            showToast('Sync completed successfully!', 'success');
+          } catch (err) {
+            showToast(`Sync failed: ${err.message}`, 'error');
+          }
+        });
+      } else {
+        syncBadgeEl.innerHTML = `
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Synced
+          </span>
+        `;
+      }
+    });
+
+    if (router.registerCleanup) router.registerCleanup(unsub);
+  }
 
   // Sidebar navigation
   container.querySelectorAll('[data-admin-nav]').forEach(btn => {

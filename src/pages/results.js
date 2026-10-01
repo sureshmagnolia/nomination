@@ -305,6 +305,12 @@ export async function renderResults(container, options = {}) {
     }, 3500);
   }
 
+  // Register router cleanup hook to guarantee intervals are stopped if user navigates away
+  router.registerCleanup(() => {
+    if (adminLivePoll) clearInterval(adminLivePoll);
+    clearInterval(timerInterval);
+  });
+
   container.querySelector('#backToHome').addEventListener('click', () => {
     if (adminLivePoll) clearInterval(adminLivePoll);
     clearInterval(timerInterval);

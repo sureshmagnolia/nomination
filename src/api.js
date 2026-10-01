@@ -4,6 +4,15 @@
  * Includes in-memory caching and background sync queue for instant UI response.
  */
 import { CONFIG } from './config.js';
+import {
+  getAdminCached,
+  setAdminCached,
+  invalidateAdminCached,
+  enqueueAdminMutation,
+  flushAdminOutbox,
+  subscribeAdminSync,
+  getAdminOutboxCount
+} from './offlineAdminStorage.js';
 
 const BASE_URL = CONFIG.API_BASE_URL;
 
@@ -12,6 +21,13 @@ let _cache = {};
 const _syncQueue = [];
 let _isSyncing = false;
 let _statusCallback = null;
+
+// Auto-flush outbox when browser reconnects to internet
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    flushAdminOutbox(post, getSessionToken).catch(() => {});
+  });
+}
 
 // ─── Session Helpers ──────────────────────────────────────────────────────────
 function getSessionToken() {
@@ -112,28 +128,56 @@ async function get(params) {
 
   // Use the original params for the cache key to maintain compatibility with updateCache
   const cacheKey = JSON.stringify(params);
+  const isAdminAction = (params.action && params.action.startsWith('admin')) || Boolean(params.password);
+
   if (_cache[cacheKey] !== undefined) return _cache[cacheKey];
+
+  // If offline and admin action, load from local IndexedDB cache immediately
+  if (!navigator.onLine && isAdminAction) {
+    const local = await getAdminCached(cacheKey);
+    if (local !== null && local !== undefined) {
+      _cache[cacheKey] = local;
+      return local;
+    }
+  }
 
   const url = new URL(BASE_URL, window.location.origin);
   Object.entries(queryParams).forEach(([k, v]) => url.searchParams.append(k, v));
-  const res = await fetch(url.toString(), { headers });
-  if (!res.ok) {
-    let errMessage = `Network error: ${res.status}`;
-    try { const errData = await res.json(); if (errData.error) errMessage = errData.error; } catch(e) {}
-    if (errMessage.includes('UNAUTHORIZED_SESSION') || errMessage === 'SESSION_EXPIRED') {
-      handleSessionExpired();
-    }
-    throw new Error(errMessage);
-  }
-  const data = await res.json();
-  if (data.error === 'SESSION_EXPIRED' || (data.error && data.error.includes('UNAUTHORIZED_SESSION'))) {
-    handleSessionExpired();
-    throw new Error('SESSION_EXPIRED');
-  }
-  if (data.error) throw new Error(data.error);
 
-  _cache[cacheKey] = data;
-  return data;
+  try {
+    const res = await fetch(url.toString(), { headers });
+    if (!res.ok) {
+      let errMessage = `Network error: ${res.status}`;
+      try { const errData = await res.json(); if (errData.error) errMessage = errData.error; } catch(e) {}
+      if (errMessage.includes('UNAUTHORIZED_SESSION') || errMessage === 'SESSION_EXPIRED') {
+        handleSessionExpired();
+      }
+      throw new Error(errMessage);
+    }
+    const data = await res.json();
+    if (data.error === 'SESSION_EXPIRED' || (data.error && data.error.includes('UNAUTHORIZED_SESSION'))) {
+      handleSessionExpired();
+      throw new Error('SESSION_EXPIRED');
+    }
+    if (data.error) throw new Error(data.error);
+
+    _cache[cacheKey] = data;
+    if (isAdminAction) {
+      setAdminCached(cacheKey, data).catch(() => {});
+    }
+    return data;
+  } catch (netErr) {
+    // If network fails (or device is offline), check IndexedDB fallback for admin data
+    if (isAdminAction || params.action === 'getPosts' || params.action === 'getNominalRoll' || params.action === 'getSettings') {
+      const local = await getAdminCached(cacheKey);
+      if (local !== null && local !== undefined) {
+        console.info(`[Admin Offline] Serving '${params.action}' from IndexedDB cache.`);
+        _cache[cacheKey] = local;
+        return local;
+      }
+    }
+    throw netErr;
+  }
 }
 
 // Direct synchronous post (blocks UI until server responds)
@@ -141,6 +185,11 @@ async function post(body) {
   // Inject session token for admin requests
   const token = getSessionToken();
   if (token && body.password) body = { ...body, sessionToken: token };
+
+  // For public submissions (e.g. submitNomination): reject if offline to prevent un-synced local nominations
+  if (!navigator.onLine && !body.password && !body.action?.startsWith('admin')) {
+    throw new Error('Internet connection required. Please connect to the internet to submit your nomination.');
+  }
 
   const res = await fetch(BASE_URL, {
     method: 'POST',
@@ -164,11 +213,27 @@ async function post(body) {
   return data;
 }
 
-// Background queued post (resolves when server finishes)
+// Background queued post: For Admin mutations, persists in IndexedDB outbox with auto-sync
 function bgPost(body) {
   // Inject session token for admin requests
   const token = getSessionToken();
   if (token && body.password) body = { ...body, sessionToken: token };
+
+  const isAdmin = (body.action && body.action.startsWith('admin')) || Boolean(body.password);
+  if (isAdmin) {
+    // 1. Enqueue to persistent IndexedDB Outbox
+    enqueueAdminMutation(body.action, body).then(() => {
+      // 2. If online, trigger background sync
+      if (navigator.onLine) {
+        flushAdminOutbox(post, getSessionToken).catch(err => {
+          console.warn('flushAdminOutbox error:', err);
+        });
+      }
+    }).catch(err => {
+      console.error('Failed to enqueue admin mutation:', err);
+    });
+    return Promise.resolve({ ok: true, queued: true });
+  }
 
   return new Promise((resolve, reject) => {
     _syncQueue.push({ body, resolve, reject });
@@ -182,6 +247,22 @@ function updateCache(params, newDataOrUpdater) {
     if (_cache[key] !== undefined) _cache[key] = newDataOrUpdater(_cache[key]);
   } else {
     _cache[key] = newDataOrUpdater;
+  }
+
+  // Persist updated state to IndexedDB admin cache as well
+  const isAdmin = (params.action && params.action.startsWith('admin')) || Boolean(params.password);
+  if (isAdmin) {
+    if (_cache[key] !== undefined) {
+      setAdminCached(key, _cache[key]).catch(() => {});
+    } else {
+      getAdminCached(key).then(cached => {
+        if (cached) {
+          const updated = typeof newDataOrUpdater === 'function' ? newDataOrUpdater(cached) : newDataOrUpdater;
+          _cache[key] = updated;
+          setAdminCached(key, updated).catch(() => {});
+        }
+      }).catch(() => {});
+    }
   }
 }
 
@@ -804,4 +885,9 @@ export const api = {
     _cache = {};
     return res;
   },
+
+  // ─── Offline-First Admin Sync API ───────────────────────────────────────────
+  syncAdminNow: () => flushAdminOutbox(post, getSessionToken),
+  subscribeAdminSync,
+  getAdminOutboxCount,
 };

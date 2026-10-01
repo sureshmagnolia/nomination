@@ -7,6 +7,7 @@ import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
 import { CONFIG } from '../../config.js';
+import { exportAdminSnapshotJSON, importAdminSnapshotJSON } from '../../offlineAdminStorage.js';
 
 export async function renderAdminBackup(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -352,6 +353,53 @@ function renderBackupPage(main, pwd, { settings, rollCount, postsCount, nomsCoun
           `}
         </div>
       </div>
+
+      <!-- Module 4: Local-First Offline USB Sync & Portability (IndexedDB) -->
+      <div class="glass rounded-2xl overflow-hidden border border-indigo-500/20 shadow-xl">
+        <div class="bg-gradient-to-r from-indigo-950/40 via-purple-950/30 to-slate-900/50 p-6 border-b border-white/10 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl shadow-inner">
+              📡
+            </div>
+            <div>
+              <h4 class="font-bold text-white text-lg">4. Offline Local-First USB Sync (IndexedDB)</h4>
+              <p class="text-slate-400 text-xs mt-0.5">Move election data across air-gapped computers via USB pendrive without needing internet.</p>
+            </div>
+          </div>
+          <span class="text-xs bg-indigo-500/10 text-indigo-300 px-3 py-1 rounded-full border border-indigo-500/30">
+            IndexedDB Engine
+          </span>
+        </div>
+
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="p-5 rounded-xl bg-white/5 border border-white/10 space-y-3">
+              <h5 class="font-bold text-white text-sm flex items-center gap-2">
+                <span>📥</span> Export Offline Snapshot (.JSON)
+              </h5>
+              <p class="text-slate-400 text-xs leading-relaxed">
+                Downloads the complete local IndexedDB database (cached nominations, settings, posts, scrutiny statuses, and outbox queue) to a USB pendrive.
+              </p>
+              <button id="btnExportOfflineDB" class="btn btn-secondary text-xs font-bold py-2.5 px-4 w-full flex items-center justify-center gap-2">
+                <span>💾</span> Export Offline DB to USB (.json)
+              </button>
+            </div>
+
+            <div class="p-5 rounded-xl bg-white/5 border border-white/10 space-y-3">
+              <h5 class="font-bold text-white text-sm flex items-center gap-2">
+                <span>📤</span> Import Offline Snapshot (.JSON)
+              </h5>
+              <p class="text-slate-400 text-xs leading-relaxed">
+                Restores an offline backup from a USB drive into this computer's IndexedDB so it can perform scrutiny and verification with zero internet.
+              </p>
+              <label for="importOfflineDBInput" class="btn btn-primary text-xs font-bold py-2.5 px-4 w-full flex items-center justify-center gap-2 cursor-pointer">
+                <span>📂</span> Import USB Backup into IndexedDB
+                <input type="file" id="importOfflineDBInput" accept=".json" class="hidden" />
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 
@@ -601,5 +649,28 @@ function setupBackupHandlers(main, pwd, liveStats) {
         setLoading(btn, false, '🔄 Revert');
       }
     });
+  });
+
+  // 5. Offline IndexedDB Export and Import (USB)
+  main.querySelector('#btnExportOfflineDB')?.addEventListener('click', async () => {
+    try {
+      await exportAdminSnapshotJSON();
+      showToast('Offline database exported to file!', 'success');
+    } catch (err) {
+      showToast(`Export failed: ${err.message}`, 'error');
+    }
+  });
+
+  main.querySelector('#importOfflineDBInput')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      await importAdminSnapshotJSON(text);
+      showToast('Offline backup imported successfully into IndexedDB!', 'success');
+      setTimeout(() => renderAdminBackup(main.closest('#app')), 1200);
+    } catch (err) {
+      showToast(`Import failed: ${err.message}`, 'error');
+    }
   });
 }

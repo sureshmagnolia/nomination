@@ -3,12 +3,15 @@
  * Robust hash-based SPA router.
  */
 
-const routes = {};
-let defaultRoute = '/';
+let currentCleanup = null;
 
 export const router = {
   on(path, handler) { routes[path] = handler; return this; },
   setDefault(path) { defaultRoute = path; return this; },
+  registerCleanup(fn) {
+    currentCleanup = fn;
+    return this;
+  },
   navigate(path, params = {}) {
     window.history.pushState({ path, params }, '', `#${path}`);
     this._resolve(path, params);
@@ -34,6 +37,15 @@ export const router = {
     resolveCurrent({});
   },
   _resolve(path, params) {
+    if (typeof currentCleanup === 'function') {
+      try {
+        currentCleanup();
+      } catch (err) {
+        console.warn('Router cleanup error:', err);
+      }
+      currentCleanup = null;
+    }
+    window.dispatchEvent(new CustomEvent('app:route-changed', { detail: { path, params } }));
     const handler = routes[path] || routes[defaultRoute];
     if (handler) handler(params);
   }

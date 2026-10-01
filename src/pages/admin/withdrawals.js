@@ -17,7 +17,17 @@ export async function renderAdminWithdrawals(container) {
     const noms = await api.adminGetNominations(pwd, true);
     renderWithdrawalUI(container.querySelector('#adminMain'), noms, pwd);
   } catch (e) {
-    container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
+    container.querySelector('#adminMain').innerHTML = `
+      <div class="glass p-8 rounded-2xl border border-rose-500/30 text-center max-w-lg mx-auto my-12">
+        <div class="text-4xl mb-3">📡</div>
+        <h3 class="text-lg font-bold text-rose-300">Offline &amp; No Data Cached Yet</h3>
+        <p class="text-slate-400 text-sm mt-2">Cannot connect to the server, and nominations have not been cached in IndexedDB on this device yet.</p>
+        <p class="text-slate-500 text-xs mt-1">Please connect to the internet once to synchronize, or import a backup.</p>
+        <div class="mt-6 flex justify-center gap-3">
+          <button onclick="location.reload()" class="btn btn-primary text-xs">🔄 Retry Connection</button>
+        </div>
+      </div>
+    `;
   }
 }
 
@@ -31,7 +41,10 @@ function renderWithdrawalUI(main, allNoms, pwd) {
     <div class="page-enter space-y-4">
       <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-2">
         <div>
-          <h3 class="text-xl font-bold text-white">Withdrawal Management</h3>
+          <h3 class="text-xl font-bold text-white flex items-center gap-2">
+            <span>Withdrawal Management</span>
+            ${!navigator.onLine ? '<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-semibold">📡 Offline Mode (IndexedDB)</span>' : ''}
+          </h3>
           <p class="text-slate-400 text-sm">Approve student requests, directly withdraw candidates, or restore accidental withdrawals.</p>
         </div>
       </div>

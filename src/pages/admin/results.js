@@ -13,16 +13,58 @@ import {
   downloadResultsCSV
 } from '../../offlineStorage.js';
 
+import { router } from '../../router.js';
+
+let activeAdminResultsPollTimer = null;
+let lastDataFingerprint = '';
+
 export async function renderAdminResults(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
+
+  // Clear any existing poll timer from a previous visit
+  if (activeAdminResultsPollTimer) {
+    clearInterval(activeAdminResultsPollTimer);
+    activeAdminResultsPollTimer = null;
+  }
+
+  // Register cleanup with router: automatically cancel timer whenever navigating away
+  router.registerCleanup(() => {
+    if (activeAdminResultsPollTimer) {
+      clearInterval(activeAdminResultsPollTimer);
+      activeAdminResultsPollTimer = null;
+    }
+  });
+
+  // Also bind hashchange/popstate as an immediate safety guard
+  const onRouteExit = () => {
+    if (!window.location.hash.startsWith('#/admin/results')) {
+      if (activeAdminResultsPollTimer) {
+        clearInterval(activeAdminResultsPollTimer);
+        activeAdminResultsPollTimer = null;
+      }
+      window.removeEventListener('hashchange', onRouteExit);
+      window.removeEventListener('popstate', onRouteExit);
+    }
+  };
+  window.addEventListener('hashchange', onRouteExit);
+  window.addEventListener('popstate', onRouteExit);
+
   renderAdminLayout(container, 'results', `
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Aggregating live results...</p></div>
   `);
 
   let isLivePolling = true;
-  let pollTimer = null;
 
   async function loadData(force = false, silent = false) {
+    // If user navigated away from Results, abort immediately to prevent route hijacking
+    if (!window.location.hash.startsWith('#/admin/results')) {
+      if (activeAdminResultsPollTimer) {
+        clearInterval(activeAdminResultsPollTimer);
+        activeAdminResultsPollTimer = null;
+      }
+      return;
+    }
+
     const main = container.querySelector('#adminMain');
     if (!main) return;
     if (force) {
@@ -57,6 +99,13 @@ export async function renderAdminResults(container) {
         await syncLedgerWithServer(results);
       }
 
+      // Check data fingerprint: If background polling data has not changed, do NOT re-render DOM or flash the screen!
+      const currentFingerprint = JSON.stringify(results) + '_' + (candidatesResp.active?.length || 0) + '_' + (sets.resultsLocked || 'false') + '_' + (sets.resultsPublished || 'false');
+      if (silent && currentFingerprint === lastDataFingerprint) {
+        return;
+      }
+      lastDataFingerprint = currentFingerprint;
+
       const scrollPos = container.closest('.overflow-auto')?.scrollTop || window.scrollY;
       renderResultsUI(main, pwd, posts, candidatesResp.active || [], results, schedule, sets, candidatesResp.isPublished, loadData, isLivePolling, (val) => {
         isLivePolling = val;
@@ -79,17 +128,20 @@ export async function renderAdminResults(container) {
     }
   }
 
-  // Live auto-polling every 3 seconds for instant updates as new data is entered
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(() => {
-    if (!document.body.contains(container) || !container.querySelector('#adminMain')) {
-      clearInterval(pollTimer);
+  // Live auto-polling every 6 seconds for gentle background updates as new data is entered
+  if (activeAdminResultsPollTimer) clearInterval(activeAdminResultsPollTimer);
+  activeAdminResultsPollTimer = setInterval(() => {
+    const isStillOnResults = window.location.hash.startsWith('#/admin/results');
+    const rootEl = document.getElementById('adminResultsRoot');
+    if (!isStillOnResults || !rootEl || !document.body.contains(rootEl)) {
+      clearInterval(activeAdminResultsPollTimer);
+      activeAdminResultsPollTimer = null;
       return;
     }
     if (isLivePolling) {
       loadData(true, true);
     }
-  }, 3000);
+  }, 6000);
 
   await loadData(true);
 }
@@ -157,7 +209,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   });
 
   main.innerHTML = `
-    <div class="page-enter space-y-6">
+    <div id="adminResultsRoot" class="page-enter space-y-6">
       ${!isFinalPublished ? `
         <div class="alert alert-warning text-xs flex items-center justify-between">
           <span>ℹ️ <strong>Preview Mode:</strong> Final candidate list has not been published yet. Showing active nominations for internal review.</span>

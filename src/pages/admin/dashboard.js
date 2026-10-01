@@ -29,7 +29,10 @@ export async function renderAdminDashboard(container) {
       <div class="page-enter space-y-8">
         <div class="flex items-end justify-between">
           <div>
-            <h3 class="text-2xl font-bold text-white">Admin Dashboard</h3>
+            <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+              <span>Admin Dashboard</span>
+              ${!navigator.onLine ? '<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-semibold">📡 Offline Mode (IndexedDB)</span>' : ''}
+            </h3>
             <p class="text-slate-400 text-sm mt-1">Real-time overview of nomination and election status.</p>
           </div>
           <div class="text-right hidden md:block">
@@ -115,7 +118,17 @@ export async function renderAdminDashboard(container) {
       });
     });
   } catch (e) {
-    container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
+    container.querySelector('#adminMain').innerHTML = `
+      <div class="glass p-8 rounded-2xl border border-rose-500/30 text-center max-w-lg mx-auto my-12">
+        <div class="text-4xl mb-3">📡</div>
+        <h3 class="text-lg font-bold text-rose-300">Offline &amp; No Data Cached Yet</h3>
+        <p class="text-slate-400 text-sm mt-2">Cannot connect to the server, and dashboard data has not been cached in IndexedDB on this device yet.</p>
+        <p class="text-slate-500 text-xs mt-1">Please connect to the internet once to synchronize, or import a backup.</p>
+        <div class="mt-6 flex justify-center gap-3">
+          <button onclick="location.reload()" class="btn btn-primary text-xs">🔄 Retry Connection</button>
+        </div>
+      </div>
+    `;
   }
 }
 
