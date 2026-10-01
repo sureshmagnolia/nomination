@@ -177,49 +177,82 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     const mean = totalStudents / numBooths;
     const numDepts = depts.length;
 
-    // Helper: Split a department cleanly into exactly 2 coherent sub-bundles
-    // Priority 1: Natural academic split (UG classes in Part A, PG classes + Research Scholars in Part B)
-    // Priority 2: Balanced 2-partition of classes closest to 50/50
+    // Helper: Smart-split a department cleanly into exactly 2 balanced coherent sub-bundles
+    // Goal: Divide classes so Part A and Part B are as balanced as possible (closest to 50/50),
+    // ensuring booth voter numbers match the overall average and highest/smallest have minimal difference.
     function splitDeptIntoTwoHalves(dept) {
       const classes = [...dept.classes];
       if (classes.length <= 1) return null;
 
-      // Natural academic split: UG vs PG/Scholars
-      const ugClasses = classes.filter(c => {
-        const u = c.name.toUpperCase();
-        return u.includes('B.A') || u.includes('B.SC') || u.includes('B.COM') || u.includes('BBA') || u.includes('BCA') || u.includes('UG') || /^(I|II|III)\s+B/i.test(u);
-      });
-      const pgClasses = classes.filter(c => !ugClasses.includes(c));
+      const n = classes.length;
+      let bestA = [];
+      let bestB = [];
+      let bestDiff = Infinity;
 
-      if (ugClasses.length > 0 && pgClasses.length > 0) {
-        const ugTotal = ugClasses.reduce((s, c) => s + c.count, 0);
-        const pgTotal = pgClasses.reduce((s, c) => s + c.count, 0);
-        if (ugTotal >= dept.total * 0.15 && pgTotal >= dept.total * 0.15) {
-          return [
-            { name: dept.name, partLabel: 'UG', total: ugTotal, classes: ugClasses, isSplit: true, deptName: dept.name },
-            { name: dept.name, partLabel: 'PG & Scholars', total: pgTotal, classes: pgClasses, isSplit: true, deptName: dept.name }
-          ];
+      // Exhaustive search over all 2^(n-1) non-empty subset partitions to find the closest to 50/50
+      if (n <= 12) {
+        for (let mask = 1; mask < (1 << n) - 1; mask++) {
+          const partA = [];
+          const partB = [];
+          let sumA = 0;
+          let sumB = 0;
+          for (let i = 0; i < n; i++) {
+            if ((mask >> i) & 1) {
+              partA.push(classes[i]);
+              sumA += classes[i].count;
+            } else {
+              partB.push(classes[i]);
+              sumB += classes[i].count;
+            }
+          }
+          const diff = Math.abs(sumA - sumB);
+          if (diff < bestDiff) {
+            bestDiff = diff;
+            bestA = partA;
+            bestB = partB;
+          }
         }
       }
 
-      // Balanced subset-sum partitioning into 2 parts
-      classes.sort((a, b) => b.count - a.count);
-      const partA = [];
-      const partB = [];
-      let sumA = 0;
-      let sumB = 0;
-      for (const c of classes) {
-        if (sumA <= sumB) {
-          partA.push(c);
-          sumA += c.count;
-        } else {
-          partB.push(c);
-          sumB += c.count;
+      // Fallback greedy partition if classes count is large
+      if (bestA.length === 0 || bestB.length === 0) {
+        classes.sort((a, b) => b.count - a.count);
+        let sumA = 0, sumB = 0;
+        for (const c of classes) {
+          if (sumA <= sumB) {
+            bestA.push(c);
+            sumA += c.count;
+          } else {
+            bestB.push(c);
+            sumB += c.count;
+          }
         }
       }
+
+      const totalA = bestA.reduce((s, c) => s + c.count, 0);
+      const totalB = bestB.reduce((s, c) => s + c.count, 0);
+
+      const isUG = (c) => {
+        const u = (c.name || '').toUpperCase();
+        return u.includes('B.COM') || u.includes('BCOM') || 
+               u.includes('B.A') || u.includes('BA') || 
+               u.includes('B.SC') || u.includes('BSC') || 
+               u.includes('BBA') || u.includes('BCA') || 
+               u.includes('UG') || /^(I|II|III)\s+(DC|YEAR|B)/i.test(u);
+      };
+
+      const getLabel = (pClasses) => {
+        const allUG = pClasses.every(isUG);
+        const allPG = pClasses.every(c => !isUG(c));
+        const names = pClasses.map(c => c.name.replace(new RegExp(`\\s+${dept.name}`, 'gi'), '')).join(', ');
+        if (allUG) return `UG (${names})`;
+        if (allPG) return `PG & Scholars (${names})`;
+        return names;
+      };
+
       return [
-        { name: dept.name, partLabel: 'Part 1', total: sumA, classes: partA, isSplit: true, deptName: dept.name },
-        { name: dept.name, partLabel: 'Part 2', total: sumB, classes: partB, isSplit: true, deptName: dept.name }
+        { name: dept.name, partLabel: getLabel(bestA), total: totalA, classes: bestA, isSplit: true, deptName: dept.name },
+        { name: dept.name, partLabel: getLabel(bestB), total: totalB, classes: bestB, isSplit: true, deptName: dept.name }
       ];
     }
 
@@ -239,10 +272,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           if (b.total < min) min = b.total;
         }
         // Heavily penalize variance and spread to force booths to be closely balanced
-        return sumSq + (max - min) * 35;
+        return sumSq + (max - min) * 75;
       }
 
-      for (let r = 0; r < 350; r++) {
+      for (let r = 0; r < 500; r++) {
         const alloc = Array.from({ length: B }, (_, i) => ({ id: i, total: 0, items: [] }));
         const sorted = [...items];
         if (r === 0) {
@@ -454,11 +487,11 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         }
       }
 
-      // Check if Tier 1 achieves balance
+      // Check if Tier 1 achieves close balance (tight spread and manageable peak booth)
       const t1Max = bestTier1 ? Math.max(...bestTier1.map(b => b.total)) : Infinity;
       const t1Min = bestTier1 ? Math.min(...bestTier1.map(b => b.total)) : 0;
       const t1Spread = t1Max - t1Min;
-      const isTier1Balanced = bestTier1 && (t1Spread < tier0Spread) && (t1Max <= Math.round(mean * 1.30));
+      const isTier1Balanced = bestTier1 && (t1Spread <= Math.max(Math.round(mean * 0.35), 55)) && (t1Max <= Math.round(mean * 1.25));
 
       if (isTier1Balanced || (bestTier1 && largeDepts.length < 2)) {
         chosenAlloc = bestTier1;
