@@ -398,6 +398,13 @@ function renderWithdrawalUI(main, allNoms, pwd) {
           <div class="flex items-center gap-1.5 flex-wrap">
             <span>${esc(n.candidateName || 'N/A')}</span>
             ${(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number']) ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[10px]">Sl. #${esc(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'])}</span>` : ''}
+            ${(() => {
+              const sid = n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'];
+              if (!sid) return '';
+              const otherActive = directList.filter(d => (d.candidateSerial || d.candidate?.['Nominal Roll Serial Number']) === sid && d.id !== n.id);
+              if (otherActive.length === 0) return '';
+              return `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px]" title="Contesting multiple posts: ${otherActive.map(o => o.post).join(', ')}">⚠️ Also contesting: ${otherActive.map(o => esc(o.post)).join(', ')}</span>`;
+            })()}
           </div>
         </td>
         <td class="text-xs text-slate-400">${esc(n.candidateClass || '')} / ${esc(n.candidateDept || '')}</td>

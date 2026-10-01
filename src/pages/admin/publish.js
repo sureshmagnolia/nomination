@@ -230,6 +230,40 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
           </div>
         </div>
 
+        ${(() => {
+          // Check for multi-post candidates in final list (after withdrawal)
+          const cCounts = {};
+          const multiList = [];
+          finalList.forEach(n => {
+            const sid = String(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || n.candidate?.serial_number || '').trim();
+            if (!sid) return;
+            if (!cCounts[sid]) cCounts[sid] = [];
+            cCounts[sid].push(n);
+          });
+          Object.values(cCounts).forEach(entries => {
+            if (entries.length > 1) {
+              const name = entries[0].candidateName || entries[0].candidate?.NAME || 'Candidate';
+              const posts = entries.map(e => `"${e.post}"`).join(', ');
+              multiList.push(`<strong>${name}</strong> (Sl #${entries[0].candidateSerial}) contesting for: ${posts}`);
+            }
+          });
+          if (multiList.length === 0) return '';
+          return `
+            <div class="alert alert-warning border border-amber-500/40 bg-amber-950/40 text-xs text-amber-200 space-y-1">
+              <div class="flex items-center gap-2 font-bold text-amber-300 text-sm">
+                <span>⚠️</span> <span>Simultaneous Contesting Alert (After Withdrawal Scrutiny):</span>
+              </div>
+              <p>The following candidate(s) have submitted nominations for multiple posts and have not yet withdrawn from all but one post:</p>
+              <ul class="list-disc pl-5 space-y-0.5 mt-1">
+                ${multiList.map(item => `<li>${item}</li>`).join('')}
+              </ul>
+              <p class="text-[11px] text-amber-300/80 mt-1">
+                <em>Note:</em> Students may file multiple nominations initially and choose to withdraw later. Before publishing the Final List, please verify that candidates have withdrawn or reject excess candidacies in <a href="#/admin/withdrawals" class="underline font-bold text-white">Withdrawals</a> / <a href="#/admin/verify" class="underline font-bold text-white">Verification</a>.
+              </p>
+            </div>
+          `;
+        })()}
+
         ${!finalPublished ? `
         <div class="alert alert-warning text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <span>⚠️ Publish after the withdrawal scrutiny deadline has passed. Uncontested candidates will be flagged as elected unanimously.</span>
@@ -679,7 +713,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
     });
 
     if (multipleCandidates.length > 0) {
-      alert(`Cannot publish Final List!\n\nThe following candidates are still validly nominated for more than one post:\n\n- ${multipleCandidates.join('\n- ')}\n\nAs per University rules, candidates must withdraw all but one nomination. Please go to 'Review Nominations' and reject the excess nominations before publishing.`);
+      alert(`⚠️ Action Required: Simultaneous Contesting Detected\n\nStudents are permitted to submit nominations for multiple posts and withdraw later. However, after the withdrawal deadline, each candidate may appear in the Final List for ONE post only.\n\nThe following candidate(s) still have multiple active nominations:\n- ${multipleCandidates.join('\n- ')}\n\nPlease process their withdrawal in 'Withdrawals' or reject excess nominations in 'Verification' before publishing the Final List.`);
       return;
     }
 
