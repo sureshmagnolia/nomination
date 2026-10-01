@@ -209,63 +209,35 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
   // 7. Duplicate Proposer / Seconder Endorsements on the SAME post (RED)
   const otherNominationsForPost = allNominations.filter(n => n.id !== nom.id && n.post === nom.post && n.status !== 'Rejected');
   
-  if (pSerial) {
+  if (pSerial || pAdm) {
     const dupProp = otherNominationsForPost.find(n => 
-      String(n.proposerSerial) === pSerial || String(n.seconderSerial) === pSerial
+      (pSerial && (String(n.proposerSerial) === pSerial || String(n.seconderSerial) === pSerial)) ||
+      (pAdm && (String(n.proposerAdmission).trim().toLowerCase() === pAdm || String(n.seconderAdmission).trim().toLowerCase() === pAdm))
     );
     if (dupProp) {
       violations.push({
         type: 'DUPLICATE_PROPOSER_ENDORSEMENT',
         severity: 'error',
-        message: `🚩 Proposer (Sl #${pSerial}, ${pName}) has already endorsed nomination #${dupProp.id} (${dupProp.candidateName || 'Candidate'}) for this exact post.`
+        message: `🚩 Proposer (Sl #${pSerial || '–'}, ${pName}) has already endorsed nomination #${dupProp.id} (${dupProp.candidateName || dupProp.candidate?.NAME || 'Candidate'}) for this same post ("${nom.post}"). A student can endorse only 1 candidate for the same post.`
       });
     }
   }
 
-  if (sSerial) {
+  if (sSerial || sAdm) {
     const dupSec = otherNominationsForPost.find(n => 
-      String(n.proposerSerial) === sSerial || String(n.seconderSerial) === sSerial
+      (sSerial && (String(n.proposerSerial) === sSerial || String(n.seconderSerial) === sSerial)) ||
+      (sAdm && (String(n.proposerAdmission).trim().toLowerCase() === sAdm || String(n.seconderAdmission).trim().toLowerCase() === sAdm))
     );
     if (dupSec) {
       violations.push({
         type: 'DUPLICATE_SECONDER_ENDORSEMENT',
         severity: 'error',
-        message: `🚩 Seconder (Sl #${sSerial}, ${sName}) has already endorsed nomination #${dupSec.id} (${dupSec.candidateName || 'Candidate'}) for this exact post.`
+        message: `🚩 Seconder (Sl #${sSerial || '–'}, ${sName}) has already endorsed nomination #${dupSec.id} (${dupSec.candidateName || dupSec.candidate?.NAME || 'Candidate'}) for this same post ("${nom.post}"). A student can endorse only 1 candidate for the same post.`
       });
     }
   }
 
-  // 8. Multi-Submissions & Multi-Post Endorsements (Flagged in RED)
-  const otherNominationsOtherPosts = allNominations.filter(n => n.id !== nom.id && n.post !== nom.post && n.status !== 'Rejected');
-  if (pSerial) {
-    const otherProp = otherNominationsOtherPosts.filter(n => 
-      String(n.proposerSerial) === pSerial || String(n.seconderSerial) === pSerial
-    );
-    if (otherProp.length > 0) {
-      const postsList = [...new Set(otherProp.map(n => `"${n.post}" (#${n.id})`))].join(', ');
-      violations.push({
-        type: 'MULTI_POST_ENDORSEMENT',
-        severity: 'error',
-        message: `🚩 Proposer (Sl #${pSerial}, ${pName}) has also endorsed candidate(s) for different post(s): ${postsList}.`
-      });
-    }
-  }
-
-  if (sSerial) {
-    const otherSec = otherNominationsOtherPosts.filter(n => 
-      String(n.proposerSerial) === sSerial || String(n.seconderSerial) === sSerial
-    );
-    if (otherSec.length > 0) {
-      const postsList = [...new Set(otherSec.map(n => `"${n.post}" (#${n.id})`))].join(', ');
-      violations.push({
-        type: 'MULTI_POST_ENDORSEMENT',
-        severity: 'error',
-        message: `🚩 Seconder (Sl #${sSerial}, ${sName}) has also endorsed candidate(s) for different post(s): ${postsList}.`
-      });
-    }
-  }
-
-  // 9. Multi-Post Candidacy (FLAGGED IN RED WITH STATUTORY CANCELLATION WARNING)
+  // 8. Multi-Post Candidacy (FLAGGED IN RED WITH STATUTORY CANCELLATION WARNING)
   const otherCandidatures = allNominations.filter(n => n.id !== nom.id && n.status !== 'Rejected' && (
     (cSerial && String(n.candidateSerial) === cSerial) ||
     (cAdm && String(n.candidateAdmission).trim().toLowerCase() === cAdm)
@@ -384,16 +356,16 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     </div>
 
     <!-- Full Nomination Form Review Modal -->
-    <div id="nomDetailModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[100] hidden flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-      <div class="glass w-full max-w-3xl rounded-2xl p-4 sm:p-6 shadow-2xl border border-indigo-500/30 max-h-[92vh] flex flex-col my-auto">
-        <!-- Modal Header -->
-        <div class="flex items-center justify-between border-b border-white/10 pb-3 mb-4 shrink-0">
+    <div id="nomDetailModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] hidden flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden">
+      <div class="glass w-full max-w-5xl rounded-2xl shadow-2xl border border-indigo-500/30 h-[94vh] max-h-[960px] flex flex-col overflow-hidden my-auto bg-slate-950/95">
+        <!-- Modal Header (Fixed at top) -->
+        <div class="flex items-center justify-between border-b border-white/10 px-4 sm:px-6 py-3.5 bg-slate-900/90 shrink-0">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl font-bold border border-indigo-500/30">📄</div>
             <div>
               <div class="flex items-center gap-2 flex-wrap">
-                <h4 class="text-lg font-bold text-white">Nomination Paper Review</h4>
-                <span id="modalNomIdBadge" class="font-mono text-xs text-indigo-300 bg-indigo-500/20 border border-indigo-500/40 px-2 py-0.5 rounded font-bold">#</span>
+                <h4 class="text-base sm:text-lg font-bold text-white">Nomination Paper Review</h4>
+                <span id="modalNomIdBadge" class="font-mono text-xs text-indigo-300 bg-indigo-500/20 border border-indigo-500/40 px-2.5 py-0.5 rounded font-bold">#</span>
                 <span id="modalNomReceiptBadge" class="badge"></span>
                 <span id="modalNomStatusBadge" class="badge"></span>
               </div>
@@ -402,41 +374,51 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
           </div>
           <div class="flex items-center gap-2">
             <button type="button" id="btnModalPrevNom" class="btn btn-secondary btn-sm px-2.5 py-1 text-xs" title="Previous Nomination">◀ Prev</button>
-            <span id="modalNomCounter" class="text-xs font-mono text-slate-400 px-1">1 / 1</span>
+            <span id="modalNomCounter" class="text-xs font-mono text-slate-400 px-1 font-semibold">1 / 1</span>
             <button type="button" id="btnModalNextNom" class="btn btn-secondary btn-sm px-2.5 py-1 text-xs" title="Next Nomination">Next ▶</button>
             <button type="button" id="btnCloseNomDetail" class="btn btn-secondary btn-sm px-2.5 py-1 text-sm ml-2 text-slate-400 hover:text-white" title="Close Modal">✕</button>
           </div>
         </div>
 
-        <!-- Statutory Scrutiny Audit Box (Flags in RED) -->
-        <div id="modalScrutinyZone" class="shrink-0 mb-3"></div>
+        <!-- Unified Scrollable Modal Body -->
+        <div id="modalScrollBody" class="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 custom-scroll">
+          
+          <!-- Key Particulars At A Glance -->
+          <div id="modalSummaryBar" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs"></div>
 
-        <!-- Rejection Reason Banner (if rejected) -->
-        <div id="modalRejectionBanner" class="hidden bg-rose-500/15 border border-rose-500/40 rounded-xl p-3 mb-3 text-xs text-rose-300 shrink-0">
-          <strong>⚠️ Statutory Rejection Reason:</strong> <span id="modalRejectionText"></span>
+          <!-- Statutory Scrutiny Audit Box (Flags in RED) -->
+          <div id="modalScrutinyZone"></div>
+
+          <!-- Rejection Reason Banner (if rejected) -->
+          <div id="modalRejectionBanner" class="hidden bg-rose-500/15 border border-rose-500/40 rounded-xl p-3 text-xs text-rose-300">
+            <strong>⚠️ Statutory Rejection Reason:</strong> <span id="modalRejectionText"></span>
+          </div>
+
+          <!-- Official Printed Nomination Paper & HoD Certificate -->
+          <div class="bg-slate-900/60 rounded-xl p-2 sm:p-3 border border-white/5 shadow-inner">
+            <div id="modalPaperZone" class="print-zone space-y-4"></div>
+          </div>
+
         </div>
 
-        <!-- Modal Body (Print-zone with Authentic Nomination Paper) -->
-        <div id="modalPaperZone" class="overflow-y-auto flex-1 pr-1 print-zone space-y-4"></div>
-
-        <!-- Modal Footer Actions (Sticky) -->
-        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4 mt-4 shrink-0">
+        <!-- Modal Footer Actions (Fixed at bottom) -->
+        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-4 sm:px-6 py-3.5 bg-slate-900/95 shrink-0">
           <div class="flex items-center gap-2">
-            <button type="button" id="btnModalPrintPaper" class="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10">
+            <button type="button" id="btnModalPrintPaper" class="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs py-2 px-3.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 shadow">
               <span>🖨️</span> <span>Print Paper</span>
             </button>
-            <button type="button" id="btnModalTogglePhysical" class="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs py-2 px-3 bg-indigo-900/30 hover:bg-indigo-800 text-indigo-200 border border-indigo-500/40">
+            <button type="button" id="btnModalTogglePhysical" class="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs py-2 px-3.5 bg-indigo-900/40 hover:bg-indigo-800 text-indigo-200 border border-indigo-500/40 shadow">
               <span id="modalPhysicalBtnIcon">📥</span> <span id="modalPhysicalBtnText">Mark Physical Received</span>
             </button>
           </div>
           <div class="flex items-center gap-2">
-            <button type="button" id="btnModalMarkValid" class="btn btn-primary btn-sm flex items-center gap-1.5 text-xs py-2 px-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg">
+            <button type="button" id="btnModalMarkValid" class="btn btn-primary btn-sm flex items-center gap-1.5 text-xs py-2 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg">
               <span>✅</span> <span>Valid</span>
             </button>
-            <button type="button" id="btnModalMarkReject" class="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs py-2 px-3.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white font-bold border border-rose-500/40 shadow-lg">
+            <button type="button" id="btnModalMarkReject" class="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs py-2 px-4 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white font-bold border border-rose-500/40 shadow-lg">
               <span>❌</span> <span>Reject</span>
             </button>
-            <button type="button" id="btnModalDeleteNom" class="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs py-2 px-3 bg-red-950/40 hover:bg-red-800 text-red-300 hover:text-white border border-red-500/40 shadow-lg" title="Permanently delete nomination">
+            <button type="button" id="btnModalDeleteNom" class="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs py-2 px-3.5 bg-red-950/40 hover:bg-red-800 text-red-300 hover:text-white border border-red-500/40 shadow-lg" title="Permanently delete nomination">
               <span>🗑️</span> <span>Delete</span>
             </button>
             <button type="button" id="btnModalCloseFooter" class="btn btn-secondary btn-sm text-xs py-2 px-3 text-slate-300">
@@ -454,6 +436,8 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
   const detailModal = main.querySelector('#nomDetailModal');
   const paperZone = main.querySelector('#modalPaperZone');
   const scrutinyZone = main.querySelector('#modalScrutinyZone');
+  const summaryBar = main.querySelector('#modalSummaryBar');
+  const scrollBody = main.querySelector('#modalScrollBody');
   const idBadge = main.querySelector('#modalNomIdBadge');
   const receiptBadge = main.querySelector('#modalNomReceiptBadge');
   const statusBadge = main.querySelector('#modalNomStatusBadge');
@@ -855,13 +839,54 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       rejBanner.classList.add('hidden');
     }
 
+    if (scrollBody) scrollBody.scrollTop = 0;
+
+    const candName = nom.candidateName || nom.candidate?.NAME || nom.candidate?.['Name of the Student'] || 'N/A';
+    const candSerial = nom.candidateSerial || nom.candidate?.['Nominal Roll Serial Number'] || nom.candidate?.serial_number || '–';
+    const candAdm = nom.candidateAdmission || nom.candidate?.['ADMISION NO'] || nom.candidate?.admission_no || '–';
+    const candCls = nom.candidateClass || nom.candidate?.['CLASS'] || nom.candidate?.class || '–';
+    const candDept = nom.candidateDept || nom.candidate?.['Dept'] || nom.candidate?.dept || '';
+    
+    const propName = nom.proposerName || nom.proposer?.NAME || nom.proposer?.['Name of the Student'] || 'N/A';
+    const propSerial = nom.proposerSerial || nom.proposer?.['Nominal Roll Serial Number'] || nom.proposer?.serial_number || '–';
+    const propCls = nom.proposerClass || nom.proposer?.['CLASS'] || nom.proposer?.class || '';
+    
+    const secName = nom.seconderName || nom.seconder?.NAME || nom.seconder?.['Name of the Student'] || 'N/A';
+    const secSerial = nom.seconderSerial || nom.seconder?.['Nominal Roll Serial Number'] || nom.seconder?.serial_number || '–';
+    const secCls = nom.seconderClass || nom.seconder?.['CLASS'] || nom.seconder?.class || '';
+
+    if (summaryBar) {
+      summaryBar.innerHTML = `
+        <div class="bg-slate-900/90 p-3 rounded-xl border border-indigo-500/30 shadow-md">
+          <div class="text-[10px] uppercase font-bold text-indigo-400 tracking-wider">Contesting Post</div>
+          <div class="font-bold text-white text-sm mt-1 truncate" title="${esc(nom.post)}">${esc(nom.post)}</div>
+          <div class="text-[11px] text-slate-400 mt-0.5">Gender: <strong class="text-slate-200">${esc(nom.gender || '–')}</strong></div>
+        </div>
+        <div class="bg-slate-900/90 p-3 rounded-xl border border-white/10 shadow-md">
+          <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Candidate (Sl. #${esc(candSerial)})</div>
+          <div class="font-bold text-white text-sm mt-1 truncate" title="${esc(candName)}">${esc(candName)}</div>
+          <div class="text-[11px] text-slate-400 font-mono mt-0.5">Adm: <span class="text-slate-200">${esc(candAdm)}</span> • ${esc(candCls)}${candDept ? ` (${esc(candDept)})` : ''}</div>
+        </div>
+        <div class="bg-slate-900/90 p-3 rounded-xl border border-white/10 shadow-md">
+          <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Proposer (Sl. #${esc(propSerial)})</div>
+          <div class="font-medium text-slate-200 text-sm mt-1 truncate" title="${esc(propName)}">${esc(propName)}</div>
+          <div class="text-[11px] text-slate-400 mt-0.5">${esc(propCls)}</div>
+        </div>
+        <div class="bg-slate-900/90 p-3 rounded-xl border border-white/10 shadow-md">
+          <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Seconder (Sl. #${esc(secSerial)})</div>
+          <div class="font-medium text-slate-200 text-sm mt-1 truncate" title="${esc(secName)}">${esc(secName)}</div>
+          <div class="text-[11px] text-slate-400 mt-0.5">${esc(secCls)}</div>
+        </div>
+      `;
+    }
+
     // Scrutiny Rule Violations in RED
     const violations = getNominationRuleViolations(nom, allPosts, allNoms, settings);
 
     let scrutinyHtml = '';
     if (violations.length > 0) {
       scrutinyHtml += `
-        <div class="rounded-xl border border-rose-500/50 bg-rose-950/50 p-4 space-y-2.5 shadow-lg mb-3">
+        <div class="rounded-xl border border-rose-500/50 bg-rose-950/60 p-4 space-y-2.5 shadow-lg">
           <div class="flex items-center justify-between border-b border-rose-500/30 pb-2">
             <div class="flex items-center gap-2 text-rose-300 font-bold text-sm">
               <span class="text-base">⚠️</span> Rule Violations & Scrutiny Warnings in RED (${violations.length})
@@ -870,9 +895,9 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
           </div>
           <div class="text-xs text-rose-200 space-y-2 pl-1">
             ${violations.map(v => `
-              <div class="flex items-start gap-2 ${v.type === 'MULTIPLE_CANDIDACY' ? 'bg-rose-900/40 p-2 rounded border border-rose-500/40 font-semibold' : ''}">
+              <div class="flex items-start gap-2 ${v.type === 'MULTIPLE_CANDIDACY' ? 'bg-rose-900/50 p-2.5 rounded-lg border border-rose-500/40 font-semibold' : ''}">
                 <span class="text-rose-400 font-bold text-sm leading-none">•</span>
-                <span>${esc(v.message)}</span>
+                <span class="leading-relaxed">${esc(v.message)}</span>
               </div>
             `).join('')}
           </div>

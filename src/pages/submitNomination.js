@@ -658,20 +658,6 @@ function runValidation(formArea, isAdminDirect = false) {
       infoNotices.push(`🚩 MULTI-POST CANDIDACY: Candidate (#${cS}) has also submitted nomination for: ${postsList}. Statutory Rule: The candidate MUST withdraw from all but one post before withdrawal deadline; otherwise ALL nominations will be CANCELLED!`);
     }
   }
-  if (pS) {
-    const propOther = existingNominations.filter(n => n.status !== 'Rejected' && (String(n.proposerSerial) === pS || String(n.seconderSerial) === pS) && n.post !== postName);
-    if (propOther.length > 0) {
-      const postsList = [...new Set(propOther.map(n => `"${n.post}"`))].join(', ');
-      infoNotices.push(`ℹ️ Multi-Submission: Proposer (#${pS}) has also endorsed candidate(s) for other post(s): ${postsList}.`);
-    }
-  }
-  if (sS) {
-    const secOther = existingNominations.filter(n => n.status !== 'Rejected' && (String(n.proposerSerial) === sS || String(n.seconderSerial) === sS) && n.post !== postName);
-    if (secOther.length > 0) {
-      const postsList = [...new Set(secOther.map(n => `"${n.post}"`))].join(', ');
-      infoNotices.push(`ℹ️ Multi-Submission: Seconder (#${sS}) has also endorsed candidate(s) for other post(s): ${postsList}.`);
-    }
-  }
 
   const box = formArea.querySelector('#warningBox');
   if (box) {
