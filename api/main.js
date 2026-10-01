@@ -776,9 +776,9 @@ export default async function handler(req, res) {
           physical_received BOOLEAN DEFAULT false,
           physical_received_at TIMESTAMP
         );
-        try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS physical_received BOOLEAN DEFAULT false;`; } catch (_) {}
-        try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS physical_received_at TIMESTAMP;`; } catch (_) {}
       `;
+      try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS physical_received BOOLEAN DEFAULT false;`; } catch (_) {}
+      try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS physical_received_at TIMESTAMP;`; } catch (_) {}
       // unq_candidate_active dropped to allow nominations across multiple posts; uniqueness enforced per (candidate_serial, post)
       try { await sql`DROP INDEX IF EXISTS unq_candidate_active;`; } catch (_) {}
       await sql`CREATE UNIQUE INDEX IF NOT EXISTS unq_candidate_post_active ON nominations (candidate_serial, post) WHERE status != 'Rejected'`;
