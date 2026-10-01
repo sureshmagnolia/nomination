@@ -403,7 +403,7 @@ function renderWithdrawalUI(main, allNoms, pwd) {
               if (!sid) return '';
               const otherActive = directList.filter(d => (d.candidateSerial || d.candidate?.['Nominal Roll Serial Number']) === sid && d.id !== n.id);
               if (otherActive.length === 0) return '';
-              return `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px]" title="Contesting multiple posts: ${otherActive.map(o => o.post).join(', ')}">⚠️ Also contesting: ${otherActive.map(o => esc(o.post)).join(', ')}</span>`;
+              return `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold" title="Candidate must withdraw all but 1 post or ALL nominations get cancelled! Other posts: ${otherActive.map(o => o.post).join(', ')}">🚩 Multi-Post: Contesting ${otherActive.map(o => esc(o.post)).join(', ')} (Must withdraw all but 1 or ALL cancelled)</span>`;
             })()}
           </div>
         </td>

@@ -629,16 +629,33 @@ function runValidation(formArea, isAdminDirect = false) {
   // Eligibility (pass dynamic allPosts rules and existing noms for endorsing checks)
   const roleLabels = ['Candidate', 'Proposer', 'Seconder'];
   students.forEach((st, i) => {
-    if (st) warnings.push(...checkEligibility(st, postName, roleLabels[i], i === 0 ? gender : null, allPosts, existingNominations));
+    if (st) warnings.push(...checkEligibility(st, postName, roleLabels[i], i === 0 ? gender : null, allPosts, existingNominations, isAdminDirect));
   });
 
-  // Check for multi-submissions across different posts (Informational flag - allowed)
   const infoNotices = [];
+
+  // Direct Entry Notice for Duplicate Endorsements (accepted in direct entry, but flagged for admin)
+  if (isAdminDirect) {
+    if (pS) {
+      const dupP = existingNominations.find(n => n.post === postName && n.status !== 'Rejected' && (String(n.proposerSerial) === pS || String(n.seconderSerial) === pS));
+      if (dupP) {
+        infoNotices.push(`⚠️ Direct Entry Notice: Proposer (#${pS}) has already endorsed candidate "${dupP.candidateName || 'Candidate'}" for "${postName}". Allowed in direct entry, but will be flagged during scrutiny.`);
+      }
+    }
+    if (sS) {
+      const dupS = existingNominations.find(n => n.post === postName && n.status !== 'Rejected' && (String(n.proposerSerial) === sS || String(n.seconderSerial) === sS));
+      if (dupS) {
+        infoNotices.push(`⚠️ Direct Entry Notice: Seconder (#${sS}) has already endorsed candidate "${dupS.candidateName || 'Candidate'}" for "${postName}". Allowed in direct entry, but will be flagged during scrutiny.`);
+      }
+    }
+  }
+
+  // Check for multi-submissions across different posts (Informational flag - allowed)
   if (cS) {
     const candOther = existingNominations.filter(n => n.status !== 'Rejected' && String(n.candidateSerial) === cS && n.post !== postName);
     if (candOther.length > 0) {
       const postsList = candOther.map(n => `"${n.post}"`).join(', ');
-      infoNotices.push(`ℹ️ Multi-Submission: Candidate (#${cS}) has also submitted nomination for other post(s): ${postsList}.`);
+      infoNotices.push(`🚩 MULTI-POST CANDIDACY: Candidate (#${cS}) has also submitted nomination for: ${postsList}. Statutory Rule: The candidate MUST withdraw from all but one post before withdrawal deadline; otherwise ALL nominations will be CANCELLED!`);
     }
   }
   if (pS) {
@@ -659,12 +676,12 @@ function runValidation(formArea, isAdminDirect = false) {
   const box = formArea.querySelector('#warningBox');
   if (box) {
     const allMessages = [
-      ...warnings.map(w => `<p class="text-sm">• ${esc(w)}</p>`),
-      ...infoNotices.map(info => `<p class="text-xs text-indigo-300">• ${esc(info)}</p>`)
+      ...warnings.map(w => `<p class="text-sm font-semibold text-rose-300">• ${esc(w)}</p>`),
+      ...infoNotices.map(info => `<p class="text-xs ${info.startsWith('🚩') ? 'text-rose-300 font-semibold' : 'text-indigo-300'}">• ${esc(info)}</p>`)
     ];
     if (allMessages.length) {
-      box.innerHTML = `<strong class="block mb-1 text-sm">${warnings.length ? '⚠ Eligibility &amp; Multi-Submission Notices' : 'ℹ️ Multi-Submission Notices'}</strong>` + allMessages.join('');
-      box.className = `alert ${warnings.length ? 'alert-warning' : 'alert-info'} mb-4`;
+      box.innerHTML = `<strong class="block mb-1 text-sm ${warnings.length ? 'text-rose-200' : 'text-indigo-200'}">${warnings.length ? '⚠️ Eligibility Rejection Warnings' : 'ℹ️ Candidacy & Multi-Submission Notices'}</strong>` + allMessages.join('');
+      box.className = `alert ${warnings.length ? 'alert-warning border-rose-500/50 bg-rose-950/40 text-rose-200' : 'alert-info'} mb-4`;
       box.classList.remove('hidden');
     } else {
       box.classList.add('hidden');
@@ -676,7 +693,12 @@ function runValidation(formArea, isAdminDirect = false) {
 async function handleSubmit(e, formArea, yearValue, collegeName, collegeLogo = '', isAdminDirect = false) {
   e.preventDefault();
   const warnings = runValidation(formArea, isAdminDirect);
-  if (warnings.length) { showToast('Please resolve all eligibility warnings first.', 'error'); return; }
+  if (warnings.length) {
+    const msg = warnings.join('\n\n');
+    alert(`⚠️ NOMINATION SUBMISSION REJECTED:\n\n${msg}`);
+    showToast(warnings[0], 'error');
+    return;
+  }
 
   if (!isAdminDirect) {
     const captchaVal = formArea.querySelector('#captchaInput')?.value.trim();

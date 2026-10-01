@@ -353,6 +353,8 @@ async function ensureSchema() {
     try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`; } catch (_) {}
     try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`; } catch (_) {}
     try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS rejection_reason TEXT;`; } catch (_) {}
+    try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS physical_received BOOLEAN DEFAULT false;`; } catch (_) {}
+    try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS physical_received_at TIMESTAMP;`; } catch (_) {}
     try { await sql`ALTER TABLE backup_snapshots ADD COLUMN IF NOT EXISTS created_at VARCHAR(100);`; } catch (_) {}
     // Allow candidates to submit nominations for different posts:
     // Drop single-post unique index if present and enforce uniqueness per (candidate_serial, post)
@@ -770,8 +772,12 @@ export default async function handler(req, res) {
           seconder_class VARCHAR(255),
           seconder_admission VARCHAR(255),
           seconder_dept VARCHAR(255),
-          rejection_reason TEXT
+          rejection_reason TEXT,
+          physical_received BOOLEAN DEFAULT false,
+          physical_received_at TIMESTAMP
         );
+        try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS physical_received BOOLEAN DEFAULT false;`; } catch (_) {}
+        try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS physical_received_at TIMESTAMP;`; } catch (_) {}
       `;
       // unq_candidate_active dropped to allow nominations across multiple posts; uniqueness enforced per (candidate_serial, post)
       try { await sql`DROP INDEX IF EXISTS unq_candidate_active;`; } catch (_) {}
@@ -951,18 +957,16 @@ export default async function handler(req, res) {
       const noms = await sql`
         SELECT * FROM nominations 
         ORDER BY 
-          CASE 
-            WHEN candidate_serial ~ '^[0-9]+$' THEN CAST(candidate_serial AS BIGINT) 
-            ELSE 999999999 
-          END ASC, 
-          timestamp ASC,
-          id ASC
+          COALESCE(timestamp, created_at) DESC,
+          id DESC
       `;
       return jsonOut(res, noms.map(n => ({
         id: n.id, post: n.post, gender: n.gender, dob: n.dob, timestamp: n.timestamp || n.created_at,
         candidateSerial: n.candidate_serial, proposerSerial: n.proposer_serial, seconderSerial: n.seconder_serial,
         candidateAdmission: n.candidate_admission, proposerAdmission: n.proposer_admission, seconderAdmission: n.seconder_admission,
         status: n.status, withdrawalStatus: n.withdrawal_status, rejectionReason: n.rejection_reason,
+        physicalReceived: n.physical_received === true || n.physical_received === 'true',
+        physicalReceivedAt: n.physical_received_at || null,
         candidate: { 'Nominal Roll Serial Number': n.candidate_serial, 'NAME': n.candidate_name, 'CLASS': n.candidate_class, 'ADMISION NO': n.candidate_admission, 'Dept': n.candidate_dept },
         proposer: { 'Nominal Roll Serial Number': n.proposer_serial, 'NAME': n.proposer_name, 'CLASS': n.proposer_class, 'ADMISION NO': n.proposer_admission, 'Dept': n.proposer_dept },
         seconder: { 'Nominal Roll Serial Number': n.seconder_serial, 'NAME': n.seconder_name, 'CLASS': n.seconder_class, 'ADMISION NO': n.seconder_admission, 'Dept': n.seconder_dept },
@@ -1861,15 +1865,31 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       }
 
       // Strict Election Integrity Rules enforced on the Server
-      const existing = await sql`SELECT post, candidate_serial, proposer_serial, seconder_serial FROM nominations WHERE status != 'Rejected'`;
+      const existing = await sql`SELECT post, candidate_serial, proposer_serial, seconder_serial, candidate_name, proposer_name, seconder_name FROM nominations WHERE status != 'Rejected'`;
       if (existing.some(n => n.candidate_serial === body.candidateSerial && n.post === body.post)) {
         return errOut(res, 'Candidate has already submitted a nomination for this specific post.');
       }
-      if (existing.some(n => n.post === body.post && (n.proposer_serial === body.proposerSerial || n.seconder_serial === body.proposerSerial))) {
-        return errOut(res, 'Proposer has already signed a nomination for this post.');
+
+      // Proposer / Seconder Rule:
+      // A Student can propose or second only 1 candidate for 1 post.
+      // If student files via public portal (!body.password), reject with informative alert naming the student and already endorsed candidate.
+      // If admin enters via direct entry (body.password), system accepts all but flags it during scrutiny.
+      const dupProp = existing.find(n => n.post === body.post && (n.proposer_serial === body.proposerSerial || n.seconder_serial === body.proposerSerial));
+      if (dupProp) {
+        if (!body.password) {
+          const endorsedCand = dupProp.candidate_name || 'another candidate';
+          const endorseRole = dupProp.proposer_serial === body.proposerSerial ? 'proposed' : 'seconded';
+          return errOut(res, `Student "${prop[0].name}" (Sl #${body.proposerSerial}) has already ${endorseRole} candidate "${endorsedCand}" for the post of "${body.post}". A student can propose or second only 1 candidate for a post.`);
+        }
       }
-      if (existing.some(n => n.post === body.post && (n.proposer_serial === body.seconderSerial || n.seconder_serial === body.seconderSerial))) {
-        return errOut(res, 'Seconder has already signed a nomination for this post.');
+
+      const dupSec = existing.find(n => n.post === body.post && (n.proposer_serial === body.seconderSerial || n.seconder_serial === body.seconderSerial));
+      if (dupSec) {
+        if (!body.password) {
+          const endorsedCand = dupSec.candidate_name || 'another candidate';
+          const endorseRole = dupSec.proposer_serial === body.seconderSerial ? 'proposed' : 'seconded';
+          return errOut(res, `Student "${sec[0].name}" (Sl #${body.seconderSerial}) has already ${endorseRole} candidate "${endorsedCand}" for the post of "${body.post}". A student can propose or second only 1 candidate for a post.`);
+        }
       }
       const allPosts = await fetchPostsFromDb();
       const rule = allPosts.find(p => p.post === body.post);
@@ -1983,6 +2003,18 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       const reason = body.reason || null;
       await sql`UPDATE nominations SET status = ${body.status}, rejection_reason = ${reason} WHERE id = ${body.id}`;
       return jsonOut(res, { ok: true });
+    }
+
+    if (action === 'adminTogglePhysicalReceipt') {
+      const id = body.id;
+      const physicalReceived = body.physicalReceived === true || body.physicalReceived === 'true';
+      const ts = physicalReceived ? new Date().toISOString() : null;
+      await sql`
+        UPDATE nominations 
+        SET physical_received = ${physicalReceived}, physical_received_at = ${ts}
+        WHERE id = ${id}
+      `;
+      return jsonOut(res, { ok: true, id, physicalReceived, physicalReceivedAt: ts });
     }
 
     if (action === 'adminApproveWithdrawal' || action === 'adminDirectWithdrawal') {

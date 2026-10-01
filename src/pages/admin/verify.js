@@ -1,7 +1,8 @@
 /**
  * pages/admin/verify.js
  * Admin page to review nominations, inspect full nomination paper,
- * audit statutory rule violations, and mark them Valid / Rejected.
+ * audit statutory rule violations, manage physical document receipt intake,
+ * and perform formal scrutiny (Valid / Rejected / Pending).
  */
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
@@ -39,7 +40,7 @@ export async function renderAdminVerify(container) {
  * - Year-level eligibility (INCLUDE, EXCLUDE, ALL modes)
  * - Self-nomination / Proposer-Seconder identity cross checks
  * - Duplicate endorsements by proposer or seconder for the same post
- * - Multiple candidacies across posts
+ * - Multiple candidacies across posts (Candidate must withdraw all but 1 or all get cancelled)
  */
 export function getNominationRuleViolations(nom, allPosts = [], allNominations = [], settings = {}) {
   const violations = [];
@@ -63,7 +64,7 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
   const sSerial = String(nom.seconderSerial || nom.seconder?.['Nominal Roll Serial Number'] || '').trim();
   const sAdm = String(nom.seconderAdmission || nom.seconder?.['ADMISION NO'] || '').trim().toLowerCase();
 
-  // 1. Research Scholars Lyngdoh Ineligibility
+  // 1. Research Scholars Lyngdoh Ineligibility (RED)
   const cLvl = getStudentYearLevel(cCls);
   if (cLvl === 'RS' || cCls.includes('RESEARCH') || cCls.includes('SCHOLAR') || cCls.includes('PHD')) {
     violations.push({
@@ -73,7 +74,7 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
     });
   }
 
-  // 2. Gender Restriction for Reserved Posts
+  // 2. Gender Restriction for Reserved Posts (RED)
   if (postRule.femaleOnly && nom.gender && nom.gender !== 'Female') {
     violations.push({
       type: 'GENDER_MISMATCH',
@@ -82,7 +83,7 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
     });
   }
 
-  // 3. Age Limit Check (Lyngdoh Committee Statutory Limits)
+  // 3. Age Limit Check (Lyngdoh Committee Statutory Limits) (RED)
   if (nom.dob) {
     const d = new Date(nom.dob);
     if (!isNaN(d.getTime())) {
@@ -118,7 +119,7 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
     }
   }
 
-  // 4. Department Restriction (Association Secretaries)
+  // 4. Department Restriction (Association Secretaries) (RED)
   if (postRule.deptRestriction) {
     const reqDept = (postRule.restrictedDept || (String(nom.post).startsWith('Association Secretary ') ? nom.post.replace('Association Secretary ', '').trim() : '')).trim();
     if (reqDept) {
@@ -138,21 +139,21 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
       if (!matches(pDept)) {
         violations.push({
           type: 'DEPT_PROPOSER',
-          severity: 'warning',
+          severity: 'error',
           message: `Proposer belongs to department "${nom.proposerDept || 'N/A'}", but post requires "${reqDept}".`
         });
       }
       if (!matches(sDept)) {
         violations.push({
           type: 'DEPT_SECONDER',
-          severity: 'warning',
+          severity: 'error',
           message: `Seconder belongs to department "${nom.seconderDept || 'N/A'}", but post requires "${reqDept}".`
         });
       }
     }
   }
 
-  // 5. Year Level Restriction
+  // 5. Year Level Restriction (RED)
   if (postRule && !isYearEligible(cCls, postRule)) {
     const desc = formatYearRuleDescription(postRule);
     violations.push({
@@ -162,7 +163,7 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
     });
   }
 
-  // 6. Self Endorsement & Identity Cross-Checks
+  // 6. Self Endorsement & Identity Cross-Checks (RED)
   if (cSerial && pSerial && cSerial === pSerial) {
     violations.push({
       type: 'SELF_PROPOSED',
@@ -205,7 +206,7 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
     });
   }
 
-  // 7. Duplicate Proposer / Seconder Endorsements on the SAME post
+  // 7. Duplicate Proposer / Seconder Endorsements on the SAME post (RED)
   const otherNominationsForPost = allNominations.filter(n => n.id !== nom.id && n.post === nom.post && n.status !== 'Rejected');
   
   if (pSerial) {
@@ -216,7 +217,7 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
       violations.push({
         type: 'DUPLICATE_PROPOSER_ENDORSEMENT',
         severity: 'error',
-        message: `Proposer (Sl #${pSerial}, ${pName}) has already endorsed nomination #${dupProp.id} (${dupProp.candidateName || 'Candidate'}) for this exact post.`
+        message: `🚩 Proposer (Sl #${pSerial}, ${pName}) has already endorsed nomination #${dupProp.id} (${dupProp.candidateName || 'Candidate'}) for this exact post.`
       });
     }
   }
@@ -229,13 +230,12 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
       violations.push({
         type: 'DUPLICATE_SECONDER_ENDORSEMENT',
         severity: 'error',
-        message: `Seconder (Sl #${sSerial}, ${sName}) has already endorsed nomination #${dupSec.id} (${dupSec.candidateName || 'Candidate'}) for this exact post.`
+        message: `🚩 Seconder (Sl #${sSerial}, ${sName}) has already endorsed nomination #${dupSec.id} (${dupSec.candidateName || 'Candidate'}) for this exact post.`
       });
     }
   }
 
-  // 8. Multi-Submissions (Flagged as info/notice for different posts)
-  // Check if Proposer or Seconder has endorsed candidates for OTHER posts
+  // 8. Multi-Submissions & Multi-Post Endorsements (Flagged in RED)
   const otherNominationsOtherPosts = allNominations.filter(n => n.id !== nom.id && n.post !== nom.post && n.status !== 'Rejected');
   if (pSerial) {
     const otherProp = otherNominationsOtherPosts.filter(n => 
@@ -245,8 +245,8 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
       const postsList = [...new Set(otherProp.map(n => `"${n.post}" (#${n.id})`))].join(', ');
       violations.push({
         type: 'MULTI_POST_ENDORSEMENT',
-        severity: 'notice',
-        message: `Proposer (Sl #${pSerial}, ${pName}) has also endorsed candidate(s) for different post(s): ${postsList}.`
+        severity: 'error',
+        message: `🚩 Proposer (Sl #${pSerial}, ${pName}) has also endorsed candidate(s) for different post(s): ${postsList}.`
       });
     }
   }
@@ -259,13 +259,13 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
       const postsList = [...new Set(otherSec.map(n => `"${n.post}" (#${n.id})`))].join(', ');
       violations.push({
         type: 'MULTI_POST_ENDORSEMENT',
-        severity: 'notice',
-        message: `Seconder (Sl #${sSerial}, ${sName}) has also endorsed candidate(s) for different post(s): ${postsList}.`
+        severity: 'error',
+        message: `🚩 Seconder (Sl #${sSerial}, ${sName}) has also endorsed candidate(s) for different post(s): ${postsList}.`
       });
     }
   }
 
-  // Check if Candidate has filed nominations for OTHER posts
+  // 9. Multi-Post Candidacy (FLAGGED IN RED WITH STATUTORY CANCELLATION WARNING)
   const otherCandidatures = allNominations.filter(n => n.id !== nom.id && n.status !== 'Rejected' && (
     (cSerial && String(n.candidateSerial) === cSerial) ||
     (cAdm && String(n.candidateAdmission).trim().toLowerCase() === cAdm)
@@ -274,8 +274,8 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
     const otherPosts = otherCandidatures.map(n => `"${n.post}" (#${n.id})`).join(', ');
     violations.push({
       type: 'MULTIPLE_CANDIDACY',
-      severity: 'notice',
-      message: `Multi-Submission: Candidate has also filed nomination for different post(s): ${otherPosts}.`
+      severity: 'error',
+      message: `🚩 MULTI-POST CANDIDACY: Candidate has filed nominations for ${otherCandidatures.length + 1} posts ("${nom.post}", ${otherPosts}). Statutory Rule: The candidate MUST withdraw from all but one post before withdrawal deadline; otherwise ALL nominations will be CANCELLED!`
     });
   }
 
@@ -285,7 +285,9 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
 function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
   const allNoms = Array.isArray(noms) ? [...noms] : [];
   const allPosts = Array.isArray(posts) ? [...posts] : [];
-  let nomViewMode = 'cards'; // 'cards' (card type for phone & mobile ease) | 'table'
+
+  let activeTab = 'intake'; // 'intake' (1. All Online Submissions) | 'scrutiny' (2. Physical Copies Received)
+  let nomViewMode = 'cards'; // 'cards' | 'table'
 
   main.innerHTML = `
     <div class="page-enter space-y-4">
@@ -295,7 +297,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
           <h3 class="text-xl font-bold text-white flex items-center gap-2">
             <span>Nomination Verification & Scrutiny</span>
           </h3>
-          <p class="text-slate-400 text-sm">Review full candidate forms, audit statutory rule violations, and mark nominations as Valid or Rejected.</p>
+          <p class="text-slate-400 text-sm">Verify online submissions, mark physical prints/documents received, and scrutinize eligible nominations.</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <button id="btnRefreshVerify" class="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs py-1.5 px-3 bg-slate-800 hover:bg-slate-700 border border-white/10 text-slate-200">
@@ -304,23 +306,45 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
         </div>
       </div>
 
+      <!-- Top Workflow Tabs -->
+      <div class="flex flex-wrap items-center gap-2 border-b border-white/10 pb-0">
+        <button type="button" id="tabBtnIntake" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-bold rounded-t-xl border-b-2 flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'intake' ? 'border-indigo-400 text-white bg-indigo-950/40 shadow-lg' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'}">
+          <span>📥</span> <span>1. All Online Submissions & Intake</span>
+          <span id="tabCountIntake" class="badge bg-slate-800 text-slate-200 border border-white/10 text-xs font-mono font-bold">0</span>
+        </button>
+        <button type="button" id="tabBtnScrutiny" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-bold rounded-t-xl border-b-2 flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'scrutiny' ? 'border-emerald-400 text-white bg-emerald-950/40 shadow-lg' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'}">
+          <span>📋</span> <span>2. Physical Copies Received (Formal Scrutiny)</span>
+          <span id="tabCountScrutiny" class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold">0</span>
+        </button>
+      </div>
+
+      <!-- Context Information Banners -->
+      <div id="bannerIntake" class="${activeTab === 'intake' ? '' : 'hidden'} text-xs bg-indigo-950/30 border border-indigo-500/30 rounded-xl p-3 text-indigo-200 leading-relaxed shadow-sm">
+        💡 <strong>Intake & Physical Print Tracking:</strong> Students may submit nominations online for testing or practice. Check off the nominations below once their physical signed prints and mandatory documents (e.g. HoD certificate, attendance certificate) are formally received in the RO office. Only nominations marked as <strong>Physical Copy Received</strong> will appear in <strong>Tab 2 (Formal Scrutiny)</strong>.
+      </div>
+      <div id="bannerScrutiny" class="${activeTab === 'scrutiny' ? '' : 'hidden'} text-xs bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-3 text-emerald-200 leading-relaxed shadow-sm">
+        📋 <strong>Formal Scrutiny & Decisions:</strong> This view lists ONLY nominations whose signed physical copies and documents have been confirmed. Review statutory eligibility and Lyngdoh criteria, and mark each nomination as <strong>Valid</strong>, <strong>Invalid (Reject)</strong>, or <strong>Pending</strong>.
+      </div>
+
       <!-- Search & Filters -->
-      <div class="glass rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center w-full shadow-lg">
+      <div class="glass rounded-xl p-4 flex flex-col md:flex-row gap-3 items-center w-full shadow-lg">
         <div class="relative flex-1 w-full">
           <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
-          <input type="text" id="nomSearch" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors" placeholder="Search Candidate, ID, Post, Dept, or Roll Serial...">
+          <input type="text" id="nomSearch" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors text-xs sm:text-sm" placeholder="Search Candidate, ID, Post, Dept, or Roll Serial...">
         </div>
-        <div class="w-full md:w-64 shrink-0">
-          <select id="statusFilter" class="field w-full bg-black/20 focus:bg-black/40 transition-colors">
-            <option value="all">All Submissions</option>
-            <option value="Pending">Pending Review</option>
-            <option value="Valid">Valid</option>
-            <option value="Rejected">Rejected</option>
-            <option value="violations">⚠️ Rule Violations Flagged</option>
-            <option value="multi">ℹ️ Multi-Submissions</option>
-            <option value="passed">✓ All Rules Passed</option>
+        <!-- Post Filter Dropdown -->
+        <div class="w-full md:w-56 shrink-0">
+          <select id="postFilter" class="field w-full bg-black/20 focus:bg-black/40 transition-colors text-xs font-medium">
+            <option value="all">All Posts</option>
           </select>
         </div>
+        <!-- Status Filter Dropdown -->
+        <div class="w-full md:w-56 shrink-0">
+          <select id="statusFilter" class="field w-full bg-black/20 focus:bg-black/40 transition-colors text-xs font-medium">
+            <option value="all">All Statuses</option>
+          </select>
+        </div>
+        <!-- Cards / Table Toggle -->
         <div class="flex items-center rounded-lg bg-black/40 p-1 border border-white/10 shrink-0 self-end md:self-center">
           <button type="button" id="btnNomModeCards" class="btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${nomViewMode === 'cards' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}" title="Card View (Optimized for Mobile/Phone)">
             <span>📇</span> <span>Cards</span>
@@ -331,20 +355,27 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
         </div>
       </div>
 
+      <!-- Item Counter / Summary -->
+      <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+        <span id="nomListCountText">Showing 0 nominations (Latest 1st)</span>
+        <span class="text-[11px] text-slate-500 italic">Sorted: Newest submissions first</span>
+      </div>
+
       <!-- Nominations List View (Cards or Table) -->
       <div class="glass rounded-xl overflow-hidden shadow-2xl" id="nomListView">
         <div id="nomCardsContainer" class="${nomViewMode === 'cards' ? '' : 'hidden'} p-3.5 sm:p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5"></div>
         <div id="nomTableContainer" class="${nomViewMode === 'table' ? '' : 'hidden'} overflow-x-auto">
           <table class="data-table" id="nomTable">
             <thead><tr>
+              <th class="w-12 text-center">#</th>
               <th>Nom. ID</th>
               <th>Post</th>
               <th>Candidate Details</th>
               <th>Class / Dept</th>
-              <th>Proposer</th>
-              <th>Seconder</th>
-              <th>Status & Scrutiny</th>
-              <th>Action</th>
+              <th>Proposer &amp; Seconder</th>
+              <th id="thStatusOrReceipt">${activeTab === 'intake' ? 'Physical Receipt' : 'Scrutiny Status'}</th>
+              <th>Flags &amp; Alerts</th>
+              <th class="text-right">Action</th>
             </tr></thead>
             <tbody id="nomTableBody"></tbody>
           </table>
@@ -363,6 +394,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
               <div class="flex items-center gap-2 flex-wrap">
                 <h4 class="text-lg font-bold text-white">Nomination Paper Review</h4>
                 <span id="modalNomIdBadge" class="font-mono text-xs text-indigo-300 bg-indigo-500/20 border border-indigo-500/40 px-2 py-0.5 rounded font-bold">#</span>
+                <span id="modalNomReceiptBadge" class="badge"></span>
                 <span id="modalNomStatusBadge" class="badge"></span>
               </div>
               <p class="text-slate-400 text-xs mt-0.5" id="modalNomTimestamp"></p>
@@ -376,7 +408,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
           </div>
         </div>
 
-        <!-- Statutory Scrutiny Audit Box -->
+        <!-- Statutory Scrutiny Audit Box (Flags in RED) -->
         <div id="modalScrutinyZone" class="shrink-0 mb-3"></div>
 
         <!-- Rejection Reason Banner (if rejected) -->
@@ -389,47 +421,28 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
 
         <!-- Modal Footer Actions (Sticky) -->
         <div class="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4 mt-4 shrink-0">
-          <button type="button" id="btnModalPrintPaper" class="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10">
-            <span>🖨️</span> <span>Print Paper</span>
-          </button>
           <div class="flex items-center gap-2">
-            <button type="button" id="btnModalMarkValid" class="btn btn-primary btn-sm flex items-center gap-1.5 text-xs py-2 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg">
-              <span>✅</span> <span>Mark as Valid</span>
+            <button type="button" id="btnModalPrintPaper" class="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10">
+              <span>🖨️</span> <span>Print Paper</span>
             </button>
-            <button type="button" id="btnModalMarkReject" class="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs py-2 px-4 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white font-bold border border-rose-500/40 shadow-lg">
-              <span>❌</span> <span>Reject Nomination</span>
+            <button type="button" id="btnModalTogglePhysical" class="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs py-2 px-3 bg-indigo-900/30 hover:bg-indigo-800 text-indigo-200 border border-indigo-500/40">
+              <span id="modalPhysicalBtnIcon">📥</span> <span id="modalPhysicalBtnText">Mark Physical Received</span>
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" id="btnModalMarkValid" class="btn btn-primary btn-sm flex items-center gap-1.5 text-xs py-2 px-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg">
+              <span>✅</span> <span>Valid</span>
+            </button>
+            <button type="button" id="btnModalMarkReject" class="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs py-2 px-3.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white font-bold border border-rose-500/40 shadow-lg">
+              <span>❌</span> <span>Reject</span>
+            </button>
+            <button type="button" id="btnModalDeleteNom" class="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs py-2 px-3 bg-red-950/40 hover:bg-red-800 text-red-300 hover:text-white border border-red-500/40 shadow-lg" title="Permanently delete nomination">
+              <span>🗑️</span> <span>Delete</span>
             </button>
             <button type="button" id="btnModalCloseFooter" class="btn btn-secondary btn-sm text-xs py-2 px-3 text-slate-300">
               Close
             </button>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Permanent Delete Warning Modal -->
-    <div id="deleteNomModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
-      <div class="glass w-full max-w-md rounded-2xl p-6 shadow-2xl border border-red-500/30">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center text-xl font-bold border border-red-500/30">⚠️</div>
-          <div>
-            <h4 class="text-xl font-bold text-white">Delete Nomination</h4>
-            <p class="text-slate-400 text-xs">Permanent deletion of submission</p>
-          </div>
-        </div>
-        <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-3 my-4 text-xs text-red-200 leading-relaxed">
-          <strong>WARNING:</strong> This will permanently delete the nomination of <strong id="delNomCandidate" class="text-white"></strong> for <strong id="delNomPost" class="text-white"></strong> (ID: <span id="delNomId" class="font-mono text-amber-300"></span>). This cannot be undone.
-        </div>
-        <div class="space-y-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Enter Admin Password to Confirm</label>
-            <input type="password" id="delNomPwdInput" class="field w-full" placeholder="Admin Password" autocomplete="current-password">
-          </div>
-          <div id="delNomError" class="text-rose-400 text-xs font-medium hidden"></div>
-        </div>
-        <div class="flex gap-2 mt-6">
-          <button type="button" id="btnCancelDelNom" class="btn btn-secondary flex-1">Cancel</button>
-          <button type="button" id="btnConfirmDelNom" class="btn bg-red-600 hover:bg-red-500 text-white flex-1 font-bold">Permanently Delete</button>
         </div>
       </div>
     </div>
@@ -442,6 +455,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
   const paperZone = main.querySelector('#modalPaperZone');
   const scrutinyZone = main.querySelector('#modalScrutinyZone');
   const idBadge = main.querySelector('#modalNomIdBadge');
+  const receiptBadge = main.querySelector('#modalNomReceiptBadge');
   const statusBadge = main.querySelector('#modalNomStatusBadge');
   const tsText = main.querySelector('#modalNomTimestamp');
   const counterText = main.querySelector('#modalNomCounter');
@@ -449,19 +463,120 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
   const btnNext = main.querySelector('#btnModalNextNom');
   const btnValid = main.querySelector('#btnModalMarkValid');
   const btnReject = main.querySelector('#btnModalMarkReject');
+  const btnTogglePhysical = main.querySelector('#btnModalTogglePhysical');
+  const modalPhysicalIcon = main.querySelector('#modalPhysicalBtnIcon');
+  const modalPhysicalText = main.querySelector('#modalPhysicalBtnText');
+  const btnModalDelete = main.querySelector('#btnModalDeleteNom');
   const rejBanner = main.querySelector('#modalRejectionBanner');
   const rejText = main.querySelector('#modalRejectionText');
 
+  // Populate Post Filter Dropdown
+  const postFilterEl = main.querySelector('#postFilter');
+  const updatePostFilterOptions = () => {
+    const uniquePosts = [...new Set(allPosts.map(p => p.post).concat(allNoms.map(n => n.post)).filter(Boolean))].sort();
+    const currVal = postFilterEl.value;
+    postFilterEl.innerHTML = `
+      <option value="all">All Posts (${allNoms.length})</option>
+      ${uniquePosts.map(p => {
+        const cnt = allNoms.filter(n => n.post === p).length;
+        return `<option value="${esc(p)}" ${currVal === p ? 'selected' : ''}>${esc(p)} (${cnt})</option>`;
+      }).join('')}
+    `;
+  };
+  updatePostFilterOptions();
+
+  // Populate Status Filter Dropdown based on active tab
+  const statusFilterEl = main.querySelector('#statusFilter');
+  const updateStatusFilterOptions = () => {
+    if (activeTab === 'intake') {
+      statusFilterEl.innerHTML = `
+        <option value="all">All Submissions</option>
+        <option value="received">✅ Physical Copy Received</option>
+        <option value="awaiting">⏳ Awaiting Physical Copy</option>
+        <option value="multi">🚩 Multi-Post Candidacies</option>
+        <option value="violations">⚠️ Rule Violations Flagged</option>
+      `;
+    } else {
+      statusFilterEl.innerHTML = `
+        <option value="all">All Received Nominations</option>
+        <option value="Pending">Pending Decision</option>
+        <option value="Valid">Valid</option>
+        <option value="Rejected">Rejected</option>
+        <option value="multi">🚩 Multi-Post Candidacies</option>
+        <option value="violations">⚠️ Rule Violations Flagged</option>
+        <option value="passed">✓ All Rules Passed</option>
+      `;
+    }
+  };
+  updateStatusFilterOptions();
+
+  // Helper to toggle physical copy receipt
+  const togglePhysicalReceipt = async (nomId, targetState) => {
+    const nom = allNoms.find(n => String(n.id) === String(nomId));
+    if (!nom) return;
+
+    try {
+      await api.adminTogglePhysicalReceipt(pwd, nomId, targetState);
+      nom.physicalReceived = targetState;
+      nom.physicalReceivedAt = targetState ? new Date().toISOString() : null;
+      showToast(`Nomination #${nomId}: Physical copy marked as ${targetState ? 'Received' : 'Pending'}.`, 'success');
+      applyFilters();
+      if (currentDetailNomId === nomId) openNomDetail(nomId);
+    } catch (err) {
+      showToast(`Failed: ${err.message}`, 'error');
+    }
+  };
+
+  // Helper to permanently delete a nomination with confirmation
+  const confirmAndDeleteNomination = async (nomId) => {
+    const nom = allNoms.find(n => String(n.id) === String(nomId));
+    const candName = nom ? (nom.candidateName || nom.candidate?.NAME || 'Candidate') : 'Candidate';
+    const postName = nom ? nom.post : 'Post';
+
+    const confirmed = confirm(
+      `⚠️ PERMANENT DELETION CONFIRMATION\n\n` +
+      `Are you sure you want to permanently delete Nomination #${nomId}?\n` +
+      `• Candidate: ${candName}\n` +
+      `• Post: ${postName}\n\n` +
+      `This will completely remove the submission from the database. This action CANNOT be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await api.adminDeleteNomination(pwd, nomId);
+      const idx = allNoms.findIndex(x => String(x.id) === String(nomId));
+      if (idx !== -1) allNoms.splice(idx, 1);
+      showToast(`Nomination #${nomId} permanently deleted.`, 'success');
+      if (currentDetailNomId === nomId) closeNomDetail();
+      updatePostFilterOptions();
+      applyFilters();
+    } catch (err) {
+      showToast(`Delete failed: ${err.message}`, 'error');
+    }
+  };
+
+  // Render Rows (Table & Cards)
   const renderRows = (data) => {
     const tbody = main.querySelector('#nomTableBody');
     const cardsDiv = main.querySelector('#nomCardsContainer');
+    const thStatusOrReceipt = main.querySelector('#thStatusOrReceipt');
+    if (thStatusOrReceipt) {
+      thStatusOrReceipt.textContent = activeTab === 'intake' ? 'Physical Receipt' : 'Scrutiny Status';
+    }
 
-    tbody.innerHTML = data.length ? data.map(n => {
+    // 1. Render Table Rows
+    tbody.innerHTML = data.length ? data.map((n, idx) => {
+      const systemSerial = idx + 1;
       const violations = getNominationRuleViolations(n, allPosts, allNoms, settings);
       const isRS = String(n.candidateClass || '').toUpperCase().includes('RESEARCH') || String(n.candidateClass || '').toUpperCase().includes('SCHOLAR');
+      const isPhysical = n.physicalReceived === true || n.physicalReceived === 'true';
 
       return `
       <tr id="row-${esc(n.id)}" class="hover:bg-white/[0.02] transition-colors">
+        <!-- System Serial Number -->
+        <td class="text-center font-mono font-bold text-xs text-indigo-300 bg-black/20">
+          ${systemSerial}
+        </td>
         <td>
           <button type="button" class="view-nom-btn font-mono text-indigo-300 hover:text-indigo-200 text-xs font-bold hover:underline cursor-pointer flex items-center gap-1" data-id="${esc(n.id)}" title="Click to view full form">
             <span>📄</span> ${esc(n.id)}
@@ -485,90 +600,129 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
           <div class="text-[10px] opacity-60">${esc(n.candidateDept || '')}</div>
         </td>
         <td>
-          <div class="text-xs font-medium text-slate-300 flex items-center gap-1">
-            <span>${esc(n.proposerName || n.proposer?.NAME || 'N/A')}</span>
-            <span class="badge bg-slate-800 text-slate-300 border border-white/10 font-mono text-[10px] px-1 py-0.2" title="Proposer Roll Serial">
-              #${esc(n.proposerSerial || n.proposer?.['Nominal Roll Serial Number'] || '–')}
-            </span>
+          <div class="text-xs font-medium text-slate-300">
+            <span class="text-slate-400">Prop:</span> ${esc(n.proposerName || n.proposer?.NAME || 'N/A')}
+            <span class="text-[10px] font-mono text-slate-500">(#${esc(n.proposerSerial || n.proposer?.['Nominal Roll Serial Number'] || '–')})</span>
           </div>
-          <div class="text-[10px] text-slate-500 font-mono">Adm: ${esc(n.proposerAdmission || n.proposer?.['ADMISION NO'] || '–')}</div>
+          <div class="text-xs font-medium text-slate-300 mt-0.5">
+            <span class="text-slate-400">Sec:</span> ${esc(n.seconderName || n.seconder?.NAME || 'N/A')}
+            <span class="text-[10px] font-mono text-slate-500">(#${esc(n.seconderSerial || n.seconder?.['Nominal Roll Serial Number'] || '–')})</span>
+          </div>
         </td>
         <td>
-          <div class="text-xs font-medium text-slate-300 flex items-center gap-1">
-            <span>${esc(n.seconderName || n.seconder?.NAME || 'N/A')}</span>
-            <span class="badge bg-slate-800 text-slate-300 border border-white/10 font-mono text-[10px] px-1 py-0.2" title="Seconder Roll Serial">
-              #${esc(n.seconderSerial || n.seconder?.['Nominal Roll Serial Number'] || '–')}
-            </span>
-          </div>
-          <div class="text-[10px] text-slate-500 font-mono">Adm: ${esc(n.seconderAdmission || n.seconder?.['ADMISION NO'] || '–')}</div>
+          ${activeTab === 'intake' ? `
+            <div>
+              ${isPhysical ? `
+                <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold inline-flex items-center gap-1">
+                  <span>✅</span> Physical Received
+                </span>
+              ` : `
+                <span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold inline-flex items-center gap-1">
+                  <span>⏳</span> Awaiting Physical
+                </span>
+              `}
+            </div>
+            <div class="mt-1">
+              <span class="badge badge-${(n.status || 'pending').toLowerCase()} text-[9px] px-1.5 py-0.2">${esc(n.status)}</span>
+            </div>
+          ` : `
+            <div>
+              <span class="badge badge-${(n.status || 'pending').toLowerCase()} font-bold">${esc(n.status)}</span>
+            </div>
+            ${n.status === 'Rejected' && n.rejectionReason ? `
+              <div class="text-[10px] text-rose-400 mt-1 max-w-[150px] leading-tight font-medium" title="${esc(n.rejectionReason)}">⚠️ ${esc(n.rejectionReason)}</div>
+            ` : ''}
+          `}
         </td>
         <td>
-          <div>
-            <span class="badge badge-${(n.status || 'pending').toLowerCase()} font-bold">${esc(n.status)}</span>
-          </div>
+          <!-- All Flags Styled in RED -->
           ${(() => {
-            const errors = violations.filter(v => v.severity !== 'notice');
-            const notices = violations.filter(v => v.severity === 'notice');
-            let badgesHtml = '';
-            if (errors.length > 0) {
-              badgesHtml += `
-                <button type="button" class="view-nom-btn badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] px-2 py-0.5 mt-1 font-semibold flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(errors.map(v => v.message).join(' | '))}">
-                  <span>⚠️ ${errors.length} Rule Violation${errors.length > 1 ? 's' : ''}</span>
-                </button>
-              `;
-            }
-            if (notices.length > 0) {
-              badgesHtml += `
-                <button type="button" class="view-nom-btn badge bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-[10px] px-2 py-0.5 mt-1 font-semibold flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(notices.map(v => v.message).join(' | '))}">
-                  <span>ℹ️ Multi-Submission (${notices.length})</span>
-                </button>
-              `;
-            }
             if (violations.length === 0) {
-              badgesHtml += `
-                <span class="badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[9px] px-1.5 py-0.2 mt-1 inline-flex items-center gap-1 font-medium">
+              return `
+                <span class="badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[9px] px-1.5 py-0.2 inline-flex items-center gap-1 font-medium">
                   <span>✓</span> Rules Passed
                 </span>
               `;
             }
-            return badgesHtml;
+            const multiCand = violations.find(v => v.type === 'MULTIPLE_CANDIDACY');
+            return `
+              <div class="space-y-1">
+                ${multiCand ? `
+                  <button type="button" class="view-nom-btn badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/50 text-[10px] px-2 py-0.5 font-bold flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(multiCand.message)}">
+                    <span>🚩 Multi-Post Candidacy</span>
+                  </button>
+                ` : ''}
+                <button type="button" class="view-nom-btn badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] px-2 py-0.5 font-semibold flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(violations.map(v => v.message).join(' | '))}">
+                  <span>⚠️ ${violations.length} Flag${violations.length > 1 ? 's' : ''} in RED</span>
+                </button>
+              </div>
+            `;
           })()}
-          ${n.status === 'Rejected' && n.rejectionReason ? `
-            <div class="text-[10px] text-rose-400 mt-1 max-w-[150px] leading-tight font-medium" title="${esc(n.rejectionReason)}">⚠️ ${esc(n.rejectionReason)}</div>
-          ` : ''}
         </td>
-        <td>
-          <div class="flex items-center gap-1.5 flex-wrap">
+        <td class="text-right">
+          <div class="flex items-center justify-end gap-1.5 flex-wrap">
             <button type="button" class="btn btn-secondary btn-xs view-nom-btn bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 px-2 py-1 flex items-center gap-1 font-semibold" data-id="${esc(n.id)}" title="View Full Nomination Form and Scrutiny Details">
-              <span>📄</span> <span>View Form</span>
+              <span>📄</span> <span>View</span>
             </button>
-            <button type="button" class="btn btn-primary btn-xs verify-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white" data-id="${esc(n.id)}" data-action="Valid"
-              ${n.status === 'Valid' ? 'disabled' : ''}>Valid</button>
-            <button type="button" class="btn btn-secondary btn-xs verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white" data-id="${esc(n.id)}" data-action="Rejected"
-              ${n.status === 'Rejected' ? 'disabled' : ''}>Reject</button>
-            <button type="button" class="btn btn-secondary btn-xs delete-nom-btn bg-red-900/20 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/30 px-2" data-id="${esc(n.id)}" data-candidate="${esc(n.candidateName || n.candidate?.NAME || '')}" data-post="${esc(n.post)}" title="Delete Nomination">🗑️</button>
+
+            ${activeTab === 'intake' ? `
+              <button type="button" class="btn btn-xs toggle-physical-btn ${isPhysical ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10' : 'bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40'} px-2 py-1 font-semibold" data-id="${esc(n.id)}" data-target="${isPhysical ? 'false' : 'true'}" title="${isPhysical ? 'Unmark physical copy' : 'Mark physical print and documents as received'}">
+                <span>${isPhysical ? '↩ Unmark' : '📥 Mark Received'}</span>
+              </button>
+            ` : `
+              <button type="button" class="btn btn-primary btn-xs verify-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white" data-id="${esc(n.id)}" data-action="Valid" ${n.status === 'Valid' ? 'disabled' : ''}>Valid</button>
+              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white" data-id="${esc(n.id)}" data-action="Rejected" ${n.status === 'Rejected' ? 'disabled' : ''}>Reject</button>
+            `}
+
+            <button type="button" class="btn btn-secondary btn-xs delete-nom-btn bg-red-900/20 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/30 px-2 py-1 font-bold" data-id="${esc(n.id)}" title="Permanently delete nomination">
+              <span>🗑️</span>
+            </button>
           </div>
         </td>
       </tr>`;
-    }).join('') : `<tr><td colspan="8" class="text-center text-slate-500 py-12">No nominations found matching those criteria.</td></tr>`;
+    }).join('') : `
+      <tr>
+        <td colspan="9" class="text-center text-slate-500 py-12">
+          ${activeTab === 'scrutiny' ? 'No nominations have physical copies marked as received yet. Go to Tab 1 to mark physical prints and documents received.' : 'No nominations found matching criteria.'}
+        </td>
+      </tr>`;
 
-    // 2. Render Cards (for mobile & card mode)
+    // 2. Render Cards View (for mobile & card mode)
     if (cardsDiv) {
-      cardsDiv.innerHTML = data.length ? data.map(n => {
+      cardsDiv.innerHTML = data.length ? data.map((n, idx) => {
+        const systemSerial = idx + 1;
         const violations = getNominationRuleViolations(n, allPosts, allNoms, settings);
         const isRS = String(n.candidateClass || '').toUpperCase().includes('RESEARCH') || String(n.candidateClass || '').toUpperCase().includes('SCHOLAR');
+        const isPhysical = n.physicalReceived === true || n.physicalReceived === 'true';
+
         return `
           <div class="bg-slate-900/80 backdrop-blur-md p-4 rounded-xl border ${violations.length ? 'border-rose-500/40 bg-rose-950/10' : 'border-white/10'} hover:border-indigo-500/40 transition-all flex flex-col justify-between space-y-3.5 shadow-xl">
-            <!-- Top Header: ID, Post, Status -->
+            <!-- Top Header: System Serial (#1), ID, Post, Status -->
             <div class="space-y-2.5">
               <div class="flex items-start justify-between gap-2">
-                <div>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="badge bg-indigo-500/30 text-indigo-200 border border-indigo-500/50 font-mono font-bold text-xs px-2 py-0.5" title="System Serial Number in list">
+                    #${systemSerial}
+                  </span>
                   <button type="button" class="view-nom-btn font-mono text-xs text-indigo-300 bg-indigo-500/20 hover:bg-indigo-500/30 px-2 py-0.5 rounded border border-indigo-500/30 font-bold inline-flex items-center gap-1" data-id="${esc(n.id)}" title="Click to view full form">
                     <span>📄</span> #${esc(n.id)}
                   </button>
-                  <span class="text-xs font-semibold text-slate-200 ml-1.5">${esc(n.post)}</span>
+                  <span class="text-xs font-semibold text-slate-200">${esc(n.post)}</span>
                 </div>
-                <span class="badge badge-${(n.status || 'pending').toLowerCase()} font-bold text-xs shrink-0">${esc(n.status)}</span>
+                <div class="flex items-center gap-1 shrink-0">
+                  <span class="badge badge-${(n.status || 'pending').toLowerCase()} font-bold text-xs">${esc(n.status)}</span>
+                </div>
+              </div>
+
+              <!-- Physical Receipt Status Indicator -->
+              <div class="flex items-center justify-between text-xs py-1 px-2.5 rounded-lg ${isPhysical ? 'bg-emerald-950/40 border border-emerald-500/30 text-emerald-300' : 'bg-amber-950/30 border border-amber-500/30 text-amber-300'}">
+                <span class="font-semibold flex items-center gap-1.5">
+                  <span>${isPhysical ? '✅' : '⏳'}</span>
+                  <span>Physical Copy: <strong>${isPhysical ? 'Received' : 'Awaiting Receipt'}</strong></span>
+                </span>
+                ${isPhysical && n.physicalReceivedAt ? `
+                  <span class="text-[10px] opacity-75 font-mono">${new Date(n.physicalReceivedAt).toLocaleDateString()}</span>
+                ` : ''}
               </div>
 
               <!-- Candidate Info -->
@@ -592,65 +746,66 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
                 <div class="bg-black/20 p-2 rounded border border-white/5 space-y-0.5">
                   <div class="text-[10px] uppercase font-bold text-slate-400">Proposer</div>
                   <div class="font-medium text-slate-200 truncate">${esc(n.proposerName || n.proposer?.NAME || 'N/A')}</div>
-                  <div class="text-[10px] font-mono text-slate-400">Sl. #${esc(n.proposerSerial || n.proposer?.['Nominal Roll Serial Number'] || '–')} • Adm: ${esc(n.proposerAdmission || n.proposer?.['ADMISION NO'] || '–')}</div>
+                  <div class="text-[10px] font-mono text-slate-400">Sl. #${esc(n.proposerSerial || n.proposer?.['Nominal Roll Serial Number'] || '–')}</div>
                 </div>
                 <div class="bg-black/20 p-2 rounded border border-white/5 space-y-0.5">
                   <div class="text-[10px] uppercase font-bold text-slate-400">Seconder</div>
                   <div class="font-medium text-slate-200 truncate">${esc(n.seconderName || n.seconder?.NAME || 'N/A')}</div>
-                  <div class="text-[10px] font-mono text-slate-400">Sl. #${esc(n.seconderSerial || n.seconder?.['Nominal Roll Serial Number'] || '–')} • Adm: ${esc(n.seconderAdmission || n.seconder?.['ADMISION NO'] || '–')}</div>
+                  <div class="text-[10px] font-mono text-slate-400">Sl. #${esc(n.seconderSerial || n.seconder?.['Nominal Roll Serial Number'] || '–')}</div>
                 </div>
               </div>
 
-              <!-- Scrutiny Audit & Violations -->
+              <!-- Scrutiny Audit & Violations in RED -->
               <div class="space-y-1.5">
                 ${(() => {
-                  const errors = violations.filter(v => v.severity !== 'notice');
-                  const notices = violations.filter(v => v.severity === 'notice');
-                  let outHtml = '';
-                  if (errors.length > 0) {
-                    outHtml += `
-                      <button type="button" class="view-nom-btn w-full badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs px-2.5 py-1.5 font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(errors.map(v => v.message).join(' | '))}">
-                        <span>⚠️ ${errors.length} Rule Violation${errors.length > 1 ? 's' : ''} Flagged</span>
-                      </button>
-                    `;
-                  }
-                  if (notices.length > 0) {
-                    outHtml += `
-                      <button type="button" class="view-nom-btn w-full badge bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-xs px-2.5 py-1.5 font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(notices.map(v => v.message).join(' | '))}">
-                        <span>ℹ️ Multi-Submission (${notices.length} Notice${notices.length > 1 ? 's' : ''})</span>
-                      </button>
-                    `;
-                  }
                   if (violations.length === 0) {
-                    outHtml += `
+                    return `
                       <div class="badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs px-2.5 py-1 flex items-center justify-center gap-1.5 font-medium">
                         <span>✓</span> All Statutory Rules Passed
                       </div>
                     `;
                   }
-                  return outHtml;
+                  const multiCand = violations.find(v => v.type === 'MULTIPLE_CANDIDACY');
+                  return `
+                    ${multiCand ? `
+                      <div class="text-xs text-rose-200 bg-rose-950/60 border border-rose-500/50 p-2.5 rounded-lg leading-relaxed shadow-sm">
+                        ${esc(multiCand.message)}
+                      </div>
+                    ` : ''}
+                    <button type="button" class="view-nom-btn w-full badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs px-2.5 py-1.5 font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(violations.map(v => v.message).join(' | '))}">
+                      <span>⚠️ ${violations.length} Statutory Flag${violations.length > 1 ? 's' : ''} in RED</span>
+                    </button>
+                  `;
                 })()}
                 ${n.status === 'Rejected' && n.rejectionReason ? `
-                  <div class="text-xs text-rose-400 mt-1.5 bg-rose-500/10 border border-rose-500/20 p-2 rounded font-medium">
+                  <div class="text-xs text-rose-400 mt-1 bg-rose-500/10 border border-rose-500/20 p-2 rounded font-medium">
                     ⚠️ ${esc(n.rejectionReason)}
                   </div>
                 ` : ''}
               </div>
             </div>
 
-            <!-- Touch-friendly Action Buttons for Phone -->
+            <!-- Touch-friendly Action Buttons -->
             <div class="space-y-2 pt-2 border-t border-white/10">
               <button type="button" class="btn btn-secondary btn-sm w-full view-nom-btn bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 py-2 flex items-center justify-center gap-1.5 font-bold text-xs" data-id="${esc(n.id)}">
                 <span>📄</span> <span>View Full Nomination Paper</span>
               </button>
+
               <div class="flex items-center gap-2">
-                <button type="button" class="btn btn-primary btn-sm flex-1 verify-btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 text-xs" data-id="${esc(n.id)}" data-action="Valid" ${n.status === 'Valid' ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>
-                  ✅ Valid
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm flex-1 verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 font-bold py-2 text-xs" data-id="${esc(n.id)}" data-action="Rejected" ${n.status === 'Rejected' ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>
-                  ❌ Reject
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm delete-nom-btn bg-red-900/20 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/30 px-3 py-2 text-xs font-bold" data-id="${esc(n.id)}" data-candidate="${esc(n.candidateName || n.candidate?.NAME || '')}" data-post="${esc(n.post)}" title="Delete Nomination">
+                ${activeTab === 'intake' ? `
+                  <button type="button" class="btn btn-sm flex-1 toggle-physical-btn ${isPhysical ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10' : 'bg-emerald-600 hover:bg-emerald-500 text-white font-bold'} py-2 text-xs" data-id="${esc(n.id)}" data-target="${isPhysical ? 'false' : 'true'}">
+                    <span>${isPhysical ? '↩ Unmark Physical' : '📥 Mark Received'}</span>
+                  </button>
+                ` : `
+                  <button type="button" class="btn btn-primary btn-sm flex-1 verify-btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 text-xs" data-id="${esc(n.id)}" data-action="Valid" ${n.status === 'Valid' ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>
+                    ✅ Valid
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-sm flex-1 verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 font-bold py-2 text-xs" data-id="${esc(n.id)}" data-action="Rejected" ${n.status === 'Rejected' ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>
+                    ❌ Reject
+                  </button>
+                `}
+
+                <button type="button" class="btn btn-secondary btn-sm delete-nom-btn bg-red-900/20 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/30 px-3 py-2 text-xs font-bold" data-id="${esc(n.id)}" title="Permanently Delete Nomination">
                   🗑️
                 </button>
               </div>
@@ -661,7 +816,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
         <div class="col-span-full text-center text-slate-500 py-12">
           <div class="text-3xl mb-2">🔍</div>
           <p class="text-slate-300 font-medium text-sm">No nominations found</p>
-          <p class="text-xs text-slate-500 mt-1">Try broadening your search term or filter.</p>
+          <p class="text-xs text-slate-500 mt-1">${activeTab === 'scrutiny' ? 'No physical copies marked as received yet. Mark physical receipts in Tab 1.' : 'Try broadening your search term or filter.'}</p>
         </div>
       `;
     }
@@ -680,6 +835,15 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     btnNext.disabled = idx === -1 || idx >= total - 1;
 
     idBadge.textContent = `#${nom.id}`;
+    
+    // Physical receipt badge in modal
+    const isPhys = nom.physicalReceived === true || nom.physicalReceived === 'true';
+    receiptBadge.className = `badge ${isPhys ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'} font-bold`;
+    receiptBadge.textContent = isPhys ? 'Physical Received' : 'Awaiting Physical';
+
+    modalPhysicalIcon.textContent = isPhys ? '↩' : '📥';
+    modalPhysicalText.textContent = isPhys ? 'Unmark Physical Copy' : 'Mark Physical Received';
+
     statusBadge.className = `badge badge-${(nom.status || 'pending').toLowerCase()} font-bold`;
     statusBadge.textContent = nom.status || 'Pending';
     tsText.textContent = nom.timestamp ? `Submitted: ${new Date(nom.timestamp).toLocaleString()}` : '';
@@ -691,53 +855,29 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       rejBanner.classList.add('hidden');
     }
 
-    // Scrutiny Rule Violations Audit
+    // Scrutiny Rule Violations in RED
     const violations = getNominationRuleViolations(nom, allPosts, allNoms, settings);
-    const errors = violations.filter(v => v.severity !== 'notice');
-    const notices = violations.filter(v => v.severity === 'notice');
 
     let scrutinyHtml = '';
-    if (errors.length > 0) {
+    if (violations.length > 0) {
       scrutinyHtml += `
-        <div class="rounded-xl border border-rose-500/40 bg-rose-950/40 p-4 space-y-2.5 shadow-lg mb-3">
+        <div class="rounded-xl border border-rose-500/50 bg-rose-950/50 p-4 space-y-2.5 shadow-lg mb-3">
           <div class="flex items-center justify-between border-b border-rose-500/30 pb-2">
             <div class="flex items-center gap-2 text-rose-300 font-bold text-sm">
-              <span class="text-base">⚠️</span> Rule Violations & Scrutiny Warnings (${errors.length})
+              <span class="text-base">⚠️</span> Rule Violations & Scrutiny Warnings in RED (${violations.length})
             </div>
             <span class="badge bg-rose-500/30 text-rose-200 border border-rose-500/50 text-[10px] font-bold uppercase tracking-wider">Scrutiny Alert</span>
           </div>
-          <div class="text-xs text-rose-200/90 space-y-1.5 pl-1">
-            ${errors.map(v => `
-              <div class="flex items-start gap-2">
+          <div class="text-xs text-rose-200 space-y-2 pl-1">
+            ${violations.map(v => `
+              <div class="flex items-start gap-2 ${v.type === 'MULTIPLE_CANDIDACY' ? 'bg-rose-900/40 p-2 rounded border border-rose-500/40 font-semibold' : ''}">
                 <span class="text-rose-400 font-bold text-sm leading-none">•</span>
                 <span>${esc(v.message)}</span>
               </div>
             `).join('')}
           </div>
         </div>`;
-    }
-
-    if (notices.length > 0) {
-      scrutinyHtml += `
-        <div class="rounded-xl border border-indigo-500/40 bg-indigo-950/40 p-4 space-y-2.5 shadow-lg mb-3">
-          <div class="flex items-center justify-between border-b border-indigo-500/30 pb-2">
-            <div class="flex items-center gap-2 text-indigo-300 font-bold text-sm">
-              <span class="text-base">ℹ️</span> Multi-Submission & Cross-Post Information (${notices.length})
-            </div>
-            <span class="badge bg-indigo-500/30 text-indigo-200 border border-indigo-500/50 text-[10px] font-bold uppercase tracking-wider">Multi-Submission</span>
-          </div>
-          <div class="text-xs text-indigo-200 space-y-1.5 pl-1">
-            ${notices.map(v => `
-              <div class="flex items-start gap-2">
-                <span class="text-indigo-400 font-bold text-sm leading-none">•</span>
-                <span>${esc(v.message)}</span>
-              </div>
-            `).join('')}
-          </div>
-        </div>`;
-    }
-
-    if (errors.length === 0 && notices.length === 0) {
+    } else {
       scrutinyHtml = `
         <div class="rounded-xl border border-emerald-500/30 bg-emerald-950/30 p-3.5 flex items-center justify-between text-xs text-emerald-300 shadow-md">
           <div class="flex items-center gap-2.5">
@@ -786,95 +926,71 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     currentDetailNomId = null;
   };
 
-  // Delete Modal Setup
-  let pendingDeleteId = null;
-  const delModal = main.querySelector('#deleteNomModal');
-  const delInput = main.querySelector('#delNomPwdInput');
-  const delErr = main.querySelector('#delNomError');
-  const btnConfirmDel = main.querySelector('#btnConfirmDelNom');
-
-  const closeDelModal = () => {
-    delModal?.classList.add('hidden');
-    pendingDeleteId = null;
-    if (delInput) delInput.value = '';
-    if (delErr) { delErr.textContent = ''; delErr.classList.add('hidden'); }
-  };
-
-  main.querySelector('#btnCancelDelNom')?.addEventListener('click', closeDelModal);
-
-  main.querySelector('#btnConfirmDelNom')?.addEventListener('click', async () => {
-    const enteredPwd = (delInput?.value || '').trim();
-    if (!enteredPwd) {
-      if (delErr) { delErr.textContent = '❌ Please enter admin password.'; delErr.classList.remove('hidden'); }
-      delInput?.focus();
-      return;
-    }
-    if (!pendingDeleteId) return;
-
-    btnConfirmDel.disabled = true;
-    btnConfirmDel.textContent = 'Deleting...';
-    if (delErr) delErr.classList.add('hidden');
-
-    try {
-      await api.adminDeleteNomination(enteredPwd, pendingDeleteId);
-      const idx = allNoms.findIndex(x => x.id === pendingDeleteId);
-      if (idx !== -1) allNoms.splice(idx, 1);
-      showToast(`Nomination ${pendingDeleteId} permanently deleted.`, 'success');
-      closeDelModal();
-      if (currentDetailNomId === pendingDeleteId) closeNomDetail();
-      applyFilters();
-    } catch (err) {
-      const msg = err.message.includes('password') ? 'Incorrect admin password.' : err.message;
-      if (delErr) { delErr.textContent = `❌ ${msg}`; delErr.classList.remove('hidden'); }
-      showToast(msg, 'error');
-      delInput?.focus();
-    } finally {
-      btnConfirmDel.disabled = false;
-      btnConfirmDel.textContent = 'Permanently Delete';
-    }
-  });
-
   const applyFilters = () => {
     const q = (main.querySelector('#nomSearch').value || '').trim().toLowerCase();
+    const selectedPost = main.querySelector('#postFilter')?.value || 'all';
     const s = main.querySelector('#statusFilter').value;
-    
-    const filtered = allNoms.filter(n => {
-      const violations = getNominationRuleViolations(n, allPosts, allNoms, settings);
-      
-      let matchStatus = true;
-      const errors = violations.filter(v => v.severity !== 'notice');
-      const notices = violations.filter(v => v.severity === 'notice');
-      if (s === 'violations') {
-        matchStatus = errors.length > 0;
-      } else if (s === 'multi') {
-        matchStatus = notices.length > 0;
-      } else if (s === 'passed') {
-        matchStatus = errors.length === 0;
-      } else if (s !== 'all') {
-        matchStatus = n.status === s;
+
+    // Update Tab Counts
+    const intakeCount = allNoms.length;
+    const receivedCount = allNoms.filter(n => n.physicalReceived === true || n.physicalReceived === 'true').length;
+    main.querySelector('#tabCountIntake').textContent = intakeCount;
+    main.querySelector('#tabCountScrutiny').textContent = receivedCount;
+
+    // Filter by active workflow tab first
+    let baseList = allNoms;
+    if (activeTab === 'scrutiny') {
+      baseList = allNoms.filter(n => n.physicalReceived === true || n.physicalReceived === 'true');
+    }
+
+    const filtered = baseList.filter(n => {
+      // 1. Post Filter
+      if (selectedPost !== 'all' && n.post !== selectedPost) {
+        return false;
       }
 
+      // 2. Status / Feature Filter
+      const violations = getNominationRuleViolations(n, allPosts, allNoms, settings);
+      const isPhys = n.physicalReceived === true || n.physicalReceived === 'true';
+
+      if (activeTab === 'intake') {
+        if (s === 'received' && !isPhys) return false;
+        if (s === 'awaiting' && isPhys) return false;
+        if (s === 'multi' && !violations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
+        if (s === 'violations' && violations.length === 0) return false;
+      } else {
+        if (s === 'violations' && violations.length === 0) return false;
+        if (s === 'multi' && !violations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
+        if (s === 'passed' && violations.length > 0) return false;
+        if (s !== 'all' && s !== 'violations' && s !== 'multi' && s !== 'passed') {
+          if (n.status !== s) return false;
+        }
+      }
+
+      // 3. Search Filter
       const matchSearch = !q || 
         String(n.id).toLowerCase().includes(q) || 
         String(n.candidateName || n.candidate?.NAME || '').toLowerCase().includes(q) || 
         String(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || '').toLowerCase().includes(q) || 
         String(n.candidateAdmission || n.candidate?.['ADMISION NO'] || '').toLowerCase().includes(q) || 
         String(n.candidateDept || '').toLowerCase().includes(q) || 
+        String(n.proposerName || '').toLowerCase().includes(q) || 
+        String(n.seconderName || '').toLowerCase().includes(q) || 
         String(n.post).toLowerCase().includes(q);
 
-      return matchStatus && matchSearch;
+      return matchSearch;
     });
 
-    // Sort: Pending first, then Valid, then Rejected
+    // Sort order: LATEST 1st to OLDEST last (Timestamp descending, id descending)
     filtered.sort((a, b) => {
-      const order = { 'Pending': 1, 'Valid': 2, 'Rejected': 3 };
-      const aOrder = order[a.status] || 99;
-      const bOrder = order[b.status] || 99;
-      if (aOrder !== bOrder) return aOrder - bOrder;
+      const timeA = new Date(a.timestamp || a.created_at || 0).getTime();
+      const timeB = new Date(b.timestamp || b.created_at || 0).getTime();
+      if (timeA !== timeB) return timeB - timeA;
       return String(b.id).localeCompare(String(a.id));
     });
 
     activeFilteredList = filtered;
+    main.querySelector('#nomListCountText').textContent = `Showing ${filtered.length} of ${baseList.length} nominations (Latest 1st)`;
     renderRows(filtered);
 
     // If modal is open, refresh counter & navigation
@@ -887,7 +1003,32 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     }
   };
 
+  // Switch Workflow Tabs
+  const setWorkflowTab = (tab) => {
+    activeTab = tab;
+    const btnI = main.querySelector('#tabBtnIntake');
+    const btnS = main.querySelector('#tabBtnScrutiny');
+    const banI = main.querySelector('#bannerIntake');
+    const banS = main.querySelector('#bannerScrutiny');
+
+    if (btnI) {
+      btnI.className = `tab-btn px-4 py-2.5 text-xs sm:text-sm font-bold rounded-t-xl border-b-2 flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'intake' ? 'border-indigo-400 text-white bg-indigo-950/40 shadow-lg' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'}`;
+    }
+    if (btnS) {
+      btnS.className = `tab-btn px-4 py-2.5 text-xs sm:text-sm font-bold rounded-t-xl border-b-2 flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'scrutiny' ? 'border-emerald-400 text-white bg-emerald-950/40 shadow-lg' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'}`;
+    }
+    if (banI) banI.classList.toggle('hidden', activeTab !== 'intake');
+    if (banS) banS.classList.toggle('hidden', activeTab !== 'scrutiny');
+
+    updateStatusFilterOptions();
+    applyFilters();
+  };
+
+  main.querySelector('#tabBtnIntake')?.addEventListener('click', () => setWorkflowTab('intake'));
+  main.querySelector('#tabBtnScrutiny')?.addEventListener('click', () => setWorkflowTab('scrutiny'));
+
   main.querySelector('#nomSearch').addEventListener('input', applyFilters);
+  main.querySelector('#postFilter').addEventListener('change', applyFilters);
   main.querySelector('#statusFilter').addEventListener('change', applyFilters);
 
   const updateNomViewUI = () => {
@@ -929,6 +1070,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       allNoms.length = 0;
       if (Array.isArray(freshNoms)) allNoms.push(...freshNoms);
       if (Array.isArray(freshPosts)) { allPosts.length = 0; allPosts.push(...freshPosts); }
+      updatePostFilterOptions();
       applyFilters();
       showToast('Nomination list & rules refreshed.', 'info');
     } catch (err) {
@@ -995,6 +1137,20 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     }
   });
 
+  btnTogglePhysical?.addEventListener('click', async () => {
+    if (!currentDetailNomId) return;
+    const id = currentDetailNomId;
+    const nom = allNoms.find(n => n.id === id);
+    if (!nom) return;
+    const nextState = !(nom.physicalReceived === true || nom.physicalReceived === 'true');
+    await togglePhysicalReceipt(id, nextState);
+  });
+
+  btnModalDelete?.addEventListener('click', async () => {
+    if (!currentDetailNomId) return;
+    await confirmAndDeleteNomination(currentDetailNomId);
+  });
+
   main.querySelector('#btnModalPrintPaper')?.addEventListener('click', () => {
     triggerPrint(paperZone.innerHTML);
   });
@@ -1030,17 +1186,20 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       return;
     }
 
-    // Delete nomination button click
+    // Toggle physical receipt button click
+    const togglePhysBtn = e.target.closest('.toggle-physical-btn');
+    if (togglePhysBtn) {
+      const id = togglePhysBtn.dataset.id;
+      const targetState = togglePhysBtn.dataset.target === 'true';
+      await togglePhysicalReceipt(id, targetState);
+      return;
+    }
+
+    // Delete nomination button click (with prompt confirmation)
     const delBtn = e.target.closest('.delete-nom-btn');
     if (delBtn) {
-      pendingDeleteId = delBtn.dataset.id;
-      main.querySelector('#delNomCandidate').textContent = delBtn.dataset.candidate || 'Unknown';
-      main.querySelector('#delNomPost').textContent = delBtn.dataset.post || 'Unknown';
-      main.querySelector('#delNomId').textContent = pendingDeleteId;
-      if (delInput) delInput.value = '';
-      if (delErr) { delErr.textContent = ''; delErr.classList.add('hidden'); }
-      delModal?.classList.remove('hidden');
-      setTimeout(() => delInput?.focus(), 50);
+      const id = delBtn.dataset.id;
+      await confirmAndDeleteNomination(id);
       return;
     }
 

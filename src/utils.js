@@ -146,7 +146,7 @@ export function formatYearRuleDescription(rule) {
  * @param {string|null} gender
  * @param {object[]} allPosts - Array of post-rule objects from the database/config
  */
-export function checkEligibility(student, postName, role, gender = null, allPosts = [], existingNominations = []) {
+export function checkEligibility(student, postName, role, gender = null, allPosts = [], existingNominations = [], isAdminDirect = false) {
   if (!student) return [];
   const warnings = [];
   const cls  = String(student['CLASS'] || '').toUpperCase();
@@ -158,13 +158,18 @@ export function checkEligibility(student, postName, role, gender = null, allPost
 
   // 1. Multi-Proposing/Seconding Check (ONLY for Proposer/Seconder on the SAME post)
   if (role === 'Proposer' || role === 'Seconder') {
-    const alreadyEndorsedThisPost = existingNominations.some(n => 
+    const dupNom = existingNominations.find(n => 
       n.post === postName && 
       n.status !== 'Rejected' && 
       (String(n.proposerSerial) === serial || String(n.seconderSerial) === serial)
     );
-    if (alreadyEndorsedThisPost) {
-      warnings.push(`Student #${serial} has already proposed or seconded a candidate for "${postName}". They cannot endorse multiple candidates for the exact same post.`);
+    if (dupNom) {
+      const studentName = student['NAME'] || student.name || `Student #${serial}`;
+      const candName = dupNom.candidateName || (dupNom.candidate && dupNom.candidate.NAME) || 'another candidate';
+      const endorseRole = String(dupNom.proposerSerial) === serial ? 'proposed' : 'seconded';
+      if (!isAdminDirect) {
+        warnings.push(`Student "${studentName}" (Sl #${serial}) has already ${endorseRole} candidate "${candName}" for the post of "${postName}". A student can propose or second only 1 candidate for a post.`);
+      }
     }
   }
 

@@ -286,6 +286,19 @@ export const api = {
     return Promise.resolve({ ok: true });
   },
 
+  adminTogglePhysicalReceipt: (password, id, physicalReceived) => {
+    updateCache({ action: 'adminGetNominations', password }, (noms) => {
+      const n = noms.find(x => x.id === id);
+      if (n) {
+        n.physicalReceived = physicalReceived;
+        n.physicalReceivedAt = physicalReceived ? new Date().toISOString() : null;
+      }
+      return noms;
+    });
+    bgPost({ action: 'adminTogglePhysicalReceipt', password, id, physicalReceived });
+    return Promise.resolve({ ok: true });
+  },
+
   adminDeleteNomination: async (password, id) => {
     const res = await post({ action: 'adminDeleteNomination', password, confirmPassword: password, id });
     invalidateCache('adminGetNominations');
