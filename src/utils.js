@@ -156,7 +156,7 @@ export function checkEligibility(student, postName, role, gender = null, allPost
   // Find the rule for this post
   const rule = allPosts.find(p => p.post === postName) || {};
 
-  // 1. Multi-Proposing/Seconding Check (ONLY for Proposer/Seconder)
+  // 1. Multi-Proposing/Seconding Check (ONLY for Proposer/Seconder on the SAME post)
   if (role === 'Proposer' || role === 'Seconder') {
     const alreadyEndorsedThisPost = existingNominations.some(n => 
       n.post === postName && 
@@ -164,7 +164,7 @@ export function checkEligibility(student, postName, role, gender = null, allPost
       (String(n.proposerSerial) === serial || String(n.seconderSerial) === serial)
     );
     if (alreadyEndorsedThisPost) {
-      warnings.push(`Student #${serial} has already proposed or seconded a candidate for "${postName}". They cannot endorse multiple candidates for the same post.`);
+      warnings.push(`Student #${serial} has already proposed or seconded a candidate for "${postName}". They cannot endorse multiple candidates for the exact same post.`);
     }
   }
 

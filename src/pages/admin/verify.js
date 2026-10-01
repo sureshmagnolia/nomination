@@ -205,7 +205,7 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
     });
   }
 
-  // 7. Duplicate Proposer / Seconder Endorsements on the same post
+  // 7. Duplicate Proposer / Seconder Endorsements on the SAME post
   const otherNominationsForPost = allNominations.filter(n => n.id !== nom.id && n.post === nom.post && n.status !== 'Rejected');
   
   if (pSerial) {
@@ -216,7 +216,7 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
       violations.push({
         type: 'DUPLICATE_PROPOSER_ENDORSEMENT',
         severity: 'error',
-        message: `Proposer (Sl #${pSerial}, ${pName}) has already endorsed nomination #${dupProp.id} (${dupProp.candidateName || 'Candidate'}) for this post.`
+        message: `Proposer (Sl #${pSerial}, ${pName}) has already endorsed nomination #${dupProp.id} (${dupProp.candidateName || 'Candidate'}) for this exact post.`
       });
     }
   }
@@ -229,12 +229,43 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
       violations.push({
         type: 'DUPLICATE_SECONDER_ENDORSEMENT',
         severity: 'error',
-        message: `Seconder (Sl #${sSerial}, ${sName}) has already endorsed nomination #${dupSec.id} (${dupSec.candidateName || 'Candidate'}) for this post.`
+        message: `Seconder (Sl #${sSerial}, ${sName}) has already endorsed nomination #${dupSec.id} (${dupSec.candidateName || 'Candidate'}) for this exact post.`
       });
     }
   }
 
-  // 8. Candidate Nominated for Multiple Posts
+  // 8. Multi-Submissions (Flagged as info/notice for different posts)
+  // Check if Proposer or Seconder has endorsed candidates for OTHER posts
+  const otherNominationsOtherPosts = allNominations.filter(n => n.id !== nom.id && n.post !== nom.post && n.status !== 'Rejected');
+  if (pSerial) {
+    const otherProp = otherNominationsOtherPosts.filter(n => 
+      String(n.proposerSerial) === pSerial || String(n.seconderSerial) === pSerial
+    );
+    if (otherProp.length > 0) {
+      const postsList = [...new Set(otherProp.map(n => `"${n.post}" (#${n.id})`))].join(', ');
+      violations.push({
+        type: 'MULTI_POST_ENDORSEMENT',
+        severity: 'notice',
+        message: `Proposer (Sl #${pSerial}, ${pName}) has also endorsed candidate(s) for different post(s): ${postsList}.`
+      });
+    }
+  }
+
+  if (sSerial) {
+    const otherSec = otherNominationsOtherPosts.filter(n => 
+      String(n.proposerSerial) === sSerial || String(n.seconderSerial) === sSerial
+    );
+    if (otherSec.length > 0) {
+      const postsList = [...new Set(otherSec.map(n => `"${n.post}" (#${n.id})`))].join(', ');
+      violations.push({
+        type: 'MULTI_POST_ENDORSEMENT',
+        severity: 'notice',
+        message: `Seconder (Sl #${sSerial}, ${sName}) has also endorsed candidate(s) for different post(s): ${postsList}.`
+      });
+    }
+  }
+
+  // Check if Candidate has filed nominations for OTHER posts
   const otherCandidatures = allNominations.filter(n => n.id !== nom.id && n.status !== 'Rejected' && (
     (cSerial && String(n.candidateSerial) === cSerial) ||
     (cAdm && String(n.candidateAdmission).trim().toLowerCase() === cAdm)
@@ -243,8 +274,8 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
     const otherPosts = otherCandidatures.map(n => `"${n.post}" (#${n.id})`).join(', ');
     violations.push({
       type: 'MULTIPLE_CANDIDACY',
-      severity: 'error',
-      message: `Candidate has also filed nomination for other post(s): ${otherPosts}.`
+      severity: 'notice',
+      message: `Multi-Submission: Candidate has also filed nomination for different post(s): ${otherPosts}.`
     });
   }
 
@@ -286,6 +317,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
             <option value="Valid">Valid</option>
             <option value="Rejected">Rejected</option>
             <option value="violations">⚠️ Rule Violations Flagged</option>
+            <option value="multi">ℹ️ Multi-Submissions</option>
             <option value="passed">✓ All Rules Passed</option>
           </select>
         </div>
@@ -474,15 +506,33 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
           <div>
             <span class="badge badge-${(n.status || 'pending').toLowerCase()} font-bold">${esc(n.status)}</span>
           </div>
-          ${violations.length > 0 ? `
-            <button type="button" class="view-nom-btn badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] px-2 py-0.5 mt-1 font-semibold flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(violations.map(v => v.message).join(' | '))}">
-              <span>⚠️ ${violations.length} Rule Violation${violations.length > 1 ? 's' : ''}</span>
-            </button>
-          ` : `
-            <span class="badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[9px] px-1.5 py-0.2 mt-1 inline-flex items-center gap-1 font-medium">
-              <span>✓</span> Rules Passed
-            </span>
-          `}
+          ${(() => {
+            const errors = violations.filter(v => v.severity !== 'notice');
+            const notices = violations.filter(v => v.severity === 'notice');
+            let badgesHtml = '';
+            if (errors.length > 0) {
+              badgesHtml += `
+                <button type="button" class="view-nom-btn badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] px-2 py-0.5 mt-1 font-semibold flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(errors.map(v => v.message).join(' | '))}">
+                  <span>⚠️ ${errors.length} Rule Violation${errors.length > 1 ? 's' : ''}</span>
+                </button>
+              `;
+            }
+            if (notices.length > 0) {
+              badgesHtml += `
+                <button type="button" class="view-nom-btn badge bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-[10px] px-2 py-0.5 mt-1 font-semibold flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(notices.map(v => v.message).join(' | '))}">
+                  <span>ℹ️ Multi-Submission (${notices.length})</span>
+                </button>
+              `;
+            }
+            if (violations.length === 0) {
+              badgesHtml += `
+                <span class="badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[9px] px-1.5 py-0.2 mt-1 inline-flex items-center gap-1 font-medium">
+                  <span>✓</span> Rules Passed
+                </span>
+              `;
+            }
+            return badgesHtml;
+          })()}
           ${n.status === 'Rejected' && n.rejectionReason ? `
             <div class="text-[10px] text-rose-400 mt-1 max-w-[150px] leading-tight font-medium" title="${esc(n.rejectionReason)}">⚠️ ${esc(n.rejectionReason)}</div>
           ` : ''}
@@ -552,16 +602,34 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
               </div>
 
               <!-- Scrutiny Audit & Violations -->
-              <div>
-                ${violations.length > 0 ? `
-                  <button type="button" class="view-nom-btn w-full badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs px-2.5 py-1.5 font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(violations.map(v => v.message).join(' | '))}">
-                    <span>⚠️ ${violations.length} Rule Violation${violations.length > 1 ? 's' : ''} Flagged</span>
-                  </button>
-                ` : `
-                  <div class="badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs px-2.5 py-1 flex items-center justify-center gap-1.5 font-medium">
-                    <span>✓</span> All Statutory Rules Passed
-                  </div>
-                `}
+              <div class="space-y-1.5">
+                ${(() => {
+                  const errors = violations.filter(v => v.severity !== 'notice');
+                  const notices = violations.filter(v => v.severity === 'notice');
+                  let outHtml = '';
+                  if (errors.length > 0) {
+                    outHtml += `
+                      <button type="button" class="view-nom-btn w-full badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs px-2.5 py-1.5 font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(errors.map(v => v.message).join(' | '))}">
+                        <span>⚠️ ${errors.length} Rule Violation${errors.length > 1 ? 's' : ''} Flagged</span>
+                      </button>
+                    `;
+                  }
+                  if (notices.length > 0) {
+                    outHtml += `
+                      <button type="button" class="view-nom-btn w-full badge bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-xs px-2.5 py-1.5 font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(notices.map(v => v.message).join(' | '))}">
+                        <span>ℹ️ Multi-Submission (${notices.length} Notice${notices.length > 1 ? 's' : ''})</span>
+                      </button>
+                    `;
+                  }
+                  if (violations.length === 0) {
+                    outHtml += `
+                      <div class="badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs px-2.5 py-1 flex items-center justify-center gap-1.5 font-medium">
+                        <span>✓</span> All Statutory Rules Passed
+                      </div>
+                    `;
+                  }
+                  return outHtml;
+                })()}
                 ${n.status === 'Rejected' && n.rejectionReason ? `
                   <div class="text-xs text-rose-400 mt-1.5 bg-rose-500/10 border border-rose-500/20 p-2 rounded font-medium">
                     ⚠️ ${esc(n.rejectionReason)}
@@ -625,17 +693,21 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
 
     // Scrutiny Rule Violations Audit
     const violations = getNominationRuleViolations(nom, allPosts, allNoms, settings);
-    if (violations.length > 0) {
-      scrutinyZone.innerHTML = `
-        <div class="rounded-xl border border-rose-500/40 bg-rose-950/40 p-4 space-y-2.5 shadow-lg">
+    const errors = violations.filter(v => v.severity !== 'notice');
+    const notices = violations.filter(v => v.severity === 'notice');
+
+    let scrutinyHtml = '';
+    if (errors.length > 0) {
+      scrutinyHtml += `
+        <div class="rounded-xl border border-rose-500/40 bg-rose-950/40 p-4 space-y-2.5 shadow-lg mb-3">
           <div class="flex items-center justify-between border-b border-rose-500/30 pb-2">
             <div class="flex items-center gap-2 text-rose-300 font-bold text-sm">
-              <span class="text-base">⚠️</span> Rule Violations & Scrutiny Warnings (${violations.length})
+              <span class="text-base">⚠️</span> Rule Violations & Scrutiny Warnings (${errors.length})
             </div>
             <span class="badge bg-rose-500/30 text-rose-200 border border-rose-500/50 text-[10px] font-bold uppercase tracking-wider">Scrutiny Alert</span>
           </div>
           <div class="text-xs text-rose-200/90 space-y-1.5 pl-1">
-            ${violations.map(v => `
+            ${errors.map(v => `
               <div class="flex items-start gap-2">
                 <span class="text-rose-400 font-bold text-sm leading-none">•</span>
                 <span>${esc(v.message)}</span>
@@ -643,8 +715,30 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
             `).join('')}
           </div>
         </div>`;
-    } else {
-      scrutinyZone.innerHTML = `
+    }
+
+    if (notices.length > 0) {
+      scrutinyHtml += `
+        <div class="rounded-xl border border-indigo-500/40 bg-indigo-950/40 p-4 space-y-2.5 shadow-lg mb-3">
+          <div class="flex items-center justify-between border-b border-indigo-500/30 pb-2">
+            <div class="flex items-center gap-2 text-indigo-300 font-bold text-sm">
+              <span class="text-base">ℹ️</span> Multi-Submission & Cross-Post Information (${notices.length})
+            </div>
+            <span class="badge bg-indigo-500/30 text-indigo-200 border border-indigo-500/50 text-[10px] font-bold uppercase tracking-wider">Multi-Submission</span>
+          </div>
+          <div class="text-xs text-indigo-200 space-y-1.5 pl-1">
+            ${notices.map(v => `
+              <div class="flex items-start gap-2">
+                <span class="text-indigo-400 font-bold text-sm leading-none">•</span>
+                <span>${esc(v.message)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+    }
+
+    if (errors.length === 0 && notices.length === 0) {
+      scrutinyHtml = `
         <div class="rounded-xl border border-emerald-500/30 bg-emerald-950/30 p-3.5 flex items-center justify-between text-xs text-emerald-300 shadow-md">
           <div class="flex items-center gap-2.5">
             <span class="text-emerald-400 text-base">✅</span>
@@ -653,6 +747,8 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
           <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold shrink-0">ALL RULES PASSED</span>
         </div>`;
     }
+
+    scrutinyZone.innerHTML = scrutinyHtml;
 
     // Format DOB & calculate age
     let dobDisplay = nom.dob || 'N/A';
@@ -746,10 +842,14 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       const violations = getNominationRuleViolations(n, allPosts, allNoms, settings);
       
       let matchStatus = true;
+      const errors = violations.filter(v => v.severity !== 'notice');
+      const notices = violations.filter(v => v.severity === 'notice');
       if (s === 'violations') {
-        matchStatus = violations.length > 0;
+        matchStatus = errors.length > 0;
+      } else if (s === 'multi') {
+        matchStatus = notices.length > 0;
       } else if (s === 'passed') {
-        matchStatus = violations.length === 0;
+        matchStatus = errors.length === 0;
       } else if (s !== 'all') {
         matchStatus = n.status === s;
       }

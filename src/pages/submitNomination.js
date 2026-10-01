@@ -632,10 +632,39 @@ function runValidation(formArea, isAdminDirect = false) {
     if (st) warnings.push(...checkEligibility(st, postName, roleLabels[i], i === 0 ? gender : null, allPosts, existingNominations));
   });
 
+  // Check for multi-submissions across different posts (Informational flag - allowed)
+  const infoNotices = [];
+  if (cS) {
+    const candOther = existingNominations.filter(n => n.status !== 'Rejected' && String(n.candidateSerial) === cS && n.post !== postName);
+    if (candOther.length > 0) {
+      const postsList = candOther.map(n => `"${n.post}"`).join(', ');
+      infoNotices.push(`ℹ️ Multi-Submission: Candidate (#${cS}) has also submitted nomination for other post(s): ${postsList}.`);
+    }
+  }
+  if (pS) {
+    const propOther = existingNominations.filter(n => n.status !== 'Rejected' && (String(n.proposerSerial) === pS || String(n.seconderSerial) === pS) && n.post !== postName);
+    if (propOther.length > 0) {
+      const postsList = [...new Set(propOther.map(n => `"${n.post}"`))].join(', ');
+      infoNotices.push(`ℹ️ Multi-Submission: Proposer (#${pS}) has also endorsed candidate(s) for other post(s): ${postsList}.`);
+    }
+  }
+  if (sS) {
+    const secOther = existingNominations.filter(n => n.status !== 'Rejected' && (String(n.proposerSerial) === sS || String(n.seconderSerial) === sS) && n.post !== postName);
+    if (secOther.length > 0) {
+      const postsList = [...new Set(secOther.map(n => `"${n.post}"`))].join(', ');
+      infoNotices.push(`ℹ️ Multi-Submission: Seconder (#${sS}) has also endorsed candidate(s) for other post(s): ${postsList}.`);
+    }
+  }
+
   const box = formArea.querySelector('#warningBox');
   if (box) {
-    if (warnings.length) {
-      box.innerHTML = '<strong class="block mb-1">⚠ Eligibility & Serial Number Warnings</strong>' + warnings.map(w => `<p class="text-sm">• ${esc(w)}</p>`).join('');
+    const allMessages = [
+      ...warnings.map(w => `<p class="text-sm">• ${esc(w)}</p>`),
+      ...infoNotices.map(info => `<p class="text-xs text-indigo-300">• ${esc(info)}</p>`)
+    ];
+    if (allMessages.length) {
+      box.innerHTML = `<strong class="block mb-1 text-sm">${warnings.length ? '⚠ Eligibility &amp; Multi-Submission Notices' : 'ℹ️ Multi-Submission Notices'}</strong>` + allMessages.join('');
+      box.className = `alert ${warnings.length ? 'alert-warning' : 'alert-info'} mb-4`;
       box.classList.remove('hidden');
     } else {
       box.classList.add('hidden');
