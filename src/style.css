@@ -12,6 +12,11 @@
   border-color: rgba(255, 255, 255, 0.1);
 }
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 body {
   background-color: #020617 !important;
   color: #f1f5f9 !important;

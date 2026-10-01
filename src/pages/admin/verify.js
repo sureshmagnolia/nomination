@@ -267,21 +267,26 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
   main.innerHTML = `
     <style>
       #nomTable {
-        width: 100%;
+        width: 100% !important;
+        max-width: 100% !important;
+        table-layout: fixed !important;
         border-collapse: separate;
         border-spacing: 0;
       }
       #nomTable th {
-        padding: 0.55rem 0.65rem !important;
-        background: rgba(15, 23, 42, 0.9) !important;
+        padding: 0.55rem 0.35rem !important;
+        background: rgba(15, 23, 42, 0.95) !important;
         color: #94a3b8 !important;
         font-size: 0.6875rem !important;
         font-weight: 700 !important;
         text-transform: uppercase !important;
-        letter-spacing: 0.05em !important;
+        letter-spacing: 0.04em !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-        white-space: nowrap !important;
         user-select: none;
+        overflow: hidden;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
       }
       #nomTable th.sortable-th {
         cursor: pointer;
@@ -292,16 +297,21 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
         background: rgba(30, 41, 59, 0.95) !important;
       }
       #nomTable td {
-        padding: 0.45rem 0.65rem !important;
+        padding: 0.45rem 0.35rem !important;
         font-size: 0.8125rem !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
         vertical-align: middle !important;
+        overflow-wrap: break-word !important;
+        word-break: break-word !important;
+        white-space: normal !important;
       }
       #nomTable tr.nom-row:hover td {
-        background: rgba(99, 102, 241, 0.05) !important;
+        background: rgba(99, 102, 241, 0.04) !important;
       }
       #nomTable tr.post-group-header td {
         padding: 0.45rem 0.75rem !important;
+        white-space: normal !important;
+        word-break: break-word !important;
       }
     </style>
 
@@ -356,13 +366,13 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       </div>
 
       <!-- Search & Filters -->
-      <div class="glass rounded-xl p-3 sm:p-4 flex flex-col lg:flex-row gap-2.5 items-stretch lg:items-center w-full shadow-lg">
+      <div class="glass rounded-xl p-3 sm:p-4 flex flex-wrap gap-2.5 items-center w-full shadow-lg">
         <div class="relative flex-1 min-w-[200px]">
           <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
           <input type="text" id="nomSearch" class="field w-full pl-9 bg-black/20 focus:bg-black/40 transition-colors text-xs sm:text-sm py-2" placeholder="Search Candidate, ID, Post, Dept, or Roll Serial...">
         </div>
         <!-- Arrange / Self-Organize Dropdown -->
-        <div class="w-full sm:w-auto shrink-0 min-w-[210px]">
+        <div class="w-full sm:w-auto shrink-0 min-w-[190px]">
           <select id="arrangeFilter" class="field w-full bg-black/20 focus:bg-black/40 transition-colors text-xs font-semibold text-indigo-300 border border-indigo-500/30 py-2" title="Self-organizing arrangement">
             <option value="post" selected>🏛️ Group by Post (Statutory)</option>
             <option value="latest">🕒 Latest Submitted 1st</option>
@@ -372,19 +382,19 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
           </select>
         </div>
         <!-- Post Filter Dropdown -->
-        <div class="w-full sm:w-auto shrink-0 min-w-[170px]">
+        <div class="w-full sm:w-auto shrink-0 min-w-[160px]">
           <select id="postFilter" class="field w-full bg-black/20 focus:bg-black/40 transition-colors text-xs font-medium py-2">
             <option value="all">All Posts</option>
           </select>
         </div>
         <!-- Status Filter Dropdown -->
-        <div class="w-full sm:w-auto shrink-0 min-w-[160px]">
+        <div class="w-full sm:w-auto shrink-0 min-w-[150px]">
           <select id="statusFilter" class="field w-full bg-black/20 focus:bg-black/40 transition-colors text-xs font-medium py-2">
             <option value="all">All Statuses</option>
           </select>
         </div>
         <!-- Cards / Table Toggle -->
-        <div class="flex items-center rounded-lg bg-black/40 p-1 border border-white/10 shrink-0 self-end lg:self-center">
+        <div class="flex items-center rounded-lg bg-black/40 p-1 border border-white/10 shrink-0">
           <button type="button" id="btnNomModeCards" class="btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${nomViewMode === 'cards' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}" title="Card View (Optimized for Mobile/Phone)">
             <span>📇</span> <span>Cards</span>
           </button>
@@ -403,20 +413,27 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       <!-- Nominations List View (Cards or Table) -->
       <div class="glass rounded-xl overflow-hidden shadow-2xl" id="nomListView">
         <div id="nomCardsContainer" class="${nomViewMode === 'cards' ? '' : 'hidden'} p-3.5 sm:p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5"></div>
-        <div id="nomTableContainer" class="${nomViewMode === 'table' ? '' : 'hidden'} overflow-x-auto">
+        <div id="nomTableContainer" class="${nomViewMode === 'table' ? '' : 'hidden'} w-full overflow-hidden">
           <table class="data-table nom-tidy-table" id="nomTable">
+            <colgroup>
+              <col style="width: 8%;">   <!-- # / ID -->
+              <col style="width: 14%;">  <!-- Post -->
+              <col style="width: 23%;">  <!-- Candidate Details -->
+              <col style="width: 17%;">  <!-- Proposer & Seconder -->
+              <col style="width: 18%;">  <!-- Physical Receipt / Status -->
+              <col style="width: 10%;">  <!-- Flags & Alerts -->
+              <col style="width: 10%;">  <!-- Action -->
+            </colgroup>
             <thead><tr>
-              <th class="w-10 text-center sortable-th" data-sort="serial" title="Sort by Roll Serial Number"># <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span></th>
-              <th class="sortable-th" data-sort="id" title="Sort by Nomination ID">Nom. ID <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span></th>
+              <th class="text-center sortable-th" data-sort="serial" title="Sort by Serial / ID"># / ID <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span></th>
               <th class="sortable-th" data-sort="post" title="Sort by Post (Statutory Order)">Post <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span></th>
               <th class="sortable-th" data-sort="name" title="Sort by Candidate Name">Candidate Details <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span></th>
-              <th>Class / Dept</th>
               <th>Proposer &amp; Seconder</th>
-              <th id="thStatusOrReceipt" class="sortable-th" data-sort="status" title="Sort by Status / Receipt">
-                ${activeTab === 'intake' ? 'Physical Receipt' : 'Scrutiny Status'} <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span>
+              <th id="thStatusOrReceipt" class="sortable-th" data-sort="status" title="Sort by Physical Receipt / Status">
+                ${activeTab === 'intake' ? 'Physical Copy' : 'Scrutiny Status'} <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span>
               </th>
               <th class="sortable-th" data-sort="flags" title="Sort by Flags & Alerts">Flags &amp; Alerts <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span></th>
-              <th class="text-right whitespace-nowrap">Action</th>
+              <th class="text-center">Action</th>
             </tr></thead>
             <tbody id="nomTableBody"></tbody>
           </table>
@@ -646,91 +663,141 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
 
       return `
       <tr id="row-${esc(n.id)}" class="nom-row hover:bg-white/[0.03] transition-colors">
-        <!-- System Serial -->
-        <td class="text-center font-mono font-bold text-xs text-indigo-300/80 bg-black/15 py-1 px-2 whitespace-nowrap">
-          ${systemSerial}
-        </td>
-        <!-- Nomination ID -->
-        <td class="whitespace-nowrap py-1 px-2.5">
-          <button type="button" class="view-nom-btn font-mono text-indigo-300 hover:text-indigo-200 text-xs font-bold hover:underline cursor-pointer inline-flex items-center gap-1" data-id="${esc(n.id)}" title="Click to view nomination paper">
-            <span class="text-[11px] opacity-70">📄</span> <span>${esc(n.id)}</span>
+        <!-- # / ID -->
+        <td class="text-center py-2 px-1 bg-black/15">
+          <div class="font-mono font-bold text-xs text-indigo-300">#${systemSerial}</div>
+          <button type="button" class="view-nom-btn font-mono text-[10px] text-slate-400 hover:text-indigo-200 hover:underline cursor-pointer block mx-auto mt-0.5 break-all max-w-full leading-tight" data-id="${esc(n.id)}" title="Nomination ID: ${esc(n.id)} (Click to view form)">
+            ${esc(n.id)}
           </button>
         </td>
+
         <!-- Post -->
-        <td class="text-xs leading-tight font-medium text-slate-200 py-1 px-2.5">
-          <div class="font-semibold text-slate-200 max-w-[150px] truncate" title="${esc(n.post)}">${esc(n.post)}</div>
+        <td class="py-2 px-2 text-xs leading-snug">
+          <div class="font-semibold text-slate-200 break-words" title="${esc(n.post)}">${esc(n.post)}</div>
         </td>
+
         <!-- Candidate Details -->
-        <td class="py-1 px-2.5">
-          <div class="flex items-center gap-1.5 flex-nowrap whitespace-nowrap">
-            <span class="font-bold text-white hover:text-indigo-300 cursor-pointer view-nom-btn text-xs" data-id="${esc(n.id)}">
+        <td class="py-2 px-2 text-xs leading-snug">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="font-bold text-white hover:text-indigo-300 cursor-pointer view-nom-btn break-words" data-id="${esc(n.id)}">
               ${esc(n.candidateName || n.candidate?.NAME || 'N/A')}
             </span>
-            <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-[10px] px-1 py-0" title="Electoral Roll Serial Number">
+            <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-[10px] px-1 py-0 shrink-0" title="Electoral Roll Serial Number">
               #${esc(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || '–')}
             </span>
-            ${isRS ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[9px] px-1 py-0 font-bold">⚠️ RS</span>` : ''}
+            ${isRS ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[9px] px-1 py-0 font-bold shrink-0">⚠️ RS</span>` : ''}
           </div>
-          <div class="text-[10px] text-slate-400 font-mono leading-tight mt-0.5 whitespace-nowrap">
+          <div class="text-[11px] text-slate-300 leading-tight mt-0.5 break-words">
+            ${esc(n.candidateClass || '')}${n.candidateDept ? ` · <span class="text-slate-400 text-[10px]">${esc(n.candidateDept)}</span>` : ''}
+          </div>
+          <div class="text-[10px] text-slate-400 font-mono leading-tight mt-0.5">
             Adm: ${esc(n.candidateAdmission || n.candidate?.['ADMISION NO'] || '–')}
           </div>
         </td>
-        <!-- Class / Dept -->
-        <td class="text-xs text-slate-300 py-1 px-2.5 whitespace-nowrap">
-          <div class="font-medium text-slate-200 text-xs leading-tight">${esc(n.candidateClass || '–')}</div>
-          <div class="text-[10px] text-slate-500 leading-tight mt-0.5">${esc(n.candidateDept || '')}</div>
-        </td>
+
         <!-- Proposer & Seconder -->
-        <td class="py-1 px-2.5 whitespace-nowrap">
-          <div class="text-[11px] leading-tight text-slate-300 flex items-center gap-1">
+        <td class="py-2 px-2 text-xs leading-snug">
+          <div class="text-[11px] text-slate-300 break-words">
             <span class="text-slate-500 font-mono font-semibold text-[10px]">P:</span>
-            <span class="truncate max-w-[110px]" title="${esc(n.proposerName || n.proposer?.NAME || 'N/A')}">${esc(n.proposerName || n.proposer?.NAME || 'N/A')}</span>
-            <span class="text-[10px] font-mono text-slate-500">(#${esc(n.proposerSerial || n.proposer?.['Nominal Roll Serial Number'] || '–')})</span>
+            <span class="font-medium">${esc(n.proposerName || n.proposer?.NAME || 'N/A')}</span>
+            <span class="text-[10px] font-mono text-slate-500 shrink-0">(#${esc(n.proposerSerial || n.proposer?.['Nominal Roll Serial Number'] || '–')})</span>
           </div>
-          <div class="text-[11px] leading-tight text-slate-300 flex items-center gap-1 mt-0.5">
+          <div class="text-[11px] text-slate-300 mt-1 break-words">
             <span class="text-slate-500 font-mono font-semibold text-[10px]">S:</span>
-            <span class="truncate max-w-[110px]" title="${esc(n.seconderName || n.seconder?.NAME || 'N/A')}">${esc(n.seconderName || n.seconder?.NAME || 'N/A')}</span>
-            <span class="text-[10px] font-mono text-slate-500">(#${esc(n.seconderSerial || n.seconder?.['Nominal Roll Serial Number'] || '–')})</span>
+            <span class="font-medium">${esc(n.seconderName || n.seconder?.NAME || 'N/A')}</span>
+            <span class="text-[10px] font-mono text-slate-500 shrink-0">(#${esc(n.seconderSerial || n.seconder?.['Nominal Roll Serial Number'] || '–')})</span>
           </div>
         </td>
-        <!-- Status / Physical Receipt -->
-        <td class="py-1 px-2.5 whitespace-nowrap">
+
+        <!-- Physical Copy / Scrutiny Status -->
+        <td class="py-2 px-2 text-xs">
           ${activeTab === 'intake' ? `
-            <div class="inline-flex items-center gap-1">
-              <span class="badge ${isPhysical ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'} text-[10px] font-bold inline-flex items-center gap-1">
-                <span>${isPhysical ? '✅' : '⏳'}</span> ${isPhysical ? 'Received' : 'Awaiting'}
-              </span>
-              ${n.status && n.status !== 'Pending' ? `
-                <span class="badge badge-${n.status.toLowerCase()} text-[9px] px-1 py-0 font-semibold">${esc(n.status)}</span>
-              ` : ''}
-            </div>
+            ${!isPhysical ? `
+              <button type="button" class="toggle-physical-btn btn btn-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 px-2 rounded text-xs inline-flex items-center justify-center gap-1 shadow-md transition-all active:scale-95 cursor-pointer w-full text-center flex-wrap" data-id="${esc(n.id)}" data-target="true" title="Confirm physical signed nomination copy & certificates received in office">
+                <span>📥</span> <span>Confirm Physical</span>
+              </button>
+            ` : `
+              <div class="flex items-center justify-between gap-1 bg-emerald-500/10 border border-emerald-500/30 rounded px-2 py-1 flex-wrap">
+                <span class="text-emerald-300 font-bold text-xs inline-flex items-center gap-1">
+                  <span>✅</span> Received
+                </span>
+                <button type="button" class="toggle-physical-btn text-[10px] text-slate-400 hover:text-rose-300 underline cursor-pointer" data-id="${esc(n.id)}" data-target="false" title="Click to undo physical receipt">
+                  Unmark
+                </button>
+              </div>
+            `}
+            ${n.status && n.status !== 'Pending' ? `
+              <div class="mt-1">
+                <span class="badge badge-${n.status.toLowerCase()} text-[9px] px-1.5 py-0 font-semibold">${esc(n.status)}</span>
+              </div>
+            ` : ''}
           ` : activeTab === 'accepted' ? `
-            <div class="inline-flex items-center gap-1">
-              <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold inline-flex items-center gap-1">
+            <div class="flex items-center gap-1 flex-wrap">
+              <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold inline-flex items-center gap-1 py-0.5 px-2">
                 <span>✅</span> Valid
               </span>
-              <span class="text-[10px] text-slate-400 font-mono ml-0.5">${isPhysical ? 'Physical' : 'Online'}</span>
+              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/30 px-1.5 py-0.5 text-[10px] font-semibold" data-id="${esc(n.id)}" data-action="Rejected" title="Move from Valid to Rejected">
+                Reject
+              </button>
+              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-white/10 px-1 py-0.5 text-[10px]" data-id="${esc(n.id)}" data-action="Pending" title="Reset nomination status to Pending">
+                ↩
+              </button>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-slate-400 mt-1 pt-0.5 border-t border-white/5">
+              <span class="text-emerald-400/90 font-medium">📥 Copy: Received</span>
+              <button type="button" class="toggle-physical-btn text-slate-500 hover:text-rose-300 underline cursor-pointer" data-id="${esc(n.id)}" data-target="false" title="Revert physical copy receipt">
+                Unmark
+              </button>
             </div>
           ` : activeTab === 'rejected' ? `
-            <div>
-              <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold inline-flex items-center gap-1">
+            <div class="flex items-center gap-1 flex-wrap">
+              <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[11px] font-bold inline-flex items-center gap-1 py-0.5 px-2">
                 <span>❌</span> Rejected
               </span>
-              ${n.rejectionReason ? `
-                <div class="text-[10px] text-rose-400 truncate max-w-[140px] font-medium leading-tight mt-0.5" title="${esc(n.rejectionReason)}">⚠️ ${esc(n.rejectionReason)}</div>
-              ` : ''}
+              <button type="button" class="btn btn-primary btn-xs verify-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-semibold" data-id="${esc(n.id)}" data-action="Valid" title="Move from Rejected to Valid">
+                Valid
+              </button>
+              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-white/10 px-1 py-0.5 text-[10px]" data-id="${esc(n.id)}" data-action="Pending" title="Reset nomination status to Pending">
+                ↩
+              </button>
             </div>
+            <div class="flex items-center justify-between text-[10px] text-slate-400 mt-1 pt-0.5 border-t border-white/5">
+              <span class="text-emerald-400/90 font-medium">📥 Copy: Received</span>
+              <button type="button" class="toggle-physical-btn text-slate-500 hover:text-rose-300 underline cursor-pointer" data-id="${esc(n.id)}" data-target="false" title="Revert physical copy receipt">
+                Unmark
+              </button>
+            </div>
+            ${n.rejectionReason ? `
+              <div class="text-[10px] text-rose-400 break-words font-medium leading-tight mt-1" title="${esc(n.rejectionReason)}">⚠️ ${esc(n.rejectionReason)}</div>
+            ` : ''}
           ` : `
-            <div>
-              <span class="badge badge-${(n.status || 'pending').toLowerCase()} text-[10px] font-bold">${esc(n.status || 'Pending')}</span>
-              ${n.status === 'Rejected' && n.rejectionReason ? `
-                <div class="text-[10px] text-rose-400 truncate max-w-[140px] font-medium leading-tight mt-0.5" title="${esc(n.rejectionReason)}">⚠️ ${esc(n.rejectionReason)}</div>
+            <div class="flex items-center gap-1 flex-wrap">
+              <button type="button" class="btn btn-primary btn-xs verify-btn bg-emerald-600/25 hover:bg-emerald-600 text-emerald-400 hover:text-white px-2 py-1 text-xs font-bold rounded ${n.status === 'Valid' ? 'opacity-40 cursor-not-allowed' : ''}" data-id="${esc(n.id)}" data-action="Valid" ${n.status === 'Valid' ? 'disabled' : ''} title="${n.status === 'Rejected' ? 'Move from Rejected to Valid' : 'Mark Valid'}">
+                ${n.status === 'Rejected' ? '🔄 Valid' : '✅ Valid'}
+              </button>
+              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-rose-600/25 hover:bg-rose-600 text-rose-400 hover:text-white px-2 py-1 text-xs font-bold rounded ${n.status === 'Rejected' ? 'opacity-40 cursor-not-allowed' : ''}" data-id="${esc(n.id)}" data-action="Rejected" ${n.status === 'Rejected' ? 'disabled' : ''} title="${n.status === 'Valid' ? 'Move from Valid to Rejected' : 'Reject'}">
+                ${n.status === 'Valid' ? '🔄 Reject' : '❌ Reject'}
+              </button>
+              ${n.status && n.status !== 'Pending' ? `
+                <button type="button" class="btn btn-secondary btn-xs verify-btn bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 px-1.5 py-1 text-xs font-semibold" data-id="${esc(n.id)}" data-action="Pending" title="Reset nomination status to Pending">
+                  ↩
+                </button>
               ` : ''}
             </div>
+            <div class="flex items-center justify-between text-[10px] text-slate-400 mt-1 pt-0.5 border-t border-white/5">
+              <span class="text-emerald-400/90 font-medium">📥 Copy: Received</span>
+              <button type="button" class="toggle-physical-btn text-slate-500 hover:text-rose-300 underline cursor-pointer" data-id="${esc(n.id)}" data-target="false" title="Revert physical copy receipt">
+                Unmark
+              </button>
+            </div>
+            ${n.status === 'Rejected' && n.rejectionReason ? `
+              <div class="text-[10px] text-rose-400 break-words font-medium leading-tight mt-1" title="${esc(n.rejectionReason)}">⚠️ ${esc(n.rejectionReason)}</div>
+            ` : ''}
           `}
         </td>
+
         <!-- Flags & Alerts (Styled in RED) -->
-        <td class="py-1 px-2.5 whitespace-nowrap">
+        <td class="py-2 px-2 text-xs">
           ${(() => {
             if (violations.length === 0) {
               return `
@@ -741,7 +808,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
             }
             const multiCand = violations.find(v => v.type === 'MULTIPLE_CANDIDACY');
             return `
-              <div class="inline-flex items-center gap-1 flex-nowrap">
+              <div class="flex flex-col gap-1 items-start">
                 ${multiCand ? `
                   <button type="button" class="view-nom-btn badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/50 text-[10px] px-1.5 py-0.5 font-bold inline-flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(multiCand.message)}">
                     <span>🚩 Multi-Post</span>
@@ -754,46 +821,14 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
             `;
           })()}
         </td>
-        <!-- Actions (Single line, no wrapping) -->
-        <td class="text-right whitespace-nowrap py-1 px-3">
-          <div class="inline-flex items-center justify-end gap-1 whitespace-nowrap">
-            <button type="button" class="btn btn-secondary btn-xs view-nom-btn bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 px-2 py-1 text-xs font-semibold inline-flex items-center gap-1 whitespace-nowrap" data-id="${esc(n.id)}" title="View Full Nomination Paper">
-              <span>📄</span> <span>View</span>
+
+        <!-- Actions -->
+        <td class="text-center py-2 px-1">
+          <div class="flex flex-wrap items-center justify-center gap-1">
+            <button type="button" class="btn btn-secondary btn-xs view-nom-btn bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 px-2 py-1 text-xs font-semibold" data-id="${esc(n.id)}" title="View Full Nomination Paper">
+              <span>📄 View</span>
             </button>
-
-            ${activeTab === 'intake' ? `
-              <button type="button" class="btn btn-xs toggle-physical-btn ${isPhysical ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10' : 'bg-emerald-600/25 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40'} px-2 py-1 text-xs font-semibold inline-flex items-center gap-1 whitespace-nowrap" data-id="${esc(n.id)}" data-target="${isPhysical ? 'false' : 'true'}" title="${isPhysical ? 'Unmark physical copy' : 'Mark physical print and documents received'}">
-                <span>${isPhysical ? '↩ Unmark' : '📥 Mark Received'}</span>
-              </button>
-            ` : activeTab === 'accepted' ? `
-              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 px-2 py-1 text-xs font-semibold whitespace-nowrap" data-id="${esc(n.id)}" data-action="Pending" title="Reset nomination status to Pending">
-                <span>↩ Reset</span>
-              </button>
-              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/30 px-2 py-1 text-xs font-semibold whitespace-nowrap" data-id="${esc(n.id)}" data-action="Rejected" title="Reject nomination">
-                <span>❌ Reject</span>
-              </button>
-            ` : activeTab === 'rejected' ? `
-              <button type="button" class="btn btn-primary btn-xs verify-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 px-2 py-1 text-xs font-semibold whitespace-nowrap" data-id="${esc(n.id)}" data-action="Valid" title="Mark nomination as Valid">
-                <span>✅ Valid</span>
-              </button>
-              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 px-2 py-1 text-xs font-semibold whitespace-nowrap" data-id="${esc(n.id)}" data-action="Pending" title="Reset nomination status to Pending">
-                <span>↩ Reset</span>
-              </button>
-            ` : `
-              <button type="button" class="btn btn-primary btn-xs verify-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white px-2 py-1 text-xs font-semibold whitespace-nowrap" data-id="${esc(n.id)}" data-action="Valid" ${n.status === 'Valid' ? 'disabled' : ''} title="${n.status === 'Rejected' ? 'Move from Rejected to Valid' : 'Mark Valid'}">
-                <span>${n.status === 'Rejected' ? '🔄 Valid' : '✅ Valid'}</span>
-              </button>
-              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white px-2 py-1 text-xs font-semibold whitespace-nowrap" data-id="${esc(n.id)}" data-action="Rejected" ${n.status === 'Rejected' ? 'disabled' : ''} title="${n.status === 'Valid' ? 'Move from Valid to Rejected' : 'Reject'}">
-                <span>${n.status === 'Valid' ? '🔄 Reject' : '❌ Reject'}</span>
-              </button>
-              ${n.status && n.status !== 'Pending' ? `
-                <button type="button" class="btn btn-secondary btn-xs verify-btn bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 px-1.5 py-1 text-xs font-semibold whitespace-nowrap" data-id="${esc(n.id)}" data-action="Pending" title="Reset nomination status back to Pending">
-                  <span>↩</span>
-                </button>
-              ` : ''}
-            `}
-
-            <button type="button" class="btn btn-secondary btn-xs delete-nom-btn bg-red-950/20 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/30 px-1.5 py-1 text-xs font-bold whitespace-nowrap" data-id="${esc(n.id)}" title="Permanently delete nomination">
+            <button type="button" class="btn btn-secondary btn-xs delete-nom-btn bg-red-950/20 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/30 px-1.5 py-1 text-xs font-bold" data-id="${esc(n.id)}" title="Permanently delete nomination">
               <span>🗑️</span>
             </button>
           </div>
@@ -810,7 +845,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
 
       return `
       <tr class="post-group-header">
-        <td colspan="9" class="bg-gradient-to-r from-indigo-950/85 via-slate-900/95 to-slate-950/90 py-2 px-3 border-y border-indigo-500/30 shadow-sm">
+        <td colspan="7" class="bg-gradient-to-r from-indigo-950/85 via-slate-900/95 to-slate-950/90 py-2 px-3 border-y border-indigo-500/30 shadow-sm">
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-2">
               <span class="text-indigo-400 text-sm">🏛️</span>
@@ -844,7 +879,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     if (!data.length) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="9" class="text-center text-slate-500 py-12">
+          <td colspan="7" class="text-center text-slate-500 py-12">
             ${activeTab === 'scrutiny' 
               ? 'No nominations have physical copies marked as received yet. Go to Tab 1 to mark physical prints and documents received.' 
               : activeTab === 'accepted'
