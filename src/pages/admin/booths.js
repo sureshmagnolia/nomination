@@ -99,11 +99,11 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     if (!modal || !content) return;
 
     content.innerHTML = `
-      <div class="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs leading-relaxed">
-        <strong>⚠️ Cross-Booth Vote Counting Required:</strong><br>
-        To prevent unmanageable booth congestion, <strong>${splitDepts.length} department${splitDepts.length > 1 ? 's' : ''}</strong> 
-        had to be split into <strong>exactly 2 booths</strong> (the maximum allowable limit). 
-        The other <strong>${intactCount} of ${totalDepts} departments</strong> remain 100% intact in single booths.
+      <div class="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs leading-relaxed">
+        <strong>⚖️ Smart Balanced Allotment Applied:</strong><br>
+        To prevent severe voter imbalance across booths (such as having booths with 240+ voters while others sit with under 90) and keep every booth evenly balanced around the target average, 
+        <strong>${splitDepts.length} department${splitDepts.length > 1 ? 's' : ''}</strong> was divided across <strong>strictly 2 booths</strong> (the maximum allowable limit). 
+        All other <strong>${intactCount} of ${totalDepts} departments</strong> remain 100% intact in single booths.
       </div>
 
       <div class="space-y-3">
@@ -223,94 +223,182 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       ];
     }
 
-    // Partition solver for arbitrary bundles (departments or half-departments)
+    // Smart Combine Partition Solver
     function solvePartition(items, B, constraints = []) {
-      let bestAllocation = null;
-      let bestScore = Infinity;
+      let bestAlloc = null;
+      let bestLoss = Infinity;
 
-      for (let r = 0; r < 250; r++) {
+      function calcLoss(alloc) {
+        let sumSq = 0;
+        let max = -Infinity;
+        let min = Infinity;
+        for (const b of alloc) {
+          const diff = b.total - mean;
+          sumSq += diff * diff;
+          if (b.total > max) max = b.total;
+          if (b.total < min) min = b.total;
+        }
+        // Heavily penalize variance and spread to force booths to be closely balanced
+        return sumSq + (max - min) * 35;
+      }
+
+      for (let r = 0; r < 350; r++) {
         const alloc = Array.from({ length: B }, (_, i) => ({ id: i, total: 0, items: [] }));
         const sorted = [...items];
-        if (r === 0) sorted.sort((a, b) => b.total - a.total);
-        else sorted.sort(() => Math.random() - 0.5);
+        if (r === 0) {
+          sorted.sort((a, b) => b.total - a.total);
+        } else if (r === 1) {
+          sorted.sort((a, b) => a.total - b.total);
+        } else {
+          sorted.sort(() => Math.random() - 0.5);
+        }
 
         let valid = true;
         for (const it of sorted) {
-          alloc.sort((a, b) => a.total - b.total);
-          let chosenBooth = null;
+          let bestB = null;
+          let minAddLoss = Infinity;
           for (const b of alloc) {
-            const violation = constraints.some(c => c(b, it));
-            if (!violation) {
-              chosenBooth = b;
-              break;
+            if (constraints.some(c => c(b, it))) continue;
+            const projectedDiff = (b.total + it.total) - mean;
+            const cost = projectedDiff * projectedDiff;
+            if (cost < minAddLoss) {
+              minAddLoss = cost;
+              bestB = b;
             }
           }
-          if (!chosenBooth) {
-            chosenBooth = alloc[0];
-            valid = false;
+          if (!bestB) {
+            const validBooths = alloc.filter(b => !constraints.some(c => c(b, it)));
+            if (validBooths.length > 0) {
+              validBooths.sort((a, b) => a.total - b.total);
+              bestB = validBooths[0];
+            } else {
+              valid = false;
+              bestB = alloc[0];
+            }
           }
-          chosenBooth.items.push(it);
-          chosenBooth.total += it.total;
+          bestB.items.push(it);
+          bestB.total += it.total;
         }
 
         if (!valid) continue;
 
-        // Local search hill climbing
+        // Local search hill-climbing
+        let currentLoss = calcLoss(alloc);
         let improved = true;
-        let passes = 0;
-        while (improved && passes < 35) {
+        let step = 0;
+        while (improved && step < 70) {
           improved = false;
-          passes++;
-          const maxB = alloc.reduce((a, b) => a.total > b.total ? a : b);
-          const minB = alloc.reduce((a, b) => a.total < b.total ? a : b);
-          const diff = maxB.total - minB.total;
+          step++;
 
-          // 1-move: move a department from heavily loaded to underloaded booth
-          for (let i = 0; i < maxB.items.length; i++) {
-            const it = maxB.items[i];
-            if (constraints.some(c => c(minB, it))) continue;
-            if (maxB.total - it.total >= minB.total + it.total) {
-              maxB.items.splice(i, 1);
-              maxB.total -= it.total;
-              minB.items.push(it);
-              minB.total += it.total;
-              improved = true;
-              break;
+          // 1-move: move item from booth i to booth j
+          for (let i = 0; i < B; i++) {
+            for (let j = 0; j < B; j++) {
+              if (i === j) continue;
+              for (let k = 0; k < alloc[i].items.length; k++) {
+                const it = alloc[i].items[k];
+                if (constraints.some(c => c(alloc[j], it))) continue;
+
+                alloc[i].total -= it.total;
+                alloc[j].total += it.total;
+                const newLoss = calcLoss(alloc);
+                if (newLoss < currentLoss - 0.001) {
+                  alloc[i].items.splice(k, 1);
+                  alloc[j].items.push(it);
+                  currentLoss = newLoss;
+                  improved = true;
+                  break;
+                } else {
+                  alloc[i].total += it.total;
+                  alloc[j].total -= it.total;
+                }
+              }
+              if (improved) break;
             }
+            if (improved) break;
           }
           if (improved) continue;
 
-          // 2-swap: swap items between booths to reduce spread
-          for (let i = 0; i < maxB.items.length; i++) {
-            for (let j = 0; j < minB.items.length; j++) {
-              const itA = maxB.items[i];
-              const itB = minB.items[j];
-              if (constraints.some(c => c(minB, itA)) || constraints.some(c => c(maxB, itB))) continue;
-              if (itA.total > itB.total) {
-                const gain = itA.total - itB.total;
-                if (gain < diff) {
-                  maxB.items[i] = itB;
-                  minB.items[j] = itA;
-                  maxB.total -= gain;
-                  minB.total += gain;
-                  improved = true;
-                  break;
+          // 2-swap: swap item between booth i and booth j
+          for (let i = 0; i < B; i++) {
+            for (let j = i + 1; j < B; j++) {
+              for (let ki = 0; ki < alloc[i].items.length; ki++) {
+                for (let kj = 0; kj < alloc[j].items.length; kj++) {
+                  const itA = alloc[i].items[ki];
+                  const itB = alloc[j].items[kj];
+                  if (constraints.some(c => c(alloc[j], itA)) || constraints.some(c => c(alloc[i], itB))) continue;
+
+                  const gain = itA.total - itB.total;
+                  alloc[i].total -= gain;
+                  alloc[j].total += gain;
+                  const newLoss = calcLoss(alloc);
+                  if (newLoss < currentLoss - 0.001) {
+                    alloc[i].items[ki] = itB;
+                    alloc[j].items[kj] = itA;
+                    currentLoss = newLoss;
+                    improved = true;
+                    break;
+                  } else {
+                    alloc[i].total += gain;
+                    alloc[j].total -= gain;
+                  }
                 }
+                if (improved) break;
               }
+              if (improved) break;
+            }
+            if (improved) break;
+          }
+          if (improved) continue;
+
+          // 2-to-1 swap: swap two small items in i with one item in j
+          for (let i = 0; i < B; i++) {
+            for (let j = 0; j < B; j++) {
+              if (i === j) continue;
+              if (alloc[i].items.length < 2) continue;
+              for (let ki1 = 0; ki1 < alloc[i].items.length - 1; ki1++) {
+                for (let ki2 = ki1 + 1; ki2 < alloc[i].items.length; ki2++) {
+                  for (let kj = 0; kj < alloc[j].items.length; kj++) {
+                    const itA1 = alloc[i].items[ki1];
+                    const itA2 = alloc[i].items[ki2];
+                    const itB = alloc[j].items[kj];
+                    if (constraints.some(c => c(alloc[j], itA1)) || constraints.some(c => c(alloc[j], itA2)) || constraints.some(c => c(alloc[i], itB))) continue;
+
+                    const gain = (itA1.total + itA2.total) - itB.total;
+                    alloc[i].total -= gain;
+                    alloc[j].total += gain;
+                    const newLoss = calcLoss(alloc);
+                    if (newLoss < currentLoss - 0.001) {
+                      alloc[i].items.splice(ki2, 1);
+                      alloc[i].items.splice(ki1, 1);
+                      alloc[i].items.push(itB);
+                      alloc[j].items.splice(kj, 1);
+                      alloc[j].items.push(itA1);
+                      alloc[j].items.push(itA2);
+                      currentLoss = newLoss;
+                      improved = true;
+                      break;
+                    } else {
+                      alloc[i].total += gain;
+                      alloc[j].total -= gain;
+                    }
+                  }
+                  if (improved) break;
+                }
+                if (improved) break;
+              }
+              if (improved) break;
             }
             if (improved) break;
           }
         }
 
-        const maxL = Math.max(...alloc.map(b => b.total));
-        const minL = Math.min(...alloc.map(b => b.total));
-        const score = (maxL * 1000) + (maxL - minL);
-        if (score < bestScore) {
-          bestScore = score;
-          bestAllocation = JSON.parse(JSON.stringify(alloc));
+        if (currentLoss < bestLoss) {
+          bestLoss = currentLoss;
+          bestAlloc = JSON.parse(JSON.stringify(alloc));
         }
       }
-      return bestAllocation;
+
+      return bestAlloc;
     }
 
     // --- TIER 0: 0-SPLIT ATTEMPT (Highest Priority: Keep 100% of departments intact!) ---
@@ -320,17 +408,18 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
     const tier0Max = Math.max(...tier0Alloc.map(b => b.total));
     const tier0Min = Math.min(...tier0Alloc.map(b => b.total));
+    const tier0Spread = tier0Max - tier0Min;
 
-    // Manageability threshold: Avoid splitting unless peak exceeds manageable hall capacity
-    // Avoid splitting even if voter allotment is not perfectly balanced!
-    const isStarved = (numDepts >= numBooths) && (tier0Min < Math.min(Math.round(mean * 0.2), 20));
-    const isOverburdened = (tier0Max > Math.max(Math.round(mean * 2.25), 450));
-    const isSeverelyImbalanced = (tier0Max > 380 && tier0Min < 30 && (tier0Max / Math.max(tier0Min, 1) > 4.5));
+    // Almost balanced test for 0 splits:
+    // Every booth should be reasonably close to the mean, with tight spread and no starvation.
+    // An 87 vs 248 disparity is explicitly disallowed!
+    const isTier0Balanced = (tier0Max <= Math.round(mean * 1.25)) && 
+                            (tier0Min >= Math.round(mean * 0.75)) && 
+                            (tier0Spread <= Math.max(Math.round(mean * 0.40), 50)) &&
+                            (tier0Max / Math.max(tier0Min, 1) <= 1.45);
 
-    const isTier0Manageable = !isStarved && !isOverburdened && !isSeverelyImbalanced;
-
-    if (isTier0Manageable) {
-      // 0 SPLITS ACCEPTED!
+    if (isTier0Balanced) {
+      // 0 SPLITS ACCEPTED: All departments intact and booths are almost balanced!
       chosenAlloc = tier0Alloc;
     } else {
       // --- TIER 1: AT MOST 1 DEPARTMENT SPLIT INTO AT MOST 2 BOOTHS ---
@@ -338,7 +427,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       let bestTier1Score = Infinity;
       let bestSplitDept = null;
 
-      const largeDepts = depts.filter(d => d.total > mean * 0.85 && d.classes.length > 1).sort((a, b) => b.total - a.total);
+      // Evaluate candidate large departments to split, sorted largest first
+      const largeDepts = depts.filter(d => d.total > mean * 0.75 && d.classes.length > 1).sort((a, b) => b.total - a.total);
 
       for (const candDept of largeDepts) {
         const halves = splitDeptIntoTwoHalves(candDept);
@@ -354,7 +444,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         if (alloc) {
           const maxL = Math.max(...alloc.map(b => b.total));
           const minL = Math.min(...alloc.map(b => b.total));
-          const score = (maxL * 1000) + (maxL - minL);
+          const spread = maxL - minL;
+          const score = (spread * 10) + Math.abs(maxL - mean) + Math.abs(minL - mean);
           if (score < bestTier1Score) {
             bestTier1Score = score;
             bestTier1 = alloc;
@@ -363,9 +454,13 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         }
       }
 
-      const isTier1Manageable = bestTier1 && (Math.max(...bestTier1.map(b => b.total)) <= Math.max(Math.round(mean * 2.25), 450));
+      // Check if Tier 1 achieves balance
+      const t1Max = bestTier1 ? Math.max(...bestTier1.map(b => b.total)) : Infinity;
+      const t1Min = bestTier1 ? Math.min(...bestTier1.map(b => b.total)) : 0;
+      const t1Spread = t1Max - t1Min;
+      const isTier1Balanced = bestTier1 && (t1Spread < tier0Spread) && (t1Max <= Math.round(mean * 1.30));
 
-      if (isTier1Manageable || (bestTier1 && largeDepts.length < 2)) {
+      if (isTier1Balanced || (bestTier1 && largeDepts.length < 2)) {
         chosenAlloc = bestTier1;
         splitDepts.push(bestSplitDept);
       } else {
@@ -397,7 +492,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             if (alloc) {
               const maxL = Math.max(...alloc.map(b => b.total));
               const minL = Math.min(...alloc.map(b => b.total));
-              const score = (maxL * 1000) + (maxL - minL);
+              const spread = maxL - minL;
+              const score = (spread * 10) + Math.abs(maxL - mean) + Math.abs(minL - mean);
               if (score < bestTier2Score) {
                 bestTier2Score = score;
                 bestTier2 = alloc;
@@ -414,7 +510,6 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           chosenAlloc = bestTier1;
           splitDepts.push(bestSplitDept);
         } else {
-          // Fallback to Tier 0
           chosenAlloc = tier0Alloc;
           splitDepts = [];
         }
