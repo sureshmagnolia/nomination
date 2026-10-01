@@ -259,9 +259,52 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
   const allPosts = Array.isArray(posts) ? [...posts] : [];
 
   let activeTab = 'intake'; // 'intake' (1. All Online Submissions) | 'scrutiny' (2. Physical Copies Received)
-  let nomViewMode = 'cards'; // 'cards' | 'table'
+  let nomViewMode = localStorage.getItem('admin_verify_view_mode') || 'table'; // 'cards' | 'table' (defaults to table for admin list scrutiny)
+  let arrangeMode = 'post'; // 'post' (Group by Post - Statutory) | 'latest' | 'flags' | 'serial' | 'name'
+  let sortCol = null; // null | 'serial' | 'id' | 'post' | 'name' | 'status' | 'flags'
+  let sortAsc = true;
 
   main.innerHTML = `
+    <style>
+      #nomTable {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+      }
+      #nomTable th {
+        padding: 0.55rem 0.65rem !important;
+        background: rgba(15, 23, 42, 0.9) !important;
+        color: #94a3b8 !important;
+        font-size: 0.6875rem !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+        white-space: nowrap !important;
+        user-select: none;
+      }
+      #nomTable th.sortable-th {
+        cursor: pointer;
+        transition: color 0.15s ease, background 0.15s ease;
+      }
+      #nomTable th.sortable-th:hover {
+        color: #ffffff !important;
+        background: rgba(30, 41, 59, 0.95) !important;
+      }
+      #nomTable td {
+        padding: 0.45rem 0.65rem !important;
+        font-size: 0.8125rem !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+        vertical-align: middle !important;
+      }
+      #nomTable tr.nom-row:hover td {
+        background: rgba(99, 102, 241, 0.05) !important;
+      }
+      #nomTable tr.post-group-header td {
+        padding: 0.45rem 0.75rem !important;
+      }
+    </style>
+
     <div class="page-enter space-y-4">
       <!-- Title Bar -->
       <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-2">
@@ -313,55 +356,67 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       </div>
 
       <!-- Search & Filters -->
-      <div class="glass rounded-xl p-4 flex flex-col md:flex-row gap-3 items-center w-full shadow-lg">
-        <div class="relative flex-1 w-full">
+      <div class="glass rounded-xl p-3 sm:p-4 flex flex-col lg:flex-row gap-2.5 items-stretch lg:items-center w-full shadow-lg">
+        <div class="relative flex-1 min-w-[200px]">
           <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
-          <input type="text" id="nomSearch" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors text-xs sm:text-sm" placeholder="Search Candidate, ID, Post, Dept, or Roll Serial...">
+          <input type="text" id="nomSearch" class="field w-full pl-9 bg-black/20 focus:bg-black/40 transition-colors text-xs sm:text-sm py-2" placeholder="Search Candidate, ID, Post, Dept, or Roll Serial...">
+        </div>
+        <!-- Arrange / Self-Organize Dropdown -->
+        <div class="w-full sm:w-auto shrink-0 min-w-[210px]">
+          <select id="arrangeFilter" class="field w-full bg-black/20 focus:bg-black/40 transition-colors text-xs font-semibold text-indigo-300 border border-indigo-500/30 py-2" title="Self-organizing arrangement">
+            <option value="post" selected>🏛️ Group by Post (Statutory)</option>
+            <option value="latest">🕒 Latest Submitted 1st</option>
+            <option value="flags">🚩 Flags &amp; Alerts 1st</option>
+            <option value="serial">📋 Roll Serial (#1..N)</option>
+            <option value="name">🔤 Candidate Name (A-Z)</option>
+          </select>
         </div>
         <!-- Post Filter Dropdown -->
-        <div class="w-full md:w-56 shrink-0">
-          <select id="postFilter" class="field w-full bg-black/20 focus:bg-black/40 transition-colors text-xs font-medium">
+        <div class="w-full sm:w-auto shrink-0 min-w-[170px]">
+          <select id="postFilter" class="field w-full bg-black/20 focus:bg-black/40 transition-colors text-xs font-medium py-2">
             <option value="all">All Posts</option>
           </select>
         </div>
         <!-- Status Filter Dropdown -->
-        <div class="w-full md:w-56 shrink-0">
-          <select id="statusFilter" class="field w-full bg-black/20 focus:bg-black/40 transition-colors text-xs font-medium">
+        <div class="w-full sm:w-auto shrink-0 min-w-[160px]">
+          <select id="statusFilter" class="field w-full bg-black/20 focus:bg-black/40 transition-colors text-xs font-medium py-2">
             <option value="all">All Statuses</option>
           </select>
         </div>
         <!-- Cards / Table Toggle -->
-        <div class="flex items-center rounded-lg bg-black/40 p-1 border border-white/10 shrink-0 self-end md:self-center">
+        <div class="flex items-center rounded-lg bg-black/40 p-1 border border-white/10 shrink-0 self-end lg:self-center">
           <button type="button" id="btnNomModeCards" class="btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${nomViewMode === 'cards' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}" title="Card View (Optimized for Mobile/Phone)">
             <span>📇</span> <span>Cards</span>
           </button>
-          <button type="button" id="btnNomModeTable" class="btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${nomViewMode === 'table' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}" title="Table View">
-            <span>📑</span> <span>Table</span>
+          <button type="button" id="btnNomModeTable" class="btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${nomViewMode === 'table' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}" title="List View (Tidy & Self-Organizing)">
+            <span>📑</span> <span>List</span>
           </button>
         </div>
       </div>
 
       <!-- Item Counter / Summary -->
       <div class="flex items-center justify-between text-xs text-slate-400 px-1">
-        <span id="nomListCountText">Showing 0 nominations (Latest 1st)</span>
-        <span class="text-[11px] text-slate-500 italic">Sorted: Newest submissions first</span>
+        <span id="nomListCountText">Showing 0 nominations</span>
+        <span id="nomSortHintText" class="text-[11px] text-slate-500 italic">Self-organized: Grouped by Post (Statutory Order)</span>
       </div>
 
       <!-- Nominations List View (Cards or Table) -->
       <div class="glass rounded-xl overflow-hidden shadow-2xl" id="nomListView">
         <div id="nomCardsContainer" class="${nomViewMode === 'cards' ? '' : 'hidden'} p-3.5 sm:p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5"></div>
         <div id="nomTableContainer" class="${nomViewMode === 'table' ? '' : 'hidden'} overflow-x-auto">
-          <table class="data-table" id="nomTable">
+          <table class="data-table nom-tidy-table" id="nomTable">
             <thead><tr>
-              <th class="w-12 text-center">#</th>
-              <th>Nom. ID</th>
-              <th>Post</th>
-              <th>Candidate Details</th>
+              <th class="w-10 text-center sortable-th" data-sort="serial" title="Sort by Roll Serial Number"># <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span></th>
+              <th class="sortable-th" data-sort="id" title="Sort by Nomination ID">Nom. ID <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span></th>
+              <th class="sortable-th" data-sort="post" title="Sort by Post (Statutory Order)">Post <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span></th>
+              <th class="sortable-th" data-sort="name" title="Sort by Candidate Name">Candidate Details <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span></th>
               <th>Class / Dept</th>
               <th>Proposer &amp; Seconder</th>
-              <th id="thStatusOrReceipt">${activeTab === 'intake' ? 'Physical Receipt' : 'Scrutiny Status'}</th>
-              <th>Flags &amp; Alerts</th>
-              <th class="text-right">Action</th>
+              <th id="thStatusOrReceipt" class="sortable-th" data-sort="status" title="Sort by Status / Receipt">
+                ${activeTab === 'intake' ? 'Physical Receipt' : 'Scrutiny Status'} <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span>
+              </th>
+              <th class="sortable-th" data-sort="flags" title="Sort by Flags & Alerts">Flags &amp; Alerts <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span></th>
+              <th class="text-right whitespace-nowrap">Action</th>
             </tr></thead>
             <tbody id="nomTableBody"></tbody>
           </table>
@@ -577,181 +632,252 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     const cardsDiv = main.querySelector('#nomCardsContainer');
     const thStatusOrReceipt = main.querySelector('#thStatusOrReceipt');
     if (thStatusOrReceipt) {
-      if (activeTab === 'intake') thStatusOrReceipt.textContent = 'Physical Receipt';
-      else if (activeTab === 'accepted') thStatusOrReceipt.textContent = 'Accepted Status';
-      else if (activeTab === 'rejected') thStatusOrReceipt.textContent = 'Rejection Reason';
-      else thStatusOrReceipt.textContent = 'Scrutiny Status';
+      const sortIcon = `<span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span>`;
+      if (activeTab === 'intake') thStatusOrReceipt.innerHTML = `Physical Receipt ${sortIcon}`;
+      else if (activeTab === 'accepted') thStatusOrReceipt.innerHTML = `Accepted Status ${sortIcon}`;
+      else if (activeTab === 'rejected') thStatusOrReceipt.innerHTML = `Rejection Reason ${sortIcon}`;
+      else thStatusOrReceipt.innerHTML = `Scrutiny Status ${sortIcon}`;
     }
 
-    // 1. Render Table Rows
-    tbody.innerHTML = data.length ? data.map((n, idx) => {
-      const systemSerial = idx + 1;
+    const renderRowHtml = (n, systemSerial, showPostName = true) => {
       const violations = getNominationRuleViolations(n, allPosts, allNoms, settings);
       const isRS = String(n.candidateClass || '').toUpperCase().includes('RESEARCH') || String(n.candidateClass || '').toUpperCase().includes('SCHOLAR');
       const isPhysical = n.physicalReceived === true || n.physicalReceived === 'true';
 
       return `
-      <tr id="row-${esc(n.id)}" class="hover:bg-white/[0.02] transition-colors">
-        <!-- System Serial Number -->
-        <td class="text-center font-mono font-bold text-xs text-indigo-300 bg-black/20">
+      <tr id="row-${esc(n.id)}" class="nom-row hover:bg-white/[0.03] transition-colors">
+        <!-- System Serial -->
+        <td class="text-center font-mono font-bold text-xs text-indigo-300/80 bg-black/15 py-1 px-2 whitespace-nowrap">
           ${systemSerial}
         </td>
-        <td>
-          <button type="button" class="view-nom-btn font-mono text-indigo-300 hover:text-indigo-200 text-xs font-bold hover:underline cursor-pointer flex items-center gap-1" data-id="${esc(n.id)}" title="Click to view full form">
-            <span>📄</span> ${esc(n.id)}
+        <!-- Nomination ID -->
+        <td class="whitespace-nowrap py-1 px-2.5">
+          <button type="button" class="view-nom-btn font-mono text-indigo-300 hover:text-indigo-200 text-xs font-bold hover:underline cursor-pointer inline-flex items-center gap-1" data-id="${esc(n.id)}" title="Click to view nomination paper">
+            <span class="text-[11px] opacity-70">📄</span> <span>${esc(n.id)}</span>
           </button>
         </td>
-        <td class="text-xs max-w-[140px] leading-snug font-medium text-slate-200">
-          <div>${esc(n.post)}</div>
+        <!-- Post -->
+        <td class="text-xs leading-tight font-medium text-slate-200 py-1 px-2.5">
+          <div class="font-semibold text-slate-200 max-w-[150px] truncate" title="${esc(n.post)}">${esc(n.post)}</div>
         </td>
-        <td>
-          <div class="font-bold text-white flex items-center gap-1.5 flex-wrap">
-            <span class="hover:text-indigo-300 cursor-pointer view-nom-btn" data-id="${esc(n.id)}">${esc(n.candidateName || n.candidate?.NAME || 'N/A')}</span>
-            <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-[10px] px-1.5 py-0.2" title="Electoral Roll Serial Number">
-              Sl. #${esc(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || '–')}
+        <!-- Candidate Details -->
+        <td class="py-1 px-2.5">
+          <div class="flex items-center gap-1.5 flex-nowrap whitespace-nowrap">
+            <span class="font-bold text-white hover:text-indigo-300 cursor-pointer view-nom-btn text-xs" data-id="${esc(n.id)}">
+              ${esc(n.candidateName || n.candidate?.NAME || 'N/A')}
             </span>
-            ${isRS ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] px-1.5 py-0.2 font-semibold">⚠️ Ineligible (RS)</span>` : ''}
+            <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-[10px] px-1 py-0" title="Electoral Roll Serial Number">
+              #${esc(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || '–')}
+            </span>
+            ${isRS ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[9px] px-1 py-0 font-bold">⚠️ RS</span>` : ''}
           </div>
-          <div class="text-[11px] text-slate-400 font-mono">Adm: ${esc(n.candidateAdmission || n.candidate?.['ADMISION NO'] || '–')}</div>
+          <div class="text-[10px] text-slate-400 font-mono leading-tight mt-0.5 whitespace-nowrap">
+            Adm: ${esc(n.candidateAdmission || n.candidate?.['ADMISION NO'] || '–')}
+          </div>
         </td>
-        <td class="text-xs text-slate-400">
-          <div>${esc(n.candidateClass || '')}</div>
-          <div class="text-[10px] opacity-60">${esc(n.candidateDept || '')}</div>
+        <!-- Class / Dept -->
+        <td class="text-xs text-slate-300 py-1 px-2.5 whitespace-nowrap">
+          <div class="font-medium text-slate-200 text-xs leading-tight">${esc(n.candidateClass || '–')}</div>
+          <div class="text-[10px] text-slate-500 leading-tight mt-0.5">${esc(n.candidateDept || '')}</div>
         </td>
-        <td>
-          <div class="text-xs font-medium text-slate-300">
-            <span class="text-slate-400">Prop:</span> ${esc(n.proposerName || n.proposer?.NAME || 'N/A')}
+        <!-- Proposer & Seconder -->
+        <td class="py-1 px-2.5 whitespace-nowrap">
+          <div class="text-[11px] leading-tight text-slate-300 flex items-center gap-1">
+            <span class="text-slate-500 font-mono font-semibold text-[10px]">P:</span>
+            <span class="truncate max-w-[110px]" title="${esc(n.proposerName || n.proposer?.NAME || 'N/A')}">${esc(n.proposerName || n.proposer?.NAME || 'N/A')}</span>
             <span class="text-[10px] font-mono text-slate-500">(#${esc(n.proposerSerial || n.proposer?.['Nominal Roll Serial Number'] || '–')})</span>
           </div>
-          <div class="text-xs font-medium text-slate-300 mt-0.5">
-            <span class="text-slate-400">Sec:</span> ${esc(n.seconderName || n.seconder?.NAME || 'N/A')}
+          <div class="text-[11px] leading-tight text-slate-300 flex items-center gap-1 mt-0.5">
+            <span class="text-slate-500 font-mono font-semibold text-[10px]">S:</span>
+            <span class="truncate max-w-[110px]" title="${esc(n.seconderName || n.seconder?.NAME || 'N/A')}">${esc(n.seconderName || n.seconder?.NAME || 'N/A')}</span>
             <span class="text-[10px] font-mono text-slate-500">(#${esc(n.seconderSerial || n.seconder?.['Nominal Roll Serial Number'] || '–')})</span>
           </div>
         </td>
-        <td>
+        <!-- Status / Physical Receipt -->
+        <td class="py-1 px-2.5 whitespace-nowrap">
           ${activeTab === 'intake' ? `
-            <div>
-              ${isPhysical ? `
-                <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold inline-flex items-center gap-1">
-                  <span>✅</span> Physical Received
-                </span>
-              ` : `
-                <span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold inline-flex items-center gap-1">
-                  <span>⏳</span> Awaiting Physical
-                </span>
-              `}
-            </div>
-            <div class="mt-1">
-              <span class="badge badge-${(n.status || 'pending').toLowerCase()} text-[9px] px-1.5 py-0.2">${esc(n.status)}</span>
+            <div class="inline-flex items-center gap-1">
+              <span class="badge ${isPhysical ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'} text-[10px] font-bold inline-flex items-center gap-1">
+                <span>${isPhysical ? '✅' : '⏳'}</span> ${isPhysical ? 'Received' : 'Awaiting'}
+              </span>
+              ${n.status && n.status !== 'Pending' ? `
+                <span class="badge badge-${n.status.toLowerCase()} text-[9px] px-1 py-0 font-semibold">${esc(n.status)}</span>
+              ` : ''}
             </div>
           ` : activeTab === 'accepted' ? `
-            <div>
-              <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold inline-flex items-center gap-1">
+            <div class="inline-flex items-center gap-1">
+              <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold inline-flex items-center gap-1">
                 <span>✅</span> Valid
               </span>
-            </div>
-            <div class="text-[10px] text-slate-400 mt-1 font-mono">
-              ${isPhysical ? 'Physical Received' : 'Online Only'}
+              <span class="text-[10px] text-slate-400 font-mono ml-0.5">${isPhysical ? 'Physical' : 'Online'}</span>
             </div>
           ` : activeTab === 'rejected' ? `
             <div>
-              <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold inline-flex items-center gap-1">
+              <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold inline-flex items-center gap-1">
                 <span>❌</span> Rejected
               </span>
+              ${n.rejectionReason ? `
+                <div class="text-[10px] text-rose-400 truncate max-w-[140px] font-medium leading-tight mt-0.5" title="${esc(n.rejectionReason)}">⚠️ ${esc(n.rejectionReason)}</div>
+              ` : ''}
             </div>
-            ${n.rejectionReason ? `
-              <div class="text-[10px] text-rose-400 mt-1 max-w-[170px] leading-tight font-medium" title="${esc(n.rejectionReason)}">⚠️ ${esc(n.rejectionReason)}</div>
-            ` : '<div class="text-[10px] text-slate-400 mt-1 italic">No reason recorded</div>'}
           ` : `
             <div>
-              <span class="badge badge-${(n.status || 'pending').toLowerCase()} font-bold">${esc(n.status)}</span>
+              <span class="badge badge-${(n.status || 'pending').toLowerCase()} text-[10px] font-bold">${esc(n.status || 'Pending')}</span>
+              ${n.status === 'Rejected' && n.rejectionReason ? `
+                <div class="text-[10px] text-rose-400 truncate max-w-[140px] font-medium leading-tight mt-0.5" title="${esc(n.rejectionReason)}">⚠️ ${esc(n.rejectionReason)}</div>
+              ` : ''}
             </div>
-            ${n.status === 'Rejected' && n.rejectionReason ? `
-              <div class="text-[10px] text-rose-400 mt-1 max-w-[150px] leading-tight font-medium" title="${esc(n.rejectionReason)}">⚠️ ${esc(n.rejectionReason)}</div>
-            ` : ''}
           `}
         </td>
-        <td>
-          <!-- All Flags Styled in RED -->
+        <!-- Flags & Alerts (Styled in RED) -->
+        <td class="py-1 px-2.5 whitespace-nowrap">
           ${(() => {
             if (violations.length === 0) {
               return `
-                <span class="badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[9px] px-1.5 py-0.2 inline-flex items-center gap-1 font-medium">
-                  <span>✓</span> Rules Passed
+                <span class="badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] px-1.5 py-0.5 inline-flex items-center gap-1 font-medium">
+                  <span>✓</span> Clear
                 </span>
               `;
             }
             const multiCand = violations.find(v => v.type === 'MULTIPLE_CANDIDACY');
             return `
-              <div class="space-y-1">
+              <div class="inline-flex items-center gap-1 flex-nowrap">
                 ${multiCand ? `
-                  <button type="button" class="view-nom-btn badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/50 text-[10px] px-2 py-0.5 font-bold flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(multiCand.message)}">
-                    <span>🚩 Multi-Post Candidacy</span>
+                  <button type="button" class="view-nom-btn badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/50 text-[10px] px-1.5 py-0.5 font-bold inline-flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(multiCand.message)}">
+                    <span>🚩 Multi-Post</span>
                   </button>
                 ` : ''}
-                <button type="button" class="view-nom-btn badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] px-2 py-0.5 font-semibold flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(violations.map(v => v.message).join(' | '))}">
-                  <span>⚠️ ${violations.length} Flag${violations.length > 1 ? 's' : ''} in RED</span>
+                <button type="button" class="view-nom-btn badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] px-1.5 py-0.5 font-bold inline-flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(violations.map(v => v.message).join(' | '))}">
+                  <span>⚠️ ${violations.length} ${violations.length === 1 ? 'Flag' : 'Flags'}</span>
                 </button>
               </div>
             `;
           })()}
         </td>
-        <td class="text-right">
-          <div class="flex items-center justify-end gap-1.5 flex-wrap">
-            <button type="button" class="btn btn-secondary btn-xs view-nom-btn bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 px-2 py-1 flex items-center gap-1 font-semibold" data-id="${esc(n.id)}" title="View Full Nomination Form and Scrutiny Details">
+        <!-- Actions (Single line, no wrapping) -->
+        <td class="text-right whitespace-nowrap py-1 px-3">
+          <div class="inline-flex items-center justify-end gap-1 whitespace-nowrap">
+            <button type="button" class="btn btn-secondary btn-xs view-nom-btn bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 px-2 py-1 text-xs font-semibold inline-flex items-center gap-1 whitespace-nowrap" data-id="${esc(n.id)}" title="View Full Nomination Paper">
               <span>📄</span> <span>View</span>
             </button>
 
             ${activeTab === 'intake' ? `
-              <button type="button" class="btn btn-xs toggle-physical-btn ${isPhysical ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10' : 'bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40'} px-2 py-1 font-semibold" data-id="${esc(n.id)}" data-target="${isPhysical ? 'false' : 'true'}" title="${isPhysical ? 'Unmark physical copy' : 'Mark physical print and documents as received'}">
+              <button type="button" class="btn btn-xs toggle-physical-btn ${isPhysical ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10' : 'bg-emerald-600/25 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40'} px-2 py-1 text-xs font-semibold inline-flex items-center gap-1 whitespace-nowrap" data-id="${esc(n.id)}" data-target="${isPhysical ? 'false' : 'true'}" title="${isPhysical ? 'Unmark physical copy' : 'Mark physical print and documents received'}">
                 <span>${isPhysical ? '↩ Unmark' : '📥 Mark Received'}</span>
               </button>
             ` : activeTab === 'accepted' ? `
-              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 px-2 py-1 font-semibold" data-id="${esc(n.id)}" data-action="Pending" title="Reset nomination status to Pending">
-                <span>↩ Pending</span>
+              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 px-2 py-1 text-xs font-semibold whitespace-nowrap" data-id="${esc(n.id)}" data-action="Pending" title="Reset nomination status to Pending">
+                <span>↩ Reset</span>
               </button>
-              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/30 px-2 py-1 font-semibold" data-id="${esc(n.id)}" data-action="Rejected" title="Reject nomination">
+              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/30 px-2 py-1 text-xs font-semibold whitespace-nowrap" data-id="${esc(n.id)}" data-action="Rejected" title="Reject nomination">
                 <span>❌ Reject</span>
               </button>
             ` : activeTab === 'rejected' ? `
-              <button type="button" class="btn btn-primary btn-xs verify-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 px-2 py-1 font-semibold" data-id="${esc(n.id)}" data-action="Valid" title="Mark nomination as Valid">
+              <button type="button" class="btn btn-primary btn-xs verify-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 px-2 py-1 text-xs font-semibold whitespace-nowrap" data-id="${esc(n.id)}" data-action="Valid" title="Mark nomination as Valid">
                 <span>✅ Valid</span>
               </button>
-              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 px-2 py-1 font-semibold" data-id="${esc(n.id)}" data-action="Pending" title="Reset nomination status to Pending">
-                <span>↩ Pending</span>
+              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 px-2 py-1 text-xs font-semibold whitespace-nowrap" data-id="${esc(n.id)}" data-action="Pending" title="Reset nomination status to Pending">
+                <span>↩ Reset</span>
               </button>
             ` : `
-              <button type="button" class="btn btn-primary btn-xs verify-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white" data-id="${esc(n.id)}" data-action="Valid" ${n.status === 'Valid' ? 'disabled' : ''} title="${n.status === 'Rejected' ? 'Move from Rejected to Valid' : 'Mark Valid'}">
-                <span>${n.status === 'Rejected' ? '🔄 Valid' : 'Valid'}</span>
+              <button type="button" class="btn btn-primary btn-xs verify-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white px-2 py-1 text-xs font-semibold whitespace-nowrap" data-id="${esc(n.id)}" data-action="Valid" ${n.status === 'Valid' ? 'disabled' : ''} title="${n.status === 'Rejected' ? 'Move from Rejected to Valid' : 'Mark Valid'}">
+                <span>${n.status === 'Rejected' ? '🔄 Valid' : '✅ Valid'}</span>
               </button>
-              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white" data-id="${esc(n.id)}" data-action="Rejected" ${n.status === 'Rejected' ? 'disabled' : ''} title="${n.status === 'Valid' ? 'Move from Valid to Rejected' : 'Reject'}">
-                <span>${n.status === 'Valid' ? '🔄 Reject' : 'Reject'}</span>
+              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white px-2 py-1 text-xs font-semibold whitespace-nowrap" data-id="${esc(n.id)}" data-action="Rejected" ${n.status === 'Rejected' ? 'disabled' : ''} title="${n.status === 'Valid' ? 'Move from Valid to Rejected' : 'Reject'}">
+                <span>${n.status === 'Valid' ? '🔄 Reject' : '❌ Reject'}</span>
               </button>
               ${n.status && n.status !== 'Pending' ? `
-                <button type="button" class="btn btn-secondary btn-xs verify-btn bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 px-2 py-1 font-semibold" data-id="${esc(n.id)}" data-action="Pending" title="Reset nomination status back to Pending">
+                <button type="button" class="btn btn-secondary btn-xs verify-btn bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 px-1.5 py-1 text-xs font-semibold whitespace-nowrap" data-id="${esc(n.id)}" data-action="Pending" title="Reset nomination status back to Pending">
                   <span>↩</span>
                 </button>
               ` : ''}
             `}
 
-            <button type="button" class="btn btn-secondary btn-xs delete-nom-btn bg-red-900/20 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/30 px-2 py-1 font-bold" data-id="${esc(n.id)}" title="Permanently delete nomination">
+            <button type="button" class="btn btn-secondary btn-xs delete-nom-btn bg-red-950/20 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/30 px-1.5 py-1 text-xs font-bold whitespace-nowrap" data-id="${esc(n.id)}" title="Permanently delete nomination">
               <span>🗑️</span>
             </button>
           </div>
         </td>
       </tr>`;
-    }).join('') : `
-      <tr>
-        <td colspan="9" class="text-center text-slate-500 py-12">
-          ${activeTab === 'scrutiny' 
-            ? 'No nominations have physical copies marked as received yet. Go to Tab 1 to mark physical prints and documents received.' 
-            : activeTab === 'accepted'
-            ? 'No accepted (Valid) nominations found.'
-            : activeTab === 'rejected'
-            ? 'No rejected nominations found.'
-            : 'No nominations found matching criteria.'}
+    };
+
+    const renderPostGroupHeader = (postName, items) => {
+      const totalCount = items.length;
+      const physCount = items.filter(n => n.physicalReceived === true || n.physicalReceived === 'true').length;
+      const validCount = items.filter(n => n.status === 'Valid').length;
+      const rejCount = items.filter(n => n.status === 'Rejected').length;
+      const flaggedCount = items.filter(n => getNominationRuleViolations(n, allPosts, allNoms, settings).length > 0).length;
+
+      return `
+      <tr class="post-group-header">
+        <td colspan="9" class="bg-gradient-to-r from-indigo-950/85 via-slate-900/95 to-slate-950/90 py-2 px-3 border-y border-indigo-500/30 shadow-sm">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="flex items-center gap-2">
+              <span class="text-indigo-400 text-sm">🏛️</span>
+              <span class="font-bold text-white text-xs sm:text-sm tracking-wide uppercase font-mono">${esc(postName)}</span>
+              <span class="badge bg-indigo-500/25 text-indigo-200 border border-indigo-500/50 text-[10px] font-mono font-bold">
+                ${totalCount} ${totalCount === 1 ? 'Candidate' : 'Candidates'}
+              </span>
+              ${activeTab === 'intake' ? `
+                <span class="badge ${physCount === totalCount && totalCount > 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-slate-300 border-white/10'} text-[10px] font-mono font-semibold">
+                  ${physCount}/${totalCount} Physical Received
+                </span>
+              ` : activeTab === 'scrutiny' ? `
+                <span class="badge bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[10px] font-mono font-semibold">${validCount} Valid</span>
+                ${rejCount > 0 ? `<span class="badge bg-rose-500/20 text-rose-300 border-rose-500/30 text-[10px] font-mono font-semibold">${rejCount} Rejected</span>` : ''}
+              ` : ''}
+              ${flaggedCount > 0 ? `
+                <span class="badge bg-rose-500/25 text-rose-300 border border-rose-500/50 text-[10px] font-bold">
+                  ⚠️ ${flaggedCount} Flagged
+                </span>
+              ` : ''}
+            </div>
+            <div class="text-[11px] text-slate-400 font-mono hidden sm:block">
+              Statutory Scrutiny Group
+            </div>
+          </div>
         </td>
       </tr>`;
+    };
+
+    // 1. Render Table Rows (Self-Organizing Post Grouping or Flat Sort)
+    if (!data.length) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="9" class="text-center text-slate-500 py-12">
+            ${activeTab === 'scrutiny' 
+              ? 'No nominations have physical copies marked as received yet. Go to Tab 1 to mark physical prints and documents received.' 
+              : activeTab === 'accepted'
+              ? 'No accepted (Valid) nominations found.'
+              : activeTab === 'rejected'
+              ? 'No rejected nominations found.'
+              : 'No nominations found matching criteria.'}
+          </td>
+        </tr>`;
+    } else if (arrangeMode === 'post' && !sortCol) {
+      const rawPosts = [...new Set(data.map(n => n.post).filter(Boolean))];
+      const uniquePosts = sortPosts(rawPosts);
+      let runningIdx = 1;
+      let html = '';
+      uniquePosts.forEach(p => {
+        const postItems = data.filter(n => n.post === p);
+        if (!postItems.length) return;
+        postItems.sort((a, b) => {
+          const sA = parseInt(a.candidateSerial) || 0;
+          const sB = parseInt(b.candidateSerial) || 0;
+          if (sA && sB && sA !== sB) return sA - sB;
+          const tA = new Date(a.timestamp || 0).getTime();
+          const tB = new Date(b.timestamp || 0).getTime();
+          if (tA !== tB) return tA - tB;
+          return String(a.id).localeCompare(String(b.id));
+        });
+        html += renderPostGroupHeader(p, postItems);
+        html += postItems.map(n => renderRowHtml(n, runningIdx++, false)).join('');
+      });
+      tbody.innerHTML = html;
+    } else {
+      tbody.innerHTML = data.map((n, idx) => renderRowHtml(n, idx + 1, true)).join('');
+    }
 
     // 2. Render Cards View (for mobile & card mode)
     if (cardsDiv) {
@@ -1092,6 +1218,10 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     const q = (main.querySelector('#nomSearch').value || '').trim().toLowerCase();
     const selectedPost = main.querySelector('#postFilter')?.value || 'all';
     const s = main.querySelector('#statusFilter').value;
+    const arrangeEl = main.querySelector('#arrangeFilter');
+    if (arrangeEl && !sortCol) {
+      arrangeMode = arrangeEl.value;
+    }
 
     // Update Tab Counts
     const intakeCount = allNoms.length;
@@ -1156,16 +1286,99 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       return matchSearch;
     });
 
-    // Sort order: LATEST 1st to OLDEST last (Timestamp descending, id descending)
-    filtered.sort((a, b) => {
-      const timeA = new Date(a.timestamp || a.created_at || 0).getTime();
-      const timeB = new Date(b.timestamp || b.created_at || 0).getTime();
-      if (timeA !== timeB) return timeB - timeA;
-      return String(b.id).localeCompare(String(a.id));
-    });
+    // Self-organizing sort logic:
+    if (sortCol) {
+      filtered.sort((a, b) => {
+        let diff = 0;
+        if (sortCol === 'serial') {
+          const sA = parseInt(a.candidateSerial) || 0;
+          const sB = parseInt(b.candidateSerial) || 0;
+          diff = sA - sB;
+        } else if (sortCol === 'id') {
+          diff = String(a.id).localeCompare(String(b.id));
+        } else if (sortCol === 'post') {
+          diff = comparePosts(a.post, b.post);
+        } else if (sortCol === 'name') {
+          const nA = a.candidateName || a.candidate?.NAME || '';
+          const nB = b.candidateName || b.candidate?.NAME || '';
+          diff = nA.localeCompare(nB);
+        } else if (sortCol === 'status') {
+          if (activeTab === 'intake') {
+            const pA = a.physicalReceived === true || a.physicalReceived === 'true' ? 1 : 0;
+            const pB = b.physicalReceived === true || b.physicalReceived === 'true' ? 1 : 0;
+            diff = pB - pA;
+          } else {
+            diff = String(a.status || '').localeCompare(String(b.status || ''));
+          }
+        } else if (sortCol === 'flags') {
+          const vA = getNominationRuleViolations(a, allPosts, allNoms, settings).length;
+          const vB = getNominationRuleViolations(b, allPosts, allNoms, settings).length;
+          diff = vB - vA;
+        }
+        return sortAsc ? diff : -diff;
+      });
+    } else {
+      // Use arrangeMode
+      if (arrangeMode === 'post') {
+        filtered.sort((a, b) => {
+          const pComp = comparePosts(a.post, b.post);
+          if (pComp !== 0) return pComp;
+          const sA = parseInt(a.candidateSerial) || 0;
+          const sB = parseInt(b.candidateSerial) || 0;
+          if (sA && sB && sA !== sB) return sA - sB;
+          const tA = new Date(a.timestamp || 0).getTime();
+          const tB = new Date(b.timestamp || 0).getTime();
+          return tA - tB;
+        });
+      } else if (arrangeMode === 'latest') {
+        filtered.sort((a, b) => {
+          const timeA = new Date(a.timestamp || a.created_at || 0).getTime();
+          const timeB = new Date(b.timestamp || b.created_at || 0).getTime();
+          if (timeA !== timeB) return timeB - timeA;
+          return String(b.id).localeCompare(String(a.id));
+        });
+      } else if (arrangeMode === 'flags') {
+        filtered.sort((a, b) => {
+          const vA = getNominationRuleViolations(a, allPosts, allNoms, settings);
+          const vB = getNominationRuleViolations(b, allPosts, allNoms, settings);
+          const multiA = vA.some(v => v.type === 'MULTIPLE_CANDIDACY') ? 1 : 0;
+          const multiB = vB.some(v => v.type === 'MULTIPLE_CANDIDACY') ? 1 : 0;
+          if (multiA !== multiB) return multiB - multiA;
+          if (vA.length !== vB.length) return vB.length - vA.length;
+          return comparePosts(a.post, b.post);
+        });
+      } else if (arrangeMode === 'serial') {
+        filtered.sort((a, b) => {
+          const sA = parseInt(a.candidateSerial) || 99999;
+          const sB = parseInt(b.candidateSerial) || 99999;
+          return sA - sB;
+        });
+      } else if (arrangeMode === 'name') {
+        filtered.sort((a, b) => {
+          const nA = a.candidateName || a.candidate?.NAME || '';
+          const nB = b.candidateName || b.candidate?.NAME || '';
+          return nA.localeCompare(nB);
+        });
+      }
+    }
 
     activeFilteredList = filtered;
-    main.querySelector('#nomListCountText').textContent = `Showing ${filtered.length} of ${baseList.length} nominations (Latest 1st)`;
+
+    const sortDescMap = {
+      post: 'Grouped by Post (Statutory Order)',
+      latest: 'Latest Submissions First',
+      flags: 'Rule Flags & Alerts First',
+      serial: 'Electoral Roll Serial (#1..N)',
+      name: 'Candidate Name (A-Z)'
+    };
+    const sortText = sortCol 
+      ? `Sorted by ${sortCol.toUpperCase()} (${sortAsc ? 'Ascending ▲' : 'Descending ▼'})` 
+      : sortDescMap[arrangeMode] || 'Self-organized';
+
+    main.querySelector('#nomListCountText').textContent = `Showing ${filtered.length} of ${baseList.length} nominations`;
+    const hintEl = main.querySelector('#nomSortHintText');
+    if (hintEl) hintEl.textContent = `Organization: ${sortText}`;
+
     renderRows(filtered);
 
     // If modal is open, refresh counter & navigation
@@ -1222,6 +1435,45 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
   main.querySelector('#postFilter').addEventListener('change', applyFilters);
   main.querySelector('#statusFilter').addEventListener('change', applyFilters);
 
+  main.querySelector('#arrangeFilter')?.addEventListener('change', (e) => {
+    arrangeMode = e.target.value;
+    sortCol = null; // Clear manual column sort
+    main.querySelectorAll('#nomTable thead th.sortable-th .sort-icon').forEach(icon => {
+      icon.textContent = '↕';
+      icon.classList.add('opacity-40');
+      icon.classList.remove('text-indigo-400', 'font-bold');
+    });
+    applyFilters();
+  });
+
+  // Sortable Column Headers in List/Table
+  main.querySelectorAll('#nomTable thead th.sortable-th').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.sort;
+      if (!col) return;
+      if (sortCol === col) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = col;
+        sortAsc = true;
+      }
+      main.querySelectorAll('#nomTable thead th.sortable-th').forEach(otherTh => {
+        const icon = otherTh.querySelector('.sort-icon');
+        if (!icon) return;
+        if (otherTh === th) {
+          icon.textContent = sortAsc ? '▲' : '▼';
+          icon.classList.remove('opacity-40');
+          icon.classList.add('text-indigo-400', 'font-bold');
+        } else {
+          icon.textContent = '↕';
+          icon.classList.add('opacity-40');
+          icon.classList.remove('text-indigo-400', 'font-bold');
+        }
+      });
+      applyFilters();
+    });
+  });
+
   const updateNomViewUI = () => {
     const cardsDiv = main.querySelector('#nomCardsContainer');
     const tableDiv = main.querySelector('#nomTableContainer');
@@ -1231,6 +1483,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     if (tableDiv) tableDiv.classList.toggle('hidden', nomViewMode !== 'table');
     if (btnC) btnC.className = `btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${nomViewMode === 'cards' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}`;
     if (btnT) btnT.className = `btn btn-xs py-1.5 px-3 rounded text-xs flex items-center gap-1.5 transition-all ${nomViewMode === 'table' ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-900/40' : 'text-slate-400 hover:text-white'}`;
+    try { localStorage.setItem('admin_verify_view_mode', nomViewMode); } catch (_) {}
   };
 
   main.querySelector('#btnNomModeCards')?.addEventListener('click', () => {
@@ -1454,5 +1707,6 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     }
   });
 
+  updateNomViewUI(); // Ensure initial view mode (cards or table) is applied
   applyFilters(); // Initial render with sorting applied
 }
