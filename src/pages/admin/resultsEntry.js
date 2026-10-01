@@ -4,7 +4,7 @@
  */
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast, setLoading } from '../../utils.js';
+import { esc, showToast, setLoading, sortPosts } from '../../utils.js';
 
 const syncQueue = [];
 let isSyncing = false;
@@ -135,7 +135,7 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
                 </select>
                 <select id="selPost" class="field text-xs">
                   <option value="">Post...</option>
-                  ${posts.map(p => `<option value="${esc(p.post||p.name)}">${esc(p.post||p.name)}</option>`).join('')}
+                  ${sortPosts(posts).map(p => `<option value="${esc(p.post||p.name)}">${esc(p.post||p.name)}</option>`).join('')}
                 </select>
                 <button id="btnLoadForm" class="btn btn-secondary px-4 text-xs">Load</button>
               </div>
