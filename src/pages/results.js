@@ -195,7 +195,8 @@ export async function renderResults(container, options = {}) {
             </button>
           </div>
 
-          <!-- Test Data Simulator Toolbar (Active for Trends tab) -->
+          <!-- Test Data Simulator Toolbar (Admin only, Active for Trends tab) -->
+          ${isAdmin ? `
           <div id="trendsToolbar" class="flex flex-wrap items-center gap-2">
             <div id="testModeBadge" class="hidden text-xs px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold items-center gap-1.5 animate-pulse">
               <span>🧪</span> Test Simulation Active
@@ -210,6 +211,7 @@ export async function renderResults(container, options = {}) {
               <span>🧹</span> Clear Test Data
             </button>
           </div>
+          ` : ''}
         </div>
       </header>
 
@@ -223,6 +225,7 @@ export async function renderResults(container, options = {}) {
   const btnRefresh = container.querySelector('#btnRefresh');
   const tabBtnStandard = container.querySelector('#tabBtnStandard');
   const tabBtnTrends = container.querySelector('#tabBtnTrends');
+  const trendsToolbar = container.querySelector('#trendsToolbar');
   const btnLoadTest = container.querySelector('#btnLoadTest');
   const btnSimulateVotes = container.querySelector('#btnSimulateVotes');
   const btnClearTest = container.querySelector('#btnClearTest');
@@ -233,9 +236,11 @@ export async function renderResults(container, options = {}) {
     if (activeTab === 'standard') {
       tabBtnStandard.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-indigo-600 text-white shadow-lg transition flex items-center gap-2';
       tabBtnTrends.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-400 hover:text-white transition flex items-center gap-2';
+      if (trendsToolbar) trendsToolbar.style.display = 'none';
     } else {
       tabBtnStandard.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-400 hover:text-white transition flex items-center gap-2';
       tabBtnTrends.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-sky-600 text-white shadow-lg transition flex items-center gap-2';
+      if (trendsToolbar) trendsToolbar.style.display = '';
     }
   }
 
@@ -318,50 +323,52 @@ export async function renderResults(container, options = {}) {
     renderCurrentView();
   });
 
-  btnLoadTest.addEventListener('click', () => {
-    testData = JSON.parse(JSON.stringify(DEFAULT_TEST_TRENDS));
-    btnSimulateVotes.classList.remove('hidden');
-    btnClearTest.classList.remove('hidden');
-    testModeBadge.classList.remove('hidden');
-    testModeBadge.classList.add('inline-flex');
-    btnLoadTest.classList.add('hidden');
-    if (activeTab !== 'trends') {
-      activeTab = 'trends';
-      updateTabButtons();
-    }
-    renderCurrentView();
-  });
-
-  btnSimulateVotes.addEventListener('click', () => {
-    if (!testData || testData.length === 0) return;
-    // Pick 3 random posts and add 5 to 25 votes to random candidates
-    const postIndices = [
-      Math.floor(Math.random() * testData.length),
-      Math.floor(Math.random() * testData.length),
-      Math.floor(Math.random() * testData.length)
-    ];
-    postIndices.forEach(idx => {
-      const postObj = testData[idx];
-      if (postObj && postObj.candidates && postObj.candidates.length > 0) {
-        const candIdx = Math.floor(Math.random() * postObj.candidates.length);
-        const added = Math.floor(Math.random() * 20) + 6;
-        postObj.candidates[candIdx].votes += added;
+  if (isAdmin) {
+    btnLoadTest?.addEventListener('click', () => {
+      testData = JSON.parse(JSON.stringify(DEFAULT_TEST_TRENDS));
+      btnSimulateVotes?.classList.remove('hidden');
+      btnClearTest?.classList.remove('hidden');
+      testModeBadge?.classList.remove('hidden');
+      testModeBadge?.classList.add('inline-flex');
+      btnLoadTest?.classList.add('hidden');
+      if (activeTab !== 'trends') {
+        activeTab = 'trends';
+        updateTabButtons();
       }
+      renderCurrentView();
     });
-    renderTrendsCards(resultsMain, testData, previousTrendsState, false);
-    previousTrendsState = JSON.parse(JSON.stringify(testData));
-  });
 
-  btnClearTest.addEventListener('click', () => {
-    testData = null;
-    previousTrendsState = {};
-    btnSimulateVotes.classList.add('hidden');
-    btnClearTest.classList.add('hidden');
-    testModeBadge.classList.add('hidden');
-    testModeBadge.classList.remove('inline-flex');
-    btnLoadTest.classList.remove('hidden');
-    renderCurrentView();
-  });
+    btnSimulateVotes?.addEventListener('click', () => {
+      if (!testData || testData.length === 0) return;
+      // Pick 3 random posts and add 5 to 25 votes to random candidates
+      const postIndices = [
+        Math.floor(Math.random() * testData.length),
+        Math.floor(Math.random() * testData.length),
+        Math.floor(Math.random() * testData.length)
+      ];
+      postIndices.forEach(idx => {
+        const postObj = testData[idx];
+        if (postObj && postObj.candidates && postObj.candidates.length > 0) {
+          const candIdx = Math.floor(Math.random() * postObj.candidates.length);
+          const added = Math.floor(Math.random() * 20) + 6;
+          postObj.candidates[candIdx].votes += added;
+        }
+      });
+      renderTrendsCards(resultsMain, testData, previousTrendsState, false);
+      previousTrendsState = JSON.parse(JSON.stringify(testData));
+    });
+
+    btnClearTest?.addEventListener('click', () => {
+      testData = null;
+      previousTrendsState = {};
+      btnSimulateVotes?.classList.add('hidden');
+      btnClearTest?.classList.add('hidden');
+      testModeBadge?.classList.add('hidden');
+      testModeBadge?.classList.remove('inline-flex');
+      btnLoadTest?.classList.remove('hidden');
+      renderCurrentView();
+    });
+  }
 
   btnRefresh.addEventListener('click', (e) => {
     if (btnRefresh.disabled || btnRefresh.classList.contains('pointer-events-none')) {
@@ -475,6 +482,7 @@ export async function renderResults(container, options = {}) {
               ? 'Vote counting is actively underway. Real-time trend cards and mechanical rolling counters will activate on this screen as soon as rounds are released by the Returning Officer.' 
               : 'Vote counting has not commenced or results have not been declared yet. Live trend cards with rolling counters will appear here during live counting.'}
           </p>
+          ${isViewerAdmin ? `
           <div class="p-4 rounded-2xl bg-slate-900/60 border border-white/10 mb-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
             <div>
               <p class="text-xs font-bold text-sky-400 uppercase tracking-wider">Preview the Visual Experience</p>
@@ -484,14 +492,17 @@ export async function renderResults(container, options = {}) {
               <span>🧪</span> Load Test Data
             </button>
           </div>
+          ` : ''}
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400 text-xs">
             <span>🔒</span> Live public stream locked until manual release by Administrator
           </div>
         </div>
       `;
-      main.querySelector('#btnLoadTestInner')?.addEventListener('click', () => {
-        btnLoadTest.click();
-      });
+      if (isViewerAdmin) {
+        main.querySelector('#btnLoadTestInner')?.addEventListener('click', () => {
+          btnLoadTest?.click();
+        });
+      }
       return;
     }
 
