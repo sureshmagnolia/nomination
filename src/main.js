@@ -139,3 +139,10 @@ setSyncStatusCallback((status) => {
 
 // Initialize public data proactively
 api.initPublicData();
+
+// Register Service Worker for offline app shell support
+if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}

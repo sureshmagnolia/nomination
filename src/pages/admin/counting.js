@@ -2,6 +2,7 @@ import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading, isYearEligible } from '../../utils.js';
 import { CONFIG } from '../../config.js';
+import { saveCountingMeta, getCountingMeta } from '../../offlineStorage.js';
 
 export async function renderAdminCounting(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -22,13 +23,32 @@ export async function renderAdminCounting(container) {
     const allNoms = Array.isArray(nominationsRaw) ? nominationsRaw : [];
     const finalList = allNoms.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved');
 
-    renderCountingUI(container.querySelector('#adminMain'), pwd, savedMatrix, posts, finalList, booths, nominalRoll, settings);
+    // Cache metadata in IndexedDB for offline access
+    await saveCountingMeta({ savedMatrix, posts, finalList, booths, settings });
+
+    renderCountingUI(container.querySelector('#adminMain'), pwd, savedMatrix, posts, finalList, booths, nominalRoll, settings, false);
   } catch (e) {
-    container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
+    console.warn('Counting online load failed, checking IndexedDB cache:', e);
+    const cached = await getCountingMeta();
+    if (cached && cached.savedMatrix) {
+      renderCountingUI(
+        container.querySelector('#adminMain'),
+        pwd,
+        cached.savedMatrix,
+        cached.posts || [],
+        cached.finalList || [],
+        cached.booths || [],
+        [],
+        cached.settings || {},
+        true
+      );
+    } else {
+      container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
+    }
   }
 }
 
-function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nominalRoll, settings = {}) {
+function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nominalRoll, settings = {}, isOffline = false) {
   const collegeName = settings?.collegeName || CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad';
   const electionYear = settings?.electionYear || new Date().getFullYear().toString();
   const collegeLogo = settings?.collegeLogo || '';
@@ -44,14 +64,17 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
 
     main.innerHTML = `
       <div class="page-enter space-y-6">
-        <div class="flex items-center justify-between no-print">
+        <div class="flex items-center justify-between no-print flex-wrap gap-3">
           <div>
-            <h3 class="text-xl font-bold text-white">Counting Matrix Setup</h3>
+            <div class="flex items-center gap-2">
+              <h3 class="text-xl font-bold text-white">Counting Matrix Setup</h3>
+              ${isOffline ? '<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-semibold">Offline Mode (IndexedDB)</span>' : ''}
+            </div>
             <p class="text-slate-400 text-sm">${T} tables · ${totalRounds} rounds · ${posts.length} posts total</p>
           </div>
           <div class="flex gap-2">
-            <button id="btnRegenerate" class="btn btn-secondary bg-white/5 border-white/10 hover:bg-white/10">🔄 Regenerate</button>
-            <button id="btnPrintForms" class="btn btn-primary">🖨️ Print All Forms</button>
+            <button id="btnRegenerate" class="btn btn-secondary bg-white/5 border-white/10 hover:bg-white/10 text-xs font-semibold">🔄 Regenerate</button>
+            <button id="btnPrintForms" class="btn btn-primary text-xs font-bold">🖨️ Print All Forms</button>
           </div>
         </div>
 
@@ -233,10 +256,14 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     try {
       main.innerHTML = `<div class="text-center py-20"><span class="spinner"></span><p class="mt-4 text-slate-400">Saving Matrix...</p></div>`;
       await api.adminSaveCountingMatrix(pwd, matrixData);
+      // Cache immediately to IndexedDB
+      await saveCountingMeta({ savedMatrix: matrixData, booths, posts, finalList, settings });
       showToast('Counting Matrix saved successfully!', 'success');
       renderDisplay(matrixData);
     } catch (e) {
-      showToast('Error saving matrix: ' + e.message, 'error');
+      // Even if cloud save fails due to network, save locally to IndexedDB!
+      await saveCountingMeta({ savedMatrix: matrixData, booths, posts, finalList, settings });
+      showToast('Matrix saved locally to IndexedDB (offline). Cloud error: ' + e.message, 'warning');
       renderDisplay(matrixData);
     }
   };

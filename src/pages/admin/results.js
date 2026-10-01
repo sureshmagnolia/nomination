@@ -5,6 +5,13 @@
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, sortPosts } from '../../utils.js';
+import {
+  getAllResultsLocally,
+  syncLedgerWithServer,
+  getCountingMeta,
+  downloadLocalBackupJSON,
+  downloadResultsCSV
+} from '../../offlineStorage.js';
 
 export async function renderAdminResults(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -44,15 +51,31 @@ export async function renderAdminResults(container) {
         api.getPublicSchedule().catch(() => ({})),
         api.adminGetSettings(pwd).catch(() => ({}))
       ]);
+
+      // Cache server results locally into IndexedDB
+      if (Array.isArray(results) && results.length > 0) {
+        await syncLedgerWithServer(results);
+      }
+
       const scrollPos = container.closest('.overflow-auto')?.scrollTop || window.scrollY;
       renderResultsUI(main, pwd, posts, candidatesResp.active || [], results, schedule, sets, candidatesResp.isPublished, loadData, isLivePolling, (val) => {
         isLivePolling = val;
-      });
+      }, false);
       if (silent && scrollPos) {
         container.closest('.overflow-auto')?.scrollTo({ top: scrollPos, behavior: 'instant' });
       }
     } catch (e) {
-      if (!silent) main.innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
+      console.warn('Results online load failed, checking IndexedDB cache:', e);
+      const localResults = await getAllResultsLocally();
+      const cachedMeta = await getCountingMeta();
+      if (cachedMeta && (cachedMeta.posts?.length || localResults.length > 0)) {
+        const posts = cachedMeta.posts || [];
+        const candidates = cachedMeta.finalList || [];
+        const sets = cachedMeta.settings || {};
+        renderResultsUI(main, pwd, posts, candidates, localResults, {}, sets, false, loadData, false, () => {}, true);
+      } else {
+        if (!silent) main.innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
+      }
     }
   }
 
@@ -71,7 +94,7 @@ export async function renderAdminResults(container) {
   await loadData(true);
 }
 
-function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished = false, reloadData = null, isLivePolling = true, setLivePolling = null) {
+function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished = false, reloadData = null, isLivePolling = true, setLivePolling = null, isOffline = false) {
   const year = sets.electionYear || schedule.electionYear || new Date().getFullYear();
   const collegeName = sets.collegeName || 'GOVERNMENT VICTORIA COLLEGE PALAKKAD';
   const shortName = sets.collegeShortName || 'GVC';
@@ -209,25 +232,39 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
 
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/5 p-6 rounded-2xl border border-white/10">
         <div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
             <h2 class="text-xl font-bold text-white tracking-tight">Vote Counting Overview</h2>
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Admin Live Stream
-            </span>
+            ${isOffline ? `
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                <span class="w-2 h-2 rounded-full bg-amber-400"></span> Offline Mode (IndexedDB)
+              </span>
+            ` : `
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Admin Live Stream
+              </span>
+            `}
           </div>
           <p class="text-slate-400 text-sm mt-0.5">Real-time tally of counting matrix entries and leading candidates.</p>
         </div>
-        <div class="flex flex-wrap items-center gap-3">
-          <button id="btnToggleAutoRefresh" class="btn btn-secondary px-3.5 text-xs flex items-center gap-1.5 font-mono">
-            <span>${isLivePolling ? '🟢' : '⏸️'}</span> Live Polling: ${isLivePolling ? 'ON (4s)' : 'PAUSED'}
+        <div class="flex flex-wrap items-center gap-2.5">
+          ${!isOffline ? `
+            <button id="btnToggleAutoRefresh" class="btn btn-secondary px-3.5 text-xs flex items-center gap-1.5 font-mono">
+              <span>${isLivePolling ? '🟢' : '⏸️'}</span> Live Polling: ${isLivePolling ? 'ON (4s)' : 'PAUSED'}
+            </button>
+            <button id="btnAdminRefreshResults" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5">
+              <span>🔄</span> Refresh
+            </button>
+          ` : ''}
+          <button id="btnResultsExportBackup" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10" title="Download complete JSON backup to USB drive">
+            <span>📥</span> Backup (JSON)
           </button>
-          <button id="btnAdminRefreshResults" class="btn btn-secondary px-4 text-xs flex items-center gap-1.5">
-            <span>🔄</span> Refresh Now
+          <button id="btnResultsExportCSV" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10" title="Export printable CSV summary">
+            <span>📊</span> CSV
           </button>
           <a href="#/trends" target="_blank" class="btn btn-secondary px-3.5 text-xs flex items-center gap-1.5 font-bold text-sky-300 border-sky-500/30 hover:bg-sky-500/10">
-            <span>🎯</span> Counting Trends Screen
+            <span>🎯</span> Trends Screen
           </a>
-          <button id="btnPrintOfficial" class="btn btn-primary px-5 text-xs flex items-center gap-1.5 font-bold">
+          <button id="btnPrintOfficial" class="btn btn-primary px-5 text-xs flex items-center gap-1.5 font-bold shadow-lg">
             <span>🖨️</span> Print Official Result Sheet
           </button>
         </div>
@@ -327,6 +364,24 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       </div>
     </div>
   `;
+
+  main.querySelector('#btnResultsExportBackup')?.addEventListener('click', async () => {
+    try {
+      const filename = await downloadLocalBackupJSON(shortName);
+      showToast(`Results backup downloaded: ${filename}`, 'success');
+    } catch (err) {
+      showToast(`Backup failed: ${err.message}`, 'error');
+    }
+  });
+
+  main.querySelector('#btnResultsExportCSV')?.addEventListener('click', async () => {
+    try {
+      const filename = await downloadResultsCSV(shortName);
+      showToast(`Results spreadsheet downloaded: ${filename}`, 'success');
+    } catch (err) {
+      showToast(`CSV export failed: ${err.message}`, 'error');
+    }
+  });
 
   main.querySelector('#btnPrintOfficial').addEventListener('click', () => {
     const printHtml = `
