@@ -88,9 +88,381 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     }
   });
 
+
   let locations = [...initialLocations];
   let editingLocIdx = null;
   let isFirstRender = true;
+
+  const openSplitModal = (splitDepts, intactCount, totalDepts) => {
+    const modal = main.querySelector('#splitAlertModal');
+    const content = main.querySelector('#splitAlertModalContent');
+    if (!modal || !content) return;
+
+    content.innerHTML = `
+      <div class="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs leading-relaxed">
+        <strong>⚠️ Cross-Booth Vote Counting Required:</strong><br>
+        To prevent unmanageable booth congestion, <strong>${splitDepts.length} department${splitDepts.length > 1 ? 's' : ''}</strong> 
+        had to be split into <strong>exactly 2 booths</strong> (the maximum allowable limit). 
+        The other <strong>${intactCount} of ${totalDepts} departments</strong> remain 100% intact in single booths.
+      </div>
+
+      <div class="space-y-3">
+        ${splitDepts.map(sd => `
+          <div class="border border-white/15 bg-white/5 rounded-xl p-4 space-y-2">
+            <div class="flex justify-between items-center border-b border-white/10 pb-2">
+              <h5 class="font-bold text-base text-white">🏛️ ${esc(sd.name)}</h5>
+              <span class="text-xs font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
+                Total: ${sd.part1.count + sd.part2.count} Voters
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div class="bg-black/30 rounded-lg p-2.5 border border-white/5">
+                <div class="text-xs text-indigo-300 font-bold mb-1 flex items-center justify-between">
+                  <span>📍 Booth ${sd.part1.boothNumber}</span>
+                  <span class="text-[10px] text-slate-400 font-normal">(${esc(sd.part1.label)})</span>
+                </div>
+                <div class="text-lg font-mono font-bold text-white mb-1">${sd.part1.count} <span class="text-xs font-normal text-slate-400">voters</span></div>
+                <div class="text-[11px] text-slate-300 line-clamp-2">
+                  ${sd.part1.classes.map(c => esc(c)).join(', ')}
+                </div>
+              </div>
+
+              <div class="bg-black/30 rounded-lg p-2.5 border border-white/5">
+                <div class="text-xs text-amber-300 font-bold mb-1 flex items-center justify-between">
+                  <span>📍 Booth ${sd.part2.boothNumber}</span>
+                  <span class="text-[10px] text-slate-400 font-normal">(${esc(sd.part2.label)})</span>
+                </div>
+                <div class="text-lg font-mono font-bold text-white mb-1">${sd.part2.count} <span class="text-xs font-normal text-slate-400">voters</span></div>
+                <div class="text-[11px] text-slate-300 line-clamp-2">
+                  ${sd.part2.classes.map(c => esc(c)).join(', ')}
+                </div>
+              </div>
+            </div>
+
+            <p class="text-[11px] text-amber-300/90 pt-1">
+              💡 <em>Counting instruction: During vote counting, ballots from Booth ${sd.part1.boothNumber} and Booth ${sd.part2.boothNumber} for ${esc(sd.name)} association will need to be aggregated together.</em>
+            </p>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    modal.classList.remove('hidden');
+  };
+
+  const closeSplitModal = () => {
+    const modal = main.querySelector('#splitAlertModal');
+    if (modal) modal.classList.add('hidden');
+  };
+
+  const autoAllot = () => {
+    booths.forEach(b => { b.classes = []; b.totalStudents = 0; });
+    const numBooths = booths.length;
+    if (numBooths === 0) return { splitDepts: [], intactCount: 0, totalDepts: 0, booths };
+
+    // 1. Group all classes by Department (Research Scholars are grouped with their department!)
+    const deptsMap = {};
+    allClasses.forEach(cls => {
+      const deptName = String(cls.dept || 'Unknown').trim();
+      if (!deptsMap[deptName]) {
+        deptsMap[deptName] = { name: deptName, total: 0, classes: [] };
+      }
+      deptsMap[deptName].classes.push(cls);
+      deptsMap[deptName].total += cls.count;
+    });
+
+    const depts = Object.values(deptsMap);
+    const totalStudents = nominalRoll.length || depts.reduce((sum, d) => sum + d.total, 0);
+    const mean = totalStudents / numBooths;
+    const numDepts = depts.length;
+
+    // Helper: Split a department cleanly into exactly 2 coherent sub-bundles
+    // Priority 1: Natural academic split (UG classes in Part A, PG classes + Research Scholars in Part B)
+    // Priority 2: Balanced 2-partition of classes closest to 50/50
+    function splitDeptIntoTwoHalves(dept) {
+      const classes = [...dept.classes];
+      if (classes.length <= 1) return null;
+
+      // Natural academic split: UG vs PG/Scholars
+      const ugClasses = classes.filter(c => {
+        const u = c.name.toUpperCase();
+        return u.includes('B.A') || u.includes('B.SC') || u.includes('B.COM') || u.includes('BBA') || u.includes('BCA') || u.includes('UG') || /^(I|II|III)\s+B/i.test(u);
+      });
+      const pgClasses = classes.filter(c => !ugClasses.includes(c));
+
+      if (ugClasses.length > 0 && pgClasses.length > 0) {
+        const ugTotal = ugClasses.reduce((s, c) => s + c.count, 0);
+        const pgTotal = pgClasses.reduce((s, c) => s + c.count, 0);
+        if (ugTotal >= dept.total * 0.15 && pgTotal >= dept.total * 0.15) {
+          return [
+            { name: dept.name, partLabel: 'UG', total: ugTotal, classes: ugClasses, isSplit: true, deptName: dept.name },
+            { name: dept.name, partLabel: 'PG & Scholars', total: pgTotal, classes: pgClasses, isSplit: true, deptName: dept.name }
+          ];
+        }
+      }
+
+      // Balanced subset-sum partitioning into 2 parts
+      classes.sort((a, b) => b.count - a.count);
+      const partA = [];
+      const partB = [];
+      let sumA = 0;
+      let sumB = 0;
+      for (const c of classes) {
+        if (sumA <= sumB) {
+          partA.push(c);
+          sumA += c.count;
+        } else {
+          partB.push(c);
+          sumB += c.count;
+        }
+      }
+      return [
+        { name: dept.name, partLabel: 'Part 1', total: sumA, classes: partA, isSplit: true, deptName: dept.name },
+        { name: dept.name, partLabel: 'Part 2', total: sumB, classes: partB, isSplit: true, deptName: dept.name }
+      ];
+    }
+
+    // Partition solver for arbitrary bundles (departments or half-departments)
+    function solvePartition(items, B, constraints = []) {
+      let bestAllocation = null;
+      let bestScore = Infinity;
+
+      for (let r = 0; r < 250; r++) {
+        const alloc = Array.from({ length: B }, (_, i) => ({ id: i, total: 0, items: [] }));
+        const sorted = [...items];
+        if (r === 0) sorted.sort((a, b) => b.total - a.total);
+        else sorted.sort(() => Math.random() - 0.5);
+
+        let valid = true;
+        for (const it of sorted) {
+          alloc.sort((a, b) => a.total - b.total);
+          let chosenBooth = null;
+          for (const b of alloc) {
+            const violation = constraints.some(c => c(b, it));
+            if (!violation) {
+              chosenBooth = b;
+              break;
+            }
+          }
+          if (!chosenBooth) {
+            chosenBooth = alloc[0];
+            valid = false;
+          }
+          chosenBooth.items.push(it);
+          chosenBooth.total += it.total;
+        }
+
+        if (!valid) continue;
+
+        // Local search hill climbing
+        let improved = true;
+        let passes = 0;
+        while (improved && passes < 35) {
+          improved = false;
+          passes++;
+          const maxB = alloc.reduce((a, b) => a.total > b.total ? a : b);
+          const minB = alloc.reduce((a, b) => a.total < b.total ? a : b);
+          const diff = maxB.total - minB.total;
+
+          // 1-move: move a department from heavily loaded to underloaded booth
+          for (let i = 0; i < maxB.items.length; i++) {
+            const it = maxB.items[i];
+            if (constraints.some(c => c(minB, it))) continue;
+            if (maxB.total - it.total >= minB.total + it.total) {
+              maxB.items.splice(i, 1);
+              maxB.total -= it.total;
+              minB.items.push(it);
+              minB.total += it.total;
+              improved = true;
+              break;
+            }
+          }
+          if (improved) continue;
+
+          // 2-swap: swap items between booths to reduce spread
+          for (let i = 0; i < maxB.items.length; i++) {
+            for (let j = 0; j < minB.items.length; j++) {
+              const itA = maxB.items[i];
+              const itB = minB.items[j];
+              if (constraints.some(c => c(minB, itA)) || constraints.some(c => c(maxB, itB))) continue;
+              if (itA.total > itB.total) {
+                const gain = itA.total - itB.total;
+                if (gain < diff) {
+                  maxB.items[i] = itB;
+                  minB.items[j] = itA;
+                  maxB.total -= gain;
+                  minB.total += gain;
+                  improved = true;
+                  break;
+                }
+              }
+            }
+            if (improved) break;
+          }
+        }
+
+        const maxL = Math.max(...alloc.map(b => b.total));
+        const minL = Math.min(...alloc.map(b => b.total));
+        const score = (maxL * 1000) + (maxL - minL);
+        if (score < bestScore) {
+          bestScore = score;
+          bestAllocation = JSON.parse(JSON.stringify(alloc));
+        }
+      }
+      return bestAllocation;
+    }
+
+    // --- TIER 0: 0-SPLIT ATTEMPT (Highest Priority: Keep 100% of departments intact!) ---
+    const tier0Alloc = solvePartition(depts, numBooths);
+    let chosenAlloc = tier0Alloc;
+    let splitDepts = [];
+
+    const tier0Max = Math.max(...tier0Alloc.map(b => b.total));
+    const tier0Min = Math.min(...tier0Alloc.map(b => b.total));
+
+    // Manageability threshold: Avoid splitting unless peak exceeds manageable hall capacity
+    // Avoid splitting even if voter allotment is not perfectly balanced!
+    const isStarved = (numDepts >= numBooths) && (tier0Min < Math.min(Math.round(mean * 0.2), 20));
+    const isOverburdened = (tier0Max > Math.max(Math.round(mean * 2.25), 450));
+    const isSeverelyImbalanced = (tier0Max > 380 && tier0Min < 30 && (tier0Max / Math.max(tier0Min, 1) > 4.5));
+
+    const isTier0Manageable = !isStarved && !isOverburdened && !isSeverelyImbalanced;
+
+    if (isTier0Manageable) {
+      // 0 SPLITS ACCEPTED!
+      chosenAlloc = tier0Alloc;
+    } else {
+      // --- TIER 1: AT MOST 1 DEPARTMENT SPLIT INTO AT MOST 2 BOOTHS ---
+      let bestTier1 = null;
+      let bestTier1Score = Infinity;
+      let bestSplitDept = null;
+
+      const largeDepts = depts.filter(d => d.total > mean * 0.85 && d.classes.length > 1).sort((a, b) => b.total - a.total);
+
+      for (const candDept of largeDepts) {
+        const halves = splitDeptIntoTwoHalves(candDept);
+        if (!halves) continue;
+
+        const items = [...depts.filter(d => d.name !== candDept.name), halves[0], halves[1]];
+        const constraint = (b, it) => {
+          if (!it.isSplit) return false;
+          return b.items.some(other => other.isSplit && other.deptName === it.deptName);
+        };
+
+        const alloc = solvePartition(items, numBooths, [constraint]);
+        if (alloc) {
+          const maxL = Math.max(...alloc.map(b => b.total));
+          const minL = Math.min(...alloc.map(b => b.total));
+          const score = (maxL * 1000) + (maxL - minL);
+          if (score < bestTier1Score) {
+            bestTier1Score = score;
+            bestTier1 = alloc;
+            bestSplitDept = { dept: candDept, halves };
+          }
+        }
+      }
+
+      const isTier1Manageable = bestTier1 && (Math.max(...bestTier1.map(b => b.total)) <= Math.max(Math.round(mean * 2.25), 450));
+
+      if (isTier1Manageable || (bestTier1 && largeDepts.length < 2)) {
+        chosenAlloc = bestTier1;
+        splitDepts.push(bestSplitDept);
+      } else {
+        // --- TIER 2: AT MOST 2 DEPARTMENTS SPLIT (EACH INTO AT MOST 2 BOOTHS) ---
+        let bestTier2 = null;
+        let bestTier2Score = Infinity;
+        let bestSplitPair = null;
+
+        for (let i = 0; i < largeDepts.length - 1; i++) {
+          for (let j = i + 1; j < largeDepts.length; j++) {
+            const d1 = largeDepts[i];
+            const d2 = largeDepts[j];
+            const h1 = splitDeptIntoTwoHalves(d1);
+            const h2 = splitDeptIntoTwoHalves(d2);
+            if (!h1 || !h2) continue;
+
+            const items = [
+              ...depts.filter(d => d.name !== d1.name && d.name !== d2.name),
+              h1[0], h1[1],
+              h2[0], h2[1]
+            ];
+
+            const constraint = (b, it) => {
+              if (!it.isSplit) return false;
+              return b.items.some(other => other.isSplit && other.deptName === it.deptName);
+            };
+
+            const alloc = solvePartition(items, numBooths, [constraint]);
+            if (alloc) {
+              const maxL = Math.max(...alloc.map(b => b.total));
+              const minL = Math.min(...alloc.map(b => b.total));
+              const score = (maxL * 1000) + (maxL - minL);
+              if (score < bestTier2Score) {
+                bestTier2Score = score;
+                bestTier2 = alloc;
+                bestSplitPair = [{ dept: d1, halves: h1 }, { dept: d2, halves: h2 }];
+              }
+            }
+          }
+        }
+
+        if (bestTier2) {
+          chosenAlloc = bestTier2;
+          splitDepts = bestSplitPair;
+        } else if (bestTier1) {
+          chosenAlloc = bestTier1;
+          splitDepts.push(bestSplitDept);
+        } else {
+          // Fallback to Tier 0
+          chosenAlloc = tier0Alloc;
+          splitDepts = [];
+        }
+      }
+    }
+
+    // Populate allotments into booths
+    chosenAlloc.sort((a, b) => a.id - b.id);
+    for (let i = 0; i < numBooths; i++) {
+      booths[i].classes = [];
+      booths[i].totalStudents = 0;
+      const bAlloc = chosenAlloc.find(x => x.id === i) || { items: [] };
+      for (const it of bAlloc.items) {
+        it.classes.forEach(c => booths[i].classes.push(c.name));
+        booths[i].totalStudents += it.total;
+      }
+    }
+
+    booths.sort((a, b) => a.boothNumber - b.boothNumber);
+
+    // Build human-readable split summary for alerts
+    const splitSummary = splitDepts.map(sd => {
+      const part1Booth = booths.find(b => b.classes.includes(sd.halves[0].classes[0]?.name));
+      const part2Booth = booths.find(b => b.classes.includes(sd.halves[1].classes[0]?.name));
+      return {
+        name: sd.dept.name,
+        part1: {
+          boothNumber: part1Booth ? part1Booth.boothNumber : '?',
+          label: sd.halves[0].partLabel,
+          classes: sd.halves[0].classes.map(c => c.name),
+          count: sd.halves[0].total
+        },
+        part2: {
+          boothNumber: part2Booth ? part2Booth.boothNumber : '?',
+          label: sd.halves[1].partLabel,
+          classes: sd.halves[1].classes.map(c => c.name),
+          count: sd.halves[1].total
+        }
+      };
+    });
+
+    return {
+      splitDepts: splitSummary,
+      intactCount: numDepts - splitSummary.length,
+      totalDepts: numDepts,
+      booths: booths
+    };
+  };
 
   const refreshUI = () => {
     // Recalculate booth stats
@@ -105,6 +477,25 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         unallocated.push(cls);
       }
     });
+
+    // Check department integrity across booths
+    const deptBoothMap = {};
+    allClasses.forEach(cls => {
+      const b = booths.find(b => b.classes && b.classes.includes(cls.name));
+      if (b) {
+        if (!deptBoothMap[cls.dept]) deptBoothMap[cls.dept] = new Map();
+        const cur = deptBoothMap[cls.dept].get(b.boothNumber) || { count: 0, classes: [] };
+        cur.count += cls.count;
+        cur.classes.push(cls.name);
+        deptBoothMap[cls.dept].set(b.boothNumber, cur);
+      }
+    });
+    const currentSplitDepts = Object.entries(deptBoothMap)
+      .filter(([_, bMap]) => bMap.size > 1)
+      .map(([dept, bMap]) => ({
+        dept,
+        booths: Array.from(bMap.entries()).map(([boothNum, info]) => ({ boothNum, count: info.count, classes: info.classes }))
+      }));
 
     const scrollPos = window.scrollY;
 
@@ -143,6 +534,33 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           </div>
         </div>
 
+        <!-- Split Department Alert Modal -->
+        <div id="splitAlertModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+          <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" id="splitAlertModalOverlay"></div>
+          <div class="relative bg-slate-800 rounded-2xl border border-amber-500/40 shadow-2xl w-full max-w-xl p-6 z-10 flex flex-col max-h-[90vh]">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+              <div class="flex items-center gap-2.5">
+                <span class="text-2xl">⚠️</span>
+                <div>
+                  <h4 class="font-bold text-amber-300 text-lg">Department Split Notice</h4>
+                  <p class="text-xs text-slate-400">Election Counting &amp; Ballot Precaution</p>
+                </div>
+              </div>
+              <button id="btnCloseSplitAlertModal" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto pr-1 space-y-4 text-sm" id="splitAlertModalContent">
+              <!-- Dynamically populated -->
+            </div>
+
+            <div class="pt-4 border-t border-white/10 flex justify-end">
+              <button id="btnAckSplitAlertModal" class="btn btn-primary bg-amber-600 hover:bg-amber-500 text-white font-bold px-6">
+                Understood &bull; View Allotments
+              </button>
+            </div>
+          </div>
+        </div>
+
       <div class="page-enter space-y-6">
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
@@ -161,8 +579,50 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         </div>
         <div id="printArea" class="hidden"></div>
 
-
-
+        <!-- Department Integrity & Counting Notice Banner -->
+        ${currentSplitDepts.length > 0 ? `
+          <div class="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-amber-200 shadow-lg">
+            <div class="flex items-start gap-3">
+              <span class="text-2xl mt-0.5">⚠️</span>
+              <div class="flex-1">
+                <div class="flex items-center justify-between flex-wrap gap-2 mb-1">
+                  <h5 class="font-bold text-amber-300 text-sm">Counting Notice: ${currentSplitDepts.length} Department${currentSplitDepts.length > 1 ? 's' : ''} Split Across Booths</h5>
+                  <span class="text-[11px] bg-amber-500/20 text-amber-200 border border-amber-500/30 px-2 py-0.5 rounded font-mono">Max 2 Booths per Dept</span>
+                </div>
+                <p class="text-xs text-slate-300 mb-2.5">
+                  To avoid overwhelming individual booths, the following department(s) are allotted across multiple booths. 
+                  <strong>During vote counting, ballots for these departments must be aggregated from the listed booths:</strong>
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  ${currentSplitDepts.map(sd => `
+                    <div class="bg-black/40 rounded-lg p-2.5 border border-amber-500/20 text-xs">
+                      <div class="font-bold text-white mb-1.5 flex items-center justify-between">
+                        <span>🏛️ ${esc(sd.dept)}</span>
+                        <span class="text-amber-400 font-mono text-[11px]">${sd.booths.reduce((s, b) => s + b.count, 0)} total voters</span>
+                      </div>
+                      <div class="space-y-1">
+                        ${sd.booths.map(b => `
+                          <div class="flex items-start gap-1.5 text-[11px] bg-white/5 p-1 rounded">
+                            <span class="font-mono text-amber-300 font-bold whitespace-nowrap">Booth ${b.boothNum}:</span>
+                            <span class="text-slate-300">${b.count} voters (${esc(b.classes.join(', '))})</span>
+                          </div>
+                        `).join('')}
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+        ` : (unallocated.length === 0 && booths.some(b => b.classes && b.classes.length > 0)) ? `
+          <div class="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-emerald-200 flex items-center gap-2.5 text-xs shadow-sm">
+            <span class="text-base">✨</span>
+            <div>
+              <strong class="text-emerald-300">100% Department Integrity (0 Splits):</strong>
+              <span class="text-slate-300 ml-1">Every department is contained within a single booth. No ballot box merging or cross-booth aggregation is required during counting.</span>
+            </div>
+          </div>
+        ` : ''}
 
         <!-- Booth Configuration -->
         <div class="glass rounded-xl p-5 border-l-4 border-l-indigo-500">
@@ -773,6 +1233,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       }
     });
 
+    main.querySelector('#btnCloseSplitAlertModal')?.addEventListener('click', closeSplitModal);
+    main.querySelector('#btnAckSplitAlertModal')?.addEventListener('click', closeSplitModal);
+    main.querySelector('#splitAlertModalOverlay')?.addEventListener('click', closeSplitModal);
+
     main.querySelector('#btnAutoAllot').addEventListener('click', async () => {
       const assignedCount = booths.reduce((acc, b) => acc + (b.classes ? b.classes.length : 0), 0);
       let confirmMsg = `⚡ CONFIRM AUTO ALLOTMENT\n\nThis will automatically distribute classes across Booths 1 to ${booths.length}, keeping departments intact and attaching Research Scholars to their respective departments.\n\nProceed?`;
@@ -782,14 +1246,23 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       if (!confirm(confirmMsg)) {
         return;
       }
-      autoAllot();
+      const result = autoAllot();
       try {
         await api.adminSaveBooths(pwd, booths);
-        showToast('✅ Auto allotment complete and saved to database!', 'success');
+        refreshUI();
+        if (result.splitDepts && result.splitDepts.length > 0) {
+          showToast(`⚠️ Auto allotment: ${result.splitDepts.length} department(s) split across at most 2 booths.`, 'warning');
+          openSplitModal(result.splitDepts, result.intactCount, result.totalDepts);
+        } else {
+          showToast('🎉 Optimal Allotment: All departments kept 100% intact in single booths (0 splits)!', 'success');
+        }
       } catch (err) {
+        refreshUI();
         showToast(`Auto allotted in memory (Failed to save to database: ${err.message})`, 'error');
+        if (result.splitDepts && result.splitDepts.length > 0) {
+          openSplitModal(result.splitDepts, result.intactCount, result.totalDepts);
+        }
       }
-      refreshUI();
     });
   };
 
@@ -1082,54 +1555,6 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     return html;
   };
 
-  const autoAllot = () => {
-    booths.forEach(b => { b.classes = []; b.totalStudents = 0; });
-    const numBooths = booths.length;
-    if (numBooths === 0) return;
-
-    // Group all classes by Department (Research Scholars are grouped with their department!)
-    const depts = {};
-    allClasses.forEach(cls => {
-      if (!depts[cls.dept]) depts[cls.dept] = { name: cls.dept, total: 0, classes: [] };
-      depts[cls.dept].classes.push(cls);
-      depts[cls.dept].total += cls.count;
-    });
-
-    const totalStudents = nominalRoll.length;
-    const mean = totalStudents / numBooths;
-    // Capacity threshold before splitting a department across booths
-    // Ordinarily, we keep the entire department together in 1 booth unless the department itself exceeds single booth capacity
-    const maxTolerance = Math.max(mean * 1.35, 120);
-
-    // Sort departments largest first for optimal bin packing
-    const deptList = Object.values(depts).sort((a, b) => b.total - a.total);
-
-    deptList.forEach(dept => {
-      // Sort booths by current voter count ascending (emptiest booth first)
-      booths.sort((a, b) => a.totalStudents - b.totalStudents);
-      const emptiestBooth = booths[0];
-
-      // A department should only be split if it exceeds single booth capacity in ordinary circumstances
-      const deptExceedsSingleBooth = numBooths > 1 && dept.total > maxTolerance;
-
-      if (!deptExceedsSingleBooth) {
-        // Ordinarily, keep ALL voters and classes of this department together in 1 booth!
-        dept.classes.forEach(cls => emptiestBooth.classes.push(cls.name));
-        emptiestBooth.totalStudents += dept.total;
-      } else {
-        // Department is exceptionally large (exceeds single booth capacity). Split across booths:
-        // Sort classes: keep Research Scholars together with PG/senior classes
-        const sortedClasses = [...dept.classes].sort((a, b) => b.count - a.count);
-        sortedClasses.forEach(cls => {
-          booths.sort((a, b) => a.totalStudents - b.totalStudents);
-          booths[0].classes.push(cls.name);
-          booths[0].totalStudents += cls.count;
-        });
-      }
-    });
-
-    booths.sort((a, b) => a.boothNumber - b.boothNumber);
-  };
-
   refreshUI();
 }
+
