@@ -721,8 +721,17 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
                 <span>↩ Pending</span>
               </button>
             ` : `
-              <button type="button" class="btn btn-primary btn-xs verify-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white" data-id="${esc(n.id)}" data-action="Valid" ${n.status === 'Valid' ? 'disabled' : ''}>Valid</button>
-              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white" data-id="${esc(n.id)}" data-action="Rejected" ${n.status === 'Rejected' ? 'disabled' : ''}>Reject</button>
+              <button type="button" class="btn btn-primary btn-xs verify-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white" data-id="${esc(n.id)}" data-action="Valid" ${n.status === 'Valid' ? 'disabled' : ''} title="${n.status === 'Rejected' ? 'Move from Rejected to Valid' : 'Mark Valid'}">
+                <span>${n.status === 'Rejected' ? '🔄 Valid' : 'Valid'}</span>
+              </button>
+              <button type="button" class="btn btn-secondary btn-xs verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white" data-id="${esc(n.id)}" data-action="Rejected" ${n.status === 'Rejected' ? 'disabled' : ''} title="${n.status === 'Valid' ? 'Move from Valid to Rejected' : 'Reject'}">
+                <span>${n.status === 'Valid' ? '🔄 Reject' : 'Reject'}</span>
+              </button>
+              ${n.status && n.status !== 'Pending' ? `
+                <button type="button" class="btn btn-secondary btn-xs verify-btn bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 px-2 py-1 font-semibold" data-id="${esc(n.id)}" data-action="Pending" title="Reset nomination status back to Pending">
+                  <span>↩</span>
+                </button>
+              ` : ''}
             `}
 
             <button type="button" class="btn btn-secondary btn-xs delete-nom-btn bg-red-900/20 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/30 px-2 py-1 font-bold" data-id="${esc(n.id)}" title="Permanently delete nomination">
@@ -868,12 +877,17 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
                     ↩ Reset
                   </button>
                 ` : `
-                  <button type="button" class="btn btn-primary btn-sm flex-1 verify-btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 text-xs" data-id="${esc(n.id)}" data-action="Valid" ${n.status === 'Valid' ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>
-                    ✅ Valid
+                  <button type="button" class="btn btn-primary btn-sm flex-1 verify-btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 text-xs" data-id="${esc(n.id)}" data-action="Valid" ${n.status === 'Valid' ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''} title="${n.status === 'Rejected' ? 'Move from Rejected to Valid' : 'Mark Valid'}">
+                    ${n.status === 'Rejected' ? '🔄 Move to Valid' : '✅ Valid'}
                   </button>
-                  <button type="button" class="btn btn-secondary btn-sm flex-1 verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 font-bold py-2 text-xs" data-id="${esc(n.id)}" data-action="Rejected" ${n.status === 'Rejected' ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>
-                    ❌ Reject
+                  <button type="button" class="btn btn-secondary btn-sm flex-1 verify-btn bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 font-bold py-2 text-xs" data-id="${esc(n.id)}" data-action="Rejected" ${n.status === 'Rejected' ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''} title="${n.status === 'Valid' ? 'Move from Valid to Rejected' : 'Reject'}">
+                    ${n.status === 'Valid' ? '🔄 Move to Reject' : '❌ Reject'}
                   </button>
+                  ${n.status && n.status !== 'Pending' ? `
+                    <button type="button" class="btn btn-secondary btn-sm verify-btn bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 font-bold px-2.5 py-2 text-xs" data-id="${esc(n.id)}" data-action="Pending" title="Reset nomination status back to Pending">
+                      ↩
+                    </button>
+                  ` : ''}
                 `}
 
                 <button type="button" class="btn btn-secondary btn-sm delete-nom-btn bg-red-900/20 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/30 px-3 py-2 text-xs font-bold" data-id="${esc(n.id)}" title="Permanently Delete Nomination">
@@ -934,6 +948,32 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       rejBanner.classList.remove('hidden');
     } else {
       rejBanner.classList.add('hidden');
+    }
+
+    // Configure Modal Decision Action Buttons (Valid / Reject / Pending)
+    if (btnValid) {
+      const isAlreadyValid = nom.status === 'Valid';
+      btnValid.disabled = isAlreadyValid;
+      btnValid.style.opacity = isAlreadyValid ? '0.5' : '1';
+      btnValid.style.cursor = isAlreadyValid ? 'not-allowed' : 'pointer';
+      btnValid.innerHTML = isAlreadyValid ? '<span>✅ Current: Valid</span>' : '<span>✅ Move to Valid</span>';
+      btnValid.title = isAlreadyValid ? 'Nomination is currently Valid' : 'Approve and mark nomination as Valid';
+    }
+    if (btnReject) {
+      const isAlreadyRejected = nom.status === 'Rejected';
+      btnReject.disabled = isAlreadyRejected;
+      btnReject.style.opacity = isAlreadyRejected ? '0.5' : '1';
+      btnReject.style.cursor = isAlreadyRejected ? 'not-allowed' : 'pointer';
+      btnReject.innerHTML = isAlreadyRejected ? '<span>❌ Current: Rejected</span>' : '<span>❌ Move to Reject</span>';
+      btnReject.title = isAlreadyRejected ? 'Nomination is currently Rejected' : 'Scrutinize and reject nomination';
+    }
+    if (btnPending) {
+      const isPending = !nom.status || nom.status === 'Pending';
+      btnPending.disabled = isPending;
+      btnPending.style.opacity = isPending ? '0.5' : '1';
+      btnPending.style.cursor = isPending ? 'not-allowed' : 'pointer';
+      btnPending.innerHTML = isPending ? '<span>↩ Current: Pending</span>' : '<span>↩ Reset to Pending</span>';
+      btnPending.title = isPending ? 'Nomination is currently awaiting decision' : 'Revert decision and reset status to Pending';
     }
 
     if (scrollBody) scrollBody.scrollTop = 0;
