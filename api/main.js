@@ -1061,32 +1061,22 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminGetFinalNominations') {
-      const published = await getSetting('finalListPublished');
-      const isPublished = published === 'true';
-      let noms;
-      if (isPublished) {
-        noms = await sql`
-          SELECT * FROM nominations 
-          WHERE status = 'Valid'
-          ORDER BY 
-            CASE 
-              WHEN candidate_serial ~ '^[0-9]+$' THEN CAST(candidate_serial AS BIGINT) 
-              ELSE 999999999 
-            END ASC,
-            candidate_name ASC
-        `;
-      } else {
-        noms = await sql`
-          SELECT * FROM nominations 
-          WHERE status != 'Rejected'
-          ORDER BY 
-            CASE 
-              WHEN candidate_serial ~ '^[0-9]+$' THEN CAST(candidate_serial AS BIGINT) 
-              ELSE 999999999 
-            END ASC,
-            candidate_name ASC
-        `;
-      }
+      const finalOverride = (await getSetting('finalListOverride')) || 'AUTO';
+      const legacyPublished = await getSetting('finalListPublished');
+      const finalStart = await getSetting('finalListStart');
+      const finalEnd = await getSetting('finalListEnd');
+      const isPublished = evaluateStageStatus(finalOverride, legacyPublished, finalStart, finalEnd);
+
+      const noms = await sql`
+        SELECT * FROM nominations 
+        WHERE status = 'Valid'
+        ORDER BY 
+          CASE 
+            WHEN candidate_serial ~ '^[0-9]+$' THEN CAST(candidate_serial AS BIGINT) 
+            ELSE 999999999 
+          END ASC,
+          candidate_name ASC
+      `;
       return jsonOut(res, {
         isPublished,
         active: noms.filter(n => n.withdrawal_status !== 'Approved').map(n => ({ 
@@ -1273,10 +1263,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
     if (action === 'adminGenerateBallotPlan') {
       const posts = await fetchPostsFromDb();
 
-      let nomRows = await sql`SELECT * FROM nominations WHERE status = 'Valid'`;
-      if (nomRows.length === 0) {
-        nomRows = await sql`SELECT * FROM nominations WHERE status != 'Rejected'`;
-      }
+      const nomRows = await sql`SELECT * FROM nominations WHERE status = 'Valid'`;
       const candidates = nomRows.filter(n => n.withdrawal_status !== 'Approved');
 
       const boothsDataRaw = await getSetting('booths_data');

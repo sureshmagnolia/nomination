@@ -743,7 +743,7 @@ export async function renderAdminBallots(container) {
         api.adminGetFinalNominations(pwd).catch(async () => {
           const all = await api.adminGetNominations(pwd).catch(() => []);
           return {
-            active: all.filter(n => n.status !== 'Rejected' && n.withdrawalStatus !== 'Approved'),
+            active: all.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved'),
             withdrawn: all.filter(n => n.withdrawalStatus === 'Approved'),
             isPublished: false
           };

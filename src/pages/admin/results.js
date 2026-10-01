@@ -84,7 +84,7 @@ export async function renderAdminResults(container) {
         api.adminGetFinalNominations(pwd).catch(async () => {
           const all = await api.adminGetNominations(pwd).catch(() => []);
           return {
-            active: all.filter(n => n.status !== 'Rejected' && n.withdrawalStatus !== 'Approved'),
+            active: all.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved'),
             withdrawn: all.filter(n => n.withdrawalStatus === 'Approved'),
             isPublished: false
           };
@@ -169,12 +169,21 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
     const postCandidates = candidates.filter(c => c.post === p.post);
     const postAgg = agg[p.post] || {};
     
-    // Check for Unanimous
-    if (postCandidates.length === 1) {
+    // Check for Unanimous (Permissible ONLY if the Final List is officially set and published!)
+    if (isFinalPublished && postCandidates.length === 1) {
       return {
         post: p.post,
         type: 'unanimous',
         winner: postCandidates[0],
+        candidates: postCandidates
+      };
+    }
+
+    // Single candidate in draft preview before final list publication
+    if (!isFinalPublished && postCandidates.length === 1) {
+      return {
+        post: p.post,
+        type: 'draft-single',
         candidates: postCandidates
       };
     }
@@ -211,9 +220,29 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   main.innerHTML = `
     <div id="adminResultsRoot" class="page-enter space-y-6">
       ${!isFinalPublished ? `
-        <div class="alert alert-warning text-xs flex items-center justify-between">
-          <span>ℹ️ <strong>Preview Mode:</strong> Final candidate list has not been published yet. Showing active nominations for internal review.</span>
-          <button data-nav="/admin/publish" class="btn btn-secondary btn-sm">Publish Lists</button>
+        <div class="glass p-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 shadow-lg page-enter">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-start gap-3">
+              <span class="text-3xl">⚠️</span>
+              <div>
+                <h3 class="font-bold text-amber-300 text-sm sm:text-base flex items-center gap-2">
+                  <span>Final List of Contesting Candidates Not Published</span>
+                  <span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px]">DRAFT PREVIEW</span>
+                </h3>
+                <p class="text-slate-300 text-xs mt-1 leading-relaxed max-w-2xl">
+                  Official election results, winner declarations, and counting tallies become official <strong>only after the Returning Officer sets and publishes the Final List of Contesting Candidates</strong>.
+                  ${candidates.length > 0 
+                    ? `Showing a draft preview of <strong>${candidates.length} scrutinized Valid candidates</strong>. Uncontested winner declarations are strictly locked until publication.` 
+                    : 'No scrutinized valid candidates found. Newly submitted nominations remain hidden until scrutinized in Verify Nominations.'}
+                </p>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <button data-nav="/admin/verify" class="btn btn-secondary btn-sm text-xs">🔍 Verify Nominations</button>
+              <button data-nav="/admin/withdrawals" class="btn btn-secondary btn-sm text-xs">↩️ Withdrawals</button>
+              <button data-nav="/admin/publish" class="btn btn-primary btn-sm text-xs font-bold shadow-md">📢 Publish Final List</button>
+            </div>
+          </div>
         </div>
       ` : ''}
 
@@ -322,98 +351,121 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
         </div>
       </div>
 
-      <div class="grid grid-cols-1 gap-6">
-        ${postResults.map(res => {
-          const isUUC = res.post.toUpperCase().includes('UUC') || res.post.toUpperCase().includes('UNIVERSITY');
-          const seats = isUUC ? 2 : 1;
-          
-          // Calculate Lead
-          let leadThreshold = 0;
-          if (res.type === 'election' && res.candidates.length > seats) {
-            leadThreshold = res.candidates[seats].votes;
-          }
+      ${candidates.length === 0 ? `
+        <div class="glass p-12 rounded-3xl border border-white/10 text-center max-w-xl mx-auto shadow-xl page-enter">
+          <div class="text-5xl mb-4">📋</div>
+          <h3 class="text-xl font-bold text-white mb-2">Final Candidate Roster Pending</h3>
+          <p class="text-slate-400 text-sm leading-relaxed mb-6">
+            No finalized contesting candidates to display. Once nominations are scrutinized in <strong>Admin → Verify Nominations</strong> and the <strong>Final List of Contesting Candidates</strong> is published in <strong>Admin → Publish Lists</strong>, the candidate roster and results will appear here.
+          </p>
+          <div class="flex justify-center gap-3">
+            <button data-nav="/admin/verify" class="btn btn-secondary btn-sm">1. Verify Nominations</button>
+            <button data-nav="/admin/publish" class="btn btn-primary btn-sm">2. Publish Final List</button>
+          </div>
+        </div>
+      ` : `
+        <div class="grid grid-cols-1 gap-6">
+          ${postResults.map(res => {
+            const isUUC = res.post.toUpperCase().includes('UUC') || res.post.toUpperCase().includes('UNIVERSITY');
+            const seats = isUUC ? 2 : 1;
+            
+            // Calculate Lead
+            let leadThreshold = 0;
+            if (res.type === 'election' && res.candidates.length > seats) {
+              leadThreshold = res.candidates[seats].votes;
+            }
 
-          return `
-            <div class="glass rounded-2xl overflow-hidden border border-white/5 page-enter shadow-lg">
-              <div class="px-6 py-4 bg-white/5 border-b border-white/10 flex justify-between items-center">
-                <h4 class="font-bold text-indigo-400 uppercase tracking-wider text-sm">${esc(res.post)}</h4>
-                ${res.type === 'unanimous' ? 
-                  `<span class="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ELECTED UNANIMOUSLY</span>` : 
-                  `<span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${res.isTie ? '⚖️ TIE DETECTED' : 'CONTESTED ELECTION'}</span>`
-                }
-              </div>
-              <div class="p-6">
-                ${res.type === 'no-candidates' ? 
-                  `<p class="text-slate-500 italic text-sm text-center py-4">No valid nominations received for this post.</p>` :
-                  `
-                  <table class="w-full text-sm">
-                    <thead>
-                      <tr class="text-slate-500 text-[10px] uppercase tracking-widest text-left border-b border-white/5">
-                        <th class="pb-3 font-bold">Candidate Name</th>
-                        <th class="pb-3 font-bold text-center">Class</th>
-                        <th class="pb-3 font-bold text-right">Votes</th>
-                        <th class="pb-3 font-bold text-center w-24">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-white/5">
-                      ${res.candidates.map((c, i) => {
-                        const isLeading = i < seats && c.votes > 0;
-                        const lead = isLeading ? (c.votes - leadThreshold) : 0;
-                        
-                        return `
-                          <tr class="${isLeading ? 'bg-white/[0.02]' : ''}">
-                            <td class="py-4">
-                              <div class="flex items-center gap-2">
-                                <span class="font-bold text-white">${esc(c.candidateName)}</span>
-                                ${c.candidateSerial ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[9px]">Sl. #${esc(c.candidateSerial)}</span>` : ''}
-                                ${lead > 0 ? `<span class="bg-green-500/20 text-green-400 text-[9px] px-1.5 py-0.5 rounded font-black border border-green-500/30">LEAD: ${lead}</span>` : ''}
-                              </div>
-                            </td>
-                            <td class="py-4 text-slate-400 text-center text-[11px]">${esc(c.candidateClass)}</td>
-                            <td class="py-4 text-right font-mono text-lg ${isLeading ? 'text-amber-400' : 'text-slate-300'}">
-                              ${res.type === 'unanimous' ? '—' : c.votes}
-                            </td>
-                            <td class="py-4 text-center">
-                              ${isLeading ? 
-                                (isLocked ? 
-                                  `<span class="text-emerald-400 text-[10px] font-black border border-emerald-400/30 px-2 py-0.5 rounded bg-emerald-500/10 tracking-wider">ELECTED</span>` : 
-                                  `<span class="text-amber-400 text-[10px] font-black border border-amber-400/30 px-2 py-0.5 rounded bg-amber-500/10 tracking-wider">LEADING</span>`
-                                ) : ''
-                              }
-                            </td>
-                          </tr>
-                        `;
-                      }).join('')}
-                    </tbody>
-                  </table>
+            return `
+              <div class="glass rounded-2xl overflow-hidden border border-white/5 page-enter shadow-lg">
+                <div class="px-6 py-4 bg-white/5 border-b border-white/10 flex justify-between items-center">
+                  <h4 class="font-bold text-indigo-400 uppercase tracking-wider text-sm">${esc(res.post)}</h4>
+                  ${res.type === 'unanimous' ? 
+                    `<span class="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ELECTED UNANIMOUSLY</span>` : 
+                    (res.type === 'draft-single' ?
+                      `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">1 VALID NOMINEE • AWAITING FINAL LIST</span>` :
+                      `<span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${res.isTie ? '⚖️ TIE DETECTED' : (isFinalPublished ? 'CONTESTED ELECTION' : 'CONTESTED (DRAFT PREVIEW)')}</span>`
+                    )
+                  }
+                </div>
+                <div class="p-6">
+                  ${res.type === 'no-candidates' ? 
+                    `<p class="text-slate-500 italic text-sm text-center py-4">No valid nominations received for this post.</p>` :
+                    `
+                    <table class="w-full text-sm">
+                      <thead>
+                        <tr class="text-slate-500 text-[10px] uppercase tracking-widest text-left border-b border-white/5">
+                          <th class="pb-3 font-bold">Candidate Name</th>
+                          <th class="pb-3 font-bold text-center">Class</th>
+                          <th class="pb-3 font-bold text-right">Votes</th>
+                          <th class="pb-3 font-bold text-center w-24">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-white/5">
+                        ${res.candidates.map((c, i) => {
+                          const isLeading = i < seats && c.votes > 0;
+                          const lead = isLeading ? (c.votes - leadThreshold) : 0;
+                          
+                          return `
+                            <tr class="${isLeading ? 'bg-white/[0.02]' : ''}">
+                              <td class="py-4">
+                                <div class="flex items-center gap-2">
+                                  <span class="font-bold text-white">${esc(c.candidateName)}</span>
+                                  ${c.candidateSerial ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[9px]">Sl. #${esc(c.candidateSerial)}</span>` : ''}
+                                  ${lead > 0 ? `<span class="bg-green-500/20 text-green-400 text-[9px] px-1.5 py-0.5 rounded font-black border border-green-500/30">LEAD: ${lead}</span>` : ''}
+                                </div>
+                              </td>
+                              <td class="py-4 text-slate-400 text-center text-[11px]">${esc(c.candidateClass)}</td>
+                              <td class="py-4 text-right font-mono text-lg ${isLeading ? 'text-amber-400' : 'text-slate-300'}">
+                                ${(res.type === 'unanimous' || res.type === 'draft-single') ? '—' : c.votes}
+                              </td>
+                              <td class="py-4 text-center">
+                                ${res.type === 'draft-single' ? 
+                                  `<span class="text-amber-400 text-[10px] font-bold border border-amber-400/30 px-2 py-0.5 rounded bg-amber-500/10 tracking-wider">AWAITING FINAL LIST</span>` :
+                                  (isLeading ? 
+                                    (isLocked ? 
+                                      `<span class="text-emerald-400 text-[10px] font-black border border-emerald-400/30 px-2 py-0.5 rounded bg-emerald-500/10 tracking-wider">ELECTED</span>` : 
+                                      (isFinalPublished ? 
+                                        `<span class="text-amber-400 text-[10px] font-black border border-amber-400/30 px-2 py-0.5 rounded bg-amber-500/10 tracking-wider">LEADING</span>` :
+                                        `<span class="text-slate-400 text-[10px] font-bold border border-white/10 px-2 py-0.5 rounded bg-white/5 tracking-wider">DRAFT TALLY</span>`
+                                      )
+                                    ) : ''
+                                  )
+                                }
+                              </td>
+                            </tr>
+                          `;
+                        }).join('')}
+                      </tbody>
+                    </table>
 
-                  ${res.type === 'election' ? `
-                    <div class="mt-6 pt-4 border-t border-white/10 grid grid-cols-2 gap-3">
-                      <div class="flex justify-between items-center py-2 px-3 bg-white/5 rounded border border-white/5 text-[11px]">
-                        <span class="text-slate-500 uppercase tracking-widest font-bold">NOTA</span>
-                        <span class="text-white font-bold">${res.nota}</span>
+                    ${res.type === 'election' ? `
+                      <div class="mt-6 pt-4 border-t border-white/10 grid grid-cols-2 gap-3">
+                        <div class="flex justify-between items-center py-2 px-3 bg-white/5 rounded border border-white/5 text-[11px]">
+                          <span class="text-slate-500 uppercase tracking-widest font-bold">NOTA</span>
+                          <span class="text-white font-bold">${res.nota}</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 px-3 bg-white/5 rounded border border-white/5 text-[11px]">
+                          <span class="text-slate-500 uppercase tracking-widest font-bold">Invalid</span>
+                          <span class="text-red-400/70 font-bold">${res.invalid}</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 px-3 bg-indigo-500/10 rounded border border-indigo-500/20 text-[11px]">
+                          <span class="text-indigo-300 uppercase tracking-widest font-bold">Valid Votes</span>
+                          <span class="text-white font-black text-sm">${res.totalVotes - res.invalid}</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 px-3 bg-purple-500/10 rounded border border-purple-500/20 text-[11px]">
+                          <span class="text-purple-300 uppercase tracking-widest font-bold">Grand Total</span>
+                          <span class="text-white font-black text-sm">${res.totalVotes}</span>
+                        </div>
                       </div>
-                      <div class="flex justify-between items-center py-2 px-3 bg-white/5 rounded border border-white/5 text-[11px]">
-                        <span class="text-slate-500 uppercase tracking-widest font-bold">Invalid</span>
-                        <span class="text-red-400/70 font-bold">${res.invalid}</span>
-                      </div>
-                      <div class="flex justify-between items-center py-2 px-3 bg-indigo-500/10 rounded border border-indigo-500/20 text-[11px]">
-                        <span class="text-indigo-300 uppercase tracking-widest font-bold">Valid Votes</span>
-                        <span class="text-white font-black text-sm">${res.totalVotes - res.invalid}</span>
-                      </div>
-                      <div class="flex justify-between items-center py-2 px-3 bg-purple-500/10 rounded border border-purple-500/20 text-[11px]">
-                        <span class="text-purple-300 uppercase tracking-widest font-bold">Grand Total</span>
-                        <span class="text-white font-black text-sm">${res.totalVotes}</span>
-                      </div>
-                    </div>
-                  ` : ''}
-                  `
-                }
+                    ` : ''}
+                    `
+                  }
+                </div>
               </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
+            `;
+          }).join('')}
+        </div>
+      `}
     </div>
   `;
 
@@ -436,6 +488,11 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   });
 
   main.querySelector('#btnPrintOfficial').addEventListener('click', () => {
+    if (!isFinalPublished) {
+      if (!confirm('⚠️ Notice: The Final List of Contesting Candidates has NOT been published yet.\n\nAny printed result sheet will be marked as an unofficial DRAFT. Do you wish to proceed?')) {
+        return;
+      }
+    }
     const printHtml = `
       <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; padding: 20px; position: relative; }
@@ -473,15 +530,27 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       </style>
       <div class="official-sheet">
         <div class="header">
+          ${!isFinalPublished ? `
+            <div style="background:#fef3c7;border:1px solid #f59e0b;padding:8px 12px;text-align:center;font-weight:bold;color:#b45309;font-size:12px;margin-bottom:15px;text-transform:uppercase;letter-spacing:0.5px;">
+              ⚠️ DRAFT RESULT PREVIEW — AWAITING OFFICIAL PUBLICATION OF FINAL CANDIDATES LIST
+            </div>
+          ` : ''}
           ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:60px;max-width:140px;margin:0 auto 8px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
           <h2>${esc(collegeName)}</h2>
           <h1>College Union Election ${year}</h1>
-          <div style="font-size: 18px; margin-top: 15px; font-weight: 900; text-decoration: underline;">OFFICIAL RESULT NOTIFICATION</div>
+          <div style="font-size: 18px; margin-top: 15px; font-weight: 900; text-decoration: underline;">
+            ${isFinalPublished ? 'OFFICIAL RESULT NOTIFICATION' : 'DRAFT RESULT NOTIFICATION (PROVISIONAL)'}
+          </div>
         </div>
 
         <p style="font-size: 14px; margin-bottom: 25px; text-align: justify;">
-          The following candidates are hereby declared to have been duly elected to the respective offices of the College Union for the academic year ${year}, 
-          based on the counting of votes held on ${new Date().toLocaleDateString('en-IN', {day: 'numeric', month: 'long', year: 'numeric'})}.
+          ${isFinalPublished ? `
+            The following candidates are hereby declared to have been duly elected to the respective offices of the College Union for the academic year ${year}, 
+            based on the counting of votes held on ${new Date().toLocaleDateString('en-IN', {day: 'numeric', month: 'long', year: 'numeric'})}.
+          ` : `
+            PROVISIONAL DRAFT: The following is an interim compilation of votes and scrutinized candidate nominations. 
+            Official result declaration and uncontested winner notifications are subject to the publication of the Final List of Contesting Candidates by the Returning Officer.
+          `}
         </p>
 
         <table class="result-table">
@@ -512,7 +581,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
                       </td>
                       <td style="text-align: center; font-weight: bold; font-size: 14px;">${res.type === 'unanimous' ? '—' : (c.votes || 0)}</td>
                       <td style="font-size: 12px; font-weight: bold;">
-                        ${isWinner ? (res.type === 'unanimous' ? 'ELECTED UNANIMOUSLY' : '✓ ELECTED') : ''}
+                        ${isWinner ? (res.type === 'unanimous' ? 'ELECTED UNANIMOUSLY' : '✓ ELECTED') : (res.type === 'draft-single' ? 'PROVISIONAL (FINAL LIST PENDING)' : '')}
                       </td>
                     </tr>
                   `;
@@ -674,4 +743,12 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       }
     };
   }
+
+  // ── Bind Navigation Buttons ────────────────────────────────────────────────
+  main.querySelectorAll('[data-nav]').forEach(btn => {
+    btn.onclick = () => {
+      const target = btn.dataset.nav;
+      if (target) router.navigate(target);
+    };
+  });
 }
