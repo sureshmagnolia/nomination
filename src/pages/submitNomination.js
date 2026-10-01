@@ -20,7 +20,8 @@ let existingNominations = [];
 let electionSchedule = {};
 let captchaAnswer = '';
 
-export async function renderSubmitNomination(container) {
+export async function renderSubmitNomination(container, options = {}) {
+  const isAdminDirect = Boolean(window.ADMIN_BYPASS_PWD || options.isAdminDirect);
   let year = new Date().getFullYear();
   let collegeName = CONFIG.COLLEGE_NAME;
   let shortName = CONFIG.COLLEGE_SHORT_NAME;
@@ -71,7 +72,7 @@ export async function renderSubmitNomination(container) {
       return p;
     });
 
-    renderForm(container, year, collegeName, setsData || {});
+    renderForm(container, year, collegeName, setsData || {}, isAdminDirect);
   } catch (e) {
     container.querySelector('#loadingState').innerHTML = `
       <div class="alert alert-error">${esc(e.message)}</div>
@@ -80,7 +81,7 @@ export async function renderSubmitNomination(container) {
   }
 }
 
-function renderForm(container, year, collegeName, setsData = {}) {
+function renderForm(container, year, collegeName, setsData = {}, isAdminDirect = false) {
   const captcha = generateCaptcha();
   captchaAnswer = captcha.answer;
 
@@ -216,11 +217,12 @@ function renderForm(container, year, collegeName, setsData = {}) {
 
       <!-- Three columns: Candidate / Proposer / Seconder -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        ${personBlock('candidate', 'Candidate', true)}
-        ${personBlock('proposer', 'Proposer', false)}
-        ${personBlock('seconder', 'Seconder', false)}
+        ${personBlock('candidate', 'Candidate', true, isAdminDirect)}
+        ${personBlock('proposer', 'Proposer', false, isAdminDirect)}
+        ${personBlock('seconder', 'Seconder', false, isAdminDirect)}
       </div>
 
+      ${isAdminDirect ? '' : `
       <!-- Captcha -->
       <div class="glass rounded-xl p-5">
         <label class="block text-sm font-semibold text-slate-300 mb-2">🤖 Captcha Verification</label>
@@ -230,6 +232,7 @@ function renderForm(container, year, collegeName, setsData = {}) {
           <button type="button" id="refreshCaptcha" class="btn btn-secondary btn-sm">↺ Refresh</button>
         </div>
       </div>
+      `}
 
       <!-- Submit -->
       <div class="flex gap-3">
@@ -304,8 +307,8 @@ function renderForm(container, year, collegeName, setsData = {}) {
   ['candidate','proposer','seconder'].forEach(role => {
     const el = formArea.querySelector(`#serial-${role}`);
     if (el) {
-      el.addEventListener('input', () => fillDetails(formArea, role));
-      el.addEventListener('change', () => fillDetails(formArea, role));
+      el.addEventListener('input', () => fillDetails(formArea, role, isAdminDirect));
+      el.addEventListener('change', () => fillDetails(formArea, role, isAdminDirect));
     }
   });
 
@@ -318,13 +321,13 @@ function renderForm(container, year, collegeName, setsData = {}) {
         const input = formArea.querySelector(`#serial-${role}`);
         if (input) {
           input.value = serial;
-          fillDetails(formArea, role);
+          fillDetails(formArea, role, isAdminDirect);
         }
-        if (role === 'candidate') {
+        if (role === 'candidate' && !isAdminDirect) {
           const authInput = formArea.querySelector('#auth-candidate');
           if (authInput && (!authInput.value || authInput.value.trim() === '') && adm && adm !== '–') {
             authInput.value = adm;
-            runValidation(formArea);
+            runValidation(formArea, isAdminDirect);
           }
         }
       });
@@ -334,18 +337,18 @@ function renderForm(container, year, collegeName, setsData = {}) {
   // Real-time listener on auth-candidate
   const authInput = formArea.querySelector('#auth-candidate');
   if (authInput) {
-    authInput.addEventListener('input', () => runValidation(formArea));
-    authInput.addEventListener('change', () => runValidation(formArea));
+    authInput.addEventListener('input', () => runValidation(formArea, isAdminDirect));
+    authInput.addEventListener('change', () => runValidation(formArea, isAdminDirect));
   }
 
   // Revalidate on any change
   formArea.querySelector('#postSelect')?.addEventListener('change', () => {
     updatePostBadgeStrip(formArea);
-    runValidation(formArea);
+    runValidation(formArea, isAdminDirect);
   });
   updatePostBadgeStrip(formArea);
-  formArea.querySelectorAll('[name="gender"]').forEach(r => r.addEventListener('change', () => runValidation(formArea)));
-  formArea.querySelectorAll('.dob-sel').forEach(s => s.addEventListener('change', () => runValidation(formArea)));
+  formArea.querySelectorAll('[name="gender"]').forEach(r => r.addEventListener('change', () => runValidation(formArea, isAdminDirect)));
+  formArea.querySelectorAll('.dob-sel').forEach(s => s.addEventListener('change', () => runValidation(formArea, isAdminDirect)));
 
   // Captcha refresh
   formArea.querySelector('#refreshCaptcha')?.addEventListener('click', () => {
@@ -356,7 +359,7 @@ function renderForm(container, year, collegeName, setsData = {}) {
   });
 
   formArea.querySelector('#backHomeBtn')?.addEventListener('click', () => router.navigate('/'));
-  formArea.querySelector('#nomForm')?.addEventListener('submit', (e) => handleSubmit(e, formArea, year, collegeName, setsData?.collegeLogo || ''));
+  formArea.querySelector('#nomForm')?.addEventListener('submit', (e) => handleSubmit(e, formArea, year, collegeName, setsData?.collegeLogo || '', isAdminDirect));
 
   // Wire up blank nomination printing
   formArea.querySelectorAll('.btn-blank-nom-trigger').forEach(btn => {
@@ -495,7 +498,7 @@ function openFindSerialModal(role, roleLabel, onSelect) {
   setTimeout(() => searchInput.focus(), 100);
 }
 
-function personBlock(role, label, isCandidate) {
+function personBlock(role, label, isCandidate, isAdminDirect = false) {
   return `
   <div class="glass rounded-xl p-4 space-y-3 border border-white/10 shadow-lg">
     <div class="flex items-center justify-between border-b border-white/10 pb-2">
@@ -516,6 +519,7 @@ function personBlock(role, label, isCandidate) {
     </div>
     <div id="details-${role}" class="text-xs text-slate-400 space-y-1 min-h-[3rem]"></div>
     ${isCandidate ? `
+    ${isAdminDirect ? '' : `
     <div class="mt-4 pt-4 border-t border-white/10">
       <label class="text-xs font-semibold text-indigo-300 block mb-1">
         Your Admission Number (Authentication) <span class="text-rose-400">*</span>
@@ -523,6 +527,7 @@ function personBlock(role, label, isCandidate) {
       <input id="auth-candidate" type="text" class="field mt-1 border-indigo-500/30 bg-indigo-900/20 font-mono text-sm" placeholder="Must match candidate serial record" required />
       <div id="auth-feedback" class="min-h-[1.25rem]"></div>
     </div>
+    `}
     <div class="mt-4">
       <label class="text-xs text-slate-400 block mb-1">Gender <span class="text-rose-400">*</span></label>
       <div class="flex gap-4">
@@ -545,7 +550,7 @@ function personBlock(role, label, isCandidate) {
   </div>`;
 }
 
-function fillDetails(formArea, role) {
+function fillDetails(formArea, role, isAdminDirect = false) {
   const serial = formArea.querySelector(`#serial-${role}`)?.value.trim();
   const box = formArea.querySelector(`#details-${role}`);
   if (!box) return;
@@ -555,7 +560,7 @@ function fillDetails(formArea, role) {
       <div class="bg-rose-500/10 border border-rose-500/20 text-rose-300 p-2.5 rounded-lg mt-1 text-xs">
         ⚠️ Serial <strong>#${esc(serial)}</strong> not found in the published Nominal Roll!
       </div>` : '';
-    runValidation(formArea);
+    runValidation(formArea, isAdminDirect);
     return;
   }
 
@@ -579,10 +584,10 @@ function fillDetails(formArea, role) {
       <p><span class="text-slate-400">Adm No:</span> <span class="text-indigo-300 font-mono font-semibold">${adm}</span></p>
     </div>`;
 
-  runValidation(formArea);
+  runValidation(formArea, isAdminDirect);
 }
 
-function runValidation(formArea) {
+function runValidation(formArea, isAdminDirect = false) {
   const warnings = [];
   const postName = formArea.querySelector('#postSelect')?.value;
   const gender = formArea.querySelector('[name="gender"]:checked')?.value || null;
@@ -597,26 +602,28 @@ function runValidation(formArea) {
   if (cS && cS === sS) warnings.push('Candidate and Seconder cannot be the same person.');
   if (pS && pS === sS) warnings.push('Proposer and Seconder cannot be the same person.');
 
-  // Real-time Candidate Admission check
+  // Real-time Candidate Admission check (only for public nominations)
   const authAdmInput = formArea.querySelector('#auth-candidate');
-  const authAdm = authAdmInput?.value.trim().toLowerCase();
-  const candStudent = students[0];
   const authFeedback = formArea.querySelector('#auth-feedback');
+  const candStudent = students[0];
 
-  if (candStudent && authAdm) {
-    const actualAdm = String(candStudent['ADMISION NO'] || candStudent['ADMISSION NO'] || candStudent.admission_no || '').trim().toLowerCase();
-    if (actualAdm && authAdm !== actualAdm) {
-      warnings.push(`Authentication Failed: Entered Admission Number "${authAdmInput.value}" does NOT match Electoral Roll Serial #${candStudent['Nominal Roll Serial Number']} (${candStudent['NAME']}). A mismatched serial number will result in rejection!`);
-      if (authFeedback) {
-        authFeedback.innerHTML = `<span class="text-rose-400 text-xs font-semibold flex items-center gap-1 mt-1">❌ Mismatch with Serial #${esc(candStudent['Nominal Roll Serial Number'])}! Registered Adm No is different.</span>`;
+  if (!isAdminDirect && authAdmInput) {
+    const authAdm = authAdmInput.value.trim().toLowerCase();
+    if (candStudent && authAdm) {
+      const actualAdm = String(candStudent['ADMISION NO'] || candStudent['ADMISSION NO'] || candStudent.admission_no || '').trim().toLowerCase();
+      if (actualAdm && authAdm !== actualAdm) {
+        warnings.push(`Authentication Failed: Entered Admission Number "${authAdmInput.value}" does NOT match Electoral Roll Serial #${candStudent['Nominal Roll Serial Number']} (${candStudent['NAME']}). A mismatched serial number will result in rejection!`);
+        if (authFeedback) {
+          authFeedback.innerHTML = `<span class="text-rose-400 text-xs font-semibold flex items-center gap-1 mt-1">❌ Mismatch with Serial #${esc(candStudent['Nominal Roll Serial Number'])}! Registered Adm No is different.</span>`;
+        }
+      } else if (actualAdm && authAdm === actualAdm) {
+        if (authFeedback) {
+          authFeedback.innerHTML = `<span class="text-emerald-400 text-xs font-semibold flex items-center gap-1 mt-1">✅ Verified: Admission No matches Electoral Roll Serial #${esc(candStudent['Nominal Roll Serial Number'])}</span>`;
+        }
       }
-    } else if (actualAdm && authAdm === actualAdm) {
-      if (authFeedback) {
-        authFeedback.innerHTML = `<span class="text-emerald-400 text-xs font-semibold flex items-center gap-1 mt-1">✅ Verified: Admission No matches Electoral Roll Serial #${esc(candStudent['Nominal Roll Serial Number'])}</span>`;
-      }
+    } else if (authFeedback) {
+      authFeedback.innerHTML = '';
     }
-  } else if (authFeedback) {
-    authFeedback.innerHTML = '';
   }
 
   // Eligibility (pass dynamic allPosts rules and existing noms for endorsing checks)
@@ -637,13 +644,15 @@ function runValidation(formArea) {
   return warnings;
 }
 
-async function handleSubmit(e, formArea, yearValue, collegeName, collegeLogo = '') {
+async function handleSubmit(e, formArea, yearValue, collegeName, collegeLogo = '', isAdminDirect = false) {
   e.preventDefault();
-  const warnings = runValidation(formArea);
+  const warnings = runValidation(formArea, isAdminDirect);
   if (warnings.length) { showToast('Please resolve all eligibility warnings first.', 'error'); return; }
 
-  const captchaVal = formArea.querySelector('#captchaInput')?.value.trim();
-  if (captchaVal !== captchaAnswer) { showToast('Captcha answer is incorrect.', 'error'); return; }
+  if (!isAdminDirect) {
+    const captchaVal = formArea.querySelector('#captchaInput')?.value.trim();
+    if (captchaVal !== captchaAnswer) { showToast('Captcha answer is incorrect.', 'error'); return; }
+  }
 
   const post = formArea.querySelector('#postSelect')?.value;
   const gender = formArea.querySelector('[name="gender"]:checked')?.value;
@@ -659,8 +668,14 @@ async function handleSubmit(e, formArea, yearValue, collegeName, collegeLogo = '
   const students = serials.map(s => nominalRoll.find(st => String(st['Nominal Roll Serial Number'] || st.serial_number || '') === s));
   if (students.some(s => !s)) { showToast('One or more serial numbers are invalid.', 'error'); return; }
 
-  const candidateAdmission = formArea.querySelector('#auth-candidate')?.value.trim();
-  if (!candidateAdmission) { showToast('Please enter the Candidate Admission Number.', 'error'); return; }
+  let candidateAdmission = formArea.querySelector('#auth-candidate')?.value?.trim();
+  if (isAdminDirect) {
+    // In admin direct mode, candidate admission is not entered manually; fetch directly from nominal roll record
+    const candStudent = students[0];
+    candidateAdmission = candStudent ? String(candStudent['ADMISION NO'] || candStudent['ADMISSION NO'] || candStudent.admission_no || '').trim() : '';
+  } else {
+    if (!candidateAdmission) { showToast('Please enter the Candidate Admission Number.', 'error'); return; }
+  }
 
   const submitBtn = formArea.querySelector('#submitBtn');
   setLoading(submitBtn, true, 'Generating & Previewing...');
@@ -684,7 +699,7 @@ async function handleSubmit(e, formArea, yearValue, collegeName, collegeLogo = '
 
     const result = await api.submitNomination(payload);
 
-    showPreview(formArea, result.id, { post, gender, day, month, year, dob: formattedDob, students }, yearValue, collegeName, collegeLogo);
+    showPreview(formArea, result.id, { post, gender, day, month, year, dob: formattedDob, students }, yearValue, collegeName, collegeLogo, isAdminDirect);
     showToast(`Nomination submitted! ID: ${result.id}`, 'success');
   } catch (err) {
     showToast(`Submission failed: ${err.message}`, 'error');
@@ -693,7 +708,7 @@ async function handleSubmit(e, formArea, yearValue, collegeName, collegeLogo = '
   }
 }
 
-function showPreview(formArea, id, { post, gender, day, month, year, dob, students }, yearValue, collegeName, collegeLogo = '') {
+function showPreview(formArea, id, { post, gender, day, month, year, dob, students }, yearValue, collegeName, collegeLogo = '', isAdminDirect = false) {
   const [candidate, proposer, seconder] = students;
   const dobDisplay = displayDob(day, month, year);
   const age = calculateAge(dob);
@@ -707,7 +722,10 @@ function showPreview(formArea, id, { post, gender, day, month, year, dob, studen
   preview.querySelector('#printBtn')?.addEventListener('click', () => {
     triggerPrint(formArea.querySelector('#printZone').innerHTML);
   });
-  preview.querySelector('#newNomBtn')?.addEventListener('click', () => renderSubmitNomination(formArea.closest('#app')));
+  preview.querySelector('#newNomBtn')?.addEventListener('click', () => {
+    const container = formArea.closest('#nominationWrapper') || formArea.closest('#app');
+    renderSubmitNomination(container, { isAdminDirect });
+  });
 }
 
 export function buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, status = '', yearValue = '2026', collegeName = null, collegeLogo = '') {

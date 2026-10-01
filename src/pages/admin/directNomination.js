@@ -25,7 +25,7 @@ export async function renderAdminDirectNomination(container) {
   `);
 
   const wrapper = container.querySelector('#nominationWrapper');
-  await renderSubmitNomination(wrapper);
+  await renderSubmitNomination(wrapper, { isAdminDirect: true });
   
   // Clean up when leaving (handled by router usually, but safe to do)
 }
