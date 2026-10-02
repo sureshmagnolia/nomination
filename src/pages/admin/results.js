@@ -57,8 +57,21 @@ function saveConfidentialPanelData(data) {
 
 function getCandidateColorInfo(candidate, panelData) {
   if (!candidate || !panelData || !panelData.candidates) return null;
-  const candKey = candidate.id || `${candidate.candidateName}_${candidate.post}`;
-  const colorId = panelData.candidates[candKey] || panelData.candidates[candidate.id] || panelData.candidates[`${candidate.candidateName}_${candidate.post}`];
+  const candName = String(candidate.candidateName || candidate.name || '').trim();
+  const candPost = String(candidate.post || '').trim();
+  const candIdStr = candidate.id != null ? String(candidate.id).trim() : '';
+
+  let colorId = null;
+  if (candIdStr && panelData.candidates[candIdStr]) {
+    colorId = panelData.candidates[candIdStr];
+  } else if (candidate.id && panelData.candidates[candidate.id]) {
+    colorId = panelData.candidates[candidate.id];
+  } else if (candName && candPost && panelData.candidates[`${candName}_${candPost}`]) {
+    colorId = panelData.candidates[`${candName}_${candPost}`];
+  } else if (candName && panelData.candidates[candName]) {
+    colorId = panelData.candidates[candName];
+  }
+
   if (!colorId || colorId === 'none') return null;
   const item = PANEL_PALETTE.find(p => p.id === colorId);
   if (!item) return null;
@@ -261,7 +274,7 @@ export async function renderAdminResults(container) {
 
     try {
       const [posts, candidatesResp, results, schedule, sets] = await Promise.all([
-        api.getPosts(),
+        api.getPosts().catch(() => []),
         api.adminGetFinalNominations(pwd).catch(async () => {
           const all = await api.adminGetNominations(pwd).catch(() => []);
           return {
@@ -280,15 +293,69 @@ export async function renderAdminResults(container) {
         await syncLedgerWithServer(results);
       }
 
+      // Robust extraction of active candidates
+      let activeCandidates = [];
+      let isFinalPublished = false;
+
+      if (candidatesResp) {
+        if (Array.isArray(candidatesResp)) {
+          activeCandidates = candidatesResp;
+        } else if (Array.isArray(candidatesResp.active) && candidatesResp.active.length > 0) {
+          activeCandidates = candidatesResp.active;
+          isFinalPublished = Boolean(candidatesResp.isPublished);
+        } else if (Array.isArray(candidatesResp.nominations) && candidatesResp.nominations.length > 0) {
+          activeCandidates = candidatesResp.nominations;
+        }
+      }
+
+      // If activeCandidates is empty (e.g. before final list publication), fallback to adminGetNominations or local IndexedDB cache
+      if (!activeCandidates || activeCandidates.length === 0) {
+        try {
+          const allNoms = await api.adminGetNominations(pwd);
+          if (Array.isArray(allNoms) && allNoms.length > 0) {
+            const valid = allNoms.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved');
+            if (valid.length > 0) {
+              activeCandidates = valid;
+            } else {
+              activeCandidates = allNoms.filter(n => n.withdrawalStatus !== 'Approved' && n.status !== 'Rejected');
+            }
+          }
+        } catch (err) {
+          console.warn('adminGetNominations fallback in results:', err);
+        }
+      }
+
+      if (!activeCandidates || activeCandidates.length === 0) {
+        try {
+          const cachedMeta = await getCountingMeta();
+          if (cachedMeta && Array.isArray(cachedMeta.finalList) && cachedMeta.finalList.length > 0) {
+            activeCandidates = cachedMeta.finalList;
+          }
+        } catch (err) {
+          console.warn('getCountingMeta candidate check error:', err);
+        }
+      }
+
+      // Clean & normalize candidate properties
+      activeCandidates = (activeCandidates || []).map(c => ({
+        ...c,
+        id: c.id != null ? c.id : (c.CandidateId || c.candidateId),
+        post: c.post || c.Post || '',
+        candidateSerial: c.candidateSerial || c.candidate_serial || c.serial || '',
+        candidateName: c.candidateName || c.candidate_name || c.name || '',
+        candidateClass: c.candidateClass || c.candidate_class || c.class || '',
+        candidateDept: c.candidateDept || c.candidate_dept || c.dept || ''
+      }));
+
       // Check data fingerprint: If background polling data has not changed, do NOT re-render DOM or flash the screen!
-      const currentFingerprint = JSON.stringify(results) + '_' + (candidatesResp.active?.length || 0) + '_' + (sets.resultsLocked || 'false') + '_' + (sets.resultsPublished || 'false');
+      const currentFingerprint = JSON.stringify(results) + '_' + activeCandidates.length + '_' + (sets.resultsLocked || 'false') + '_' + (sets.resultsPublished || 'false');
       if (silent && currentFingerprint === lastDataFingerprint) {
         return;
       }
       lastDataFingerprint = currentFingerprint;
 
       const scrollPos = container.closest('.overflow-auto')?.scrollTop || window.scrollY;
-      renderResultsUI(main, pwd, posts, candidatesResp.active || [], results, schedule, sets, candidatesResp.isPublished, loadData, isLivePolling, (val) => {
+      renderResultsUI(main, pwd, posts || [], activeCandidates, results || [], schedule, sets, isFinalPublished, loadData, isLivePolling, (val) => {
         isLivePolling = val;
       }, false);
       if (silent && scrollPos) {
@@ -902,12 +969,12 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       ` : ''}
 
       <!-- Modal: Assign Candidate Panel Colors -->
-      <div id="modalPanelColors" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm hidden page-enter">
-        <div class="glass w-full max-w-3xl rounded-3xl border border-white/15 bg-slate-900/95 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+      <div id="modalPanelColors" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md hidden page-enter">
+        <div class="w-full max-w-3xl rounded-3xl border border-slate-700/80 bg-slate-900 shadow-2xl flex flex-col h-[650px] max-h-[92vh] overflow-hidden">
           <!-- Modal Header -->
-          <div class="px-6 py-4 border-b border-white/10 bg-slate-950/70 flex items-center justify-between shrink-0">
+          <div class="px-6 py-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between shrink-0">
             <div class="flex items-center gap-3">
-              <span class="text-2xl">🎨</span>
+              <div class="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-xl shrink-0">🎨</div>
               <div>
                 <div class="flex items-center gap-2">
                   <h3 class="font-bold text-white text-base">Assign Candidate Panel Colors</h3>
@@ -916,90 +983,133 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
                 <p class="text-xs text-slate-400 mt-0.5">Strictly saved on this Admin PC browser. Never visible to students or in print.</p>
               </div>
             </div>
-            <button id="btnClosePanelModal" class="btn btn-secondary btn-xs text-slate-400 hover:text-white px-2.5 py-1 text-sm">
+            <button id="btnClosePanelModal" class="btn btn-secondary btn-xs text-slate-400 hover:text-white px-2.5 py-1 text-sm rounded-lg border border-slate-700 hover:bg-slate-800 transition-colors">
               ✕
             </button>
           </div>
 
           <!-- Search & Filter Controls -->
-          <div class="p-4 border-b border-white/10 bg-white/[0.02] flex flex-col sm:flex-row items-center gap-3 shrink-0">
+          <div class="p-4 border-b border-slate-800 bg-slate-950/60 flex flex-col sm:flex-row items-center gap-3 shrink-0">
             <div class="relative w-full sm:flex-1">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
-              <input type="text" id="inputFilterPanelCand" placeholder="Filter by candidate or post name..." class="input input-sm w-full pl-8 text-xs bg-slate-950/60 border-white/10 text-white placeholder-slate-500">
+              <input type="text" id="inputFilterPanelCand" placeholder="Filter by candidate or post name..." class="input input-sm w-full pl-8 text-xs bg-slate-950 border border-slate-700 text-white placeholder-slate-500 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
             </div>
-            <button id="btnToggleCustomLabels" type="button" class="btn btn-secondary btn-sm text-xs shrink-0 flex items-center gap-1.5 text-slate-300">
+            <button id="btnToggleCustomLabels" type="button" class="btn btn-secondary btn-sm text-xs shrink-0 flex items-center gap-1.5 text-slate-200 border-slate-700 bg-slate-800 hover:bg-slate-700">
               <span>🏷️</span> Rename Panels (Optional)
             </button>
           </div>
 
           <!-- Collapsible Custom Names Section -->
-          <div id="sectionCustomLabels" class="p-4 border-b border-white/10 bg-slate-950/40 hidden shrink-0">
+          <div id="sectionCustomLabels" class="p-4 border-b border-slate-800 bg-slate-950/80 hidden shrink-0">
             <div class="text-xs font-bold text-slate-300 mb-2">Customize Panel Aliases (e.g. Front A, Alliance B):</div>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               ${PANEL_PALETTE.map(p => `
-                <div class="flex items-center gap-1.5 bg-white/5 p-1.5 rounded-lg border border-white/5">
-                  <span class="w-3 h-3 rounded-full ${p.dot} shrink-0"></span>
-                  <input type="text" data-color-label-id="${p.id}" value="${esc(panelData.labels?.[p.id] || '')}" placeholder="${p.name} Panel" class="input input-xs bg-transparent border-0 text-white text-xs w-full focus:ring-0 p-0.5">
+                <div class="flex items-center gap-2 bg-slate-900 p-2 rounded-xl border border-slate-800">
+                  <span class="w-3.5 h-3.5 rounded-full ${p.dot} shrink-0 shadow-sm"></span>
+                  <input type="text" data-color-label-id="${p.id}" value="${esc(panelData.labels?.[p.id] || '')}" placeholder="${p.name} Panel" class="input input-xs bg-slate-950 border border-slate-700 text-white text-xs w-full focus:ring-0 p-1 rounded">
                 </div>
               `).join('')}
             </div>
           </div>
 
           <!-- Candidate List by Post (Scrollable) -->
-          <div id="modalPanelCandList" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 custom-scroll">
-            ${sortedPosts.map(p => {
-              const postCandidates = candidates.filter(c => c.post === p.post);
-              if (postCandidates.length === 0) return '';
-              return `
-                <div class="panel-post-group bg-white/[0.02] border border-white/5 rounded-2xl p-4 space-y-3" data-post-name="${esc(p.post.toLowerCase())}">
-                  <div class="flex items-center justify-between border-b border-white/5 pb-2">
-                    <h4 class="font-bold text-indigo-400 text-xs uppercase tracking-wider">${esc(p.post)}</h4>
-                    <span class="text-[10px] text-slate-400 font-mono">${postCandidates.length} candidate${postCandidates.length > 1 ? 's' : ''}</span>
-                  </div>
-                  <div class="space-y-2.5">
-                    ${postCandidates.map(c => {
-                      const candKey = c.id || `${c.candidateName}_${c.post}`;
-                      const curColorId = panelData.candidates?.[candKey] || panelData.candidates?.[c.id] || panelData.candidates?.[`${c.candidateName}_${c.post}`] || 'none';
-                      return `
-                        <div class="panel-cand-item p-2.5 rounded-xl bg-slate-950/40 border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3" data-cand-search="${esc((c.candidateName + ' ' + (c.candidateClass || '') + ' ' + p.post).toLowerCase())}">
-                          <div class="min-w-0">
-                            <div class="font-bold text-white text-xs truncate flex items-center gap-2">
-                              <span>${esc(c.candidateName)}</span>
-                              ${c.candidateSerial ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[9px]">Sl. #${esc(c.candidateSerial)}</span>` : ''}
-                            </div>
-                            <div class="text-[11px] text-slate-400 truncate mt-0.5">${esc(c.candidateClass || '')}</div>
-                          </div>
+          <div id="modalPanelCandList" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scroll bg-slate-900">
+            ${(() => {
+              // Collect all unique post names across configured posts and candidate records
+              const postMap = new Map();
+              sortedPosts.forEach(p => {
+                const pName = String(p.post || '').trim();
+                if (pName) postMap.set(pName.toLowerCase(), pName);
+              });
+              candidates.forEach(c => {
+                const cPost = String(c.post || '').trim();
+                if (cPost && !postMap.has(cPost.toLowerCase())) {
+                  postMap.set(cPost.toLowerCase(), cPost);
+                }
+              });
 
-                          <!-- Color Swatches Row -->
-                          <div class="flex items-center gap-1.5 flex-wrap shrink-0">
-                            ${PANEL_PALETTE.map(pal => `
-                              <button type="button" class="swatch-btn w-6 h-6 rounded-full ${pal.dot} transition-all duration-150 flex items-center justify-center text-[10px] text-white font-bold cursor-pointer ${curColorId === pal.id ? 'ring-2 ring-white scale-110 shadow-lg' : 'opacity-60 hover:opacity-100'}" data-cand-key="${esc(candKey)}" data-color="${pal.id}" title="${pal.name} Panel">
-                                ${curColorId === pal.id ? '✓' : ''}
+              let renderedAnyCandidate = false;
+              const groupsHtml = Array.from(postMap.entries()).map(([postKeyLower, postOriginalName]) => {
+                const postCandidates = candidates.filter(c => String(c.post || '').trim().toLowerCase() === postKeyLower);
+                if (postCandidates.length === 0) return '';
+                renderedAnyCandidate = true;
+
+                return `
+                  <div class="panel-post-group bg-slate-950/70 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm" data-post-name="${esc(postKeyLower)}">
+                    <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                      <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-sm shadow-indigo-500/50"></span>
+                        <h4 class="font-bold text-indigo-300 text-xs uppercase tracking-wider">${esc(postOriginalName)}</h4>
+                      </div>
+                      <span class="text-[11px] text-slate-400 font-mono bg-slate-900 px-2.5 py-0.5 rounded border border-slate-800">${postCandidates.length} candidate${postCandidates.length > 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="space-y-2">
+                      ${postCandidates.map(c => {
+                        const candKey = c.id != null && String(c.id).trim() !== '' ? String(c.id).trim() : `${c.candidateName}_${c.post}`;
+                        const curColorId = panelData.candidates?.[candKey] || 
+                                           (c.id != null ? panelData.candidates?.[String(c.id)] : null) || 
+                                           panelData.candidates?.[`${c.candidateName}_${c.post}`] || 
+                                           panelData.candidates?.[c.candidateName] || 'none';
+                        return `
+                          <div class="panel-cand-item p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3" 
+                               data-cand-id="${esc(c.id != null ? String(c.id) : '')}"
+                               data-cand-name="${esc(c.candidateName || '')}"
+                               data-cand-name-post="${esc(`${c.candidateName}_${c.post}`)}"
+                               data-cand-search="${esc(((c.candidateName || '') + ' ' + (c.candidateClass || '') + ' ' + (c.candidateDept || '') + ' ' + postOriginalName).toLowerCase())}">
+                            <div class="min-w-0">
+                              <div class="font-bold text-white text-sm truncate flex items-center gap-2">
+                                <span>${esc(c.candidateName)}</span>
+                                ${c.candidateSerial ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[9px] px-1.5 py-0.5 border border-indigo-500/30">Sl. #${esc(c.candidateSerial)}</span>` : ''}
+                              </div>
+                              <div class="text-xs text-slate-400 truncate mt-0.5">${esc(c.candidateClass || c.candidateDept || '')}</div>
+                            </div>
+
+                            <!-- Color Swatches Row -->
+                            <div class="flex items-center gap-1.5 flex-wrap shrink-0">
+                              ${PANEL_PALETTE.map(pal => `
+                                <button type="button" class="swatch-btn w-7 h-7 rounded-full ${pal.dot} transition-all duration-150 flex items-center justify-center text-xs text-white font-bold cursor-pointer shadow-sm ${curColorId === pal.id ? 'ring-2 ring-white scale-110 shadow-lg' : 'opacity-65 hover:opacity-100 hover:scale-105'}" data-cand-key="${esc(candKey)}" data-color="${pal.id}" title="${pal.name} Panel">
+                                  ${curColorId === pal.id ? '✓' : ''}
+                                </button>
+                              `).join('')}
+                              <button type="button" class="swatch-btn px-2.5 h-7 rounded-full bg-slate-800 border border-slate-700 text-[11px] text-slate-400 hover:text-white hover:bg-slate-700 transition-all duration-150 cursor-pointer ${curColorId === 'none' || !curColorId ? 'ring-2 ring-white/50 text-white font-bold bg-slate-700' : 'opacity-65 hover:opacity-100'}" data-cand-key="${esc(candKey)}" data-color="none" title="Clear / No Panel">
+                                None
                               </button>
-                            `).join('')}
-                            <button type="button" class="swatch-btn px-2 h-6 rounded-full bg-slate-800 border border-white/10 text-[10px] text-slate-400 hover:text-white transition-all duration-150 cursor-pointer ${curColorId === 'none' || !curColorId ? 'ring-2 ring-white/50 text-white font-bold' : 'opacity-60 hover:opacity-100'}" data-cand-key="${esc(candKey)}" data-color="none" title="Clear / No Panel">
-                              None
-                            </button>
+                            </div>
                           </div>
-                        </div>
-                      `;
-                    }).join('')}
+                        `;
+                      }).join('')}
+                    </div>
                   </div>
-                </div>
-              `;
-            }).join('')}
+                `;
+              }).join('');
+
+              if (!renderedAnyCandidate) {
+                return `
+                  <div class="text-center py-16 px-6 bg-slate-950/40 rounded-2xl border border-slate-800/80 my-auto">
+                    <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-3xl flex items-center justify-center mx-auto mb-3">
+                      📋
+                    </div>
+                    <h4 class="font-bold text-white text-base">No Contesting Candidates Found Yet</h4>
+                    <p class="text-xs text-slate-400 mt-1.5 max-w-md mx-auto leading-relaxed">
+                      Nominations have not been entered or scrutinized in this election yet. Once candidate nominations are submitted and validated, you can assign them panel colors right here.
+                    </p>
+                  </div>
+                `;
+              }
+              return groupsHtml;
+            })()}
           </div>
 
           <!-- Modal Footer -->
-          <div class="px-6 py-4 border-t border-white/10 bg-slate-950/70 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-            <button id="btnModalClearAll" type="button" class="text-rose-400 hover:text-rose-300 text-xs flex items-center gap-1.5 transition-colors cursor-pointer">
+          <div class="px-6 py-4 border-t border-slate-800 bg-slate-950 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+            <button id="btnModalClearAll" type="button" class="text-rose-400 hover:text-rose-300 text-xs flex items-center gap-1.5 transition-colors cursor-pointer font-medium">
               <span>🗑️</span> Clear All Colors
             </button>
             <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-              <button id="btnCancelPanelModal" type="button" class="btn btn-secondary btn-sm text-xs">
+              <button id="btnCancelPanelModal" type="button" class="btn btn-secondary btn-sm text-xs border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300">
                 Cancel
               </button>
-              <button id="btnSavePanelColors" type="button" class="btn btn-primary btn-sm text-xs font-bold shadow-lg flex items-center gap-1.5">
+              <button id="btnSavePanelColors" type="button" class="btn btn-primary btn-sm text-xs font-bold shadow-lg shadow-indigo-500/20 flex items-center gap-1.5">
                 <span>💾</span> Save & Apply Tally
               </button>
             </div>
@@ -1340,6 +1450,35 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   const openPanelModal = () => {
     if (panelModal) {
       panelModal.classList.remove('hidden');
+      const latestData = getConfidentialPanelData();
+      workingCandidateColors = { ...(latestData.candidates || {}) };
+
+      // Re-sync all swatch buttons in the modal to reflect current saved state
+      panelModal.querySelectorAll('.panel-cand-item').forEach(parentRow => {
+        const cId = parentRow.getAttribute('data-cand-id');
+        const cName = parentRow.getAttribute('data-cand-name');
+        const cNamePost = parentRow.getAttribute('data-cand-name-post');
+
+        parentRow.querySelectorAll('.swatch-btn').forEach(btn => {
+          const candKey = btn.getAttribute('data-cand-key');
+          const sColor = btn.getAttribute('data-color');
+          const curColor = (candKey && workingCandidateColors[candKey]) ||
+                           (cId && workingCandidateColors[cId]) ||
+                           (cNamePost && workingCandidateColors[cNamePost]) ||
+                           (cName && workingCandidateColors[cName]) || 'none';
+          const isMatch = (curColor === 'none' && sColor === 'none') || (curColor === sColor);
+          if (isMatch) {
+            btn.classList.remove('opacity-65');
+            btn.classList.add('ring-2', sColor === 'none' ? 'ring-white/50' : 'ring-white', 'scale-110');
+            if (sColor !== 'none') btn.textContent = '✓';
+          } else {
+            btn.classList.add('opacity-65');
+            btn.classList.remove('ring-2', 'ring-white', 'ring-white/50', 'scale-110');
+            if (sColor !== 'none') btn.textContent = '';
+          }
+        });
+      });
+
       const searchInput = panelModal.querySelector('#inputFilterPanelCand');
       if (searchInput) {
         searchInput.value = '';
@@ -1397,24 +1536,33 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
         const color = btn.getAttribute('data-color');
         if (!candKey) return;
 
+        const parentRow = btn.closest('.panel-cand-item');
+        const cId = parentRow?.getAttribute('data-cand-id');
+        const cName = parentRow?.getAttribute('data-cand-name');
+        const cNamePost = parentRow?.getAttribute('data-cand-name-post');
+
         if (color === 'none') {
           delete workingCandidateColors[candKey];
+          if (cId) delete workingCandidateColors[cId];
+          if (cNamePost) delete workingCandidateColors[cNamePost];
+          if (cName) delete workingCandidateColors[cName];
         } else {
           workingCandidateColors[candKey] = color;
+          if (cId) workingCandidateColors[cId] = color;
+          if (cNamePost) workingCandidateColors[cNamePost] = color;
         }
 
         // Update UI for this candidate's swatches
-        const parentRow = btn.closest('.panel-cand-item');
         if (parentRow) {
           parentRow.querySelectorAll('.swatch-btn').forEach(s => {
             const sColor = s.getAttribute('data-color');
             const isMatch = (color === 'none' && sColor === 'none') || (color === sColor);
             if (isMatch) {
-              s.classList.remove('opacity-60');
+              s.classList.remove('opacity-65');
               s.classList.add('ring-2', sColor === 'none' ? 'ring-white/50' : 'ring-white', 'scale-110');
               if (sColor !== 'none') s.textContent = '✓';
             } else {
-              s.classList.add('opacity-60');
+              s.classList.add('opacity-65');
               s.classList.remove('ring-2', 'ring-white', 'ring-white/50', 'scale-110');
               if (sColor !== 'none') s.textContent = '';
             }
