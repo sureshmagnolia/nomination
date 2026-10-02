@@ -527,8 +527,8 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           <button id="btnResultsExportCSV" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10" title="Export printable CSV summary">
             <span>📊</span> CSV
           </button>
-          <button id="btnOpenPanelSetup" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 ${panelStandings.hasAssignedColors ? 'border-purple-500/40 text-purple-300 bg-purple-500/10 hover:bg-purple-500/20' : 'border-dashed border-white/20 text-slate-300 hover:text-white'}" title="Confidential Candidate Panel Colors (Admin PC Only)">
-            <span>🎨</span> ${panelStandings.hasAssignedColors ? `Panel Colors (${panelStandings.assignedCandidateCount})` : 'Set Panel Colors'}
+          <button id="btnOpenPanelSetup" class="btn btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 ${panelStandings.hasAssignedColors ? 'border-purple-500/50 bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 font-bold' : 'border-purple-500/40 bg-purple-950/40 text-purple-200 hover:bg-purple-900/60 font-bold'} shadow-md" title="Confidential Candidate Panel Colors (Admin PC Only)">
+            <span class="text-sm">🎨</span> ${panelStandings.hasAssignedColors ? `Candidate Colors (${panelStandings.assignedCandidateCount})` : 'Set Candidate Colors'}
           </button>
           ${panelStandings.hasAssignedColors ? `
             <button id="btnToolbarTogglePanelDrawer" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 border-purple-500/40 text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 font-bold" title="Open Confidential Panel Tally">
@@ -543,6 +543,27 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           </button>
         </div>
       </div>
+
+      ${!panelStandings.hasAssignedColors ? `
+        <!-- Prominent Helper Banner for First-Time Setup -->
+        <div class="glass p-4 rounded-2xl border border-purple-500/30 bg-purple-950/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+          <div class="flex items-start sm:items-center gap-3">
+            <span class="text-3xl">🎨</span>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white text-sm">Confidential Candidate Panel Tracking</span>
+                <span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[10px] font-bold">ADMIN PC ONLY</span>
+              </div>
+              <p class="text-slate-300 text-xs mt-1">
+                Assign each candidate to a color (Red, Blue, Green, etc.) representing their alliance. A confidential, collapsed live tally will track Won vs. Leading posts on this PC.
+              </p>
+            </div>
+          </div>
+          <button id="btnBannerOpenPanelSetup" class="btn btn-sm bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shrink-0 shadow-lg flex items-center gap-1.5 cursor-pointer">
+            <span>🎨</span> Assign Candidate Colors
+          </button>
+        </div>
+      ` : ''}
 
       ${candidates.length === 0 ? `
         <div class="glass p-12 rounded-3xl border border-white/10 text-center max-w-xl mx-auto shadow-xl page-enter">
@@ -1333,6 +1354,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   };
 
   main.querySelector('#btnOpenPanelSetup')?.addEventListener('click', openPanelModal);
+  main.querySelector('#btnBannerOpenPanelSetup')?.addEventListener('click', openPanelModal);
   main.querySelector('#btnDrawerEditColors')?.addEventListener('click', openPanelModal);
   main.querySelector('#btnClosePanelModal')?.addEventListener('click', closePanelModal);
   main.querySelector('#btnCancelPanelModal')?.addEventListener('click', closePanelModal);
@@ -1437,4 +1459,13 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
 
   main.querySelector('#btnModalClearAll')?.addEventListener('click', executeClearAllColors);
   main.querySelector('#btnDrawerClearColors')?.addEventListener('click', executeClearAllColors);
+
+  // Auto-open if redirected with openPanelColors flag
+  if (window.location.hash.includes('openPanelColors=true')) {
+    setTimeout(() => {
+      openPanelModal();
+      window.history.replaceState(null, '', '#/admin/results');
+    }, 50);
+  }
 }
+
