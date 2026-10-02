@@ -1417,11 +1417,7 @@ export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year
         Received the notice of withdrawal of candidature for the above office/post, delivered at my office on <span style="white-space:nowrap;">Date: <strong>_____ / _____ / ${esc(y)}</strong></span> at <span style="white-space:nowrap;">Time: <strong>_____ : _____ AM/PM</strong></span>.
       </p>
 
-      <div class="flex justify-between items-end pt-2 text-slate-400">
-        <div class="space-y-1">
-          <p style="font-size: 11.5px;">Date: _____ / _____ / ${esc(y)}</p>
-          <p class="italic text-[10.5px] text-slate-500 pt-1.5">(College Seal)</p>
-        </div>
+      <div class="flex justify-end pt-2 text-slate-400" style="display:flex;justify-content:flex-end;">
         <div class="text-center" style="width: 240px;">
           <div style="border-top: 1.5px dashed #000; margin-top: 28px; margin-bottom: 4px;"></div>
           <p class="font-bold text-white text-xs">Returning Officer</p>

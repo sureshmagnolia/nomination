@@ -342,6 +342,7 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
           .shrink-0 { flex-shrink: 0; }
           .justify-between { justify-content: space-between; }
           .justify-around { justify-content: space-around; }
+          .justify-end { justify-content: flex-end; }
           .items-start { align-items: flex-start; }
           .items-center { align-items: center; }
           .items-baseline { align-items: baseline; }
