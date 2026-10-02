@@ -386,8 +386,8 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       <!-- Search & Filters -->
       <div class="glass rounded-xl p-3 sm:p-4 flex flex-wrap gap-2.5 items-center w-full shadow-lg">
         <div class="relative flex-1 min-w-[200px]">
-          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
-          <input type="text" id="nomSearch" class="field w-full pl-9 bg-black/20 focus:bg-black/40 transition-colors text-xs sm:text-sm py-2" placeholder="Search Candidate, ID, Post, Dept, or Roll Serial...">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none select-none">🔍</span>
+          <input type="text" id="nomSearch" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors text-xs sm:text-sm py-2" placeholder="Search Candidate, ID, Post, Dept, or Roll Serial...">
         </div>
         <!-- Arrange / Self-Organize Dropdown -->
         <div class="w-full sm:w-auto shrink-0 min-w-[190px]">
