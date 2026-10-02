@@ -1265,6 +1265,18 @@ export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year
   const cls  = isBlank ? '' : (nom.candidate?.CLASS || nom.candidateClass || nom.class || '');
   const dept = isBlank ? '' : (nom.candidate?.Dept || nom.candidateDept || nom.dept || '');
   const post = isBlank ? '' : (nom.post || '');
+  const adm  = isBlank ? '' : (
+    nom.candidate?.['ADMISION NO'] || 
+    nom.candidate?.['ADMISSION NO'] || 
+    nom.candidate?.['Admission No'] || 
+    nom.candidate?.admission_no || 
+    nom.candidate?.admission || 
+    nom.candidateAdmission || 
+    nom.admissionNo || 
+    nom.admission_no || 
+    nom.adm || 
+    ''
+  );
   const nomId = isBlank ? '' : id;
 
   const fillDotted = (width = '300px') => `<span class="dotted-line" style="display:inline-block;width:${width};height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;">&nbsp;</span>`;
@@ -1306,6 +1318,10 @@ export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year
       <div class="flex items-baseline" style="padding: 2px 0;">
         <span class="text-slate-400 font-semibold shrink-0" style="width: 215px; font-size: 13.5px;">Candidate Name:</span>
         ${isBlank ? `<span class="dotted-line" style="flex:1;display:inline-block;height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-left:8px;">&nbsp;</span>` : `<span class="font-bold text-white text-base">${esc(name)}</span>`}
+      </div>
+      <div class="flex items-baseline" style="padding: 2px 0;">
+        <span class="text-slate-400 font-semibold shrink-0" style="width: 215px; font-size: 13.5px;">Admission Number:</span>
+        ${isBlank ? `<span class="dotted-line" style="flex:1;display:inline-block;height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-left:8px;">&nbsp;</span>` : `<span class="font-mono text-white text-base font-semibold">${esc(adm)}</span>`}
       </div>
       <div class="flex items-baseline" style="padding: 2px 0;">
         <span class="text-slate-400 font-semibold shrink-0" style="width: 215px; font-size: 13.5px;">Class &amp; Semester:</span>
@@ -1361,31 +1377,53 @@ export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year
       </div>
     </div>
 
-    <!-- Tear-off / Office Endorsement Separator -->
+    <!-- Tear-off / Receipt Separator -->
     <div style="display:flex;align-items:center;margin:18px 0 14px 0;">
       <div style="flex:1;border-top:1.5px dashed #555;"></div>
-      <span style="padding:0 10px;font-size:8pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.04em;">
-        ✂ Office Endorsement &amp; Receipt of Withdrawal ✂
+      <span style="padding:0 12px;font-size:8.5pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;">
+        ✂ RECEIPT ✂
       </span>
       <div style="flex:1;border-top:1.5px dashed #555;"></div>
     </div>
 
-    <!-- Office of the Returning Officer — Endorsement & Receipt (Relaxed layout) -->
-    <div class="border border-white/20 rounded-xl p-5 bg-white/[0.03] space-y-4 text-xs" style="padding: 16px 20px;">
+    <!-- Receipt -->
+    <div class="border border-white/20 rounded-xl p-5 bg-white/[0.03] space-y-3.5 text-xs" style="padding: 16px 20px;">
       <div class="flex justify-between items-center border-b border-white/10 pb-2">
-        <span class="font-bold text-white uppercase tracking-wider text-[11.5px]">OFFICE OF THE RETURNING OFFICER — ENDORSEMENT &amp; RECEIPT</span>
-        <span class="text-slate-400">Receipt Ref: ${isBlank ? fillDotted('130px') : `<strong class="font-mono text-indigo-300 font-bold">${esc(nomId)}/WD</strong>`}</span>
+        <span class="font-bold text-white uppercase tracking-wider text-sm font-bold">RECEIPT</span>
+        <span class="text-slate-400">Receipt Ref: ${isBlank ? fillDotted('120px') : `<strong class="font-mono text-indigo-300 font-bold">${esc(nomId)}/WD</strong>`}</span>
       </div>
-      <p class="text-slate-300" style="line-height: 1.85; font-size: 12.5px;">
-        This notice of withdrawal of candidature was delivered to me at my office on <span style="white-space:nowrap;">Date: <strong>_____ / _____ / ${esc(y)}</strong></span> at <span style="white-space:nowrap;">Time: <strong>_____ : _____ AM/PM</strong></span> by the candidate in person.
+
+      <!-- Candidate Details in Receipt -->
+      <div class="grid grid-cols-2 gap-x-6 gap-y-2 py-1 text-xs border-b border-white/10 pb-3" style="line-height: 1.6;">
+        <div class="flex items-baseline">
+          <span class="text-slate-400 font-semibold shrink-0" style="width: 120px;">Candidate Name:</span>
+          ${isBlank ? `<span class="dotted-line" style="flex:1;display:inline-block;height:18px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-left:6px;">&nbsp;</span>` : `<strong class="text-white text-xs font-bold">${esc(name)}</strong>`}
+        </div>
+        <div class="flex items-baseline">
+          <span class="text-slate-400 font-semibold shrink-0" style="width: 120px;">Admission No.:</span>
+          ${isBlank ? `<span class="dotted-line" style="flex:1;display:inline-block;height:18px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-left:6px;">&nbsp;</span>` : `<span class="font-mono text-white text-xs font-semibold">${esc(adm)}</span>`}
+        </div>
+        <div class="flex items-baseline">
+          <span class="text-slate-400 font-semibold shrink-0" style="width: 120px;">Class:</span>
+          ${isBlank ? `<span class="dotted-line" style="flex:1;display:inline-block;height:18px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-left:6px;">&nbsp;</span>` : `<span class="text-slate-200 text-xs">${esc(cls)}</span>`}
+        </div>
+        <div class="flex items-baseline">
+          <span class="text-slate-400 font-semibold shrink-0" style="width: 120px;">Post Contested:</span>
+          ${isBlank ? `<span class="dotted-line" style="flex:1;display:inline-block;height:18px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-left:6px;">&nbsp;</span>` : `<strong class="text-white text-xs font-bold">${esc(post)}</strong>`}
+        </div>
+      </div>
+
+      <p class="text-slate-300" style="line-height: 1.85; font-size: 12px; margin-top: 4px;">
+        Received the notice of withdrawal of candidature for the above office/post, delivered at my office on <span style="white-space:nowrap;">Date: <strong>_____ / _____ / ${esc(y)}</strong></span> at <span style="white-space:nowrap;">Time: <strong>_____ : _____ AM/PM</strong></span>.
       </p>
-      <div class="flex justify-between items-end pt-3 text-slate-400">
+
+      <div class="flex justify-between items-end pt-2 text-slate-400">
         <div class="space-y-1">
-          <p style="font-size: 12px;">Date: _____ / _____ / ${esc(y)}</p>
-          <p class="italic text-[10.5px] text-slate-500 pt-2">(College Seal)</p>
+          <p style="font-size: 11.5px;">Date: _____ / _____ / ${esc(y)}</p>
+          <p class="italic text-[10.5px] text-slate-500 pt-1.5">(College Seal)</p>
         </div>
         <div class="text-center" style="width: 240px;">
-          <div style="border-top: 1.5px dashed #000; margin-top: 32px; margin-bottom: 4px;"></div>
+          <div style="border-top: 1.5px dashed #000; margin-top: 28px; margin-bottom: 4px;"></div>
           <p class="font-bold text-white text-xs">Returning Officer</p>
           <p class="text-[10px] text-slate-400">${esc(cName)}</p>
         </div>
