@@ -24,19 +24,20 @@ export async function renderAdminOfficials(container) {
   `);
 
   try {
-    const [officialsData, booths, settings] = await Promise.all([
+    const [officialsData, booths, settings, nominalRoll] = await Promise.all([
       api.adminGetOfficials(pwd, true).catch(() => null),
       api.adminGetBooths(pwd, true).catch(() => []),
-      api.adminGetSettings(pwd).catch(() => ({}))
+      api.adminGetSettings(pwd).catch(() => ({})),
+      api.getNominalRoll().catch(() => [])
     ]);
 
-    renderOfficialsUI(container.querySelector('#adminMain'), pwd, officialsData, booths, settings);
+    renderOfficialsUI(container.querySelector('#adminMain'), pwd, officialsData, booths, settings, nominalRoll || []);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
   }
 }
 
-function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, settings) {
+function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, settings, nominalRoll = []) {
   const collegeName = settings?.collegeName || CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad';
   const electionYear = settings?.electionYear || new Date().getFullYear().toString();
   const collegeLogo = settings?.collegeLogo || '';
@@ -44,55 +45,84 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
   // 1. Initialize State with defaults or persisted data
   let faculty = [];
-  if (initialOfficialsData && Array.isArray(initialOfficialsData.faculty) && initialOfficialsData.faculty.length > 0) {
+  const cachedFac = localStorage.getItem('gcc_faculty_roster');
+  if (cachedFac !== null) {
+    try { faculty = JSON.parse(cachedFac); } catch (_) { faculty = []; }
+  } else if (initialOfficialsData && Array.isArray(initialOfficialsData.faculty)) {
     faculty = initialOfficialsData.faculty;
   } else {
-    const cached = localStorage.getItem('gcc_faculty_roster');
-    if (cached) {
-      try { faculty = JSON.parse(cached); } catch (_) { faculty = [...DEFAULT_FACULTY_ROSTER]; }
-    } else {
-      faculty = [...DEFAULT_FACULTY_ROSTER];
-    }
-  }
-
-  // Ensure faculty contains latest additions (Librarians & Guest Faculty)
-  const hasLibrarianInFaculty = faculty.some(f => (f.designation || '').toLowerCase().includes('librarian'));
-  const hasGuestInFaculty = faculty.some(f => (f.designation || '').toLowerCase().includes('guest'));
-  if (!hasLibrarianInFaculty || !hasGuestInFaculty || faculty.length < DEFAULT_FACULTY_ROSTER.length) {
-    const existingMap = new Map(faculty.map(f => [f.name.toLowerCase().trim(), f]));
-    faculty = DEFAULT_FACULTY_ROSTER.map(f => {
-      const existing = existingMap.get(f.name.toLowerCase().trim());
-      if (existing) {
-        return {
-          ...f,
-          isExcluded: existing.isExcluded ?? false,
-          exclusionReason: existing.exclusionReason || ''
-        };
-      }
-      return { ...f };
-    });
+    faculty = [...DEFAULT_FACULTY_ROSTER];
     localStorage.setItem('gcc_faculty_roster', JSON.stringify(faculty));
   }
 
   let nonTeaching = [];
-  if (initialOfficialsData && Array.isArray(initialOfficialsData.nonTeaching) && initialOfficialsData.nonTeaching.length > 0) {
+  const cachedNT = localStorage.getItem('gcc_non_teaching_roster');
+  if (cachedNT !== null) {
+    try { nonTeaching = JSON.parse(cachedNT); } catch (_) { nonTeaching = []; }
+  } else if (initialOfficialsData && Array.isArray(initialOfficialsData.nonTeaching)) {
     nonTeaching = initialOfficialsData.nonTeaching;
   } else {
-    const cachedNT = localStorage.getItem('gcc_non_teaching_roster');
-    if (cachedNT) {
-      try { nonTeaching = JSON.parse(cachedNT); } catch (_) { nonTeaching = [...DEFAULT_NON_TEACHING_ROSTER]; }
-    } else {
-      nonTeaching = [...DEFAULT_NON_TEACHING_ROSTER];
-    }
-  }
-
-  // Ensure Non-Teaching uses the official list from NTS DETAILS (filter out any old dummy names and filter out librarians)
-  const isOldDummyNT = nonTeaching.length > 0 && nonTeaching.some(nt => nt.name === 'Sri. K. Ramesh' || nt.name === 'Smt. P. Vasantha');
-  const hasLibrarianInNT = nonTeaching.some(nt => (nt.designation || '').toLowerCase().includes('librarian'));
-  if (isOldDummyNT || hasLibrarianInNT || nonTeaching.length === 0 || !nonTeaching.some(nt => nt.pen === '423685')) {
     nonTeaching = [...DEFAULT_NON_TEACHING_ROSTER];
     localStorage.setItem('gcc_non_teaching_roster', JSON.stringify(nonTeaching));
   }
+
+  // One-time upgrade migration (v2) for existing 92-teacher setups
+  // If the user has explicitly cleared the rosters or already completed migration, we do NOT overwrite their data.
+  const isMigratedV2 = localStorage.getItem('gcc_roster_migrated_v2');
+  if (!isMigratedV2) {
+    // Only upgrade if faculty has records and is the old 92-member roster
+    if (faculty.length > 0 && faculty.length <= 92) {
+      const existingMap = new Map(faculty.map(f => [f.name.toLowerCase().trim(), f]));
+      faculty = DEFAULT_FACULTY_ROSTER.map(f => {
+        const existing = existingMap.get(f.name.toLowerCase().trim());
+        if (existing) {
+          return {
+            ...f,
+            isExcluded: existing.isExcluded ?? false,
+            exclusionReason: existing.exclusionReason || ''
+          };
+        }
+        return { ...f };
+      });
+      localStorage.setItem('gcc_faculty_roster', JSON.stringify(faculty));
+    }
+
+    if (nonTeaching.length > 0) {
+      const isOldDummyNT = nonTeaching.some(nt => nt.name === 'Sri. K. Ramesh' || nt.name === 'Smt. P. Vasantha');
+      const hasLibrarianInNT = nonTeaching.some(nt => (nt.designation || '').toLowerCase().includes('librarian'));
+      if (isOldDummyNT || hasLibrarianInNT) {
+        nonTeaching = [...DEFAULT_NON_TEACHING_ROSTER];
+        localStorage.setItem('gcc_non_teaching_roster', JSON.stringify(nonTeaching));
+      }
+    }
+
+    localStorage.setItem('gcc_roster_migrated_v2', 'true');
+  }
+
+  // Voter count calculation per booth from Nominal Roll
+  const getStudentClassKey = (s) => {
+    const c = String(s['CLASS'] || s['Class'] || 'Unknown').trim();
+    const dept = String(s['Dept'] || s['Department'] || 'Unknown').trim();
+    const upper = c.toUpperCase();
+    if (upper.includes('RESEARCH') || upper.includes('SCHOLAR') || upper.includes('PH.D') || upper.includes('PHD')) {
+      return `RESEARCH SCHOLAR - ${dept}`;
+    }
+    return c;
+  };
+
+  const isStudentInBooth = (s, boothClasses) => {
+    if (!boothClasses || !boothClasses.length) return false;
+    const key = getStudentClassKey(s);
+    const raw = String(s['CLASS'] || s['Class'] || '').trim();
+    return boothClasses.includes(key) || boothClasses.includes(raw);
+  };
+
+  const getBoothVoterCount = (b) => {
+    if (Array.isArray(nominalRoll) && nominalRoll.length > 0 && Array.isArray(b.classes) && b.classes.length > 0) {
+      return nominalRoll.filter(s => isStudentInBooth(s, b.classes)).length;
+    }
+    return b.totalVoters || b.voterCount || b.voters || 0;
+  };
 
   // Ensure booths exist (fallback to 11 booths if not configured)
   let booths = Array.isArray(initialBooths) && initialBooths.length > 0 ? initialBooths : [];
@@ -245,10 +275,287 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     `;
   };
 
+  // Reusable file import handler for Faculty (Regular Excel, CSV, or Guest Faculty)
+  const handleFacultyFile = (file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+        if (!jsonRows || jsonRows.length < 2) {
+          showToast('Invalid or empty spreadsheet format.', 'error');
+          return;
+        }
+
+        const isGuestFile = file.name.toLowerCase().includes('guest') || jsonRows.some(row => (row || []).some(cell => String(cell).toLowerCase().includes('guest')));
+
+        if (isGuestFile) {
+          let nameCol = 1, deptCol = 2;
+          let startR = 1;
+          for (let r = 0; r < Math.min(6, jsonRows.length); r++) {
+            const row = (jsonRows[r] || []).map(c => String(c).toLowerCase());
+            row.forEach((c, i) => {
+              if (c.includes('name') || c.includes('lecturer')) { nameCol = i; startR = r + 1; }
+              if (c.includes('dept') || c.includes('department')) deptCol = i;
+            });
+          }
+
+          const parsedGuests = [];
+          for (let r = startR; r < jsonRows.length; r++) {
+            const row = jsonRows[r];
+            if (!row || row.length === 0) continue;
+            const name = row[nameCol] !== undefined ? String(row[nameCol]).trim() : '';
+            if (!name || name.toLowerCase().includes('guest') || name.toLowerCase().includes('name') || name.toLowerCase().includes('lecturer')) continue;
+            const dept = row[deptCol] !== undefined ? String(row[deptCol]).trim() : '';
+
+            parsedGuests.push({
+              name: name,
+              pen: '',
+              designation: 'Guest Lecturer',
+              department: dept,
+              joiningDate: '',
+              isExcluded: false,
+              exclusionReason: ''
+            });
+          }
+
+          if (parsedGuests.length === 0) {
+            showToast('No guest lecturers found in file.', 'error');
+            return;
+          }
+
+          if (confirm(`📥 Parsed ${parsedGuests.length} Guest Lecturers from "${file.name}".\n\nAppend these to the Teaching Faculty Roster (starting from Seniority #${faculty.length + 1})?`)) {
+            let added = 0;
+            parsedGuests.forEach(g => {
+              if (!faculty.some(f => f.name.toLowerCase() === g.name.toLowerCase())) {
+                faculty.push({
+                  ...g,
+                  seniority: faculty.length + 1
+                });
+                added++;
+              }
+            });
+            saveAll(false);
+            showToast(`Added ${added} Guest Lecturers to Faculty Roster!`, 'success');
+            renderUI();
+            return;
+          }
+        }
+
+        // Regular Faculty List Parsing
+        let headerIdx = -1;
+        for (let r = 0; r < Math.min(10, jsonRows.length); r++) {
+          const rowStr = (jsonRows[r] || []).map(c => String(c).toLowerCase()).join(' ');
+          if (rowStr.includes('name') || rowStr.includes('sl') || rowStr.includes('seniority') || rowStr.includes('pen')) {
+            headerIdx = r;
+            break;
+          }
+        }
+
+        const parsedFaculty = [];
+        const startR = headerIdx >= 0 ? headerIdx + 1 : 2;
+
+        for (let r = startR; r < jsonRows.length; r++) {
+          const row = jsonRows[r];
+          if (!row || row.length === 0) continue;
+
+          const sl = row[0] !== undefined ? parseInt(row[0], 10) : parsedFaculty.length + 1;
+          const name = row[1] !== undefined ? String(row[1]).trim() : '';
+          if (!name || name.toLowerCase().includes('seniority') || name.toLowerCase().includes('college')) continue;
+
+          const pen = row[2] !== undefined ? String(row[2]).trim() : '';
+          const desig = row[3] !== undefined ? String(row[3]).trim() : 'Assistant Professor';
+          let dt = row[4] !== undefined ? String(row[4]).trim() : '';
+
+          parsedFaculty.push({
+            seniority: isNaN(sl) ? parsedFaculty.length + 1 : sl,
+            name: name,
+            pen: pen,
+            designation: desig,
+            department: '',
+            joiningDate: dt,
+            isExcluded: false,
+            exclusionReason: ''
+          });
+        }
+
+        if (parsedFaculty.length === 0) {
+          showToast('No faculty rows could be parsed. Check column layout.', 'error');
+          return;
+        }
+
+        if (confirm(`📥 Successfully parsed ${parsedFaculty.length} teaching faculty records from "${file.name}".\n\nReplace current teaching faculty roster with this list?`)) {
+          faculty = parsedFaculty;
+          saveAll(false);
+          showToast(`Imported ${parsedFaculty.length} faculty records!`, 'success');
+          renderUI();
+        }
+      } catch (err) {
+        showToast(`Import error: ${err.message}`, 'error');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  // Reusable file import handler for Non-Teaching (with automated Librarian detection)
+  const handleNonTeachingFile = (file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+        if (!jsonRows || jsonRows.length < 1) {
+          showToast('Invalid or empty spreadsheet format.', 'error');
+          return;
+        }
+
+        // Scan for header row
+        let headerIdx = -1;
+        let nameCol = 2, desigCol = 3, penCol = 1, deptCol = 4;
+
+        for (let r = 0; r < Math.min(10, jsonRows.length); r++) {
+          const row = (jsonRows[r] || []).map(c => String(c).toLowerCase());
+          const hasName = row.some((c, i) => {
+            if (c.includes('name') || c.includes('staff') || c.includes('employee')) {
+              nameCol = i;
+              return true;
+            }
+            return false;
+          });
+          row.forEach((c, i) => {
+            if (c.includes('desig') || c.includes('post') || c.includes('cadre') || c.includes('role')) desigCol = i;
+            if (c.includes('pen') || c.includes('id') || c.includes('code')) penCol = i;
+            if (c.includes('dept') || c.includes('department')) deptCol = i;
+          });
+          if (hasName) {
+            headerIdx = r;
+            break;
+          }
+        }
+
+        const parsedNT = [];
+        const detectedLibrarians = [];
+        const startR = headerIdx >= 0 ? headerIdx + 1 : 0;
+
+        for (let r = startR; r < jsonRows.length; r++) {
+          const row = jsonRows[r];
+          if (!row || row.length === 0) continue;
+
+          const name = row[nameCol] !== undefined ? String(row[nameCol]).trim() : '';
+          if (!name || name.toLowerCase().includes('staff name') || name.toLowerCase().includes('total') || name.toLowerCase().includes('college') || name.toLowerCase().includes('details')) continue;
+
+          const desig = row[desigCol] !== undefined ? String(row[desigCol]).trim() : 'Staff';
+          const pen = row[penCol] !== undefined ? String(row[penCol]).trim() : '';
+          const dept = row[deptCol] !== undefined ? String(row[deptCol]).trim() : '';
+
+          // Check if UGC Librarian, Librarian Gr.IV, or any Librarian
+          if (desig.toLowerCase().includes('librarian')) {
+            detectedLibrarians.push({
+              name: name,
+              designation: desig,
+              pen: pen,
+              department: dept || 'Library'
+            });
+          } else {
+            parsedNT.push({
+              id: 'nt_' + (parsedNT.length + 1) + '_' + Date.now(),
+              name: name,
+              designation: desig,
+              pen: pen,
+              department: dept,
+              isExcluded: false,
+              exclusionReason: ''
+            });
+          }
+        }
+
+        if (parsedNT.length === 0 && detectedLibrarians.length === 0) {
+          showToast('No staff rows could be parsed from the file.', 'error');
+          return;
+        }
+
+        let confirmMsg = `📥 Successfully parsed ${parsedNT.length} Non-Teaching Staff members from "${file.name}".`;
+        if (detectedLibrarians.length > 0) {
+          confirmMsg += `\n\n📚 Identified ${detectedLibrarians.length} Librarian(s):\n${detectedLibrarians.map(l => '• ' + l.name + ' (' + l.designation + ')').join('\n')}\nPer election guidelines, Librarians are included in the Teaching Faculty Roster and excluded from Non-Teaching Staff.`;
+        }
+        confirmMsg += `\n\nApply this update to your election rosters?`;
+
+        if (confirm(confirmMsg)) {
+          nonTeaching = parsedNT;
+          // Add librarians to faculty if not already present
+          let libAdded = 0;
+          detectedLibrarians.forEach(lib => {
+            if (!faculty.some(f => f.pen === lib.pen || f.name.toLowerCase() === lib.name.toLowerCase())) {
+              faculty.push({
+                seniority: faculty.length + 1,
+                name: lib.name,
+                pen: lib.pen,
+                designation: lib.designation,
+                department: lib.department,
+                joiningDate: '',
+                isExcluded: false,
+                exclusionReason: ''
+              });
+              libAdded++;
+            }
+          });
+
+          saveAll(false);
+          showToast(`Imported ${parsedNT.length} Non-Teaching staff!${libAdded > 0 ? ` (${libAdded} Librarians added to Faculty)` : ''}`, 'success');
+          renderUI();
+        }
+      } catch (err) {
+        showToast(`Non-teaching import error: ${err.message}`, 'error');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   // Live in-place DOM update for Faculty table rows (preserves search input focus & cursor position)
   const updateFacultyTableRows = () => {
     const tbody = main.querySelector('#facultyTableBody');
     if (!tbody) return;
+    if (faculty.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" class="text-center py-12 text-slate-400">
+            <div class="space-y-3 max-w-md mx-auto">
+              <span class="text-4xl block">📋</span>
+              <h5 class="text-white font-bold text-sm">Teaching Faculty Roster is Empty</h5>
+              <p class="text-xs text-slate-400 leading-relaxed">
+                The roster has been cleared. You can upload your new Faculty Excel / CSV file, or restore the official 103 faculty roster.
+              </p>
+              <div class="flex items-center justify-center gap-2 pt-2">
+                <label class="btn btn-primary bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2 cursor-pointer flex items-center gap-1.5 shadow">
+                  📥 Import Faculty (Excel / CSV)
+                  <input type="file" id="fileFacultyImportEmpty" accept=".xlsx,.xls,.csv" class="hidden" />
+                </label>
+                <button id="btnResetFacultyRosterEmpty" class="btn btn-secondary text-xs text-amber-300 hover:bg-amber-500/20 px-3 py-2">
+                  🔄 Restore Official Roster (103)
+                </button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+      tbody.querySelector('#fileFacultyImportEmpty')?.addEventListener('change', (e) => {
+        if (e.target.files[0]) handleFacultyFile(e.target.files[0]);
+      });
+      tbody.querySelector('#btnResetFacultyRosterEmpty')?.addEventListener('click', () => {
+        faculty = [...DEFAULT_FACULTY_ROSTER];
+        saveAll(false);
+        renderUI();
+      });
+      return;
+    }
     const filtered = faculty.filter(f => {
       if (facultyFilter === 'active' && f.isExcluded) return false;
       if (facultyFilter === 'excluded' && !f.isExcluded) return false;
@@ -283,11 +590,34 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     if (nonTeaching.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" class="text-center py-8 text-slate-400">
-            No Non-Teaching staff added yet. Click <strong>Upload Non-Teaching List (Excel / CSV)</strong> above to upload your staff roster.
+          <td colspan="8" class="text-center py-12 text-slate-400">
+            <div class="space-y-3 max-w-md mx-auto">
+              <span class="text-4xl block">🤝</span>
+              <h5 class="text-white font-bold text-sm">Non-Teaching Staff Roster is Empty</h5>
+              <p class="text-xs text-slate-400 leading-relaxed">
+                The non-teaching roster has been cleared. You can upload your new staff list as Excel / CSV, or restore the official 16 staff roster.
+              </p>
+              <div class="flex items-center justify-center gap-2 pt-2">
+                <label class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 cursor-pointer flex items-center gap-1.5 shadow">
+                  📥 Upload Non-Teaching (Excel / CSV)
+                  <input type="file" id="fileNonTeachingImportEmpty" accept=".xlsx,.xls,.csv" class="hidden" />
+                </label>
+                <button id="btnResetNTRosterEmpty" class="btn btn-secondary text-xs text-emerald-300 hover:bg-emerald-500/20 px-3 py-2">
+                  🔄 Restore Official NTS List (16)
+                </button>
+              </div>
+            </div>
           </td>
         </tr>
       `;
+      tbody.querySelector('#fileNonTeachingImportEmpty')?.addEventListener('change', (e) => {
+        if (e.target.files[0]) handleNonTeachingFile(e.target.files[0]);
+      });
+      tbody.querySelector('#btnResetNTRosterEmpty')?.addEventListener('click', () => {
+        nonTeaching = [...DEFAULT_NON_TEACHING_ROSTER];
+        saveAll(false);
+        renderUI();
+      });
       return;
     }
     const filtered = nonTeaching.filter(nt => {
@@ -523,6 +853,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <button id="btnSaveAll" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow">
               💾 Save All Changes
             </button>
+            <button id="btnClearAllRosters" class="btn btn-secondary text-xs text-rose-300 hover:text-white hover:bg-rose-600/40 border-rose-500/30 px-3 py-2 flex items-center gap-1.5 font-semibold transition-colors" title="Delete Teaching Faculty, Non-Teaching Staff, and Team Allotments to start fresh">
+              🗑️ Delete All Rosters
+            </button>
             <a href="#/admin/booths" class="btn btn-secondary text-xs px-3 py-2 flex items-center gap-1">
               🏫 Polling Booths
             </a>
@@ -637,14 +970,19 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               return `
                 <div class="glass rounded-xl border ${hierarchyViolation ? 'border-amber-500/70 bg-amber-950/20' : 'border-white/10'} p-4 flex flex-col justify-between space-y-3 relative group" data-booth="${b.boothNumber}">
                   <div>
-                    <div class="flex items-center justify-between pb-2.5 border-b border-white/10">
+                    <div class="flex items-center justify-between pb-2.5 border-b border-white/10 gap-2">
                       <div>
                         <span class="font-mono text-indigo-400 font-bold text-sm">Booth ${b.boothNumber}</span>
                         <h5 class="font-bold text-white text-base">${esc(b.roomName || `Booth ${b.boothNumber}`)}</h5>
                       </div>
-                      <span class="text-[11px] font-mono bg-white/10 text-slate-300 px-2 py-0.5 rounded border border-white/10">
-                        ${b.classes ? `${b.classes.length} classes` : ''}
-                      </span>
+                      <div class="flex items-center gap-1.5 flex-wrap justify-end">
+                        <span class="text-[11px] font-mono bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30 flex items-center gap-1 shadow-sm font-semibold" title="Total Voters Assigned to Booth ${b.boothNumber}">
+                          <span>🗳️</span> <span>${getBoothVoterCount(b)} voters</span>
+                        </span>
+                        <span class="text-[11px] font-mono bg-white/10 text-slate-300 px-2 py-0.5 rounded border border-white/10" title="Assigned Classes">
+                          ${b.classes ? `${b.classes.length} classes` : '0 classes'}
+                        </span>
+                      </div>
                     </div>
 
                     ${hierarchyViolation ? `
@@ -791,18 +1129,23 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               return `
                 <div class="glass rounded-xl border ${hasDoubleDuty ? 'border-amber-500/50 bg-amber-950/20' : 'border-white/10'} p-4 flex flex-col justify-between space-y-3 relative group" data-table="${b.boothNumber}">
                   <div>
-                    <div class="flex items-center justify-between pb-2.5 border-b border-white/10">
+                    <div class="flex items-center justify-between pb-2.5 border-b border-white/10 gap-2">
                       <div>
                         <span class="font-mono text-purple-400 font-bold text-sm">Counting Table ${b.boothNumber}</span>
                         <h5 class="font-bold text-white text-base">${esc(b.roomName || `Table ${b.boothNumber}`)}</h5>
                       </div>
-                      ${hasDoubleDuty ? `
-                        <span class="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded flex items-center gap-1">
-                          ⚠️ Double Duty Flag
+                      <div class="flex items-center gap-1.5 flex-wrap justify-end">
+                        <span class="text-[11px] font-mono bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30 flex items-center gap-1 shadow-sm font-semibold" title="Total Voters Assigned to Booth ${b.boothNumber}">
+                          <span>🗳️</span> <span>${getBoothVoterCount(b)} voters</span>
                         </span>
-                      ` : `
-                        <span class="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded border border-white/10">Fresh Team</span>
-                      `}
+                        ${hasDoubleDuty ? `
+                          <span class="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded flex items-center gap-1">
+                            ⚠️ Double Duty Flag
+                          </span>
+                        ` : `
+                          <span class="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded border border-white/10">Fresh Team</span>
+                        `}
+                      </div>
                     </div>
 
                     ${hierarchyViolation ? `
@@ -929,6 +1272,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <button id="btnResetFacultyRoster" class="btn btn-secondary text-xs text-amber-300 hover:bg-amber-500/20 px-3 py-2">
                 🔄 Reset to Official Roster (103)
               </button>
+              <button id="btnClearFacultyRoster" class="btn btn-secondary text-xs text-rose-300 hover:text-white hover:bg-rose-600/30 border-rose-500/20 px-3 py-2 flex items-center gap-1" title="Clear teaching faculty roster to upload a fresh file">
+                🗑️ Clear Faculty Roster
+              </button>
             </div>
           </div>
 
@@ -962,6 +1308,30 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 </thead>
                 <tbody class="divide-y divide-white/5" id="facultyTableBody">
                   ${(() => {
+                    if (faculty.length === 0) {
+                      return `
+                        <tr>
+                          <td colspan="8" class="text-center py-12 text-slate-400">
+                            <div class="space-y-3 max-w-md mx-auto">
+                              <span class="text-4xl block">📋</span>
+                              <h5 class="text-white font-bold text-sm">Teaching Faculty Roster is Empty</h5>
+                              <p class="text-xs text-slate-400 leading-relaxed">
+                                The roster has been cleared. You can upload your new Faculty Excel / CSV file, or restore the official 103 faculty roster.
+                              </p>
+                              <div class="flex items-center justify-center gap-2 pt-2">
+                                <label class="btn btn-primary bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2 cursor-pointer flex items-center gap-1.5 shadow">
+                                  📥 Import Faculty (Excel / CSV)
+                                  <input type="file" id="fileFacultyImportEmpty" accept=".xlsx,.xls,.csv" class="hidden" />
+                                </label>
+                                <button id="btnResetFacultyRosterEmpty" class="btn btn-secondary text-xs text-amber-300 hover:bg-amber-500/20 px-3 py-2">
+                                  🔄 Restore Official Roster (103)
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      `;
+                    }
                     const filtered = faculty.filter(f => {
                       if (facultyFilter === 'active' && f.isExcluded) return false;
                       if (facultyFilter === 'excluded' && !f.isExcluded) return false;
@@ -1009,8 +1379,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <button id="btnResetNTRoster" class="btn btn-secondary text-xs text-emerald-300 hover:bg-emerald-500/20 px-3 py-2">
                 🔄 Reset to Official NTS List (16)
               </button>
-              <button id="btnClearNonTeachingList" class="btn btn-secondary text-xs text-red-300 hover:bg-red-500/20 px-3 py-2">
-                🗑️ Clear List
+              <button id="btnClearNonTeachingList" class="btn btn-secondary text-xs text-rose-300 hover:text-white hover:bg-rose-600/30 border-rose-500/20 px-3 py-2 flex items-center gap-1" title="Clear non-teaching staff roster to upload a fresh file">
+                🗑️ Clear Non-Teaching Roster
               </button>
             </div>
           </div>
@@ -1062,7 +1432,28 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <tbody class="divide-y divide-white/5" id="nonTeachingTableBody">
                   ${(() => {
                     if (nonTeaching.length === 0) {
-                      return `<tr><td colspan="8" class="text-center py-8 text-slate-400">No Non-Teaching staff added yet. Click <strong>Upload Non-Teaching List (Excel / CSV)</strong> above to upload your staff roster.</td></tr>`;
+                      return `
+                        <tr>
+                          <td colspan="8" class="text-center py-12 text-slate-400">
+                            <div class="space-y-3 max-w-md mx-auto">
+                              <span class="text-4xl block">🤝</span>
+                              <h5 class="text-white font-bold text-sm">Non-Teaching Staff Roster is Empty</h5>
+                              <p class="text-xs text-slate-400 leading-relaxed">
+                                The non-teaching roster has been cleared. You can upload your new staff list as Excel / CSV, or restore the official 16 staff roster.
+                              </p>
+                              <div class="flex items-center justify-center gap-2 pt-2">
+                                <label class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 cursor-pointer flex items-center gap-1.5 shadow">
+                                  📥 Upload Non-Teaching (Excel / CSV)
+                                  <input type="file" id="fileNonTeachingImportEmpty" accept=".xlsx,.xls,.csv" class="hidden" />
+                                </label>
+                                <button id="btnResetNTRosterEmpty" class="btn btn-secondary text-xs text-emerald-300 hover:bg-emerald-500/20 px-3 py-2">
+                                  🔄 Restore Official NTS List (16)
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      `;
                     }
                     const filtered = nonTeaching.filter(nt => {
                       if (nonTeachingFilter === 'active' && nt.isExcluded) return false;
@@ -1439,6 +1830,54 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       renderUI();
     });
 
+    // Clear All Rosters
+    main.querySelector('#btnClearAllRosters')?.addEventListener('click', async () => {
+      const confirmText = prompt(
+        '⚠️ CONFIRM CLEAR ALL ROSTERS:\n\n' +
+        'This will clear:\n' +
+        ' • Teaching Faculty Roster (' + faculty.length + ' members)\n' +
+        ' • Non-Teaching Staff Roster (' + nonTeaching.length + ' members)\n' +
+        ' • All Polling Booth & Counting Table official assignments\n\n' +
+        'You will have an empty canvas to upload your new Excel / CSV files.\n\n' +
+        'Type DELETE in the box below to confirm:'
+      );
+      if (confirmText && confirmText.trim().toUpperCase() === 'DELETE') {
+        faculty = [];
+        nonTeaching = [];
+        pollingTeams = [];
+        countingTeams = [];
+        localStorage.setItem('gcc_roster_migrated_v2', 'true');
+        await saveAll(false);
+        showToast('All rosters and team assignments cleared! Ready for new CSV uploads.', 'info');
+        renderUI();
+      }
+    });
+
+    // Clear Faculty Roster
+    main.querySelector('#btnClearFacultyRoster')?.addEventListener('click', async () => {
+      if (confirm(
+        '🗑️ Clear the entire Teaching Faculty roster (' + faculty.length + ' faculty)?\n\n' +
+        'This will also clear current Polling & Counting faculty duty assignments so you can upload a fresh Faculty Excel/CSV file.\n\n' +
+        'Proceed?'
+      )) {
+        faculty = [];
+        pollingTeams.forEach(t => {
+          t.presidingOfficer = null;
+          t.pollingOfficer1 = null;
+          t.pollingOfficer2 = null;
+        });
+        countingTeams.forEach(t => {
+          t.supervisor = null;
+          t.countingOfficer1 = null;
+          t.countingOfficer2 = null;
+        });
+        localStorage.setItem('gcc_roster_migrated_v2', 'true');
+        await saveAll(false);
+        showToast('Faculty roster cleared. You can now upload your new Faculty file.', 'info');
+        renderUI();
+      }
+    });
+
     // Reset Faculty Roster
     main.querySelector('#btnResetFacultyRoster')?.addEventListener('click', () => {
       if (confirm('🔄 Reset Faculty Seniority List to official college roster (103 Faculty)?\n\nThis includes:\n• 92 Teaching Faculty (from SENIORITY LIST OF TEACHERS.xlsx)\n• 2 Librarians (UGC Librarian SATHEESH-K.M & Librarian Gr.IV REKHA R NAIR)\n• 9 Guest Lecturers (from Guest 26-27.xlsx)')) {
@@ -1447,6 +1886,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         showToast('Restored 103 faculty members (92 Teaching + 2 Librarians + 9 Guest Lecturers)!', 'success');
         renderUI();
       }
+    });
+
+    main.querySelector('#btnResetFacultyRosterEmpty')?.addEventListener('click', () => {
+      faculty = [...DEFAULT_FACULTY_ROSTER];
+      saveAll(false);
+      showToast('Restored 103 faculty members (92 Teaching + 2 Librarians + 9 Guest Lecturers)!', 'success');
+      renderUI();
     });
 
     // Reset Non-Teaching Roster
@@ -1459,12 +1905,22 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       }
     });
 
+    main.querySelector('#btnResetNTRosterEmpty')?.addEventListener('click', () => {
+      nonTeaching = [...DEFAULT_NON_TEACHING_ROSTER];
+      saveAll(false);
+      showToast('Restored 16 official Non-Teaching staff members!', 'success');
+      renderUI();
+    });
+
     // Clear Non-Teaching Roster
-    main.querySelector('#btnClearNonTeachingList')?.addEventListener('click', () => {
-      if (confirm('🗑️ Clear entire Non-Teaching Staff roster?\n\nYou will be able to upload a fresh file using "Upload Non-Teaching List".')) {
+    main.querySelector('#btnClearNonTeachingList')?.addEventListener('click', async () => {
+      if (confirm('🗑️ Clear entire Non-Teaching Staff roster (' + nonTeaching.length + ' staff)?\n\nYou will be able to upload a fresh file using "Upload Non-Teaching List".')) {
         nonTeaching = [];
-        saveAll(false);
-        showToast('Cleared Non-Teaching Staff roster.', 'info');
+        pollingTeams.forEach(t => { t.pollingAssistant = null; });
+        countingTeams.forEach(t => { t.countingAssistant = null; });
+        localStorage.setItem('gcc_roster_migrated_v2', 'true');
+        await saveAll(false);
+        showToast('Cleared Non-Teaching Staff roster. Ready for new upload.', 'info');
         renderUI();
       }
     });
@@ -1529,252 +1985,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       document.body.removeChild(link);
     });
 
-    // Import Faculty (Excel / CSV) - Supports Regular & Guest Faculty lists
+    // Import Faculty (Excel / CSV) - Toolbar & Empty State
     main.querySelector('#fileFacultyImport')?.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        try {
-          const data = new Uint8Array(evt.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const jsonRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-
-          if (!jsonRows || jsonRows.length < 2) {
-            showToast('Invalid or empty spreadsheet format.', 'error');
-            return;
-          }
-
-          const isGuestFile = file.name.toLowerCase().includes('guest') || jsonRows.some(row => (row || []).some(cell => String(cell).toLowerCase().includes('guest')));
-
-          if (isGuestFile) {
-            let nameCol = 1, deptCol = 2;
-            let startR = 1;
-            for (let r = 0; r < Math.min(6, jsonRows.length); r++) {
-              const row = (jsonRows[r] || []).map(c => String(c).toLowerCase());
-              row.forEach((c, i) => {
-                if (c.includes('name') || c.includes('lecturer')) { nameCol = i; startR = r + 1; }
-                if (c.includes('dept') || c.includes('department')) deptCol = i;
-              });
-            }
-
-            const parsedGuests = [];
-            for (let r = startR; r < jsonRows.length; r++) {
-              const row = jsonRows[r];
-              if (!row || row.length === 0) continue;
-              const name = row[nameCol] !== undefined ? String(row[nameCol]).trim() : '';
-              if (!name || name.toLowerCase().includes('guest') || name.toLowerCase().includes('name') || name.toLowerCase().includes('lecturer')) continue;
-              const dept = row[deptCol] !== undefined ? String(row[deptCol]).trim() : '';
-
-              parsedGuests.push({
-                name: name,
-                pen: '',
-                designation: 'Guest Lecturer',
-                department: dept,
-                joiningDate: '',
-                isExcluded: false,
-                exclusionReason: ''
-              });
-            }
-
-            if (parsedGuests.length === 0) {
-              showToast('No guest lecturers found in file.', 'error');
-              return;
-            }
-
-            if (confirm(`📥 Parsed ${parsedGuests.length} Guest Lecturers from "${file.name}".\n\nAppend these to the Teaching Faculty Roster (starting from Seniority #${faculty.length + 1})?`)) {
-              let added = 0;
-              parsedGuests.forEach(g => {
-                if (!faculty.some(f => f.name.toLowerCase() === g.name.toLowerCase())) {
-                  faculty.push({
-                    ...g,
-                    seniority: faculty.length + 1
-                  });
-                  added++;
-                }
-              });
-              saveAll(false);
-              showToast(`Added ${added} Guest Lecturers to Faculty Roster!`, 'success');
-              renderUI();
-              return;
-            }
-          }
-
-          // Regular Faculty List Parsing
-          let headerIdx = -1;
-          for (let r = 0; r < Math.min(10, jsonRows.length); r++) {
-            const rowStr = (jsonRows[r] || []).map(c => String(c).toLowerCase()).join(' ');
-            if (rowStr.includes('name') || rowStr.includes('sl') || rowStr.includes('seniority') || rowStr.includes('pen')) {
-              headerIdx = r;
-              break;
-            }
-          }
-
-          const parsedFaculty = [];
-          const startR = headerIdx >= 0 ? headerIdx + 1 : 2;
-
-          for (let r = startR; r < jsonRows.length; r++) {
-            const row = jsonRows[r];
-            if (!row || row.length === 0) continue;
-
-            const sl = row[0] !== undefined ? parseInt(row[0], 10) : parsedFaculty.length + 1;
-            const name = row[1] !== undefined ? String(row[1]).trim() : '';
-            if (!name || name.toLowerCase().includes('seniority') || name.toLowerCase().includes('college')) continue;
-
-            const pen = row[2] !== undefined ? String(row[2]).trim() : '';
-            const desig = row[3] !== undefined ? String(row[3]).trim() : 'Assistant Professor';
-            let dt = row[4] !== undefined ? String(row[4]).trim() : '';
-
-            parsedFaculty.push({
-              seniority: isNaN(sl) ? parsedFaculty.length + 1 : sl,
-              name: name,
-              pen: pen,
-              designation: desig,
-              department: '',
-              joiningDate: dt,
-              isExcluded: false,
-              exclusionReason: ''
-            });
-          }
-
-          if (parsedFaculty.length === 0) {
-            showToast('No faculty rows could be parsed. Check column layout.', 'error');
-            return;
-          }
-
-          if (confirm(`📥 Successfully parsed ${parsedFaculty.length} teaching faculty records from "${file.name}".\n\nReplace current teaching faculty roster with this list?`)) {
-            faculty = parsedFaculty;
-            saveAll(false);
-            showToast(`Imported ${parsedFaculty.length} faculty records!`, 'success');
-            renderUI();
-          }
-        } catch (err) {
-          showToast(`Import error: ${err.message}`, 'error');
-        }
-      };
-      reader.readAsArrayBuffer(file);
+      if (e.target.files[0]) handleFacultyFile(e.target.files[0]);
+    });
+    main.querySelector('#fileFacultyImportEmpty')?.addEventListener('change', (e) => {
+      if (e.target.files[0]) handleFacultyFile(e.target.files[0]);
     });
 
-    // Import Non-Teaching (Excel / CSV) - Dedicated Separate Uploader with automatic Librarian handling
+    // Import Non-Teaching (Excel / CSV) - Toolbar & Empty State
     main.querySelector('#fileNonTeachingImport')?.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        try {
-          const data = new Uint8Array(evt.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const jsonRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-
-          if (!jsonRows || jsonRows.length < 1) {
-            showToast('Invalid or empty spreadsheet format.', 'error');
-            return;
-          }
-
-          // Scan for header row
-          let headerIdx = -1;
-          let nameCol = 2, desigCol = 3, penCol = 1, deptCol = 4;
-
-          for (let r = 0; r < Math.min(10, jsonRows.length); r++) {
-            const row = (jsonRows[r] || []).map(c => String(c).toLowerCase());
-            const hasName = row.some((c, i) => {
-              if (c.includes('name') || c.includes('staff') || c.includes('employee')) {
-                nameCol = i;
-                return true;
-              }
-              return false;
-            });
-            row.forEach((c, i) => {
-              if (c.includes('desig') || c.includes('post') || c.includes('cadre') || c.includes('role')) desigCol = i;
-              if (c.includes('pen') || c.includes('id') || c.includes('code')) penCol = i;
-              if (c.includes('dept') || c.includes('department')) deptCol = i;
-            });
-            if (hasName) {
-              headerIdx = r;
-              break;
-            }
-          }
-
-          const parsedNT = [];
-          const detectedLibrarians = [];
-          const startR = headerIdx >= 0 ? headerIdx + 1 : 0;
-
-          for (let r = startR; r < jsonRows.length; r++) {
-            const row = jsonRows[r];
-            if (!row || row.length === 0) continue;
-
-            const name = row[nameCol] !== undefined ? String(row[nameCol]).trim() : '';
-            if (!name || name.toLowerCase().includes('staff name') || name.toLowerCase().includes('total') || name.toLowerCase().includes('college') || name.toLowerCase().includes('details')) continue;
-
-            const desig = row[desigCol] !== undefined ? String(row[desigCol]).trim() : 'Staff';
-            const pen = row[penCol] !== undefined ? String(row[penCol]).trim() : '';
-            const dept = row[deptCol] !== undefined ? String(row[deptCol]).trim() : '';
-
-            // Check if UGC Librarian, Librarian Gr.IV, or any Librarian
-            if (desig.toLowerCase().includes('librarian')) {
-              detectedLibrarians.push({
-                name: name,
-                designation: desig,
-                pen: pen,
-                department: dept || 'Library'
-              });
-            } else {
-              parsedNT.push({
-                id: 'nt_' + (parsedNT.length + 1) + '_' + Date.now(),
-                name: name,
-                designation: desig,
-                pen: pen,
-                department: dept,
-                isExcluded: false,
-                exclusionReason: ''
-              });
-            }
-          }
-
-          if (parsedNT.length === 0 && detectedLibrarians.length === 0) {
-            showToast('No staff rows could be parsed from the file.', 'error');
-            return;
-          }
-
-          let confirmMsg = `📥 Successfully parsed ${parsedNT.length} Non-Teaching Staff members from "${file.name}".`;
-          if (detectedLibrarians.length > 0) {
-            confirmMsg += `\n\n📚 Identified ${detectedLibrarians.length} Librarian(s):\n${detectedLibrarians.map(l => '• ' + l.name + ' (' + l.designation + ')').join('\n')}\nPer election guidelines, Librarians are included in the Teaching Faculty Roster and excluded from Non-Teaching Staff.`;
-          }
-          confirmMsg += `\n\nApply this update to your election rosters?`;
-
-          if (confirm(confirmMsg)) {
-            nonTeaching = parsedNT;
-            // Add librarians to faculty if not already present
-            let libAdded = 0;
-            detectedLibrarians.forEach(lib => {
-              if (!faculty.some(f => f.pen === lib.pen || f.name.toLowerCase() === lib.name.toLowerCase())) {
-                faculty.push({
-                  seniority: faculty.length + 1,
-                  name: lib.name,
-                  pen: lib.pen,
-                  designation: lib.designation,
-                  department: lib.department,
-                  joiningDate: '',
-                  isExcluded: false,
-                  exclusionReason: ''
-                });
-                libAdded++;
-              }
-            });
-
-            saveAll(false);
-            showToast(`Imported ${parsedNT.length} Non-Teaching staff!${libAdded > 0 ? ` (${libAdded} Librarians added to Faculty)` : ''}`, 'success');
-            renderUI();
-          }
-        } catch (err) {
-          showToast(`Non-teaching import error: ${err.message}`, 'error');
-        }
-      };
-      reader.readAsArrayBuffer(file);
+      if (e.target.files[0]) handleNonTeachingFile(e.target.files[0]);
+    });
+    main.querySelector('#fileNonTeachingImportEmpty')?.addEventListener('change', (e) => {
+      if (e.target.files[0]) handleNonTeachingFile(e.target.files[0]);
     });
 
     // Print Polling Orders (Opens in New Tab)
