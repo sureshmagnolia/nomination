@@ -18,6 +18,187 @@ import { router } from '../../router.js';
 let activeAdminResultsPollTimer = null;
 let lastDataFingerprint = '';
 
+// ── Confidential Admin-Only Candidate Panel Colors ──────────────────────────
+const CONFIDENTIAL_PANEL_KEY = 'gcc_admin_confidential_panel_colors';
+let isPanelDrawerOpen = false; // Strictly collapsed by default!
+
+const PANEL_PALETTE = [
+  { id: 'red', hex: '#ef4444', name: 'Red', bg: 'bg-red-500/15', text: 'text-red-400', border: 'border-red-500/40', ring: 'ring-red-500', dot: 'bg-red-500', lightBorder: 'border-red-500/20', badge: 'bg-red-500/20 text-red-300 border-red-500/30' },
+  { id: 'blue', hex: '#3b82f6', name: 'Blue', bg: 'bg-blue-500/15', text: 'text-blue-400', border: 'border-blue-500/40', ring: 'ring-blue-500', dot: 'bg-blue-500', lightBorder: 'border-blue-500/20', badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
+  { id: 'green', hex: '#10b981', name: 'Green', bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/40', ring: 'ring-emerald-500', dot: 'bg-emerald-500', lightBorder: 'border-emerald-500/20', badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+  { id: 'yellow', hex: '#eab308', name: 'Yellow', bg: 'bg-yellow-500/15', text: 'text-yellow-400', border: 'border-yellow-500/40', ring: 'ring-yellow-500', dot: 'bg-yellow-500', lightBorder: 'border-yellow-500/20', badge: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' },
+  { id: 'purple', hex: '#a855f7', name: 'Purple', bg: 'bg-purple-500/15', text: 'text-purple-400', border: 'border-purple-500/40', ring: 'ring-purple-500', dot: 'bg-purple-500', lightBorder: 'border-purple-500/20', badge: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
+  { id: 'orange', hex: '#f97316', name: 'Orange', bg: 'bg-orange-500/15', text: 'text-orange-400', border: 'border-orange-500/40', ring: 'ring-orange-500', dot: 'bg-orange-500', lightBorder: 'border-orange-500/20', badge: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
+  { id: 'cyan', hex: '#06b6d4', name: 'Cyan', bg: 'bg-cyan-500/15', text: 'text-cyan-400', border: 'border-cyan-500/40', ring: 'ring-cyan-500', dot: 'bg-cyan-500', lightBorder: 'border-cyan-500/20', badge: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
+  { id: 'pink', hex: '#ec4899', name: 'Pink', bg: 'bg-pink-500/15', text: 'text-pink-400', border: 'border-pink-500/40', ring: 'ring-pink-500', dot: 'bg-pink-500', lightBorder: 'border-pink-500/20', badge: 'bg-pink-500/20 text-pink-300 border-pink-500/30' },
+];
+
+function getConfidentialPanelData() {
+  try {
+    const raw = localStorage.getItem(CONFIDENTIAL_PANEL_KEY);
+    if (!raw) return { candidates: {}, labels: {} };
+    const parsed = JSON.parse(raw);
+    return {
+      candidates: parsed.candidates || {},
+      labels: parsed.labels || {}
+    };
+  } catch (e) {
+    return { candidates: {}, labels: {} };
+  }
+}
+
+function saveConfidentialPanelData(data) {
+  try {
+    localStorage.setItem(CONFIDENTIAL_PANEL_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.warn('Failed to save confidential panel colors to localStorage:', e);
+  }
+}
+
+function getCandidateColorInfo(candidate, panelData) {
+  if (!candidate || !panelData || !panelData.candidates) return null;
+  const candKey = candidate.id || `${candidate.candidateName}_${candidate.post}`;
+  const colorId = panelData.candidates[candKey] || panelData.candidates[candidate.id] || panelData.candidates[`${candidate.candidateName}_${candidate.post}`];
+  if (!colorId || colorId === 'none') return null;
+  const item = PANEL_PALETTE.find(p => p.id === colorId);
+  if (!item) return null;
+  const customLabel = panelData.labels && panelData.labels[colorId];
+  return {
+    ...item,
+    displayName: customLabel && customLabel.trim() ? customLabel.trim() : `${item.name} Panel`
+  };
+}
+
+function calculatePanelStandings(postResults, candidates, panelData, isLocked, isFinalPublished) {
+  const activeColorCount = Object.keys(panelData.candidates).filter(k => panelData.candidates[k] && panelData.candidates[k] !== 'none').length;
+  
+  const colorStats = {};
+  PANEL_PALETTE.forEach(p => {
+    const customLabel = panelData.labels && panelData.labels[p.id];
+    colorStats[p.id] = {
+      ...p,
+      displayName: customLabel && customLabel.trim() ? customLabel.trim() : `${p.name} Panel`,
+      assignedCandidates: 0,
+      wonPosts: [],
+      leadingPosts: [],
+      trailingPosts: [],
+      totalVotes: 0
+    };
+  });
+
+  candidates.forEach(c => {
+    const colorInfo = getCandidateColorInfo(c, panelData);
+    if (colorInfo && colorStats[colorInfo.id]) {
+      colorStats[colorInfo.id].assignedCandidates++;
+    }
+  });
+
+  const unassignedStats = {
+    wonPosts: [],
+    leadingPosts: [],
+    totalVotes: 0
+  };
+
+  postResults.forEach(res => {
+    if (res.type === 'no-candidates') return;
+
+    const isUUC = res.post.toUpperCase().includes('UUC') || res.post.toUpperCase().includes('UNIVERSITY');
+    const seats = isUUC ? 2 : 1;
+
+    // Unanimous declaration (won)
+    if (res.type === 'unanimous') {
+      const winner = res.winner || (res.candidates && res.candidates[0]);
+      if (winner) {
+        const colorInfo = getCandidateColorInfo(winner, panelData);
+        const item = {
+          postName: res.post,
+          candidateName: winner.candidateName,
+          candidateClass: winner.candidateClass || '',
+          votes: 'Uncontested',
+          isUnanimous: true,
+          leadMargin: 0
+        };
+        if (colorInfo && colorStats[colorInfo.id]) {
+          colorStats[colorInfo.id].wonPosts.push(item);
+        } else {
+          unassignedStats.wonPosts.push(item);
+        }
+      }
+      return;
+    }
+
+    // Contested election
+    if (res.candidates && res.candidates.length > 0) {
+      res.candidates.forEach(c => {
+        const candVotes = Number(c.votes) || 0;
+        const colorInfo = getCandidateColorInfo(c, panelData);
+        if (colorInfo && colorStats[colorInfo.id]) {
+          colorStats[colorInfo.id].totalVotes += candVotes;
+        } else {
+          unassignedStats.totalVotes += candVotes;
+        }
+      });
+
+      let runnerUpVotes = 0;
+      if (res.candidates.length > seats) {
+        runnerUpVotes = Number(res.candidates[seats].votes) || 0;
+      }
+
+      for (let s = 0; s < seats; s++) {
+        const topCand = res.candidates[s];
+        if (!topCand) continue;
+
+        const candVotes = Number(topCand.votes) || 0;
+        const colorInfo = getCandidateColorInfo(topCand, panelData);
+        const postLabel = isUUC ? `${res.post} (Seat ${s + 1})` : res.post;
+        const leadMargin = candVotes > 0 ? (candVotes - runnerUpVotes) : 0;
+        const isTieForSeat = res.isTie && s === 0;
+
+        const item = {
+          postName: postLabel,
+          candidateName: topCand.candidateName,
+          candidateClass: topCand.candidateClass || '',
+          votes: candVotes,
+          leadMargin,
+          isTie: isTieForSeat,
+          runnerUpVotes
+        };
+
+        if (isLocked) {
+          if (candVotes > 0 && !isTieForSeat) {
+            if (colorInfo && colorStats[colorInfo.id]) {
+              colorStats[colorInfo.id].wonPosts.push(item);
+            } else {
+              unassignedStats.wonPosts.push(item);
+            }
+          }
+        } else {
+          if (candVotes > 0 && !isTieForSeat) {
+            if (colorInfo && colorStats[colorInfo.id]) {
+              colorStats[colorInfo.id].leadingPosts.push(item);
+            } else {
+              unassignedStats.leadingPosts.push(item);
+            }
+          }
+        }
+      }
+    }
+  });
+
+  const activeColors = Object.values(colorStats).filter(c => c.assignedCandidates > 0);
+  const totalWon = activeColors.reduce((sum, c) => sum + c.wonPosts.length, 0);
+  const totalLeading = activeColors.reduce((sum, c) => sum + c.leadingPosts.length, 0);
+
+  return {
+    hasAssignedColors: activeColorCount > 0 && activeColors.length > 0,
+    assignedCandidateCount: activeColorCount,
+    activeColors,
+    totalWon,
+    totalLeading,
+    unassignedStats
+  };
+}
+
 export async function renderAdminResults(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
 
@@ -217,6 +398,10 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
     };
   });
 
+  // 3. Confidential Admin-Only Candidate Panel Calculation
+  const panelData = getConfidentialPanelData();
+  const panelStandings = calculatePanelStandings(postResults, candidates, panelData, isLocked, isFinalPublished);
+
   main.innerHTML = `
     <div id="adminResultsRoot" class="page-enter space-y-6">
       ${!isFinalPublished ? `
@@ -342,6 +527,14 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           <button id="btnResultsExportCSV" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10" title="Export printable CSV summary">
             <span>📊</span> CSV
           </button>
+          <button id="btnOpenPanelSetup" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 ${panelStandings.hasAssignedColors ? 'border-purple-500/40 text-purple-300 bg-purple-500/10 hover:bg-purple-500/20' : 'border-dashed border-white/20 text-slate-300 hover:text-white'}" title="Confidential Candidate Panel Colors (Admin PC Only)">
+            <span>🎨</span> ${panelStandings.hasAssignedColors ? `Panel Colors (${panelStandings.assignedCandidateCount})` : 'Set Panel Colors'}
+          </button>
+          ${panelStandings.hasAssignedColors ? `
+            <button id="btnToolbarTogglePanelDrawer" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 border-purple-500/40 text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 font-bold" title="Open Confidential Panel Tally">
+              <span>📊</span> Panel Tally (${panelStandings.totalWon}W / ${panelStandings.totalLeading}L)
+            </button>
+          ` : ''}
           <a href="#/trends" target="_blank" class="btn btn-secondary px-3.5 text-xs flex items-center gap-1.5 font-bold text-sky-300 border-sky-500/30 hover:bg-sky-500/10">
             <span>🎯</span> Trends Screen
           </a>
@@ -404,14 +597,17 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
                         ${res.candidates.map((c, i) => {
                           const isLeading = i < seats && c.votes > 0;
                           const lead = isLeading ? (c.votes - leadThreshold) : 0;
+                          const colorInfo = getCandidateColorInfo(c, panelData);
                           
                           return `
                             <tr class="${isLeading ? 'bg-white/[0.02]' : ''}">
                               <td class="py-4">
                                 <div class="flex items-center gap-2">
+                                  ${colorInfo ? `<span class="w-2.5 h-2.5 rounded-full shrink-0 ${colorInfo.dot} shadow-sm" title="${esc(colorInfo.displayName)} (Confidential Admin View)"></span>` : ''}
                                   <span class="font-bold text-white">${esc(c.candidateName)}</span>
                                   ${c.candidateSerial ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[9px]">Sl. #${esc(c.candidateSerial)}</span>` : ''}
                                   ${lead > 0 ? `<span class="bg-green-500/20 text-green-400 text-[9px] px-1.5 py-0.5 rounded font-black border border-green-500/30">LEAD: ${lead}</span>` : ''}
+                                  ${colorInfo ? `<span class="text-[9px] font-mono px-1.5 py-0.2 rounded ${colorInfo.badge} hidden sm:inline-block">${esc(colorInfo.displayName)}</span>` : ''}
                                 </div>
                               </td>
                               <td class="py-4 text-slate-400 text-center text-[11px]">${esc(c.candidateClass)}</td>
@@ -466,6 +662,329 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           }).join('')}
         </div>
       `}
+
+      ${panelStandings.hasAssignedColors ? `
+        <!-- Floating Edge Trigger: Collapsed by Default -->
+        <div id="panelDrawerTrigger" class="fixed right-0 top-1/2 -translate-y-1/2 z-30 transition-transform duration-300 ${isPanelDrawerOpen ? 'translate-x-full' : 'translate-x-0'}">
+          <button id="btnTogglePanelDrawer" class="flex items-center gap-2 px-3 py-3 rounded-l-2xl shadow-2xl border-y border-l border-purple-500/40 bg-slate-900/95 backdrop-blur-md text-xs font-bold text-purple-300 hover:text-white hover:bg-purple-950/80 transition-all cursor-pointer group hover:pl-4" title="Confidential Panel Tally (Admin PC Only)">
+            <span class="text-sm group-hover:scale-125 transition-transform">🎨</span>
+            <span class="tracking-wider uppercase text-[11px] hidden sm:inline">Panel Tally</span>
+            <span class="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-mono rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              ${panelStandings.totalWon}W / ${panelStandings.totalLeading}L
+            </span>
+            <span class="text-[10px] text-slate-400 group-hover:-translate-x-0.5 transition-transform">◂</span>
+          </button>
+        </div>
+
+        <!-- Backdrop Overlay (hidden when collapsed) -->
+        <div id="panelDrawerBackdrop" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 transition-opacity duration-300 ${isPanelDrawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}"></div>
+
+        <!-- Confidential Side Drawer (Collapsed by default!) -->
+        <aside id="panelTallyDrawer" class="fixed top-0 right-0 h-full w-full sm:w-[460px] md:w-[500px] bg-slate-900/95 backdrop-blur-xl border-l border-white/10 shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${isPanelDrawerOpen ? 'translate-x-0' : 'translate-x-full'}">
+          <!-- Drawer Header -->
+          <div class="p-4 border-b border-white/10 bg-slate-950/70 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">🎨</span>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="font-bold text-white text-sm">Confidential Panel Tally</h3>
+                  <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">ADMIN PC ONLY</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-0.5">Live internal standings by assigned panel colors.</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="btnDrawerEditColors" class="btn btn-secondary btn-xs text-[11px] px-2.5 py-1.5 flex items-center gap-1.5 border-purple-500/30 text-purple-300 bg-purple-500/10 hover:bg-purple-500/20" title="Edit candidate color assignments">
+                <span>⚙️</span> Edit Colors
+              </button>
+              <button id="btnClosePanelDrawer" class="btn btn-secondary btn-xs text-slate-400 hover:text-white px-2.5 py-1.5 text-sm" title="Collapse Panel Drawer">
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <!-- Drawer Body (Scrollable) -->
+          <div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scroll">
+            <!-- Statutory Confidentiality Warning Banner -->
+            <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 flex items-start gap-2.5 text-xs text-rose-200/90 leading-relaxed">
+              <span class="text-base shrink-0 mt-0.5">🔒</span>
+              <div>
+                <strong class="text-rose-300">Confidential to RO / Admin PC:</strong>
+                Official election rules forbid recognizing political panels. This tally is stored solely on this browser for internal situational awareness. It is never displayed to students, electors, or on official print certificates.
+              </div>
+            </div>
+
+            <!-- Quick Summary Scoreboard Ribbon -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              ${panelStandings.activeColors.map(color => `
+                <div class="p-2.5 rounded-xl border ${color.lightBorder} ${color.bg} flex flex-col justify-between">
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <span class="w-2.5 h-2.5 rounded-full ${color.dot} shrink-0"></span>
+                    <span class="font-bold text-white text-xs truncate">${esc(color.displayName)}</span>
+                  </div>
+                  <div class="mt-2 flex items-baseline justify-between font-mono text-xs">
+                    <span class="text-slate-400 text-[10px]">Seats in Hand:</span>
+                    <span class="font-bold ${color.text} text-sm">${color.wonPosts.length + color.leadingPosts.length}</span>
+                  </div>
+                  <div class="text-[10px] text-slate-400 font-mono flex items-center justify-between border-t border-white/5 pt-1 mt-1">
+                    <span class="text-emerald-300">🏆 ${color.wonPosts.length}W</span>
+                    <span class="text-amber-300">⚡ ${color.leadingPosts.length}L</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- Color-by-Color Breakdown: Directly Below Each Summary Card Shows Posts Won and Leading For That Color! -->
+            <div class="space-y-4 pt-1">
+              ${panelStandings.activeColors.map(color => `
+                <div class="rounded-2xl border ${color.border} ${color.bg} overflow-hidden shadow-lg">
+                  <!-- 1. Color Summary Card -->
+                  <div class="p-3.5 bg-slate-900/90 border-b ${color.lightBorder} flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                      <span class="w-3.5 h-3.5 rounded-full ${color.dot} shadow-sm ring-2 ring-white/20 shrink-0"></span>
+                      <div>
+                        <h4 class="font-bold text-white text-sm leading-tight">${esc(color.displayName)}</h4>
+                        <div class="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center gap-1.5">
+                          <span>Total Seats: <strong class="${color.text}">${color.wonPosts.length + color.leadingPosts.length}</strong></span>
+                          <span>&bull;</span>
+                          <span>Votes: <strong class="text-slate-200">${color.totalVotes}</strong></span>
+                          <span>&bull;</span>
+                          <span>Contesting: <strong class="text-slate-300">${color.assignedCandidates}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-1.5 font-mono text-xs shrink-0">
+                      <span class="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold text-[11px]" title="Total Posts Won">
+                        🏆 ${color.wonPosts.length} Won
+                      </span>
+                      <span class="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold text-[11px]" title="Total Posts Currently Leading">
+                        ⚡ ${color.leadingPosts.length} Lead
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- 2. Post-by-Post Breakdown Below This Summary Card -->
+                  <div class="p-3 space-y-3 bg-slate-950/60 text-xs">
+                    <!-- Posts Won for this Color -->
+                    <div>
+                      <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-1.5 flex items-center justify-between">
+                        <span class="flex items-center gap-1">
+                          <span>🏆</span> Posts Won (${color.wonPosts.length})
+                        </span>
+                        ${color.wonPosts.length > 0 ? `<span class="text-[9px] text-emerald-500/80 font-mono">Elected</span>` : ''}
+                      </div>
+                      ${color.wonPosts.length > 0 ? `
+                        <div class="space-y-1.5">
+                          ${color.wonPosts.map(p => `
+                            <div class="p-2 rounded-xl bg-white/[0.04] border border-white/5 flex items-center justify-between gap-2.5">
+                              <div class="min-w-0">
+                                <div class="font-bold text-white text-xs truncate flex items-center gap-1.5">
+                                  <span class="w-1.5 h-1.5 rounded-full ${color.dot} shrink-0"></span>
+                                  <span class="truncate">${esc(p.postName)}</span>
+                                </div>
+                                <div class="text-[11px] text-slate-300 truncate mt-0.5">
+                                  <span class="font-medium">${esc(p.candidateName)}</span>
+                                  ${p.candidateClass ? `<span class="text-[10px] text-slate-500">(${esc(p.candidateClass)})</span>` : ''}
+                                </div>
+                              </div>
+                              <div class="text-right shrink-0">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold font-mono">
+                                  ${p.isUnanimous ? '✓ UNANIMOUS' : `✓ ${p.votes} votes`}
+                                </span>
+                              </div>
+                            </div>
+                          `).join('')}
+                        </div>
+                      ` : `
+                        <div class="p-2 rounded-lg bg-white/[0.02] border border-white/5 text-[11px] text-slate-500 italic">
+                          No posts declared won yet
+                        </div>
+                      `}
+                    </div>
+
+                    <!-- Posts Leading for this Color -->
+                    <div>
+                      <div class="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-1.5 flex items-center justify-between">
+                        <span class="flex items-center gap-1">
+                          <span>⚡</span> Posts Leading (${color.leadingPosts.length})
+                        </span>
+                        ${color.leadingPosts.length > 0 ? `<span class="text-[9px] text-amber-500/80 font-mono">In Progress</span>` : ''}
+                      </div>
+                      ${color.leadingPosts.length > 0 ? `
+                        <div class="space-y-1.5">
+                          ${color.leadingPosts.map(p => `
+                            <div class="p-2 rounded-xl bg-white/[0.04] border border-white/5 flex items-center justify-between gap-2.5">
+                              <div class="min-w-0">
+                                <div class="font-bold text-white text-xs truncate flex items-center gap-1.5">
+                                  <span class="w-1.5 h-1.5 rounded-full ${color.dot} shrink-0"></span>
+                                  <span class="truncate">${esc(p.postName)}</span>
+                                </div>
+                                <div class="text-[11px] text-slate-300 truncate mt-0.5">
+                                  <span class="font-medium">${esc(p.candidateName)}</span>
+                                  ${p.candidateClass ? `<span class="text-[10px] text-slate-500">(${esc(p.candidateClass)})</span>` : ''}
+                                </div>
+                              </div>
+                              <div class="text-right shrink-0">
+                                <div class="font-mono text-amber-300 font-bold text-xs">${p.votes} votes</div>
+                                ${p.leadMargin > 0 ? `
+                                  <div class="text-[9px] text-emerald-400 font-bold font-mono">+${p.leadMargin} lead</div>
+                                ` : (p.isTie ? `<div class="text-[9px] text-amber-400 font-bold font-mono">TIED</div>` : '')}
+                              </div>
+                            </div>
+                          `).join('')}
+                        </div>
+                      ` : `
+                        <div class="p-2 rounded-lg bg-white/[0.02] border border-white/5 text-[11px] text-slate-500 italic">
+                          No posts currently leading
+                        </div>
+                      `}
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- Independents / Unassigned Standings (if any) -->
+            ${(panelStandings.unassignedStats.wonPosts.length > 0 || panelStandings.unassignedStats.leadingPosts.length > 0) ? `
+              <div class="p-3.5 rounded-2xl border border-white/10 bg-white/[0.02] text-xs space-y-2">
+                <div class="flex items-center justify-between text-slate-400 font-bold">
+                  <span class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+                    <span>Independents / Unassigned</span>
+                  </span>
+                  <span class="font-mono text-[11px] text-slate-300">
+                    🏆 ${panelStandings.unassignedStats.wonPosts.length} Won &bull; ⚡ ${panelStandings.unassignedStats.leadingPosts.length} Lead
+                  </span>
+                </div>
+                <div class="space-y-1">
+                  ${[...panelStandings.unassignedStats.wonPosts, ...panelStandings.unassignedStats.leadingPosts].map(p => `
+                    <div class="flex items-center justify-between p-1.5 rounded bg-white/[0.03] text-[11px]">
+                      <span class="text-slate-300 truncate">${esc(p.postName)}: <strong class="text-white">${esc(p.candidateName)}</strong></span>
+                      <span class="font-mono text-slate-400 shrink-0">${p.isUnanimous ? 'Unanimous' : `${p.votes} votes`}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Drawer Footer -->
+          <div class="p-3 border-t border-white/10 bg-slate-950/70 flex items-center justify-between shrink-0 text-xs">
+            <button id="btnDrawerClearColors" class="text-rose-400 hover:text-rose-300 text-[11px] flex items-center gap-1 underline underline-offset-2 cursor-pointer">
+              <span>🗑️</span> Clear All Colors
+            </button>
+            <button id="btnDrawerCloseBottom" class="btn btn-secondary btn-xs px-3 py-1">
+              Close Drawer
+            </button>
+          </div>
+        </aside>
+      ` : ''}
+
+      <!-- Modal: Assign Candidate Panel Colors -->
+      <div id="modalPanelColors" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm hidden page-enter">
+        <div class="glass w-full max-w-3xl rounded-3xl border border-white/15 bg-slate-900/95 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+          <!-- Modal Header -->
+          <div class="px-6 py-4 border-b border-white/10 bg-slate-950/70 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">🎨</span>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="font-bold text-white text-base">Assign Candidate Panel Colors</h3>
+                  <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">CONFIDENTIAL</span>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5">Strictly saved on this Admin PC browser. Never visible to students or in print.</p>
+              </div>
+            </div>
+            <button id="btnClosePanelModal" class="btn btn-secondary btn-xs text-slate-400 hover:text-white px-2.5 py-1 text-sm">
+              ✕
+            </button>
+          </div>
+
+          <!-- Search & Filter Controls -->
+          <div class="p-4 border-b border-white/10 bg-white/[0.02] flex flex-col sm:flex-row items-center gap-3 shrink-0">
+            <div class="relative w-full sm:flex-1">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+              <input type="text" id="inputFilterPanelCand" placeholder="Filter by candidate or post name..." class="input input-sm w-full pl-8 text-xs bg-slate-950/60 border-white/10 text-white placeholder-slate-500">
+            </div>
+            <button id="btnToggleCustomLabels" type="button" class="btn btn-secondary btn-sm text-xs shrink-0 flex items-center gap-1.5 text-slate-300">
+              <span>🏷️</span> Rename Panels (Optional)
+            </button>
+          </div>
+
+          <!-- Collapsible Custom Names Section -->
+          <div id="sectionCustomLabels" class="p-4 border-b border-white/10 bg-slate-950/40 hidden shrink-0">
+            <div class="text-xs font-bold text-slate-300 mb-2">Customize Panel Aliases (e.g. Front A, Alliance B):</div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              ${PANEL_PALETTE.map(p => `
+                <div class="flex items-center gap-1.5 bg-white/5 p-1.5 rounded-lg border border-white/5">
+                  <span class="w-3 h-3 rounded-full ${p.dot} shrink-0"></span>
+                  <input type="text" data-color-label-id="${p.id}" value="${esc(panelData.labels?.[p.id] || '')}" placeholder="${p.name} Panel" class="input input-xs bg-transparent border-0 text-white text-xs w-full focus:ring-0 p-0.5">
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Candidate List by Post (Scrollable) -->
+          <div id="modalPanelCandList" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 custom-scroll">
+            ${sortedPosts.map(p => {
+              const postCandidates = candidates.filter(c => c.post === p.post);
+              if (postCandidates.length === 0) return '';
+              return `
+                <div class="panel-post-group bg-white/[0.02] border border-white/5 rounded-2xl p-4 space-y-3" data-post-name="${esc(p.post.toLowerCase())}">
+                  <div class="flex items-center justify-between border-b border-white/5 pb-2">
+                    <h4 class="font-bold text-indigo-400 text-xs uppercase tracking-wider">${esc(p.post)}</h4>
+                    <span class="text-[10px] text-slate-400 font-mono">${postCandidates.length} candidate${postCandidates.length > 1 ? 's' : ''}</span>
+                  </div>
+                  <div class="space-y-2.5">
+                    ${postCandidates.map(c => {
+                      const candKey = c.id || `${c.candidateName}_${c.post}`;
+                      const curColorId = panelData.candidates?.[candKey] || panelData.candidates?.[c.id] || panelData.candidates?.[`${c.candidateName}_${c.post}`] || 'none';
+                      return `
+                        <div class="panel-cand-item p-2.5 rounded-xl bg-slate-950/40 border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3" data-cand-search="${esc((c.candidateName + ' ' + (c.candidateClass || '') + ' ' + p.post).toLowerCase())}">
+                          <div class="min-w-0">
+                            <div class="font-bold text-white text-xs truncate flex items-center gap-2">
+                              <span>${esc(c.candidateName)}</span>
+                              ${c.candidateSerial ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[9px]">Sl. #${esc(c.candidateSerial)}</span>` : ''}
+                            </div>
+                            <div class="text-[11px] text-slate-400 truncate mt-0.5">${esc(c.candidateClass || '')}</div>
+                          </div>
+
+                          <!-- Color Swatches Row -->
+                          <div class="flex items-center gap-1.5 flex-wrap shrink-0">
+                            ${PANEL_PALETTE.map(pal => `
+                              <button type="button" class="swatch-btn w-6 h-6 rounded-full ${pal.dot} transition-all duration-150 flex items-center justify-center text-[10px] text-white font-bold cursor-pointer ${curColorId === pal.id ? 'ring-2 ring-white scale-110 shadow-lg' : 'opacity-60 hover:opacity-100'}" data-cand-key="${esc(candKey)}" data-color="${pal.id}" title="${pal.name} Panel">
+                                ${curColorId === pal.id ? '✓' : ''}
+                              </button>
+                            `).join('')}
+                            <button type="button" class="swatch-btn px-2 h-6 rounded-full bg-slate-800 border border-white/10 text-[10px] text-slate-400 hover:text-white transition-all duration-150 cursor-pointer ${curColorId === 'none' || !curColorId ? 'ring-2 ring-white/50 text-white font-bold' : 'opacity-60 hover:opacity-100'}" data-cand-key="${esc(candKey)}" data-color="none" title="Clear / No Panel">
+                              None
+                            </button>
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="px-6 py-4 border-t border-white/10 bg-slate-950/70 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+            <button id="btnModalClearAll" type="button" class="text-rose-400 hover:text-rose-300 text-xs flex items-center gap-1.5 transition-colors cursor-pointer">
+              <span>🗑️</span> Clear All Colors
+            </button>
+            <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+              <button id="btnCancelPanelModal" type="button" class="btn btn-secondary btn-sm text-xs">
+                Cancel
+              </button>
+              <button id="btnSavePanelColors" type="button" class="btn btn-primary btn-sm text-xs font-bold shadow-lg flex items-center gap-1.5">
+                <span>💾</span> Save & Apply Tally
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 
@@ -751,4 +1270,171 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       if (target) router.navigate(target);
     };
   });
+
+  // ── Confidential Panel Colors & Side Drawer Interaction ────────────────────
+  const panelModal = main.querySelector('#modalPanelColors');
+  const panelDrawer = main.querySelector('#panelTallyDrawer');
+  const panelBackdrop = main.querySelector('#panelDrawerBackdrop');
+  const panelTrigger = main.querySelector('#panelDrawerTrigger');
+
+  const openDrawer = () => {
+    if (!panelDrawer || !panelBackdrop) return;
+    isPanelDrawerOpen = true;
+    panelDrawer.classList.remove('translate-x-full');
+    panelDrawer.classList.add('translate-x-0');
+    panelBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+    panelBackdrop.classList.add('opacity-100', 'pointer-events-auto');
+    if (panelTrigger) {
+      panelTrigger.classList.add('translate-x-full');
+      panelTrigger.classList.remove('translate-x-0');
+    }
+  };
+
+  const closeDrawer = () => {
+    if (!panelDrawer || !panelBackdrop) return;
+    isPanelDrawerOpen = false;
+    panelDrawer.classList.remove('translate-x-0');
+    panelDrawer.classList.add('translate-x-full');
+    panelBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
+    panelBackdrop.classList.add('opacity-0', 'pointer-events-none');
+    if (panelTrigger) {
+      panelTrigger.classList.remove('translate-x-full');
+      panelTrigger.classList.add('translate-x-0');
+    }
+  };
+
+  main.querySelector('#btnTogglePanelDrawer')?.addEventListener('click', () => {
+    if (isPanelDrawerOpen) closeDrawer(); else openDrawer();
+  });
+
+  main.querySelector('#btnToolbarTogglePanelDrawer')?.addEventListener('click', () => {
+    if (isPanelDrawerOpen) closeDrawer(); else openDrawer();
+  });
+
+  main.querySelector('#btnClosePanelDrawer')?.addEventListener('click', closeDrawer);
+  main.querySelector('#btnDrawerCloseBottom')?.addEventListener('click', closeDrawer);
+  panelBackdrop?.addEventListener('click', closeDrawer);
+
+  // Modal open & close
+  const openPanelModal = () => {
+    if (panelModal) {
+      panelModal.classList.remove('hidden');
+      const searchInput = panelModal.querySelector('#inputFilterPanelCand');
+      if (searchInput) {
+        searchInput.value = '';
+        searchInput.focus();
+      }
+      panelModal.querySelectorAll('.panel-post-group, .panel-cand-item').forEach(el => el.classList.remove('hidden'));
+    }
+  };
+
+  const closePanelModal = () => {
+    if (panelModal) panelModal.classList.add('hidden');
+  };
+
+  main.querySelector('#btnOpenPanelSetup')?.addEventListener('click', openPanelModal);
+  main.querySelector('#btnDrawerEditColors')?.addEventListener('click', openPanelModal);
+  main.querySelector('#btnClosePanelModal')?.addEventListener('click', closePanelModal);
+  main.querySelector('#btnCancelPanelModal')?.addEventListener('click', closePanelModal);
+
+  // Toggle Custom Panel Names in modal
+  const btnToggleLabels = main.querySelector('#btnToggleCustomLabels');
+  const sectionLabels = main.querySelector('#sectionCustomLabels');
+  if (btnToggleLabels && sectionLabels) {
+    btnToggleLabels.onclick = () => {
+      sectionLabels.classList.toggle('hidden');
+    };
+  }
+
+  // Filter candidates/posts in modal
+  const inputFilter = main.querySelector('#inputFilterPanelCand');
+  if (inputFilter && panelModal) {
+    inputFilter.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const candItems = panelModal.querySelectorAll('.panel-cand-item');
+      candItems.forEach(item => {
+        const text = item.getAttribute('data-cand-search') || '';
+        item.classList.toggle('hidden', Boolean(q && !text.includes(q)));
+      });
+
+      panelModal.querySelectorAll('.panel-post-group').forEach(group => {
+        const hasVisibleChildren = Array.from(group.querySelectorAll('.panel-cand-item')).some(item => !item.classList.contains('hidden'));
+        group.classList.toggle('hidden', !hasVisibleChildren);
+      });
+    });
+  }
+
+  // Working copy of candidate colors for the modal session
+  let workingCandidateColors = { ...(panelData.candidates || {}) };
+
+  // Swatch selection in modal
+  if (panelModal) {
+    panelModal.querySelectorAll('.swatch-btn').forEach(btn => {
+      btn.onclick = () => {
+        const candKey = btn.getAttribute('data-cand-key');
+        const color = btn.getAttribute('data-color');
+        if (!candKey) return;
+
+        if (color === 'none') {
+          delete workingCandidateColors[candKey];
+        } else {
+          workingCandidateColors[candKey] = color;
+        }
+
+        // Update UI for this candidate's swatches
+        const parentRow = btn.closest('.panel-cand-item');
+        if (parentRow) {
+          parentRow.querySelectorAll('.swatch-btn').forEach(s => {
+            const sColor = s.getAttribute('data-color');
+            const isMatch = (color === 'none' && sColor === 'none') || (color === sColor);
+            if (isMatch) {
+              s.classList.remove('opacity-60');
+              s.classList.add('ring-2', sColor === 'none' ? 'ring-white/50' : 'ring-white', 'scale-110');
+              if (sColor !== 'none') s.textContent = '✓';
+            } else {
+              s.classList.add('opacity-60');
+              s.classList.remove('ring-2', 'ring-white', 'ring-white/50', 'scale-110');
+              if (sColor !== 'none') s.textContent = '';
+            }
+          });
+        }
+      };
+    });
+  }
+
+  // Save Modal Changes
+  main.querySelector('#btnSavePanelColors')?.addEventListener('click', () => {
+    const workingLabels = {};
+    if (sectionLabels) {
+      sectionLabels.querySelectorAll('input[data-color-label-id]').forEach(inp => {
+        const cid = inp.getAttribute('data-color-label-id');
+        const val = inp.value.trim();
+        if (val) workingLabels[cid] = val;
+      });
+    }
+
+    saveConfidentialPanelData({
+      candidates: workingCandidateColors,
+      labels: workingLabels
+    });
+
+    closePanelModal();
+    showToast('🎨 Candidate panel colors saved! Confidential tally updated.', 'success');
+    renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+  });
+
+  // Clear All Colors
+  const executeClearAllColors = () => {
+    if (!confirm('⚠️ Are you sure you want to clear all candidate panel colors from this browser?\n\nThis will remove confidential panel tags and hide the side tally view.')) {
+      return;
+    }
+    localStorage.removeItem(CONFIDENTIAL_PANEL_KEY);
+    isPanelDrawerOpen = false;
+    closePanelModal();
+    showToast('Candidate panel colors cleared.', 'info');
+    renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+  };
+
+  main.querySelector('#btnModalClearAll')?.addEventListener('click', executeClearAllColors);
+  main.querySelector('#btnDrawerClearColors')?.addEventListener('click', executeClearAllColors);
 }
