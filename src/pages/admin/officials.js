@@ -153,6 +153,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       if (team.presidingOfficer?.name === fName) return { role: 'Presiding Officer', boothNumber: team.boothNumber };
       if (team.pollingOfficer1?.name === fName) return { role: 'Polling Officer', boothNumber: team.boothNumber };
       if (team.pollingOfficer2?.name === fName) return { role: 'Polling Officer', boothNumber: team.boothNumber };
+      if (team.pollingOfficer3?.name === fName) return { role: 'Polling Officer 3 (Optional)', boothNumber: team.boothNumber };
     }
     return null;
   };
@@ -164,6 +165,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       if (team.supervisor?.name === fName) return { role: 'Counting Supervisor', tableNumber: team.tableNumber };
       if (team.countingOfficer1?.name === fName) return { role: 'Counting Officer', tableNumber: team.tableNumber };
       if (team.countingOfficer2?.name === fName) return { role: 'Counting Officer', tableNumber: team.tableNumber };
+      if (team.countingOfficer3?.name === fName) return { role: 'Counting Officer 3 (Optional)', tableNumber: team.tableNumber };
     }
     return null;
   };
@@ -705,8 +707,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const po2 = pollingPool[i * 2 + 1] || null;
       const assistant = availableNT.length > 0 ? (availableNT[i % availableNT.length] || null) : null;
 
+      // Preserve any manually assigned 3rd Polling Officer
+      const existingTeam = pollingTeams.find(t => t.boothNumber === b.boothNumber);
+      const existingPO3 = existingTeam?.pollingOfficer3 || null;
+      const existingShowPO3 = existingTeam?.showPollingOfficer3 || false;
+
       // Verify hierarchy: Presiding Officer must be strictly seniormost
-      const teamFaculty = [pOfficer, po1, po2].filter(Boolean);
+      const teamFaculty = [pOfficer, po1, po2, existingPO3].filter(Boolean);
       teamFaculty.sort((a, b) => a.seniority - b.seniority);
 
       newTeams.push({
@@ -715,6 +722,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         presidingOfficer: teamFaculty[0] || null,
         pollingOfficer1: teamFaculty[1] || null,
         pollingOfficer2: teamFaculty[2] || null,
+        pollingOfficer3: teamFaculty[3] || null,
+        showPollingOfficer3: existingShowPO3 || !!existingPO3,
         pollingAssistant: assistant ? { name: assistant.name, designation: assistant.designation, pen: assistant.pen || '' } : null
       });
     }
@@ -738,6 +747,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       if (t.presidingOfficer?.name) pollingAssignedNames.add(t.presidingOfficer.name);
       if (t.pollingOfficer1?.name) pollingAssignedNames.add(t.pollingOfficer1.name);
       if (t.pollingOfficer2?.name) pollingAssignedNames.add(t.pollingOfficer2.name);
+      if (t.pollingOfficer3?.name) pollingAssignedNames.add(t.pollingOfficer3.name);
     });
 
     const activeFaculty = faculty.filter(f => !f.isExcluded).sort((a, b) => a.seniority - b.seniority);
@@ -766,7 +776,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       // Pair with non-teaching staff, shifting offset to use fresh staff if available
       const assistant = availableNT.length > 0 ? (availableNT[(i + numTables) % availableNT.length] || null) : null;
 
-      const teamFaculty = [sup, co1, co2].filter(Boolean);
+      // Preserve any manually assigned 3rd Counting Officer
+      const existingTeam = countingTeams.find(t => t.tableNumber === b.boothNumber);
+      const existingCO3 = existingTeam?.countingOfficer3 || null;
+      const existingShowCO3 = existingTeam?.showCountingOfficer3 || false;
+
+      const teamFaculty = [sup, co1, co2, existingCO3].filter(Boolean);
       teamFaculty.sort((a, b) => a.seniority - b.seniority);
 
       teamFaculty.forEach(f => {
@@ -779,6 +794,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         supervisor: teamFaculty[0] || null,
         countingOfficer1: teamFaculty[1] || null,
         countingOfficer2: teamFaculty[2] || null,
+        countingOfficer3: teamFaculty[3] || null,
+        showCountingOfficer3: existingShowCO3 || !!existingCO3,
         countingAssistant: assistant ? { name: assistant.name, designation: assistant.designation, pen: assistant.pen || '' } : null
       });
     }
@@ -818,6 +835,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       if (t.presidingOfficer) pollingSlotsFilled++;
       if (t.pollingOfficer1) pollingSlotsFilled++;
       if (t.pollingOfficer2) pollingSlotsFilled++;
+      if (t.pollingOfficer3) pollingSlotsFilled++;
       if (t.pollingAssistant) pollingAsstFilled++;
     });
 
@@ -825,11 +843,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     let countingAsstFilled = 0;
     let doubleDutyCount = 0;
     const assignedPollingNames = new Set(
-      pollingTeams.flatMap(t => [t.presidingOfficer?.name, t.pollingOfficer1?.name, t.pollingOfficer2?.name]).filter(Boolean)
+      pollingTeams.flatMap(t => [t.presidingOfficer?.name, t.pollingOfficer1?.name, t.pollingOfficer2?.name, t.pollingOfficer3?.name]).filter(Boolean)
     );
 
     countingTeams.forEach(t => {
-      [t.supervisor, t.countingOfficer1, t.countingOfficer2].filter(Boolean).forEach(f => {
+      [t.supervisor, t.countingOfficer1, t.countingOfficer2, t.countingOfficer3].filter(Boolean).forEach(f => {
         countingSlotsFilled++;
         if (assignedPollingNames.has(f.name)) doubleDutyCount++;
       });
@@ -889,18 +907,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <span class="text-[11px] uppercase tracking-wider text-indigo-300 font-semibold">Polling Teams</span>
             <div class="flex items-baseline gap-2 mt-1">
               <span class="text-2xl font-bold text-indigo-200 font-mono">${pollingSlotsFilled}</span>
-              <span class="text-xs text-slate-400">/ ${booths.length * 3} Faculty</span>
+              <span class="text-xs text-slate-400">/ ${booths.length * 3 + pollingTeams.filter(t => t.pollingOfficer3).length} Faculty</span>
             </div>
-            <span class="text-[10px] text-indigo-400 mt-1">${pollingAsstFilled} / ${booths.length} Assistants</span>
+            <span class="text-[10px] text-indigo-400 mt-1">${pollingAsstFilled} / ${booths.length} Assistants${pollingTeams.filter(t => t.pollingOfficer3).length > 0 ? ` · ${pollingTeams.filter(t => t.pollingOfficer3).length} addl` : ''}</span>
           </div>
 
           <div class="glass p-3 rounded-xl border border-purple-500/30 flex flex-col justify-between bg-purple-950/20">
             <span class="text-[11px] uppercase tracking-wider text-purple-300 font-semibold">Counting Teams</span>
             <div class="flex items-baseline gap-2 mt-1">
               <span class="text-2xl font-bold text-purple-200 font-mono">${countingSlotsFilled}</span>
-              <span class="text-xs text-slate-400">/ ${booths.length * 3} Faculty</span>
+              <span class="text-xs text-slate-400">/ ${booths.length * 3 + countingTeams.filter(t => t.countingOfficer3).length} Faculty</span>
             </div>
-            <span class="text-[10px] text-purple-400 mt-1">${countingAsstFilled} / ${booths.length} Assistants</span>
+            <span class="text-[10px] text-purple-400 mt-1">${countingAsstFilled} / ${booths.length} Assistants${countingTeams.filter(t => t.countingOfficer3).length > 0 ? ` · ${countingTeams.filter(t => t.countingOfficer3).length} addl` : ''}</span>
           </div>
 
           <div class="glass p-3 rounded-xl border ${doubleDutyCount > 0 ? 'border-amber-500/50 bg-amber-950/30' : 'border-emerald-500/30 bg-emerald-950/20'} flex flex-col justify-between">
@@ -958,6 +976,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 presidingOfficer: null,
                 pollingOfficer1: null,
                 pollingOfficer2: null,
+                pollingOfficer3: null,
                 pollingAssistant: null
               };
 
@@ -965,7 +984,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               const pRank = team.presidingOfficer ? team.presidingOfficer.seniority : 999;
               const po1Rank = team.pollingOfficer1 ? team.pollingOfficer1.seniority : 999;
               const po2Rank = team.pollingOfficer2 ? team.pollingOfficer2.seniority : 999;
-              const hierarchyViolation = (po1Rank < pRank) || (po2Rank < pRank);
+              const po3Rank = team.pollingOfficer3 ? team.pollingOfficer3.seniority : 999;
+              const hierarchyViolation = (po1Rank < pRank) || (po2Rank < pRank) || (po3Rank < pRank);
 
               return `
                 <div class="glass rounded-xl border ${hierarchyViolation ? 'border-amber-500/70 bg-amber-950/20' : 'border-white/10'} p-4 flex flex-col justify-between space-y-3 relative group" data-booth="${b.boothNumber}">
@@ -1059,6 +1079,41 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         </select>
                       </div>
 
+                      <!-- Polling Officer (Slot 3 - Optional / High Voter Booth) -->
+                      ${team.pollingOfficer3 || team.showPollingOfficer3 ? `
+                        <div class="p-2.5 rounded-lg bg-indigo-950/40 border border-indigo-500/30 space-y-1.5 transition-all">
+                          <div class="flex items-center justify-between mb-0.5">
+                            <label class="text-[11px] font-bold text-indigo-300 flex items-center gap-1">
+                              <span>👤</span> Polling Officer 3 <span class="text-[10px] text-indigo-400 font-normal">(Additional · Optional)</span>
+                            </label>
+                            <div class="flex items-center gap-1.5">
+                              ${team.pollingOfficer3 ? `<span class="text-[10px] font-mono text-indigo-200 bg-indigo-500/20 px-1.5 py-0.2 rounded border border-indigo-500/30">Rank #${team.pollingOfficer3.seniority}</span>` : ''}
+                              <button type="button" class="text-[10px] text-rose-400 hover:text-rose-200 hover:underline btn-remove-polling-officer3 flex items-center gap-0.5" data-booth="${b.boothNumber}" title="Remove 3rd Polling Officer slot">
+                                <span>✖</span> Remove
+                              </button>
+                            </div>
+                          </div>
+                          <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-indigo-400 focus:outline-none select-polling-role" data-booth="${b.boothNumber}" data-role="pollingOfficer3">
+                            <option value="">-- Select Additional Polling Officer --</option>
+                            ${faculty.map(f => {
+                              const isAssignedElsewhere = getPollingAssignment(f.name) && getPollingAssignment(f.name).boothNumber !== b.boothNumber;
+                              const isSelected = team.pollingOfficer3?.name === f.name;
+                              return `
+                                <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${isAssignedElsewhere ? 'disabled' : ''}>
+                                  ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)} · PEN:${f.pen}) ${isAssignedElsewhere ? `(Already in Booth ${getPollingAssignment(f.name).boothNumber})` : ''}
+                                </option>
+                              `;
+                            }).join('')}
+                          </select>
+                        </div>
+                      ` : `
+                        <div class="pt-0.5">
+                          <button type="button" class="w-full py-1.5 px-2 rounded-lg border border-dashed border-indigo-500/40 text-[11px] text-indigo-300 hover:text-white hover:bg-indigo-600/20 hover:border-indigo-400 transition flex items-center justify-center gap-1.5 btn-add-polling-officer3" data-booth="${b.boothNumber}" title="Add a 3rd Polling Officer manually for high-voter booths">
+                            <span>➕</span> Add 3rd Polling Officer <span class="text-[10px] text-indigo-400/80 font-normal">(Optional / High Voters)</span>
+                          </button>
+                        </div>
+                      `}
+
                       <!-- Polling Assistant (Non Teaching) -->
                       <div class="pt-1 border-t border-white/10">
                         <div class="flex items-center justify-between mb-1">
@@ -1112,19 +1167,22 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 supervisor: null,
                 countingOfficer1: null,
                 countingOfficer2: null,
+                countingOfficer3: null,
                 countingAssistant: null
               };
 
               const supRank = team.supervisor ? team.supervisor.seniority : 999;
               const co1Rank = team.countingOfficer1 ? team.countingOfficer1.seniority : 999;
               const co2Rank = team.countingOfficer2 ? team.countingOfficer2.seniority : 999;
-              const hierarchyViolation = (co1Rank < supRank) || (co2Rank < supRank);
+              const co3Rank = team.countingOfficer3 ? team.countingOfficer3.seniority : 999;
+              const hierarchyViolation = (co1Rank < supRank) || (co2Rank < supRank) || (co3Rank < supRank);
 
               const supDouble = team.supervisor ? getPollingAssignment(team.supervisor.name) : null;
               const co1Double = team.countingOfficer1 ? getPollingAssignment(team.countingOfficer1.name) : null;
               const co2Double = team.countingOfficer2 ? getPollingAssignment(team.countingOfficer2.name) : null;
+              const co3Double = team.countingOfficer3 ? getPollingAssignment(team.countingOfficer3.name) : null;
               const asstDouble = team.countingAssistant ? getNonTeachingAssignment(team.countingAssistant.name).polling : null;
-              const hasDoubleDuty = !!(supDouble || co1Double || co2Double || asstDouble);
+              const hasDoubleDuty = !!(supDouble || co1Double || co2Double || co3Double || asstDouble);
 
               return `
                 <div class="glass rounded-xl border ${hasDoubleDuty ? 'border-amber-500/50 bg-amber-950/20' : 'border-white/10'} p-4 flex flex-col justify-between space-y-3 relative group" data-table="${b.boothNumber}">
@@ -1224,6 +1282,42 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         </select>
                         ${co2Double ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Polling Booth ${co2Double.boothNumber} (${co2Double.role})</p>` : ''}
                       </div>
+
+                      <!-- Counting Officer (Slot 3 - Optional / High Load Table) -->
+                      ${team.countingOfficer3 || team.showCountingOfficer3 ? `
+                        <div class="p-2.5 rounded-lg bg-purple-950/40 border border-purple-500/30 space-y-1.5 transition-all">
+                          <div class="flex items-center justify-between mb-0.5">
+                            <label class="text-[11px] font-bold text-purple-300 flex items-center gap-1">
+                              <span>👤</span> Counting Officer 3 <span class="text-[10px] text-purple-400 font-normal">(Additional · Optional)</span>
+                            </label>
+                            <div class="flex items-center gap-1.5">
+                              ${team.countingOfficer3 ? `<span class="text-[10px] font-mono text-purple-200 bg-purple-500/20 px-1.5 py-0.2 rounded border border-purple-500/30">Rank #${team.countingOfficer3.seniority}</span>` : ''}
+                              <button type="button" class="text-[10px] text-rose-400 hover:text-rose-200 hover:underline btn-remove-counting-officer3 flex items-center gap-0.5" data-table="${b.boothNumber}" title="Remove 3rd Counting Officer slot">
+                                <span>✖</span> Remove
+                              </button>
+                            </div>
+                          </div>
+                          <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-purple-400 focus:outline-none select-counting-role" data-table="${b.boothNumber}" data-role="countingOfficer3">
+                            <option value="">-- Select Additional Counting Officer --</option>
+                            ${faculty.map(f => {
+                              const pAssigned = getPollingAssignment(f.name);
+                              const isSelected = team.countingOfficer3?.name === f.name;
+                              return `
+                                <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''}>
+                                  ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)}) ${pAssigned ? `[⚠️ Double Duty: Booth ${pAssigned.boothNumber}]` : ''}
+                                </option>
+                              `;
+                            }).join('')}
+                          </select>
+                          ${co3Double ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Polling Booth ${co3Double.boothNumber} (${co3Double.role})</p>` : ''}
+                        </div>
+                      ` : `
+                        <div class="pt-0.5">
+                          <button type="button" class="w-full py-1.5 px-2 rounded-lg border border-dashed border-purple-500/40 text-[11px] text-purple-300 hover:text-white hover:bg-purple-600/20 hover:border-purple-400 transition flex items-center justify-center gap-1.5 btn-add-counting-officer3" data-table="${b.boothNumber}" title="Add a 3rd Counting Officer manually for high-load tables">
+                            <span>➕</span> Add 3rd Counting Officer <span class="text-[10px] text-purple-400/80 font-normal">(Optional / High Load)</span>
+                          </button>
+                        </div>
+                      `}
 
                       <!-- Counting Assistant (Non Teaching) -->
                       <div class="pt-1 border-t border-white/10">
@@ -1563,7 +1657,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
         let team = pollingTeams.find(t => t.boothNumber === boothNum);
         if (!team) {
-          team = { boothNumber: boothNum, roomName: `Booth ${boothNum}`, presidingOfficer: null, pollingOfficer1: null, pollingOfficer2: null, pollingAssistant: null };
+          team = { boothNumber: boothNum, roomName: `Booth ${boothNum}`, presidingOfficer: null, pollingOfficer1: null, pollingOfficer2: null, pollingOfficer3: null, pollingAssistant: null };
           pollingTeams.push(team);
         }
 
@@ -1574,6 +1668,34 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       });
     });
 
+    // Add 3rd Polling Officer Slot
+    main.querySelectorAll('.btn-add-polling-officer3').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const boothNum = parseInt(e.currentTarget.dataset.booth, 10);
+        let team = pollingTeams.find(t => t.boothNumber === boothNum);
+        if (!team) {
+          team = { boothNumber: boothNum, roomName: `Booth ${boothNum}`, presidingOfficer: null, pollingOfficer1: null, pollingOfficer2: null, pollingOfficer3: null, pollingAssistant: null };
+          pollingTeams.push(team);
+        }
+        team.showPollingOfficer3 = true;
+        renderUI();
+      });
+    });
+
+    // Remove 3rd Polling Officer Slot
+    main.querySelectorAll('.btn-remove-polling-officer3').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const boothNum = parseInt(e.currentTarget.dataset.booth, 10);
+        const team = pollingTeams.find(t => t.boothNumber === boothNum);
+        if (team) {
+          team.pollingOfficer3 = null;
+          team.showPollingOfficer3 = false;
+          saveAll(false);
+          renderUI();
+        }
+      });
+    });
+
     // Change Polling Assistant Dropdown
     main.querySelectorAll('.select-polling-assistant').forEach(sel => {
       sel.addEventListener('change', (e) => {
@@ -1581,7 +1703,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         const selectedName = e.target.value;
         let team = pollingTeams.find(t => t.boothNumber === boothNum);
         if (!team) {
-          team = { boothNumber: boothNum, roomName: `Booth ${boothNum}`, presidingOfficer: null, pollingOfficer1: null, pollingOfficer2: null, pollingAssistant: null };
+          team = { boothNumber: boothNum, roomName: `Booth ${boothNum}`, presidingOfficer: null, pollingOfficer1: null, pollingOfficer2: null, pollingOfficer3: null, pollingAssistant: null };
           pollingTeams.push(team);
         }
         const nt = nonTeaching.find(n => n.name === selectedName);
@@ -1597,12 +1719,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         const team = pollingTeams.find(t => t.boothNumber === boothNum);
         if (!team) return;
 
-        const teamFaculty = [team.presidingOfficer, team.pollingOfficer1, team.pollingOfficer2].filter(Boolean);
+        const teamFaculty = [team.presidingOfficer, team.pollingOfficer1, team.pollingOfficer2, team.pollingOfficer3].filter(Boolean);
         teamFaculty.sort((a, b) => a.seniority - b.seniority);
 
         team.presidingOfficer = teamFaculty[0] || null;
         team.pollingOfficer1 = teamFaculty[1] || null;
         team.pollingOfficer2 = teamFaculty[2] || null;
+        team.pollingOfficer3 = teamFaculty[3] || null;
 
         showToast(`Booth ${boothNum} hierarchy fixed: Seniormost is now Presiding Officer!`, 'success');
         saveAll(false);
@@ -1619,7 +1742,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
         let team = countingTeams.find(t => t.tableNumber === tableNum);
         if (!team) {
-          team = { tableNumber: tableNum, roomName: `Table ${tableNum}`, supervisor: null, countingOfficer1: null, countingOfficer2: null, countingAssistant: null };
+          team = { tableNumber: tableNum, roomName: `Table ${tableNum}`, supervisor: null, countingOfficer1: null, countingOfficer2: null, countingOfficer3: null, countingAssistant: null };
           countingTeams.push(team);
         }
 
@@ -1630,6 +1753,34 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       });
     });
 
+    // Add 3rd Counting Officer Slot
+    main.querySelectorAll('.btn-add-counting-officer3').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const tableNum = parseInt(e.currentTarget.dataset.table, 10);
+        let team = countingTeams.find(t => t.tableNumber === tableNum);
+        if (!team) {
+          team = { tableNumber: tableNum, roomName: `Table ${tableNum}`, supervisor: null, countingOfficer1: null, countingOfficer2: null, countingOfficer3: null, countingAssistant: null };
+          countingTeams.push(team);
+        }
+        team.showCountingOfficer3 = true;
+        renderUI();
+      });
+    });
+
+    // Remove 3rd Counting Officer Slot
+    main.querySelectorAll('.btn-remove-counting-officer3').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const tableNum = parseInt(e.currentTarget.dataset.table, 10);
+        const team = countingTeams.find(t => t.tableNumber === tableNum);
+        if (team) {
+          team.countingOfficer3 = null;
+          team.showCountingOfficer3 = false;
+          saveAll(false);
+          renderUI();
+        }
+      });
+    });
+
     // Change Counting Assistant Dropdown
     main.querySelectorAll('.select-counting-assistant').forEach(sel => {
       sel.addEventListener('change', (e) => {
@@ -1637,7 +1788,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         const selectedName = e.target.value;
         let team = countingTeams.find(t => t.tableNumber === tableNum);
         if (!team) {
-          team = { tableNumber: tableNum, roomName: `Table ${tableNum}`, supervisor: null, countingOfficer1: null, countingOfficer2: null, countingAssistant: null };
+          team = { tableNumber: tableNum, roomName: `Table ${tableNum}`, supervisor: null, countingOfficer1: null, countingOfficer2: null, countingOfficer3: null, countingAssistant: null };
           countingTeams.push(team);
         }
         const nt = nonTeaching.find(n => n.name === selectedName);
@@ -1653,12 +1804,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         const team = countingTeams.find(t => t.tableNumber === tableNum);
         if (!team) return;
 
-        const teamFaculty = [team.supervisor, team.countingOfficer1, team.countingOfficer2].filter(Boolean);
+        const teamFaculty = [team.supervisor, team.countingOfficer1, team.countingOfficer2, team.countingOfficer3].filter(Boolean);
         teamFaculty.sort((a, b) => a.seniority - b.seniority);
 
         team.supervisor = teamFaculty[0] || null;
         team.countingOfficer1 = teamFaculty[1] || null;
         team.countingOfficer2 = teamFaculty[2] || null;
+        team.countingOfficer3 = teamFaculty[3] || null;
 
         showToast(`Table ${tableNum} hierarchy fixed: Seniormost is now Counting Supervisor!`, 'success');
         saveAll(false);
@@ -1865,11 +2017,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           t.presidingOfficer = null;
           t.pollingOfficer1 = null;
           t.pollingOfficer2 = null;
+          t.pollingOfficer3 = null;
+          t.showPollingOfficer3 = false;
         });
         countingTeams.forEach(t => {
           t.supervisor = null;
           t.countingOfficer1 = null;
           t.countingOfficer2 = null;
+          t.countingOfficer3 = null;
+          t.showCountingOfficer3 = false;
         });
         localStorage.setItem('gcc_roster_migrated_v2', 'true');
         await saveAll(false);
@@ -2558,6 +2714,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               const head = isPolling ? t.presidingOfficer : t.supervisor;
               const o1 = isPolling ? t.pollingOfficer1 : t.countingOfficer1;
               const o2 = isPolling ? t.pollingOfficer2 : t.countingOfficer2;
+              const o3 = isPolling ? t.pollingOfficer3 : t.countingOfficer3;
               const asst = isPolling ? t.pollingAssistant : t.countingAssistant;
 
               return `
@@ -2587,6 +2744,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         <span class="staff-meta" style="margin-left: 14px;">${esc(o2.designation || 'Faculty')}${o2.pen ? ` · PEN: ${esc(o2.pen)}` : ''}</span>
                       ` : '<span class="unassigned">2. – Not Assigned –</span>'}
                     </div>
+                    ${o3 && o3.name ? `
+                      <div style="border-top: 1px dashed #cbd5e1; padding-top: 4px; margin-top: 4px;">
+                        <span class="staff-name">3. ${esc(o3.name)} <span style="font-size: 8.5px; color: #4338ca; font-weight: bold; background: #e0e7ff; padding: 1px 4px; border-radius: 3px;">Optional / Addl</span></span>
+                        <span class="staff-meta" style="margin-left: 14px;">${esc(o3.designation || 'Faculty')}${o3.pen ? ` · PEN: ${esc(o3.pen)}` : ''}</span>
+                      </div>
+                    ` : ''}
                   </td>
                   <td>
                     ${asst && asst.name ? `
@@ -2677,6 +2840,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           designation: o2.designation || 'Faculty',
           pen: o2.pen || '',
           role: officerRole,
+          boothNumber: num,
+          venue: venue
+        });
+      }
+
+      const o3 = isPolling ? t.pollingOfficer3 : t.countingOfficer3;
+      if (o3 && o3.name) {
+        personnel.push({
+          name: o3.name,
+          designation: o3.designation || 'Faculty',
+          pen: o3.pen || '',
+          role: isPolling ? 'Polling Officer (Additional)' : 'Counting Officer (Additional)',
           boothNumber: num,
           venue: venue
         });
