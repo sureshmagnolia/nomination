@@ -2373,6 +2373,8 @@ All students are directed to strictly adhere to the University Code of Conduct, 
         return errOut(res, 'Nominal Roll is finalized and locked. Please unfinalize with admin password before replacing the roll.', 400);
       }
 
+      const isFinalUpload = body.isFinalRoll === true || body.isFinalRoll === 'true' || body.preserveSerials === true;
+
       await sql`DELETE FROM nominal_roll`;
       // DO NOT DELETE NOMINATIONS! Preserve nominations and auto-remap
       await sql`UPDATE settings SET value='false' WHERE key IN ('validListPublished', 'finalListPublished', 'isRollFinalized', 'draftRollPublished')`;
@@ -2389,7 +2391,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
         return u;
       };
 
-      const toInsert = body.rows.map(r => {
+      const toInsert = body.rows.map((r, idx) => {
         let cl = r[2], adm = r[3], dpt = r[4];
         if (!isLegacy) {
           const yr = formatYearPrefix(r[2]);
@@ -2397,14 +2399,12 @@ All students are directed to strictly adhere to the University Code of Conduct, 
           adm = r[4] || ''; // Admission No
           dpt = r[5] || ''; // Dept
         }
-        return { serial_number: String(r[0] || ''), name: String(r[1] || ''), class: String(cl), admission_no: String(adm), dept: String(dpt) };
+        const slRaw = String(r[0] !== undefined && r[0] !== null ? r[0] : '').trim();
+        const finalSl = slRaw || String(idx + 1);
+        return { serial_number: finalSl, name: String(r[1] || '').trim(), class: String(cl), admission_no: String(adm), dept: String(dpt) };
       });
       
       if (toInsert.length > 0) {
-        // Check if uploaded data already has unique serial numbers
-        const hasValidSerials = toInsert.every(r => r.serial_number && r.serial_number.trim() && !isNaN(Number(r.serial_number))) &&
-          new Set(toInsert.map(r => r.serial_number.trim())).size === toInsert.length;
-
         // Bulk insert using concurrent Neon HTTP requests (chunked to avoid Vercel timeouts)
         const batchSize = 50;
         for (let i = 0; i < toInsert.length; i += batchSize) {
@@ -2414,45 +2414,53 @@ All students are directed to strictly adhere to the University Code of Conduct, 
           ));
         }
         
-        // Always assign contiguous sequential 1..N serial numbers strictly following canonical sort order:
-        // Department (A-Z) -> Progression (1st UG -> 2nd UG -> 3rd UG -> 4th UG -> 1st PG -> 2nd PG -> RS) -> Class Name -> Student Name
-        await sql`UPDATE nominal_roll SET serial_number = serial_number || '_' || gen_random_uuid()::varchar`;
-        await sql`
-          WITH renumbered AS (
-            SELECT serial_number as old_serial,
-              ROW_NUMBER() OVER (
-                ORDER BY 
-                  LOWER(TRIM(dept)) ASC,
-                  CASE 
-                    WHEN UPPER(class) LIKE '%RESEARCH%' OR UPPER(class) LIKE '%SCHOLAR%' OR UPPER(class) ~ 'PH\.?\s*D' THEN 6000
-                    WHEN (UPPER(class) ~ '(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)' OR UPPER(class) ~ '^(I|II|III|[1-3](ST|ND|RD)?)\s*(YEAR\s*)?(M|PG)\b')
-                     AND (UPPER(class) ~ '(^|[^A-Z])(2ND|II|SECOND)([^A-Z]|$)' OR UPPER(class) ~ '2ND\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[34]|S[34]|[34](RD|TH)\s*SEM)([^A-Z]|$)') THEN 5000
-                    WHEN (UPPER(class) ~ '(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)' OR UPPER(class) ~ '^(I|II|III|[1-3](ST|ND|RD)?)\s*(YEAR\s*)?(M|PG)\b')
-                     AND (UPPER(class) ~ '(^|[^A-Z])(3RD|III|THIRD)([^A-Z]|$)' OR UPPER(class) ~ '3RD\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[56]|S[56]|[56](TH)\s*SEM)([^A-Z]|$)') THEN 5500
-                    WHEN UPPER(class) ~ '(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)' OR UPPER(class) ~ '^(I|II|III|[1-3](ST|ND|RD)?)\s*(YEAR\s*)?(M|PG)\b' THEN 4000
-                    WHEN UPPER(class) ~ '(^|[^A-Z])(1ST|I|FIRST)([^A-Z]|$)' OR UPPER(class) ~ '1ST\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[12]|S[12]|[12](ST|ND)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^I\s+(B|UG)' THEN 1000
-                    WHEN UPPER(class) ~ '(^|[^A-Z])(2ND|II|SECOND)([^A-Z]|$)' OR UPPER(class) ~ '2ND\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[34]|S[34]|[34](RD|TH)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^II\s+(B|UG)' THEN 2000
-                    WHEN UPPER(class) ~ '(^|[^A-Z])(3RD|III|THIRD)([^A-Z]|$)' OR UPPER(class) ~ '3RD\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[56]|S[56]|[56](TH)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^III\s+(B|UG)' THEN 3000
-                    WHEN UPPER(class) ~ '(^|[^A-Z])(4TH|IV|FOURTH)([^A-Z]|$)' OR UPPER(class) ~ '4TH\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[78]|S[78]|[78](TH)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^IV\s+(B|UG)' THEN 3500
-                    ELSE 3800
-                  END ASC,
-                  LOWER(TRIM(class)) ASC,
-                  LOWER(TRIM(name)) ASC,
-                  name ASC,
-                  CASE WHEN split_part(serial_number, '_', 1) ~ '^[0-9]+$' THEN CAST(split_part(serial_number, '_', 1) AS BIGINT) ELSE 999999 END ASC,
-                  CASE WHEN admission_no ~ '^[0-9]+$' THEN CAST(admission_no AS BIGINT) ELSE 999999 END ASC
-              ) as new_serial
-            FROM nominal_roll
-          )
-          UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
-          FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
-        `;
+        if (!isFinalUpload) {
+          // Draft Roll: Re-order and assign contiguous sequential 1..N serial numbers strictly following canonical sort order:
+          // Department (A-Z) -> Progression (1st UG -> 2nd UG -> 3rd UG -> 4th UG -> 1st PG -> 2nd PG -> RS) -> Class Name -> Student Name
+          await sql`UPDATE nominal_roll SET serial_number = serial_number || '_' || gen_random_uuid()::varchar`;
+          await sql`
+            WITH renumbered AS (
+              SELECT serial_number as old_serial,
+                ROW_NUMBER() OVER (
+                  ORDER BY 
+                    LOWER(TRIM(dept)) ASC,
+                    CASE 
+                      WHEN UPPER(class) LIKE '%RESEARCH%' OR UPPER(class) LIKE '%SCHOLAR%' OR UPPER(class) ~ 'PH\.?\s*D' THEN 6000
+                      WHEN (UPPER(class) ~ '(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)' OR UPPER(class) ~ '^(I|II|III|[1-3](ST|ND|RD)?)\s*(YEAR\s*)?(M|PG)\b')
+                       AND (UPPER(class) ~ '(^|[^A-Z])(2ND|II|SECOND)([^A-Z]|$)' OR UPPER(class) ~ '2ND\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[34]|S[34]|[34](RD|TH)\s*SEM)([^A-Z]|$)') THEN 5000
+                      WHEN (UPPER(class) ~ '(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)' OR UPPER(class) ~ '^(I|II|III|[1-3](ST|ND|RD)?)\s*(YEAR\s*)?(M|PG)\b')
+                       AND (UPPER(class) ~ '(^|[^A-Z])(3RD|III|THIRD)([^A-Z]|$)' OR UPPER(class) ~ '3RD\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[56]|S[56]|[56](TH)\s*SEM)([^A-Z]|$)') THEN 5500
+                      WHEN UPPER(class) ~ '(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)' OR UPPER(class) ~ '^(I|II|III|[1-3](ST|ND|RD)?)\s*(YEAR\s*)?(M|PG)\b' THEN 4000
+                      WHEN UPPER(class) ~ '(^|[^A-Z])(1ST|I|FIRST)([^A-Z]|$)' OR UPPER(class) ~ '1ST\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[12]|S[12]|[12](ST|ND)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^I\s+(B|UG)' THEN 1000
+                      WHEN UPPER(class) ~ '(^|[^A-Z])(2ND|II|SECOND)([^A-Z]|$)' OR UPPER(class) ~ '2ND\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[34]|S[34]|[34](RD|TH)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^II\s+(B|UG)' THEN 2000
+                      WHEN UPPER(class) ~ '(^|[^A-Z])(3RD|III|THIRD)([^A-Z]|$)' OR UPPER(class) ~ '3RD\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[56]|S[56]|[56](TH)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^III\s+(B|UG)' THEN 3000
+                      WHEN UPPER(class) ~ '(^|[^A-Z])(4TH|IV|FOURTH)([^A-Z]|$)' OR UPPER(class) ~ '4TH\s+YEAR' OR UPPER(class) ~ '(^|[^A-Z])(SEM\s*[78]|S[78]|[78](TH)\s*SEM)([^A-Z]|$)' OR UPPER(class) ~ '^IV\s+(B|UG)' THEN 3500
+                      ELSE 3800
+                    END ASC,
+                    LOWER(TRIM(class)) ASC,
+                    LOWER(TRIM(name)) ASC,
+                    name ASC,
+                    CASE WHEN split_part(serial_number, '_', 1) ~ '^[0-9]+$' THEN CAST(split_part(serial_number, '_', 1) AS BIGINT) ELSE 999999 END ASC,
+                    CASE WHEN admission_no ~ '^[0-9]+$' THEN CAST(admission_no AS BIGINT) ELSE 999999 END ASC
+                ) as new_serial
+              FROM nominal_roll
+            )
+            UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
+            FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
+          `;
+        } else {
+          // Final Nominal Roll: Preserve uploaded serial numbers as final without modification
+          await setSetting('isRollFinalized', 'true');
+          await setSetting('nominalRollFinalized', 'true');
+          await setSetting('draftRollPublished', 'true');
+          await setSetting('finalRollOverride', 'FORCE_OPEN');
+        }
       }
 
       // Automatically re-map existing nominations against newly uploaded roll
       const remapResult = await remapNominationsWithRoll();
 
-      return jsonOut(res, { ok: true, count: toInsert.length, remappedNominations: remapResult.remapped, totalNominations: remapResult.total });
+      return jsonOut(res, { ok: true, count: toInsert.length, isFinalRoll: isFinalUpload, remappedNominations: remapResult.remapped, totalNominations: remapResult.total });
     }
 
     if (action === 'adminFixSerialNumbersDeptWise') {

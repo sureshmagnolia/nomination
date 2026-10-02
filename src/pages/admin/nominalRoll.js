@@ -7,6 +7,7 @@ import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading, compareSl, getProgWeight, getStudentDeptClassKey, formatCorrectionDeadline } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 import { openPrintRollModal } from '../../rollPrinter.js';
+import * as XLSX from 'xlsx';
 
 export async function renderAdminNominalRoll(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -117,15 +118,15 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
             </button>
           </div>
 
-          <!-- Step 2: Pick CSV File -->
+          <!-- Step 2: Pick CSV or Excel File -->
           <div>
-            <div class="text-white font-bold text-sm mb-3">📂 Step 2 — Select Your CSV File</div>
+            <div class="text-white font-bold text-sm mb-3">📂 Step 2 — Select Your Excel or CSV File</div>
             <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-white/20 rounded-xl cursor-pointer hover:border-indigo-400/50 hover:bg-indigo-500/5 transition-all group">
               <div class="text-center">
                 <div class="text-3xl mb-2 group-hover:scale-110 transition-transform">📁</div>
-                <div class="text-slate-400 text-sm" id="filePickerLabel">Click to select a .csv file</div>
+                <div class="text-slate-400 text-sm" id="filePickerLabel">Click to select an Excel (.xlsx, .xls) or CSV (.csv) file</div>
               </div>
-              <input type="file" id="csvFileInput" accept=".csv" class="hidden">
+              <input type="file" id="csvFileInput" accept=".csv,.xlsx,.xls" class="hidden">
             </label>
           </div>
 
@@ -136,14 +137,32 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
               <div id="csvSummary" class="text-slate-300 space-y-1 text-xs"></div>
             </div>
 
+            <!-- Final Nominal Roll Option -->
+            <div class="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 border border-indigo-400/30 rounded-xl p-4 transition-all">
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input type="checkbox" id="chkIsFinalRoll" class="mt-1 w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-900 border-white/20 cursor-pointer">
+                <div class="flex-1">
+                  <div class="text-white font-bold text-sm flex items-center gap-2">
+                    <span>🔒</span> Final Nominal Roll with Fixed Serial Numbers
+                  </div>
+                  <div class="text-indigo-200/80 text-xs mt-1 leading-relaxed">
+                    Tick this option if your uploaded file contains the <strong>official / final Sl. Numbers</strong>. The system will use your file's exact Sl. No as the final serial numbers without re-ordering, re-numbering, or shifting numbers.
+                  </div>
+                  <div id="finalRollBadge" class="hidden text-emerald-400 font-semibold text-xs mt-2 flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2.5">
+                    <span>✅</span> <strong>Final Mode Active:</strong> Sl. Numbers from file will be saved directly and locked as the Final Electoral Roll without system re-ordering.
+                  </div>
+                </div>
+              </label>
+            </div>
+
             <!-- Roll Update Notice -->
             <div class="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-4">
               <div class="text-indigo-300 font-bold text-sm mb-2">🔄 Nominal Roll Update & Automatic Re-mapping</div>
               <ul class="text-indigo-200/90 text-xs space-y-1.5 list-disc list-inside">
-                <li>The Nominal Roll student voter records will be <strong>replaced</strong> with the uploaded CSV data</li>
+                <li>The Nominal Roll student voter records will be <strong>replaced</strong> with the uploaded file data</li>
                 <li><strong>Existing Nominations are SAFELY PRESERVED:</strong> All candidates, proposers, and seconders will be <strong>automatically re-mapped</strong> using their Admission Numbers!</li>
-                <li>Serial numbers for candidates, proposers, and seconders will be recalculated based on the new roll</li>
-                <li>Draft and finalized roll publication flags will be reset so you can review before publishing</li>
+                <li id="serialRemapNotice">Serial numbers for candidates, proposers, and seconders will be updated to match the new roll</li>
+                <li>You can review the updated roster immediately in the Electoral Roll table</li>
               </ul>
             </div>
 
@@ -920,107 +939,127 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
 
           const reader = new FileReader();
           reader.onload = (ev) => {
-            const text = ev.target.result;
-            const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim());
-            if (lines.length < 2) {
-              showToast('CSV file appears empty.', 'error'); return;
-            }
+            try {
+              const data = new Uint8Array(ev.target.result);
+              const workbook = XLSX.read(data, { type: 'array' });
+              const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+              const rawRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
 
-            let headerRowIndex = -1;
-            let detectedDelimiter = ',';
-            const normCol = c => String(c || '').trim().replace(/^"|"$/g, '').toUpperCase().replace(/\s+/g, ' ');
-            const isAdmCol = c => {
-              const u = normCol(c);
-              return u === 'ADMISION NO' || u === 'ADMISSION NO' || u === 'ADMISION NUMBER' || u === 'ADMISSION NUMBER' || u === 'ADM NO';
-            };
-
-            for (let i = 0; i < Math.min(lines.length, 20); i++) {
-              const delim = lines[i].includes('\t') && !lines[i].includes(',') ? '\t' : ',';
-              const cols = lines[i].split(delim).map(normCol);
-
-              const hasSerial = cols.some(c => c === 'NOMINAL ROLL SERIAL NUMBER' || c === 'SERIAL NUMBER' || c === 'SL. NO' || c === 'SL NO');
-              const hasName = cols.includes('NAME');
-              const hasDept = cols.includes('DEPT') || cols.includes('DEPARTMENT');
-              const hasAdm = cols.some(isAdmCol);
-              const hasClass = cols.includes('CLASS');
-              const hasYear = cols.includes('YEAR');
-              const hasStream = cols.includes('STREAM');
-
-              if (hasSerial && hasName && hasDept && hasAdm) {
-                headerRowIndex = i;
-                detectedDelimiter = delim;
-                usedHeaders = (hasYear && hasStream) ? explicitHeaders : legacyHeaders;
-                break;
+              if (!rawRows || rawRows.length < 2) {
+                showToast('Spreadsheet appears empty.', 'error');
+                return;
               }
-            }
 
-            if (headerRowIndex === -1) {
-              showToast('Missing required columns. Please use one of the standard templates.', 'error');
-              main.querySelector('#csvPreview')?.classList.add('hidden');
-              return;
-            }
-
-            const rawHeaders = lines[headerRowIndex].split(detectedDelimiter).map(h => h.trim().replace(/^"|"$/g, ''));
-            const normHeaders = rawHeaders.map(normCol);
-            
-            let idxMap;
-            if (usedHeaders === explicitHeaders) {
-              const sIdx = normHeaders.findIndex(c => c === 'NOMINAL ROLL SERIAL NUMBER' || c === 'SERIAL NUMBER' || c === 'SL. NO' || c === 'SL NO');
-              const nIdx = normHeaders.indexOf('NAME');
-              const yIdx = normHeaders.indexOf('YEAR');
-              const stIdx = normHeaders.indexOf('STREAM');
-              const aIdx = normHeaders.findIndex(isAdmCol);
-              const dIdx = normHeaders.findIndex(c => c === 'DEPT' || c === 'DEPARTMENT');
-              idxMap = [sIdx, nIdx, yIdx, stIdx, aIdx, dIdx];
-            } else {
-              const sIdx = normHeaders.findIndex(c => c === 'NOMINAL ROLL SERIAL NUMBER' || c === 'SERIAL NUMBER' || c === 'SL. NO' || c === 'SL NO');
-              const nIdx = normHeaders.indexOf('NAME');
-              const cIdx = normHeaders.indexOf('CLASS');
-              const aIdx = normHeaders.findIndex(isAdmCol);
-              const dIdx = normHeaders.findIndex(c => c === 'DEPT' || c === 'DEPARTMENT');
-              idxMap = [sIdx, nIdx, cIdx, aIdx, dIdx];
-            }
-            
-            parsedRows = lines.slice(headerRowIndex + 1).map(line => {
-              const cells = [];
-              let cur = '', inQ = false;
-              for (const ch of line + detectedDelimiter) {
-                if (ch === '"') { inQ = !inQ; }
-                else if (ch === detectedDelimiter && !inQ) { cells.push(cur.trim()); cur = ''; }
-                else cur += ch;
-              }
-              return idxMap.map(i => (i >= 0 ? cells[i] ?? '' : ''));
-            }).filter(r => r[1] && r[1].trim() !== '' && r[1].toUpperCase() !== 'NAME');
-
-            const deptIdx = usedHeaders.indexOf('Dept');
-            
-            let classes = [];
-            if (usedHeaders === legacyHeaders) {
-              classes = [...new Set(parsedRows.map(r => r[usedHeaders.indexOf('CLASS')]))].sort();
-            } else {
-              const formatYearPrefix = (y) => {
-                const u = String(y || '').trim().toUpperCase();
-                if (u === '1' || u === '1ST' || u === 'I') return '1ST YEAR';
-                if (u === '2' || u === '2ND' || u === 'II') return '2ND YEAR';
-                if (u === '3' || u === '3RD' || u === 'III') return '3RD YEAR';
-                if (u && !u.includes('YEAR')) return `${u} YEAR`;
-                return u;
+              const normCol = c => String(c || '').trim().replace(/^"|"$/g, '').toUpperCase().replace(/\s+/g, ' ');
+              const isAdmCol = c => {
+                const u = normCol(c);
+                return u === 'ADMISION NO' || u === 'ADMISSION NO' || u === 'ADMISION NUMBER' || u === 'ADMISSION NUMBER' || u === 'ADM NO' || u.includes('ADMIS');
               };
-              classes = [...new Set(parsedRows.map(r => `${formatYearPrefix(r[usedHeaders.indexOf('YEAR')])} ${r[usedHeaders.indexOf('STREAM')]} ${r[deptIdx]}`.replace(/\s+/g, ' ').trim()))].sort();
-            }
-            const depts = [...new Set(parsedRows.map(r => r[deptIdx]))].sort();
 
-            main.querySelector('#csvSummary').innerHTML = `
-              <div>👥 <strong class="text-white">${parsedRows.length}</strong> students detected using <strong>${usedHeaders === legacyHeaders ? 'Legacy Format' : 'Explicit Format'}</strong></div>
-              <div>🏛️ <strong class="text-white">${depts.length}</strong> departments: ${depts.map(d => `<span class="text-indigo-300">${esc(d)}</span>`).join(', ')}</div>
-              <div>📚 <strong class="text-white">${classes.length}</strong> unique classes found</div>
-            `;
-            main.querySelector('#csvPreview')?.classList.remove('hidden');
-            checkUploadReady();
+              let headerRowIndex = -1;
+              for (let i = 0; i < Math.min(rawRows.length, 25); i++) {
+                const row = (rawRows[i] || []).map(normCol);
+                const hasSerial = row.some(c => c === 'NOMINAL ROLL SERIAL NUMBER' || c === 'SERIAL NUMBER' || c === 'SL. NO' || c === 'SL NO' || c === 'SLNO' || c === 'SL.NO' || c === 'SL' || c === 'S.NO' || c === 'ROLL NO');
+                const hasName = row.some(c => c === 'NAME' || c.includes('NAME'));
+                const hasDept = row.some(c => c === 'DEPT' || c === 'DEPARTMENT' || c.includes('DEPT'));
+                const hasAdm = row.some(isAdmCol);
+                const hasClass = row.some(c => c === 'CLASS' || c.includes('CLASS'));
+                const hasYear = row.some(c => c === 'YEAR');
+                const hasStream = row.some(c => c === 'STREAM');
+
+                if ((hasSerial || hasName) && (hasDept || hasClass) && hasAdm) {
+                  headerRowIndex = i;
+                  usedHeaders = (hasYear && hasStream) ? explicitHeaders : legacyHeaders;
+                  break;
+                }
+              }
+
+              if (headerRowIndex === -1) {
+                if (rawRows[0] && rawRows[0].length >= 4) {
+                  headerRowIndex = 0;
+                  usedHeaders = legacyHeaders;
+                } else {
+                  showToast('Missing required columns. Please use one of the standard templates.', 'error');
+                  main.querySelector('#csvPreview')?.classList.add('hidden');
+                  return;
+                }
+              }
+
+              const normHeaders = (rawRows[headerRowIndex] || []).map(normCol);
+
+              let idxMap;
+              if (usedHeaders === explicitHeaders) {
+                const sIdx = normHeaders.findIndex(c => c === 'NOMINAL ROLL SERIAL NUMBER' || c === 'SERIAL NUMBER' || c === 'SL. NO' || c === 'SL NO' || c === 'SLNO' || c === 'SL.NO' || c === 'SL' || c === 'S.NO' || c === 'ROLL NO');
+                const nIdx = normHeaders.findIndex(c => c === 'NAME' || c.includes('NAME'));
+                const yIdx = normHeaders.findIndex(c => c === 'YEAR');
+                const stIdx = normHeaders.findIndex(c => c === 'STREAM');
+                const aIdx = normHeaders.findIndex(isAdmCol);
+                const dIdx = normHeaders.findIndex(c => c === 'DEPT' || c === 'DEPARTMENT' || c.includes('DEPT'));
+                idxMap = [sIdx, nIdx, yIdx, stIdx, aIdx, dIdx];
+              } else {
+                const sIdx = normHeaders.findIndex(c => c === 'NOMINAL ROLL SERIAL NUMBER' || c === 'SERIAL NUMBER' || c === 'SL. NO' || c === 'SL NO' || c === 'SLNO' || c === 'SL.NO' || c === 'SL' || c === 'S.NO' || c === 'ROLL NO');
+                const nIdx = normHeaders.findIndex(c => c === 'NAME' || c.includes('NAME'));
+                const cIdx = normHeaders.findIndex(c => c === 'CLASS' || c.includes('CLASS'));
+                const aIdx = normHeaders.findIndex(isAdmCol);
+                const dIdx = normHeaders.findIndex(c => c === 'DEPT' || c === 'DEPARTMENT' || c.includes('DEPT'));
+                idxMap = [sIdx, nIdx, cIdx, aIdx, dIdx];
+              }
+
+              parsedRows = rawRows.slice(headerRowIndex + 1).map((cells, rowIdx) => {
+                return idxMap.map((colIdx, targetIdx) => {
+                  if (targetIdx === 0) {
+                    const val = colIdx >= 0 && cells[colIdx] !== undefined ? String(cells[colIdx]).trim() : '';
+                    return val || String(rowIdx + 1);
+                  }
+                  return colIdx >= 0 && cells[colIdx] !== undefined ? String(cells[colIdx]).trim() : '';
+                });
+              }).filter(r => r[1] && r[1].trim() !== '' && r[1].toUpperCase() !== 'NAME');
+
+              const deptIdx = usedHeaders.indexOf('Dept');
+              
+              let classes = [];
+              if (usedHeaders === legacyHeaders) {
+                classes = [...new Set(parsedRows.map(r => r[usedHeaders.indexOf('CLASS')]))].sort();
+              } else {
+                const formatYearPrefix = (y) => {
+                  const u = String(y || '').trim().toUpperCase();
+                  if (u === '1' || u === '1ST' || u === 'I') return '1ST YEAR';
+                  if (u === '2' || u === '2ND' || u === 'II') return '2ND YEAR';
+                  if (u === '3' || u === '3RD' || u === 'III') return '3RD YEAR';
+                  if (u && !u.includes('YEAR')) return `${u} YEAR`;
+                  return u;
+                };
+                classes = [...new Set(parsedRows.map(r => `${formatYearPrefix(r[usedHeaders.indexOf('YEAR')])} ${r[usedHeaders.indexOf('STREAM')]} ${r[deptIdx]}`.replace(/\s+/g, ' ').trim()))].sort();
+              }
+              const depts = [...new Set(parsedRows.map(r => r[deptIdx]))].sort();
+
+              main.querySelector('#csvSummary').innerHTML = `
+                <div>👥 <strong class="text-white">${parsedRows.length}</strong> students detected using <strong>${usedHeaders === legacyHeaders ? 'Legacy Format' : 'Explicit Format'}</strong></div>
+                <div>🏛️ <strong class="text-white">${depts.length}</strong> departments: ${depts.map(d => `<span class="text-indigo-300">${esc(d)}</span>`).join(', ')}</div>
+                <div>📚 <strong class="text-white">${classes.length}</strong> unique classes found</div>
+              `;
+              main.querySelector('#csvPreview')?.classList.remove('hidden');
+              checkUploadReady();
+            } catch (err) {
+              showToast(`File parse error: ${err.message}`, 'error');
+            }
           };
-          reader.readAsText(file);
+          reader.readAsArrayBuffer(file);
         };
       }
+
+      // Final Nominal Roll checkbox toggle
+      main.querySelector('#chkIsFinalRoll')?.addEventListener('change', (e) => {
+        const isFinal = e.target.checked;
+        const badge = main.querySelector('#finalRollBadge');
+        const uploadBtn = main.querySelector('#btnUploadRoll');
+        if (badge) badge.classList.toggle('hidden', !isFinal);
+        if (uploadBtn) {
+          uploadBtn.textContent = isFinal
+            ? '🔒 Upload as Final Nominal Roll (Preserve Sl. Numbers)'
+            : '📤 Upload Roll & Auto-Remap Nominations';
+        }
+      });
 
       const checkUploadReady = () => {
         const resetVal = main.querySelector('#confirmResetText')?.value.trim().toUpperCase() || '';
@@ -1041,17 +1080,29 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
         main.querySelector('#btnUploadRoll').onclick = async (e) => {
           const confirmPwd = main.querySelector('#confirmPwd').value.trim();
           if (!parsedRows || parsedRows.length === 0) return showToast('No data to upload.', 'error');
-          if (!confirm(`CONFIRMATION\n\nYou are about to update the Nominal Roll with ${parsedRows.length} students.\nExisting nominations will be preserved and automatically re-mapped by Admission Number.\n\nProceed?`)) return;
 
-          setLoading(e.target, true, 'Uploading & Re-mapping...');
+          const isFinalRoll = Boolean(main.querySelector('#chkIsFinalRoll')?.checked);
+          const confirmMsg = isFinalRoll
+            ? `FINAL NOMINAL ROLL CONFIRMATION\n\nYou are about to upload ${parsedRows.length} voters as the FINAL Nominal Roll.\n\n• The Sl. Numbers in your file will be locked and used as the FINAL Serial Numbers (no system re-ordering or re-numbering).\n• Existing nominations will be preserved and automatically re-mapped.\n\nProceed?`
+            : `CONFIRMATION\n\nYou are about to update the Nominal Roll with ${parsedRows.length} students.\nExisting nominations will be preserved and automatically re-mapped by Admission Number.\n\nProceed?`;
+
+          if (!confirm(confirmMsg)) return;
+
+          setLoading(e.target, true, isFinalRoll ? 'Uploading Final Roll...' : 'Uploading & Re-mapping...');
           try {
-            const res = await api.adminUploadNominalRoll(confirmPwd, { headers: usedHeaders, rows: parsedRows });
+            const res = await api.adminUploadNominalRoll(confirmPwd, { 
+              headers: usedHeaders, 
+              rows: parsedRows,
+              isFinalRoll: isFinalRoll,
+              preserveSerials: isFinalRoll
+            });
             const remapMsg = res.remappedNominations !== undefined ? ` Re-mapped ${res.remappedNominations} existing nominations.` : '';
-            showToast(`✅ Nominal Roll updated with ${res.count || parsedRows.length} students.${remapMsg}`, 'success');
+            const finalNotice = isFinalRoll ? ' (Final Roll locked)' : '';
+            showToast(`✅ Nominal Roll updated with ${res.count || parsedRows.length} students${finalNotice}.${remapMsg}`, 'success');
             await reloadRollData(main, pwd);
           } catch (err) {
             showToast(err.message, 'error');
-            setLoading(e.target, false, '📤 Upload Roll & Auto-Remap Nominations');
+            setLoading(e.target, false, isFinalRoll ? '🔒 Upload as Final Nominal Roll' : '📤 Upload Roll & Auto-Remap Nominations');
           }
         };
       }
