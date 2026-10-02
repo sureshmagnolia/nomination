@@ -558,6 +558,17 @@ export const api = {
     return res;
   },
 
+  adminGetOfficials: (password, bypassCache = false) => {
+    if (bypassCache) invalidateCache('adminGetOfficials');
+    return get({ action: 'adminGetOfficials', password });
+  },
+
+  adminSaveOfficials: async (password, officialsData) => {
+    const res = await post({ action: 'adminSaveOfficials', password, ...officialsData });
+    invalidateCache('adminGetOfficials');
+    return res;
+  },
+
   // ─── Results Management ──────────────────────────────────────────────────────
 
   getResults: (force = false) => {

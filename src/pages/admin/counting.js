@@ -73,6 +73,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             <p class="text-slate-400 text-sm">${T} tables · ${totalRounds} rounds · ${posts.length} posts total</p>
           </div>
           <div class="flex gap-2">
+            <a href="#/admin/officials" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold">👥 Allot Counting Teams</a>
             <button id="btnRegenerate" class="btn btn-secondary bg-white/5 border-white/10 hover:bg-white/10 text-xs font-semibold">🔄 Regenerate</button>
             <button id="btnPrintForms" class="btn btn-primary text-xs font-bold">🖨️ Print All Forms</button>
           </div>

@@ -792,6 +792,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           <div class="flex flex-wrap gap-2">
             <button id="btnClearAll" class="btn btn-secondary border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white">🗑️ Clear All</button>
             <button id="btnAutoAllot" class="btn btn-secondary">⚡ Auto Allot</button>
+            <a href="#/admin/officials" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white">👥 Allot Officials (Team Builder)</a>
             <button id="btnManageLocations" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📍 Manage Locations</button>
             <button id="btnSaveBooths" class="btn btn-primary">💾 Save Configuration</button>
             <button id="btnRegenPlan" class="btn btn-primary border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 px-4">🔄 Finalize Master Plan</button>

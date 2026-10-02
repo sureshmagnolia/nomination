@@ -1110,6 +1110,21 @@ export default async function handler(req, res) {
       return jsonOut(res, safeJsonParse(data, []));
     }
 
+    if (action === 'adminGetOfficials') {
+      const [facRaw, ntRaw, pollRaw, countRaw] = await Promise.all([
+        getSetting('election_faculty_roster'),
+        getSetting('election_non_teaching_roster'),
+        getSetting('polling_teams_officials'),
+        getSetting('counting_teams_officials')
+      ]);
+      return jsonOut(res, {
+        faculty: safeJsonParse(facRaw, null),
+        nonTeaching: safeJsonParse(ntRaw, null),
+        pollingTeams: safeJsonParse(pollRaw, []),
+        countingTeams: safeJsonParse(countRaw, [])
+      });
+    }
+
     if (action === 'adminGetNotices') {
       const [noticesRaw, boothsRaw, locationsRaw, status, colName, colShort, colLogo, electionYearSetting, postsList] = await Promise.all([
         getSetting('official_notices'),
@@ -2197,6 +2212,17 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       const lData = typeof body.locations === 'string' ? body.locations : JSON.stringify(body.locations || []);
       await setSetting('availableLocations', lData);
       return jsonOut(res, { ok: true });
+
+    if (action === 'adminSaveOfficials') {
+      const { faculty, nonTeaching, pollingTeams, countingTeams } = body;
+      const tasks = [];
+      if (faculty !== undefined) tasks.push(setSetting('election_faculty_roster', JSON.stringify(faculty)));
+      if (nonTeaching !== undefined) tasks.push(setSetting('election_non_teaching_roster', JSON.stringify(nonTeaching)));
+      if (pollingTeams !== undefined) tasks.push(setSetting('polling_teams_officials', JSON.stringify(pollingTeams)));
+      if (countingTeams !== undefined) tasks.push(setSetting('counting_teams_officials', JSON.stringify(countingTeams)));
+      await Promise.all(tasks);
+      return jsonOut(res, { ok: true });
+    }
     }
 
     if (action === 'adminSaveNotices') {

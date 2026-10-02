@@ -19,6 +19,7 @@ import { renderAdminWithdrawals }   from './pages/admin/withdrawals.js';
 import { renderAdminPublish }       from './pages/admin/publish.js';
 import { renderAdminPosts }         from './pages/admin/posts.js';
 import { renderAdminBooths }        from './pages/admin/booths.js';
+import { renderAdminOfficials }     from './pages/admin/officials.js';
 import { renderAdminCounting }      from './pages/admin/counting.js';
 import { renderAdminResultsEntry }  from './pages/admin/resultsEntry.js';
 import { renderAdminBallots }      from './pages/admin/ballots.js';
@@ -77,6 +78,7 @@ router
   .on('/admin/posts',       render(renderAdminPosts))
   .on('/admin/ballots',     render(renderAdminBallots))
   .on('/admin/booths',      render(renderAdminBooths))
+  .on('/admin/officials',   render(renderAdminOfficials))
   .on('/admin/notices',     render(renderAdminNotices))
   .on('/admin/counting',    render(renderAdminCounting))
   .on('/admin/results-entry', render(renderAdminResultsEntry))

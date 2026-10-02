@@ -19,6 +19,7 @@
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "dotenv": "^17.4.2",
-    "resend": "^6.17.2"
+    "resend": "^6.17.2",
+    "xlsx": "^0.18.5"
   }
 }
