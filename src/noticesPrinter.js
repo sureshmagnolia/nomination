@@ -1279,22 +1279,26 @@ export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year
         <p class="text-slate-400 text-xs">College Union Election ${esc(y)} — Notice of Withdrawal</p>
       </div>
       <div class="text-right text-xs text-slate-400 space-y-1.5">
-        <p>Date: ${isBlank ? `_____ / _____ / ${esc(y)}` : today}</p>
-        ${nomId ? `<p class="font-mono text-indigo-300 font-bold text-sm">ID: ${esc(nomId)}</p>` : `<p>Nom. ID (if known): ${fillDotted('110px')}</p>`}
+        ${!isBlank ? `
+          <p>Date: ${today}</p>
+          ${nomId ? `<p class="font-mono text-indigo-300 font-bold text-sm">ID: ${esc(nomId)}</p>` : ''}
+        ` : ''}
       </div>
     </div>
 
     <!-- Title -->
     <h2 class="text-center font-bold text-lg text-white border-y border-white/10 py-2.5 uppercase tracking-wide">
-      NOTICE OF WITHDRAWAL OF CANDIDATURE
+      FORM FOR WITHDRAWAL OF CANDIDATE
     </h2>
 
     <!-- Particulars (Relaxed & Full-Width) -->
     <div class="space-y-4 text-sm" style="margin: 20px 0 24px 0;">
-      <div class="flex items-baseline" style="padding: 2px 0;">
-        <span class="text-slate-400 font-semibold shrink-0" style="width: 215px; font-size: 13.5px;">${isBlank ? 'Nomination ID (if known):' : 'Nomination ID:'}</span>
-        ${isBlank ? `<span class="dotted-line" style="flex:1;display:inline-block;height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-left:8px;">&nbsp;</span>` : `<strong class="font-mono text-indigo-300 text-base font-bold">${esc(nomId)}</strong>`}
-      </div>
+      ${!isBlank && nomId ? `
+        <div class="flex items-baseline" style="padding: 2px 0;">
+          <span class="text-slate-400 font-semibold shrink-0" style="width: 215px; font-size: 13.5px;">Nomination ID:</span>
+          <strong class="font-mono text-indigo-300 text-base font-bold">${esc(nomId)}</strong>
+        </div>
+      ` : ''}
       <div class="flex items-baseline" style="padding: 2px 0;">
         <span class="text-slate-400 font-semibold shrink-0" style="width: 215px; font-size: 13.5px;">Post Contested:</span>
         ${isBlank ? `<span class="dotted-line" style="flex:1;display:inline-block;height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-left:8px;">&nbsp;</span>` : `<strong class="text-white text-base font-bold">${esc(post)}</strong>`}
@@ -1313,32 +1317,30 @@ export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year
       </div>
     </div>
 
-    <!-- Candidate Declaration (Relaxed & Structured) -->
+    <!-- Candidate Declaration (Prescribed University Format) -->
     <div class="text-sm text-slate-300 border border-white/10 rounded-xl p-5 bg-white/5" style="padding: 18px 22px; margin-bottom: 22px;">
       ${isBlank 
-        ? `<div class="space-y-3" style="line-height: 2.0; font-size: 13.5px;">
+        ? `<div class="space-y-3" style="line-height: 2.2; font-size: 14px;">
              <div class="flex items-baseline">
-               <span class="shrink-0 font-medium">I,</span>
-               <span class="dotted-line" style="flex:1;display:inline-block;height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin: 0 6px;">&nbsp;</span>
-               <span class="shrink-0 font-medium">,</span>
-             </div>
-             <div class="flex items-baseline">
-               <span class="shrink-0 font-medium">a validly nominated candidate for the post of</span>
+               <span class="shrink-0 font-medium">I</span>
                <span class="dotted-line" style="flex:1;display:inline-block;height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-left:8px;">&nbsp;</span>
              </div>
-             <div style="line-height: 1.75; margin-top: 4px;">
-               in the College Union Election ${esc(y)}, do hereby give notice that I voluntarily <strong>WITHDRAW</strong> my candidature for the said post.
+             <div class="flex items-baseline">
+               <span class="dotted-line" style="flex:1;display:inline-block;height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-right:8px;">&nbsp;</span>
+               <span class="shrink-0 font-medium">hereby withdraw</span>
              </div>
-             <div style="line-height: 1.75; margin-top: 14px; color: #cbd5e1;">
-               I declare that this decision is made of my own free will, without any coercion or undue influence.
+             <div class="flex items-baseline">
+               <span class="shrink-0 font-medium">my candidature for the office of</span>
+               <span class="dotted-line" style="flex:1;display:inline-block;height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-left:8px;">&nbsp;</span>
+             </div>
+             <div class="flex items-baseline">
+               <span class="dotted-line" style="flex:1;display:inline-block;height:20px;vertical-align:bottom;border-bottom:1.5px dotted #333 !important;margin-right:8px;">&nbsp;</span>
+               <span class="shrink-0 font-medium">of the College Union.</span>
              </div>
            </div>`
-        : `<div style="line-height: 1.85; font-size: 13.5px;">
+        : `<div style="line-height: 2.0; font-size: 14px;">
              <p>
-               I, <strong class="text-white font-bold">${esc(name)}</strong>, a validly nominated candidate for the post of <strong class="text-white font-bold">${esc(post)}</strong> in the College Union Election ${esc(y)}, do hereby give notice that I voluntarily <strong>WITHDRAW</strong> my candidature for the said post.
-             </p>
-             <p style="margin-top: 14px; color: #cbd5e1;">
-               I declare that this decision is made of my own free will, without any coercion or undue influence.
+               I, <strong class="text-white font-bold">${esc(name)}</strong>, hereby withdraw my candidature for the office of <strong class="text-white font-bold">${esc(post)}</strong> of the College Union.
              </p>
            </div>`
       }
@@ -1346,16 +1348,16 @@ export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year
 
     <!-- Candidate Signature Section -->
     <div class="flex justify-between items-end pt-3 text-sm text-slate-400">
-      <div class="space-y-2" style="line-height: 1.7;">
-        <p>Date: _____ / _____ / ${esc(y)}</p>
-        <p>Time: _____ : _____ AM / PM</p>
-        <p>Place: ___________________________</p>
+      <div class="space-y-2.5" style="line-height: 1.8;">
+        <p>Place: ${isBlank ? '___________________________' : 'Palakkad'}</p>
+        <p>Date: ${isBlank ? `_____ / _____ / ${esc(y)}` : today}</p>
       </div>
-      <div class="text-center" style="width: 240px;">
-        <div style="height: 45px;"></div>
+      <div class="text-center" style="width: 260px;">
+        <div style="height: 40px;"></div>
         <div style="border-top: 1.5px solid #000; margin-bottom: 4px;"></div>
         <p class="font-bold text-white text-xs">Signature of Candidate</p>
-        ${!isBlank && name ? `<p class="text-xs text-slate-400">(${esc(name)})</p>` : `<p class="text-[11px] text-slate-500">(Name: ______________________)</p>`}
+        ${!isBlank && name ? `<p class="text-xs text-slate-400">(${esc(name)})</p>` : ''}
+        <p class="text-[11px] text-slate-400 mt-1 font-medium">(To be signed in front of the Returning Officer)</p>
       </div>
     </div>
 
