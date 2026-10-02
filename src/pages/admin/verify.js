@@ -268,7 +268,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
   const allNoms = Array.isArray(noms) ? [...noms] : [];
   const allPosts = Array.isArray(posts) ? [...posts] : [];
 
-  let activeTab = 'intake'; // 'intake' (1. All Submissions) | 'scrutiny' (2. Physical Received) | 'not_confirmed' (3. Physical Not Yet Confirmed) | 'accepted' | 'rejected'
+  let activeTab = 'intake'; // 'intake' (1. All Submissions) | 'not_confirmed' (2. Physical Not Received) | 'scrutiny' (3. Physical Received) | 'accepted' | 'rejected'
   let nomViewMode = localStorage.getItem('admin_verify_view_mode') || 'table'; // 'cards' | 'table' (defaults to table for admin list scrutiny)
   let arrangeMode = 'post'; // 'post' (Group by Post - Statutory) | 'latest' | 'flags' | 'serial' | 'name'
   let sortCol = null; // null | 'serial' | 'id' | 'post' | 'name' | 'status' | 'flags'
@@ -348,13 +348,13 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
           <span>📥</span> <span>1. All Submissions</span>
           <span id="tabCountIntake" class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-xs font-mono font-bold">0</span>
         </button>
-        <button type="button" id="tabBtnScrutiny" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-bold rounded-t-xl border-b-2 flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'scrutiny' ? 'border-sky-400 text-white bg-sky-950/40 shadow-lg shadow-sky-950/20' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'}">
-          <span>📋</span> <span>2. Physical Received</span>
-          <span id="tabCountScrutiny" class="badge bg-sky-500/20 text-sky-300 border border-sky-500/40 text-xs font-mono font-bold">0</span>
-        </button>
         <button type="button" id="tabBtnNotConfirmed" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-bold rounded-t-xl border-b-2 flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'not_confirmed' ? 'border-amber-400 text-white bg-amber-950/40 shadow-lg shadow-amber-950/20' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'}">
-          <span>⏳</span> <span>3. Physical Not Yet Confirmed</span>
+          <span>⏳</span> <span>2. Physical Not Received</span>
           <span id="tabCountNotConfirmed" class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-mono font-bold">0</span>
+        </button>
+        <button type="button" id="tabBtnScrutiny" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-bold rounded-t-xl border-b-2 flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'scrutiny' ? 'border-sky-400 text-white bg-sky-950/40 shadow-lg shadow-sky-950/20' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'}">
+          <span>📋</span> <span>3. Physical Received</span>
+          <span id="tabCountScrutiny" class="badge bg-sky-500/20 text-sky-300 border border-sky-500/40 text-xs font-mono font-bold">0</span>
         </button>
         <button type="button" id="tabBtnAccepted" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-bold rounded-t-xl border-b-2 flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'accepted' ? 'border-emerald-400 text-white bg-emerald-950/40 shadow-lg shadow-emerald-950/20' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'}">
           <span>✅</span> <span>4. Accepted Nominations</span>
@@ -370,11 +370,11 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       <div id="bannerIntake" class="${activeTab === 'intake' ? '' : 'hidden'} text-xs bg-indigo-950/30 border border-indigo-500/30 rounded-xl p-3 text-indigo-200 leading-relaxed shadow-sm">
         💡 <strong>All Submissions:</strong> Complete registry of all online nominations filed by students. Mark physical prints and documents as received to advance candidates to Formal Scrutiny.
       </div>
+      <div id="bannerNotConfirmed" class="${activeTab === 'not_confirmed' ? '' : 'hidden'} text-xs bg-amber-950/30 border border-amber-500/30 rounded-xl p-3 text-amber-200 leading-relaxed shadow-sm">
+        ⏳ <strong>Physical Not Received:</strong> These nominations were submitted online, but physical signed hard copies and supporting certificates have not yet been marked received. Review the list below and click <strong>Confirm Physical</strong> once received in the RO office.
+      </div>
       <div id="bannerScrutiny" class="${activeTab === 'scrutiny' ? '' : 'hidden'} text-xs bg-sky-950/30 border border-sky-500/30 rounded-xl p-3 text-sky-200 leading-relaxed shadow-sm">
         📋 <strong>Formal Scrutiny (Physical Received):</strong> This view lists ONLY nominations whose signed physical hard copies and certificates have been confirmed in the RO office. Mark each nomination as <strong>Valid</strong>, <strong>Invalid (Reject)</strong>, or <strong>Pending</strong>.
-      </div>
-      <div id="bannerNotConfirmed" class="${activeTab === 'not_confirmed' ? '' : 'hidden'} text-xs bg-amber-950/30 border border-amber-500/30 rounded-xl p-3 text-amber-200 leading-relaxed shadow-sm">
-        ⏳ <strong>Physical Not Yet Confirmed:</strong> These nominations were submitted online, but physical signed hard copies and supporting certificates have not yet been marked received. Review the list below and click <strong>Confirm Physical</strong> once received in the RO office.
       </div>
       <div id="bannerAccepted" class="${activeTab === 'accepted' ? '' : 'hidden'} text-xs bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-3 text-emerald-200 leading-relaxed shadow-sm">
         ✅ <strong>Accepted Nominations:</strong> These nominations have passed formal scrutiny and have been marked <strong>Valid</strong>. They are eligible for publication in the preliminary valid list unless withdrawn before the statutory withdrawal deadline.
@@ -591,7 +591,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       `;
     } else if (activeTab === 'not_confirmed') {
       statusFilterEl.innerHTML = `
-        <option value="all">All Not Yet Confirmed</option>
+        <option value="all">All Physical Not Received</option>
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
       `;
@@ -905,7 +905,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
         <tr>
           <td colspan="7" class="text-center text-slate-500 py-12">
             ${activeTab === 'scrutiny' 
-              ? 'No nominations have physical copies marked as received yet. Go to Tab 1 or Tab 3 to mark physical prints and documents received.' 
+              ? 'No nominations have physical copies marked as received yet. Go to Tab 1 or Tab 2 to mark physical prints and documents received.' 
               : activeTab === 'not_confirmed'
               ? 'All submitted nominations have their physical copies confirmed! None pending.'
               : activeTab === 'accepted'
@@ -1094,7 +1094,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
             ${activeTab === 'not_confirmed'
               ? 'All submitted nominations have their physical copies marked as received in office.'
               : activeTab === 'scrutiny' 
-              ? 'No physical copies marked as received yet. Mark physical receipts in Tab 1 or Tab 3.' 
+              ? 'No physical copies marked as received yet. Mark physical receipts in Tab 1 or Tab 2.' 
               : activeTab === 'accepted'
               ? 'Scrutinize nominations in Tab 2 and mark them Valid.'
               : activeTab === 'rejected'
@@ -1504,8 +1504,8 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
   };
 
   main.querySelector('#tabBtnIntake')?.addEventListener('click', () => setWorkflowTab('intake'));
-  main.querySelector('#tabBtnScrutiny')?.addEventListener('click', () => setWorkflowTab('scrutiny'));
   main.querySelector('#tabBtnNotConfirmed')?.addEventListener('click', () => setWorkflowTab('not_confirmed'));
+  main.querySelector('#tabBtnScrutiny')?.addEventListener('click', () => setWorkflowTab('scrutiny'));
   main.querySelector('#tabBtnAccepted')?.addEventListener('click', () => setWorkflowTab('accepted'));
   main.querySelector('#tabBtnRejected')?.addEventListener('click', () => setWorkflowTab('rejected'));
 
