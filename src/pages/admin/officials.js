@@ -39,6 +39,8 @@ export async function renderAdminOfficials(container) {
 function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, settings) {
   const collegeName = settings?.collegeName || CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad';
   const electionYear = settings?.electionYear || new Date().getFullYear().toString();
+  const collegeLogo = settings?.collegeLogo || '';
+  const collegeShortName = settings?.collegeShortName || CONFIG.COLLEGE_SHORT_NAME || 'GCC';
 
   // 1. Initialize State with defaults or persisted data
   let faculty = [];
@@ -962,8 +964,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </div>
         </div>
 
-        <!-- Printable Appointment Orders Container -->
-        <div id="printOrdersContainer" class="hidden print:block"></div>
+        <!-- Printable Appointment Orders Modal Container -->
+        <div id="dutyOrdersPrintModalContainer"></div>
       </div>
     `;
 
@@ -1510,127 +1512,774 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // Print Polling Orders
     main.querySelector('#btnPrintPollingOrders')?.addEventListener('click', () => {
-      printDutyOrders('polling');
+      openDutyOrdersModal('polling');
     });
 
     // Print Counting Orders
     main.querySelector('#btnPrintCountingOrders')?.addEventListener('click', () => {
-      printDutyOrders('counting');
+      openDutyOrdersModal('counting');
     });
   };
 
-  // ─── Duty Orders Printer ───────────────────────────────────────────────────
+  // ─── Duty Orders Modal & High-Precision Print Engine ────────────────────────
 
-  const printDutyOrders = (type) => {
+  const getPrintStyles = (orientation) => `
+    @page {
+      size: A4 ${orientation};
+      margin: ${orientation === 'landscape' ? '8mm 10mm 8mm 10mm' : '10mm 12mm 10mm 12mm'};
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff !important;
+      color: #000000 !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: ${orientation === 'landscape' ? '10px' : '11px'};
+      line-height: 1.35;
+    }
+    .header-container {
+      text-align: center;
+      border-bottom: 2px solid #000;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+    }
+    .header-logo {
+      max-height: 48px;
+      max-width: 140px;
+      margin: 0 auto 4px auto;
+      display: block;
+      object-fit: contain;
+    }
+    .college-title {
+      font-size: 15px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 0;
+      color: #000;
+    }
+    .order-title {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 2px 0 0 0;
+      color: #111;
+    }
+    .order-sub {
+      font-size: 10px;
+      font-weight: 700;
+      color: #333;
+      margin: 1px 0 0 0;
+    }
+    .meta-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      font-weight: 700;
+      margin: 6px 0 8px 0;
+      padding: 3px 0;
+      border-bottom: 1px dashed #666;
+      color: #111;
+    }
+    .preamble-text {
+      font-size: 9.5px;
+      line-height: 1.4;
+      margin-bottom: 8px;
+      text-align: justify;
+      color: #111;
+    }
+    .roster-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin-bottom: 8px;
+    }
+    .roster-table th, .roster-table td {
+      border: 1px solid #000;
+      padding: 4px 6px;
+      vertical-align: top;
+      font-size: 9.5px;
+      word-break: break-word;
+    }
+    .roster-table th {
+      background: #f1f5f9 !important;
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 9px;
+      color: #000;
+      text-align: left;
+    }
+    .roster-table th.col-center, .roster-table td.col-center {
+      text-align: center;
+    }
+    .roster-table tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .staff-name {
+      font-weight: 700;
+      font-size: 10px;
+      color: #000;
+      display: block;
+    }
+    .staff-meta {
+      font-size: 8.5px;
+      color: #374151;
+      display: block;
+      margin-top: 1px;
+    }
+    .unassigned {
+      color: #9ca3af;
+      font-style: italic;
+      font-size: 8.5px;
+    }
+    .instructions-panel {
+      border: 1px solid #64748b;
+      background: #f8fafc !important;
+      padding: 5px 8px;
+      font-size: 8.5px;
+      line-height: 1.35;
+      margin-bottom: 8px;
+      border-radius: 3px;
+      color: #1e293b;
+    }
+    .instructions-panel ol {
+      margin: 2px 0 0 14px;
+      padding: 0;
+    }
+    .footer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 10px;
+      page-break-inside: avoid;
+    }
+    .copy-block {
+      font-size: 8.5px;
+      color: #374151;
+      line-height: 1.35;
+    }
+    .ro-sign-block {
+      text-align: center;
+      width: 200px;
+    }
+    .ro-sign-line {
+      border-bottom: 1px solid #000;
+      height: 35px;
+      margin-bottom: 3px;
+    }
+
+    /* Individual Slips */
+    .slip-container {
+      box-sizing: border-box;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      border: 1px solid #1f2937;
+      border-radius: 4px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      background: #fff;
+      position: relative;
+    }
+    .slip-page-break {
+      page-break-after: always;
+      break-after: page;
+    }
+    .slip-header {
+      text-align: center;
+      border-bottom: 1.5px solid #000;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+    }
+    .slip-college {
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .slip-office {
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #1f2937;
+      margin-top: 1px;
+    }
+    .slip-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+      color: #000;
+    }
+    .slip-meta-bar {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.5px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px dashed #666;
+    }
+    .slip-to-block {
+      font-size: 11px;
+      margin-bottom: 8px;
+      line-height: 1.4;
+      padding: 4px 8px;
+      background: #f8fafc;
+      border-left: 3px solid #1e293b;
+    }
+    .slip-body {
+      font-size: 10.5px;
+      line-height: 1.45;
+      margin-bottom: 10px;
+      text-align: justify;
+    }
+    .slip-body p {
+      margin: 0 0 6px 0;
+    }
+    .slip-statutory-note {
+      font-size: 9.5px;
+      color: #334155;
+      font-style: italic;
+      border-left: 2px solid #94a3b8;
+      padding-left: 6px;
+      margin-top: 6px;
+    }
+    .slip-sign-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 12px;
+      margin-bottom: 12px;
+    }
+    .slip-ack-section {
+      border-top: 1.5px dashed #000;
+      padding-top: 8px;
+      margin-top: 10px;
+      font-size: 9.5px;
+    }
+    .slip-ack-cut {
+      text-align: center;
+      font-size: 8.5px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #4b5563;
+      margin-bottom: 4px;
+    }
+    .slip-ack-sign-line {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      padding-top: 4px;
+    }
+  `;
+
+  const executeCleanPrint = (title, htmlBody, orientation = 'landscape') => {
+    let frame = document.getElementById('gcc_official_print_frame');
+    if (frame) frame.remove();
+
+    const fullHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${esc(title)}</title>
+  <style>
+    ${getPrintStyles(orientation)}
+  </style>
+</head>
+<body>
+  ${htmlBody}
+</body>
+</html>`;
+
+    frame = document.createElement('iframe');
+    frame.id = 'gcc_official_print_frame';
+    frame.style.position = 'fixed';
+    frame.style.right = '0';
+    frame.style.bottom = '0';
+    frame.style.width = '0';
+    frame.style.height = '0';
+    frame.style.border = '0';
+    frame.style.visibility = 'hidden';
+    frame.style.zIndex = '-9999';
+    document.body.appendChild(frame);
+
+    const doc = frame.contentWindow.document;
+    doc.open();
+    doc.write(fullHtml);
+    doc.close();
+
+    setTimeout(() => {
+      try {
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+      } catch (err) {
+        console.warn('Iframe print error, falling back to window.open:', err);
+        const printWin = window.open('', '_blank');
+        if (printWin) {
+          printWin.document.open();
+          printWin.document.write(fullHtml);
+          printWin.document.close();
+          setTimeout(() => {
+            printWin.focus();
+            printWin.print();
+          }, 350);
+        }
+      }
+    }, 250);
+  };
+
+  const buildRosterHtml = (type, orderNo, orderDate, reportingTime) => {
     const isPolling = type === 'polling';
     const title = isPolling ? 'ORDER OF APPOINTMENT OF POLLING PERSONNEL' : 'ORDER OF APPOINTMENT OF COUNTING PERSONNEL';
-    const subTitle = isPolling ? 'COLLEGE UNION ELECTION – POLLING DUTY ROSTER' : 'COLLEGE UNION ELECTION – COUNTING DUTY ROSTER';
+    const subTitle = isPolling ? 'COLLEGE UNION ELECTION – CONSOLIDATED POLLING DUTY ROSTER' : 'COLLEGE UNION ELECTION – CONSOLIDATED COUNTING DUTY ROSTER';
+    const teams = isPolling ? pollingTeams : countingTeams;
 
-    const printHtml = `
-      <div class="print-page p-8 max-w-4xl mx-auto bg-white text-black font-sans text-xs">
-        <style>
-          @media print {
-            body * { visibility: hidden; }
-            #printOrdersContainer, #printOrdersContainer * { visibility: visible; }
-            #printOrdersContainer { position: absolute; left: 0; top: 0; width: 100%; }
-            .print-page { padding: 20px; page-break-after: always; }
-          }
-        </style>
-
+    return `
+      <div class="roster-page">
         <!-- Header -->
-        <div class="text-center border-b-2 border-black pb-3 mb-4">
-          <h2 class="text-base font-bold uppercase tracking-wider">${esc(collegeName)}</h2>
-          <h3 class="text-sm font-bold uppercase mt-0.5">${esc(title)}</h3>
-          <p class="text-[11px] font-semibold text-slate-700 mt-0.5">${esc(subTitle)} · ${esc(electionYear)}</p>
+        <div class="header-container">
+          ${collegeLogo ? `<img src="${collegeLogo}" class="header-logo" alt="College Logo">` : ''}
+          <h2 class="college-title">${esc(collegeName)}</h2>
+          <h3 class="order-title">${esc(title)}</h3>
+          <p class="order-sub">${esc(subTitle)} · ${esc(electionYear)}</p>
         </div>
 
-        <div class="flex justify-between items-center text-[11px] font-mono mb-4">
-          <span>Order No: GCC/ELEC/${electionYear}/${isPolling ? 'POLL' : 'COUNT'}-01</span>
-          <span>Date: ${new Date().toLocaleDateString('en-GB')}</span>
+        <!-- Meta Bar -->
+        <div class="meta-bar">
+          <span>Order No: ${esc(orderNo)}</span>
+          <span>Ref: Election Notification No. ${esc(collegeShortName)}/ELEC/${esc(electionYear)}/01</span>
+          <span>Date: ${esc(orderDate)}</span>
         </div>
 
-        <p class="text-[11px] leading-relaxed mb-4 text-justify">
-          In exercise of powers vested with the Returning Officer for the conduct of College Union Election ${esc(electionYear)}, 
+        <!-- Preamble -->
+        <p class="preamble-text">
+          In exercise of powers vested with the Returning Officer under the College Union Election Rules and Constitution, 
           the following members of teaching faculty and non-teaching staff are hereby appointed for <strong>${isPolling ? 'Polling Duty' : 'Counting Duty'}</strong> 
-          at the venues specified below. Officials are requested to report for duty strictly on schedule 
-          (${isPolling ? '8:30 AM on Polling Day' : '1:30 PM on Counting Day'}) without fail.
+          at the designated venues specified below for <strong>College Union Election ${esc(electionYear)}</strong>. All officials are strictly directed to report 
+          for duty at <strong>${esc(reportingTime)}</strong> on ${isPolling ? 'Polling Day' : 'Counting Day'} without fail.
         </p>
 
-        <!-- Roster Table -->
-        <table class="w-full border-collapse border border-black text-[11px] mb-6">
+        <!-- Table -->
+        <table class="roster-table">
+          <colgroup>
+            <col style="width: 5.5%;">
+            <col style="width: 13%;">
+            <col style="width: 21%;">
+            <col style="width: 20%;">
+            <col style="width: 20%;">
+            <col style="width: 13.5%;">
+            <col style="width: 7%;">
+          </colgroup>
           <thead>
-            <tr class="bg-gray-100 font-bold border-b border-black">
-              <th class="border border-black p-1.5 w-14 text-center">${isPolling ? 'Booth #' : 'Table #'}</th>
-              <th class="border border-black p-1.5 w-24">Room / Venue</th>
-              <th class="border border-black p-1.5 w-28 text-left">${isPolling ? 'Presiding Officer' : 'Counting Supervisor'}</th>
-              <th class="border border-black p-1.5 text-left">${isPolling ? 'Polling Officer 1' : 'Counting Officer 1'}</th>
-              <th class="border border-black p-1.5 text-left">${isPolling ? 'Polling Officer 2' : 'Counting Officer 2'}</th>
-              <th class="border border-black p-1.5 text-left">${isPolling ? 'Polling Assistant (Non-Teaching)' : 'Counting Assistant (Non-Teaching)'}</th>
-              <th class="border border-black p-1.5 w-20 text-center">Signature</th>
+            <tr>
+              <th class="col-center">${isPolling ? 'Booth #' : 'Table #'}</th>
+              <th>${isPolling ? 'Polling Station / Venue' : 'Counting Table / Venue'}</th>
+              <th>${isPolling ? 'Presiding Officer (Seniormost)' : 'Counting Supervisor (Seniormost)'}</th>
+              <th>${isPolling ? 'Polling Officer 1' : 'Counting Officer 1'}</th>
+              <th>${isPolling ? 'Polling Officer 2' : 'Counting Officer 2'}</th>
+              <th>${isPolling ? 'Polling Assistant (Non-Teaching)' : 'Counting Assistant (Non-Teaching)'}</th>
+              <th class="col-center">Signature</th>
             </tr>
           </thead>
           <tbody>
-            ${(isPolling ? pollingTeams : countingTeams).map((t, i) => {
+            ${booths.map((b) => {
+              const t = teams.find(team => (isPolling ? team.boothNumber : team.tableNumber) === b.boothNumber) || {
+                boothNumber: b.boothNumber,
+                tableNumber: b.boothNumber,
+                roomName: b.roomName || (isPolling ? `Booth ${b.boothNumber}` : `Table ${b.boothNumber}`),
+                presidingOfficer: null,
+                pollingOfficer1: null,
+                pollingOfficer2: null,
+                pollingAssistant: null,
+                supervisor: null,
+                countingOfficer1: null,
+                countingOfficer2: null,
+                countingAssistant: null
+              };
+
               const head = isPolling ? t.presidingOfficer : t.supervisor;
               const o1 = isPolling ? t.pollingOfficer1 : t.countingOfficer1;
               const o2 = isPolling ? t.pollingOfficer2 : t.countingOfficer2;
               const asst = isPolling ? t.pollingAssistant : t.countingAssistant;
 
               return `
-                <tr class="border-b border-black">
-                  <td class="border border-black p-1.5 text-center font-bold font-mono">
+                <tr>
+                  <td class="col-center" style="font-weight: bold; font-family: monospace; font-size: 11px;">
                     ${isPolling ? t.boothNumber : t.tableNumber}
                   </td>
-                  <td class="border border-black p-1.5 font-semibold">
+                  <td style="font-weight: 600;">
                     ${esc(t.roomName || (isPolling ? `Booth ${t.boothNumber}` : `Table ${t.tableNumber}`))}
                   </td>
-                  <td class="border border-black p-1.5">
-                    <strong>${esc(head?.name || '–')}</strong><br>
-                    <span class="text-[10px] text-gray-700">${esc(head?.designation || '')}${head?.pen ? ` · PEN:${head.pen}` : ''}</span>
+                  <td>
+                    ${head && head.name ? `
+                      <span class="staff-name">${esc(head.name)}</span>
+                      <span class="staff-meta">${esc(head.designation || 'Professor')}${head.pen ? ` · PEN: ${esc(head.pen)}` : ''}</span>
+                    ` : '<span class="unassigned">– Not Assigned –</span>'}
                   </td>
-                  <td class="border border-black p-1.5">
-                    <strong>${esc(o1?.name || '–')}</strong><br>
-                    <span class="text-[10px] text-gray-700">${esc(o1?.designation || '')}${o1?.pen ? ` · PEN:${o1.pen}` : ''}</span>
+                  <td>
+                    ${o1 && o1.name ? `
+                      <span class="staff-name">${esc(o1.name)}</span>
+                      <span class="staff-meta">${esc(o1.designation || 'Faculty')}${o1.pen ? ` · PEN: ${esc(o1.pen)}` : ''}</span>
+                    ` : '<span class="unassigned">– Not Assigned –</span>'}
                   </td>
-                  <td class="border border-black p-1.5">
-                    <strong>${esc(o2?.name || '–')}</strong><br>
-                    <span class="text-[10px] text-gray-700">${esc(o2?.designation || '')}${o2?.pen ? ` · PEN:${o2.pen}` : ''}</span>
+                  <td>
+                    ${o2 && o2.name ? `
+                      <span class="staff-name">${esc(o2.name)}</span>
+                      <span class="staff-meta">${esc(o2.designation || 'Faculty')}${o2.pen ? ` · PEN: ${esc(o2.pen)}` : ''}</span>
+                    ` : '<span class="unassigned">– Not Assigned –</span>'}
                   </td>
-                  <td class="border border-black p-1.5">
-                    ${esc(asst?.name || '–')}<br>
-                    <span class="text-[10px] text-gray-700">${esc(asst?.designation || '')}${asst?.pen ? ` · PEN:${asst.pen}` : ''}</span>
+                  <td>
+                    ${asst && asst.name ? `
+                      <span class="staff-name">${esc(asst.name)}</span>
+                      <span class="staff-meta">${esc(asst.designation || 'Staff')}${asst.pen ? ` · PEN: ${esc(asst.pen)}` : ''}</span>
+                    ` : '<span class="unassigned">– Not Assigned –</span>'}
                   </td>
-                  <td class="border border-black p-1.5"></td>
+                  <td></td>
                 </tr>
               `;
             }).join('')}
           </tbody>
         </table>
 
-        <!-- Signatures & Statutory Footer -->
-        <div class="mt-8 flex justify-between items-end pt-4">
-          <div class="text-[10px] text-gray-600">
-            <p>Copy forwarded for compliance to:</p>
-            <p>1. All Appointed Officials</p>
-            <p>2. Principal's Table / Guard File</p>
-            <p>3. Notice Board</p>
+        <!-- Instructions Panel -->
+        <div class="instructions-panel">
+          <strong>STATUTORY ELECTION DUTY INSTRUCTIONS:</strong>
+          <ol>
+            <li><strong>Reporting & Material Collection:</strong> Appointed officials shall report at the Central Distribution Counter at <strong>${esc(reportingTime)}</strong> to collect ballot boxes/materials, voter registers, and statutory envelopes.</li>
+            <li><strong>Commencement & Conclusion:</strong> ${isPolling ? 'Polling commences strictly at 09:30 AM and closes at 01:30 PM. All electors standing in queue at 01:30 PM must be given tokens.' : 'Counting commences at 02:00 PM and shall proceed continuously till declaration of results.'}</li>
+            <li><strong>Statutory Obligation:</strong> Election duty is mandatory. Absence without prior written sanction of the Returning Officer constitutes dereliction of statutory duty.</li>
+            <li><strong>Handover:</strong> Immediately after completion, all sealed packets and ballot boxes must be delivered to the Returning Officer under proper receipt.</li>
+          </ol>
+        </div>
+
+        <!-- Footer Signatures -->
+        <div class="footer-row">
+          <div class="copy-block">
+            <strong>Copy forwarded for information &amp; compliance to:</strong><br>
+            1. All Appointed Officials (Teaching Faculty &amp; Non-Teaching Staff)<br>
+            2. The Principal, ${esc(collegeName)} (for official records)<br>
+            3. College Election Observer &amp; Notice Board<br>
+            4. Guard File / Record File
           </div>
-          <div class="text-center">
-            <div class="w-40 border-b border-black mb-1"></div>
-            <p class="font-bold text-[11px] uppercase">Returning Officer</p>
-            <p class="text-[10px]">${esc(collegeName)}</p>
+          <div class="ro-sign-block">
+            <div class="ro-sign-line"></div>
+            <strong>RETURNING OFFICER</strong><br>
+            <span style="font-size: 9px;">College Union Election ${esc(electionYear)}</span><br>
+            <span style="font-size: 8.5px; color: #4b5563;">${esc(collegeName)}</span>
           </div>
         </div>
       </div>
     `;
+  };
 
-    const printContainer = main.querySelector('#printOrdersContainer');
-    if (printContainer) {
-      printContainer.innerHTML = printHtml;
-      printContainer.classList.remove('hidden');
-      window.print();
-      setTimeout(() => printContainer.classList.add('hidden'), 1000);
+  const buildIndividualOrdersHtml = (type, orderNo, orderDate, reportingTime) => {
+    const isPolling = type === 'polling';
+    const teams = isPolling ? pollingTeams : countingTeams;
+    const personnel = [];
+
+    booths.forEach((b) => {
+      const t = teams.find(team => (isPolling ? team.boothNumber : team.tableNumber) === b.boothNumber) || {};
+      const num = isPolling ? b.boothNumber : b.boothNumber;
+      const venue = t.roomName || b.roomName || (isPolling ? `Booth ${num}` : `Table ${num}`);
+
+      const head = isPolling ? t.presidingOfficer : t.supervisor;
+      const headRole = isPolling ? 'Presiding Officer' : 'Counting Supervisor';
+      if (head && head.name) {
+        personnel.push({
+          name: head.name,
+          designation: head.designation || 'Professor',
+          pen: head.pen || '',
+          role: headRole,
+          boothNumber: num,
+          venue: venue
+        });
+      }
+
+      const o1 = isPolling ? t.pollingOfficer1 : t.countingOfficer1;
+      const o1Role = isPolling ? 'Polling Officer 1' : 'Counting Officer 1';
+      if (o1 && o1.name) {
+        personnel.push({
+          name: o1.name,
+          designation: o1.designation || 'Faculty',
+          pen: o1.pen || '',
+          role: o1Role,
+          boothNumber: num,
+          venue: venue
+        });
+      }
+
+      const o2 = isPolling ? t.pollingOfficer2 : t.countingOfficer2;
+      const o2Role = isPolling ? 'Polling Officer 2' : 'Counting Officer 2';
+      if (o2 && o2.name) {
+        personnel.push({
+          name: o2.name,
+          designation: o2.designation || 'Faculty',
+          pen: o2.pen || '',
+          role: o2Role,
+          boothNumber: num,
+          venue: venue
+        });
+      }
+
+      const asst = isPolling ? t.pollingAssistant : t.countingAssistant;
+      const asstRole = isPolling ? 'Polling Assistant' : 'Counting Assistant';
+      if (asst && asst.name) {
+        personnel.push({
+          name: asst.name,
+          designation: asst.designation || 'Non-Teaching Staff',
+          pen: asst.pen || '',
+          role: asstRole,
+          boothNumber: num,
+          venue: venue
+        });
+      }
+    });
+
+    if (personnel.length === 0) {
+      return `
+        <div style="padding: 40px; text-align: center; color: #64748b;">
+          <p style="font-size: 14px; font-weight: bold;">No officials assigned yet.</p>
+          <p style="font-size: 12px; margin-top: 4px;">Please allot personnel to booths before printing individual appointment orders.</p>
+        </div>
+      `;
     }
+
+    // Build slips, 2 per page
+    return personnel.map((p, idx) => {
+      const isSecondOnPage = (idx % 2 === 1);
+      const isLast = (idx === personnel.length - 1);
+      const apptOrderNo = `${orderNo}/APPT-${String(idx + 1).padStart(2, '0')}`;
+
+      return `
+        <div class="slip-container ${isSecondOnPage && !isLast ? 'slip-page-break' : ''}">
+          <!-- Slip Header -->
+          <div class="slip-header">
+            ${collegeLogo ? `<img src="${collegeLogo}" class="header-logo" alt="College Logo">` : ''}
+            <div class="slip-college">${esc(collegeName)}</div>
+            <div class="slip-office">OFFICE OF THE RETURNING OFFICER · COLLEGE UNION ELECTION ${esc(electionYear)}</div>
+            <div class="slip-title">ORDER OF APPOINTMENT AS ${esc(p.role.toUpperCase())}</div>
+          </div>
+
+          <!-- Slip Meta Bar -->
+          <div class="slip-meta-bar">
+            <span>Order No: <strong>${esc(apptOrderNo)}</strong></span>
+            <span>Date: <strong>${esc(orderDate)}</strong></span>
+          </div>
+
+          <!-- To Recipient -->
+          <div class="slip-to-block">
+            <strong>To:</strong> ${esc(p.name)}, ${esc(p.designation)} ${p.pen ? `(PEN: ${esc(p.pen)})` : ''}
+          </div>
+
+          <!-- Body -->
+          <div class="slip-body">
+            <p>
+              In exercise of powers vested with the Returning Officer under the College Union Election Rules and Constitution, 
+              you are hereby appointed as <strong>${esc(p.role)}</strong> for <strong>${isPolling ? 'Polling Booth' : 'Counting Table'} ${p.boothNumber} (${esc(p.venue)})</strong> 
+              for the conduct of <strong>College Union Election ${esc(electionYear)}</strong>.
+            </p>
+            <p>
+              You are strictly directed to report for election duty at <strong>${esc(reportingTime)}</strong> on 
+              <strong>${isPolling ? 'Polling Day' : 'Counting Day'}</strong> at the <strong>${esc(p.venue)} / Central Election Office</strong> without fail.
+            </p>
+            <div class="slip-statutory-note">
+              <strong>Statutory Warning:</strong> Election duty is a mandatory public responsibility. Absence or delay without prior written 
+              permission of the Returning Officer will be treated as dereliction of duty and reported for statutory disciplinary action.
+            </div>
+          </div>
+
+          <!-- Signatures -->
+          <div class="slip-sign-row">
+            <div style="font-size: 8.5px; color: #475569;">
+              Copy to: 1. Official Concerned &nbsp; 2. Principal's Office &nbsp; 3. Guard File
+            </div>
+            <div style="text-align: center; width: 170px;">
+              <div style="border-bottom: 1px solid #000; height: 30px; margin-bottom: 2px;"></div>
+              <strong style="font-size: 10px;">RETURNING OFFICER</strong><br>
+              <span style="font-size: 8px;">${esc(collegeName)}</span>
+            </div>
+          </div>
+
+          <!-- Detachable Acknowledgement Slip -->
+          <div class="slip-ack-section">
+            <div class="slip-ack-cut">✂ - - - - - - - - - - - - - - - - - - - TEAR OFF &amp; RETURN TO RETURNING OFFICER - - - - - - - - - - - - - - - - - - -</div>
+            <div style="display: flex; justify-content: space-between; font-size: 9px; margin-top: 4px;">
+              <span><strong>ACKNOWLEDGEMENT:</strong> Received Order No. ${esc(apptOrderNo)} for duty as <strong>${esc(p.role)}</strong> at ${isPolling ? 'Booth' : 'Table'} ${p.boothNumber}.</span>
+            </div>
+            <div class="slip-ack-sign-line">
+              <span>Signature of Official: __________________________</span>
+              <span>Date: ____________</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  };
+
+  const openDutyOrdersModal = (type) => {
+    const isPolling = type === 'polling';
+    let currentFormat = 'roster'; // 'roster' | 'individual'
+    let orderNo = `GCC/ELEC/${electionYear}/${isPolling ? 'POLL' : 'COUNT'}-01`;
+    let orderDate = new Date().toLocaleDateString('en-GB');
+    let reportingTime = isPolling ? '08:00 AM' : '01:30 PM';
+
+    const modalContainer = main.querySelector('#dutyOrdersPrintModalContainer');
+    if (!modalContainer) return;
+
+    const renderModal = () => {
+      const orientation = currentFormat === 'roster' ? 'landscape' : 'portrait';
+      const docHtml = currentFormat === 'roster'
+        ? buildRosterHtml(type, orderNo, orderDate, reportingTime)
+        : buildIndividualOrdersHtml(type, orderNo, orderDate, reportingTime);
+
+      modalContainer.innerHTML = `
+        <div id="dutyOrdersPrintModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-hidden">
+          <div class="bg-slate-900 border border-white/20 rounded-2xl max-w-6xl w-full h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+            <!-- Modal Top Bar -->
+            <div class="p-4 border-b border-white/10 flex items-center justify-between flex-wrap gap-3 bg-white/5 shrink-0">
+              <div class="flex items-center gap-3">
+                <span class="text-2xl">${isPolling ? '🏫' : '🧮'}</span>
+                <div>
+                  <h3 class="font-bold text-white text-base">
+                    ${isPolling ? 'Print Polling Personnel Appointment Orders' : 'Print Counting Personnel Appointment Orders'}
+                  </h3>
+                  <p class="text-xs text-slate-400">
+                    Official publication &amp; dispatch system · ${esc(collegeName)} (${esc(electionYear)})
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button id="modalBtnPrint" class="btn btn-primary bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow-lg">
+                  🖨️ Print Document
+                </button>
+                <button id="modalBtnClose" class="btn btn-secondary text-xs px-3 py-2 text-slate-300 hover:text-white">
+                  ✕ Close
+                </button>
+              </div>
+            </div>
+
+            <!-- Modal Sub-Bar / Controls -->
+            <div class="p-3 bg-slate-950/70 border-b border-white/10 flex items-center justify-between flex-wrap gap-3 text-xs shrink-0">
+              <div class="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
+                <button id="formatBtnRoster" class="px-3.5 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${currentFormat === 'roster' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}">
+                  📋 Consolidated Roster (Landscape Table)
+                </button>
+                <button id="formatBtnIndividual" class="px-3.5 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${currentFormat === 'individual' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}">
+                  📜 Individual Appointment Orders (Slips)
+                </button>
+              </div>
+
+              <div class="flex items-center gap-2 flex-wrap">
+                <div class="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+                  <label class="text-[10px] text-slate-400 uppercase font-semibold">Order No:</label>
+                  <input type="text" id="modalInputOrderNo" value="${esc(orderNo)}" class="bg-transparent text-white font-mono text-xs w-44 focus:outline-none" />
+                </div>
+                <div class="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+                  <label class="text-[10px] text-slate-400 uppercase font-semibold">Date:</label>
+                  <input type="text" id="modalInputOrderDate" value="${esc(orderDate)}" class="bg-transparent text-white font-mono text-xs w-24 focus:outline-none" />
+                </div>
+                <div class="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+                  <label class="text-[10px] text-slate-400 uppercase font-semibold">Reporting:</label>
+                  <input type="text" id="modalInputReportingTime" value="${esc(reportingTime)}" class="bg-transparent text-white font-mono text-xs w-24 focus:outline-none" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Preview Screen -->
+            <div class="flex-1 bg-slate-950 p-4 sm:p-6 overflow-y-auto flex justify-center">
+              <div id="modalDocumentPreview" class="bg-white text-black shadow-2xl rounded-sm p-6 sm:p-8 transition-all ${currentFormat === 'roster' ? 'w-full max-w-5xl' : 'w-full max-w-3xl'}">
+                <style>
+                  ${getPrintStyles(orientation)}
+                </style>
+                ${docHtml}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Bind modal events
+      const modalEl = modalContainer.querySelector('#dutyOrdersPrintModal');
+      const closeBtn = modalContainer.querySelector('#modalBtnClose');
+      const printBtn = modalContainer.querySelector('#modalBtnPrint');
+      const rosterBtn = modalContainer.querySelector('#formatBtnRoster');
+      const indBtn = modalContainer.querySelector('#formatBtnIndividual');
+
+      const inputOrderNo = modalContainer.querySelector('#modalInputOrderNo');
+      const inputOrderDate = modalContainer.querySelector('#modalInputOrderDate');
+      const inputReporting = modalContainer.querySelector('#modalInputReportingTime');
+
+      closeBtn?.addEventListener('click', () => {
+        modalContainer.innerHTML = '';
+      });
+
+      modalEl?.addEventListener('click', (e) => {
+        if (e.target === modalEl) modalContainer.innerHTML = '';
+      });
+
+      rosterBtn?.addEventListener('click', () => {
+        currentFormat = 'roster';
+        renderModal();
+      });
+
+      indBtn?.addEventListener('click', () => {
+        currentFormat = 'individual';
+        renderModal();
+      });
+
+      inputOrderNo?.addEventListener('input', (e) => {
+        orderNo = e.target.value;
+        updatePreviewOnly();
+      });
+
+      inputOrderDate?.addEventListener('input', (e) => {
+        orderDate = e.target.value;
+        updatePreviewOnly();
+      });
+
+      inputReporting?.addEventListener('input', (e) => {
+        reportingTime = e.target.value;
+        updatePreviewOnly();
+      });
+
+      printBtn?.addEventListener('click', () => {
+        const title = isPolling
+          ? (currentFormat === 'roster' ? `Polling_Duty_Roster_${electionYear}` : `Polling_Appointment_Orders_${electionYear}`)
+          : (currentFormat === 'roster' ? `Counting_Duty_Roster_${electionYear}` : `Counting_Appointment_Orders_${electionYear}`);
+        const printDoc = currentFormat === 'roster'
+          ? buildRosterHtml(type, orderNo, orderDate, reportingTime)
+          : buildIndividualOrdersHtml(type, orderNo, orderDate, reportingTime);
+
+        executeCleanPrint(title, printDoc, orientation);
+      });
+    };
+
+    const updatePreviewOnly = () => {
+      const previewEl = modalContainer.querySelector('#modalDocumentPreview');
+      if (!previewEl) return;
+      const orientation = currentFormat === 'roster' ? 'landscape' : 'portrait';
+      const docHtml = currentFormat === 'roster'
+        ? buildRosterHtml(type, orderNo, orderDate, reportingTime)
+        : buildIndividualOrdersHtml(type, orderNo, orderDate, reportingTime);
+
+      previewEl.innerHTML = `
+        <style>
+          ${getPrintStyles(orientation)}
+        </style>
+        ${docHtml}
+      `;
+    };
+
+    renderModal();
   };
 
   renderUI();
