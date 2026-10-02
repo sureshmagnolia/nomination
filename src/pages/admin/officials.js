@@ -55,6 +55,25 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     }
   }
 
+  // Ensure faculty contains latest additions (Librarians & Guest Faculty)
+  const hasLibrarianInFaculty = faculty.some(f => (f.designation || '').toLowerCase().includes('librarian'));
+  const hasGuestInFaculty = faculty.some(f => (f.designation || '').toLowerCase().includes('guest'));
+  if (!hasLibrarianInFaculty || !hasGuestInFaculty || faculty.length < DEFAULT_FACULTY_ROSTER.length) {
+    const existingMap = new Map(faculty.map(f => [f.name.toLowerCase().trim(), f]));
+    faculty = DEFAULT_FACULTY_ROSTER.map(f => {
+      const existing = existingMap.get(f.name.toLowerCase().trim());
+      if (existing) {
+        return {
+          ...f,
+          isExcluded: existing.isExcluded ?? false,
+          exclusionReason: existing.exclusionReason || ''
+        };
+      }
+      return { ...f };
+    });
+    localStorage.setItem('gcc_faculty_roster', JSON.stringify(faculty));
+  }
+
   let nonTeaching = [];
   if (initialOfficialsData && Array.isArray(initialOfficialsData.nonTeaching) && initialOfficialsData.nonTeaching.length > 0) {
     nonTeaching = initialOfficialsData.nonTeaching;
@@ -65,6 +84,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     } else {
       nonTeaching = [...DEFAULT_NON_TEACHING_ROSTER];
     }
+  }
+
+  // Ensure Non-Teaching uses the official list from NTS DETAILS (filter out any old dummy names and filter out librarians)
+  const isOldDummyNT = nonTeaching.length > 0 && nonTeaching.some(nt => nt.name === 'Sri. K. Ramesh' || nt.name === 'Smt. P. Vasantha');
+  const hasLibrarianInNT = nonTeaching.some(nt => (nt.designation || '').toLowerCase().includes('librarian'));
+  if (isOldDummyNT || hasLibrarianInNT || nonTeaching.length === 0 || !nonTeaching.some(nt => nt.pen === '423685')) {
+    nonTeaching = [...DEFAULT_NON_TEACHING_ROSTER];
+    localStorage.setItem('gcc_non_teaching_roster', JSON.stringify(nonTeaching));
   }
 
   // Ensure booths exist (fallback to 11 booths if not configured)
@@ -724,7 +751,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 📤 Export Roster
               </button>
               <button id="btnResetFacultyRoster" class="btn btn-secondary text-xs text-amber-300 hover:bg-amber-500/20 px-3 py-2">
-                🔄 Reset to College Seed (92)
+                🔄 Reset to Official Roster (103)
               </button>
             </div>
           </div>
@@ -766,7 +793,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         const s = facultySearch.toLowerCase();
                         return (f.name || '').toLowerCase().includes(s) ||
                                String(f.pen || '').toLowerCase().includes(s) ||
-                               (f.designation || '').toLowerCase().includes(s);
+                               (f.designation || '').toLowerCase().includes(s) ||
+                               (f.department || '').toLowerCase().includes(s);
                       }
                       return true;
                     })
@@ -786,7 +814,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                             ${f.pen || '–'}
                           </td>
                           <td class="text-slate-300">
-                            ${esc(f.designation || '–')}
+                            ${esc(f.designation || '–')}${f.department ? `<span class="text-[10px] text-indigo-300/80 block font-normal">${esc(f.department)}</span>` : ''}
                           </td>
                           <td class="font-mono text-slate-400">
                             ${f.joiningDate || '–'}
@@ -843,6 +871,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               </button>
               <button id="btnExportNonTeaching" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5">
                 📤 Export CSV
+              </button>
+              <button id="btnResetNTRoster" class="btn btn-secondary text-xs text-emerald-300 hover:bg-emerald-500/20 px-3 py-2">
+                🔄 Reset to Official NTS List (16)
               </button>
               <button id="btnClearNonTeachingList" class="btn btn-secondary text-xs text-red-300 hover:bg-red-500/20 px-3 py-2">
                 🗑️ Clear List
@@ -909,7 +940,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         const s = nonTeachingSearch.toLowerCase();
                         return (nt.name || '').toLowerCase().includes(s) ||
                                String(nt.pen || '').toLowerCase().includes(s) ||
-                               (nt.designation || '').toLowerCase().includes(s);
+                               (nt.designation || '').toLowerCase().includes(s) ||
+                               (nt.department || '').toLowerCase().includes(s);
                       }
                       return true;
                     })
@@ -925,7 +957,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                             ${esc(nt.name)}
                           </td>
                           <td class="text-slate-300">
-                            ${esc(nt.designation || 'Staff')}
+                            ${esc(nt.designation || 'Staff')}${nt.department ? `<span class="text-[10px] text-emerald-300/80 block font-normal">${esc(nt.department)}</span>` : ''}
                           </td>
                           <td class="font-mono text-slate-300">
                             ${nt.pen || '–'}
@@ -1277,10 +1309,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // Reset Faculty Roster
     main.querySelector('#btnResetFacultyRoster')?.addEventListener('click', () => {
-      if (confirm('🔄 Reset Faculty Seniority List to original college seed (92 Teachers)?\n\nThis will restore the original names, PENs, and designations from SENIORITY LIST OF TEACHERS.xlsx.')) {
+      if (confirm('🔄 Reset Faculty Seniority List to official college roster (103 Faculty)?\n\nThis includes:\n• 92 Teaching Faculty (from SENIORITY LIST OF TEACHERS.xlsx)\n• 2 Librarians (UGC Librarian SATHEESH-K.M & Librarian Gr.IV REKHA R NAIR)\n• 9 Guest Lecturers (from Guest 26-27.xlsx)')) {
         faculty = [...DEFAULT_FACULTY_ROSTER];
         saveAll(false);
-        showToast('Restored 92 faculty members from original college seniority list!', 'success');
+        showToast('Restored 103 faculty members (92 Teaching + 2 Librarians + 9 Guest Lecturers)!', 'success');
+        renderUI();
+      }
+    });
+
+    // Reset Non-Teaching Roster
+    main.querySelector('#btnResetNTRoster')?.addEventListener('click', () => {
+      if (confirm('🔄 Reset Non-Teaching Staff List to official list (16 Staff from NTS DETAILS SEP 2026.xlsx)?\n\nThis restores the 16 Lab Assistants, Herbarium Keeper, Library Assistants, and Office Attendants (with Librarians properly in Faculty).')) {
+        nonTeaching = [...DEFAULT_NON_TEACHING_ROSTER];
+        saveAll(false);
+        showToast('Restored 16 official Non-Teaching staff members!', 'success');
         renderUI();
       }
     });
@@ -1355,7 +1397,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       document.body.removeChild(link);
     });
 
-    // Import Faculty (Excel / CSV)
+    // Import Faculty (Excel / CSV) - Supports Regular & Guest Faculty lists
     main.querySelector('#fileFacultyImport')?.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -1373,6 +1415,62 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             return;
           }
 
+          const isGuestFile = file.name.toLowerCase().includes('guest') || jsonRows.some(row => (row || []).some(cell => String(cell).toLowerCase().includes('guest')));
+
+          if (isGuestFile) {
+            let nameCol = 1, deptCol = 2;
+            let startR = 1;
+            for (let r = 0; r < Math.min(6, jsonRows.length); r++) {
+              const row = (jsonRows[r] || []).map(c => String(c).toLowerCase());
+              row.forEach((c, i) => {
+                if (c.includes('name') || c.includes('lecturer')) { nameCol = i; startR = r + 1; }
+                if (c.includes('dept') || c.includes('department')) deptCol = i;
+              });
+            }
+
+            const parsedGuests = [];
+            for (let r = startR; r < jsonRows.length; r++) {
+              const row = jsonRows[r];
+              if (!row || row.length === 0) continue;
+              const name = row[nameCol] !== undefined ? String(row[nameCol]).trim() : '';
+              if (!name || name.toLowerCase().includes('guest') || name.toLowerCase().includes('name') || name.toLowerCase().includes('lecturer')) continue;
+              const dept = row[deptCol] !== undefined ? String(row[deptCol]).trim() : '';
+
+              parsedGuests.push({
+                name: name,
+                pen: '',
+                designation: 'Guest Lecturer',
+                department: dept,
+                joiningDate: '',
+                isExcluded: false,
+                exclusionReason: ''
+              });
+            }
+
+            if (parsedGuests.length === 0) {
+              showToast('No guest lecturers found in file.', 'error');
+              return;
+            }
+
+            if (confirm(`📥 Parsed ${parsedGuests.length} Guest Lecturers from "${file.name}".\n\nAppend these to the Teaching Faculty Roster (starting from Seniority #${faculty.length + 1})?`)) {
+              let added = 0;
+              parsedGuests.forEach(g => {
+                if (!faculty.some(f => f.name.toLowerCase() === g.name.toLowerCase())) {
+                  faculty.push({
+                    ...g,
+                    seniority: faculty.length + 1
+                  });
+                  added++;
+                }
+              });
+              saveAll(false);
+              showToast(`Added ${added} Guest Lecturers to Faculty Roster!`, 'success');
+              renderUI();
+              return;
+            }
+          }
+
+          // Regular Faculty List Parsing
           let headerIdx = -1;
           for (let r = 0; r < Math.min(10, jsonRows.length); r++) {
             const rowStr = (jsonRows[r] || []).map(c => String(c).toLowerCase()).join(' ');
@@ -1402,6 +1500,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               name: name,
               pen: pen,
               designation: desig,
+              department: '',
               joiningDate: dt,
               isExcluded: false,
               exclusionReason: ''
@@ -1426,7 +1525,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       reader.readAsArrayBuffer(file);
     });
 
-    // Import Non-Teaching (Excel / CSV) - Dedicated Separate Uploader
+    // Import Non-Teaching (Excel / CSV) - Dedicated Separate Uploader with automatic Librarian handling
     main.querySelector('#fileNonTeachingImport')?.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -1446,7 +1545,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
           // Scan for header row
           let headerIdx = -1;
-          let nameCol = 1, desigCol = 2, penCol = 3;
+          let nameCol = 2, desigCol = 3, penCol = 1, deptCol = 4;
 
           for (let r = 0; r < Math.min(10, jsonRows.length); r++) {
             const row = (jsonRows[r] || []).map(c => String(c).toLowerCase());
@@ -1460,6 +1559,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             row.forEach((c, i) => {
               if (c.includes('desig') || c.includes('post') || c.includes('cadre') || c.includes('role')) desigCol = i;
               if (c.includes('pen') || c.includes('id') || c.includes('code')) penCol = i;
+              if (c.includes('dept') || c.includes('department')) deptCol = i;
             });
             if (hasName) {
               headerIdx = r;
@@ -1468,6 +1568,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           }
 
           const parsedNT = [];
+          const detectedLibrarians = [];
           const startR = headerIdx >= 0 ? headerIdx + 1 : 0;
 
           for (let r = startR; r < jsonRows.length; r++) {
@@ -1475,30 +1576,66 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             if (!row || row.length === 0) continue;
 
             const name = row[nameCol] !== undefined ? String(row[nameCol]).trim() : '';
-            if (!name || name.toLowerCase().includes('staff name') || name.toLowerCase().includes('total') || name.toLowerCase().includes('college')) continue;
+            if (!name || name.toLowerCase().includes('staff name') || name.toLowerCase().includes('total') || name.toLowerCase().includes('college') || name.toLowerCase().includes('details')) continue;
 
             const desig = row[desigCol] !== undefined ? String(row[desigCol]).trim() : 'Staff';
             const pen = row[penCol] !== undefined ? String(row[penCol]).trim() : '';
+            const dept = row[deptCol] !== undefined ? String(row[deptCol]).trim() : '';
 
-            parsedNT.push({
-              id: 'nt_' + (parsedNT.length + 1) + '_' + Date.now(),
-              name: name,
-              designation: desig,
-              pen: pen,
-              isExcluded: false,
-              exclusionReason: ''
-            });
+            // Check if UGC Librarian, Librarian Gr.IV, or any Librarian
+            if (desig.toLowerCase().includes('librarian')) {
+              detectedLibrarians.push({
+                name: name,
+                designation: desig,
+                pen: pen,
+                department: dept || 'Library'
+              });
+            } else {
+              parsedNT.push({
+                id: 'nt_' + (parsedNT.length + 1) + '_' + Date.now(),
+                name: name,
+                designation: desig,
+                pen: pen,
+                department: dept,
+                isExcluded: false,
+                exclusionReason: ''
+              });
+            }
           }
 
-          if (parsedNT.length === 0) {
-            showToast('No non-teaching staff rows could be parsed from the file.', 'error');
+          if (parsedNT.length === 0 && detectedLibrarians.length === 0) {
+            showToast('No staff rows could be parsed from the file.', 'error');
             return;
           }
 
-          if (confirm(`📥 Successfully parsed ${parsedNT.length} Non-Teaching Staff members from "${file.name}".\n\nReplace current Non-Teaching Staff roster with this list?`)) {
+          let confirmMsg = `📥 Successfully parsed ${parsedNT.length} Non-Teaching Staff members from "${file.name}".`;
+          if (detectedLibrarians.length > 0) {
+            confirmMsg += `\n\n📚 Identified ${detectedLibrarians.length} Librarian(s):\n${detectedLibrarians.map(l => '• ' + l.name + ' (' + l.designation + ')').join('\n')}\nPer election guidelines, Librarians are included in the Teaching Faculty Roster and excluded from Non-Teaching Staff.`;
+          }
+          confirmMsg += `\n\nApply this update to your election rosters?`;
+
+          if (confirm(confirmMsg)) {
             nonTeaching = parsedNT;
+            // Add librarians to faculty if not already present
+            let libAdded = 0;
+            detectedLibrarians.forEach(lib => {
+              if (!faculty.some(f => f.pen === lib.pen || f.name.toLowerCase() === lib.name.toLowerCase())) {
+                faculty.push({
+                  seniority: faculty.length + 1,
+                  name: lib.name,
+                  pen: lib.pen,
+                  designation: lib.designation,
+                  department: lib.department,
+                  joiningDate: '',
+                  isExcluded: false,
+                  exclusionReason: ''
+                });
+                libAdded++;
+              }
+            });
+
             saveAll(false);
-            showToast(`Imported ${parsedNT.length} Non-Teaching staff members!`, 'success');
+            showToast(`Imported ${parsedNT.length} Non-Teaching staff!${libAdded > 0 ? ` (${libAdded} Librarians added to Faculty)` : ''}`, 'success');
             renderUI();
           }
         } catch (err) {
