@@ -94,8 +94,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     if (!fName) return null;
     for (const team of pollingTeams) {
       if (team.presidingOfficer?.name === fName) return { role: 'Presiding Officer', boothNumber: team.boothNumber };
-      if (team.pollingOfficer1?.name === fName) return { role: 'Polling Officer 1', boothNumber: team.boothNumber };
-      if (team.pollingOfficer2?.name === fName) return { role: 'Polling Officer 2', boothNumber: team.boothNumber };
+      if (team.pollingOfficer1?.name === fName) return { role: 'Polling Officer', boothNumber: team.boothNumber };
+      if (team.pollingOfficer2?.name === fName) return { role: 'Polling Officer', boothNumber: team.boothNumber };
     }
     return null;
   };
@@ -105,8 +105,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     if (!fName) return null;
     for (const team of countingTeams) {
       if (team.supervisor?.name === fName) return { role: 'Counting Supervisor', tableNumber: team.tableNumber };
-      if (team.countingOfficer1?.name === fName) return { role: 'Counting Officer 1', tableNumber: team.tableNumber };
-      if (team.countingOfficer2?.name === fName) return { role: 'Counting Officer 2', tableNumber: team.tableNumber };
+      if (team.countingOfficer1?.name === fName) return { role: 'Counting Officer', tableNumber: team.tableNumber };
+      if (team.countingOfficer2?.name === fName) return { role: 'Counting Officer', tableNumber: team.tableNumber };
     }
     return null;
   };
@@ -474,16 +474,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         </select>
                       </div>
 
-                      <!-- Polling Officer 1 -->
+                      <!-- Polling Officer (Slot 1) -->
                       <div>
                         <div class="flex items-center justify-between mb-1">
                           <label class="text-[11px] font-bold text-indigo-300 flex items-center gap-1">
-                            <span>👤</span> Polling Officer 1
+                            <span>👤</span> Polling Officer
                           </label>
                           ${team.pollingOfficer1 ? `<span class="text-[10px] font-mono text-indigo-200 bg-indigo-500/20 px-1.5 py-0.2 rounded border border-indigo-500/30">Rank #${team.pollingOfficer1.seniority}</span>` : ''}
                         </div>
                         <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-indigo-400 focus:outline-none select-polling-role" data-booth="${b.boothNumber}" data-role="pollingOfficer1">
-                          <option value="">-- Select Polling Officer 1 --</option>
+                          <option value="">-- Select Polling Officer --</option>
                           ${faculty.map(f => {
                             const isAssignedElsewhere = getPollingAssignment(f.name) && getPollingAssignment(f.name).boothNumber !== b.boothNumber;
                             const isSelected = team.pollingOfficer1?.name === f.name;
@@ -496,16 +496,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         </select>
                       </div>
 
-                      <!-- Polling Officer 2 -->
+                      <!-- Polling Officer (Slot 2) -->
                       <div>
                         <div class="flex items-center justify-between mb-1">
                           <label class="text-[11px] font-bold text-indigo-300 flex items-center gap-1">
-                            <span>👤</span> Polling Officer 2
+                            <span>👤</span> Polling Officer
                           </label>
                           ${team.pollingOfficer2 ? `<span class="text-[10px] font-mono text-indigo-200 bg-indigo-500/20 px-1.5 py-0.2 rounded border border-indigo-500/30">Rank #${team.pollingOfficer2.seniority}</span>` : ''}
                         </div>
                         <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-indigo-400 focus:outline-none select-polling-role" data-booth="${b.boothNumber}" data-role="pollingOfficer2">
-                          <option value="">-- Select Polling Officer 2 --</option>
+                          <option value="">-- Select Polling Officer --</option>
                           ${faculty.map(f => {
                             const isAssignedElsewhere = getPollingAssignment(f.name) && getPollingAssignment(f.name).boothNumber !== b.boothNumber;
                             const isSelected = team.pollingOfficer2?.name === f.name;
@@ -633,16 +633,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         ${supDouble ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Polling Booth ${supDouble.boothNumber} (${supDouble.role})</p>` : ''}
                       </div>
 
-                      <!-- Counting Officer 1 -->
+                      <!-- Counting Officer (Slot 1) -->
                       <div>
                         <div class="flex items-center justify-between mb-1">
                           <label class="text-[11px] font-bold text-indigo-300 flex items-center gap-1">
-                            <span>👤</span> Counting Officer 1
+                            <span>👤</span> Counting Officer
                           </label>
                           ${team.countingOfficer1 ? `<span class="text-[10px] font-mono text-indigo-200 bg-indigo-500/20 px-1.5 py-0.2 rounded border border-indigo-500/30">Rank #${team.countingOfficer1.seniority}</span>` : ''}
                         </div>
                         <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-purple-400 focus:outline-none select-counting-role" data-table="${b.boothNumber}" data-role="countingOfficer1">
-                          <option value="">-- Select Counting Officer 1 --</option>
+                          <option value="">-- Select Counting Officer --</option>
                           ${faculty.map(f => {
                             const pAssigned = getPollingAssignment(f.name);
                             const isSelected = team.countingOfficer1?.name === f.name;
@@ -656,16 +656,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         ${co1Double ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Polling Booth ${co1Double.boothNumber} (${co1Double.role})</p>` : ''}
                       </div>
 
-                      <!-- Counting Officer 2 -->
+                      <!-- Counting Officer (Slot 2) -->
                       <div>
                         <div class="flex items-center justify-between mb-1">
                           <label class="text-[11px] font-bold text-indigo-300 flex items-center gap-1">
-                            <span>👤</span> Counting Officer 2
+                            <span>👤</span> Counting Officer
                           </label>
                           ${team.countingOfficer2 ? `<span class="text-[10px] font-mono text-indigo-200 bg-indigo-500/20 px-1.5 py-0.2 rounded border border-indigo-500/30">Rank #${team.countingOfficer2.seniority}</span>` : ''}
                         </div>
                         <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-purple-400 focus:outline-none select-counting-role" data-table="${b.boothNumber}" data-role="countingOfficer2">
-                          <option value="">-- Select Counting Officer 2 --</option>
+                          <option value="">-- Select Counting Officer --</option>
                           ${faculty.map(f => {
                             const pAssigned = getPollingAssignment(f.name);
                             const isSelected = team.countingOfficer2?.name === f.name;
