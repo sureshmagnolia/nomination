@@ -6,6 +6,7 @@ import { api } from '../api.js';
 import { router } from '../router.js';
 import { esc, comparePosts } from '../utils.js';
 import { CONFIG } from '../config.js';
+import { exportNominationsToExcel } from '../excelExporter.js';
 
 export async function renderFinalList(container) {
   let year = new Date().getFullYear();
@@ -29,13 +30,13 @@ export async function renderFinalList(container) {
   try {
     const data = await api.getFinalNominations();
     // getFinalNominations returns { active: [], withdrawn: [] }
-    renderList(container.querySelector('main'), data?.active || [], year);
+    renderList(container.querySelector('main'), data?.active || [], year, shortName);
   } catch (e) {
-    renderList(container.querySelector('main'), [], year);
+    renderList(container.querySelector('main'), [], year, shortName);
   }
 }
 
-function renderList(main, nominations, year) {
+function renderList(main, nominations, year, shortName = null) {
   if (!nominations || nominations.length === 0) {
     main.innerHTML = `
       <div class="glass rounded-3xl p-20 text-center border-dashed border-white/10">
@@ -58,9 +59,16 @@ function renderList(main, nominations, year) {
 
   main.innerHTML = `
     <div class="page-enter space-y-10">
-      <div class="text-center md:text-left border-b border-white/5 pb-8">
-        <h2 class="text-3xl font-black text-white tracking-tight">Final Candidate List ${year}</h2>
-        <p class="text-slate-400 mt-2">Official approved list of candidates for the College Union Election ${year}.</p>
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/5 pb-8 gap-4">
+        <div>
+          <h2 class="text-3xl font-black text-white tracking-tight">Final Candidate List ${year}</h2>
+          <p class="text-slate-400 mt-2">Official approved list of candidates for the College Union Election ${year}.</p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button id="btnExportFinalExcel" class="btn btn-secondary btn-sm flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10" title="Download Final Candidate List in Excel (.xlsx)">
+            <span>📊</span> Download Excel
+          </button>
+        </div>
       </div>
       
       <div class="space-y-12">
@@ -114,6 +122,14 @@ function renderList(main, nominations, year) {
         }).join('')}
       </div>
     </div>`;
+
+  main.querySelector('#btnExportFinalExcel')?.addEventListener('click', () => {
+    try {
+      exportNominationsToExcel(nominations, 'final', { year, shortName });
+    } catch (e) {
+      alert(e.message);
+    }
+  });
 }
 
 function publicLayout(title, bodyHtml, yearValue = '2026', shortName = null) {

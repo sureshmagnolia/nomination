@@ -11,6 +11,7 @@ import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading, comparePosts, sortPosts } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 import { openPrintRollModal } from '../../rollPrinter.js';
+import { exportNominationsToExcel, exportNominalRollToExcel } from '../../excelExporter.js';
 
 export async function renderAdminPublish(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -141,6 +142,9 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
             <button id="btnPrintNominalRoll" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${nominalRoll.length === 0 ? 'disabled' : ''}>
               <span>🖨️</span> Print Roll
             </button>
+            <button id="btnDownloadRollExcel" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${nominalRoll.length === 0 ? 'disabled' : ''} title="Download Nominal Roll in Excel (.xlsx)">
+              <span>📊</span> Download Excel
+            </button>
             <button data-nav="/admin/nominal-roll" class="btn btn-secondary btn-sm">👥 Manage Roll</button>
           </div>
         </div>
@@ -190,6 +194,9 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
             <button id="btnPrintValid" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${validList.length === 0 ? 'disabled title="Disabled: No nominations have been verified as Valid yet. Scrutinize & mark nominations as Valid in Review Nominations."' : 'title="Print official List of Valid Nominations"'}>
               <span>🖨️</span> Print Valid List
             </button>
+            <button id="btnDownloadValidExcel" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${validList.length === 0 ? 'disabled title="Disabled: No nominations have been verified as Valid yet."' : 'title="Download official List of Valid Nominations in Excel (.xlsx)"'}>
+              <span>📊</span> Download Excel
+            </button>
             <button data-nav="/admin/verify" class="btn btn-secondary btn-sm">✅ Review Nominations</button>
           </div>
         </div>
@@ -225,6 +232,9 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
           <div class="flex flex-wrap items-center gap-2 shrink-0">
             <button id="btnPrintFinal" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${finalList.length === 0 ? 'disabled title="Disabled: No approved contesting candidates available yet. Verify nominations and complete withdrawals first."' : 'title="Print official Final List of Eligible Contesting Candidates"'}>
               <span>🖨️</span> Print Final List
+            </button>
+            <button id="btnDownloadFinalExcel" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${finalList.length === 0 ? 'disabled title="Disabled: No approved contesting candidates available yet."' : 'title="Download official Final List of Eligible Contesting Candidates in Excel (.xlsx)"'}>
+              <span>📊</span> Download Excel
             </button>
             <button data-nav="/admin/withdrawals" class="btn btn-secondary btn-sm">↩️ Withdrawals</button>
           </div>
@@ -467,6 +477,34 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
 
   main.querySelector('#btnPrintValid')?.addEventListener('click', () => printNominationList('valid'));
   main.querySelector('#btnPrintFinal')?.addEventListener('click', () => printNominationList('final'));
+
+  // ── Download Excel Handlers ────────────────────────────────────────────────
+  main.querySelector('#btnDownloadValidExcel')?.addEventListener('click', () => {
+    try {
+      const fileName = exportNominationsToExcel(validList, 'valid', { collegeName, year, shortName });
+      showToast(`Excel downloaded: ${fileName}`, 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
+
+  main.querySelector('#btnDownloadFinalExcel')?.addEventListener('click', () => {
+    try {
+      const fileName = exportNominationsToExcel(finalList, 'final', { collegeName, year, shortName });
+      showToast(`Excel downloaded: ${fileName}`, 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
+
+  main.querySelector('#btnDownloadRollExcel')?.addEventListener('click', () => {
+    try {
+      const fileName = exportNominalRollToExcel(nominalRoll, { collegeName, year, shortName, isFinal: isRollFinal, isDraft: isDraftRoll });
+      showToast(`Excel downloaded: ${fileName}`, 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
 
   // ── Print Official Result Sheet ───────────────────────────────────────────
   main.querySelector('#btnPrintResults')?.addEventListener('click', () => {

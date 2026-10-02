@@ -6,6 +6,7 @@ import { api } from '../api.js';
 import { router } from '../router.js';
 import { esc, comparePosts } from '../utils.js';
 import { CONFIG } from '../config.js';
+import { exportNominationsToExcel } from '../excelExporter.js';
 
 export async function renderValidList(container) {
   let year = new Date().getFullYear();
@@ -27,13 +28,13 @@ export async function renderValidList(container) {
 
   try {
     const data = await api.getValidNominations();
-    renderList(container.querySelector('main'), data);
+    renderList(container.querySelector('main'), data, year, shortName);
   } catch (e) {
-    renderList(container.querySelector('main'), []);
+    renderList(container.querySelector('main'), [], year, shortName);
   }
 }
 
-function renderList(main, nominations) {
+function renderList(main, nominations, year = '2026', shortName = null) {
   if (!nominations || nominations.length === 0) {
     main.innerHTML = `
       <div class="glass rounded-3xl p-20 text-center border-dashed border-white/10">
@@ -56,9 +57,16 @@ function renderList(main, nominations) {
 
   main.innerHTML = `
     <div class="page-enter space-y-10">
-      <div class="text-center md:text-left border-b border-white/5 pb-8">
-        <h2 class="text-3xl font-black text-white tracking-tight">Verified Nominations</h2>
-        <p class="text-slate-400 mt-2">Official list of all candidates whose nominations have been verified as valid.</p>
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/5 pb-8 gap-4">
+        <div>
+          <h2 class="text-3xl font-black text-white tracking-tight">Verified Nominations</h2>
+          <p class="text-slate-400 mt-2">Official list of all candidates whose nominations have been verified as valid.</p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button id="btnExportValidExcel" class="btn btn-secondary btn-sm flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10" title="Download Valid Nominations in Excel (.xlsx)">
+            <span>📊</span> Download Excel
+          </button>
+        </div>
       </div>
       
       <div class="space-y-12">
@@ -105,6 +113,14 @@ function renderList(main, nominations) {
         }).join('')}
       </div>
     </div>`;
+
+  main.querySelector('#btnExportValidExcel')?.addEventListener('click', () => {
+    try {
+      exportNominationsToExcel(nominations, 'valid', { year, shortName });
+    } catch (e) {
+      alert(e.message);
+    }
+  });
 }
 
 function publicLayout(title, bodyHtml, yearValue = '2026', shortName = null) {
