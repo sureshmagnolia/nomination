@@ -93,6 +93,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
   let editingLocIdx = null;
   let isFirstRender = true;
 
+  let currentProposals = [];
+
   const openSplitModal = (splitDepts, intactCount, totalDepts) => {
     const modal = main.querySelector('#splitAlertModal');
     const content = main.querySelector('#splitAlertModalContent');
@@ -156,10 +158,169 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     if (modal) modal.classList.add('hidden');
   };
 
-  const autoAllot = () => {
-    booths.forEach(b => { b.classes = []; b.totalStudents = 0; });
+  const openStrategyModal = (proposals) => {
+    currentProposals = proposals;
+    const modal = main.querySelector('#strategySelectModal');
+    const container = main.querySelector('#strategyModalCardsContainer');
+    if (!modal || !container) return;
+
+    container.innerHTML = `
+      <div class="grid grid-cols-1 lg:grid-cols-${Math.min(proposals.length, 3)} gap-4 pb-2">
+        ${proposals.map(p => `
+          <div class="bg-slate-850 rounded-2xl border ${p.badgeColor === 'emerald' ? 'border-emerald-500/40 hover:border-emerald-400' : p.badgeColor === 'amber' ? 'border-amber-500/40 hover:border-amber-400' : 'border-indigo-500/40 hover:border-indigo-400'} flex flex-col justify-between p-4.5 transition-all shadow-xl relative overflow-hidden group" style="background:#1e293b;">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <span class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${p.badgeColor === 'emerald' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : p.badgeColor === 'amber' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'}">
+                  ${p.badge}
+                </span>
+                <span class="text-xs font-mono text-slate-300 bg-white/5 px-2 py-0.5 rounded border border-white/10">
+                  ${p.splitDepts.length === 0 ? '0 Splits' : `${p.splitDepts.length} Split Dept${p.splitDepts.length > 1 ? 's' : ''}`}
+                </span>
+              </div>
+
+              <div>
+                <h5 class="text-base font-bold text-white mb-1">${esc(p.title)}</h5>
+                <p class="text-xs text-slate-300 leading-relaxed">${esc(p.tagline)}</p>
+              </div>
+
+              <div class="bg-black/40 rounded-xl p-3 space-y-1.5 text-xs border border-white/5">
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400">Voter Range / Booth:</span>
+                  <span class="font-mono font-bold text-white">${p.minBooth} – ${p.maxBooth} voters</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400">Max Disparity (Spread):</span>
+                  <span class="font-mono font-bold ${p.spread <= 70 ? 'text-emerald-400' : 'text-amber-400'}">${p.spread} voters</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400">Department Integrity:</span>
+                  <span class="font-bold text-white">${p.intactCount} of ${p.totalDepts} Intact</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400">Counting Complexity:</span>
+                  <span class="font-bold ${p.splitDepts.length <= 1 ? 'text-emerald-300' : 'text-amber-300'}">
+                    ${p.splitDepts.length === 0 ? 'None (0 Merges)' : p.splitDepts.length === 1 ? 'Minimal (1 Dept Merge)' : 'Moderate (2 Dept Merges)'}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Split Details -->
+              ${p.splitDepts.length > 0 ? `
+                <div class="space-y-1.5">
+                  <div class="text-[11px] font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1">
+                    <span>⚠️</span> Split Aggregation Notice:
+                  </div>
+                  ${p.splitDepts.map(sd => `
+                    <div class="text-[11px] bg-amber-500/10 border border-amber-500/20 rounded-lg p-2 text-amber-200 space-y-1">
+                      <div class="font-bold text-white flex justify-between">
+                        <span>🏛️ ${esc(sd.name)}</span>
+                        <span class="font-mono text-amber-400 text-[10px]">${sd.part1.count + sd.part2.count} total</span>
+                      </div>
+                      <div class="grid grid-cols-2 gap-1.5 text-[10px]">
+                        <div class="bg-black/30 p-1 rounded">
+                          <span class="font-bold text-amber-300">Booth ${sd.part1.boothNumber}:</span> ${sd.part1.count} (${esc(sd.part1.label)})
+                        </div>
+                        <div class="bg-black/30 p-1 rounded">
+                          <span class="font-bold text-amber-300">Booth ${sd.part2.boothNumber}:</span> ${sd.part2.count} (${esc(sd.part2.label)})
+                        </div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : `
+                <div class="text-[11px] bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2.5 text-emerald-200">
+                  ✨ <strong>100% Department Integrity:</strong> Every department sits completely intact in a single booth. No ballot merging needed.
+                </div>
+              `}
+
+              <!-- Expandable Booth Breakdown -->
+              <div>
+                <button type="button" class="btn btn-secondary btn-xs w-full text-slate-300 toggle-proposal-booths-btn hover:text-white" data-pid="${p.id}">
+                  🔍 Preview All ${p.booths.length} Booths
+                </button>
+                <div id="booths-preview-${p.id}" class="hidden mt-2 max-h-48 overflow-y-auto space-y-1 bg-black/50 rounded-lg p-2 border border-white/10 text-[11px]">
+                  ${p.booths.map(b => `
+                    <div class="flex items-center justify-between gap-2 p-1.5 rounded bg-white/5 hover:bg-white/10 transition-colors">
+                      <span class="font-bold text-indigo-300 font-mono whitespace-nowrap">Booth ${b.boothNumber}:</span>
+                      <span class="text-slate-300 truncate flex-1 text-[10px]" title="${esc(b.classes.join(', '))}">
+                        ${esc(b.classes.join(', '))}
+                      </span>
+                      <span class="font-mono font-bold text-white whitespace-nowrap px-1.5 py-0.5 rounded bg-white/10 text-[11px]">${b.totalStudents}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-3 mt-3 border-t border-white/10">
+              <button type="button" class="btn btn-primary w-full py-2.5 font-bold shadow-lg select-strategy-apply-btn text-white text-sm" data-pid="${p.id}" style="${p.badgeColor === 'emerald' ? 'background:#059669;' : p.badgeColor === 'amber' ? 'background:#d97706;' : 'background:#4f46e5;'}">
+                ✓ Apply ${esc(p.title.split(':')[0])}
+              </button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    // Bind accordion toggles
+    container.querySelectorAll('.toggle-proposal-booths-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const pid = e.currentTarget.dataset.pid;
+        const box = container.querySelector(`#booths-preview-${pid}`);
+        if (box) {
+          box.classList.toggle('hidden');
+          e.currentTarget.textContent = box.classList.contains('hidden') ? `🔍 Preview All ${booths.length} Booths` : '▲ Hide Booth Preview';
+        }
+      });
+    });
+
+    // Bind Apply buttons
+    container.querySelectorAll('.select-strategy-apply-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const pid = e.currentTarget.dataset.pid;
+        const selectedProposal = currentProposals.find(p => p.id === pid);
+        if (!selectedProposal) return;
+
+        closeStrategyModal();
+        applyProposal(selectedProposal);
+      });
+    });
+
+    modal.classList.remove('hidden');
+  };
+
+  const closeStrategyModal = () => {
+    const modal = main.querySelector('#strategySelectModal');
+    if (modal) modal.classList.add('hidden');
+  };
+
+  const applyProposal = async (proposal) => {
+    for (let i = 0; i < booths.length; i++) {
+      const pb = proposal.booths.find(b => b.boothNumber === booths[i].boothNumber);
+      if (pb) {
+        booths[i].classes = [...pb.classes];
+        booths[i].totalStudents = pb.totalStudents;
+      }
+    }
+    try {
+      await api.adminSaveBooths(pwd, booths);
+      refreshUI();
+      showToast(`✅ Successfully applied "${proposal.title}" across ${booths.length} booths!`, 'success');
+      if (proposal.splitDepts && proposal.splitDepts.length > 0) {
+        openSplitModal(proposal.splitDepts, proposal.intactCount, proposal.totalDepts);
+      }
+    } catch (err) {
+      refreshUI();
+      showToast(`Applied in memory (Failed to save to database: ${err.message})`, 'error');
+      if (proposal.splitDepts && proposal.splitDepts.length > 0) {
+        openSplitModal(proposal.splitDepts, proposal.intactCount, proposal.totalDepts);
+      }
+    }
+  };
+
+  const generateAllotmentProposals = () => {
     const numBooths = booths.length;
-    if (numBooths === 0) return { splitDepts: [], intactCount: 0, totalDepts: 0, booths };
+    if (numBooths === 0) return [];
 
     // 1. Group all classes by Department (Research Scholars are grouped with their department!)
     const deptsMap = {};
@@ -177,33 +338,29 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     const mean = totalStudents / numBooths;
     const numDepts = depts.length;
 
-    // Helper: Smart-split a department cleanly into exactly 2 balanced coherent sub-bundles
-    // Goal: Divide classes so Part A and Part B are as balanced as possible (closest to 50/50),
-    // ensuring booth voter numbers match the overall average and highest/smallest have minimal difference.
-    function splitDeptIntoTwoHalves(dept) {
+    const isUG = (c) => {
+      const u = (c.name || '').toUpperCase();
+      return u.includes('B.COM') || u.includes('BCOM') || 
+             u.includes('B.A') || u.includes('BA') || 
+             u.includes('B.SC') || u.includes('BSC') || 
+             u.includes('BBA') || u.includes('BCA') || 
+             u.includes('UG') || /^(I|II|III)\s+(DC|YEAR|B)/i.test(u);
+    };
+
+    // Helper A: Smart-split a department into 2 balanced coherent halves (closest to 50/50)
+    function splitSmartBalanced(dept) {
       const classes = [...dept.classes];
       if (classes.length <= 1) return null;
 
       const n = classes.length;
-      let bestA = [];
-      let bestB = [];
-      let bestDiff = Infinity;
-
-      // Exhaustive search over all 2^(n-1) non-empty subset partitions to find the closest to 50/50
+      let bestA = [], bestB = [], bestDiff = Infinity;
       if (n <= 12) {
         for (let mask = 1; mask < (1 << n) - 1; mask++) {
-          const partA = [];
-          const partB = [];
-          let sumA = 0;
-          let sumB = 0;
+          const partA = [], partB = [];
+          let sumA = 0, sumB = 0;
           for (let i = 0; i < n; i++) {
-            if ((mask >> i) & 1) {
-              partA.push(classes[i]);
-              sumA += classes[i].count;
-            } else {
-              partB.push(classes[i]);
-              sumB += classes[i].count;
-            }
+            if ((mask >> i) & 1) { partA.push(classes[i]); sumA += classes[i].count; }
+            else { partB.push(classes[i]); sumB += classes[i].count; }
           }
           const diff = Math.abs(sumA - sumB);
           if (diff < bestDiff) {
@@ -213,33 +370,17 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           }
         }
       }
-
-      // Fallback greedy partition if classes count is large
       if (bestA.length === 0 || bestB.length === 0) {
         classes.sort((a, b) => b.count - a.count);
         let sumA = 0, sumB = 0;
         for (const c of classes) {
-          if (sumA <= sumB) {
-            bestA.push(c);
-            sumA += c.count;
-          } else {
-            bestB.push(c);
-            sumB += c.count;
-          }
+          if (sumA <= sumB) { bestA.push(c); sumA += c.count; }
+          else { bestB.push(c); sumB += c.count; }
         }
       }
 
       const totalA = bestA.reduce((s, c) => s + c.count, 0);
       const totalB = bestB.reduce((s, c) => s + c.count, 0);
-
-      const isUG = (c) => {
-        const u = (c.name || '').toUpperCase();
-        return u.includes('B.COM') || u.includes('BCOM') || 
-               u.includes('B.A') || u.includes('BA') || 
-               u.includes('B.SC') || u.includes('BSC') || 
-               u.includes('BBA') || u.includes('BCA') || 
-               u.includes('UG') || /^(I|II|III)\s+(DC|YEAR|B)/i.test(u);
-      };
 
       const getLabel = (pClasses) => {
         const allUG = pClasses.every(isUG);
@@ -256,51 +397,56 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       ];
     }
 
-    // Smart Combine Partition Solver
-    function solvePartition(items, B, constraints = []) {
-      let bestAlloc = null;
-      let bestLoss = Infinity;
+    // Helper B: Academic Cohort split (Strict UG vs PG & Scholars)
+    function splitAcademicCohort(dept) {
+      const classes = [...dept.classes];
+      if (classes.length <= 1) return null;
+      const ugClasses = classes.filter(isUG);
+      const pgClasses = classes.filter(c => !isUG(c));
+      if (ugClasses.length === 0 || pgClasses.length === 0) return splitSmartBalanced(dept);
+
+      const ugTotal = ugClasses.reduce((s, c) => s + c.count, 0);
+      const pgTotal = pgClasses.reduce((s, c) => s + c.count, 0);
+      return [
+        { name: dept.name, partLabel: 'UG', total: ugTotal, classes: ugClasses, isSplit: true, deptName: dept.name },
+        { name: dept.name, partLabel: 'PG & Scholars', total: pgTotal, classes: pgClasses, isSplit: true, deptName: dept.name }
+      ];
+    }
+
+    // Partition Solver with multi-restart and local hill-climbing
+    function solvePartition(items, B, penalty = 75, numRestarts = 350) {
+      let bestAlloc = null, bestLoss = Infinity;
+      const constraint = (b, it) => it.isSplit && b.items.some(o => o.isSplit && o.deptName === it.deptName);
 
       function calcLoss(alloc) {
-        let sumSq = 0;
-        let max = -Infinity;
-        let min = Infinity;
+        let sumSq = 0, max = -Infinity, min = Infinity;
         for (const b of alloc) {
           const diff = b.total - mean;
           sumSq += diff * diff;
           if (b.total > max) max = b.total;
           if (b.total < min) min = b.total;
         }
-        // Heavily penalize variance and spread to force booths to be closely balanced
-        return sumSq + (max - min) * 75;
+        return sumSq + (max - min) * penalty;
       }
 
-      for (let r = 0; r < 500; r++) {
+      for (let r = 0; r < numRestarts; r++) {
         const alloc = Array.from({ length: B }, (_, i) => ({ id: i, total: 0, items: [] }));
         const sorted = [...items];
-        if (r === 0) {
-          sorted.sort((a, b) => b.total - a.total);
-        } else if (r === 1) {
-          sorted.sort((a, b) => a.total - b.total);
-        } else {
-          sorted.sort(() => Math.random() - 0.5);
-        }
+        if (r === 0) sorted.sort((a, b) => b.total - a.total);
+        else if (r === 1) sorted.sort((a, b) => a.total - b.total);
+        else sorted.sort(() => Math.random() - 0.5);
 
         let valid = true;
         for (const it of sorted) {
-          let bestB = null;
-          let minAddLoss = Infinity;
+          let bestB = null, minAddLoss = Infinity;
           for (const b of alloc) {
-            if (constraints.some(c => c(b, it))) continue;
+            if (constraint(b, it)) continue;
             const projectedDiff = (b.total + it.total) - mean;
             const cost = projectedDiff * projectedDiff;
-            if (cost < minAddLoss) {
-              minAddLoss = cost;
-              bestB = b;
-            }
+            if (cost < minAddLoss) { minAddLoss = cost; bestB = b; }
           }
           if (!bestB) {
-            const validBooths = alloc.filter(b => !constraints.some(c => c(b, it)));
+            const validBooths = alloc.filter(b => !constraint(b, it));
             if (validBooths.length > 0) {
               validBooths.sort((a, b) => a.total - b.total);
               bestB = validBooths[0];
@@ -312,37 +458,24 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           bestB.items.push(it);
           bestB.total += it.total;
         }
-
         if (!valid) continue;
 
-        // Local search hill-climbing
-        let currentLoss = calcLoss(alloc);
-        let improved = true;
-        let step = 0;
-        while (improved && step < 70) {
-          improved = false;
-          step++;
-
-          // 1-move: move item from booth i to booth j
+        let currentLoss = calcLoss(alloc), improved = true, step = 0;
+        while (improved && step < 60) {
+          improved = false; step++;
           for (let i = 0; i < B; i++) {
             for (let j = 0; j < B; j++) {
               if (i === j) continue;
               for (let k = 0; k < alloc[i].items.length; k++) {
                 const it = alloc[i].items[k];
-                if (constraints.some(c => c(alloc[j], it))) continue;
-
-                alloc[i].total -= it.total;
-                alloc[j].total += it.total;
+                if (constraint(alloc[j], it)) continue;
+                alloc[i].total -= it.total; alloc[j].total += it.total;
                 const newLoss = calcLoss(alloc);
                 if (newLoss < currentLoss - 0.001) {
-                  alloc[i].items.splice(k, 1);
-                  alloc[j].items.push(it);
-                  currentLoss = newLoss;
-                  improved = true;
-                  break;
+                  alloc[i].items.splice(k, 1); alloc[j].items.push(it);
+                  currentLoss = newLoss; improved = true; break;
                 } else {
-                  alloc[i].total += it.total;
-                  alloc[j].total -= it.total;
+                  alloc[i].total += it.total; alloc[j].total -= it.total;
                 }
               }
               if (improved) break;
@@ -351,71 +484,21 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           }
           if (improved) continue;
 
-          // 2-swap: swap item between booth i and booth j
           for (let i = 0; i < B; i++) {
             for (let j = i + 1; j < B; j++) {
               for (let ki = 0; ki < alloc[i].items.length; ki++) {
                 for (let kj = 0; kj < alloc[j].items.length; kj++) {
-                  const itA = alloc[i].items[ki];
-                  const itB = alloc[j].items[kj];
-                  if (constraints.some(c => c(alloc[j], itA)) || constraints.some(c => c(alloc[i], itB))) continue;
-
+                  const itA = alloc[i].items[ki], itB = alloc[j].items[kj];
+                  if (constraint(alloc[j], itA) || constraint(alloc[i], itB)) continue;
                   const gain = itA.total - itB.total;
-                  alloc[i].total -= gain;
-                  alloc[j].total += gain;
+                  alloc[i].total -= gain; alloc[j].total += gain;
                   const newLoss = calcLoss(alloc);
                   if (newLoss < currentLoss - 0.001) {
-                    alloc[i].items[ki] = itB;
-                    alloc[j].items[kj] = itA;
-                    currentLoss = newLoss;
-                    improved = true;
-                    break;
+                    alloc[i].items[ki] = itB; alloc[j].items[kj] = itA;
+                    currentLoss = newLoss; improved = true; break;
                   } else {
-                    alloc[i].total += gain;
-                    alloc[j].total -= gain;
+                    alloc[i].total += gain; alloc[j].total -= gain;
                   }
-                }
-                if (improved) break;
-              }
-              if (improved) break;
-            }
-            if (improved) break;
-          }
-          if (improved) continue;
-
-          // 2-to-1 swap: swap two small items in i with one item in j
-          for (let i = 0; i < B; i++) {
-            for (let j = 0; j < B; j++) {
-              if (i === j) continue;
-              if (alloc[i].items.length < 2) continue;
-              for (let ki1 = 0; ki1 < alloc[i].items.length - 1; ki1++) {
-                for (let ki2 = ki1 + 1; ki2 < alloc[i].items.length; ki2++) {
-                  for (let kj = 0; kj < alloc[j].items.length; kj++) {
-                    const itA1 = alloc[i].items[ki1];
-                    const itA2 = alloc[i].items[ki2];
-                    const itB = alloc[j].items[kj];
-                    if (constraints.some(c => c(alloc[j], itA1)) || constraints.some(c => c(alloc[j], itA2)) || constraints.some(c => c(alloc[i], itB))) continue;
-
-                    const gain = (itA1.total + itA2.total) - itB.total;
-                    alloc[i].total -= gain;
-                    alloc[j].total += gain;
-                    const newLoss = calcLoss(alloc);
-                    if (newLoss < currentLoss - 0.001) {
-                      alloc[i].items.splice(ki2, 1);
-                      alloc[i].items.splice(ki1, 1);
-                      alloc[i].items.push(itB);
-                      alloc[j].items.splice(kj, 1);
-                      alloc[j].items.push(itA1);
-                      alloc[j].items.push(itA2);
-                      currentLoss = newLoss;
-                      improved = true;
-                      break;
-                    } else {
-                      alloc[i].total += gain;
-                      alloc[j].total -= gain;
-                    }
-                  }
-                  if (improved) break;
                 }
                 if (improved) break;
               }
@@ -430,166 +513,151 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           bestAlloc = JSON.parse(JSON.stringify(alloc));
         }
       }
-
       return bestAlloc;
     }
 
-    // --- TIER 0: 0-SPLIT ATTEMPT (Highest Priority: Keep 100% of departments intact!) ---
-    const tier0Alloc = solvePartition(depts, numBooths);
-    let chosenAlloc = tier0Alloc;
-    let splitDepts = [];
-
-    const tier0Max = Math.max(...tier0Alloc.map(b => b.total));
-    const tier0Min = Math.min(...tier0Alloc.map(b => b.total));
-    const tier0Spread = tier0Max - tier0Min;
-
-    // Almost balanced test for 0 splits:
-    // Every booth should be reasonably close to the mean, with tight spread and no starvation.
-    // An 87 vs 248 disparity is explicitly disallowed!
-    const isTier0Balanced = (tier0Max <= Math.round(mean * 1.25)) && 
-                            (tier0Min >= Math.round(mean * 0.75)) && 
-                            (tier0Spread <= Math.max(Math.round(mean * 0.40), 50)) &&
-                            (tier0Max / Math.max(tier0Min, 1) <= 1.45);
-
-    if (isTier0Balanced) {
-      // 0 SPLITS ACCEPTED: All departments intact and booths are almost balanced!
-      chosenAlloc = tier0Alloc;
-    } else {
-      // --- TIER 1: AT MOST 1 DEPARTMENT SPLIT INTO AT MOST 2 BOOTHS ---
-      let bestTier1 = null;
-      let bestTier1Score = Infinity;
-      let bestSplitDept = null;
-
-      // Evaluate candidate large departments to split, sorted largest first
-      const largeDepts = depts.filter(d => d.total > mean * 0.75 && d.classes.length > 1).sort((a, b) => b.total - a.total);
-
-      for (const candDept of largeDepts) {
-        const halves = splitDeptIntoTwoHalves(candDept);
-        if (!halves) continue;
-
-        const items = [...depts.filter(d => d.name !== candDept.name), halves[0], halves[1]];
-        const constraint = (b, it) => {
-          if (!it.isSplit) return false;
-          return b.items.some(other => other.isSplit && other.deptName === it.deptName);
+    function formatProposal(id, title, badge, badgeColor, tagline, alloc, splitDeptsList) {
+      if (!alloc) return null;
+      alloc.sort((a, b) => a.id - b.id);
+      const boothsRes = alloc.map((b, i) => {
+        const cList = [];
+        b.items.forEach(it => it.classes.forEach(c => cList.push(c.name)));
+        return {
+          boothNumber: i + 1,
+          totalStudents: b.total,
+          classes: cList,
+          items: b.items
         };
+      });
 
-        const alloc = solvePartition(items, numBooths, [constraint]);
-        if (alloc) {
-          const maxL = Math.max(...alloc.map(b => b.total));
-          const minL = Math.min(...alloc.map(b => b.total));
-          const spread = maxL - minL;
-          const score = (spread * 10) + Math.abs(maxL - mean) + Math.abs(minL - mean);
-          if (score < bestTier1Score) {
-            bestTier1Score = score;
-            bestTier1 = alloc;
-            bestSplitDept = { dept: candDept, halves };
+      const splitSummary = splitDeptsList.map(sd => {
+        const part1Booth = boothsRes.find(b => b.classes.includes(sd.halves[0].classes[0]?.name));
+        const part2Booth = boothsRes.find(b => b.classes.includes(sd.halves[1].classes[0]?.name));
+        return {
+          name: sd.dept.name,
+          part1: {
+            boothNumber: part1Booth ? part1Booth.boothNumber : '?',
+            label: sd.halves[0].partLabel,
+            classes: sd.halves[0].classes.map(c => c.name),
+            count: sd.halves[0].total
+          },
+          part2: {
+            boothNumber: part2Booth ? part2Booth.boothNumber : '?',
+            label: sd.halves[1].partLabel,
+            classes: sd.halves[1].classes.map(c => c.name),
+            count: sd.halves[1].total
           }
-        }
-      }
+        };
+      });
 
-      // Check if Tier 1 achieves close balance (tight spread and manageable peak booth)
-      const t1Max = bestTier1 ? Math.max(...bestTier1.map(b => b.total)) : Infinity;
-      const t1Min = bestTier1 ? Math.min(...bestTier1.map(b => b.total)) : 0;
-      const t1Spread = t1Max - t1Min;
-      const isTier1Balanced = bestTier1 && (t1Spread <= Math.max(Math.round(mean * 0.35), 55)) && (t1Max <= Math.round(mean * 1.25));
+      const totals = boothsRes.map(b => b.totalStudents);
+      const minBooth = Math.min(...totals);
+      const maxBooth = Math.max(...totals);
 
-      if (isTier1Balanced || (bestTier1 && largeDepts.length < 2)) {
-        chosenAlloc = bestTier1;
-        splitDepts.push(bestSplitDept);
-      } else {
-        // --- TIER 2: AT MOST 2 DEPARTMENTS SPLIT (EACH INTO AT MOST 2 BOOTHS) ---
-        let bestTier2 = null;
-        let bestTier2Score = Infinity;
-        let bestSplitPair = null;
-
-        for (let i = 0; i < largeDepts.length - 1; i++) {
-          for (let j = i + 1; j < largeDepts.length; j++) {
-            const d1 = largeDepts[i];
-            const d2 = largeDepts[j];
-            const h1 = splitDeptIntoTwoHalves(d1);
-            const h2 = splitDeptIntoTwoHalves(d2);
-            if (!h1 || !h2) continue;
-
-            const items = [
-              ...depts.filter(d => d.name !== d1.name && d.name !== d2.name),
-              h1[0], h1[1],
-              h2[0], h2[1]
-            ];
-
-            const constraint = (b, it) => {
-              if (!it.isSplit) return false;
-              return b.items.some(other => other.isSplit && other.deptName === it.deptName);
-            };
-
-            const alloc = solvePartition(items, numBooths, [constraint]);
-            if (alloc) {
-              const maxL = Math.max(...alloc.map(b => b.total));
-              const minL = Math.min(...alloc.map(b => b.total));
-              const spread = maxL - minL;
-              const score = (spread * 10) + Math.abs(maxL - mean) + Math.abs(minL - mean);
-              if (score < bestTier2Score) {
-                bestTier2Score = score;
-                bestTier2 = alloc;
-                bestSplitPair = [{ dept: d1, halves: h1 }, { dept: d2, halves: h2 }];
-              }
-            }
-          }
-        }
-
-        if (bestTier2) {
-          chosenAlloc = bestTier2;
-          splitDepts = bestSplitPair;
-        } else if (bestTier1) {
-          chosenAlloc = bestTier1;
-          splitDepts.push(bestSplitDept);
-        } else {
-          chosenAlloc = tier0Alloc;
-          splitDepts = [];
-        }
-      }
-    }
-
-    // Populate allotments into booths
-    chosenAlloc.sort((a, b) => a.id - b.id);
-    for (let i = 0; i < numBooths; i++) {
-      booths[i].classes = [];
-      booths[i].totalStudents = 0;
-      const bAlloc = chosenAlloc.find(x => x.id === i) || { items: [] };
-      for (const it of bAlloc.items) {
-        it.classes.forEach(c => booths[i].classes.push(c.name));
-        booths[i].totalStudents += it.total;
-      }
-    }
-
-    booths.sort((a, b) => a.boothNumber - b.boothNumber);
-
-    // Build human-readable split summary for alerts
-    const splitSummary = splitDepts.map(sd => {
-      const part1Booth = booths.find(b => b.classes.includes(sd.halves[0].classes[0]?.name));
-      const part2Booth = booths.find(b => b.classes.includes(sd.halves[1].classes[0]?.name));
       return {
-        name: sd.dept.name,
-        part1: {
-          boothNumber: part1Booth ? part1Booth.boothNumber : '?',
-          label: sd.halves[0].partLabel,
-          classes: sd.halves[0].classes.map(c => c.name),
-          count: sd.halves[0].total
-        },
-        part2: {
-          boothNumber: part2Booth ? part2Booth.boothNumber : '?',
-          label: sd.halves[1].partLabel,
-          classes: sd.halves[1].classes.map(c => c.name),
-          count: sd.halves[1].total
-        }
+        id,
+        title,
+        badge,
+        badgeColor,
+        tagline,
+        minBooth,
+        maxBooth,
+        spread: maxBooth - minBooth,
+        intactCount: numDepts - splitSummary.length,
+        totalDepts: numDepts,
+        splitDepts: splitSummary,
+        booths: boothsRes
       };
-    });
+    }
 
-    return {
-      splitDepts: splitSummary,
-      intactCount: numDepts - splitSummary.length,
-      totalDepts: numDepts,
-      booths: booths
-    };
+    const proposals = [];
+    const largeDepts = depts.filter(d => d.total > mean * 0.75 && d.classes.length > 1).sort((a, b) => b.total - a.total);
+
+    // Check Plan 0: 100% Pure Integrity (0 Splits)
+    const tier0Alloc = solvePartition(depts, numBooths, 60, 250);
+    if (tier0Alloc) {
+      const t0Totals = tier0Alloc.map(b => b.total);
+      const t0Min = Math.min(...t0Totals);
+      const t0Max = Math.max(...t0Totals);
+      const t0Spread = t0Max - t0Min;
+      const isTier0Balanced = (t0Max <= Math.round(mean * 1.25)) && (t0Min >= Math.round(mean * 0.75)) && (t0Spread <= 50);
+      if (isTier0Balanced) {
+        proposals.push(formatProposal(
+          'pure',
+          'Plan 0: Pure Integrity',
+          '✨ 100% Whole (0 Splits)',
+          'emerald',
+          'Zero departments are split. Every single department sits whole in a single booth.',
+          tier0Alloc,
+          []
+        ));
+      }
+    }
+
+    // Plan A: Minimal Splitting (Only 1 Dept Split)
+    if (largeDepts.length > 0) {
+      const d1 = largeDepts[0];
+      const h1 = splitSmartBalanced(d1);
+      if (h1) {
+        const items1 = [...depts.filter(d => d.name !== d1.name), h1[0], h1[1]];
+        const alloc1 = solvePartition(items1, numBooths, 65, 300);
+        if (alloc1) {
+          proposals.push(formatProposal(
+            'minimal',
+            'Plan A: Minimal Splitting',
+            '🛡️ Easiest Counting',
+            'emerald',
+            `Maximizes whole departments. Only 1 department (${esc(d1.name)}) is split; all other ${numDepts - 1} departments remain 100% whole.`,
+            alloc1,
+            [{ dept: d1, halves: h1 }]
+          ));
+        }
+      }
+    }
+
+    // Plan B: Balanced Queues (Smart 50/50 Halves on 2 Depts)
+    if (largeDepts.length >= 2) {
+      const d1 = largeDepts[0], d2 = largeDepts[1];
+      const h1 = splitSmartBalanced(d1), h2 = splitSmartBalanced(d2);
+      if (h1 && h2) {
+        const items2 = [...depts.filter(d => d.name !== d1.name && d.name !== d2.name), h1[0], h1[1], h2[0], h2[1]];
+        const alloc2 = solvePartition(items2, numBooths, 85, 350);
+        if (alloc2) {
+          proposals.push(formatProposal(
+            'balanced',
+            'Plan B: Balanced Queues',
+            '⚖️ Recommended • Optimal Flow',
+            'indigo',
+            `Divides ${esc(d1.name)} and ${esc(d2.name)} into balanced 50/50 halves to equalize officer workloads and avoid crowded hallways.`,
+            alloc2,
+            [{ dept: d1, halves: h1 }, { dept: d2, halves: h2 }]
+          ));
+        }
+      }
+    }
+
+    // Plan C: Academic Cohort (UG vs PG Split)
+    if (largeDepts.length >= 2) {
+      const d1 = largeDepts[0], d2 = largeDepts[1];
+      const h1 = splitAcademicCohort(d1), h2 = splitAcademicCohort(d2);
+      if (h1 && h2) {
+        const items3 = [...depts.filter(d => d.name !== d1.name && d.name !== d2.name), h1[0], h1[1], h2[0], h2[1]];
+        const alloc3 = solvePartition(items3, numBooths, 50, 300);
+        if (alloc3) {
+          proposals.push(formatProposal(
+            'cohort',
+            'Plan C: Academic Cohort',
+            '🎓 UG vs PG Segregation',
+            'amber',
+            `Separates Undergraduates from Postgraduates & Scholars for clean degree-level physical campus navigation.`,
+            alloc3,
+            [{ dept: d1, halves: h1 }, { dept: d2, halves: h2 }]
+          ));
+        }
+      }
+    }
+
+    return proposals.filter(Boolean);
   };
 
   const refreshUI = () => {
@@ -658,6 +726,32 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                 <button id="btnCloseLocationsModal2" class="btn btn-secondary">Close</button>
                 <button id="btnSaveLocations" class="btn btn-primary">💾 Save Locations</button>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Strategy Selection Modal -->
+        <div id="strategySelectModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+          <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" id="strategyModalOverlay"></div>
+          <div class="relative bg-slate-900 rounded-2xl border border-indigo-500/30 shadow-2xl w-full max-w-6xl p-6 z-10 flex flex-col max-h-[92vh] text-white">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+              <div class="flex items-center gap-2.5">
+                <span class="text-2xl">⚡</span>
+                <div>
+                  <h4 class="font-bold text-indigo-300 text-lg">Polling Booth Allotment Optimizer</h4>
+                  <p class="text-xs text-slate-400">The solver evaluated your voters across distinct optimization models. Choose the strategy that best matches your election priorities:</p>
+                </div>
+              </div>
+              <button id="btnCloseStrategyModal" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto pr-1" id="strategyModalCardsContainer">
+              <!-- Dynamically populated with strategy cards -->
+            </div>
+
+            <div class="pt-3 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <span class="text-xs text-slate-400">💡 Click <strong>Preview Booths</strong> on any plan to see all booth assignments before applying.</span>
+              <button id="btnCancelStrategyModal" class="btn btn-secondary px-5">Cancel</button>
             </div>
           </div>
         </div>
@@ -1365,32 +1459,35 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     main.querySelector('#btnAckSplitAlertModal')?.addEventListener('click', closeSplitModal);
     main.querySelector('#splitAlertModalOverlay')?.addEventListener('click', closeSplitModal);
 
-    main.querySelector('#btnAutoAllot').addEventListener('click', async () => {
-      const assignedCount = booths.reduce((acc, b) => acc + (b.classes ? b.classes.length : 0), 0);
-      let confirmMsg = `⚡ CONFIRM AUTO ALLOTMENT\n\nThis will automatically distribute classes across Booths 1 to ${booths.length}, keeping departments intact and attaching Research Scholars to their respective departments.\n\nProceed?`;
-      if (assignedCount > 0) {
-        confirmMsg = `⚠️ CONFIRM AUTO ALLOTMENT OVERWRITE\n\n${assignedCount} class allotment(s) are currently configured.\nAuto-allotment will replace current assignments to keep each department together and align Research Scholars with their department.\n\nAre you sure you want to proceed?`;
-      }
-      if (!confirm(confirmMsg)) {
+    main.querySelector('#btnCloseStrategyModal')?.addEventListener('click', closeStrategyModal);
+    main.querySelector('#btnCancelStrategyModal')?.addEventListener('click', closeStrategyModal);
+    main.querySelector('#strategyModalOverlay')?.addEventListener('click', closeStrategyModal);
+
+    main.querySelector('#btnAutoAllot').addEventListener('click', () => {
+      if (!booths || booths.length === 0) {
+        showToast('Please configure at least 1 polling booth first.', 'error');
         return;
       }
-      const result = autoAllot();
-      try {
-        await api.adminSaveBooths(pwd, booths);
-        refreshUI();
-        if (result.splitDepts && result.splitDepts.length > 0) {
-          showToast(`⚠️ Auto allotment: ${result.splitDepts.length} department(s) split across at most 2 booths.`, 'warning');
-          openSplitModal(result.splitDepts, result.intactCount, result.totalDepts);
-        } else {
-          showToast('🎉 Optimal Allotment: All departments kept 100% intact in single booths (0 splits)!', 'success');
-        }
-      } catch (err) {
-        refreshUI();
-        showToast(`Auto allotted in memory (Failed to save to database: ${err.message})`, 'error');
-        if (result.splitDepts && result.splitDepts.length > 0) {
-          openSplitModal(result.splitDepts, result.intactCount, result.totalDepts);
-        }
+      if (!allClasses || allClasses.length === 0) {
+        showToast('No classes found in nominal roll to allot.', 'error');
+        return;
       }
+      const btn = main.querySelector('#btnAutoAllot');
+      setLoading(btn, true, '⚡ Analyzing...');
+      setTimeout(() => {
+        try {
+          const proposals = generateAllotmentProposals();
+          setLoading(btn, false, '⚡ Auto Allot');
+          if (!proposals || proposals.length === 0) {
+            showToast('Unable to generate allotment proposals.', 'error');
+            return;
+          }
+          openStrategyModal(proposals);
+        } catch (err) {
+          setLoading(btn, false, '⚡ Auto Allot');
+          showToast(`Error generating proposals: ${err.message}`, 'error');
+        }
+      }, 40);
     });
   };
 
