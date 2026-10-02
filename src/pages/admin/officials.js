@@ -964,8 +964,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </div>
         </div>
 
-        <!-- Printable Appointment Orders Modal Container -->
-        <div id="dutyOrdersPrintModalContainer"></div>
       </div>
     `;
 
@@ -1510,100 +1508,243 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       reader.readAsArrayBuffer(file);
     });
 
-    // Print Polling Orders
+    // Print Polling Orders (Opens in New Tab)
     main.querySelector('#btnPrintPollingOrders')?.addEventListener('click', () => {
-      openDutyOrdersModal('polling');
+      openDutyOrdersWindow('polling');
     });
 
-    // Print Counting Orders
+    // Print Counting Orders (Opens in New Tab)
     main.querySelector('#btnPrintCountingOrders')?.addEventListener('click', () => {
-      openDutyOrdersModal('counting');
+      openDutyOrdersWindow('counting');
     });
   };
 
-  // ─── Duty Orders Modal & High-Precision Print Engine ────────────────────────
+  // ─── Duty Orders Standalone Window & High-Precision Print Engine ──────────
 
-  const getPrintStyles = (orientation) => `
-    @page {
-      size: A4 ${orientation};
-      margin: ${orientation === 'landscape' ? '8mm 10mm 8mm 10mm' : '10mm 12mm 10mm 12mm'};
+  const openDutyOrdersWindow = (type) => {
+    const isPolling = type === 'polling';
+    const orderNo = `GCC/ELEC/${electionYear}/${isPolling ? 'POLL' : 'COUNT'}-01`;
+    const orderDate = new Date().toLocaleDateString('en-GB');
+    const reportingTime = isPolling ? '08:00 AM' : '01:30 PM';
+
+    const win = window.open('', '_blank');
+    if (!win) {
+      alert('Pop-up was blocked by your browser. Please allow pop-ups for this site to view and print appointment orders.');
+      return;
     }
+
+    const pageHtml = buildStandaloneDutyOrdersPage(type, orderNo, orderDate, reportingTime);
+    win.document.open();
+    win.document.write(pageHtml);
+    win.document.close();
+  };
+
+  const buildStandaloneDutyOrdersPage = (type, orderNo, orderDate, reportingTime) => {
+    const isPolling = type === 'polling';
+    const title = isPolling ? `Polling_Duty_Orders_${electionYear}` : `Counting_Duty_Orders_${electionYear}`;
+    const rosterHtml = buildRosterHtml(type, orderNo, orderDate, reportingTime);
+    const individualHtml = buildIndividualOrdersHtml(type, orderNo, orderDate, reportingTime);
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${esc(title)}</title>
+  <style id="dynamicPageStyle">
+    @page {
+      size: A4 landscape;
+      margin: 8mm 10mm 8mm 10mm;
+    }
+  </style>
+  <style>
     *, *::before, *::after {
       box-sizing: border-box;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-    body {
+    html, body {
       margin: 0;
       padding: 0;
-      background: #ffffff !important;
-      color: #000000 !important;
+      background: #f1f5f9;
+      color: #000000;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      font-size: ${orientation === 'landscape' ? '10px' : '11px'};
+      font-size: 10px;
       line-height: 1.35;
     }
+    @media print {
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .sheet-wrapper {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .paper-sheet {
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        max-width: none !important;
+        width: 100% !important;
+      }
+    }
+    /* Screen View Action Bar */
+    .top-action-bar {
+      position: sticky;
+      top: 0;
+      z-index: 999;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      font-size: 13px;
+    }
+    .action-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .action-bar-left .title-badge {
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.2px;
+    }
+    .action-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-action {
+      background: #4f46e5;
+      color: #ffffff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+    .btn-action:hover { background: #4338ca; }
+    .btn-tab-toggle {
+      background: #334155;
+      color: #e2e8f0;
+      border: 1px solid #475569;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-tab-toggle:hover { background: #475569; color: #ffffff; }
+    .btn-tab-toggle.active { background: #2563eb; color: #ffffff; border-color: #3b82f6; }
+    .btn-close-win {
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1px solid #334155;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .btn-close-win:hover { background: #334155; color: #ffffff; }
+
+    /* Paper Sheet Container on Screen */
+    .sheet-wrapper {
+      padding: 24px 20px;
+      display: flex;
+      justify-content: center;
+    }
+    .paper-sheet {
+      background: #ffffff;
+      color: #000000;
+      width: 100%;
+      max-width: 1120px;
+      box-shadow: 0 4px 25px rgba(0,0,0,0.12);
+      border-radius: 4px;
+      padding: 25px 32px;
+      transition: max-width 0.2s ease;
+    }
+    .paper-sheet.portrait-mode {
+      max-width: 820px;
+    }
+
+    /* Document Layout */
     .header-container {
       text-align: center;
-      border-bottom: 2px solid #000;
-      padding-bottom: 6px;
-      margin-bottom: 8px;
+      border-bottom: 2px solid #000000;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
     }
     .header-logo {
-      max-height: 48px;
+      max-height: 52px;
       max-width: 140px;
-      margin: 0 auto 4px auto;
+      margin: 0 auto 5px auto;
       display: block;
       object-fit: contain;
     }
     .college-title {
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin: 0;
-      color: #000;
+      color: #000000;
     }
     .order-title {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      margin: 2px 0 0 0;
-      color: #111;
+      margin: 3px 0 0 0;
+      color: #111827;
     }
     .order-sub {
-      font-size: 10px;
+      font-size: 10.5px;
       font-weight: 700;
-      color: #333;
-      margin: 1px 0 0 0;
+      color: #374151;
+      margin: 2px 0 0 0;
     }
     .meta-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 10px;
+      font-size: 10.5px;
       font-weight: 700;
-      margin: 6px 0 8px 0;
-      padding: 3px 0;
-      border-bottom: 1px dashed #666;
-      color: #111;
+      margin: 8px 0 10px 0;
+      padding: 4px 0;
+      border-bottom: 1px dashed #64748b;
+      color: #000000;
     }
     .preamble-text {
-      font-size: 9.5px;
-      line-height: 1.4;
-      margin-bottom: 8px;
+      font-size: 10px;
+      line-height: 1.45;
+      margin-bottom: 10px;
       text-align: justify;
-      color: #111;
+      color: #000000;
     }
     .roster-table {
       width: 100%;
       border-collapse: collapse;
       table-layout: fixed;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
     .roster-table th, .roster-table td {
-      border: 1px solid #000;
-      padding: 4px 6px;
+      border: 1px solid #000000;
+      padding: 5px 6px;
       vertical-align: top;
       font-size: 9.5px;
       word-break: break-word;
@@ -1613,7 +1754,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       font-weight: 800;
       text-transform: uppercase;
       font-size: 9px;
-      color: #000;
+      color: #000000;
       text-align: left;
     }
     .roster-table th.col-center, .roster-table td.col-center {
@@ -1623,10 +1764,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       page-break-inside: avoid;
       break-inside: avoid;
     }
+    .roster-table tbody tr:nth-child(even) {
+      background-color: #f8fafc !important;
+    }
     .staff-name {
       font-weight: 700;
       font-size: 10px;
-      color: #000;
+      color: #000000;
       display: block;
     }
     .staff-meta {
@@ -1636,17 +1780,17 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       margin-top: 1px;
     }
     .unassigned {
-      color: #9ca3af;
+      color: #94a3b8;
       font-style: italic;
       font-size: 8.5px;
     }
     .instructions-panel {
       border: 1px solid #64748b;
       background: #f8fafc !important;
-      padding: 5px 8px;
+      padding: 6px 10px;
       font-size: 8.5px;
-      line-height: 1.35;
-      margin-bottom: 8px;
+      line-height: 1.4;
+      margin-bottom: 10px;
       border-radius: 3px;
       color: #1e293b;
     }
@@ -1658,21 +1802,21 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      margin-top: 10px;
+      margin-top: 12px;
       page-break-inside: avoid;
     }
     .copy-block {
       font-size: 8.5px;
       color: #374151;
-      line-height: 1.35;
+      line-height: 1.4;
     }
     .ro-sign-block {
       text-align: center;
       width: 200px;
     }
     .ro-sign-line {
-      border-bottom: 1px solid #000;
-      height: 35px;
+      border-bottom: 1px solid #000000;
+      height: 38px;
       margin-bottom: 3px;
     }
 
@@ -1681,11 +1825,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       box-sizing: border-box;
       page-break-inside: avoid;
       break-inside: avoid;
-      border: 1px solid #1f2937;
+      border: 1.5px solid #1f2937;
       border-radius: 4px;
-      padding: 14px 16px;
-      margin-bottom: 14px;
-      background: #fff;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      background: #ffffff;
       position: relative;
     }
     .slip-page-break {
@@ -1694,7 +1838,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     }
     .slip-header {
       text-align: center;
-      border-bottom: 1.5px solid #000;
+      border-bottom: 1.5px solid #000000;
       padding-bottom: 6px;
       margin-bottom: 8px;
     }
@@ -1716,7 +1860,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-top: 2px;
-      color: #000;
+      color: #000000;
     }
     .slip-meta-bar {
       display: flex;
@@ -1725,13 +1869,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       font-weight: 700;
       margin-bottom: 8px;
       padding-bottom: 4px;
-      border-bottom: 1px dashed #666;
+      border-bottom: 1px dashed #666666;
     }
     .slip-to-block {
       font-size: 11px;
       margin-bottom: 8px;
       line-height: 1.4;
-      padding: 4px 8px;
+      padding: 5px 8px;
       background: #f8fafc;
       border-left: 3px solid #1e293b;
     }
@@ -1760,7 +1904,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       margin-bottom: 12px;
     }
     .slip-ack-section {
-      border-top: 1.5px dashed #000;
+      border-top: 1.5px dashed #000000;
       padding-top: 8px;
       margin-top: 10px;
       font-size: 9.5px;
@@ -1779,61 +1923,76 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       margin-top: 10px;
       padding-top: 4px;
     }
-  `;
-
-  const executeCleanPrint = (title, htmlBody, orientation = 'landscape') => {
-    let frame = document.getElementById('gcc_official_print_frame');
-    if (frame) frame.remove();
-
-    const fullHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>${esc(title)}</title>
-  <style>
-    ${getPrintStyles(orientation)}
   </style>
 </head>
 <body>
-  ${htmlBody}
+  <!-- Action Bar on Screen -->
+  <div class="no-print top-action-bar">
+    <div class="action-bar-left">
+      <span class="title-badge">${isPolling ? '🏫 Polling Booth Officials Duty Orders' : '🧮 Counting Table Officials Duty Orders'}</span>
+    </div>
+    <div class="action-bar-right">
+      <button id="btnRoster" onclick="switchView('roster')" class="btn-tab-toggle active">
+        📋 Consolidated Roster (Landscape)
+      </button>
+      <button id="btnIndividual" onclick="switchView('individual')" class="btn-tab-toggle">
+        📜 Individual Appointment Orders (Slips)
+      </button>
+      <button onclick="window.print()" class="btn-action">
+        🖨️ Print Document
+      </button>
+      <button onclick="window.close()" class="btn-close-win">
+        ✕ Close
+      </button>
+    </div>
+  </div>
+
+  <!-- Document Sheet -->
+  <div class="sheet-wrapper">
+    <div id="paperSheet" class="paper-sheet">
+      <div id="viewRoster">
+        ${rosterHtml}
+      </div>
+      <div id="viewIndividual" style="display: none;">
+        ${individualHtml}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchView(mode) {
+      const roster = document.getElementById('viewRoster');
+      const ind = document.getElementById('viewIndividual');
+      const sheet = document.getElementById('paperSheet');
+      const btnR = document.getElementById('btnRoster');
+      const btnI = document.getElementById('btnIndividual');
+      const stylePage = document.getElementById('dynamicPageStyle');
+
+      if (mode === 'individual') {
+        roster.style.display = 'none';
+        ind.style.display = 'block';
+        sheet.classList.add('portrait-mode');
+        btnR.classList.remove('active');
+        btnI.classList.add('active');
+        if (stylePage) stylePage.innerHTML = '@page { size: A4 portrait; margin: 10mm 12mm; }';
+      } else {
+        roster.style.display = 'block';
+        ind.style.display = 'none';
+        sheet.classList.remove('portrait-mode');
+        btnR.classList.add('active');
+        btnI.classList.remove('active');
+        if (stylePage) stylePage.innerHTML = '@page { size: A4 landscape; margin: 8mm 10mm; }';
+      }
+    }
+
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        window.print();
+      }, 350);
+    });
+  <\/script>
 </body>
 </html>`;
-
-    frame = document.createElement('iframe');
-    frame.id = 'gcc_official_print_frame';
-    frame.style.position = 'fixed';
-    frame.style.right = '0';
-    frame.style.bottom = '0';
-    frame.style.width = '0';
-    frame.style.height = '0';
-    frame.style.border = '0';
-    frame.style.visibility = 'hidden';
-    frame.style.zIndex = '-9999';
-    document.body.appendChild(frame);
-
-    const doc = frame.contentWindow.document;
-    doc.open();
-    doc.write(fullHtml);
-    doc.close();
-
-    setTimeout(() => {
-      try {
-        frame.contentWindow.focus();
-        frame.contentWindow.print();
-      } catch (err) {
-        console.warn('Iframe print error, falling back to window.open:', err);
-        const printWin = window.open('', '_blank');
-        if (printWin) {
-          printWin.document.open();
-          printWin.document.write(fullHtml);
-          printWin.document.close();
-          setTimeout(() => {
-            printWin.focus();
-            printWin.print();
-          }, 350);
-        }
-      }
-    }, 250);
   };
 
   const buildRosterHtml = (type, orderNo, orderDate, reportingTime) => {
@@ -1871,11 +2030,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <table class="roster-table">
           <colgroup>
             <col style="width: 5.5%;">
-            <col style="width: 13%;">
-            <col style="width: 21%;">
-            <col style="width: 20%;">
-            <col style="width: 20%;">
-            <col style="width: 13.5%;">
+            <col style="width: 14%;">
+            <col style="width: 25.5%;">
+            <col style="width: 34%;">
+            <col style="width: 14%;">
             <col style="width: 7%;">
           </colgroup>
           <thead>
@@ -1883,8 +2041,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <th class="col-center">${isPolling ? 'Booth #' : 'Table #'}</th>
               <th>${isPolling ? 'Polling Station / Venue' : 'Counting Table / Venue'}</th>
               <th>${isPolling ? 'Presiding Officer (Seniormost)' : 'Counting Supervisor (Seniormost)'}</th>
-              <th>${isPolling ? 'Polling Officer 1' : 'Counting Officer 1'}</th>
-              <th>${isPolling ? 'Polling Officer 2' : 'Counting Officer 2'}</th>
+              <th>${isPolling ? 'Polling Officers' : 'Counting Officers'}</th>
               <th>${isPolling ? 'Polling Assistant (Non-Teaching)' : 'Counting Assistant (Non-Teaching)'}</th>
               <th class="col-center">Signature</th>
             </tr>
@@ -1912,7 +2069,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
               return `
                 <tr>
-                  <td class="col-center" style="font-weight: bold; font-family: monospace; font-size: 11px;">
+                  <td class="col-center" style="font-weight: 700; font-family: monospace; font-size: 11px;">
                     ${isPolling ? t.boothNumber : t.tableNumber}
                   </td>
                   <td style="font-weight: 600;">
@@ -1921,20 +2078,22 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>
                     ${head && head.name ? `
                       <span class="staff-name">${esc(head.name)}</span>
-                      <span class="staff-meta">${esc(head.designation || 'Professor')}${head.pen ? ` · PEN: ${esc(head.pen)}` : ''}</span>
+                      <span class="staff-meta">${esc(head.designation || (isPolling ? 'Professor' : 'Supervisor'))}${head.pen ? ` · PEN: ${esc(head.pen)}` : ''}</span>
                     ` : '<span class="unassigned">– Not Assigned –</span>'}
                   </td>
                   <td>
-                    ${o1 && o1.name ? `
-                      <span class="staff-name">${esc(o1.name)}</span>
-                      <span class="staff-meta">${esc(o1.designation || 'Faculty')}${o1.pen ? ` · PEN: ${esc(o1.pen)}` : ''}</span>
-                    ` : '<span class="unassigned">– Not Assigned –</span>'}
-                  </td>
-                  <td>
-                    ${o2 && o2.name ? `
-                      <span class="staff-name">${esc(o2.name)}</span>
-                      <span class="staff-meta">${esc(o2.designation || 'Faculty')}${o2.pen ? ` · PEN: ${esc(o2.pen)}` : ''}</span>
-                    ` : '<span class="unassigned">– Not Assigned –</span>'}
+                    <div style="margin-bottom: 5px;">
+                      ${o1 && o1.name ? `
+                        <span class="staff-name">1. ${esc(o1.name)}</span>
+                        <span class="staff-meta" style="margin-left: 14px;">${esc(o1.designation || 'Faculty')}${o1.pen ? ` · PEN: ${esc(o1.pen)}` : ''}</span>
+                      ` : '<span class="unassigned">1. – Not Assigned –</span>'}
+                    </div>
+                    <div style="border-top: 1px dashed #cbd5e1; padding-top: 4px;">
+                      ${o2 && o2.name ? `
+                        <span class="staff-name">2. ${esc(o2.name)}</span>
+                        <span class="staff-meta" style="margin-left: 14px;">${esc(o2.designation || 'Faculty')}${o2.pen ? ` · PEN: ${esc(o2.pen)}` : ''}</span>
+                      ` : '<span class="unassigned">2. – Not Assigned –</span>'}
+                    </div>
                   </td>
                   <td>
                     ${asst && asst.name ? `
@@ -1985,17 +2144,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const teams = isPolling ? pollingTeams : countingTeams;
     const personnel = [];
 
+    const headRole = isPolling ? 'Presiding Officer' : 'Counting Supervisor';
+    const officerRole = isPolling ? 'Polling Officer' : 'Counting Officer';
+    const asstRole = isPolling ? 'Polling Assistant' : 'Counting Assistant';
+
     booths.forEach((b) => {
       const t = teams.find(team => (isPolling ? team.boothNumber : team.tableNumber) === b.boothNumber) || {};
       const num = isPolling ? b.boothNumber : b.boothNumber;
       const venue = t.roomName || b.roomName || (isPolling ? `Booth ${num}` : `Table ${num}`);
 
       const head = isPolling ? t.presidingOfficer : t.supervisor;
-      const headRole = isPolling ? 'Presiding Officer' : 'Counting Supervisor';
       if (head && head.name) {
         personnel.push({
           name: head.name,
-          designation: head.designation || 'Professor',
+          designation: head.designation || (isPolling ? 'Professor' : 'Supervisor'),
           pen: head.pen || '',
           role: headRole,
           boothNumber: num,
@@ -2004,33 +2166,30 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       }
 
       const o1 = isPolling ? t.pollingOfficer1 : t.countingOfficer1;
-      const o1Role = isPolling ? 'Polling Officer 1' : 'Counting Officer 1';
       if (o1 && o1.name) {
         personnel.push({
           name: o1.name,
           designation: o1.designation || 'Faculty',
           pen: o1.pen || '',
-          role: o1Role,
+          role: officerRole,
           boothNumber: num,
           venue: venue
         });
       }
 
       const o2 = isPolling ? t.pollingOfficer2 : t.countingOfficer2;
-      const o2Role = isPolling ? 'Polling Officer 2' : 'Counting Officer 2';
       if (o2 && o2.name) {
         personnel.push({
           name: o2.name,
           designation: o2.designation || 'Faculty',
           pen: o2.pen || '',
-          role: o2Role,
+          role: officerRole,
           boothNumber: num,
           venue: venue
         });
       }
 
       const asst = isPolling ? t.pollingAssistant : t.countingAssistant;
-      const asstRole = isPolling ? 'Polling Assistant' : 'Counting Assistant';
       if (asst && asst.name) {
         personnel.push({
           name: asst.name,
@@ -2052,7 +2211,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       `;
     }
 
-    // Build slips, 2 per page
     return personnel.map((p, idx) => {
       const isSecondOnPage = (idx % 2 === 1);
       const isLast = (idx === personnel.length - 1);
@@ -2122,164 +2280,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         </div>
       `;
     }).join('');
-  };
-
-  const openDutyOrdersModal = (type) => {
-    const isPolling = type === 'polling';
-    let currentFormat = 'roster'; // 'roster' | 'individual'
-    let orderNo = `GCC/ELEC/${electionYear}/${isPolling ? 'POLL' : 'COUNT'}-01`;
-    let orderDate = new Date().toLocaleDateString('en-GB');
-    let reportingTime = isPolling ? '08:00 AM' : '01:30 PM';
-
-    const modalContainer = main.querySelector('#dutyOrdersPrintModalContainer');
-    if (!modalContainer) return;
-
-    const renderModal = () => {
-      const orientation = currentFormat === 'roster' ? 'landscape' : 'portrait';
-      const docHtml = currentFormat === 'roster'
-        ? buildRosterHtml(type, orderNo, orderDate, reportingTime)
-        : buildIndividualOrdersHtml(type, orderNo, orderDate, reportingTime);
-
-      modalContainer.innerHTML = `
-        <div id="dutyOrdersPrintModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-hidden">
-          <div class="bg-slate-900 border border-white/20 rounded-2xl max-w-6xl w-full h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-            <!-- Modal Top Bar -->
-            <div class="p-4 border-b border-white/10 flex items-center justify-between flex-wrap gap-3 bg-white/5 shrink-0">
-              <div class="flex items-center gap-3">
-                <span class="text-2xl">${isPolling ? '🏫' : '🧮'}</span>
-                <div>
-                  <h3 class="font-bold text-white text-base">
-                    ${isPolling ? 'Print Polling Personnel Appointment Orders' : 'Print Counting Personnel Appointment Orders'}
-                  </h3>
-                  <p class="text-xs text-slate-400">
-                    Official publication &amp; dispatch system · ${esc(collegeName)} (${esc(electionYear)})
-                  </p>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-2">
-                <button id="modalBtnPrint" class="btn btn-primary bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow-lg">
-                  🖨️ Print Document
-                </button>
-                <button id="modalBtnClose" class="btn btn-secondary text-xs px-3 py-2 text-slate-300 hover:text-white">
-                  ✕ Close
-                </button>
-              </div>
-            </div>
-
-            <!-- Modal Sub-Bar / Controls -->
-            <div class="p-3 bg-slate-950/70 border-b border-white/10 flex items-center justify-between flex-wrap gap-3 text-xs shrink-0">
-              <div class="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
-                <button id="formatBtnRoster" class="px-3.5 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${currentFormat === 'roster' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}">
-                  📋 Consolidated Roster (Landscape Table)
-                </button>
-                <button id="formatBtnIndividual" class="px-3.5 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${currentFormat === 'individual' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}">
-                  📜 Individual Appointment Orders (Slips)
-                </button>
-              </div>
-
-              <div class="flex items-center gap-2 flex-wrap">
-                <div class="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
-                  <label class="text-[10px] text-slate-400 uppercase font-semibold">Order No:</label>
-                  <input type="text" id="modalInputOrderNo" value="${esc(orderNo)}" class="bg-transparent text-white font-mono text-xs w-44 focus:outline-none" />
-                </div>
-                <div class="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
-                  <label class="text-[10px] text-slate-400 uppercase font-semibold">Date:</label>
-                  <input type="text" id="modalInputOrderDate" value="${esc(orderDate)}" class="bg-transparent text-white font-mono text-xs w-24 focus:outline-none" />
-                </div>
-                <div class="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
-                  <label class="text-[10px] text-slate-400 uppercase font-semibold">Reporting:</label>
-                  <input type="text" id="modalInputReportingTime" value="${esc(reportingTime)}" class="bg-transparent text-white font-mono text-xs w-24 focus:outline-none" />
-                </div>
-              </div>
-            </div>
-
-            <!-- Preview Screen -->
-            <div class="flex-1 bg-slate-950 p-4 sm:p-6 overflow-y-auto flex justify-center">
-              <div id="modalDocumentPreview" class="bg-white text-black shadow-2xl rounded-sm p-6 sm:p-8 transition-all ${currentFormat === 'roster' ? 'w-full max-w-5xl' : 'w-full max-w-3xl'}">
-                <style>
-                  ${getPrintStyles(orientation)}
-                </style>
-                ${docHtml}
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-
-      // Bind modal events
-      const modalEl = modalContainer.querySelector('#dutyOrdersPrintModal');
-      const closeBtn = modalContainer.querySelector('#modalBtnClose');
-      const printBtn = modalContainer.querySelector('#modalBtnPrint');
-      const rosterBtn = modalContainer.querySelector('#formatBtnRoster');
-      const indBtn = modalContainer.querySelector('#formatBtnIndividual');
-
-      const inputOrderNo = modalContainer.querySelector('#modalInputOrderNo');
-      const inputOrderDate = modalContainer.querySelector('#modalInputOrderDate');
-      const inputReporting = modalContainer.querySelector('#modalInputReportingTime');
-
-      closeBtn?.addEventListener('click', () => {
-        modalContainer.innerHTML = '';
-      });
-
-      modalEl?.addEventListener('click', (e) => {
-        if (e.target === modalEl) modalContainer.innerHTML = '';
-      });
-
-      rosterBtn?.addEventListener('click', () => {
-        currentFormat = 'roster';
-        renderModal();
-      });
-
-      indBtn?.addEventListener('click', () => {
-        currentFormat = 'individual';
-        renderModal();
-      });
-
-      inputOrderNo?.addEventListener('input', (e) => {
-        orderNo = e.target.value;
-        updatePreviewOnly();
-      });
-
-      inputOrderDate?.addEventListener('input', (e) => {
-        orderDate = e.target.value;
-        updatePreviewOnly();
-      });
-
-      inputReporting?.addEventListener('input', (e) => {
-        reportingTime = e.target.value;
-        updatePreviewOnly();
-      });
-
-      printBtn?.addEventListener('click', () => {
-        const title = isPolling
-          ? (currentFormat === 'roster' ? `Polling_Duty_Roster_${electionYear}` : `Polling_Appointment_Orders_${electionYear}`)
-          : (currentFormat === 'roster' ? `Counting_Duty_Roster_${electionYear}` : `Counting_Appointment_Orders_${electionYear}`);
-        const printDoc = currentFormat === 'roster'
-          ? buildRosterHtml(type, orderNo, orderDate, reportingTime)
-          : buildIndividualOrdersHtml(type, orderNo, orderDate, reportingTime);
-
-        executeCleanPrint(title, printDoc, orientation);
-      });
-    };
-
-    const updatePreviewOnly = () => {
-      const previewEl = modalContainer.querySelector('#modalDocumentPreview');
-      if (!previewEl) return;
-      const orientation = currentFormat === 'roster' ? 'landscape' : 'portrait';
-      const docHtml = currentFormat === 'roster'
-        ? buildRosterHtml(type, orderNo, orderDate, reportingTime)
-        : buildIndividualOrdersHtml(type, orderNo, orderDate, reportingTime);
-
-      previewEl.innerHTML = `
-        <style>
-          ${getPrintStyles(orientation)}
-        </style>
-        ${docHtml}
-      `;
-    };
-
-    renderModal();
   };
 
   renderUI();
