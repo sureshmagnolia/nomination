@@ -397,6 +397,22 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       ];
     }
 
+    // Helper B: Academic Cohort split (Strict UG vs PG & Scholars)
+    function splitAcademicCohort(dept) {
+      const classes = [...dept.classes];
+      if (classes.length <= 1) return null;
+      const ugClasses = classes.filter(isUG);
+      const pgClasses = classes.filter(c => !isUG(c));
+      if (ugClasses.length === 0 || pgClasses.length === 0) return splitSmartBalanced(dept);
+
+      const ugTotal = ugClasses.reduce((s, c) => s + c.count, 0);
+      const pgTotal = pgClasses.reduce((s, c) => s + c.count, 0);
+      return [
+        { name: dept.name, partLabel: 'UG', total: ugTotal, classes: ugClasses, isSplit: true, deptName: dept.name },
+        { name: dept.name, partLabel: 'PG & Scholars', total: pgTotal, classes: pgClasses, isSplit: true, deptName: dept.name }
+      ];
+    }
+
     // Partition Solver with multi-restart and local hill-climbing
     function solvePartition(items, B, penalty = 75, numRestarts = 350) {
       let bestAlloc = null, bestLoss = Infinity;
@@ -614,6 +630,27 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             'indigo',
             `Divides ${esc(d1.name)} and ${esc(d2.name)} into balanced 50/50 halves to equalize officer workloads and avoid crowded hallways.`,
             alloc2,
+            [{ dept: d1, halves: h1 }, { dept: d2, halves: h2 }]
+          ));
+        }
+      }
+    }
+
+    // Plan C: Academic Cohort (UG vs PG Split)
+    if (largeDepts.length >= 2) {
+      const d1 = largeDepts[0], d2 = largeDepts[1];
+      const h1 = splitAcademicCohort(d1), h2 = splitAcademicCohort(d2);
+      if (h1 && h2) {
+        const items3 = [...depts.filter(d => d.name !== d1.name && d.name !== d2.name), h1[0], h1[1], h2[0], h2[1]];
+        const alloc3 = solvePartition(items3, numBooths, 50, 300);
+        if (alloc3) {
+          proposals.push(formatProposal(
+            'cohort',
+            'Plan C: Academic Cohort',
+            '🎓 UG vs PG Segregation',
+            'amber',
+            `Separates Undergraduates from Postgraduates & Scholars for clean degree-level physical campus navigation.`,
+            alloc3,
             [{ dept: d1, halves: h1 }, { dept: d2, halves: h2 }]
           ));
         }
