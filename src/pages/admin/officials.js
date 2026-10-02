@@ -43,7 +43,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const collegeLogo = settings?.collegeLogo || '';
   const collegeShortName = settings?.collegeShortName || CONFIG.COLLEGE_SHORT_NAME || 'GCC';
 
-  // 1. Initialize State with defaults or persisted data
+  // 1. Initialize State with saved data or clean empty defaults
   let faculty = [];
   const cachedFac = localStorage.getItem('gcc_faculty_roster');
   if (cachedFac !== null) {
@@ -51,7 +51,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   } else if (initialOfficialsData && Array.isArray(initialOfficialsData.faculty)) {
     faculty = initialOfficialsData.faculty;
   } else {
-    faculty = [...DEFAULT_FACULTY_ROSTER];
+    faculty = Array.isArray(DEFAULT_FACULTY_ROSTER) ? [...DEFAULT_FACULTY_ROSTER] : [];
     localStorage.setItem('gcc_faculty_roster', JSON.stringify(faculty));
   }
 
@@ -62,42 +62,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   } else if (initialOfficialsData && Array.isArray(initialOfficialsData.nonTeaching)) {
     nonTeaching = initialOfficialsData.nonTeaching;
   } else {
-    nonTeaching = [...DEFAULT_NON_TEACHING_ROSTER];
+    nonTeaching = Array.isArray(DEFAULT_NON_TEACHING_ROSTER) ? [...DEFAULT_NON_TEACHING_ROSTER] : [];
     localStorage.setItem('gcc_non_teaching_roster', JSON.stringify(nonTeaching));
   }
 
-  // One-time upgrade migration (v2) for existing 92-teacher setups
-  // If the user has explicitly cleared the rosters or already completed migration, we do NOT overwrite their data.
-  const isMigratedV2 = localStorage.getItem('gcc_roster_migrated_v2');
-  if (!isMigratedV2) {
-    // Only upgrade if faculty has records and is the old 92-member roster
-    if (faculty.length > 0 && faculty.length <= 92) {
-      const existingMap = new Map(faculty.map(f => [f.name.toLowerCase().trim(), f]));
-      faculty = DEFAULT_FACULTY_ROSTER.map(f => {
-        const existing = existingMap.get(f.name.toLowerCase().trim());
-        if (existing) {
-          return {
-            ...f,
-            isExcluded: existing.isExcluded ?? false,
-            exclusionReason: existing.exclusionReason || ''
-          };
-        }
-        return { ...f };
-      });
-      localStorage.setItem('gcc_faculty_roster', JSON.stringify(faculty));
-    }
-
-    if (nonTeaching.length > 0) {
-      const isOldDummyNT = nonTeaching.some(nt => nt.name === 'Sri. K. Ramesh' || nt.name === 'Smt. P. Vasantha');
-      const hasLibrarianInNT = nonTeaching.some(nt => (nt.designation || '').toLowerCase().includes('librarian'));
-      if (isOldDummyNT || hasLibrarianInNT) {
-        nonTeaching = [...DEFAULT_NON_TEACHING_ROSTER];
-        localStorage.setItem('gcc_non_teaching_roster', JSON.stringify(nonTeaching));
-      }
-    }
-
-    localStorage.setItem('gcc_roster_migrated_v2', 'true');
-  }
+  // Ensure migration flag is set so legacy hardcoded migrations never overwrite user rosters
+  localStorage.setItem('gcc_roster_migrated_v2', 'true');
 
   // Voter count calculation per booth from Nominal Roll
   const getStudentClassKey = (s) => {
@@ -296,6 +266,43 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     `;
   };
 
+  // Downloadable CSV Templates
+  const downloadFacultyTemplate = () => {
+    const csvContent = `Seniority,Name,PEN,Designation,Joining Date,Department\r\n` +
+      `1,Dr. Example Professor,100001,Professor,2005-06-01,Physics\r\n` +
+      `2,Dr. Example Associate Professor,100002,Associate Professor,2008-09-15,Chemistry\r\n` +
+      `3,Sri. Example Assistant Professor,100003,Assistant Professor,2014-02-10,Mathematics\r\n` +
+      `4,Smt. Example UGC Librarian,100004,UGC Librarian,2016-08-01,Library\r\n` +
+      `5,Example Guest Lecturer,100005,Guest Lecturer,2022-09-01,Commerce\r\n`;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'Faculty_Seniority_Template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast('Downloaded Faculty Seniority CSV Template!', 'success');
+  };
+
+  const downloadNonTeachingTemplate = () => {
+    const csvContent = `Sl No,Staff Name,Designation,PEN,Department\r\n` +
+      `1,Sri. Example Staff One,Senior Clerk,200001,Office\r\n` +
+      `2,Smt. Example Staff Two,Office Attendant,200002,Administration\r\n` +
+      `3,Sri. Example Staff Three,Lab Assistant,200003,Physics\r\n`;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'Non_Teaching_Staff_Template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast('Downloaded Non-Teaching Staff CSV Template!', 'success');
+  };
+
   // Reusable file import handler for Faculty (Regular Excel, CSV, or Guest Faculty)
   const handleFacultyFile = (file) => {
     if (!file) return;
@@ -369,35 +376,52 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
         // Regular Faculty List Parsing
         let headerIdx = -1;
+        let seniorityCol = 0, nameCol = 1, penCol = 2, desigCol = 3, dateCol = 4, deptCol = -1;
+
         for (let r = 0; r < Math.min(10, jsonRows.length); r++) {
-          const rowStr = (jsonRows[r] || []).map(c => String(c).toLowerCase()).join(' ');
-          if (rowStr.includes('name') || rowStr.includes('sl') || rowStr.includes('seniority') || rowStr.includes('pen')) {
+          const row = (jsonRows[r] || []).map(c => String(c).toLowerCase().trim());
+          const hasName = row.some((c, i) => {
+            if (c === 'name' || c.includes('name of') || c.includes('teacher') || c.includes('faculty') || c.includes('staff')) {
+              nameCol = i;
+              return true;
+            }
+            return false;
+          });
+          if (hasName) {
             headerIdx = r;
+            row.forEach((c, i) => {
+              if (c.includes('sl') || c.includes('seniority') || c.includes('s.no') || c.includes('no.')) seniorityCol = i;
+              if (c.includes('pen') || c.includes('id') || c.includes('code')) penCol = i;
+              if (c.includes('desig') || c.includes('post') || c.includes('rank') || c.includes('role')) desigCol = i;
+              if (c.includes('date') || c.includes('joining') || c.includes('doj')) dateCol = i;
+              if (c.includes('dept') || c.includes('department') || c.includes('subject')) deptCol = i;
+            });
             break;
           }
         }
 
         const parsedFaculty = [];
-        const startR = headerIdx >= 0 ? headerIdx + 1 : 2;
+        const startR = headerIdx >= 0 ? headerIdx + 1 : 1;
 
         for (let r = startR; r < jsonRows.length; r++) {
           const row = jsonRows[r];
           if (!row || row.length === 0) continue;
 
-          const sl = row[0] !== undefined ? parseInt(row[0], 10) : parsedFaculty.length + 1;
-          const name = row[1] !== undefined ? String(row[1]).trim() : '';
-          if (!name || name.toLowerCase().includes('seniority') || name.toLowerCase().includes('college')) continue;
+          const rawSl = row[seniorityCol] !== undefined ? parseInt(row[seniorityCol], 10) : parsedFaculty.length + 1;
+          const name = row[nameCol] !== undefined ? String(row[nameCol]).trim() : '';
+          if (!name || name.toLowerCase().includes('seniority') || name.toLowerCase().includes('college') || name.toLowerCase() === 'name') continue;
 
-          const pen = row[2] !== undefined ? String(row[2]).trim() : '';
-          const desig = row[3] !== undefined ? String(row[3]).trim() : 'Assistant Professor';
-          let dt = row[4] !== undefined ? String(row[4]).trim() : '';
+          const pen = penCol >= 0 && row[penCol] !== undefined ? String(row[penCol]).trim() : '';
+          const desig = desigCol >= 0 && row[desigCol] !== undefined ? String(row[desigCol]).trim() : 'Assistant Professor';
+          let dt = dateCol >= 0 && row[dateCol] !== undefined ? String(row[dateCol]).trim() : '';
+          let dept = deptCol >= 0 && row[deptCol] !== undefined ? String(row[deptCol]).trim() : '';
 
           parsedFaculty.push({
-            seniority: isNaN(sl) ? parsedFaculty.length + 1 : sl,
+            seniority: isNaN(rawSl) ? parsedFaculty.length + 1 : rawSl,
             name: name,
             pen: pen,
             designation: desig,
-            department: '',
+            department: dept,
             joiningDate: dt,
             isExcluded: false,
             exclusionReason: ''
@@ -405,7 +429,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         }
 
         if (parsedFaculty.length === 0) {
-          showToast('No faculty rows could be parsed. Check column layout.', 'error');
+          showToast('No faculty rows could be parsed. Check column layout or use CSV template.', 'error');
           return;
         }
 
@@ -552,15 +576,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <span class="text-4xl block">📋</span>
               <h5 class="text-white font-bold text-sm">Teaching Faculty Roster is Empty</h5>
               <p class="text-xs text-slate-400 leading-relaxed">
-                The roster has been cleared. You can upload your new Faculty Excel / CSV file, or restore the official 103 faculty roster.
+                No teaching faculty uploaded yet. Upload your College Faculty Seniority Excel / CSV file or download our template format.
               </p>
               <div class="flex items-center justify-center gap-2 pt-2">
                 <label class="btn btn-primary bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2 cursor-pointer flex items-center gap-1.5 shadow">
                   📥 Import Faculty (Excel / CSV)
                   <input type="file" id="fileFacultyImportEmpty" accept=".xlsx,.xls,.csv" class="hidden" />
                 </label>
-                <button id="btnResetFacultyRosterEmpty" class="btn btn-secondary text-xs text-amber-300 hover:bg-amber-500/20 px-3 py-2">
-                  🔄 Restore Official Roster (103)
+                <button id="btnDownloadFacultyTemplateEmpty" class="btn btn-secondary text-xs text-sky-300 hover:bg-sky-500/20 px-3 py-2 flex items-center gap-1">
+                  📄 Download CSV Template
                 </button>
               </div>
             </div>
@@ -570,10 +594,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       tbody.querySelector('#fileFacultyImportEmpty')?.addEventListener('change', (e) => {
         if (e.target.files[0]) handleFacultyFile(e.target.files[0]);
       });
-      tbody.querySelector('#btnResetFacultyRosterEmpty')?.addEventListener('click', () => {
-        faculty = [...DEFAULT_FACULTY_ROSTER];
-        saveAll(false);
-        renderUI();
+      tbody.querySelector('#btnDownloadFacultyTemplateEmpty')?.addEventListener('click', () => {
+        downloadFacultyTemplate();
       });
       return;
     }
@@ -616,15 +638,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <span class="text-4xl block">🤝</span>
               <h5 class="text-white font-bold text-sm">Non-Teaching Staff Roster is Empty</h5>
               <p class="text-xs text-slate-400 leading-relaxed">
-                The non-teaching roster has been cleared. You can upload your new staff list as Excel / CSV, or restore the official 16 staff roster.
+                No non-teaching staff uploaded yet. Upload your staff list as Excel / CSV or download our template format.
               </p>
               <div class="flex items-center justify-center gap-2 pt-2">
                 <label class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 cursor-pointer flex items-center gap-1.5 shadow">
                   📥 Upload Non-Teaching (Excel / CSV)
                   <input type="file" id="fileNonTeachingImportEmpty" accept=".xlsx,.xls,.csv" class="hidden" />
                 </label>
-                <button id="btnResetNTRosterEmpty" class="btn btn-secondary text-xs text-emerald-300 hover:bg-emerald-500/20 px-3 py-2">
-                  🔄 Restore Official NTS List (16)
+                <button id="btnDownloadNTTemplateEmpty" class="btn btn-secondary text-xs text-sky-300 hover:bg-sky-500/20 px-3 py-2 flex items-center gap-1">
+                  📄 Download CSV Template
                 </button>
               </div>
             </div>
@@ -634,10 +656,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       tbody.querySelector('#fileNonTeachingImportEmpty')?.addEventListener('change', (e) => {
         if (e.target.files[0]) handleNonTeachingFile(e.target.files[0]);
       });
-      tbody.querySelector('#btnResetNTRosterEmpty')?.addEventListener('click', () => {
-        nonTeaching = [...DEFAULT_NON_TEACHING_ROSTER];
-        saveAll(false);
-        renderUI();
+      tbody.querySelector('#btnDownloadNTTemplateEmpty')?.addEventListener('click', () => {
+        downloadNonTeachingTemplate();
       });
       return;
     }
@@ -717,6 +737,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const activeFaculty = faculty
       .filter(f => !f.isExcluded && !preservedPO3Names.has(f.name))
       .sort((a, b) => a.seniority - b.seniority);
+
+    if (activeFaculty.length === 0) {
+      showToast('No active faculty members found. Please upload your Faculty Seniority List in the "Teaching Faculty Roster" tab.', 'error');
+      return;
+    }
 
     // Classify into Regular Teaching Faculty, Librarians, and Guest Faculty
     const activeRegular = activeFaculty.filter(isRegularFaculty);
@@ -877,6 +902,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const activeFaculty = faculty
       .filter(f => !f.isExcluded && !preservedCO3Names.has(f.name))
       .sort((a, b) => a.seniority - b.seniority);
+
+    if (activeFaculty.length === 0) {
+      showToast('No active faculty members found. Please upload your Faculty Seniority List in the "Teaching Faculty Roster" tab.', 'error');
+      return;
+    }
 
     const activeRegular = activeFaculty.filter(isRegularFaculty);
     const activeLibrarians = activeFaculty.filter(isLibrarian);
@@ -1589,8 +1619,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <button id="btnExportFaculty" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5">
                 📤 Export Roster
               </button>
-              <button id="btnResetFacultyRoster" class="btn btn-secondary text-xs text-amber-300 hover:bg-amber-500/20 px-3 py-2">
-                🔄 Reset to Official Roster (103)
+              <button id="btnDownloadFacultyTemplate" class="btn btn-secondary text-xs text-sky-300 hover:bg-sky-500/20 px-3 py-2 flex items-center gap-1.5" title="Download sample CSV template for Teaching Faculty">
+                📄 Download CSV Template
               </button>
               <button id="btnClearFacultyRoster" class="btn btn-secondary text-xs text-rose-300 hover:text-white hover:bg-rose-600/30 border-rose-500/20 px-3 py-2 flex items-center gap-1" title="Clear teaching faculty roster to upload a fresh file">
                 🗑️ Clear Faculty Roster
@@ -1636,15 +1666,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                               <span class="text-4xl block">📋</span>
                               <h5 class="text-white font-bold text-sm">Teaching Faculty Roster is Empty</h5>
                               <p class="text-xs text-slate-400 leading-relaxed">
-                                The roster has been cleared. You can upload your new Faculty Excel / CSV file, or restore the official 103 faculty roster.
+                                No teaching faculty uploaded yet. Upload your College Faculty Seniority Excel / CSV file or download our template format.
                               </p>
                               <div class="flex items-center justify-center gap-2 pt-2">
                                 <label class="btn btn-primary bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2 cursor-pointer flex items-center gap-1.5 shadow">
                                   📥 Import Faculty (Excel / CSV)
                                   <input type="file" id="fileFacultyImportEmpty" accept=".xlsx,.xls,.csv" class="hidden" />
                                 </label>
-                                <button id="btnResetFacultyRosterEmpty" class="btn btn-secondary text-xs text-amber-300 hover:bg-amber-500/20 px-3 py-2">
-                                  🔄 Restore Official Roster (103)
+                                <button id="btnDownloadFacultyTemplateEmpty" class="btn btn-secondary text-xs text-sky-300 hover:bg-sky-500/20 px-3 py-2 flex items-center gap-1">
+                                  📄 Download CSV Template
                                 </button>
                               </div>
                             </div>
@@ -1696,8 +1726,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <button id="btnExportNonTeaching" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5">
                 📤 Export CSV
               </button>
-              <button id="btnResetNTRoster" class="btn btn-secondary text-xs text-emerald-300 hover:bg-emerald-500/20 px-3 py-2">
-                🔄 Reset to Official NTS List (16)
+              <button id="btnDownloadNTTemplate" class="btn btn-secondary text-xs text-sky-300 hover:bg-sky-500/20 px-3 py-2 flex items-center gap-1.5" title="Download sample CSV template for Non-Teaching Staff">
+                📄 Download CSV Template
               </button>
               <button id="btnClearNonTeachingList" class="btn btn-secondary text-xs text-rose-300 hover:text-white hover:bg-rose-600/30 border-rose-500/20 px-3 py-2 flex items-center gap-1" title="Clear non-teaching staff roster to upload a fresh file">
                 🗑️ Clear Non-Teaching Roster
@@ -1759,15 +1789,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                               <span class="text-4xl block">🤝</span>
                               <h5 class="text-white font-bold text-sm">Non-Teaching Staff Roster is Empty</h5>
                               <p class="text-xs text-slate-400 leading-relaxed">
-                                The non-teaching roster has been cleared. You can upload your new staff list as Excel / CSV, or restore the official 16 staff roster.
+                                No non-teaching staff uploaded yet. Upload your staff list as Excel / CSV or download our template format.
                               </p>
                               <div class="flex items-center justify-center gap-2 pt-2">
                                 <label class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 cursor-pointer flex items-center gap-1.5 shadow">
                                   📥 Upload Non-Teaching (Excel / CSV)
                                   <input type="file" id="fileNonTeachingImportEmpty" accept=".xlsx,.xls,.csv" class="hidden" />
                                 </label>
-                                <button id="btnResetNTRosterEmpty" class="btn btn-secondary text-xs text-emerald-300 hover:bg-emerald-500/20 px-3 py-2">
-                                  🔄 Restore Official NTS List (16)
+                                <button id="btnDownloadNTTemplateEmpty" class="btn btn-secondary text-xs text-sky-300 hover:bg-sky-500/20 px-3 py-2 flex items-center gap-1">
+                                  📄 Download CSV Template
                                 </button>
                               </div>
                             </div>
@@ -2260,38 +2290,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       }
     });
 
-    // Reset Faculty Roster
-    main.querySelector('#btnResetFacultyRoster')?.addEventListener('click', () => {
-      if (confirm('🔄 Reset Faculty Seniority List to official college roster (103 Faculty)?\n\nThis includes:\n• 92 Teaching Faculty (from SENIORITY LIST OF TEACHERS.xlsx)\n• 2 Librarians (UGC Librarian SATHEESH-K.M & Librarian Gr.IV REKHA R NAIR)\n• 9 Guest Lecturers (from Guest 26-27.xlsx)')) {
-        faculty = [...DEFAULT_FACULTY_ROSTER];
-        saveAll(false);
-        showToast('Restored 103 faculty members (92 Teaching + 2 Librarians + 9 Guest Lecturers)!', 'success');
-        renderUI();
-      }
+    // Download Faculty CSV Template
+    main.querySelector('#btnDownloadFacultyTemplate')?.addEventListener('click', () => {
+      downloadFacultyTemplate();
+    });
+    main.querySelector('#btnDownloadFacultyTemplateEmpty')?.addEventListener('click', () => {
+      downloadFacultyTemplate();
     });
 
-    main.querySelector('#btnResetFacultyRosterEmpty')?.addEventListener('click', () => {
-      faculty = [...DEFAULT_FACULTY_ROSTER];
-      saveAll(false);
-      showToast('Restored 103 faculty members (92 Teaching + 2 Librarians + 9 Guest Lecturers)!', 'success');
-      renderUI();
+    // Download Non-Teaching CSV Template
+    main.querySelector('#btnDownloadNTTemplate')?.addEventListener('click', () => {
+      downloadNonTeachingTemplate();
     });
-
-    // Reset Non-Teaching Roster
-    main.querySelector('#btnResetNTRoster')?.addEventListener('click', () => {
-      if (confirm('🔄 Reset Non-Teaching Staff List to official list (16 Staff from NTS DETAILS SEP 2026.xlsx)?\n\nThis restores the 16 Lab Assistants, Herbarium Keeper, Library Assistants, and Office Attendants (with Librarians properly in Faculty).')) {
-        nonTeaching = [...DEFAULT_NON_TEACHING_ROSTER];
-        saveAll(false);
-        showToast('Restored 16 official Non-Teaching staff members!', 'success');
-        renderUI();
-      }
-    });
-
-    main.querySelector('#btnResetNTRosterEmpty')?.addEventListener('click', () => {
-      nonTeaching = [...DEFAULT_NON_TEACHING_ROSTER];
-      saveAll(false);
-      showToast('Restored 16 official Non-Teaching staff members!', 'success');
-      renderUI();
+    main.querySelector('#btnDownloadNTTemplateEmpty')?.addEventListener('click', () => {
+      downloadNonTeachingTemplate();
     });
 
     // Clear Non-Teaching Roster
