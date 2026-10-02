@@ -36,15 +36,20 @@ export async function renderSubmitNomination(container, options = {}) {
     if (sets.collegeShortName) shortName = sets.collegeShortName;
   } catch(e) {}
 
-  container.innerHTML = publicLayout('Submit Nomination', `
+  const bodyContent = `
     <div id="loadingState" class="flex flex-col items-center justify-center py-24 gap-4">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
       <p class="text-slate-400 text-sm">Loading data...</p>
     </div>
     <div id="formArea" class="hidden"></div>
-  `, year, shortName);
+  `;
 
-  container.querySelector('#backToHome').addEventListener('click', () => router.navigate('/'));
+  if (isAdminDirect) {
+    container.innerHTML = `<div class="page-enter max-w-5xl mx-auto">${bodyContent}</div>`;
+  } else {
+    container.innerHTML = publicLayout('Submit Nomination', bodyContent, year, shortName);
+    container.querySelector('#backToHome')?.addEventListener('click', () => router.navigate('/'));
+  }
 
   try {
     // Load nominal roll, posts, existing nominations, schedule, and settings in parallel
@@ -208,10 +213,31 @@ function renderForm(container, year, collegeName, setsData = {}, isAdminDirect =
     <div id="warningBox" class="hidden alert alert-warning mb-4"></div>
 
     <form id="nomForm" class="space-y-8">
-      <!-- Post -->
-      <div>
-        <label class="block text-sm font-semibold text-slate-300 mb-1">Post Applied For</label>
-        <select id="postSelect" class="field">${postOptions}</select>
+      <!-- Post Applied For (Searchable & Scrollable Combobox) -->
+      <div class="relative" id="postComboboxContainer">
+        <label class="block text-sm font-semibold text-slate-300 mb-1.5">Post Applied For <span class="text-rose-400">*</span></label>
+        
+        <!-- Native select kept hidden for programmatic validation & values -->
+        <select id="postSelect" class="hidden">${postOptions}</select>
+
+        <!-- Searchable & Scrollable Combobox Trigger -->
+        <button type="button" id="postComboboxBtn" class="field w-full text-left flex items-center justify-between cursor-pointer select-none bg-black/40 hover:border-indigo-500/50 transition">
+          <span id="postComboboxLabel" class="font-medium text-white truncate">${sortedPosts.length > 0 ? esc(sortedPosts[0].post) : 'Select Post'}</span>
+          <span id="postComboboxArrow" class="text-slate-400 text-xs ml-2 transition-transform duration-200">▼</span>
+        </button>
+
+        <!-- Searchable Dropdown Popup Menu -->
+        <div id="postComboboxMenu" class="hidden absolute left-0 right-0 top-full mt-1.5 z-50 rounded-xl bg-slate-900 border border-white/20 shadow-2xl overflow-hidden backdrop-blur-xl">
+          <div class="p-2.5 border-b border-white/10 bg-black/40 sticky top-0 z-10">
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+              <input type="text" id="postSearchInput" class="w-full bg-slate-800/90 border border-white/15 rounded-lg pl-8 pr-8 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition" placeholder="Search post by name or department (e.g. Botany, Vice, Rep)..." autocomplete="off" />
+              <button type="button" id="postSearchClear" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs">✕</button>
+            </div>
+          </div>
+          <div id="postComboboxList" class="max-h-64 overflow-y-auto divide-y divide-white/5 p-1 custom-scrollbar"></div>
+        </div>
+
         <div id="postRuleBadgeStrip" class="mt-2.5 flex flex-wrap items-center gap-2"></div>
       </div>
 
@@ -341,6 +367,9 @@ function renderForm(container, year, collegeName, setsData = {}, isAdminDirect =
     authInput.addEventListener('change', () => runValidation(formArea, isAdminDirect));
   }
 
+  // Initialize searchable & scrollable Post dropdown
+  setupPostCombobox(formArea, sortedPosts);
+
   // Revalidate on any change
   formArea.querySelector('#postSelect')?.addEventListener('change', () => {
     updatePostBadgeStrip(formArea);
@@ -358,7 +387,13 @@ function renderForm(container, year, collegeName, setsData = {}, isAdminDirect =
     formArea.querySelector('#captchaQuestion').textContent = c.question;
   });
 
-  formArea.querySelector('#backHomeBtn')?.addEventListener('click', () => router.navigate('/'));
+  formArea.querySelector('#backHomeBtn')?.addEventListener('click', () => {
+    if (isAdminDirect) {
+      router.navigate('/admin/dashboard');
+    } else {
+      router.navigate('/');
+    }
+  });
   formArea.querySelector('#nomForm')?.addEventListener('submit', (e) => handleSubmit(e, formArea, year, collegeName, setsData?.collegeLogo || '', isAdminDirect));
 
   // Wire up blank nomination printing
@@ -502,12 +537,12 @@ function personBlock(role, label, isCandidate, isAdminDirect = false) {
   return `
   <div class="glass rounded-xl p-4 space-y-3 border border-white/10 shadow-lg">
     <div class="flex items-center justify-between border-b border-white/10 pb-2">
-      <h3 class="font-bold text-white text-sm uppercase tracking-wide flex items-center gap-2">
+      <h3 class="font-bold text-white text-sm uppercase tracking-wide flex items-center gap-1.5">
         <span>${isCandidate ? '👤' : (role === 'proposer' ? '✍️' : '🤝')}</span>
         ${label}
       </h3>
-      <button type="button" class="btn btn-secondary btn-xs text-[11px] py-1 px-2.5 flex items-center gap-1.5 find-serial-btn border-indigo-500/30 text-indigo-300 hover:text-white" data-role="${role}" data-label="${label}">
-        🔍 Find Sl. No.
+      <button type="button" class="find-serial-btn text-[11px] text-slate-400 hover:text-indigo-300 transition-colors flex items-center gap-1 py-1 px-2.5 rounded bg-white/[0.04] hover:bg-white/10 border border-white/10 cursor-pointer font-normal shrink-0 whitespace-nowrap" data-role="${role}" data-label="${label}" title="Lookup Serial Number in Nominal Roll">
+        <span class="text-xs opacity-75">🔍</span> Find Sl. No.
       </button>
     </div>
     <div>
@@ -541,10 +576,10 @@ function personBlock(role, label, isCandidate, isAdminDirect = false) {
     </div>
     <div>
       <label class="text-xs text-slate-400 block mb-1">Date of Birth <span class="text-rose-400">*</span></label>
-      <div class="flex gap-2">
-        <select id="dob-day"   class="field dob-sel"><option value="">Day</option></select>
-        <select id="dob-month" class="field dob-sel"><option value="">Month</option></select>
-        <select id="dob-year"  class="field dob-sel"><option value="">Year</option></select>
+      <div class="flex gap-1.5 items-center">
+        <select id="dob-day"   class="field dob-sel" style="flex: 1; min-width: 0;"><option value="">Day</option></select>
+        <select id="dob-month" class="field dob-sel" style="flex: 1.25; min-width: 0;"><option value="">Month</option></select>
+        <select id="dob-year"  class="field dob-sel" style="flex: 1.25; min-width: 0;"><option value="">Year</option></select>
       </div>
     </div>` : ''}
   </div>`;
@@ -954,7 +989,7 @@ function publicLayout(title, bodyHtml, yearValue = '2026', shortName = null) {
   return `
   <div class="page-enter min-h-screen">
     <header class="no-print sticky top-0 z-50 border-b border-white/10 glass">
-      <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+      <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
         <div class="flex items-center gap-4">
           <button id="backToHome" class="btn btn-secondary btn-sm flex items-center gap-2">
             <span class="text-lg">←</span> Home
@@ -967,6 +1002,143 @@ function publicLayout(title, bodyHtml, yearValue = '2026', shortName = null) {
         </div>
       </div>
     </header>
-    <main class="max-w-4xl mx-auto px-4 py-8">${bodyHtml}</main>
+    <main class="max-w-5xl mx-auto px-4 py-8">${bodyHtml}</main>
   </div>`;
+}
+
+/**
+ * Setup searchable & scrollable combobox for Post selection
+ */
+function setupPostCombobox(formArea, sortedPosts) {
+  const container = formArea.querySelector('#postComboboxContainer');
+  const select = formArea.querySelector('#postSelect');
+  const trigger = formArea.querySelector('#postComboboxBtn');
+  const label = formArea.querySelector('#postComboboxLabel');
+  const arrow = formArea.querySelector('#postComboboxArrow');
+  const menu = formArea.querySelector('#postComboboxMenu');
+  const searchInput = formArea.querySelector('#postSearchInput');
+  const clearBtn = formArea.querySelector('#postSearchClear');
+  const list = formArea.querySelector('#postComboboxList');
+
+  if (!container || !select || !trigger || !menu || !list) return;
+
+  function renderOptions(filterText = '') {
+    const q = (filterText || '').toLowerCase().trim();
+    const filtered = sortedPosts.filter(p => {
+      if (!q) return true;
+      const name = String(p.post || '').toLowerCase();
+      const dept = String(p.restrictedDept || (p.deptRestriction && String(p.post || '').startsWith('Association Secretary ') ? p.post.replace('Association Secretary ', '') : '')).toLowerCase();
+      return name.includes(q) || dept.includes(q);
+    });
+
+    if (filtered.length === 0) {
+      list.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">No matching posts found.</div>`;
+      return;
+    }
+
+    const currentVal = select.value;
+    list.innerHTML = filtered.map(p => {
+      const isSelected = p.post === currentVal;
+      const badges = [];
+      if (p.femaleOnly) {
+        badges.push('<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-pink-500/20 text-pink-300 border border-pink-500/30">♀ Female Only</span>');
+      }
+      const deptName = p.restrictedDept || (p.deptRestriction && String(p.post || '').startsWith('Association Secretary ') ? p.post.replace('Association Secretary ', '').trim() : '');
+      if (p.deptRestriction || deptName) {
+        badges.push(`<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">🏢 ${esc(deptName || 'Dept')} Only</span>`);
+      }
+      const yrDesc = formatYearRuleDescription(p);
+      if (yrDesc && yrDesc !== 'All Years Eligible' && yrDesc !== 'All Years') {
+        badges.push(`<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">🎓 ${esc(yrDesc)}</span>`);
+      }
+
+      return `
+        <div class="post-opt-item px-3.5 py-2.5 rounded-lg flex items-center justify-between cursor-pointer transition text-xs ${isSelected ? 'bg-indigo-600/30 text-white font-bold' : 'text-slate-200 hover:bg-white/10 hover:text-white'}" data-value="${esc(p.post)}">
+          <div class="flex flex-col gap-1 min-w-0 pr-3">
+            <span class="truncate text-sm font-semibold">${esc(p.post)}</span>
+            ${badges.length ? `<div class="flex flex-wrap items-center gap-1.5">${badges.join('')}</div>` : ''}
+          </div>
+          ${isSelected ? '<span class="text-indigo-400 font-bold shrink-0 text-sm">✓</span>' : ''}
+        </div>
+      `;
+    }).join('');
+
+    list.querySelectorAll('.post-opt-item').forEach(item => {
+      item.onclick = (e) => {
+        e.stopPropagation();
+        selectPost(item.dataset.value);
+      };
+    });
+  }
+
+  function selectPost(val) {
+    select.value = val;
+    label.textContent = val;
+    closeMenu();
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function openMenu() {
+    menu.classList.remove('hidden');
+    arrow.style.transform = 'rotate(180deg)';
+    renderOptions(searchInput.value);
+    setTimeout(() => {
+      searchInput.focus();
+      searchInput.select();
+    }, 50);
+  }
+
+  function closeMenu() {
+    menu.classList.add('hidden');
+    arrow.style.transform = 'rotate(0deg)';
+  }
+
+  trigger.onclick = (e) => {
+    e.stopPropagation();
+    if (menu.classList.contains('hidden')) {
+      openMenu();
+    } else {
+      closeMenu();
+    }
+  };
+
+  searchInput.oninput = () => {
+    const val = searchInput.value;
+    clearBtn.classList.toggle('hidden', !val);
+    renderOptions(val);
+  };
+
+  clearBtn.onclick = (e) => {
+    e.stopPropagation();
+    searchInput.value = '';
+    clearBtn.classList.add('hidden');
+    renderOptions('');
+    searchInput.focus();
+  };
+
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (!container.contains(e.target)) {
+      closeMenu();
+    }
+  });
+
+  // Close on Escape key
+  container.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeMenu();
+      trigger.focus();
+    }
+  });
+
+  // Keep label synced if select changes programmatically
+  select.addEventListener('change', () => {
+    label.textContent = select.value;
+  });
+
+  // Initial setup
+  if (sortedPosts.length > 0 && !select.value) {
+    select.value = sortedPosts[0].post;
+  }
+  label.textContent = select.value || (sortedPosts[0]?.post || 'Select Post');
 }

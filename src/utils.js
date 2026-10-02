@@ -222,10 +222,33 @@ export function todayFormatted() {
 // ─── DOB dropdowns ─────────────────────────────────────────────────────────────
 export function populateDobSelects(dayEl, monthEl, yearEl) {
   if (!dayEl || !monthEl || !yearEl) return;
-  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  for (let i = 1; i <= 31; i++) dayEl.innerHTML += `<option value="${i}">${i}</option>`;
-  months.forEach((m, i) => monthEl.innerHTML += `<option value="${i+1}">${m}</option>`);
-  for (let y = 2015; y >= 1950; y--) yearEl.innerHTML += `<option value="${y}">${y}</option>`;
+  const months = [
+    { val: 1, name: 'Jan' },
+    { val: 2, name: 'Feb' },
+    { val: 3, name: 'Mar' },
+    { val: 4, name: 'Apr' },
+    { val: 5, name: 'May' },
+    { val: 6, name: 'Jun' },
+    { val: 7, name: 'Jul' },
+    { val: 8, name: 'Aug' },
+    { val: 9, name: 'Sep' },
+    { val: 10, name: 'Oct' },
+    { val: 11, name: 'Nov' },
+    { val: 12, name: 'Dec' }
+  ];
+  dayEl.innerHTML = '<option value="">Day</option>';
+  for (let i = 1; i <= 31; i++) {
+    const dStr = String(i).padStart(2, '0');
+    dayEl.innerHTML += `<option value="${i}">${dStr}</option>`;
+  }
+  monthEl.innerHTML = '<option value="">Month</option>';
+  months.forEach(m => {
+    monthEl.innerHTML += `<option value="${m.val}">${m.name}</option>`;
+  });
+  yearEl.innerHTML = '<option value="">Year</option>';
+  for (let y = 1998; y <= 2015; y++) {
+    yearEl.innerHTML += `<option value="${y}">${y}</option>`;
+  }
 }
 
 export function buildDobString(day, month, year) {
