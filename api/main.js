@@ -2212,6 +2212,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       const lData = typeof body.locations === 'string' ? body.locations : JSON.stringify(body.locations || []);
       await setSetting('availableLocations', lData);
       return jsonOut(res, { ok: true });
+    }
 
     if (action === 'adminSaveOfficials') {
       const { faculty, nonTeaching, pollingTeams, countingTeams } = body;
@@ -2222,7 +2223,6 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       if (countingTeams !== undefined) tasks.push(setSetting('counting_teams_officials', JSON.stringify(countingTeams)));
       await Promise.all(tasks);
       return jsonOut(res, { ok: true });
-    }
     }
 
     if (action === 'adminSaveNotices') {
