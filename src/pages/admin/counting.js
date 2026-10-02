@@ -1,24 +1,31 @@
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast, setLoading, isYearEligible } from '../../utils.js';
+import { esc, showToast, setLoading, isYearEligible, sortPosts } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 import { saveCountingMeta, getCountingMeta } from '../../offlineStorage.js';
 import { router } from '../../router.js';
 
+export function isUuc(postName) {
+  if (!postName) return false;
+  const u = String(postName).toUpperCase();
+  return u.includes('UUC') || u.includes('UNIVERSITY UNION COUNCILLOR') || u.includes('COUNCILLOR');
+}
+
 export async function renderAdminCounting(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
   renderAdminLayout(container, 'counting', `
-    <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Counting Setup...</p></div>
+    <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Counting Setup & Officials...</p></div>
   `);
 
   try {
-    const [savedMatrix, posts, nominationsRaw, booths, nominalRoll, settings] = await Promise.all([
+    const [savedMatrix, posts, nominationsRaw, booths, nominalRoll, settings, officialsRaw] = await Promise.all([
       api.adminGetCountingMatrix(pwd, true).catch(() => null),
       api.getPosts().catch(() => []),
       api.adminGetNominations(pwd).catch(() => []),
       api.adminGetBooths(pwd, true).catch(() => []),
       api.getNominalRoll().catch(() => []),
-      api.adminGetSettings(pwd).catch(() => ({}))
+      api.adminGetSettings(pwd).catch(() => ({})),
+      api.adminGetOfficials(pwd, true).catch(() => null)
     ]);
 
     const allNoms = Array.isArray(nominationsRaw) ? nominationsRaw : [];
@@ -27,10 +34,19 @@ export async function renderAdminCounting(container) {
     const postsList = Array.isArray(posts) ? posts : (Array.isArray(posts?.posts) ? posts.posts : []);
     const nominalRollList = Array.isArray(nominalRoll) ? nominalRoll : [];
 
-    // Cache metadata in IndexedDB for offline access
-    await saveCountingMeta({ savedMatrix, posts: postsList, finalList, booths: boothsList, settings });
+    let countingTeams = [];
+    if (officialsRaw && Array.isArray(officialsRaw.countingTeams)) {
+      countingTeams = officialsRaw.countingTeams;
+    } else {
+      try {
+        countingTeams = JSON.parse(localStorage.getItem('gcc_counting_teams') || '[]');
+      } catch (_) {}
+    }
 
-    renderCountingUI(container.querySelector('#adminMain'), pwd, savedMatrix, postsList, finalList, boothsList, nominalRollList, settings, false);
+    // Cache metadata in IndexedDB for offline access
+    await saveCountingMeta({ savedMatrix, posts: postsList, finalList, booths: boothsList, settings, countingTeams });
+
+    renderCountingUI(container.querySelector('#adminMain'), pwd, savedMatrix, postsList, finalList, boothsList, nominalRollList, settings, false, countingTeams);
   } catch (e) {
     console.warn('Counting online load failed, checking IndexedDB cache:', e);
     const cached = await getCountingMeta();
@@ -44,7 +60,8 @@ export async function renderAdminCounting(container) {
         cached.booths || [],
         [],
         cached.settings || {},
-        true
+        true,
+        cached.countingTeams || []
       );
     } else {
       container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
@@ -52,7 +69,15 @@ export async function renderAdminCounting(container) {
   }
 }
 
-function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nominalRoll, settings = {}, isOffline = false) {
+function getSupervisorNameForTable(tableNum, countingTeams) {
+  if (!Array.isArray(countingTeams)) return '';
+  const team = countingTeams.find(t => String(t.tableNumber) === String(tableNum));
+  if (!team || !team.supervisor) return '';
+  if (typeof team.supervisor === 'string') return team.supervisor;
+  return team.supervisor.name || team.supervisor.fullName || '';
+}
+
+function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nominalRoll, settings = {}, isOffline = false, countingTeams = []) {
   const collegeName = settings?.collegeName || CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad';
   const electionYear = settings?.electionYear || new Date().getFullYear().toString();
   const collegeLogo = settings?.collegeLogo || '';
@@ -87,7 +112,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     return [];
   };
 
-  // ── This function handles the actual rendering of whatever data we have ──────
+  // ── Render Display ─────────────────────────────────────────────────────────
   const renderDisplay = (data) => {
     const matrix = Array.isArray(data?.matrix) ? data.matrix : [];
     const formSerials = data?.formSerials && typeof data.formSerials === 'object' ? data.formSerials : {};
@@ -97,6 +122,38 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       : Array.from({ length: totalRounds }, (_, i) => `Round ${i + 1}`);
     const T = boothsList.length;
     const isMismatch = matrix.length !== T;
+
+    // Build list of active contesting posts sorted statutorily
+    const sortedPostObjects = sortPosts(postsList);
+
+    // Map each post to its counting tables/rounds
+    const postTableMap = {};
+    sortedPostObjects.forEach(p => {
+      const pn = pName(p);
+      postTableMap[pn] = [];
+    });
+
+    for (let r = 0; r < totalRounds; r++) {
+      for (let t = 0; t < T; t++) {
+        const post = matrix[t] ? matrix[t][r] : null;
+        if (!post) continue;
+        const pn = pName(post);
+        const bNum = boothsList[t]?.boothNumber || (t + 1);
+        const roomName = boothsList[t]?.roomName || `Table ${bNum}`;
+        const serial = formSerials[`${t}-${r}`] || `${t + 1}-${r + 1}`;
+        const supName = getSupervisorNameForTable(bNum, countingTeams);
+        if (!postTableMap[pn]) postTableMap[pn] = [];
+        postTableMap[pn].push({
+          tIndex: t,
+          roundIndex: r,
+          tableNum: bNum,
+          roundNum: r + 1,
+          roomName,
+          serial,
+          supervisorName: supName
+        });
+      }
+    }
 
     main.innerHTML = `
       <div class="page-enter space-y-6">
@@ -115,57 +172,367 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
           </div>
         ` : ''}
 
+        <!-- Top Header & Secondary Tools -->
         <div class="flex items-center justify-between no-print flex-wrap gap-3">
           <div>
             <div class="flex items-center gap-2">
-              <h3 class="text-xl font-bold text-white">Counting Matrix Setup</h3>
+              <h3 class="text-xl font-bold text-white">Counting Matrix &amp; Forms</h3>
               ${isOffline ? '<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-semibold">Offline Mode (IndexedDB)</span>' : ''}
             </div>
-            <p class="text-slate-400 text-sm">${T} tables · ${totalRounds} rounds · ${postsList.length} posts total</p>
+            <p class="text-slate-400 text-sm mt-0.5">${T} tables · ${totalRounds} rounds · ${postsList.length} posts total</p>
           </div>
-          <div class="flex gap-2 flex-wrap">
+          <div class="flex gap-2 flex-wrap items-center">
             <a href="#/admin/results?openPanelColors=true" class="btn btn-secondary border-purple-500/40 text-purple-300 hover:bg-purple-500/20 text-xs font-semibold flex items-center gap-1.5" title="Confidential candidate panel colors">
               <span>🎨</span> Set Candidate Colors
             </a>
-            <a href="#/admin/officials" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold">👥 Allot Counting Teams</a>
-            <button id="btnRegenerate" class="btn btn-secondary bg-white/5 border-white/10 hover:bg-white/10 text-xs font-semibold">🔄 Regenerate</button>
-            <button id="btnPrintForms" class="btn btn-primary text-xs font-bold">🖨️ Print All Forms</button>
+            <a href="#/admin/officials" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold flex items-center gap-1.5">
+              <span>👥</span> Allot Counting Teams
+            </a>
+            <button id="btnRegenerate" class="btn btn-secondary bg-white/5 border-white/10 hover:bg-white/10 text-xs font-semibold flex items-center gap-1.5">
+              <span>🔄</span> Regenerate Matrix
+            </button>
           </div>
         </div>
 
-        <div class="glass rounded-xl overflow-hidden no-print">
+        <!-- Dedicated Printing & Consolidation Toolbar -->
+        <div class="glass p-4 rounded-xl border border-indigo-500/30 shadow-xl no-print space-y-3">
+          <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+            <!-- Post Selector -->
+            <div class="flex items-center gap-3 flex-1 min-w-[300px]">
+              <label for="selPostPrint" class="text-xs font-bold text-slate-300 shrink-0 uppercase tracking-wide">
+                Target Post:
+              </label>
+              <select id="selPostPrint" class="field text-xs py-2 bg-slate-900 border-white/20 text-white font-medium flex-1">
+                <option value="all">🌟 All Posts (Complete Election Batch)</option>
+                ${sortedPostObjects.map(p => {
+                  const pn = pName(p);
+                  const isPostUuc = isUuc(pn);
+                  const countTbls = (postTableMap[pn] || []).length;
+                  return `<option value="${esc(pn)}">${esc(pn)} (${countTbls} table${countTbls === 1 ? '' : 's'})${isPostUuc ? ' ⭐ [2 Vacancies]' : ''}</option>`;
+                }).join('')}
+              </select>
+            </div>
+
+            <!-- Print Actions -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <button type="button" id="btnPrintForms" class="btn btn-primary text-xs font-bold py-2 px-3.5 shadow-md flex items-center gap-1.5" title="Print Counting Forms (Form 6) with allotted Supervisor Names">
+                <span>🖨️</span> <span id="labelPrintForms">Print Counting Forms</span>
+              </button>
+              <button type="button" id="btnPrintConsolidation" class="btn btn-secondary text-xs font-semibold py-2 px-3 border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 flex items-center gap-1.5" title="Print Manual Tabulation & Consolidation Register for tables/rounds">
+                <span>📊</span> <span id="labelPrintConsolidation">Tabulation Sheet</span>
+              </button>
+              <button type="button" id="btnPrintUucTally" class="btn btn-secondary text-xs font-semibold py-2 px-3 border-amber-500/40 text-amber-300 hover:bg-amber-500/20 flex items-center gap-1.5" title="Print Statutory Dual-Vote Tally Sheet for University Union Councillor">
+                <span>🧮</span> UUC Tally Sheet
+              </button>
+              <button type="button" id="btnPrintPackage" class="btn btn-secondary text-xs font-semibold py-2 px-3.5 bg-white/10 hover:bg-white/20 text-white flex items-center gap-1.5" title="Print complete set (Counting Forms + Tabulation Sheet + Tally Sheet)">
+                <span>📑</span> Full Post Dossier
+              </button>
+            </div>
+          </div>
+          <div class="text-[11px] text-slate-400 flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-white/5">
+            <span id="printScopeHint">💡 <strong>Scope:</strong> Currently printing across all ${totalRounds} rounds and ${T} tables. Select a specific post above for recounting or single-post table assignment.</span>
+            <span class="text-indigo-300 font-mono text-[10px]">Supervisor names automatically populated on all forms</span>
+          </div>
+        </div>
+
+        <!-- Counting Matrix Table -->
+        <div class="glass rounded-xl overflow-hidden no-print shadow-2xl">
+          <div class="p-3 border-b border-white/10 bg-slate-900/60 flex items-center justify-between">
+            <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Table × Round Allocation Matrix</h4>
+            <span class="text-[11px] text-slate-500">Form Serials: #1 .. #${T * totalRounds}</span>
+          </div>
           <div class="overflow-x-auto">
             <table class="data-table text-xs">
               <thead><tr>
-                <th>Table</th>
+                <th class="w-36">Table &amp; Supervisor</th>
                 ${roundLabels.map(l => `<th>${esc(l)}</th>`).join('')}
               </tr></thead>
               <tbody>
                 ${boothsList.map((b, t) => {
+                  const bNum = b.boothNumber || (t + 1);
+                  const supName = getSupervisorNameForTable(bNum, countingTeams);
                   const tableRow = Array.isArray(matrix[t]) 
                     ? matrix[t] 
                     : Array.from({ length: totalRounds }, () => null);
                   return `
                   <tr>
-                    <td class="font-bold text-indigo-300 whitespace-nowrap">
-                      Table ${b.boothNumber || (t + 1)}<br>
-                      <span class="text-xs text-slate-500 font-normal">${esc(b.roomName || '')}</span>
+                    <td class="font-bold text-indigo-300 whitespace-nowrap bg-black/15">
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-sm">🪑</span>
+                        <span>Table ${bNum}</span>
+                      </div>
+                      <div class="text-[11px] text-slate-400 font-normal truncate max-w-[140px]" title="${esc(b.roomName || '')}">
+                        ${esc(b.roomName || `Room ${bNum}`)}
+                      </div>
+                      <div class="text-[10px] text-slate-500 font-normal italic mt-0.5 truncate max-w-[140px]" title="Supervisor: ${esc(supName || 'Unassigned')}">
+                        ${supName ? `👤 ${esc(supName)}` : '<span class="text-amber-400/80">⚠️ No supervisor</span>'}
+                      </div>
                     </td>
-                    ${tableRow.map((post, r) => `
-                      <td class="align-top py-2 min-w-[100px]">
-                        ${post
-                          ? `<div class="text-[10px] text-slate-500 mb-0.5 font-mono">#${esc(formSerials[`${t}-${r}`] || '')}</div>
-                             <div class="badge badge-valid block text-left" title="${esc(pName(post))}">${esc(pName(post))}</div>`
-                          : '<span class="text-slate-600">–</span>'}
-                      </td>`).join('')}
+                    ${tableRow.map((post, r) => {
+                      if (!post) return '<td class="align-top py-2.5 min-w-[110px] text-slate-600">–</td>';
+                      const pn = pName(post);
+                      const isPostUuc = isUuc(pn);
+                      const serial = formSerials[`${t}-${r}`] || `${t + 1}-${r + 1}`;
+                      return `
+                      <td class="align-top py-2.5 min-w-[110px]">
+                        <div class="flex items-center justify-between gap-1 mb-1">
+                          <span class="text-[10px] text-slate-400 font-mono font-bold">#${esc(serial)}</span>
+                          ${isPostUuc ? '<span class="px-1 py-0.2 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">2-Seat</span>' : ''}
+                        </div>
+                        <div class="badge ${isPostUuc ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30' : 'badge-valid'} block text-left truncate cursor-pointer hover:underline" data-quick-post="${esc(pn)}" title="Click to filter print options to ${esc(pn)}">
+                          ${esc(pn)}
+                        </div>
+                      </td>`;
+                    }).join('')}
                   </tr>`;
                 }).join('')}
               </tbody>
             </table>
           </div>
         </div>
+
+        <!-- Post-Wise Quick Actions Directory -->
+        <div class="glass rounded-xl p-5 border border-white/10 shadow-2xl no-print space-y-4">
+          <div class="flex items-center justify-between border-b border-white/10 pb-3 flex-wrap gap-2">
+            <div>
+              <h4 class="font-bold text-white text-sm flex items-center gap-2">
+                <span>📋</span> Post-Wise Tabulation &amp; Recount Dossiers
+              </h4>
+              <p class="text-xs text-slate-400 mt-0.5">Quick 1-click access to print individual Counting Forms, Tabulation Registers, and UUC Tally Sheets for any post.</p>
+            </div>
+            <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono text-xs">
+              ${sortedPostObjects.length} Posts
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            ${sortedPostObjects.map(p => {
+              const pn = pName(p);
+              const postUuc = isUuc(pn);
+              const tbls = postTableMap[pn] || [];
+              const cands = candidatesList.filter(c => c.post === pn);
+              return `
+                <div class="p-3.5 rounded-xl border ${postUuc ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/10 bg-white/[0.02]'} flex flex-col justify-between gap-3 hover:border-white/20 transition-all">
+                  <div>
+                    <div class="flex items-start justify-between gap-2">
+                      <h5 class="font-bold text-xs text-white leading-snug">${esc(pn)}</h5>
+                      ${postUuc ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">2 Seats</span>' : ''}
+                    </div>
+                    <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
+                      <span>👥 ${cands.length} Candidate${cands.length === 1 ? '' : 's'}</span>
+                      <span>•</span>
+                      <span>🪑 ${tbls.length} Table${tbls.length === 1 ? '' : 's'}</span>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-1.5 pt-2 border-t border-white/5 flex-wrap">
+                    <button type="button" class="btn btn-secondary btn-xs py-1 px-2 text-[11px] quick-print-forms" data-post="${esc(pn)}" title="Print counting forms for ${esc(pn)}">
+                      🖨️ Forms
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-xs py-1 px-2 text-[11px] quick-print-tab" data-post="${esc(pn)}" title="Print manual consolidation sheet for ${esc(pn)}">
+                      📊 Tabulation
+                    </button>
+                    ${postUuc ? `
+                      <button type="button" class="btn btn-secondary btn-xs py-1 px-2 text-[11px] border-amber-500/40 text-amber-300 quick-print-uuc" data-post="${esc(pn)}" title="Print Dual-Vote Tally Sheet for ${esc(pn)}">
+                        🧮 Tally
+                      </button>
+                    ` : ''}
+                    <button type="button" class="btn btn-primary btn-xs py-1 px-2 text-[11px] quick-print-dossier" data-post="${esc(pn)}" title="Print complete dossier for ${esc(pn)}">
+                      📑 All
+                    </button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
       </div>`;
 
+    // ─── Attach Events ────────────────────────────────────────────────────────
+    const selPostPrint = main.querySelector('#selPostPrint');
+    const labelPrintForms = main.querySelector('#labelPrintForms');
+    const labelPrintConsolidation = main.querySelector('#labelPrintConsolidation');
+    const printScopeHint = main.querySelector('#printScopeHint');
+
+    const updatePrintScopeUI = () => {
+      const selected = selPostPrint.value;
+      if (selected === 'all') {
+        labelPrintForms.textContent = 'Print All Forms';
+        labelPrintConsolidation.textContent = 'All Tabulation Sheets';
+        printScopeHint.innerHTML = `💡 <strong>Scope:</strong> Batch printing all ${totalRounds} rounds and ${T} tables across the entire election.`;
+      } else {
+        const tblCount = (postTableMap[selected] || []).length;
+        labelPrintForms.textContent = `Print Forms (${tblCount})`;
+        labelPrintConsolidation.textContent = `Tabulation Sheet`;
+        printScopeHint.innerHTML = `💡 <strong>Scope:</strong> Focused on <strong>${esc(selected)}</strong> (${tblCount} table${tblCount === 1 ? '' : 's'}). Ideal for recounts or single-post packets.`;
+      }
+    };
+
+    selPostPrint?.addEventListener('change', updatePrintScopeUI);
+
+    // Matrix cell click shortcut to select post in dropdown
+    main.querySelectorAll('[data-quick-post]').forEach(badge => {
+      badge.addEventListener('click', () => {
+        const postName = badge.dataset.quickPost;
+        if (selPostPrint && postName) {
+          selPostPrint.value = postName;
+          updatePrintScopeUI();
+          selPostPrint.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    });
+
+    // ── Main Print Action Handlers ───────────────────────────────────────────
+
+    // 1. Print Counting Forms
+    const executePrintForms = (postFilter = 'all') => {
+      let html = '';
+      let count = 0;
+
+      for (let r = 0; r < totalRounds; r++) {
+        for (let t = 0; t < T; t++) {
+          const post = matrix[t] ? matrix[t][r] : null;
+          if (!post) continue;
+          const pn = pName(post);
+          if (postFilter !== 'all' && pn !== postFilter) continue;
+
+          const serial = formSerials[`${t}-${r}`] || `${t + 1}-${r + 1}`;
+          const cands = candidatesList.filter(c => c.post === pn).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
+          const bNum = boothsList[t]?.boothNumber || (t + 1);
+          const roomName = boothsList[t]?.roomName || `Table ${bNum}`;
+          const supName = getSupervisorNameForTable(bNum, countingTeams);
+
+          html += buildFormHtml(bNum, r + 1, pn, cands, serial, collegeName, electionYear, collegeLogo, supName, roomName);
+          count++;
+        }
+      }
+
+      if (!count) {
+        showToast(postFilter === 'all' ? 'No counting forms found.' : `No tables assigned for "${postFilter}".`, 'warning');
+        return;
+      }
+      const title = postFilter === 'all' ? 'Counting Forms - All Posts' : `Counting Forms - ${postFilter}`;
+      triggerCountingPrint(html, title, collegeLogo);
+    };
+
+    main.querySelector('#btnPrintForms')?.addEventListener('click', () => {
+      executePrintForms(selPostPrint.value);
+    });
+
+    // 2. Print Tabulation & Consolidation Sheets
+    const executePrintConsolidation = (postFilter = 'all') => {
+      let html = '';
+      let count = 0;
+
+      const targetPosts = postFilter === 'all' ? sortedPostObjects.map(p => pName(p)) : [postFilter];
+
+      targetPosts.forEach(pn => {
+        const tables = postTableMap[pn] || [];
+        const cands = candidatesList.filter(c => c.post === pn).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
+        html += buildConsolidationHtml(pn, tables, cands, collegeName, electionYear, collegeLogo);
+        count++;
+      });
+
+      if (!count) {
+        showToast('No tabulation sheets generated.', 'warning');
+        return;
+      }
+      const title = postFilter === 'all' ? 'Consolidation Sheets - All Posts' : `Consolidation Sheet - ${postFilter}`;
+      triggerCountingPrint(html, title, collegeLogo);
+    };
+
+    main.querySelector('#btnPrintConsolidation')?.addEventListener('click', () => {
+      executePrintConsolidation(selPostPrint.value);
+    });
+
+    // 3. Print UUC Tally Sheet
+    const executePrintUucTally = (tableFilter = null) => {
+      // Find all UUC posts
+      const uucPosts = sortedPostObjects.filter(p => isUuc(pName(p)));
+      if (!uucPosts.length) {
+        showToast('No University Union Councillor (UUC) post found in election configuration.', 'warning');
+        return;
+      }
+
+      let html = '';
+      let count = 0;
+
+      uucPosts.forEach(p => {
+        const pn = pName(p);
+        const tables = postTableMap[pn] || [];
+        const cands = candidatesList.filter(c => c.post === pn).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
+
+        tables.forEach(tInfo => {
+          if (tableFilter && String(tInfo.tableNum) !== String(tableFilter)) return;
+          html += buildUucTallySheetHtml(tInfo.tableNum, tInfo.roundNum, tInfo.serial, cands, collegeName, electionYear, collegeLogo, tInfo.supervisorName, tInfo.roomName);
+          count++;
+        });
+      });
+
+      if (!count) {
+        showToast('No UUC counting tables found.', 'warning');
+        return;
+      }
+      triggerCountingPrint(html, 'UUC Dual-Vote Tally Sheets', collegeLogo);
+    };
+
+    main.querySelector('#btnPrintUucTally')?.addEventListener('click', () => {
+      executePrintUucTally();
+    });
+
+    // 4. Print Full Dossier
+    const executePrintPackage = (postFilter = 'all') => {
+      let html = '';
+      const targetPosts = postFilter === 'all' ? sortedPostObjects.map(p => pName(p)) : [postFilter];
+
+      targetPosts.forEach(pn => {
+        const tables = postTableMap[pn] || [];
+        const cands = candidatesList.filter(c => c.post === pn).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
+        const isPostUuc = isUuc(pn);
+
+        // First: Tabulation Consolidation Sheet for the Post
+        html += buildConsolidationHtml(pn, tables, cands, collegeName, electionYear, collegeLogo);
+
+        // Second: If UUC, append UUC Tally Sheets for all its tables
+        if (isPostUuc) {
+          tables.forEach(tInfo => {
+            html += buildUucTallySheetHtml(tInfo.tableNum, tInfo.roundNum, tInfo.serial, cands, collegeName, electionYear, collegeLogo, tInfo.supervisorName, tInfo.roomName);
+          });
+        }
+
+        // Third: Counting Forms (Form 6) for each table
+        tables.forEach(tInfo => {
+          html += buildFormHtml(tInfo.tableNum, tInfo.roundNum, pn, cands, tInfo.serial, collegeName, electionYear, collegeLogo, tInfo.supervisorName, tInfo.roomName);
+        });
+      });
+
+      if (!html) {
+        showToast('No dossier documents generated.', 'warning');
+        return;
+      }
+      triggerCountingPrint(html, postFilter === 'all' ? 'Complete Counting Dossier' : `Counting Dossier - ${postFilter}`, collegeLogo);
+    };
+
+    main.querySelector('#btnPrintPackage')?.addEventListener('click', () => {
+      executePrintPackage(selPostPrint.value);
+    });
+
+    // ── Quick Print Buttons per Post ─────────────────────────────────────────
+    main.querySelectorAll('.quick-print-forms').forEach(btn => {
+      btn.addEventListener('click', () => executePrintForms(btn.dataset.post));
+    });
+    main.querySelectorAll('.quick-print-tab').forEach(btn => {
+      btn.addEventListener('click', () => executePrintConsolidation(btn.dataset.post));
+    });
+    main.querySelectorAll('.quick-print-uuc').forEach(btn => {
+      btn.addEventListener('click', () => executePrintUucTally());
+    });
+    main.querySelectorAll('.quick-print-dossier').forEach(btn => {
+      btn.addEventListener('click', () => executePrintPackage(btn.dataset.post));
+    });
+
+    // Matrix Regenerate listeners
     main.querySelector('#btnRegenerate')?.addEventListener('click', () => {
       if (confirm('Are you sure? This will discard the current matrix and generate a new one based on current Booths and Posts. Results entry serial numbers may change!')) {
         generateAndSave();
@@ -177,42 +544,12 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         generateAndSave();
       }
     });
-
-    main.querySelector('#btnPrintForms')?.addEventListener('click', () => {
-      let html = ''; let count = 0;
-      for (let r = 0; r < totalRounds; r++) {
-        for (let t = 0; t < T; t++) {
-          const post = matrix[t] ? matrix[t][r] : null;
-          if (!post) continue;
-          const pn = pName(post);
-          const serial = formSerials[`${t}-${r}`] || `${t + 1}-${r + 1}`;
-          const cands = candidatesList.filter(c => c.post === pn).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
-          const bNum = boothsList[t]?.boothNumber || (t + 1);
-          html += buildFormHtml(bNum, r + 1, pn, cands, serial, collegeName, electionYear, collegeLogo);
-          count++;
-        }
-      }
-      if (!count) { alert('No forms generated.'); return; }
-      const w = window.open('', '_blank');
-      if (!w) { alert('Pop-up blocked.'); return; }
-      w.document.write(`<!DOCTYPE html><html><head><title>Counting Forms</title><style>
-        @page{size:A4;margin:12mm}*{box-sizing:border-box}
-        body{margin:0;font-family:Arial,sans-serif;background:#fff;color:#000}
-        .pg{page-break-after:always;padding:10px;position:relative}.pg:last-child{page-break-after:avoid}
-        .serial-tag{position:absolute;top:10px;right:10px;border:2px solid #000;padding:5px 12px;font-family:monospace;font-size:18px;font-weight:bold}
-        table{width:100%;border-collapse:collapse;margin-bottom:18px}
-        th,td{border:1.5px solid #000;padding:8px}th{background:#eee}
-        .watermark-global{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:450px;height:450px;opacity:0.1;pointer-events:none;z-index:-1;background-size:contain;background-repeat:no-repeat;background-position:center;}
-      </style></head><body>${collegeLogo ? `<div class="watermark-global" style="background-image: url('${collegeLogo}');"></div>` : ''}${html}<script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`);
-      w.document.close();
-    });
   };
 
   // ── Function to generate matrix from scratch and save to backend ──────────────
   const generateAndSave = async () => {
     const T = boothsList.length;
     
-    // Helper to get department from post name
     const getPostDept = (p) => {
       if (p?.restrictedDept) return String(p.restrictedDept).toUpperCase().trim();
       const name = pName(p);
@@ -253,97 +590,61 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       return yrs;
     });
 
-    const activeContestablePosts = postsList.filter(p => {
-      const pCands = candidatesList.filter(c => c.post === pName(p));
-      return pCands.length > 1;
-    });
-    const pool = (candidatesList.length > 0 && activeContestablePosts.length > 0) ? activeContestablePosts : postsList;
+    const isMatch = (post, bIdx) => {
+      const pDept = getPostDept(post);
+      if (pDept && !boothDepts[bIdx].has(pDept)) return false;
+      const yrRule = post.yearRule;
+      if (!yrRule || yrRule === 'ALL') return true;
+      const bYrs = boothYears[bIdx];
+      if (yrRule === 'PG')  return bYrs.has('PG');
+      if (yrRule === 'UG1') return bYrs.has('1');
+      if (yrRule === 'UG2') return bYrs.has('2');
+      if (yrRule === 'UG3') return bYrs.has('3');
+      return true;
+    };
 
-    const uucPosts     = pool.filter(p => {
-      const name = pName(p).toUpperCase();
-      return name.includes('UUC') || name.includes('UNIVERSITY UNION COUNCILLOR');
-    });
-    const assocPosts   = pool.filter(p => !uucPosts.includes(p) && (pName(p).toUpperCase().includes('ASSOCIATION') || !!p.deptRestriction)).sort((a, b) => pName(a).localeCompare(pName(b)));
-    const yearRepPosts = pool.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && (pName(p).toUpperCase().includes('REPRESENTATIVE') || pName(p).toUpperCase().includes('REP')));
-    const generalPosts = pool.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && !yearRepPosts.includes(p));
-    const G = generalPosts.length;
+    const maxPostsAtTable = Math.max(...boothsList.map((_, i) => postsList.filter(p => isMatch(p, i)).length), 1);
+    const R = Math.max(maxPostsAtTable, 1);
+    const matrix = Array.from({ length: T }, () => Array.from({ length: R }, () => null));
 
-    // Generate individual table schedules based on booth eligibility
-    const matrix = Array.from({ length: T }, (_, t) => {
-      const rounds = [];
-      
-      // 1. Association Posts (FIRST)
-      assocPosts.forEach(ap => {
-        const d = getPostDept(ap);
-        if (d && boothDepts[t]?.has(d)) {
-          rounds.push(ap);
-        }
+    boothsList.forEach((_, t) => {
+      const matchingPosts = postsList.filter(p => isMatch(p, t));
+      matchingPosts.forEach((p, r) => {
+        if (r < R) matrix[t][r] = p;
       });
-
-      // 2. Year Reps (Filtered by isYearEligible against booth classes)
-      yearRepPosts.forEach(yp => {
-        const bClasses = getBoothClasses(boothsList[t]);
-        const hasEligibleClass = bClasses.some(c => isYearEligible(c, yp));
-        if (hasEligibleClass) {
-          rounds.push(yp);
-        }
-      });
-      
-      // 3. General Posts (Rotated per table)
-      if (G > 0) {
-        for (let i = 0; i < G; i++) {
-          rounds.push(generalPosts[(t + i) % G]);
-        }
-      }
-      
-      // 4. UUC Posts (LAST)
-      uucPosts.forEach(up => rounds.push(up));
-      
-      return rounds;
     });
 
-    const totalRounds = matrix.length > 0 ? Math.max(...matrix.map(m => (Array.isArray(m) ? m.length : 0)), 0) : 0;
-    // Pad all tables to same number of rounds
-    matrix.forEach(m => {
-      while (m.length < totalRounds) m.push(null);
-    });
+    let currentSerial = 1;
     const formSerials = {};
-    let serialCounter = 1;
-    for (let r = 0; r < totalRounds; r++) {
+    for (let r = 0; r < R; r++) {
       for (let t = 0; t < T; t++) {
-        if (matrix[t] && matrix[t][r]) formSerials[`${t}-${r}`] = serialCounter++;
+        if (matrix[t][r]) {
+          formSerials[`${t}-${r}`] = currentSerial++;
+        }
       }
     }
 
-    const roundLabels = [];
-    for (let r = 0; r < totalRounds; r++) {
-      roundLabels.push(`Round ${r + 1}`);
-    }
+    const payload = {
+      matrix,
+      formSerials,
+      totalRounds: R,
+      roundLabels: Array.from({ length: R }, (_, i) => `Round ${i + 1}`)
+    };
 
-    const matrixData = { matrix, formSerials, totalRounds, roundLabels };
-    
     try {
-      main.innerHTML = `<div class="text-center py-20"><span class="spinner"></span><p class="mt-4 text-slate-400">Saving Matrix...</p></div>`;
-      await api.adminSaveCountingMatrix(pwd, matrixData);
-      // Cache immediately to IndexedDB
-      await saveCountingMeta({ savedMatrix: matrixData, booths: boothsList, posts: postsList, finalList: candidatesList, settings });
-      showToast('Counting Matrix saved successfully!', 'success');
-      renderDisplay(matrixData);
+      await api.adminSaveCountingMatrix(pwd, payload);
+      await saveCountingMeta({ savedMatrix: payload, posts: postsList, finalList: candidatesList, booths: boothsList, settings, countingTeams });
+      showToast('Counting matrix generated and saved successfully.', 'success');
+      renderDisplay(payload);
     } catch (e) {
-      // Even if cloud save fails due to network, save locally to IndexedDB!
-      await saveCountingMeta({ savedMatrix: matrixData, booths: boothsList, posts: postsList, finalList: candidatesList, settings });
-      showToast('Matrix saved locally to IndexedDB (offline). Cloud error: ' + e.message, 'warning');
-      renderDisplay(matrixData);
+      console.warn('Online save matrix failed, saving locally to IndexedDB:', e);
+      await saveCountingMeta({ savedMatrix: payload, posts: postsList, finalList: candidatesList, booths: boothsList, settings, countingTeams });
+      showToast('Matrix saved locally to IndexedDB (Offline).', 'info');
+      renderDisplay(payload);
     }
   };
 
-  // ── Initial Logic: Show Saved Matrix OR Ask to Generate ────────────────────────
-  const isValidMatrix = savedMatrix && 
-    typeof savedMatrix === 'object' && 
-    Array.isArray(savedMatrix.matrix) && 
-    savedMatrix.matrix.length > 0;
-
-  if (isValidMatrix) {
+  if (savedMatrix && Array.isArray(savedMatrix.matrix) && savedMatrix.matrix.length) {
     renderDisplay(savedMatrix);
   } else {
     main.innerHTML = `
@@ -360,48 +661,361 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
   }
 }
 
-function buildFormHtml(tableNum, roundNum, postName, candidates, serial, collegeName = CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad', electionYear = '', collegeLogo = '') {
-  const pName = p => String(p?.post || p?.name || '');
+/**
+ * Trigger print dialog with styled printable window
+ */
+function triggerCountingPrint(htmlContent, title = 'Counting Documents', collegeLogo = '') {
+  const w = window.open('', '_blank');
+  if (!w) {
+    alert('Pop-up was blocked. Please allow pop-ups for this site to print counting forms.');
+    return;
+  }
+  w.document.write(`<!DOCTYPE html><html><head><title>${esc(title)}</title><style>
+    @page { size: A4 portrait; margin: 10mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #fff; color: #000; font-size: 13px; }
+    .pg { page-break-after: always; padding: 10px; position: relative; }
+    .pg:last-child { page-break-after: avoid; }
+    .serial-tag { position: absolute; top: 10px; right: 10px; border: 2px solid #000; padding: 5px 12px; font-family: monospace; font-size: 17px; font-weight: bold; background: #fff; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    th, td { border: 1.5px solid #000; padding: 7px 8px; }
+    th { background: #f3f4f6; }
+    .watermark-global { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 450px; height: 450px; opacity: 0.08; pointer-events: none; z-index: -1; background-size: contain; background-repeat: no-repeat; background-position: center; }
+  </style></head><body>
+    ${collegeLogo ? `<div class="watermark-global" style="background-image: url('${collegeLogo}');"></div>` : ''}
+    ${htmlContent}
+    <script>window.onload=()=>setTimeout(()=>window.print(), 400);<\/script>
+  </body></html>`);
+  w.document.close();
+}
+
+/**
+ * Form 6 — Standard Table Counting Form
+ */
+function buildFormHtml(tableNum, roundNum, postName, candidates, serial, collegeName = CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad', electionYear = '', collegeLogo = '', supervisorName = '', roomName = '') {
   const yearStr = electionYear || new Date().getFullYear().toString();
   const candsList = Array.isArray(candidates) ? candidates : [];
+  const isPostUuc = isUuc(postName);
+
   const rows = candsList.length
     ? candsList.map((c, i) => `<tr>
-        <td style="text-align:center;padding:18px 8px;font-weight:bold">${i+1}</td>
-        <td style="padding:18px 8px;font-size:15px;font-weight:bold">
+        <td style="text-align:center;padding:16px 8px;font-weight:bold">${i+1}</td>
+        <td style="padding:16px 8px;font-size:15px;font-weight:bold">
           ${esc(c.candidateName || '')}
-          <div style="font-size:11px;font-weight:normal;color:#333;margin-top:2px;">${esc(c.candidateClass || '')}</div>
+          <div style="font-size:11px;font-weight:normal;color:#444;margin-top:2px;">${esc(c.candidateClass || '')}</div>
         </td>
-        <td style="padding:18px 8px"></td></tr>`).join('')
-    : `<tr><td colspan="3" style="padding:14px;text-align:center;color:#555">No Candidates Found</td></tr>`;
+        <td style="padding:16px 8px"></td></tr>`).join('')
+    : `<tr><td colspan="3" style="padding:14px;text-align:center;color:#555">No Contesting Candidates</td></tr>`;
 
   return `<div class="pg">
     <div class="serial-tag">FORM #${serial}</div>
-    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:16px;padding-right:100px;">
-      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:45px;max-width:120px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:14px;padding-right:95px;">
+      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:42px;max-width:120px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
       <div style="font-size:13px;font-weight:bold;color:#111;text-transform:uppercase;">${esc(collegeName)}</div>
       <div style="font-size:12px;font-weight:bold;color:#444;margin-top:2px;">College Union Election ${esc(yearStr)}</div>
-      <h2 style="margin:6px 0 0;font-size:20px;text-transform:uppercase;letter-spacing:2px">Counting Form</h2>
-      <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:15px;font-weight:bold">
-        <span>TABLE: <u>${tableNum}</u></span><span>ROUND: <u>${roundNum}</u></span>
+      <h2 style="margin:5px 0 0;font-size:19px;text-transform:uppercase;letter-spacing:2px">Counting Form</h2>
+      <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:14px;font-weight:bold;background:#f9fafb;padding:4px 8px;border:1px solid #ccc;">
+        <span>TABLE NO: <u>${tableNum}</u> ${roomName ? `<span style="font-size:11px;font-weight:normal;color:#555">(${esc(roomName)})</span>` : ''}</span>
+        <span>ROUND NO: <u>${roundNum}</u></span>
       </div>
-      <h3 style="margin:10px 0 0;font-size:15px;text-decoration:underline;text-transform:uppercase">POST: ${esc(postName)}</h3>
+      <h3 style="margin:8px 0 0;font-size:15px;text-decoration:underline;text-transform:uppercase">POST: ${esc(postName)}</h3>
+      ${isPostUuc ? `<div style="font-size:11px;font-weight:bold;color:#b45309;margin-top:3px;">⭐ TWO (2) VACANCIES — DUAL-VOTE COUNTING (Total votes tallied = 2 × Ballots cast)</div>` : ''}
     </div>
     <table>
       <thead><tr>
         <th style="width:8%;text-align:center">#</th>
-        <th style="text-align:left;width:62%">Candidate Name & Class</th>
-        <th style="width:30%;text-align:center">Votes</th>
+        <th style="text-align:left;width:62%">Candidate Name &amp; Class</th>
+        <th style="width:30%;text-align:center">Votes Tallied</th>
       </tr></thead>
       <tbody>
         ${rows}
-        <tr><td style="text-align:center;padding:18px 8px">–</td><td style="padding:18px 8px;font-weight:bold">NOTA</td><td></td></tr>
-        <tr><td style="text-align:center;padding:18px 8px">–</td><td style="padding:18px 8px;font-weight:bold;color:#555">INVALID</td><td></td></tr>
-        <tr style="background:#eee"><td style="text-align:center;padding:18px 8px">–</td><td style="padding:18px 8px;font-weight:black;font-size:16px">TOTAL</td><td></td></tr>
+        <tr><td style="text-align:center;padding:15px 8px">–</td><td style="padding:15px 8px;font-weight:bold">NOTA (None of the Above)</td><td></td></tr>
+        <tr><td style="text-align:center;padding:15px 8px">–</td><td style="padding:15px 8px;font-weight:bold;color:#444">INVALID / REJECTED VOTES</td><td></td></tr>
+        <tr style="background:#eee;border-top:2px solid #000"><td style="text-align:center;padding:15px 8px">–</td><td style="padding:15px 8px;font-weight:black;font-size:16px">TOTAL VOTES TALLIED</td><td></td></tr>
       </tbody>
     </table>
-    <div style="display:flex;justify-content:space-between;margin-top:60px;text-align:center">
-      <div><div style="border-top:1.5px solid #000;width:200px;margin-bottom:5px"></div><div style="font-size:11px">Signature of the Agents</div></div>
-      <div><div style="border-top:1.5px solid #000;width:200px;margin-bottom:5px"></div><div style="font-size:11px">Counting Supervisor Signature</div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:55px;text-align:center">
+      <div>
+        <div style="border-top:1.5px solid #000;width:200px;margin-bottom:4px"></div>
+        <div style="font-size:11px">Signature of the Agents</div>
+      </div>
+      <div>
+        <div style="border-top:1.5px solid #000;width:220px;margin-bottom:4px"></div>
+        <div style="font-size:11px;font-weight:bold">Counting Supervisor Signature</div>
+        ${supervisorName ? `<div style="font-size:10.5px;color:#222;margin-top:3px;font-style:italic;">( Name: ${esc(supervisorName)} )</div>` : `<div style="font-size:10.5px;color:#666;margin-top:3px;font-style:italic;">( Name: _______________________ )</div>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+/**
+ * Form 7 — Manual Consolidation & Tabulation Register (Post-Wise)
+ */
+function buildConsolidationHtml(postName, tableEntries, candidates, collegeName = CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad', electionYear = '', collegeLogo = '') {
+  const yearStr = electionYear || new Date().getFullYear().toString();
+  const candsList = Array.isArray(candidates) ? candidates : [];
+  const entries = Array.isArray(tableEntries) ? tableEntries : [];
+  const postUuc = isUuc(postName);
+
+  const numCands = candsList.length;
+  // Calculate relative column widths
+  const candColWidth = numCands > 0 ? Math.floor(45 / Math.max(numCands, 1)) : 20;
+
+  const rows = entries.length ? entries.map((entry, idx) => `
+    <tr>
+      <td style="text-align:center;font-weight:bold">${idx + 1}</td>
+      <td style="font-size:12px;">
+        <strong>Table ${entry.tableNum}</strong>
+        ${entry.roomName ? `<div style="font-size:10px;color:#555">${esc(entry.roomName)}</div>` : ''}
+      </td>
+      <td style="text-align:center;font-size:12px">R-${entry.roundNum}</td>
+      <td style="text-align:center;font-family:monospace;font-weight:bold;font-size:13px">#${esc(entry.serial)}</td>
+      ${candsList.map(() => `<td style="padding:14px 6px"></td>`).join('')}
+      <td style="padding:14px 6px"></td>
+      <td style="padding:14px 6px"></td>
+      <td style="padding:14px 6px;background:#fafafa"></td>
+      <td></td>
+    </tr>
+  `).join('') : `
+    <tr>
+      <td style="text-align:center">1</td>
+      <td>Table 1</td>
+      <td style="text-align:center">R-1</td>
+      <td style="text-align:center;font-family:monospace">–</td>
+      ${candsList.map(() => `<td style="padding:14px 6px"></td>`).join('')}
+      <td></td><td></td><td></td><td></td>
+    </tr>
+  `;
+
+  return `<div class="pg">
+    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:14px;">
+      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:42px;max-width:120px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+      <div style="font-size:13px;font-weight:bold;color:#111;text-transform:uppercase;">${esc(collegeName)}</div>
+      <div style="font-size:12px;font-weight:bold;color:#444;margin-top:2px;">College Union Election ${esc(yearStr)}</div>
+      <h2 style="margin:5px 0 0;font-size:18px;text-transform:uppercase;letter-spacing:1.5px">FORM 7 — TABULATION &amp; CONSOLIDATION REGISTER</h2>
+      <h3 style="margin:6px 0 0;font-size:15px;text-decoration:underline;text-transform:uppercase">POST: ${esc(postName)}</h3>
+      <div style="font-size:12px;color:#222;margin-top:3px;font-weight:bold">
+        ${postUuc 
+          ? '⭐ TWO (2) VACANCIES — DUAL-VOTE STATUTORY COUNTING (Top 2 candidates elected; Total votes = 2 × Ballots cast)' 
+          : 'ONE (1) VACANCY — FIRST-PAST-THE-POST'}
+      </div>
+    </div>
+
+    <table style="font-size:11px;">
+      <thead>
+        <tr>
+          <th style="width:4%;text-align:center">#</th>
+          <th style="width:13%;text-align:left">Table / Booth</th>
+          <th style="width:6%;text-align:center">Round</th>
+          <th style="width:11%;text-align:center">Ref Form #</th>
+          ${candsList.map(c => `
+            <th style="width:${candColWidth}%;text-align:center">
+              ${esc(c.candidateName)}
+              <div style="font-size:9.5px;font-weight:normal;color:#444">${esc(c.candidateClass || '')}</div>
+            </th>
+          `).join('')}
+          <th style="width:8%;text-align:center">NOTA</th>
+          <th style="width:8%;text-align:center">Invalid</th>
+          <th style="width:12%;text-align:center">Total Accounted</th>
+          <th style="width:8%;text-align:center">Initial</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+        <tr style="background:#eee;font-weight:bold;border-top:2px solid #000;border-bottom:3px double #000;">
+          <td colspan="4" style="text-align:right;padding:9px;font-size:12px;letter-spacing:1px">GRAND TOTAL:</td>
+          ${candsList.map(() => `<td></td>`).join('')}
+          <td></td>
+          <td></td>
+          <td style="background:#e0e7ff;font-size:14px;font-weight:black;text-align:center"></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Statutory Result Declaration Box -->
+    <div style="margin-top:14px;border:1.5px solid #000;padding:10px 12px;border-radius:4px;font-size:11.5px;">
+      <div style="font-weight:bold;text-transform:uppercase;margin-bottom:6px;border-bottom:1px solid #ccc;padding-bottom:3px">
+        Statutory Result Consolidation &amp; Declaration
+      </div>
+      ${postUuc ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">
+          <div>1. Highest Votes Secured: ________________________ (Votes: _____)</div>
+          <div>2. Second Highest Votes: ________________________ (Votes: _____)</div>
+        </div>
+        <div><strong>DECLARED ELECTED AS UNIVERSITY UNION COUNCILLORS (UUC):</strong></div>
+        <div style="margin-top:4px;">1. __________________________________________________ &nbsp;&nbsp;&nbsp;&nbsp; 2. __________________________________________________</div>
+      ` : `
+        <div style="margin-bottom:5px;">Highest Number of Valid Votes Secured: ____________________________________ (Total Votes: _____________)</div>
+        <div><strong>DECLARED ELECTED TO THE POST:</strong> __________________________________________________________________</div>
+      `}
+    </div>
+
+    <!-- Official Signatures -->
+    <div style="display:flex;justify-content:space-between;margin-top:40px;text-align:center;">
+      <div>
+        <div style="border-top:1.5px solid #000;width:200px;margin-bottom:4px"></div>
+        <div style="font-size:11px;font-weight:bold">Tabulating Officer / Counting In-charge</div>
+      </div>
+      <div>
+        <div style="border-top:1.5px solid #000;width:200px;margin-bottom:4px"></div>
+        <div style="font-size:11px;font-weight:bold">Returning Officer</div>
+        <div style="font-size:10px;color:#555">(Office Seal)</div>
+      </div>
+    </div>
+
+    <!-- Contesting Candidates / Agents Signatures -->
+    <div style="margin-top:20px;">
+      <div style="font-size:11px;font-weight:bold;margin-bottom:3px">Signatures of Contesting Candidates / Authorized Counting Agents:</div>
+      <table style="width:100%;margin-bottom:0;font-size:10.5px;">
+        <thead>
+          <tr>
+            <th style="width:30%;padding:4px">Candidate / Agent Name</th>
+            <th style="width:35%;padding:4px">Candidate Represented</th>
+            <th style="width:35%;padding:4px">Signature</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="padding:10px 6px"></td><td></td><td></td></tr>
+          <tr><td style="padding:10px 6px"></td><td></td><td></td></tr>
+          <tr><td style="padding:10px 6px"></td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+/**
+ * Form 6-T (UUC) — Statutory Dual-Vote Counting Tally Sheet
+ */
+function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, collegeName = CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad', electionYear = '', collegeLogo = '', supervisorName = '', roomName = '') {
+  const yearStr = electionYear || new Date().getFullYear().toString();
+  const candsList = Array.isArray(candidates) ? candidates : [];
+
+  return `<div class="pg">
+    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:10px;">
+      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:40px;max-width:110px;margin:0 auto 3px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+      <div style="font-size:12.5px;font-weight:bold;color:#111;text-transform:uppercase;">${esc(collegeName)}</div>
+      <div style="font-size:11.5px;font-weight:bold;color:#444;margin-top:1px;">College Union Election ${esc(yearStr)}</div>
+      <h2 style="margin:4px 0 0;font-size:17px;text-transform:uppercase;letter-spacing:1px">FORM 6-T (UUC) — STATUTORY DUAL-VOTE COUNTING TALLY SHEET</h2>
+      <div style="font-size:12.5px;font-weight:bold;margin-top:2px;text-decoration:underline">POST: UNIVERSITY UNION COUNCILLOR (TWO VACANCIES)</div>
+      
+      <div style="display:flex;justify-content:space-between;margin-top:7px;font-size:12.5px;font-weight:bold;background:#f3f4f6;padding:5px 8px;border:1px solid #000;">
+        <span>TABLE NO: <u>${tableNum}</u></span>
+        <span>ROUND NO: <u>${roundNum}</u></span>
+        <span>REF COUNTING FORM: <u>#${serial}</u></span>
+        <span>ROOM: <u>${esc(roomName || `Table ${tableNum}`)}</u></span>
+      </div>
+      <div style="font-size:11px;margin-top:3px;color:#222;font-style:italic;text-align:right">
+        Counting Supervisor: <strong>${esc(supervisorName || '_______________________')}</strong>
+      </div>
+    </div>
+
+    <!-- Statutory Dual-Vote Instructions Box -->
+    <div style="border:1.5px solid #000;padding:6px 10px;margin:8px 0;font-size:10.5px;background:#fefce8;line-height:1.35;">
+      <strong>⚠️ STATUTORY DUAL-VOTE COUNTING INSTRUCTIONS (READ CAREFULLY BEFORE TALLYING):</strong>
+      <ol style="margin:3px 0 0 14px;padding:0">
+        <li><strong>Accountable Votes Target:</strong> Every ballot paper contains <strong>2 votes</strong>. Total Accountable Votes = <strong>2 × Total Ballots Inside Ballot Box</strong>.</li>
+        <li><strong>2 Valid Choices Marked:</strong> Award <strong>1 vote</strong> to each of the two marked candidates.</li>
+        <li><strong>1 Candidate Marked Only:</strong> Award <strong>1 valid vote</strong> to that candidate AND <strong>1 Invalid vote</strong> (unmatched second vote).</li>
+        <li><strong>More than 2 Candidates Marked (Overvoting):</strong> Record <strong>2 Invalid votes</strong>.</li>
+        <li><strong>NOTA Marked:</strong> Record <strong>2 NOTA votes</strong> (if NOTA + candidate marked, entire ballot is invalid = 2 Invalid votes).</li>
+        <li><strong>Blank / Defaced Ballot:</strong> Record <strong>2 Invalid votes</strong>.</li>
+      </ol>
+    </div>
+
+    <!-- Section 1: Ballot Account Target -->
+    <table style="width:100%;margin-bottom:8px;font-size:11.5px;">
+      <tr>
+        <td style="width:50%;padding:5px 8px;font-weight:bold;background:#f3f4f6">
+          Total Physical Ballots Extracted from Box (Form 5 Account):
+        </td>
+        <td style="width:20%;text-align:center;font-size:15px;font-weight:bold;padding:5px">
+          [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]
+        </td>
+        <td style="width:30%;padding:5px 8px;font-weight:bold;background:#e0e7ff;text-align:center">
+          Expected Total Votes Target [ A = 2 × Ballots ]: <br>
+          <span style="font-size:15px;">[ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</span>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Section 2: Structured 5-Gate Tally Matrix -->
+    <table style="width:100%;border-collapse:collapse;margin-bottom:8px;font-size:11px;">
+      <thead>
+        <tr>
+          <th style="width:5%;text-align:center">#</th>
+          <th style="width:33%;text-align:left">Candidate Name &amp; Class</th>
+          <th style="width:48%;text-align:left">Tally Marks (5-Bar Gate Tally: 卌 卌 卌 ...)</th>
+          <th style="width:14%;text-align:center">Total Votes</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${candsList.map((c, i) => `
+          <tr>
+            <td style="text-align:center;font-weight:bold">${i + 1}</td>
+            <td style="font-weight:bold">
+              ${esc(c.candidateName)}
+              <div style="font-size:9.5px;font-weight:normal;color:#444">${esc(c.candidateClass || '')}</div>
+            </td>
+            <td style="padding:12px 6px"></td>
+            <td style="padding:12px 6px;text-align:center;font-weight:bold;font-size:14px"></td>
+          </tr>
+        `).join('')}
+        <tr>
+          <td style="text-align:center;font-weight:bold">–</td>
+          <td style="font-weight:bold">NOTA (None of the Above)</td>
+          <td style="padding:12px 6px"></td>
+          <td style="padding:12px 6px;text-align:center;font-weight:bold;font-size:14px"></td>
+        </tr>
+        <tr>
+          <td style="text-align:center;font-weight:bold">–</td>
+          <td>
+            <strong style="color:#b91c1c">INVALID / REJECTED VOTES:</strong>
+            <div style="font-size:9.5px;color:#555;margin-top:2px;">
+              • Single-choice unmatched invalids: [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]<br>
+              • Overvoted (&gt;2) &amp; defaced: [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]<br>
+              • Blank ballots: [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]
+            </div>
+          </td>
+          <td style="padding:12px 6px"></td>
+          <td style="padding:12px 6px;text-align:center;font-weight:bold;font-size:14px;color:#b91c1c"></td>
+        </tr>
+        <tr style="background:#eee;font-weight:bold;font-size:13px;border-top:2px solid #000">
+          <td colspan="2" style="text-align:right;padding:7px">TOTAL OF ALL VOTES TALLIED [ B ]:</td>
+          <td style="font-size:10px;color:#555;padding:7px">Must exactly equal Target [ A ]</td>
+          <td style="text-align:center;font-size:16px;font-weight:black;padding:7px;background:#e0e7ff"></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Section 3: Statutory Reconciliation & Signatures -->
+    <div style="display:flex;justify-content:space-between;align-items:center;border:1.5px solid #000;padding:6px 10px;background:#f9fafb;font-size:10.5px;">
+      <div><strong>RECONCILIATION RESULT:</strong> Does Total Tallied [ B ] equal Expected Target [ A ]?</div>
+      <div style="display:flex;gap:16px;font-weight:bold;">
+        <span>[ &nbsp;&nbsp; ] BALANCED (B = A)</span>
+        <span>[ &nbsp;&nbsp; ] DISCREPANCY NOTED</span>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;margin-top:25px;text-align:center;">
+      <div>
+        <div style="border-top:1.5px solid #000;width:130px;margin-bottom:2px"></div>
+        <div style="font-size:9.5px">Counting Officer 1</div>
+      </div>
+      <div>
+        <div style="border-top:1.5px solid #000;width:130px;margin-bottom:2px"></div>
+        <div style="font-size:9.5px">Counting Officer 2</div>
+      </div>
+      <div>
+        <div style="border-top:1.5px solid #000;width:160px;margin-bottom:2px"></div>
+        <div style="font-size:10px;font-weight:bold">Counting Supervisor</div>
+        <div style="font-size:9.5px;font-style:italic;color:#333">( ${esc(supervisorName || 'Name: ________________')} )</div>
+      </div>
+      <div>
+        <div style="border-top:1.5px solid #000;width:140px;margin-bottom:2px"></div>
+        <div style="font-size:9.5px">Counting Agents (Initials)</div>
+      </div>
     </div>
   </div>`;
 }
