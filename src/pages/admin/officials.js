@@ -1,7 +1,8 @@
 /**
  * pages/admin/officials.js
  * Comprehensive Election Officials & Team Builder
- * Manages Polling Booth Teams, Counting Table Teams, Faculty Seniority Roster, Exclusions, and Import/Export.
+ * Manages Polling Booth Teams, Counting Table Teams, Faculty Seniority Roster,
+ * Separate Non-Teaching Staff Roster (with dedicated Excel/CSV import), Exclusions, and Duty Orders.
  */
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
@@ -44,7 +45,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   if (initialOfficialsData && Array.isArray(initialOfficialsData.faculty) && initialOfficialsData.faculty.length > 0) {
     faculty = initialOfficialsData.faculty;
   } else {
-    // Read from localStorage cache or seed default 92 faculty
     const cached = localStorage.getItem('gcc_faculty_roster');
     if (cached) {
       try { faculty = JSON.parse(cached); } catch (_) { faculty = [...DEFAULT_FACULTY_ROSTER]; }
@@ -74,10 +74,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   let pollingTeams = Array.isArray(initialOfficialsData?.pollingTeams) ? initialOfficialsData.pollingTeams : [];
   let countingTeams = Array.isArray(initialOfficialsData?.countingTeams) ? initialOfficialsData.countingTeams : [];
 
-  // Active UI tab: 'polling' | 'counting' | 'roster'
-  let activeTab = 'polling';
-  let rosterSearch = '';
-  let rosterFilter = 'all'; // 'all' | 'active' | 'excluded'
+  // Active UI state
+  let activeTab = 'polling'; // 'polling' | 'counting' | 'faculty' | 'nonteaching'
+  let facultySearch = '';
+  let facultyFilter = 'all'; // 'all' | 'active' | 'excluded'
+  let nonTeachingSearch = '';
+  let nonTeachingFilter = 'all'; // 'all' | 'active' | 'excluded'
 
   // Helper: Get faculty by name or PEN
   const getFaculty = (identifier) => {
@@ -105,6 +107,17 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       if (team.countingOfficer2?.name === fName) return { role: 'Counting Officer 2', tableNumber: team.tableNumber };
     }
     return null;
+  };
+
+  // Helper: Check if non-teaching staff is assigned
+  const getNonTeachingAssignment = (ntName) => {
+    if (!ntName) return { polling: null, counting: null };
+    const p = pollingTeams.find(t => t.pollingAssistant?.name === ntName);
+    const c = countingTeams.find(t => t.countingAssistant?.name === ntName);
+    return {
+      polling: p ? { boothNumber: p.boothNumber } : null,
+      counting: c ? { tableNumber: c.tableNumber } : null
+    };
   };
 
   // Save changes to API & local cache
@@ -148,6 +161,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     }
 
     const availableNT = nonTeaching.filter(nt => !nt.isExcluded);
+    if (availableNT.length === 0) {
+      showToast('Notice: No active Non-Teaching Staff available. Please upload the Non-Teaching Staff list in the "Non-Teaching Staff" tab.', 'info');
+    }
 
     // 1. Top numBooths seniors -> Presiding Officers
     const presidingPool = availableFaculty.slice(0, numBooths);
@@ -160,7 +176,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const pOfficer = presidingPool[i] || null;
       const po1 = pollingPool[i * 2] || null;
       const po2 = pollingPool[i * 2 + 1] || null;
-      const assistant = availableNT[i % (availableNT.length || 1)] || null;
+      const assistant = availableNT.length > 0 ? (availableNT[i % availableNT.length] || null) : null;
 
       // Verify hierarchy: Presiding Officer must be strictly seniormost
       const teamFaculty = [pOfficer, po1, po2].filter(Boolean);
@@ -172,7 +188,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         presidingOfficer: teamFaculty[0] || null,
         pollingOfficer1: teamFaculty[1] || null,
         pollingOfficer2: teamFaculty[2] || null,
-        pollingAssistant: assistant ? { name: assistant.name, designation: assistant.designation } : null
+        pollingAssistant: assistant ? { name: assistant.name, designation: assistant.designation, pen: assistant.pen || '' } : null
       });
     }
 
@@ -202,10 +218,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     let countingPool = [];
     if (preferFresh && freshFaculty.length >= numTables * 3) {
-      // Complete fresh pool without double duty
       countingPool = freshFaculty;
     } else {
-      // Use fresh faculty first, fill remaining with polling faculty
       countingPool = [...freshFaculty, ...activeFaculty.filter(f => pollingAssignedNames.has(f.name))];
     }
 
@@ -222,7 +236,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const sup = supervisorPool[i] || null;
       const co1 = officerPool[i * 2] || null;
       const co2 = officerPool[i * 2 + 1] || null;
-      const assistant = availableNT[(i + numTables) % (availableNT.length || 1)] || null;
+      // Pair with non-teaching staff, shifting offset to use fresh staff if available
+      const assistant = availableNT.length > 0 ? (availableNT[(i + numTables) % availableNT.length] || null) : null;
 
       const teamFaculty = [sup, co1, co2].filter(Boolean);
       teamFaculty.sort((a, b) => a.seniority - b.seniority);
@@ -237,7 +252,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         supervisor: teamFaculty[0] || null,
         countingOfficer1: teamFaculty[1] || null,
         countingOfficer2: teamFaculty[2] || null,
-        countingAssistant: assistant ? { name: assistant.name, designation: assistant.designation } : null
+        countingAssistant: assistant ? { name: assistant.name, designation: assistant.designation, pen: assistant.pen || '' } : null
       });
     }
 
@@ -259,14 +274,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const activeFaculty = faculty.filter(f => !f.isExcluded).length;
     const excludedFaculty = totalFaculty - activeFaculty;
 
+    const totalNT = nonTeaching.length;
+    const activeNT = nonTeaching.filter(n => !n.isExcluded).length;
+
     let pollingSlotsFilled = 0;
+    let pollingAsstFilled = 0;
     pollingTeams.forEach(t => {
       if (t.presidingOfficer) pollingSlotsFilled++;
       if (t.pollingOfficer1) pollingSlotsFilled++;
       if (t.pollingOfficer2) pollingSlotsFilled++;
+      if (t.pollingAssistant) pollingAsstFilled++;
     });
 
     let countingSlotsFilled = 0;
+    let countingAsstFilled = 0;
     let doubleDutyCount = 0;
     const assignedPollingNames = new Set(
       pollingTeams.flatMap(t => [t.presidingOfficer?.name, t.pollingOfficer1?.name, t.pollingOfficer2?.name]).filter(Boolean)
@@ -277,6 +298,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         countingSlotsFilled++;
         if (assignedPollingNames.has(f.name)) doubleDutyCount++;
       });
+      if (t.countingAssistant) countingAsstFilled++;
     });
 
     main.innerHTML = `
@@ -288,7 +310,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <span class="text-3xl">👥</span>
               <div>
                 <h3 class="text-xl font-bold text-white tracking-wide">Election Officials & Team Builder</h3>
-                <p class="text-slate-400 text-xs">Assign Presiding Officers, Polling Officers, Counting Supervisors & Assistants based on Official Faculty Seniority.</p>
+                <p class="text-slate-400 text-xs">Allot Presiding Officers, Polling Officers, Counting Supervisors, and Non-Teaching Polling Assistants.</p>
               </div>
             </div>
           </div>
@@ -297,10 +319,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               💾 Save All Changes
             </button>
             <a href="#/admin/booths" class="btn btn-secondary text-xs px-3 py-2 flex items-center gap-1">
-              🏫 Go to Booths
+              🏫 Polling Booths
             </a>
             <a href="#/admin/counting" class="btn btn-secondary text-xs px-3 py-2 flex items-center gap-1">
-              🧮 Go to Counting
+              🧮 Counting Matrix
             </a>
           </div>
         </div>
@@ -316,13 +338,22 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <span class="text-[10px] text-amber-300/80 mt-1">${excludedFaculty} excluded from duty</span>
           </div>
 
+          <div class="glass p-3 rounded-xl border border-emerald-500/30 flex flex-col justify-between bg-emerald-950/20">
+            <span class="text-[11px] uppercase tracking-wider text-emerald-300 font-semibold">Non-Teaching Staff</span>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span class="text-2xl font-bold text-emerald-200 font-mono">${activeNT}</span>
+              <span class="text-xs text-slate-400">/ ${totalNT} Total</span>
+            </div>
+            <span class="text-[10px] text-emerald-400 mt-1">For Polling & Counting Assistants</span>
+          </div>
+
           <div class="glass p-3 rounded-xl border border-indigo-500/30 flex flex-col justify-between bg-indigo-950/20">
             <span class="text-[11px] uppercase tracking-wider text-indigo-300 font-semibold">Polling Teams</span>
             <div class="flex items-baseline gap-2 mt-1">
               <span class="text-2xl font-bold text-indigo-200 font-mono">${pollingSlotsFilled}</span>
               <span class="text-xs text-slate-400">/ ${booths.length * 3} Faculty</span>
             </div>
-            <span class="text-[10px] text-indigo-400 mt-1">${booths.length} Booths configured</span>
+            <span class="text-[10px] text-indigo-400 mt-1">${pollingAsstFilled} / ${booths.length} Assistants</span>
           </div>
 
           <div class="glass p-3 rounded-xl border border-purple-500/30 flex flex-col justify-between bg-purple-950/20">
@@ -331,7 +362,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <span class="text-2xl font-bold text-purple-200 font-mono">${countingSlotsFilled}</span>
               <span class="text-xs text-slate-400">/ ${booths.length * 3} Faculty</span>
             </div>
-            <span class="text-[10px] text-purple-400 mt-1">${booths.length} Counting Tables</span>
+            <span class="text-[10px] text-purple-400 mt-1">${countingAsstFilled} / ${booths.length} Assistants</span>
           </div>
 
           <div class="glass p-3 rounded-xl border ${doubleDutyCount > 0 ? 'border-amber-500/50 bg-amber-950/30' : 'border-emerald-500/30 bg-emerald-950/20'} flex flex-col justify-between">
@@ -342,28 +373,22 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             </div>
             <span class="text-[10px] ${doubleDutyCount > 0 ? 'text-amber-400' : 'text-emerald-400'} mt-1">${doubleDutyCount > 0 ? 'Serving Polling & Counting' : 'Clean Separation (0 Overlap)'}</span>
           </div>
-
-          <div class="glass p-3 rounded-xl border border-white/10 flex flex-col justify-between">
-            <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Reserves Available</span>
-            <div class="flex items-baseline gap-2 mt-1">
-              <span class="text-2xl font-bold text-emerald-400 font-mono">${Math.max(0, activeFaculty - (pollingSlotsFilled + (countingSlotsFilled - doubleDutyCount)))}</span>
-              <span class="text-xs text-slate-400">Standby Faculty</span>
-            </div>
-            <span class="text-[10px] text-slate-400 mt-1">Ready for emergency relief</span>
-          </div>
         </div>
 
         <!-- Navigation Tabs -->
-        <div class="flex border-b border-white/10 no-print gap-2">
-          <button class="nav-tab px-4 py-2.5 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${activeTab === 'polling' ? 'border-indigo-500 text-indigo-300 bg-white/5' : 'border-transparent text-slate-400 hover:text-white'}" data-tab="polling">
+        <div class="flex border-b border-white/10 no-print gap-2 overflow-x-auto">
+          <button class="nav-tab px-4 py-2.5 font-bold text-sm border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'polling' ? 'border-indigo-500 text-indigo-300 bg-white/5' : 'border-transparent text-slate-400 hover:text-white'}" data-tab="polling">
             🏫 Polling Booth Teams (${booths.length})
           </button>
-          <button class="nav-tab px-4 py-2.5 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${activeTab === 'counting' ? 'border-purple-500 text-purple-300 bg-white/5' : 'border-transparent text-slate-400 hover:text-white'}" data-tab="counting">
+          <button class="nav-tab px-4 py-2.5 font-bold text-sm border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'counting' ? 'border-purple-500 text-purple-300 bg-white/5' : 'border-transparent text-slate-400 hover:text-white'}" data-tab="counting">
             🧮 Counting Table Teams (${booths.length})
             ${doubleDutyCount > 0 ? `<span class="bg-amber-500 text-black text-[10px] px-1.5 py-0.2 rounded-full font-bold">${doubleDutyCount}</span>` : ''}
           </button>
-          <button class="nav-tab px-4 py-2.5 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${activeTab === 'roster' ? 'border-emerald-500 text-emerald-300 bg-white/5' : 'border-transparent text-slate-400 hover:text-white'}" data-tab="roster">
-            📋 Faculty Seniority Roster (${faculty.length})
+          <button class="nav-tab px-4 py-2.5 font-bold text-sm border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'faculty' ? 'border-blue-500 text-blue-300 bg-white/5' : 'border-transparent text-slate-400 hover:text-white'}" data-tab="faculty">
+            📋 Teaching Faculty Roster (${faculty.length})
+          </button>
+          <button class="nav-tab px-4 py-2.5 font-bold text-sm border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'nonteaching' ? 'border-emerald-500 text-emerald-300 bg-white/5' : 'border-transparent text-slate-400 hover:text-white'}" data-tab="nonteaching">
+            🤝 Non-Teaching Staff Roster (${nonTeaching.length})
           </button>
         </div>
 
@@ -372,7 +397,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <div class="flex items-center justify-between flex-wrap gap-3 bg-white/5 p-4 rounded-xl border border-white/10 no-print">
             <div>
               <h4 class="font-bold text-white text-base">Polling Booth Officials Allotment</h4>
-              <p class="text-xs text-slate-400">Each polling booth requires 1 Presiding Officer (Seniormost faculty), 2 Polling Officers (Other faculty), and 1 Polling Assistant (Non-teaching staff).</p>
+              <p class="text-xs text-slate-400">Each booth needs 1 Presiding Officer (Seniormost faculty), 2 Polling Officers (Faculty), and 1 Polling Assistant (Non-teaching staff).</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
               <button id="btnAutoAllotPolling" class="btn btn-primary bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow">
@@ -419,7 +444,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
                     ${hierarchyViolation ? `
                       <div class="mt-2.5 p-2 rounded bg-amber-500/20 border border-amber-500/40 text-[11px] text-amber-200 flex items-center justify-between gap-1">
-                        <span>⚠️ Hierarchy Mismatch: Polling Officer is more senior than Presiding Officer!</span>
+                        <span>⚠️ Hierarchy Alert: Polling Officer is more senior than Presiding Officer!</span>
                         <button class="btn btn-secondary text-[10px] py-0.5 px-1.5 btn-fix-hierarchy-polling" data-booth="${b.boothNumber}">Swap</button>
                       </div>
                     ` : ''}
@@ -492,15 +517,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                       </div>
 
                       <!-- Polling Assistant (Non Teaching) -->
-                      <div>
-                        <label class="text-[11px] font-bold text-slate-300 flex items-center gap-1 mb-1">
-                          <span>🤝</span> Polling Assistant <span class="text-[10px] text-slate-400 font-normal">(Non-Teaching)</span>
-                        </label>
-                        <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-indigo-400 focus:outline-none select-polling-assistant" data-booth="${b.boothNumber}">
+                      <div class="pt-1 border-t border-white/10">
+                        <div class="flex items-center justify-between mb-1">
+                          <label class="text-[11px] font-bold text-emerald-300 flex items-center gap-1">
+                            <span>🤝</span> Polling Assistant <span class="text-[10px] text-slate-400 font-normal">(Non-Teaching)</span>
+                          </label>
+                          <a href="javascript:void(0)" class="text-[10px] text-emerald-400 hover:underline btn-goto-nonteaching">Manage List</a>
+                        </div>
+                        <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-emerald-400 focus:outline-none select-polling-assistant" data-booth="${b.boothNumber}">
                           <option value="">-- Select Non-Teaching Staff --</option>
                           ${nonTeaching.map(nt => `
                             <option value="${esc(nt.name)}" ${team.pollingAssistant?.name === nt.name ? 'selected' : ''}>
-                              ${esc(nt.name)} (${esc(nt.designation)}${nt.pen ? ` · PEN:${nt.pen}` : ''})
+                              ${nt.isExcluded ? '⛔ ' : ''}${esc(nt.name)} (${esc(nt.designation)}${nt.pen ? ` · PEN:${nt.pen}` : ''})
                             </option>
                           `).join('')}
                         </select>
@@ -518,7 +546,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <div class="flex items-center justify-between flex-wrap gap-3 bg-white/5 p-4 rounded-xl border border-white/10 no-print">
             <div>
               <h4 class="font-bold text-white text-base">Counting Table Officials Allotment</h4>
-              <p class="text-xs text-slate-400">Each counting table requires 1 Counting Supervisor (Seniormost at table), 2 Counting Officers, and 1 Counting Assistant. Staff serving polling duty are flagged with double duty.</p>
+              <p class="text-xs text-slate-400">Each table needs 1 Counting Supervisor (Seniormost at table), 2 Counting Officers, and 1 Counting Assistant. Staff serving polling duty are flagged with double duty.</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
               <button id="btnAutoAllotCountingFresh" class="btn btn-primary bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow">
@@ -549,11 +577,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               const co2Rank = team.countingOfficer2 ? team.countingOfficer2.seniority : 999;
               const hierarchyViolation = (co1Rank < supRank) || (co2Rank < supRank);
 
-              // Detect Double Duty on Table
               const supDouble = team.supervisor ? getPollingAssignment(team.supervisor.name) : null;
               const co1Double = team.countingOfficer1 ? getPollingAssignment(team.countingOfficer1.name) : null;
               const co2Double = team.countingOfficer2 ? getPollingAssignment(team.countingOfficer2.name) : null;
-              const hasDoubleDuty = !!(supDouble || co1Double || co2Double);
+              const asstDouble = team.countingAssistant ? getNonTeachingAssignment(team.countingAssistant.name).polling : null;
+              const hasDoubleDuty = !!(supDouble || co1Double || co2Double || asstDouble);
 
               return `
                 <div class="glass rounded-xl border ${hasDoubleDuty ? 'border-amber-500/50 bg-amber-950/20' : 'border-white/10'} p-4 flex flex-col justify-between space-y-3 relative group" data-table="${b.boothNumber}">
@@ -574,7 +602,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
                     ${hierarchyViolation ? `
                       <div class="mt-2.5 p-2 rounded bg-amber-500/20 border border-amber-500/40 text-[11px] text-amber-200 flex items-center justify-between gap-1">
-                        <span>⚠️ Hierarchy Mismatch: Counting Officer is more senior than Supervisor!</span>
+                        <span>⚠️ Hierarchy Alert: Counting Officer is more senior than Supervisor!</span>
                         <button class="btn btn-secondary text-[10px] py-0.5 px-1.5 btn-fix-hierarchy-counting" data-table="${b.boothNumber}">Swap</button>
                       </div>
                     ` : ''}
@@ -650,18 +678,25 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                       </div>
 
                       <!-- Counting Assistant (Non Teaching) -->
-                      <div>
-                        <label class="text-[11px] font-bold text-slate-300 flex items-center gap-1 mb-1">
-                          <span>🤝</span> Counting Assistant <span class="text-[10px] text-slate-400 font-normal">(Non-Teaching)</span>
-                        </label>
+                      <div class="pt-1 border-t border-white/10">
+                        <div class="flex items-center justify-between mb-1">
+                          <label class="text-[11px] font-bold text-emerald-300 flex items-center gap-1">
+                            <span>🤝</span> Counting Assistant <span class="text-[10px] text-slate-400 font-normal">(Non-Teaching)</span>
+                          </label>
+                          <a href="javascript:void(0)" class="text-[10px] text-emerald-400 hover:underline btn-goto-nonteaching">Manage List</a>
+                        </div>
                         <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-purple-400 focus:outline-none select-counting-assistant" data-table="${b.boothNumber}">
                           <option value="">-- Select Non-Teaching Staff --</option>
-                          ${nonTeaching.map(nt => `
-                            <option value="${esc(nt.name)}" ${team.countingAssistant?.name === nt.name ? 'selected' : ''}>
-                              ${esc(nt.name)} (${esc(nt.designation)}${nt.pen ? ` · PEN:${nt.pen}` : ''})
-                            </option>
-                          `).join('')}
+                          ${nonTeaching.map(nt => {
+                            const ntAssigned = getNonTeachingAssignment(nt.name);
+                            return `
+                              <option value="${esc(nt.name)}" ${team.countingAssistant?.name === nt.name ? 'selected' : ''}>
+                                ${nt.isExcluded ? '⛔ ' : ''}${esc(nt.name)} (${esc(nt.designation)}${nt.pen ? ` · PEN:${nt.pen}` : ''}) ${ntAssigned.polling ? `[⚠️ Booth ${ntAssigned.polling.boothNumber}]` : ''}
+                              </option>
+                            `;
+                          }).join('')}
                         </select>
+                        ${asstDouble ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Polling Booth ${asstDouble.boothNumber}</p>` : ''}
                       </div>
                     </div>
                   </div>
@@ -671,22 +706,22 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </div>
         </div>
 
-        <!-- Tab 3: Faculty Seniority Roster & Exclusions -->
-        <div id="tabContent-roster" class="${activeTab === 'roster' ? '' : 'hidden'} space-y-4">
+        <!-- Tab 3: Faculty Seniority Roster (Teaching) -->
+        <div id="tabContent-faculty" class="${activeTab === 'faculty' ? '' : 'hidden'} space-y-4">
           <div class="flex items-center justify-between flex-wrap gap-3 bg-white/5 p-4 rounded-xl border border-white/10 no-print">
             <div>
-              <h4 class="font-bold text-white text-base">College Faculty Seniority List (${faculty.length} Faculty)</h4>
-              <p class="text-xs text-slate-400">Manage teacher seniority, PEN numbers, and mark duty exclusions (Returning Officer, Medical Leave, etc.). You can import updated CSV / Excel files anytime.</p>
+              <h4 class="font-bold text-white text-base">Teaching Faculty Seniority List (${faculty.length} Faculty)</h4>
+              <p class="text-xs text-slate-400">Official seniority list for Presiding Officers and Polling Officers. Upload Excel/CSV to replace or update.</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
-              <label class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 cursor-pointer flex items-center gap-1.5 shadow">
-                📥 Import Excel / CSV
-                <input type="file" id="fileRosterImport" accept=".xlsx,.xls,.csv" class="hidden" />
+              <label class="btn btn-primary bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2 cursor-pointer flex items-center gap-1.5 shadow">
+                📥 Import Faculty (Excel / CSV)
+                <input type="file" id="fileFacultyImport" accept=".xlsx,.xls,.csv" class="hidden" />
               </label>
-              <button id="btnExportRoster" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5">
+              <button id="btnExportFaculty" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5">
                 📤 Export Roster
               </button>
-              <button id="btnResetToDefaultRoster" class="btn btn-secondary text-xs text-amber-300 hover:bg-amber-500/20 px-3 py-2">
+              <button id="btnResetFacultyRoster" class="btn btn-secondary text-xs text-amber-300 hover:bg-amber-500/20 px-3 py-2">
                 🔄 Reset to College Seed (92)
               </button>
             </div>
@@ -695,16 +730,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <!-- Search and Filter Bar -->
           <div class="flex items-center justify-between gap-3 flex-wrap no-print">
             <div class="flex-1 min-w-[240px]">
-              <input type="text" id="inputRosterSearch" value="${esc(rosterSearch)}" placeholder="Search by name, PEN, designation..." class="w-full bg-slate-900 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-indigo-400" />
+              <input type="text" id="inputFacultySearch" value="${esc(facultySearch)}" placeholder="Search teaching staff by name, PEN, designation..." class="w-full bg-slate-900 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-indigo-400" />
             </div>
             <div class="flex items-center gap-1.5 bg-white/5 p-1 rounded-xl border border-white/10 text-xs">
-              <button class="filter-roster-btn px-3 py-1 rounded-lg font-semibold transition-colors ${rosterFilter === 'all' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}" data-filter="all">All (${faculty.length})</button>
-              <button class="filter-roster-btn px-3 py-1 rounded-lg font-semibold transition-colors ${rosterFilter === 'active' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}" data-filter="active">Active (${activeFaculty})</button>
-              <button class="filter-roster-btn px-3 py-1 rounded-lg font-semibold transition-colors ${rosterFilter === 'excluded' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}" data-filter="excluded">Excluded (${excludedFaculty})</button>
+              <button class="filter-faculty-btn px-3 py-1 rounded-lg font-semibold transition-colors ${facultyFilter === 'all' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}" data-filter="all">All (${faculty.length})</button>
+              <button class="filter-faculty-btn px-3 py-1 rounded-lg font-semibold transition-colors ${facultyFilter === 'active' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}" data-filter="active">Active (${activeFaculty})</button>
+              <button class="filter-faculty-btn px-3 py-1 rounded-lg font-semibold transition-colors ${facultyFilter === 'excluded' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}" data-filter="excluded">Excluded (${excludedFaculty})</button>
             </div>
           </div>
 
-          <!-- Roster Table -->
+          <!-- Faculty Table -->
           <div class="glass rounded-xl overflow-hidden border border-white/10">
             <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
               <table class="data-table text-xs w-full">
@@ -716,17 +751,17 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     <th>Designation</th>
                     <th>Joining Date</th>
                     <th>Assigned Duty</th>
-                    <th>Duty Status</th>
+                    <th>Status</th>
                     <th class="text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-white/5">
                   ${faculty
                     .filter(f => {
-                      if (rosterFilter === 'active' && f.isExcluded) return false;
-                      if (rosterFilter === 'excluded' && !f.isExcluded) return false;
-                      if (rosterSearch) {
-                        const s = rosterSearch.toLowerCase();
+                      if (facultyFilter === 'active' && f.isExcluded) return false;
+                      if (facultyFilter === 'excluded' && !f.isExcluded) return false;
+                      if (facultySearch) {
+                        const s = facultySearch.toLowerCase();
                         return (f.name || '').toLowerCase().includes(s) ||
                                String(f.pen || '').toLowerCase().includes(s) ||
                                (f.designation || '').toLowerCase().includes(s);
@@ -773,7 +808,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                             `}
                           </td>
                           <td class="text-right">
-                            <button class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-exclude ${f.isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-pen="${f.pen || f.name}">
+                            <button class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-exclude-fac ${f.isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-pen="${f.pen || f.name}">
                               ${f.isExcluded ? '✓ Make Available' : '⛔ Exclude'}
                             </button>
                           </td>
@@ -786,7 +821,148 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </div>
         </div>
 
-        <!-- Printable Appointment Orders Container (Hidden until print) -->
+        <!-- Tab 4: Non-Teaching Staff Roster (Separate List) -->
+        <div id="tabContent-nonteaching" class="${activeTab === 'nonteaching' ? '' : 'hidden'} space-y-4">
+          <div class="flex items-center justify-between flex-wrap gap-3 bg-white/5 p-4 rounded-xl border border-white/10 no-print">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xl">🤝</span>
+                <h4 class="font-bold text-white text-base">Non-Teaching Staff Roster (${nonTeaching.length} Staff)</h4>
+              </div>
+              <p class="text-xs text-slate-400 mt-0.5">Separate official list for Polling Assistants and Counting Assistants. Upload your independent Non-Teaching Staff list as Excel or CSV.</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <label class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 cursor-pointer flex items-center gap-1.5 shadow">
+                📥 Upload Non-Teaching List (Excel / CSV)
+                <input type="file" id="fileNonTeachingImport" accept=".xlsx,.xls,.csv" class="hidden" />
+              </label>
+              <button id="btnAddStaffModalBtn" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5">
+                ➕ Add Staff Member
+              </button>
+              <button id="btnExportNonTeaching" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5">
+                📤 Export CSV
+              </button>
+              <button id="btnClearNonTeachingList" class="btn btn-secondary text-xs text-red-300 hover:bg-red-500/20 px-3 py-2">
+                🗑️ Clear List
+              </button>
+            </div>
+          </div>
+
+          <!-- Add Staff Quick Form (Hidden by default) -->
+          <div id="addStaffPanel" class="hidden bg-slate-900 border border-emerald-500/30 p-4 rounded-xl space-y-3 no-print">
+            <h5 class="font-bold text-emerald-300 text-sm flex items-center gap-1.5">
+              <span>➕</span> Add New Non-Teaching Staff Member
+            </h5>
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <input type="text" id="newStaffName" placeholder="Full Name (e.g. Sri. K. Ramesh)" class="bg-black/50 border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white" />
+              <input type="text" id="newStaffDesig" placeholder="Designation (e.g. Senior Clerk, Office Attendant)" class="bg-black/50 border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white" />
+              <input type="text" id="newStaffPen" placeholder="PEN (Optional)" class="bg-black/50 border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white" />
+              <div class="flex gap-2">
+                <button id="btnConfirmAddStaff" class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-xs flex-1 font-bold">Save Staff</button>
+                <button id="btnCancelAddStaff" class="btn btn-secondary text-xs">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search and Filter Bar -->
+          <div class="flex items-center justify-between gap-3 flex-wrap no-print">
+            <div class="flex-1 min-w-[240px]">
+              <input type="text" id="inputNonTeachingSearch" value="${esc(nonTeachingSearch)}" placeholder="Search non-teaching staff by name, PEN, designation..." class="w-full bg-slate-900 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-400" />
+            </div>
+            <div class="flex items-center gap-1.5 bg-white/5 p-1 rounded-xl border border-white/10 text-xs">
+              <button class="filter-nt-btn px-3 py-1 rounded-lg font-semibold transition-colors ${nonTeachingFilter === 'all' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'}" data-filter="all">All (${nonTeaching.length})</button>
+              <button class="filter-nt-btn px-3 py-1 rounded-lg font-semibold transition-colors ${nonTeachingFilter === 'active' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'}" data-filter="active">Active (${activeNT})</button>
+              <button class="filter-nt-btn px-3 py-1 rounded-lg font-semibold transition-colors ${nonTeachingFilter === 'excluded' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'}" data-filter="excluded">Excluded (${totalNT - activeNT})</button>
+            </div>
+          </div>
+
+          <!-- Non-Teaching Staff Table -->
+          <div class="glass rounded-xl overflow-hidden border border-white/10">
+            <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
+              <table class="data-table text-xs w-full">
+                <thead class="sticky top-0 bg-slate-900/95 backdrop-blur z-10 border-b border-white/10">
+                  <tr>
+                    <th class="w-12 text-center">#</th>
+                    <th>Staff Name</th>
+                    <th>Designation</th>
+                    <th>PEN</th>
+                    <th>Assigned Polling Booth</th>
+                    <th>Assigned Counting Table</th>
+                    <th>Status</th>
+                    <th class="text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                  ${nonTeaching.length === 0 ? `
+                    <tr>
+                      <td colspan="8" class="text-center py-8 text-slate-400">
+                        No Non-Teaching staff added yet. Click <strong>Upload Non-Teaching List (Excel / CSV)</strong> above to upload your staff roster.
+                      </td>
+                    </tr>
+                  ` : nonTeaching
+                    .filter(nt => {
+                      if (nonTeachingFilter === 'active' && nt.isExcluded) return false;
+                      if (nonTeachingFilter === 'excluded' && !nt.isExcluded) return false;
+                      if (nonTeachingSearch) {
+                        const s = nonTeachingSearch.toLowerCase();
+                        return (nt.name || '').toLowerCase().includes(s) ||
+                               String(nt.pen || '').toLowerCase().includes(s) ||
+                               (nt.designation || '').toLowerCase().includes(s);
+                      }
+                      return true;
+                    })
+                    .map((nt, idx) => {
+                      const asstDuty = getNonTeachingAssignment(nt.name);
+
+                      return `
+                        <tr class="${nt.isExcluded ? 'bg-red-950/20 opacity-70' : 'hover:bg-white/5'} transition-colors">
+                          <td class="text-center font-mono text-slate-400">
+                            ${idx + 1}
+                          </td>
+                          <td class="font-bold text-white whitespace-nowrap">
+                            ${esc(nt.name)}
+                          </td>
+                          <td class="text-slate-300">
+                            ${esc(nt.designation || 'Staff')}
+                          </td>
+                          <td class="font-mono text-slate-300">
+                            ${nt.pen || '–'}
+                          </td>
+                          <td>
+                            ${asstDuty.polling ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">Booth ${asstDuty.polling.boothNumber}</span>` : '<span class="text-slate-500">–</span>'}
+                          </td>
+                          <td>
+                            ${asstDuty.counting ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-semibold">Table ${asstDuty.counting.tableNumber}</span>` : '<span class="text-slate-500">–</span>'}
+                          </td>
+                          <td>
+                            ${nt.isExcluded ? `
+                              <span class="badge bg-red-500/20 text-red-300 border border-red-500/40 text-[10px] font-bold" title="${esc(nt.exclusionReason || 'Excluded')}">
+                                ⛔ Excluded${nt.exclusionReason ? `: ${esc(nt.exclusionReason)}` : ''}
+                              </span>
+                            ` : `
+                              <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold">
+                                ✓ Available
+                              </span>
+                            `}
+                          </td>
+                          <td class="text-right whitespace-nowrap space-x-1">
+                            <button class="btn btn-secondary text-[11px] py-1 px-2 btn-toggle-exclude-nt ${nt.isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-name="${esc(nt.name)}">
+                              ${nt.isExcluded ? '✓ Enable' : '⛔ Exclude'}
+                            </button>
+                            <button class="btn btn-secondary text-[11px] py-1 px-1.5 text-red-400 hover:bg-red-500/20 btn-delete-nt" data-name="${esc(nt.name)}" title="Remove from roster">
+                              🗑️
+                            </button>
+                          </td>
+                        </tr>
+                      `;
+                    }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Printable Appointment Orders Container -->
         <div id="printOrdersContainer" class="hidden print:block"></div>
       </div>
     `;
@@ -805,6 +981,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       });
     });
 
+    // Manage List jump link from cards to Non-Teaching tab
+    main.querySelectorAll('.btn-goto-nonteaching').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeTab = 'nonteaching';
+        renderUI();
+      });
+    });
+
     // Save All
     main.querySelector('#btnSaveAll')?.addEventListener('click', async () => {
       const btn = main.querySelector('#btnSaveAll');
@@ -815,7 +999,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // Polling Auto-Allot
     main.querySelector('#btnAutoAllotPolling')?.addEventListener('click', () => {
-      if (confirm('⚡ Auto-Allot Polling Teams?\n\nThis will assign the seniormost available faculty as Presiding Officers, followed by Polling Officers 1 & 2 for all booths based on the official Seniority List.\n\nProceed?')) {
+      if (confirm('⚡ Auto-Allot Polling Teams?\n\nThis will assign the seniormost available faculty as Presiding Officers, followed by Polling Officers 1 & 2 for all booths based on the official Seniority List, and assign Non-Teaching Polling Assistants.\n\nProceed?')) {
         autoAllotPolling();
       }
     });
@@ -876,7 +1060,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           pollingTeams.push(team);
         }
         const nt = nonTeaching.find(n => n.name === selectedName);
-        team.pollingAssistant = nt ? { name: nt.name, designation: nt.designation } : null;
+        team.pollingAssistant = nt ? { name: nt.name, designation: nt.designation, pen: nt.pen || '' } : null;
         saveAll(true);
       });
     });
@@ -932,7 +1116,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           countingTeams.push(team);
         }
         const nt = nonTeaching.find(n => n.name === selectedName);
-        team.countingAssistant = nt ? { name: nt.name, designation: nt.designation } : null;
+        team.countingAssistant = nt ? { name: nt.name, designation: nt.designation, pen: nt.pen || '' } : null;
         saveAll(true);
       });
     });
@@ -957,21 +1141,34 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       });
     });
 
-    // Roster Search and Filter
-    main.querySelector('#inputRosterSearch')?.addEventListener('input', (e) => {
-      rosterSearch = e.target.value;
+    // Faculty Search and Filter
+    main.querySelector('#inputFacultySearch')?.addEventListener('input', (e) => {
+      facultySearch = e.target.value;
       renderUI();
     });
 
-    main.querySelectorAll('.filter-roster-btn').forEach(btn => {
+    main.querySelectorAll('.filter-faculty-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        rosterFilter = e.currentTarget.dataset.filter;
+        facultyFilter = e.currentTarget.dataset.filter;
         renderUI();
       });
     });
 
-    // Toggle Exclude
-    main.querySelectorAll('.btn-toggle-exclude').forEach(btn => {
+    // Non-Teaching Search and Filter
+    main.querySelector('#inputNonTeachingSearch')?.addEventListener('input', (e) => {
+      nonTeachingSearch = e.target.value;
+      renderUI();
+    });
+
+    main.querySelectorAll('.filter-nt-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        nonTeachingFilter = e.currentTarget.dataset.filter;
+        renderUI();
+      });
+    });
+
+    // Toggle Exclude Faculty
+    main.querySelectorAll('.btn-toggle-exclude-fac').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const pen = e.currentTarget.dataset.pen;
         const target = faculty.find(f => String(f.pen) === pen || f.name === pen);
@@ -994,8 +1191,92 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       });
     });
 
-    // Reset to Default College Roster
-    main.querySelector('#btnResetToDefaultRoster')?.addEventListener('click', () => {
+    // Toggle Exclude Non-Teaching
+    main.querySelectorAll('.btn-toggle-exclude-nt').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const name = e.currentTarget.dataset.name;
+        const target = nonTeaching.find(n => n.name === name);
+        if (!target) return;
+
+        if (target.isExcluded) {
+          target.isExcluded = false;
+          target.exclusionReason = '';
+          showToast(`${target.name} is now Available for duty.`, 'success');
+        } else {
+          const reason = prompt(`Enter reason for excluding ${target.name} from duty:\n(e.g., Essential Office Duty, Leave):`, 'Office Duty');
+          if (reason !== null) {
+            target.isExcluded = true;
+            target.exclusionReason = reason.trim() || 'Office Duty';
+            showToast(`${target.name} excluded (${target.exclusionReason}).`, 'info');
+          }
+        }
+        saveAll(false);
+        renderUI();
+      });
+    });
+
+    // Delete individual Non-Teaching staff
+    main.querySelectorAll('.btn-delete-nt').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const name = e.currentTarget.dataset.name;
+        if (confirm(`Remove "${name}" from the Non-Teaching Staff roster?`)) {
+          nonTeaching = nonTeaching.filter(n => n.name !== name);
+          saveAll(false);
+          showToast(`Removed "${name}" from Non-Teaching roster.`, 'info');
+          renderUI();
+        }
+      });
+    });
+
+    // Add Staff Modal Toggle
+    main.querySelector('#btnAddStaffModalBtn')?.addEventListener('click', () => {
+      const panel = main.querySelector('#addStaffPanel');
+      if (panel) {
+        panel.classList.toggle('hidden');
+        main.querySelector('#newStaffName')?.focus();
+      }
+    });
+
+    main.querySelector('#btnCancelAddStaff')?.addEventListener('click', () => {
+      main.querySelector('#addStaffPanel')?.classList.add('hidden');
+    });
+
+    // Confirm Add Staff
+    main.querySelector('#btnConfirmAddStaff')?.addEventListener('click', () => {
+      const nameInput = main.querySelector('#newStaffName');
+      const desigInput = main.querySelector('#newStaffDesig');
+      const penInput = main.querySelector('#newStaffPen');
+
+      const name = (nameInput?.value || '').trim();
+      const desig = (desigInput?.value || '').trim() || 'Staff';
+      const pen = (penInput?.value || '').trim();
+
+      if (!name) {
+        showToast('Please enter the staff member name.', 'error');
+        return;
+      }
+
+      nonTeaching.push({
+        id: 'nt_' + Date.now(),
+        name,
+        designation: desig,
+        pen,
+        isExcluded: false,
+        exclusionReason: ''
+      });
+
+      nameInput.value = '';
+      desigInput.value = '';
+      if (penInput) penInput.value = '';
+      main.querySelector('#addStaffPanel')?.classList.add('hidden');
+
+      saveAll(false);
+      showToast(`Added "${name}" to Non-Teaching roster!`, 'success');
+      renderUI();
+    });
+
+    // Reset Faculty Roster
+    main.querySelector('#btnResetFacultyRoster')?.addEventListener('click', () => {
       if (confirm('🔄 Reset Faculty Seniority List to original college seed (92 Teachers)?\n\nThis will restore the original names, PENs, and designations from SENIORITY LIST OF TEACHERS.xlsx.')) {
         faculty = [...DEFAULT_FACULTY_ROSTER];
         saveAll(false);
@@ -1004,8 +1285,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       }
     });
 
-    // Export Roster (CSV)
-    main.querySelector('#btnExportRoster')?.addEventListener('click', () => {
+    // Clear Non-Teaching Roster
+    main.querySelector('#btnClearNonTeachingList')?.addEventListener('click', () => {
+      if (confirm('🗑️ Clear entire Non-Teaching Staff roster?\n\nYou will be able to upload a fresh file using "Upload Non-Teaching List".')) {
+        nonTeaching = [];
+        saveAll(false);
+        showToast('Cleared Non-Teaching Staff roster.', 'info');
+        renderUI();
+      }
+    });
+
+    // Export Faculty (CSV)
+    main.querySelector('#btnExportFaculty')?.addEventListener('click', () => {
       const rows = [
         ['Seniority', 'Name', 'PEN', 'Designation', 'Joining Date', 'Status', 'Exclusion Reason', 'Polling Duty', 'Counting Duty']
       ];
@@ -1035,8 +1326,37 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       document.body.removeChild(link);
     });
 
-    // Import Excel / CSV
-    main.querySelector('#fileRosterImport')?.addEventListener('change', (e) => {
+    // Export Non-Teaching (CSV)
+    main.querySelector('#btnExportNonTeaching')?.addEventListener('click', () => {
+      const rows = [
+        ['Sl No', 'Staff Name', 'Designation', 'PEN', 'Status', 'Exclusion Reason', 'Polling Booth', 'Counting Table']
+      ];
+      nonTeaching.forEach((nt, idx) => {
+        const asstDuty = getNonTeachingAssignment(nt.name);
+        rows.push([
+          idx + 1,
+          nt.name,
+          nt.designation || 'Staff',
+          nt.pen || '',
+          nt.isExcluded ? 'Excluded' : 'Available',
+          nt.exclusionReason || '',
+          asstDuty.polling ? `Booth ${asstDuty.polling.boothNumber}` : '',
+          asstDuty.counting ? `Table ${asstDuty.counting.tableNumber}` : ''
+        ]);
+      });
+
+      const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `Non_Teaching_Staff_Roster_${electionYear}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+
+    // Import Faculty (Excel / CSV)
+    main.querySelector('#fileFacultyImport')?.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
@@ -1053,7 +1373,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             return;
           }
 
-          // Search for row with headers or parse rows
           let headerIdx = -1;
           for (let r = 0; r < Math.min(10, jsonRows.length); r++) {
             const rowStr = (jsonRows[r] || []).map(c => String(c).toLowerCase()).join(' ');
@@ -1094,7 +1413,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             return;
           }
 
-          if (confirm(`📥 Successfully parsed ${parsedFaculty.length} faculty records from "${file.name}".\n\nReplace current faculty roster with this list?`)) {
+          if (confirm(`📥 Successfully parsed ${parsedFaculty.length} teaching faculty records from "${file.name}".\n\nReplace current teaching faculty roster with this list?`)) {
             faculty = parsedFaculty;
             saveAll(false);
             showToast(`Imported ${parsedFaculty.length} faculty records!`, 'success');
@@ -1102,6 +1421,88 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           }
         } catch (err) {
           showToast(`Import error: ${err.message}`, 'error');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    // Import Non-Teaching (Excel / CSV) - Dedicated Separate Uploader
+    main.querySelector('#fileNonTeachingImport')?.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+          if (!jsonRows || jsonRows.length < 1) {
+            showToast('Invalid or empty spreadsheet format.', 'error');
+            return;
+          }
+
+          // Scan for header row
+          let headerIdx = -1;
+          let nameCol = 1, desigCol = 2, penCol = 3;
+
+          for (let r = 0; r < Math.min(10, jsonRows.length); r++) {
+            const row = (jsonRows[r] || []).map(c => String(c).toLowerCase());
+            const hasName = row.some((c, i) => {
+              if (c.includes('name') || c.includes('staff') || c.includes('employee')) {
+                nameCol = i;
+                return true;
+              }
+              return false;
+            });
+            row.forEach((c, i) => {
+              if (c.includes('desig') || c.includes('post') || c.includes('cadre') || c.includes('role')) desigCol = i;
+              if (c.includes('pen') || c.includes('id') || c.includes('code')) penCol = i;
+            });
+            if (hasName) {
+              headerIdx = r;
+              break;
+            }
+          }
+
+          const parsedNT = [];
+          const startR = headerIdx >= 0 ? headerIdx + 1 : 0;
+
+          for (let r = startR; r < jsonRows.length; r++) {
+            const row = jsonRows[r];
+            if (!row || row.length === 0) continue;
+
+            const name = row[nameCol] !== undefined ? String(row[nameCol]).trim() : '';
+            if (!name || name.toLowerCase().includes('staff name') || name.toLowerCase().includes('total') || name.toLowerCase().includes('college')) continue;
+
+            const desig = row[desigCol] !== undefined ? String(row[desigCol]).trim() : 'Staff';
+            const pen = row[penCol] !== undefined ? String(row[penCol]).trim() : '';
+
+            parsedNT.push({
+              id: 'nt_' + (parsedNT.length + 1) + '_' + Date.now(),
+              name: name,
+              designation: desig,
+              pen: pen,
+              isExcluded: false,
+              exclusionReason: ''
+            });
+          }
+
+          if (parsedNT.length === 0) {
+            showToast('No non-teaching staff rows could be parsed from the file.', 'error');
+            return;
+          }
+
+          if (confirm(`📥 Successfully parsed ${parsedNT.length} Non-Teaching Staff members from "${file.name}".\n\nReplace current Non-Teaching Staff roster with this list?`)) {
+            nonTeaching = parsedNT;
+            saveAll(false);
+            showToast(`Imported ${parsedNT.length} Non-Teaching staff members!`, 'success');
+            renderUI();
+          }
+        } catch (err) {
+          showToast(`Non-teaching import error: ${err.message}`, 'error');
         }
       };
       reader.readAsArrayBuffer(file);
@@ -1150,7 +1551,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
         <p class="text-[11px] leading-relaxed mb-4 text-justify">
           In exercise of powers vested with the Returning Officer for the conduct of College Union Election ${esc(electionYear)}, 
-          the following members of teaching and non-teaching staff are hereby appointed for <strong>${isPolling ? 'Polling Duty' : 'Counting Duty'}</strong> 
+          the following members of teaching faculty and non-teaching staff are hereby appointed for <strong>${isPolling ? 'Polling Duty' : 'Counting Duty'}</strong> 
           at the venues specified below. Officials are requested to report for duty strictly on schedule 
           (${isPolling ? '8:30 AM on Polling Day' : '1:30 PM on Counting Day'}) without fail.
         </p>
@@ -1164,7 +1565,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <th class="border border-black p-1.5 w-28 text-left">${isPolling ? 'Presiding Officer' : 'Counting Supervisor'}</th>
               <th class="border border-black p-1.5 text-left">${isPolling ? 'Polling Officer 1' : 'Counting Officer 1'}</th>
               <th class="border border-black p-1.5 text-left">${isPolling ? 'Polling Officer 2' : 'Counting Officer 2'}</th>
-              <th class="border border-black p-1.5 text-left">${isPolling ? 'Polling Assistant' : 'Counting Assistant'}</th>
+              <th class="border border-black p-1.5 text-left">${isPolling ? 'Polling Assistant (Non-Teaching)' : 'Counting Assistant (Non-Teaching)'}</th>
               <th class="border border-black p-1.5 w-20 text-center">Signature</th>
             </tr>
           </thead>
@@ -1197,7 +1598,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   </td>
                   <td class="border border-black p-1.5">
                     ${esc(asst?.name || '–')}<br>
-                    <span class="text-[10px] text-gray-700">${esc(asst?.designation || '')}</span>
+                    <span class="text-[10px] text-gray-700">${esc(asst?.designation || '')}${asst?.pen ? ` · PEN:${asst.pen}` : ''}</span>
                   </td>
                   <td class="border border-black p-1.5"></td>
                 </tr>
