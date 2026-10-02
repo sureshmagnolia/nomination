@@ -187,7 +187,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-2 shrink-0">
-            <button id="btnPrintValid" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${validList.length === 0 ? 'disabled' : ''}>
+            <button id="btnPrintValid" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${validList.length === 0 ? 'disabled title="Disabled: No nominations have been verified as Valid yet. Scrutinize & mark nominations as Valid in Review Nominations."' : 'title="Print official List of Valid Nominations"'}>
               <span>🖨️</span> Print Valid List
             </button>
             <button data-nav="/admin/verify" class="btn btn-secondary btn-sm">✅ Review Nominations</button>
@@ -223,7 +223,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-2 shrink-0">
-            <button id="btnPrintFinal" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${finalList.length === 0 ? 'disabled' : ''}>
+            <button id="btnPrintFinal" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${finalList.length === 0 ? 'disabled title="Disabled: No approved contesting candidates available yet. Verify nominations and complete withdrawals first."' : 'title="Print official Final List of Eligible Contesting Candidates"'}>
               <span>🖨️</span> Print Final List
             </button>
             <button data-nav="/admin/withdrawals" class="btn btn-secondary btn-sm">↩️ Withdrawals</button>
