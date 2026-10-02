@@ -7,6 +7,210 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
+/* ==========================================================================
+   THEME DEFINITIONS & COLOR TOKENS
+   ========================================================================== */
+
+:root,
+html[data-theme="dark"] {
+  --bg-app: #020617;
+  --text-main: #f1f5f9;
+  --text-heading: #ffffff;
+  --text-muted: #94a3b8;
+  --glass-bg: rgba(15, 23, 42, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  --sidebar-bg: #090e1a;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-active-bg: rgba(99, 102, 241, 0.15);
+  --sidebar-active-border: #6366f1;
+  --header-bg: rgba(15, 23, 42, 0.75);
+  --field-bg: rgba(0, 0, 0, 0.4);
+  --field-border: rgba(255, 255, 255, 0.15);
+  --field-text: #ffffff;
+  --field-opt-bg: #0f172a;
+  --field-opt-text: #ffffff;
+  --btn-primary-bg: #4f46e5;
+  --btn-primary-hover: #4338ca;
+  --btn-secondary-bg: rgba(255, 255, 255, 0.05);
+  --btn-secondary-hover: rgba(255, 255, 255, 0.1);
+  --btn-secondary-border: rgba(255, 255, 255, 0.1);
+  --btn-secondary-text: #ffffff;
+  --dropdown-bg: #1e293b;
+  --dropdown-border: rgba(255, 255, 255, 0.2);
+  --dropdown-text: #f1f5f9;
+  --dropdown-hover-bg: #334155;
+  --dropdown-hover-text: #ffffff;
+  --table-th-bg: rgba(255, 255, 255, 0.02);
+  --table-th-text: #64748b;
+  --table-th-border: rgba(255, 255, 255, 0.08);
+  --table-td-text: #cbd5e1;
+  --table-td-border: rgba(255, 255, 255, 0.04);
+  --table-hover-bg: rgba(255, 255, 255, 0.02);
+  --subtle-bg: rgba(0, 0, 0, 0.2);
+  --subtle-card-bg: rgba(255, 255, 255, 0.03);
+}
+
+/* 🏛️ 1. University Navy & Clean White (Formal Institutional Light) */
+html[data-theme="light-navy"] {
+  --bg-app: #f8fafc;
+  --text-main: #1e293b;
+  --text-heading: #0f172a;
+  --text-muted: #64748b;
+  --glass-bg: #ffffff;
+  --glass-border: #e2e8f0;
+  --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --sidebar-bg: #0f2744; /* Prestigious Oxford Navy */
+  --sidebar-border: #1e3a8a;
+  --sidebar-active-bg: rgba(255, 255, 255, 0.18);
+  --sidebar-active-border: #60a5fa;
+  --header-bg: #ffffff;
+  --field-bg: #ffffff;
+  --field-border: #cbd5e1;
+  --field-text: #0f172a;
+  --field-opt-bg: #ffffff;
+  --field-opt-text: #0f172a;
+  --btn-primary-bg: #1e40af; /* Royal University Navy */
+  --btn-primary-hover: #1d4ed8;
+  --btn-secondary-bg: #f1f5f9;
+  --btn-secondary-hover: #e2e8f0;
+  --btn-secondary-border: #cbd5e1;
+  --btn-secondary-text: #1e293b;
+  --dropdown-bg: #ffffff;
+  --dropdown-border: #cbd5e1;
+  --dropdown-text: #0f172a;
+  --dropdown-hover-bg: #f1f5f9;
+  --dropdown-hover-text: #0f172a;
+  --table-th-bg: #f1f5f9;
+  --table-th-text: #334155;
+  --table-th-border: #cbd5e1;
+  --table-td-text: #1e293b;
+  --table-td-border: #e2e8f0;
+  --table-hover-bg: #f8fafc;
+  --subtle-bg: #f1f5f9;
+  --subtle-card-bg: #f8fafc;
+}
+
+/* 🌲 2. Academic Emerald Green & Gold (Collegiate Institutional Light) */
+html[data-theme="light-emerald"] {
+  --bg-app: #f6f9f6;
+  --text-main: #1e293b;
+  --text-heading: #064e3b;
+  --text-muted: #64748b;
+  --glass-bg: #ffffff;
+  --glass-border: #d1fae5;
+  --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --sidebar-bg: #064e3b; /* Deep British Forest/Emerald Green */
+  --sidebar-border: #047857;
+  --sidebar-active-bg: rgba(255, 255, 255, 0.18);
+  --sidebar-active-border: #34d399;
+  --header-bg: #ffffff;
+  --field-bg: #ffffff;
+  --field-border: #a7f3d0;
+  --field-text: #064e3b;
+  --field-opt-bg: #ffffff;
+  --field-opt-text: #064e3b;
+  --btn-primary-bg: #059669; /* Emerald Green */
+  --btn-primary-hover: #047857;
+  --btn-secondary-bg: #ecfdf5;
+  --btn-secondary-hover: #d1fae5;
+  --btn-secondary-border: #a7f3d0;
+  --btn-secondary-text: #065f46;
+  --dropdown-bg: #ffffff;
+  --dropdown-border: #a7f3d0;
+  --dropdown-text: #064e3b;
+  --dropdown-hover-bg: #ecfdf5;
+  --dropdown-hover-text: #064e3b;
+  --table-th-bg: #ecfdf5;
+  --table-th-text: #065f46;
+  --table-th-border: #a7f3d0;
+  --table-td-text: #1e293b;
+  --table-td-border: #e2e8f0;
+  --table-hover-bg: #f0fdf4;
+  --subtle-bg: #ecfdf5;
+  --subtle-card-bg: #f6fbf8;
+}
+
+/* 🏢 3. Warm Slate Executive (Executive Daylight Neutral) */
+html[data-theme="light-slate"] {
+  --bg-app: #f8fafc;
+  --text-main: #334155;
+  --text-heading: #0f172a;
+  --text-muted: #64748b;
+  --glass-bg: #ffffff;
+  --glass-border: #e2e8f0;
+  --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --sidebar-bg: #1e293b; /* Executive Slate */
+  --sidebar-border: #334155;
+  --sidebar-active-bg: rgba(255, 255, 255, 0.18);
+  --sidebar-active-border: #38bdf8;
+  --header-bg: #ffffff;
+  --field-bg: #ffffff;
+  --field-border: #cbd5e1;
+  --field-text: #1e293b;
+  --field-opt-bg: #ffffff;
+  --field-opt-text: #1e293b;
+  --btn-primary-bg: #334155; /* Slate */
+  --btn-primary-hover: #1e293b;
+  --btn-secondary-bg: #f1f5f9;
+  --btn-secondary-hover: #e2e8f0;
+  --btn-secondary-border: #cbd5e1;
+  --btn-secondary-text: #334155;
+  --dropdown-bg: #ffffff;
+  --dropdown-border: #cbd5e1;
+  --dropdown-text: #1e293b;
+  --dropdown-hover-bg: #f1f5f9;
+  --dropdown-hover-text: #0f172a;
+  --table-th-bg: #f1f5f9;
+  --table-th-text: #475569;
+  --table-th-border: #cbd5e1;
+  --table-td-text: #1e293b;
+  --table-td-border: #e2e8f0;
+  --table-hover-bg: #f8fafc;
+  --subtle-bg: #f1f5f9;
+  --subtle-card-bg: #f8fafc;
+}
+
+/* 🏛️ 4. Government Portal Classic (Official Administrative Styling) */
+html[data-theme="gov-portal"] {
+  --bg-app: #f0f4f8; /* Administrative classic tint */
+  --text-main: #0f172a;
+  --text-heading: #002b49;
+  --text-muted: #475569;
+  --glass-bg: #ffffff;
+  --glass-border: #cbd5e1;
+  --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --sidebar-bg: #002244; /* Indian Official Administrative Navy */
+  --sidebar-border: #003366;
+  --sidebar-active-bg: rgba(255, 255, 255, 0.2);
+  --sidebar-active-border: #fbbf24; /* Saffron gold indicator */
+  --header-bg: #ffffff;
+  --field-bg: #ffffff;
+  --field-border: #94a3b8;
+  --field-text: #0f172a;
+  --field-opt-bg: #ffffff;
+  --field-opt-text: #0f172a;
+  --btn-primary-bg: #003366; /* Government Navy */
+  --btn-primary-hover: #002244;
+  --btn-secondary-bg: #f8fafc;
+  --btn-secondary-hover: #e2e8f0;
+  --btn-secondary-border: #94a3b8;
+  --btn-secondary-text: #003366;
+  --dropdown-bg: #ffffff;
+  --dropdown-border: #94a3b8;
+  --dropdown-text: #003366;
+  --dropdown-hover-bg: #f0f4f8;
+  --dropdown-hover-text: #002244;
+  --table-th-bg: #e2e8f0;
+  --table-th-text: #002244;
+  --table-th-border: #cbd5e1;
+  --table-td-text: #0f172a;
+  --table-td-border: #cbd5e1;
+  --table-hover-bg: #e6f0fa;
+  --subtle-bg: #e2e8f0;
+  --subtle-card-bg: #f8fafc;
+}
+
 /* Global resets */
 * {
   border-color: rgba(255, 255, 255, 0.1);
@@ -18,16 +222,17 @@ html, body {
 }
 
 body {
-  background-color: #020617 !important;
-  color: #f1f5f9 !important;
+  background-color: var(--bg-app) !important;
+  color: var(--text-main) !important;
   min-height: 100vh;
   font-family: var(--font-sans);
   margin: 0;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  color: #ffffff !important;
+  color: var(--text-heading) !important;
   font-weight: 700 !important;
   letter-spacing: -0.025em;
 }
@@ -37,7 +242,7 @@ label, p, span, div {
 }
 
 label {
-  color: #94a3b8 !important;
+  color: var(--text-muted) !important;
   font-weight: 600;
   font-size: 0.75rem;
   text-transform: uppercase;
@@ -47,10 +252,11 @@ label {
 
 /* Custom components */
 .glass {
-  background: rgba(15, 23, 42, 0.6) !important;
+  background: var(--glass-bg) !important;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--glass-shadow) !important;
 }
 
 .gradient-text {
@@ -74,20 +280,31 @@ label {
   border: none;
 }
 .btn:active { transform: scale(0.98); }
-.btn-primary { background: #4f46e5 !important; color: white !important; box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.39); }
-.btn-primary:hover { background: #4338ca !important; }
-.btn-secondary { background: rgba(255,255,255,0.05) !important; color: white !important; border: 1px solid rgba(255,255,255,0.1) !important; }
-.btn-secondary:hover { background: rgba(255,255,255,0.1) !important; }
+.btn-primary {
+  background: var(--btn-primary-bg) !important;
+  color: white !important;
+  box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.25);
+}
+.btn-primary:hover {
+  background: var(--btn-primary-hover) !important;
+}
+.btn-secondary {
+  background: var(--btn-secondary-bg) !important;
+  color: var(--btn-secondary-text) !important;
+  border: 1px solid var(--btn-secondary-border) !important;
+}
+.btn-secondary:hover {
+  background: var(--btn-secondary-hover) !important;
+}
 
 .field {
   display: block;
   width: 100%;
   padding: 0.75rem 1rem;
-  background: rgba(0, 0, 0, 0.4) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  background: var(--field-bg) !important;
+  border: 1px solid var(--field-border) !important;
   border-radius: 0.6rem;
-  color: white !important;
-  color-scheme: dark;
+  color: var(--field-text) !important;
   outline: none;
   transition: all 0.2s;
 }
@@ -96,11 +313,16 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   filter: invert(0.8);
 }
-.field:focus { border-color: #6366f1 !important; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
-.field.pl-9, .field.pl-10, .field.pl-11, .field.pl-12 { padding-left: 2.75rem !important; }
+.field:focus {
+  border-color: var(--btn-primary-bg) !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+.field.pl-9, .field.pl-10, .field.pl-11, .field.pl-12 {
+  padding-left: 2.75rem !important;
+}
 select.field option {
-  background-color: #0f172a;
-  color: white;
+  background-color: var(--field-opt-bg);
+  color: var(--field-opt-text);
 }
 
 /* Compact Date of Birth Selects */
@@ -118,29 +340,29 @@ select.field option {
   width: 6px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.15);
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(148, 163, 184, 0.35);
   border-radius: 3px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(148, 163, 184, 0.6);
 }
 
 /* Dropdowns */
 .dropdown-menu {
-  background: #1e293b !important; /* Darker, solid background for better contrast */
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  background: var(--dropdown-bg) !important;
+  border: 1px solid var(--dropdown-border) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35);
 }
 .dropdown-menu button {
-  color: #f1f5f9 !important;
+  color: var(--dropdown-text) !important;
   font-weight: 500;
 }
 .dropdown-menu button:hover {
-  background: #334155 !important;
-  color: #ffffff !important;
+  background: var(--dropdown-hover-bg) !important;
+  color: var(--dropdown-hover-text) !important;
 }
 
 /* Data Tables */
@@ -151,23 +373,23 @@ select.field option {
 }
 .data-table th {
   padding: 0.875rem 1.25rem;
-  background: rgba(255, 255, 255, 0.02);
-  color: #64748b;
+  background: var(--table-th-bg) !important;
+  color: var(--table-th-text) !important;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-size: 0.7rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--table-th-border) !important;
 }
 .data-table td {
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--table-td-border) !important;
   font-size: 0.875rem;
-  color: #cbd5e1;
+  color: var(--table-td-text) !important;
   vertical-align: middle;
 }
 .data-table tr:last-child td { border-bottom: none; }
-.data-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
+.data-table tr:hover td { background: var(--table-hover-bg) !important; }
 
 /* Badges */
 .badge {
@@ -180,9 +402,9 @@ select.field option {
   text-transform: uppercase;
   letter-spacing: 0.025em;
 }
-.badge-pending { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.1); }
-.badge-valid { background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.1); }
-.badge-rejected { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.1); }
+.badge-pending { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.25); }
+.badge-valid { background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.25); }
+.badge-rejected { background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25); }
 
 /* Animations */
 .bg-blob {
@@ -213,9 +435,9 @@ select.field option {
 /* Spinner */
 .spinner {
   display: inline-block;
-  border: 3px solid rgba(255,255,255,0.1);
+  border: 3px solid rgba(148, 163, 184, 0.2);
   border-radius: 50%;
-  border-top: 3px solid #6366f1;
+  border-top: 3px solid var(--btn-primary-bg);
   width: 24px;
   height: 24px;
   animation: spin 0.8s linear infinite;
@@ -224,10 +446,10 @@ select.field option {
 
 /* Alert */
 .alert { padding: 1rem; border-radius: 0.75rem; border: 1px solid transparent; font-size: 0.875rem; }
-.alert-info { background: rgba(56, 189, 248, 0.1); color: #7dd3fc; border-color: rgba(56, 189, 248, 0.2); }
-.alert-warning { background: rgba(251, 191, 36, 0.1); color: #fcd34d; border-color: rgba(251, 191, 36, 0.2); }
-.alert-error { background: rgba(248, 113, 113, 0.1); color: #fca5a5; border-color: rgba(248, 113, 113, 0.2); }
-.alert-success { background: rgba(52, 211, 153, 0.1); color: #6ee7b7; border-color: rgba(52, 211, 153, 0.2); }
+.alert-info { background: rgba(56, 189, 248, 0.1); color: #38bdf8; border-color: rgba(56, 189, 248, 0.2); }
+.alert-warning { background: rgba(251, 191, 36, 0.1); color: #f59e0b; border-color: rgba(251, 191, 36, 0.2); }
+.alert-error { background: rgba(248, 113, 113, 0.1); color: #ef4444; border-color: rgba(248, 113, 113, 0.2); }
+.alert-success { background: rgba(52, 211, 153, 0.1); color: #10b981; border-color: rgba(52, 211, 153, 0.2); }
 
 /* --- Rolling Odometer Digit Counter Styles --- */
 .rolling-counter-container {
@@ -265,4 +487,108 @@ select.field option {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* ==========================================================================
+   DAYLIGHT / LIGHT THEMES COMPREHENSIVE ADAPTATIONS
+   ========================================================================== */
+
+html:not([data-theme="dark"]) .bg-blob {
+  display: none !important;
+}
+
+/* Sidebar styling in Daylight mode (Stays commanding high-contrast dark navy/slate) */
+html:not([data-theme="dark"]) aside {
+  background: var(--sidebar-bg) !important;
+  border-color: var(--sidebar-border) !important;
+}
+html:not([data-theme="dark"]) aside #layout-college-name {
+  color: #ffffff !important;
+}
+html:not([data-theme="dark"]) aside .sidebar-item {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+html:not([data-theme="dark"]) aside .sidebar-item:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+html:not([data-theme="dark"]) aside .sidebar-item.active {
+  background: var(--sidebar-active-bg) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-left: 3px solid var(--sidebar-active-border) !important;
+}
+
+/* Header in Daylight mode */
+html:not([data-theme="dark"]) header.glass {
+  background: var(--header-bg) !important;
+  border-color: var(--glass-border) !important;
+}
+html:not([data-theme="dark"]) header h2 {
+  color: var(--text-heading) !important;
+}
+
+/* Text adaptations in content area */
+html:not([data-theme="dark"]) #adminMain .text-white,
+html:not([data-theme="dark"]) main .text-white {
+  color: var(--text-heading) !important;
+}
+html:not([data-theme="dark"]) #adminMain .text-slate-200,
+html:not([data-theme="dark"]) #adminMain .text-slate-300,
+html:not([data-theme="dark"]) main .text-slate-200,
+html:not([data-theme="dark"]) main .text-slate-300 {
+  color: #334155 !important;
+}
+html:not([data-theme="dark"]) #adminMain .text-slate-400,
+html:not([data-theme="dark"]) #adminMain .text-slate-500,
+html:not([data-theme="dark"]) main .text-slate-400,
+html:not([data-theme="dark"]) main .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Background utilities in Daylight mode */
+html:not([data-theme="dark"]) #adminMain .bg-black\/15,
+html:not([data-theme="dark"]) #adminMain .bg-black\/20,
+html:not([data-theme="dark"]) #adminMain .bg-black\/30,
+html:not([data-theme="dark"]) #adminMain .bg-black\/40,
+html:not([data-theme="dark"]) main .bg-black\/15,
+html:not([data-theme="dark"]) main .bg-black\/20,
+html:not([data-theme="dark"]) main .bg-black\/30,
+html:not([data-theme="dark"]) main .bg-black\/40 {
+  background-color: var(--subtle-bg) !important;
+}
+html:not([data-theme="dark"]) #adminMain .bg-white\/5,
+html:not([data-theme="dark"]) #adminMain .bg-white\/\[0\.04\],
+html:not([data-theme="dark"]) #adminMain .bg-white\/\[0\.03\],
+html:not([data-theme="dark"]) main .bg-white\/5,
+html:not([data-theme="dark"]) main .bg-white\/\[0\.04\],
+html:not([data-theme="dark"]) main .bg-white\/\[0\.03\] {
+  background-color: var(--subtle-card-bg) !important;
+}
+html:not([data-theme="dark"]) #adminMain .bg-slate-900,
+html:not([data-theme="dark"]) #adminMain .bg-slate-950,
+html:not([data-theme="dark"]) main .bg-slate-900,
+html:not([data-theme="dark"]) main .bg-slate-950 {
+  background-color: #ffffff !important;
+  color: var(--text-main) !important;
+}
+html:not([data-theme="dark"]) #adminMain .border-white\/10,
+html:not([data-theme="dark"]) #adminMain .border-white\/5,
+html:not([data-theme="dark"]) main .border-white\/10,
+html:not([data-theme="dark"]) main .border-white\/5 {
+  border-color: var(--glass-border) !important;
+}
+
+/* Modals & Full Review Screens in Daylight mode */
+html:not([data-theme="dark"]) #nomDetailModal > div {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: var(--glass-border) !important;
+}
+html:not([data-theme="dark"]) #nomDetailModal .bg-slate-900\/90 {
+  background: #f8fafc !important;
+  border-color: var(--glass-border) !important;
+}
+html:not([data-theme="dark"]) #nomDetailModal .text-white {
+  color: #0f172a !important;
 }

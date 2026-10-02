@@ -7,6 +7,7 @@ import { router } from '../../router.js';
 import { showToast } from '../../utils.js';
 import { api } from '../../api.js';
 import { CONFIG } from '../../config.js';
+import { getHeaderThemeControlsHtml, setupHeaderThemeControls } from '../../theme.js';
 
 export function getAdminPassword() {
   const pwd = localStorage.getItem('adminPwd');
@@ -103,6 +104,8 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
         </div>
         <div class="flex items-center gap-3">
           <span class="text-xs text-slate-500 hidden sm:inline">Logged in as Admin</span>
+          <div class="h-4 w-[1px] bg-white/10 hidden sm:block"></div>
+          ${getHeaderThemeControlsHtml()}
         </div>
       </header>
       <main id="adminMain" class="flex-1 p-6 overflow-auto">
@@ -110,6 +113,9 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
       </main>
     </div>
   </div>`;
+
+  // Attach Header Theme Controls
+  setupHeaderThemeControls(container);
 
   // Live Admin Sync Status badge subscription
   const syncBadgeEl = container.querySelector('#adminGlobalSyncBadge');

@@ -34,6 +34,10 @@ import { renderAdminAudit }          from './pages/admin/audit.js';
 import { renderSettings }            from './pages/admin/settings.js';
 import { renderAdminBackup }         from './pages/admin/backup.js';
 import { renderAdminNotices }        from './pages/admin/notices.js';
+import { initTheme }                 from './theme.js';
+
+// ─── Initialize Institutional Theme ──────────────────────────────────────────
+initTheme();
 
 // ─── Background decoration ────────────────────────────────────────────────────
 const app = document.getElementById('app');

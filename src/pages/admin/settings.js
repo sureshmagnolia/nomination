@@ -5,6 +5,7 @@
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
+import { THEMES, getActiveTheme, applyTheme } from '../../theme.js';
 
 export async function renderSettings(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -14,13 +15,14 @@ export async function renderSettings(container) {
 
   try {
     const settings = await api.adminGetSettings(pwd);
+    const currentActiveTheme = getActiveTheme();
     
     const main = container.querySelector('#adminMain');
     main.innerHTML = `
       <div class="page-enter space-y-8 max-w-4xl mx-auto">
         <div>
           <h3 class="text-2xl font-bold text-white">System Settings</h3>
-          <p class="text-slate-400 text-sm mt-1">Manage your college branding and security credentials.</p>
+          <p class="text-slate-400 text-sm mt-1">Manage your college branding, institutional theme, and security credentials.</p>
         </div>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -92,6 +94,50 @@ export async function renderSettings(container) {
               </div>
               <button id="btnUpdateSecurity" class="btn bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 w-full py-3 mt-2">Update Credentials</button>
             </div>
+          </div>
+        </div>
+
+        <!-- Theme & Institutional Appearance -->
+        <div class="glass rounded-2xl p-8 space-y-6 border border-indigo-500/20">
+          <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h4 class="font-bold text-white text-lg flex items-center gap-2">
+                <span>🎨</span> Institutional Theme &amp; Visual Appearance
+              </h4>
+              <p class="text-slate-400 text-xs mt-1">Select the official visual style for the portal. Switch between modern dark slate and formal institutional daylight themes.</p>
+            </div>
+            <div id="settingsActiveThemeBadge" class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-xs px-3 py-1 font-mono">
+              Active: ${THEMES.find(t => t.id === currentActiveTheme)?.name || 'Midnight Slate'}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="themeCardsGrid">
+            ${THEMES.map(t => {
+              const isSelected = t.id === currentActiveTheme;
+              return `
+                <div class="theme-card cursor-pointer rounded-xl p-4 border transition-all relative ${isSelected ? 'border-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-500/50' : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20'}" data-theme-id="${t.id}">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-2xl">${t.icon}</span>
+                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${t.category === 'dark' ? 'bg-slate-800 text-slate-300' : 'bg-emerald-500/20 text-emerald-300'} border border-white/10">
+                      ${t.badge}
+                    </span>
+                  </div>
+                  <h5 class="font-bold text-sm text-white">${t.name}</h5>
+                  <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">${t.desc}</p>
+                  
+                  <div class="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
+                    <div class="flex items-center gap-1.5" title="Theme Color Palette">
+                      <span class="w-3.5 h-3.5 rounded-full border border-white/30" style="background:${t.primaryColor};" title="Primary Accent: ${t.primaryColor}"></span>
+                      <span class="w-3.5 h-3.5 rounded-full border border-white/30" style="background:${t.bgColor};" title="Background: ${t.bgColor}"></span>
+                      <span class="w-3.5 h-3.5 rounded-full border border-white/30" style="background:${t.surfaceColor};" title="Surface: ${t.surfaceColor}"></span>
+                    </div>
+                    <span class="theme-check-icon text-xs font-bold ${isSelected ? 'text-indigo-400' : 'text-transparent'}">
+                      ✓ Active
+                    </span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
           </div>
         </div>
         
@@ -239,6 +285,37 @@ export async function renderSettings(container) {
       } catch (e) {
         showToast(e.message, 'error');
       }
+    });
+
+    // Handle Theme Selection Cards
+    const themeCards = container.querySelectorAll('.theme-card');
+    const themeBadge = container.querySelector('#settingsActiveThemeBadge');
+    themeCards.forEach(card => {
+      card.addEventListener('click', async () => {
+        const themeId = card.dataset.themeId;
+        if (!themeId) return;
+        applyTheme(themeId);
+        
+        themeCards.forEach(c => {
+          const isThis = c.dataset.themeId === themeId;
+          c.className = `theme-card cursor-pointer rounded-xl p-4 border transition-all relative ${isThis ? 'border-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-500/50' : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20'}`;
+          const checkIcon = c.querySelector('.theme-check-icon');
+          if (checkIcon) {
+            checkIcon.className = `theme-check-icon text-xs font-bold ${isThis ? 'text-indigo-400' : 'text-transparent'}`;
+          }
+        });
+
+        const activeObj = THEMES.find(t => t.id === themeId);
+        if (themeBadge && activeObj) {
+          themeBadge.textContent = `Active: ${activeObj.name}`;
+        }
+
+        try {
+          await api.adminUpdateSettings(pwd, { portalTheme: themeId });
+        } catch (_) {}
+
+        showToast(`Theme switched to "${activeObj?.name || themeId}".`, 'success');
+      });
     });
 
     // Handle Factory Reset
