@@ -611,27 +611,6 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
         </div>
       </div>
 
-      ${!panelStandings.hasAssignedColors ? `
-        <!-- Prominent Helper Banner for First-Time Setup -->
-        <div class="glass p-4 rounded-2xl border border-purple-500/30 bg-purple-950/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
-          <div class="flex items-start sm:items-center gap-3">
-            <span class="text-3xl">🎨</span>
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="font-bold text-white text-sm">Confidential Candidate Panel Tracking</span>
-                <span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[10px] font-bold">ADMIN PC ONLY</span>
-              </div>
-              <p class="text-slate-300 text-xs mt-1">
-                Assign each candidate to a color (Red, Blue, Green, etc.) representing their alliance. A confidential, collapsed live tally will track Won vs. Leading posts on this PC.
-              </p>
-            </div>
-          </div>
-          <button id="btnBannerOpenPanelSetup" class="btn btn-sm bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shrink-0 shadow-lg flex items-center gap-1.5 cursor-pointer">
-            <span>🎨</span> Assign Candidate Colors
-          </button>
-        </div>
-      ` : ''}
-
       ${candidates.length === 0 ? `
         <div class="glass p-12 rounded-3xl border border-white/10 text-center max-w-xl mx-auto shadow-xl page-enter">
           <div class="text-5xl mb-4">📋</div>
@@ -977,7 +956,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
               <div class="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-xl shrink-0">🎨</div>
               <div>
                 <div class="flex items-center gap-2">
-                  <h3 class="font-bold text-white text-base">Assign Candidate Panel Colors</h3>
+                  <h3 class="font-bold text-white text-base">Set Candidate Colors</h3>
                   <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">CONFIDENTIAL</span>
                 </div>
                 <p class="text-xs text-slate-400 mt-0.5">Strictly saved on this Admin PC browser. Never visible to students or in print.</p>
@@ -1493,7 +1472,6 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   };
 
   main.querySelector('#btnOpenPanelSetup')?.addEventListener('click', openPanelModal);
-  main.querySelector('#btnBannerOpenPanelSetup')?.addEventListener('click', openPanelModal);
   main.querySelector('#btnDrawerEditColors')?.addEventListener('click', openPanelModal);
   main.querySelector('#btnClosePanelModal')?.addEventListener('click', closePanelModal);
   main.querySelector('#btnCancelPanelModal')?.addEventListener('click', closePanelModal);
