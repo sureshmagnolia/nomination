@@ -200,14 +200,16 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         </div>
 
         <!-- Dedicated Printing & Consolidation Toolbar -->
-        <div class="glass p-4 rounded-xl border border-indigo-500/30 shadow-xl no-print space-y-3">
-          <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        <div class="glass p-4 sm:p-5 rounded-2xl border border-indigo-500/30 shadow-2xl no-print space-y-4 bg-slate-900/60 backdrop-blur-md">
+          
+          <!-- Row 1: Target Post Selector & Layout / Recount Controls -->
+          <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3.5 pb-3.5 border-b border-white/10">
             <!-- Post Selector -->
-            <div class="flex items-center gap-3 flex-1 min-w-[280px]">
-              <label for="selPostPrint" class="text-xs font-bold text-slate-300 shrink-0 uppercase tracking-wide">
-                Target Post:
+            <div class="flex items-center gap-2.5 flex-1 min-w-[300px]">
+              <label for="selPostPrint" class="text-xs font-bold text-indigo-300 shrink-0 uppercase tracking-wide flex items-center gap-1.5">
+                <span>🎯</span> Target Post:
               </label>
-              <select id="selPostPrint" class="field text-xs py-2 bg-slate-900 border-white/20 text-white font-medium flex-1">
+              <select id="selPostPrint" class="field text-xs py-2 px-3 bg-black/40 border border-white/20 hover:border-indigo-400/50 rounded-xl text-white font-medium flex-1 focus:outline-none focus:border-indigo-400 shadow-inner transition-colors">
                 <option value="all">🌟 All Posts (Complete Election Batch)</option>
                 ${sortedPostObjects.map(p => {
                   const pn = pName(p);
@@ -218,43 +220,64 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
               </select>
             </div>
 
-            <!-- Recount Toggle & Orientation Settings -->
-            <div class="flex items-center gap-2 flex-wrap">
-              <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 px-3 py-2 rounded-lg select-none transition-all shadow-sm" title="Enable to stamp forms and consolidation sheets with RECOUNTING label">
+            <!-- Settings: Orientation & Recount Mode -->
+            <div class="flex items-center gap-2.5 shrink-0 flex-wrap justify-end">
+              <!-- Orientation Selector -->
+              <div class="flex items-center gap-1.5 bg-black/40 border border-white/15 px-3 py-1.5 rounded-xl text-xs shadow-inner">
+                <label for="selOrientation" class="text-[11px] font-semibold text-slate-400">Layout:</label>
+                <select id="selOrientation" class="bg-transparent text-white font-semibold text-xs focus:outline-none cursor-pointer">
+                  <option value="portrait" class="bg-slate-900 text-white">📄 Portrait</option>
+                  <option value="landscape" class="bg-slate-900 text-white">📄 Landscape</option>
+                </select>
+              </div>
+
+              <!-- Recount Mode Toggle -->
+              <label class="flex items-center gap-2 cursor-pointer text-xs font-bold px-3 py-1.5 rounded-xl select-none transition-all border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 shadow-sm" title="Enable to stamp forms and consolidation sheets with RECOUNTING label">
                 <input type="checkbox" id="chkRecountMode" class="rounded accent-amber-500 w-4 h-4 cursor-pointer">
                 <span>🔁 Recounting Mode</span>
               </label>
-
-              <div class="flex items-center gap-1.5 text-xs text-slate-300 bg-slate-900/60 border border-white/10 px-2.5 py-1.5 rounded-lg">
-                <label for="selOrientation" class="text-[11px] font-semibold text-slate-400">Orientation:</label>
-                <select id="selOrientation" class="bg-transparent text-white font-medium text-xs focus:outline-none cursor-pointer">
-                  <option value="portrait" class="bg-slate-900">📄 Portrait</option>
-                  <option value="landscape" class="bg-slate-900">📄 Landscape</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Print Actions -->
-            <div class="flex items-center gap-2 flex-wrap">
-              <button type="button" id="btnPrintForms" class="btn btn-primary text-xs font-bold py-2 px-3.5 shadow-md flex items-center gap-1.5" title="Print Counting Forms (Form 6) ordered Table 1 to ${T}">
-                <span>🖨️</span> <span id="labelPrintForms">Print Counting Forms</span>
-              </button>
-              <button type="button" id="btnPrintConsolidation" class="btn btn-secondary text-xs font-semibold py-2 px-3 border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 flex items-center gap-1.5" title="Print Manual Tabulation & Consolidation Register (fits 1 A4 page in Portrait/Landscape)">
-                <span>📊</span> <span id="labelPrintConsolidation">Tabulation Sheet</span>
-              </button>
-              <button type="button" id="btnPrintUucTally" class="btn btn-secondary text-xs font-semibold py-2 px-3 border-amber-500/40 text-amber-300 hover:bg-amber-500/20 flex items-center gap-1.5" title="Print Working Dual-Vote Tally Sheet for University Union Councillor">
-                <span>🧮</span> UUC Tally Sheet
-              </button>
-              <button type="button" id="btnPrintPackage" class="btn btn-secondary text-xs font-semibold py-2 px-3.5 bg-white/10 hover:bg-white/20 text-white flex items-center gap-1.5" title="Print complete set for Post (Tabulation Sheet + Tally Sheet + Counting Forms)">
-                <span>📑</span> Full Post Dossier
-              </button>
             </div>
           </div>
-          <div class="text-[11px] text-slate-400 flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-white/5">
-            <span id="printScopeHint">💡 <strong>Scope:</strong> Printing across all ${totalRounds} rounds and ${T} tables (ordered Table 1 to ${T}). Select a specific post for recounting or single-post packet.</span>
-            <div class="flex items-center gap-3">
-              <span id="recountBadgeStatus" class="hidden text-amber-400 font-bold text-[11px]">⚠️ RECOUNT MODE ACTIVE</span>
-              <span class="text-indigo-300 font-mono text-[10px]">Forms ordered Table 1..${T} · Supervisor names auto-filled</span>
+
+          <!-- Row 2: Print Actions Grid (Balanced 4 Equal Columns) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <!-- 1. Counting Forms -->
+            <button type="button" id="btnPrintForms" class="btn btn-primary text-xs font-bold py-2.5 px-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Print Counting Forms (Form 6) ordered Table 1 to ${T}">
+              <span>🖨️</span>
+              <span id="labelPrintForms" class="truncate">Print Counting Forms</span>
+            </button>
+
+            <!-- 2. Tabulation Sheet -->
+            <button type="button" id="btnPrintConsolidation" class="btn btn-secondary text-xs font-semibold py-2.5 px-3.5 rounded-xl border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Print Manual Tabulation & Consolidation Register (fits 1 A4 page in Portrait/Landscape)">
+              <span>📊</span>
+              <span id="labelPrintConsolidation" class="truncate">Tabulation Sheet</span>
+            </button>
+
+            <!-- 3. UUC Tally Sheet -->
+            <button type="button" id="btnPrintUucTally" class="btn btn-secondary text-xs font-semibold py-2.5 px-3.5 rounded-xl border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Print Working Dual-Vote Tally Sheet for University Union Councillor">
+              <span>🧮</span>
+              <span id="labelPrintUuc" class="truncate">UUC Tally Sheet</span>
+            </button>
+
+            <!-- 4. Full Post Dossier -->
+            <button type="button" id="btnPrintPackage" class="btn btn-secondary text-xs font-bold py-2.5 px-3.5 rounded-xl border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98] shadow-md" title="Print complete set for Post (Tabulation Sheet + Tally Sheet + Counting Forms)">
+              <span>📑</span>
+              <span id="labelPrintDossier" class="truncate">Full Post Dossier</span>
+            </button>
+          </div>
+
+          <!-- Bottom Status & Hints Bar -->
+          <div class="text-[11px] text-slate-400 flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-white/5">
+            <span id="printScopeHint" class="flex items-center gap-1.5 text-slate-300">
+              💡 <strong>Scope:</strong> Printing across all ${totalRounds} rounds and ${T} tables (ordered Table 1 to ${T}). Select a specific post for recounting or single-post packet.
+            </span>
+            <div class="flex items-center gap-2.5">
+              <span id="recountBadgeStatus" class="hidden text-amber-300 font-bold text-[10.5px] bg-amber-500/15 px-2 py-0.5 rounded-md border border-amber-500/30 flex items-center gap-1">
+                <span>⚠️</span> RECOUNT MODE ACTIVE
+              </span>
+              <span class="text-indigo-300 font-mono text-[10px] bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">
+                Table 1..${T} Order · Supervisor Auto-filled
+              </span>
             </div>
           </div>
         </div>
@@ -377,6 +400,8 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     const selPostPrint = main.querySelector('#selPostPrint');
     const labelPrintForms = main.querySelector('#labelPrintForms');
     const labelPrintConsolidation = main.querySelector('#labelPrintConsolidation');
+    const labelPrintDossier = main.querySelector('#labelPrintDossier');
+    const btnPrintUucTally = main.querySelector('#btnPrintUucTally');
     const printScopeHint = main.querySelector('#printScopeHint');
     const chkRecountMode = main.querySelector('#chkRecountMode');
     const selOrientation = main.querySelector('#selOrientation');
@@ -385,15 +410,32 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     const updatePrintScopeUI = () => {
       const selected = selPostPrint.value;
       const isRecount = !!chkRecountMode?.checked;
+      const isPostUuc = isUuc(selected);
+
       if (selected === 'all') {
         labelPrintForms.textContent = isRecount ? 'Print Recount Forms' : 'Print All Forms';
         labelPrintConsolidation.textContent = isRecount ? 'All Recount Tabulations' : 'All Tabulation Sheets';
+        if (labelPrintDossier) labelPrintDossier.textContent = isRecount ? 'Full Recount Dossier' : 'Full Election Dossier';
         printScopeHint.innerHTML = `💡 <strong>Scope:</strong> Batch printing all ${totalRounds} rounds and ${T} tables across the entire election (ordered Table 1 to ${T}).`;
+        if (btnPrintUucTally) {
+          btnPrintUucTally.classList.remove('opacity-40');
+          btnPrintUucTally.title = 'Print Working Dual-Vote Tally Sheet for University Union Councillor';
+        }
       } else {
         const tblCount = (postTableMap[selected] || []).length;
         labelPrintForms.textContent = isRecount ? `Recount Forms (${tblCount})` : `Print Forms (${tblCount})`;
         labelPrintConsolidation.textContent = isRecount ? `Recount Tabulation` : `Tabulation Sheet`;
+        if (labelPrintDossier) labelPrintDossier.textContent = isRecount ? `Recount Dossier (${tblCount})` : `Full Post Dossier (${tblCount})`;
         printScopeHint.innerHTML = `💡 <strong>Scope:</strong> Focused on <strong>${esc(selected)}</strong> (${tblCount} table${tblCount === 1 ? '' : 's'}, ordered Table 1 to ${T}). Ideal for recounting or single-post packets.`;
+        if (btnPrintUucTally) {
+          if (!isPostUuc) {
+            btnPrintUucTally.classList.add('opacity-40');
+            btnPrintUucTally.title = 'UUC Tally Sheet is only applicable for University Union Councillor';
+          } else {
+            btnPrintUucTally.classList.remove('opacity-40');
+            btnPrintUucTally.title = 'Print Working Dual-Vote Tally Sheet for University Union Councillor';
+          }
+        }
       }
     };
 
