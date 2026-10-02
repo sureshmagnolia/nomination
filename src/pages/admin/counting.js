@@ -976,113 +976,173 @@ function buildConsolidationHtml(postName, tableEntries, candidates, collegeName 
 }
 
 /**
- * Form 6-T (UUC) — Dual-Vote Counting Tally Sheet (Informal Helper for Counting Officers)
+ * Form 6-T (UUC) — Batch-of-25 Dual-Vote Counting Tally Sheet
+ * Implements the 25-Ballot Milestone Check Method for foolproof UUC tallying.
  */
 function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, collegeName = CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad', electionYear = '', collegeLogo = '', supervisorName = '', roomName = '', isRecount = false) {
   const yearStr = electionYear || new Date().getFullYear().toString();
   const candsList = Array.isArray(candidates) ? candidates : [];
 
-  return `<div class="pg">
+  return `<div class="pg pg-tally" style="page-break-inside:avoid;">
     ${isRecount ? `<div style="position:absolute;top:6px;right:6px;border:2px solid #b91c1c;color:#b91c1c;padding:3px 10px;font-size:12px;font-weight:bold;letter-spacing:1px;background:#fff;">🔁 RECOUNTING</div>` : ''}
-    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px;">
-      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:36px;max-width:110px;margin:0 auto 3px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
-      <div style="font-size:12px;font-weight:bold;color:#111;text-transform:uppercase;">${esc(collegeName)}</div>
-      <div style="font-size:11px;font-weight:bold;color:#444;margin-top:1px;">College Union Election ${esc(yearStr)}</div>
-      <h2 style="margin:3px 0 0;font-size:16px;text-transform:uppercase;letter-spacing:1px">
-        FORM 6-T (UUC) — DUAL-VOTE COUNTING TALLY SHEET ${isRecount ? '<span style="color:#b91c1c;">(RECOUNT)</span>' : ''}
+    <div style="text-align:center;border-bottom:1.5px solid #000;padding-bottom:5px;margin-bottom:6px;">
+      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:32px;max-width:100px;margin:0 auto 2px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+      <div style="font-size:11.5px;font-weight:bold;color:#111;text-transform:uppercase;">${esc(collegeName)}</div>
+      <div style="font-size:10.5px;font-weight:bold;color:#444;margin-top:1px;">College Union Election ${esc(yearStr)}</div>
+      <h2 style="margin:2px 0 0;font-size:15px;text-transform:uppercase;letter-spacing:1px">
+        FORM 6-T (UUC) — BATCH-OF-25 DUAL-VOTE TALLY SHEET ${isRecount ? '<span style="color:#b91c1c;">(RECOUNT)</span>' : ''}
       </h2>
-      <div style="font-size:12px;font-weight:bold;margin-top:2px;text-decoration:underline">POST: UNIVERSITY UNION COUNCILLOR (TWO VACANCIES)</div>
+      <div style="font-size:11.5px;font-weight:bold;margin-top:1px;text-decoration:underline">
+        POST: UNIVERSITY UNION COUNCILLOR (TWO VACANCIES)
+      </div>
       
-      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:12px;font-weight:bold;background:#f3f4f6;padding:4px 8px;border:1px solid #000;">
-        <span>TABLE NO: <u>${tableNum}</u></span>
+      <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:11.5px;font-weight:bold;background:#f3f4f6;padding:4px 8px;border:1px solid #000;">
+        <span>TABLE NO: <u>${tableNum}</u> ${roomName ? `<span style="font-weight:normal;color:#555">(${esc(roomName)})</span>` : ''}</span>
         <span>ROUND NO: <u>${roundNum}</u></span>
         <span>REF COUNTING FORM: <u>#${serial}</u></span>
-        <span>ROOM: <u>${esc(roomName || `Table ${tableNum}`)}</u></span>
-      </div>
-      <div style="font-size:10.5px;margin-top:2px;color:#222;font-style:italic;text-align:right">
-        Counting Supervisor: <strong>${esc(supervisorName || '_______________________')}</strong>
+        <span>SUPERVISOR: <u>${esc(supervisorName || '__________________')}</u></span>
       </div>
     </div>
 
-    <!-- Statutory Dual-Vote Instructions Box -->
-    <div style="border:1.5px solid #000;padding:5px 8px;margin:6px 0;font-size:10px;background:#fefce8;line-height:1.3;">
-      <strong>⚠️ DUAL-VOTE COUNTING GUIDE (FOR COUNTING OFFICERS):</strong>
-      <ol style="margin:2px 0 0 14px;padding:0">
-        <li><strong>Accountable Votes Target:</strong> Every ballot paper contains <strong>2 votes</strong>. Total Accountable Votes = <strong>2 × Total Ballots</strong>.</li>
-        <li><strong>2 Valid Choices Marked:</strong> Award <strong>1 vote</strong> to each of the two marked candidates.</li>
-        <li><strong>1 Candidate Marked Only:</strong> Award <strong>1 valid vote</strong> to that candidate AND <strong>1 Invalid vote</strong> (unmatched second vote).</li>
-        <li><strong>Overvoting (&gt;2 candidates marked) or Blank / Defaced:</strong> Record <strong>2 Invalid votes</strong>.</li>
-        <li><strong>NOTA Marked:</strong> Record <strong>2 NOTA votes</strong> (if NOTA + candidate marked, entire ballot is invalid = 2 Invalid votes).</li>
-      </ol>
+    <!-- The 3-Step Milestone Rule Guide -->
+    <div style="border:1.5px solid #000;padding:5px 8px;margin-bottom:6px;font-size:10px;background:#fefce8;line-height:1.35;">
+      <strong>📌 BATCH-OF-25 COUNTING PROTOCOL (AVOIDS END-OF-ROUND RECOUNTS):</strong>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:3px;">
+        <div style="background:#fff;padding:3px 6px;border:1px solid #eab308;border-radius:3px;">
+          <strong>1. Pre-Bundle in 25s:</strong> Rubber-band physical ballots into packets of <strong>25 ballots</strong>.
+        </div>
+        <div style="background:#fff;padding:3px 6px;border:1px solid #eab308;border-radius:3px;">
+          <strong>2. Milestone Rule:</strong> Each 25-ballot packet MUST yield <strong>exactly 50 votes</strong> (2 × 25).
+        </div>
+        <div style="background:#fff;padding:3px 6px;border:1px solid #eab308;border-radius:3px;">
+          <strong>3. Lock &amp; Proceed:</strong> Verify subtotal = 50 before opening the next batch. Sum rows at the end.
+        </div>
+      </div>
     </div>
 
-    <!-- Section 1: Ballot Account Target -->
-    <table style="width:100%;margin-bottom:6px;font-size:11px;">
+    <!-- Section 1: Ballot & Batch Target Account -->
+    <table style="width:100%;margin-bottom:6px;font-size:10.5px;">
       <tr>
-        <td style="width:50%;padding:4px 8px;font-weight:bold;background:#f3f4f6">
-          Total Physical Ballots Extracted from Box (Form 5 Account):
+        <td style="width:35%;padding:4px 6px;font-weight:bold;background:#f3f4f6">
+          Total Physical Ballots in Box: <br>
+          <span style="font-size:14px;font-family:monospace">[ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ] Ballots</span>
         </td>
-        <td style="width:20%;text-align:center;font-size:14px;font-weight:bold;padding:4px">
-          [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]
+        <td style="width:35%;padding:4px 6px;font-weight:bold;background:#e0e7ff;text-align:center">
+          Expected Total Accountable Votes: <br>
+          <span style="font-size:14px;font-family:monospace;color:#1e40af">[ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ] = 2 × Ballots</span>
         </td>
-        <td style="width:30%;padding:4px 8px;font-weight:bold;background:#e0e7ff;text-align:center">
-          Expected Total Votes Target [ A = 2 × Ballots ]: <br>
-          <span style="font-size:14px;">[ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</span>
+        <td style="width:30%;padding:4px 6px;font-size:9.5px;background:#f9fafb;line-height:1.3">
+          <strong>Dual-Vote Rule Reminder:</strong><br>
+          • 2 candidates marked = 1 vote to each<br>
+          • 1 candidate marked = 1 Valid + 1 Invalid<br>
+          • NOTA = 2 NOTA | Overvote = 2 Invalid
         </td>
       </tr>
     </table>
 
-    <!-- Section 2: Structured 5-Gate Tally Matrix -->
+    <!-- Section 2: Batch-of-25 Milestone Tally Matrix -->
     <table style="width:100%;border-collapse:collapse;margin-bottom:6px;font-size:10.5px;">
       <thead>
         <tr>
-          <th style="width:5%;text-align:center">#</th>
-          <th style="width:33%;text-align:left">Candidate Name &amp; Class</th>
-          <th style="width:48%;text-align:left">Tally Marks (5-Bar Gate Tally: 卌 卌 卌 ...)</th>
-          <th style="width:14%;text-align:center">Total Votes</th>
+          <th style="width:3%;text-align:center;padding:4px 2px;">#</th>
+          <th style="width:25%;text-align:left;padding:4px 6px;">Candidate Name &amp; Class</th>
+          <th style="width:12%;text-align:center;padding:4px 2px;">
+            Batch 1 (1–25)
+            <div style="font-size:8.5px;font-weight:normal;color:#555">Target: 50 votes</div>
+          </th>
+          <th style="width:12%;text-align:center;padding:4px 2px;">
+            Batch 2 (26–50)
+            <div style="font-size:8.5px;font-weight:normal;color:#555">Target: 50 votes</div>
+          </th>
+          <th style="width:12%;text-align:center;padding:4px 2px;">
+            Batch 3 (51–75)
+            <div style="font-size:8.5px;font-weight:normal;color:#555">Target: 50 votes</div>
+          </th>
+          <th style="width:12%;text-align:center;padding:4px 2px;">
+            Batch 4 (76–100)
+            <div style="font-size:8.5px;font-weight:normal;color:#555">Target: 50 votes</div>
+          </th>
+          <th style="width:11%;text-align:center;padding:4px 2px;">
+            Remainder Batch
+            <div style="font-size:8.5px;font-weight:normal;color:#555">Target: 2 × Rem</div>
+          </th>
+          <th style="width:13%;text-align:center;padding:4px 2px;background:#e0e7ff;">
+            FINAL TOTAL
+            <div style="font-size:8.5px;font-weight:normal;color:#1e40af">Transfer to Form 6</div>
+          </th>
         </tr>
       </thead>
       <tbody>
         ${candsList.map((c, i) => `
           <tr>
-            <td style="text-align:center;font-weight:bold">${i + 1}</td>
-            <td style="font-weight:bold">
+            <td style="text-align:center;font-weight:bold;padding:5px 2px;">${i + 1}</td>
+            <td style="font-weight:bold;padding:5px 6px;">
               ${esc(c.candidateName)}
-              <div style="font-size:9px;font-weight:normal;color:#444">${esc(c.candidateClass || '')}</div>
+              <div style="font-size:8.5px;font-weight:normal;color:#555">${esc(c.candidateClass || '')}</div>
             </td>
-            <td style="padding:10px 6px"></td>
-            <td style="padding:10px 6px;text-align:center;font-weight:bold;font-size:13px"></td>
+            <td style="padding:5px 4px;"></td>
+            <td style="padding:5px 4px;"></td>
+            <td style="padding:5px 4px;"></td>
+            <td style="padding:5px 4px;"></td>
+            <td style="padding:5px 4px;"></td>
+            <td style="padding:5px 4px;background:#f8fafc;font-weight:bold;font-size:12px;text-align:center;"></td>
           </tr>
         `).join('')}
         <tr>
-          <td style="text-align:center;font-weight:bold">–</td>
-          <td style="font-weight:bold">NOTA</td>
-          <td style="padding:10px 6px"></td>
-          <td style="padding:10px 6px;text-align:center;font-weight:bold;font-size:13px"></td>
+          <td style="text-align:center;font-weight:bold;padding:5px 2px;">–</td>
+          <td style="font-weight:bold;padding:5px 6px;">NOTA</td>
+          <td style="padding:5px 4px;"></td>
+          <td style="padding:5px 4px;"></td>
+          <td style="padding:5px 4px;"></td>
+          <td style="padding:5px 4px;"></td>
+          <td style="padding:5px 4px;"></td>
+          <td style="padding:5px 4px;background:#f8fafc;font-weight:bold;font-size:12px;text-align:center;"></td>
         </tr>
         <tr>
-          <td style="text-align:center;font-weight:bold">–</td>
-          <td>
-            <strong style="color:#b91c1c">INVALID</strong>
-            <div style="font-size:9px;color:#555;margin-top:2px;">
-              • Single-choice unmatched: [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]<br>
-              • Overvoted &amp; defaced: [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]<br>
-              • Blank ballots: [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]
-            </div>
+          <td style="text-align:center;font-weight:bold;padding:5px 2px;">–</td>
+          <td style="padding:5px 6px;">
+            <strong style="color:#b91c1c;">INVALID</strong>
+            <div style="font-size:8.5px;color:#555;">(Unmatched 1-choice, Overvote &gt;2, Blank)</div>
           </td>
-          <td style="padding:10px 6px"></td>
-          <td style="padding:10px 6px;text-align:center;font-weight:bold;font-size:13px;color:#b91c1c"></td>
+          <td style="padding:5px 4px;"></td>
+          <td style="padding:5px 4px;"></td>
+          <td style="padding:5px 4px;"></td>
+          <td style="padding:5px 4px;"></td>
+          <td style="padding:5px 4px;"></td>
+          <td style="padding:5px 4px;background:#f8fafc;font-weight:bold;font-size:12px;text-align:center;color:#b91c1c;"></td>
         </tr>
-        <tr style="background:#eee;font-weight:bold;font-size:12px;border-top:2px solid #000">
-          <td colspan="2" style="text-align:right;padding:6px">TOTAL OF ALL VOTES TALLIED [ B ]:</td>
-          <td style="font-size:9.5px;color:#555;padding:6px">Must equal Target [ A ]</td>
-          <td style="text-align:center;font-size:15px;font-weight:black;padding:6px;background:#e0e7ff"></td>
+
+        <!-- Batch Milestone Verification Subtotal Row -->
+        <tr style="background:#fef3c7;font-weight:bold;border-top:2px solid #000;">
+          <td colspan="2" style="text-align:right;padding:5px 6px;font-size:10px;letter-spacing:0.5px;">
+            BATCH TOTAL VOTES:
+          </td>
+          <td style="text-align:center;padding:5px;font-size:11px;font-family:monospace;">[ &nbsp;&nbsp;&nbsp;&nbsp; ]</td>
+          <td style="text-align:center;padding:5px;font-size:11px;font-family:monospace;">[ &nbsp;&nbsp;&nbsp;&nbsp; ]</td>
+          <td style="text-align:center;padding:5px;font-size:11px;font-family:monospace;">[ &nbsp;&nbsp;&nbsp;&nbsp; ]</td>
+          <td style="text-align:center;padding:5px;font-size:11px;font-family:monospace;">[ &nbsp;&nbsp;&nbsp;&nbsp; ]</td>
+          <td style="text-align:center;padding:5px;font-size:11px;font-family:monospace;">[ &nbsp;&nbsp;&nbsp;&nbsp; ]</td>
+          <td style="text-align:center;padding:5px;background:#dbeafe;font-size:13px;font-weight:black;"></td>
+        </tr>
+
+        <!-- Batch Balance Check (Must Equal Target) -->
+        <tr style="background:#f9fafb;font-size:9.5px;border-bottom:2px double #000;">
+          <td colspan="2" style="text-align:right;padding:4px 6px;font-weight:bold;color:#444;">
+            MILESTONE CHECK:
+          </td>
+          <td style="text-align:center;padding:3px;color:#15803d;font-weight:bold;">= 50 [ &nbsp; ]</td>
+          <td style="text-align:center;padding:3px;color:#15803d;font-weight:bold;">= 50 [ &nbsp; ]</td>
+          <td style="text-align:center;padding:3px;color:#15803d;font-weight:bold;">= 50 [ &nbsp; ]</td>
+          <td style="text-align:center;padding:3px;color:#15803d;font-weight:bold;">= 50 [ &nbsp; ]</td>
+          <td style="text-align:center;padding:3px;color:#15803d;font-weight:bold;">= 2×Rem [ &nbsp; ]</td>
+          <td style="text-align:center;padding:3px;font-weight:bold;color:#1e40af;">GRAND TOTAL</td>
         </tr>
       </tbody>
     </table>
 
-    <div style="margin-top:8px;border-top:1px dashed #777;padding-top:4px;font-size:9.5px;color:#555;font-style:italic;text-align:center;">
-      * Informal working tally sheet for Table Counting Officers. No official signatures required. Transfer verified final totals to the official Counting Form (Form 6).
+    <div style="margin-top:6px;border-top:1px dashed #777;padding-top:4px;font-size:9.5px;color:#555;font-style:italic;text-align:center;">
+      * Working tally sheet for Table Counting Officers. Verify each 25-ballot packet milestone before opening the next. Transfer final verified totals directly onto official Counting Form (Form 6). No signatures required.
     </div>
   </div>`;
 }
+
