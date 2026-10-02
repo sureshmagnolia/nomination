@@ -149,6 +149,174 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     };
   };
 
+  // Helper: Generate HTML for a single faculty table row
+  const getFacultyRowHtml = (f) => {
+    const pDuty = getPollingAssignment(f.name);
+    const cDuty = getCountingAssignment(f.name);
+
+    return `
+      <tr class="${f.isExcluded ? 'bg-red-950/20 opacity-70' : 'hover:bg-white/5'} transition-colors">
+        <td class="text-center font-mono font-bold ${f.seniority <= 15 ? 'text-amber-300' : 'text-slate-300'}">
+          #${f.seniority}
+        </td>
+        <td class="font-bold text-white whitespace-nowrap">
+          ${esc(f.name)}
+        </td>
+        <td class="font-mono text-slate-300">
+          ${f.pen || '–'}
+        </td>
+        <td class="text-slate-300">
+          ${esc(f.designation || '–')}${f.department ? `<span class="text-[10px] text-indigo-300/80 block font-normal">${esc(f.department)}</span>` : ''}
+        </td>
+        <td class="font-mono text-slate-400">
+          ${f.joiningDate || '–'}
+        </td>
+        <td>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            ${pDuty ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">Booth ${pDuty.boothNumber} (${pDuty.role})</span>` : ''}
+            ${cDuty ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-semibold">Table ${cDuty.tableNumber} (${cDuty.role})</span>` : ''}
+            ${!pDuty && !cDuty ? `<span class="text-slate-500 text-[11px]">–</span>` : ''}
+          </div>
+        </td>
+        <td>
+          ${f.isExcluded ? `
+            <span class="badge bg-red-500/20 text-red-300 border border-red-500/40 text-[10px] font-bold" title="${esc(f.exclusionReason || 'Excluded')}">
+              ⛔ Excluded${f.exclusionReason ? `: ${esc(f.exclusionReason)}` : ''}
+            </span>
+          ` : `
+            <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold">
+              ✓ Available
+            </span>
+          `}
+        </td>
+        <td class="text-right">
+          <button class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-exclude-fac ${f.isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-pen="${f.pen || f.name}">
+            ${f.isExcluded ? '✓ Make Available' : '⛔ Exclude'}
+          </button>
+        </td>
+      </tr>
+    `;
+  };
+
+  // Helper: Generate HTML for a single non-teaching table row
+  const getNonTeachingRowHtml = (nt, idx) => {
+    const asstDuty = getNonTeachingAssignment(nt.name);
+
+    return `
+      <tr class="${nt.isExcluded ? 'bg-red-950/20 opacity-70' : 'hover:bg-white/5'} transition-colors">
+        <td class="text-center font-mono text-slate-400">
+          ${idx + 1}
+        </td>
+        <td class="font-bold text-white whitespace-nowrap">
+          ${esc(nt.name)}
+        </td>
+        <td class="text-slate-300">
+          ${esc(nt.designation || 'Staff')}${nt.department ? `<span class="text-[10px] text-emerald-300/80 block font-normal">${esc(nt.department)}</span>` : ''}
+        </td>
+        <td class="font-mono text-slate-300">
+          ${nt.pen || '–'}
+        </td>
+        <td>
+          ${asstDuty.polling ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">Booth ${asstDuty.polling.boothNumber}</span>` : '<span class="text-slate-500">–</span>'}
+        </td>
+        <td>
+          ${asstDuty.counting ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-semibold">Table ${asstDuty.counting.tableNumber}</span>` : '<span class="text-slate-500">–</span>'}
+        </td>
+        <td>
+          ${nt.isExcluded ? `
+            <span class="badge bg-red-500/20 text-red-300 border border-red-500/40 text-[10px] font-bold" title="${esc(nt.exclusionReason || 'Excluded')}">
+              ⛔ Excluded${nt.exclusionReason ? `: ${esc(nt.exclusionReason)}` : ''}
+            </span>
+          ` : `
+            <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold">
+              ✓ Available
+            </span>
+          `}
+        </td>
+        <td class="text-right whitespace-nowrap space-x-1">
+          <button class="btn btn-secondary text-[11px] py-1 px-2 btn-toggle-exclude-nt ${nt.isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-name="${esc(nt.name)}">
+            ${nt.isExcluded ? '✓ Enable' : '⛔ Exclude'}
+          </button>
+          <button class="btn btn-secondary text-[11px] py-1 px-1.5 text-red-400 hover:bg-red-500/20 btn-delete-nt" data-name="${esc(nt.name)}" title="Remove from roster">
+            🗑️
+          </button>
+        </td>
+      </tr>
+    `;
+  };
+
+  // Live in-place DOM update for Faculty table rows (preserves search input focus & cursor position)
+  const updateFacultyTableRows = () => {
+    const tbody = main.querySelector('#facultyTableBody');
+    if (!tbody) return;
+    const filtered = faculty.filter(f => {
+      if (facultyFilter === 'active' && f.isExcluded) return false;
+      if (facultyFilter === 'excluded' && !f.isExcluded) return false;
+      if (facultySearch) {
+        const s = facultySearch.toLowerCase().trim();
+        return (f.name || '').toLowerCase().includes(s) ||
+               String(f.pen || '').toLowerCase().includes(s) ||
+               (f.designation || '').toLowerCase().includes(s) ||
+               (f.department || '').toLowerCase().includes(s);
+      }
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" class="text-center py-8 text-slate-400">
+            No teaching staff found matching "<strong>${esc(facultySearch)}</strong>".
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(getFacultyRowHtml).join('');
+  };
+
+  // Live in-place DOM update for Non-Teaching table rows (preserves search input focus & cursor position)
+  const updateNonTeachingTableRows = () => {
+    const tbody = main.querySelector('#nonTeachingTableBody');
+    if (!tbody) return;
+    if (nonTeaching.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" class="text-center py-8 text-slate-400">
+            No Non-Teaching staff added yet. Click <strong>Upload Non-Teaching List (Excel / CSV)</strong> above to upload your staff roster.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+    const filtered = nonTeaching.filter(nt => {
+      if (nonTeachingFilter === 'active' && nt.isExcluded) return false;
+      if (nonTeachingFilter === 'excluded' && !nt.isExcluded) return false;
+      if (nonTeachingSearch) {
+        const s = nonTeachingSearch.toLowerCase().trim();
+        return (nt.name || '').toLowerCase().includes(s) ||
+               String(nt.pen || '').toLowerCase().includes(s) ||
+               (nt.designation || '').toLowerCase().includes(s) ||
+               (nt.department || '').toLowerCase().includes(s);
+      }
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" class="text-center py-8 text-slate-400">
+            No non-teaching staff found matching "<strong>${esc(nonTeachingSearch)}</strong>".
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(getNonTeachingRowHtml).join('');
+  };
+
   // Save changes to API & local cache
   const saveAll = async (quiet = false) => {
     localStorage.setItem('gcc_faculty_roster', JSON.stringify(faculty));
@@ -298,6 +466,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   // ─── Render Main UI ─────────────────────────────────────────────────────────
 
   const renderUI = () => {
+    // Preserve active search field focus and selection before replacing main.innerHTML
+    const activeEl = document.activeElement;
+    const searchFocusState = (activeEl && (activeEl.id === 'inputFacultySearch' || activeEl.id === 'inputNonTeachingSearch')) ? {
+      id: activeEl.id,
+      start: activeEl.selectionStart,
+      end: activeEl.selectionEnd
+    } : null;
+
     // Calculate Summary Metrics
     const totalFaculty = faculty.length;
     const activeFaculty = faculty.filter(f => !f.isExcluded).length;
@@ -759,7 +935,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <!-- Search and Filter Bar -->
           <div class="flex items-center justify-between gap-3 flex-wrap no-print">
             <div class="flex-1 min-w-[240px]">
-              <input type="text" id="inputFacultySearch" value="${esc(facultySearch)}" placeholder="Search teaching staff by name, PEN, designation..." class="w-full bg-slate-900 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-indigo-400" />
+              <input type="text" id="inputFacultySearch" value="${esc(facultySearch)}" placeholder="Search teaching staff by name, PEN, designation, department..." autocomplete="off" spellcheck="false" class="w-full bg-slate-900 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-indigo-400" />
             </div>
             <div class="flex items-center gap-1.5 bg-white/5 p-1 rounded-xl border border-white/10 text-xs">
               <button class="filter-faculty-btn px-3 py-1 rounded-lg font-semibold transition-colors ${facultyFilter === 'all' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}" data-filter="all">All (${faculty.length})</button>
@@ -784,67 +960,25 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     <th class="text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-white/5">
-                  ${faculty
-                    .filter(f => {
+                <tbody class="divide-y divide-white/5" id="facultyTableBody">
+                  ${(() => {
+                    const filtered = faculty.filter(f => {
                       if (facultyFilter === 'active' && f.isExcluded) return false;
                       if (facultyFilter === 'excluded' && !f.isExcluded) return false;
                       if (facultySearch) {
-                        const s = facultySearch.toLowerCase();
+                        const s = facultySearch.toLowerCase().trim();
                         return (f.name || '').toLowerCase().includes(s) ||
                                String(f.pen || '').toLowerCase().includes(s) ||
                                (f.designation || '').toLowerCase().includes(s) ||
                                (f.department || '').toLowerCase().includes(s);
                       }
                       return true;
-                    })
-                    .map(f => {
-                      const pDuty = getPollingAssignment(f.name);
-                      const cDuty = getCountingAssignment(f.name);
-
-                      return `
-                        <tr class="${f.isExcluded ? 'bg-red-950/20 opacity-70' : 'hover:bg-white/5'} transition-colors">
-                          <td class="text-center font-mono font-bold ${f.seniority <= 15 ? 'text-amber-300' : 'text-slate-300'}">
-                            #${f.seniority}
-                          </td>
-                          <td class="font-bold text-white whitespace-nowrap">
-                            ${esc(f.name)}
-                          </td>
-                          <td class="font-mono text-slate-300">
-                            ${f.pen || '–'}
-                          </td>
-                          <td class="text-slate-300">
-                            ${esc(f.designation || '–')}${f.department ? `<span class="text-[10px] text-indigo-300/80 block font-normal">${esc(f.department)}</span>` : ''}
-                          </td>
-                          <td class="font-mono text-slate-400">
-                            ${f.joiningDate || '–'}
-                          </td>
-                          <td>
-                            <div class="flex items-center gap-1.5 flex-wrap">
-                              ${pDuty ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">Booth ${pDuty.boothNumber} (${pDuty.role})</span>` : ''}
-                              ${cDuty ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-semibold">Table ${cDuty.tableNumber} (${cDuty.role})</span>` : ''}
-                              ${!pDuty && !cDuty ? `<span class="text-slate-500 text-[11px]">–</span>` : ''}
-                            </div>
-                          </td>
-                          <td>
-                            ${f.isExcluded ? `
-                              <span class="badge bg-red-500/20 text-red-300 border border-red-500/40 text-[10px] font-bold" title="${esc(f.exclusionReason || 'Excluded')}">
-                                ⛔ Excluded${f.exclusionReason ? `: ${esc(f.exclusionReason)}` : ''}
-                              </span>
-                            ` : `
-                              <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold">
-                                ✓ Available
-                              </span>
-                            `}
-                          </td>
-                          <td class="text-right">
-                            <button class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-exclude-fac ${f.isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-pen="${f.pen || f.name}">
-                              ${f.isExcluded ? '✓ Make Available' : '⛔ Exclude'}
-                            </button>
-                          </td>
-                        </tr>
-                      `;
-                    }).join('')}
+                    });
+                    if (filtered.length === 0) {
+                      return `<tr><td colspan="8" class="text-center py-8 text-slate-400">No teaching staff found matching "<strong>${esc(facultySearch)}</strong>".</td></tr>`;
+                    }
+                    return filtered.map(getFacultyRowHtml).join('');
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -900,7 +1034,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <!-- Search and Filter Bar -->
           <div class="flex items-center justify-between gap-3 flex-wrap no-print">
             <div class="flex-1 min-w-[240px]">
-              <input type="text" id="inputNonTeachingSearch" value="${esc(nonTeachingSearch)}" placeholder="Search non-teaching staff by name, PEN, designation..." class="w-full bg-slate-900 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-400" />
+              <input type="text" id="inputNonTeachingSearch" value="${esc(nonTeachingSearch)}" placeholder="Search non-teaching staff by name, PEN, designation, department..." autocomplete="off" spellcheck="false" class="w-full bg-slate-900 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-400" />
             </div>
             <div class="flex items-center gap-1.5 bg-white/5 p-1 rounded-xl border border-white/10 text-xs">
               <button class="filter-nt-btn px-3 py-1 rounded-lg font-semibold transition-colors ${nonTeachingFilter === 'all' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'}" data-filter="all">All (${nonTeaching.length})</button>
@@ -925,71 +1059,28 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     <th class="text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-white/5">
-                  ${nonTeaching.length === 0 ? `
-                    <tr>
-                      <td colspan="8" class="text-center py-8 text-slate-400">
-                        No Non-Teaching staff added yet. Click <strong>Upload Non-Teaching List (Excel / CSV)</strong> above to upload your staff roster.
-                      </td>
-                    </tr>
-                  ` : nonTeaching
-                    .filter(nt => {
+                <tbody class="divide-y divide-white/5" id="nonTeachingTableBody">
+                  ${(() => {
+                    if (nonTeaching.length === 0) {
+                      return `<tr><td colspan="8" class="text-center py-8 text-slate-400">No Non-Teaching staff added yet. Click <strong>Upload Non-Teaching List (Excel / CSV)</strong> above to upload your staff roster.</td></tr>`;
+                    }
+                    const filtered = nonTeaching.filter(nt => {
                       if (nonTeachingFilter === 'active' && nt.isExcluded) return false;
                       if (nonTeachingFilter === 'excluded' && !nt.isExcluded) return false;
                       if (nonTeachingSearch) {
-                        const s = nonTeachingSearch.toLowerCase();
+                        const s = nonTeachingSearch.toLowerCase().trim();
                         return (nt.name || '').toLowerCase().includes(s) ||
                                String(nt.pen || '').toLowerCase().includes(s) ||
                                (nt.designation || '').toLowerCase().includes(s) ||
                                (nt.department || '').toLowerCase().includes(s);
                       }
                       return true;
-                    })
-                    .map((nt, idx) => {
-                      const asstDuty = getNonTeachingAssignment(nt.name);
-
-                      return `
-                        <tr class="${nt.isExcluded ? 'bg-red-950/20 opacity-70' : 'hover:bg-white/5'} transition-colors">
-                          <td class="text-center font-mono text-slate-400">
-                            ${idx + 1}
-                          </td>
-                          <td class="font-bold text-white whitespace-nowrap">
-                            ${esc(nt.name)}
-                          </td>
-                          <td class="text-slate-300">
-                            ${esc(nt.designation || 'Staff')}${nt.department ? `<span class="text-[10px] text-emerald-300/80 block font-normal">${esc(nt.department)}</span>` : ''}
-                          </td>
-                          <td class="font-mono text-slate-300">
-                            ${nt.pen || '–'}
-                          </td>
-                          <td>
-                            ${asstDuty.polling ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">Booth ${asstDuty.polling.boothNumber}</span>` : '<span class="text-slate-500">–</span>'}
-                          </td>
-                          <td>
-                            ${asstDuty.counting ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-semibold">Table ${asstDuty.counting.tableNumber}</span>` : '<span class="text-slate-500">–</span>'}
-                          </td>
-                          <td>
-                            ${nt.isExcluded ? `
-                              <span class="badge bg-red-500/20 text-red-300 border border-red-500/40 text-[10px] font-bold" title="${esc(nt.exclusionReason || 'Excluded')}">
-                                ⛔ Excluded${nt.exclusionReason ? `: ${esc(nt.exclusionReason)}` : ''}
-                              </span>
-                            ` : `
-                              <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold">
-                                ✓ Available
-                              </span>
-                            `}
-                          </td>
-                          <td class="text-right whitespace-nowrap space-x-1">
-                            <button class="btn btn-secondary text-[11px] py-1 px-2 btn-toggle-exclude-nt ${nt.isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-name="${esc(nt.name)}">
-                              ${nt.isExcluded ? '✓ Enable' : '⛔ Exclude'}
-                            </button>
-                            <button class="btn btn-secondary text-[11px] py-1 px-1.5 text-red-400 hover:bg-red-500/20 btn-delete-nt" data-name="${esc(nt.name)}" title="Remove from roster">
-                              🗑️
-                            </button>
-                          </td>
-                        </tr>
-                      `;
-                    }).join('')}
+                    });
+                    if (filtered.length === 0) {
+                      return `<tr><td colspan="8" class="text-center py-8 text-slate-400">No non-teaching staff found matching "<strong>${esc(nonTeachingSearch)}</strong>".</td></tr>`;
+                    }
+                    return filtered.map(getNonTeachingRowHtml).join('');
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -1000,6 +1091,17 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     `;
 
     bindEvents();
+
+    // Restore focus and cursor selection if user had an active search field
+    if (searchFocusState) {
+      const el = main.querySelector('#' + searchFocusState.id);
+      if (el) {
+        el.focus();
+        try {
+          el.setSelectionRange(searchFocusState.start, searchFocusState.end);
+        } catch (_) {}
+      }
+    }
   };
 
   // ─── Event Bindings ─────────────────────────────────────────────────────────
@@ -1173,60 +1275,91 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       });
     });
 
-    // Faculty Search and Filter
+    // Faculty Search and Filter (In-place live filtering without page re-render)
     main.querySelector('#inputFacultySearch')?.addEventListener('input', (e) => {
       facultySearch = e.target.value;
-      renderUI();
+      updateFacultyTableRows();
+    });
+
+    main.querySelector('#inputFacultySearch')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.target.value = '';
+        facultySearch = '';
+        updateFacultyTableRows();
+      }
     });
 
     main.querySelectorAll('.filter-faculty-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         facultyFilter = e.currentTarget.dataset.filter;
-        renderUI();
+        main.querySelectorAll('.filter-faculty-btn').forEach(b => {
+          if (b.dataset.filter === facultyFilter) {
+            b.className = 'filter-faculty-btn px-3 py-1 rounded-lg font-semibold transition-colors bg-indigo-600 text-white';
+          } else {
+            b.className = 'filter-faculty-btn px-3 py-1 rounded-lg font-semibold transition-colors text-slate-400 hover:text-white';
+          }
+        });
+        updateFacultyTableRows();
       });
     });
 
-    // Non-Teaching Search and Filter
+    // Delegated click handler on Faculty table body so dynamically filtered rows respond immediately
+    main.querySelector('#facultyTableBody')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-toggle-exclude-fac');
+      if (!btn) return;
+      const pen = btn.dataset.pen;
+      const target = faculty.find(f => String(f.pen) === pen || f.name === pen);
+      if (!target) return;
+
+      if (target.isExcluded) {
+        target.isExcluded = false;
+        target.exclusionReason = '';
+        showToast(`${target.name} is now Available for election duty.`, 'success');
+      } else {
+        const reason = prompt(`Enter reason for excluding ${target.name} from election duty:\n(e.g., Returning Officer, ARO, Medical Leave, Observer, On Deputation):`, 'Returning Officer / Official Duty');
+        if (reason !== null) {
+          target.isExcluded = true;
+          target.exclusionReason = reason.trim() || 'Official Duty';
+          showToast(`${target.name} excluded from duty (${target.exclusionReason}).`, 'info');
+        }
+      }
+      saveAll(false);
+      renderUI();
+    });
+
+    // Non-Teaching Search and Filter (In-place live filtering without page re-render)
     main.querySelector('#inputNonTeachingSearch')?.addEventListener('input', (e) => {
       nonTeachingSearch = e.target.value;
-      renderUI();
+      updateNonTeachingTableRows();
+    });
+
+    main.querySelector('#inputNonTeachingSearch')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.target.value = '';
+        nonTeachingSearch = '';
+        updateNonTeachingTableRows();
+      }
     });
 
     main.querySelectorAll('.filter-nt-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         nonTeachingFilter = e.currentTarget.dataset.filter;
-        renderUI();
-      });
-    });
-
-    // Toggle Exclude Faculty
-    main.querySelectorAll('.btn-toggle-exclude-fac').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const pen = e.currentTarget.dataset.pen;
-        const target = faculty.find(f => String(f.pen) === pen || f.name === pen);
-        if (!target) return;
-
-        if (target.isExcluded) {
-          target.isExcluded = false;
-          target.exclusionReason = '';
-          showToast(`${target.name} is now Available for election duty.`, 'success');
-        } else {
-          const reason = prompt(`Enter reason for excluding ${target.name} from election duty:\n(e.g., Returning Officer, ARO, Medical Leave, Observer, On Deputation):`, 'Returning Officer / Official Duty');
-          if (reason !== null) {
-            target.isExcluded = true;
-            target.exclusionReason = reason.trim() || 'Official Duty';
-            showToast(`${target.name} excluded from duty (${target.exclusionReason}).`, 'info');
+        main.querySelectorAll('.filter-nt-btn').forEach(b => {
+          if (b.dataset.filter === nonTeachingFilter) {
+            b.className = 'filter-nt-btn px-3 py-1 rounded-lg font-semibold transition-colors bg-emerald-600 text-white';
+          } else {
+            b.className = 'filter-nt-btn px-3 py-1 rounded-lg font-semibold transition-colors text-slate-400 hover:text-white';
           }
-        }
-        saveAll(false);
-        renderUI();
+        });
+        updateNonTeachingTableRows();
       });
     });
 
-    // Toggle Exclude Non-Teaching
-    main.querySelectorAll('.btn-toggle-exclude-nt').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const name = e.currentTarget.dataset.name;
+    // Delegated click handler on Non-Teaching table body
+    main.querySelector('#nonTeachingTableBody')?.addEventListener('click', (e) => {
+      const excludeBtn = e.target.closest('.btn-toggle-exclude-nt');
+      if (excludeBtn) {
+        const name = excludeBtn.dataset.name;
         const target = nonTeaching.find(n => n.name === name);
         if (!target) return;
 
@@ -1244,20 +1377,19 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         }
         saveAll(false);
         renderUI();
-      });
-    });
+        return;
+      }
 
-    // Delete individual Non-Teaching staff
-    main.querySelectorAll('.btn-delete-nt').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const name = e.currentTarget.dataset.name;
+      const delBtn = e.target.closest('.btn-delete-nt');
+      if (delBtn) {
+        const name = delBtn.dataset.name;
         if (confirm(`Remove "${name}" from the Non-Teaching Staff roster?`)) {
           nonTeaching = nonTeaching.filter(n => n.name !== name);
           saveAll(false);
           showToast(`Removed "${name}" from Non-Teaching roster.`, 'info');
           renderUI();
         }
-      });
+      }
     });
 
     // Add Staff Modal Toggle
