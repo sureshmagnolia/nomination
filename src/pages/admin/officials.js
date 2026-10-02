@@ -140,6 +140,24 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   let nonTeachingSearch = '';
   let nonTeachingFilter = 'all'; // 'all' | 'active' | 'excluded'
 
+  // Helper: Classification predicates
+  const isLibrarian = (f) => {
+    if (!f) return false;
+    const d = (f.designation || '').toLowerCase();
+    const dept = (f.department || '').toLowerCase();
+    return d.includes('librarian') || dept === 'library';
+  };
+
+  const isGuestFaculty = (f) => {
+    if (!f) return false;
+    const d = (f.designation || '').toLowerCase();
+    return d.includes('guest');
+  };
+
+  const isRegularFaculty = (f) => {
+    return f && !isLibrarian(f) && !isGuestFaculty(f);
+  };
+
   // Helper: Get faculty by name or PEN
   const getFaculty = (identifier) => {
     if (!identifier) return null;
@@ -207,6 +225,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <div class="flex items-center gap-1.5 flex-wrap">
             ${pDuty ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">Booth ${pDuty.boothNumber} (${pDuty.role})</span>` : ''}
             ${cDuty ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-semibold">Table ${cDuty.tableNumber} (${cDuty.role})</span>` : ''}
+            ${pDuty && cDuty ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">⚠️ Double Duty</span>` : ''}
             ${!pDuty && !cDuty ? `<span class="text-slate-500 text-[11px]">–</span>` : ''}
           </div>
         </td>
@@ -679,14 +698,35 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       return;
     }
 
-    // Available, non-excluded faculty sorted by seniority rank (1 = seniormost)
-    const availableFaculty = faculty
-      .filter(f => !f.isExcluded)
+    // Identify faculty already assigned to Counting Duty to avoid double duty
+    const countingAssignedNames = new Set();
+    countingTeams.forEach(t => {
+      if (t.supervisor?.name) countingAssignedNames.add(t.supervisor.name);
+      if (t.countingOfficer1?.name) countingAssignedNames.add(t.countingOfficer1.name);
+      if (t.countingOfficer2?.name) countingAssignedNames.add(t.countingOfficer2.name);
+      if (t.countingOfficer3?.name) countingAssignedNames.add(t.countingOfficer3.name);
+    });
+
+    // Check for any manually preserved 3rd Polling Officers to prevent duplicate booth assignment
+    const preservedPO3Names = new Set();
+    pollingTeams.forEach(t => {
+      if (t.pollingOfficer3?.name) preservedPO3Names.add(t.pollingOfficer3.name);
+    });
+
+    // Active, non-excluded faculty sorted by seniority rank (1 = seniormost)
+    const activeFaculty = faculty
+      .filter(f => !f.isExcluded && !preservedPO3Names.has(f.name))
       .sort((a, b) => a.seniority - b.seniority);
 
+    // Classify into Regular Teaching Faculty, Librarians, and Guest Faculty
+    const activeRegular = activeFaculty.filter(isRegularFaculty);
+    const activeLibrarians = activeFaculty.filter(isLibrarian);
+    const activeGuest = activeFaculty.filter(isGuestFaculty);
+
+    const totalEligible = activeFaculty.length;
     const requiredFaculty = numBooths * 3;
-    if (availableFaculty.length < requiredFaculty) {
-      showToast(`Warning: Only ${availableFaculty.length} active faculty available for ${requiredFaculty} polling positions.`, 'warning');
+    if (totalEligible < requiredFaculty) {
+      showToast(`Warning: Only ${totalEligible} active personnel available for ${requiredFaculty} polling positions.`, 'warning');
     }
 
     const availableNT = nonTeaching.filter(nt => !nt.isExcluded);
@@ -694,17 +734,76 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       showToast('Notice: No active Non-Teaching Staff available. Please upload the Non-Teaching Staff list in the "Non-Teaching Staff" tab.', 'info');
     }
 
-    // 1. Top numBooths seniors -> Presiding Officers
-    const presidingPool = availableFaculty.slice(0, numBooths);
-    // 2. Next numBooths * 2 -> Polling Officers
-    const pollingPool = availableFaculty.slice(numBooths, numBooths * 3);
+    // 1. Presiding Officers: Must be regular teaching faculty (seniormost)
+    // Priority: Fresh regular faculty without counting duty
+    const freshRegular = activeRegular.filter(f => !countingAssignedNames.has(f.name));
+    const doubleDutyRegular = activeRegular.filter(f => countingAssignedNames.has(f.name));
+
+    let presidingPool = [];
+    let remainingFreshRegular = [];
+    let remainingDoubleDutyRegular = [];
+
+    if (freshRegular.length >= numBooths) {
+      // Sufficient fresh regular faculty: 0 double duty for Presiding Officers
+      presidingPool = freshRegular.slice(0, numBooths);
+      remainingFreshRegular = freshRegular.slice(numBooths);
+      remainingDoubleDutyRegular = [...doubleDutyRegular];
+    } else {
+      // Shortage of fresh regular faculty: Fall back to double duty regular faculty only for the shortfall
+      presidingPool = [...freshRegular];
+      const shortfall = numBooths - presidingPool.length;
+      presidingPool.push(...doubleDutyRegular.slice(0, shortfall));
+      remainingFreshRegular = [];
+      remainingDoubleDutyRegular = doubleDutyRegular.slice(shortfall);
+    }
+    presidingPool.sort((a, b) => a.seniority - b.seniority);
+
+    // 2. Polling Officers (PO1 & PO2): Can be regular faculty, librarians, or guest faculty
+    // Priority: Avoid double duty by filling from fresh staff first (fresh regular + fresh librarians + fresh guest)
+    const freshLibrarians = activeLibrarians.filter(f => !countingAssignedNames.has(f.name));
+    const freshGuest = activeGuest.filter(f => !countingAssignedNames.has(f.name));
+
+    const doubleDutyLibrarians = activeLibrarians.filter(f => countingAssignedNames.has(f.name));
+    const doubleDutyGuest = activeGuest.filter(f => countingAssignedNames.has(f.name));
+
+    // Combine fresh pool in seniority order: Regular faculty -> Librarians -> Guest faculty
+    const freshPollingPool = [
+      ...remainingFreshRegular,
+      ...freshLibrarians,
+      ...freshGuest
+    ].sort((a, b) => a.seniority - b.seniority);
+
+    // Double duty fallback pool (only used if fresh personnel are unavailable)
+    const doubleDutyPollingPool = [
+      ...remainingDoubleDutyRegular,
+      ...doubleDutyLibrarians,
+      ...doubleDutyGuest
+    ].sort((a, b) => a.seniority - b.seniority);
+
+    const neededPollingOfficers = numBooths * 2;
+    let pollingOfficersPool = [];
+
+    if (freshPollingPool.length >= neededPollingOfficers) {
+      pollingOfficersPool = freshPollingPool.slice(0, neededPollingOfficers);
+    } else {
+      // Fresh pool exhausted: Allot double duty ONLY for the remaining unfilled slots
+      const shortfall = neededPollingOfficers - freshPollingPool.length;
+      pollingOfficersPool = [
+        ...freshPollingPool,
+        ...doubleDutyPollingPool.slice(0, shortfall)
+      ];
+    }
 
     const newTeams = [];
+    let doubleDutyCount = 0;
+    let guestCount = 0;
+    let librarianCount = 0;
+
     for (let i = 0; i < numBooths; i++) {
       const b = booths[i];
       const pOfficer = presidingPool[i] || null;
-      const po1 = pollingPool[i * 2] || null;
-      const po2 = pollingPool[i * 2 + 1] || null;
+      const po1 = pollingOfficersPool[i * 2] || null;
+      const po2 = pollingOfficersPool[i * 2 + 1] || null;
       const assistant = availableNT.length > 0 ? (availableNT[i % availableNT.length] || null) : null;
 
       // Preserve any manually assigned 3rd Polling Officer
@@ -712,17 +811,25 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const existingPO3 = existingTeam?.pollingOfficer3 || null;
       const existingShowPO3 = existingTeam?.showPollingOfficer3 || false;
 
-      // Verify hierarchy: Presiding Officer must be strictly seniormost
-      const teamFaculty = [pOfficer, po1, po2, existingPO3].filter(Boolean);
-      teamFaculty.sort((a, b) => a.seniority - b.seniority);
+      // Sort polling officers by seniority
+      const pollingOfficers = [po1, po2, existingPO3].filter(Boolean);
+      pollingOfficers.sort((a, b) => a.seniority - b.seniority);
+
+      // Verify hierarchy: Presiding Officer is seniormost regular faculty
+      const allTeamFaculty = [pOfficer, ...pollingOfficers].filter(Boolean);
+      allTeamFaculty.forEach(f => {
+        if (countingAssignedNames.has(f.name)) doubleDutyCount++;
+        if (isGuestFaculty(f)) guestCount++;
+        if (isLibrarian(f)) librarianCount++;
+      });
 
       newTeams.push({
         boothNumber: b.boothNumber,
         roomName: b.roomName || `Booth ${b.boothNumber}`,
-        presidingOfficer: teamFaculty[0] || null,
-        pollingOfficer1: teamFaculty[1] || null,
-        pollingOfficer2: teamFaculty[2] || null,
-        pollingOfficer3: teamFaculty[3] || null,
+        presidingOfficer: pOfficer,
+        pollingOfficer1: pollingOfficers[0] || null,
+        pollingOfficer2: pollingOfficers[1] || null,
+        pollingOfficer3: pollingOfficers[2] || null,
         showPollingOfficer3: existingShowPO3 || !!existingPO3,
         pollingAssistant: assistant ? { name: assistant.name, designation: assistant.designation, pen: assistant.pen || '' } : null
       });
@@ -730,6 +837,17 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     pollingTeams = newTeams;
     saveAll(false);
+
+    const extraDetails = [];
+    if (librarianCount > 0) extraDetails.push(`${librarianCount} Librarian${librarianCount > 1 ? 's' : ''}`);
+    if (guestCount > 0) extraDetails.push(`${guestCount} Guest Faculty`);
+    const extraStr = extraDetails.length > 0 ? ` (Utilized ${extraDetails.join(' & ')} as Polling Officers)` : '';
+
+    if (doubleDutyCount > 0) {
+      showToast(`Polling teams allotted. Note: ${doubleDutyCount} double duty assignment(s) required due to active faculty shortage.${extraStr}`, 'warning');
+    } else {
+      showToast(`Polling teams allotted cleanly with 0 double duties!${extraStr}`, 'success');
+    }
     renderUI();
   };
 
@@ -741,7 +859,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       return;
     }
 
-    // Assigned polling faculty names
+    // Assigned polling faculty names to avoid double duty
     const pollingAssignedNames = new Set();
     pollingTeams.forEach(t => {
       if (t.presidingOfficer?.name) pollingAssignedNames.add(t.presidingOfficer.name);
@@ -750,30 +868,92 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       if (t.pollingOfficer3?.name) pollingAssignedNames.add(t.pollingOfficer3.name);
     });
 
-    const activeFaculty = faculty.filter(f => !f.isExcluded).sort((a, b) => a.seniority - b.seniority);
-    const freshFaculty = activeFaculty.filter(f => !pollingAssignedNames.has(f.name));
+    // Check for any manually preserved 3rd Counting Officers
+    const preservedCO3Names = new Set();
+    countingTeams.forEach(t => {
+      if (t.countingOfficer3?.name) preservedCO3Names.add(t.countingOfficer3.name);
+    });
 
-    let countingPool = [];
-    if (preferFresh && freshFaculty.length >= numTables * 3) {
-      countingPool = freshFaculty;
+    const activeFaculty = faculty
+      .filter(f => !f.isExcluded && !preservedCO3Names.has(f.name))
+      .sort((a, b) => a.seniority - b.seniority);
+
+    const activeRegular = activeFaculty.filter(isRegularFaculty);
+    const activeLibrarians = activeFaculty.filter(isLibrarian);
+    const activeGuest = activeFaculty.filter(isGuestFaculty);
+
+    // 1. Counting Supervisors: Must be regular faculty (seniormost)
+    const freshRegular = activeRegular.filter(f => !pollingAssignedNames.has(f.name));
+    const doubleDutyRegular = activeRegular.filter(f => pollingAssignedNames.has(f.name));
+
+    let supervisorPool = [];
+    let remainingFreshRegular = [];
+    let remainingDoubleDutyRegular = [];
+
+    if (preferFresh && freshRegular.length >= numTables) {
+      supervisorPool = freshRegular.slice(0, numTables);
+      remainingFreshRegular = freshRegular.slice(numTables);
+      remainingDoubleDutyRegular = [...doubleDutyRegular];
+    } else if (preferFresh) {
+      supervisorPool = [...freshRegular];
+      const shortfall = numTables - supervisorPool.length;
+      supervisorPool.push(...doubleDutyRegular.slice(0, shortfall));
+      remainingFreshRegular = [];
+      remainingDoubleDutyRegular = doubleDutyRegular.slice(shortfall);
     } else {
-      countingPool = [...freshFaculty, ...activeFaculty.filter(f => pollingAssignedNames.has(f.name))];
+      supervisorPool = activeRegular.slice(0, numTables);
+      const supSet = new Set(supervisorPool.map(s => s.name));
+      remainingFreshRegular = freshRegular.filter(f => !supSet.has(f.name));
+      remainingDoubleDutyRegular = doubleDutyRegular.filter(f => !supSet.has(f.name));
+    }
+    supervisorPool.sort((a, b) => a.seniority - b.seniority);
+
+    // 2. Counting Officers: Can be regular faculty, librarians, or guest faculty
+    const freshLibrarians = activeLibrarians.filter(f => !pollingAssignedNames.has(f.name));
+    const freshGuest = activeGuest.filter(f => !pollingAssignedNames.has(f.name));
+
+    const doubleDutyLibrarians = activeLibrarians.filter(f => pollingAssignedNames.has(f.name));
+    const doubleDutyGuest = activeGuest.filter(f => pollingAssignedNames.has(f.name));
+
+    const freshOfficerPool = [
+      ...remainingFreshRegular,
+      ...freshLibrarians,
+      ...freshGuest
+    ].sort((a, b) => a.seniority - b.seniority);
+
+    const doubleDutyOfficerPool = [
+      ...remainingDoubleDutyRegular,
+      ...doubleDutyLibrarians,
+      ...doubleDutyGuest
+    ].sort((a, b) => a.seniority - b.seniority);
+
+    const neededOfficers = numTables * 2;
+    let officerPool = [];
+
+    if (preferFresh && freshOfficerPool.length >= neededOfficers) {
+      officerPool = freshOfficerPool.slice(0, neededOfficers);
+    } else if (preferFresh) {
+      const shortfall = neededOfficers - freshOfficerPool.length;
+      officerPool = [
+        ...freshOfficerPool,
+        ...doubleDutyOfficerPool.slice(0, shortfall)
+      ];
+    } else {
+      officerPool = [...freshOfficerPool, ...doubleDutyOfficerPool].slice(0, neededOfficers);
     }
 
     const availableNT = nonTeaching.filter(nt => !nt.isExcluded);
 
-    const supervisorPool = countingPool.slice(0, numTables);
-    const officerPool = countingPool.slice(numTables, numTables * 3);
-
     const newCountingTeams = [];
     let doubleDutyCount = 0;
+    let guestCount = 0;
+    let librarianCount = 0;
 
     for (let i = 0; i < numTables; i++) {
       const b = booths[i];
       const sup = supervisorPool[i] || null;
       const co1 = officerPool[i * 2] || null;
       const co2 = officerPool[i * 2 + 1] || null;
-      // Pair with non-teaching staff, shifting offset to use fresh staff if available
       const assistant = availableNT.length > 0 ? (availableNT[(i + numTables) % availableNT.length] || null) : null;
 
       // Preserve any manually assigned 3rd Counting Officer
@@ -781,20 +961,23 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const existingCO3 = existingTeam?.countingOfficer3 || null;
       const existingShowCO3 = existingTeam?.showCountingOfficer3 || false;
 
-      const teamFaculty = [sup, co1, co2, existingCO3].filter(Boolean);
-      teamFaculty.sort((a, b) => a.seniority - b.seniority);
+      const countingOfficers = [co1, co2, existingCO3].filter(Boolean);
+      countingOfficers.sort((a, b) => a.seniority - b.seniority);
 
-      teamFaculty.forEach(f => {
+      const allTeamFaculty = [sup, ...countingOfficers].filter(Boolean);
+      allTeamFaculty.forEach(f => {
         if (pollingAssignedNames.has(f.name)) doubleDutyCount++;
+        if (isGuestFaculty(f)) guestCount++;
+        if (isLibrarian(f)) librarianCount++;
       });
 
       newCountingTeams.push({
         tableNumber: b.boothNumber,
         roomName: b.roomName || `Table ${b.boothNumber}`,
-        supervisor: teamFaculty[0] || null,
-        countingOfficer1: teamFaculty[1] || null,
-        countingOfficer2: teamFaculty[2] || null,
-        countingOfficer3: teamFaculty[3] || null,
+        supervisor: sup,
+        countingOfficer1: countingOfficers[0] || null,
+        countingOfficer2: countingOfficers[1] || null,
+        countingOfficer3: countingOfficers[2] || null,
         showCountingOfficer3: existingShowCO3 || !!existingCO3,
         countingAssistant: assistant ? { name: assistant.name, designation: assistant.designation, pen: assistant.pen || '' } : null
       });
@@ -802,10 +985,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     countingTeams = newCountingTeams;
     saveAll(false);
+
+    const extraDetails = [];
+    if (librarianCount > 0) extraDetails.push(`${librarianCount} Librarian${librarianCount > 1 ? 's' : ''}`);
+    if (guestCount > 0) extraDetails.push(`${guestCount} Guest Faculty`);
+    const extraStr = extraDetails.length > 0 ? ` (Utilized ${extraDetails.join(' & ')} as Counting Officers)` : '';
+
     if (doubleDutyCount > 0) {
-      showToast(`Counting teams allotted with ${doubleDutyCount} double duty faculty members flagged.`, 'warning');
+      showToast(`Counting teams allotted with ${doubleDutyCount} double duty personnel due to active faculty shortage.${extraStr}`, 'warning');
     } else {
-      showToast('Counting teams allotted cleanly with 0 double duties!', 'success');
+      showToast(`Counting teams allotted cleanly with 0 double duties!${extraStr}`, 'success');
     }
     renderUI();
   };
@@ -935,10 +1124,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <div class="flex border-b border-white/10 no-print gap-2 overflow-x-auto">
           <button class="nav-tab px-4 py-2.5 font-bold text-sm border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'polling' ? 'border-indigo-500 text-indigo-300 bg-white/5' : 'border-transparent text-slate-400 hover:text-white'}" data-tab="polling">
             🏫 Polling Booth Teams (${booths.length})
+            ${doubleDutyCount > 0 ? `<span class="bg-amber-500 text-black text-[10px] px-1.5 py-0.2 rounded-full font-bold" title="${doubleDutyCount} personnel assigned to both Polling and Counting">${doubleDutyCount}</span>` : ''}
           </button>
           <button class="nav-tab px-4 py-2.5 font-bold text-sm border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'counting' ? 'border-purple-500 text-purple-300 bg-white/5' : 'border-transparent text-slate-400 hover:text-white'}" data-tab="counting">
             🧮 Counting Table Teams (${booths.length})
-            ${doubleDutyCount > 0 ? `<span class="bg-amber-500 text-black text-[10px] px-1.5 py-0.2 rounded-full font-bold">${doubleDutyCount}</span>` : ''}
+            ${doubleDutyCount > 0 ? `<span class="bg-amber-500 text-black text-[10px] px-1.5 py-0.2 rounded-full font-bold" title="${doubleDutyCount} personnel assigned to both Polling and Counting">${doubleDutyCount}</span>` : ''}
           </button>
           <button class="nav-tab px-4 py-2.5 font-bold text-sm border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'faculty' ? 'border-blue-500 text-blue-300 bg-white/5' : 'border-transparent text-slate-400 hover:text-white'}" data-tab="faculty">
             📋 Teaching Faculty Roster (${faculty.length})
@@ -953,10 +1143,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <div class="flex items-center justify-between flex-wrap gap-3 bg-white/5 p-4 rounded-xl border border-white/10 no-print">
             <div>
               <h4 class="font-bold text-white text-base">Polling Booth Officials Allotment</h4>
-              <p class="text-xs text-slate-400">Each booth needs 1 Presiding Officer (Seniormost faculty), 2 Polling Officers (Faculty), and 1 Polling Assistant (Non-teaching staff).</p>
+              <p class="text-xs text-slate-400">Each booth needs 1 Presiding Officer (Seniormost regular faculty), 2 Polling Officers (Regular faculty, Guest faculty, or Librarians), and 1 Polling Assistant (Non-teaching staff). Double duty with counting tables is strictly minimized.</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
-              <button id="btnAutoAllotPolling" class="btn btn-primary bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow">
+              <button id="btnAutoAllotPolling" class="btn btn-primary bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow" title="Auto-allot Polling Teams avoiding double duty, utilizing Guest Faculty and Librarians as Polling Officers">
                 ⚡ Auto-Allot Polling Teams
               </button>
               <button id="btnPrintPollingOrders" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5">
@@ -987,8 +1177,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               const po3Rank = team.pollingOfficer3 ? team.pollingOfficer3.seniority : 999;
               const hierarchyViolation = (po1Rank < pRank) || (po2Rank < pRank) || (po3Rank < pRank);
 
+              // Double duty checks for Polling Booth
+              const pDouble = team.presidingOfficer ? getCountingAssignment(team.presidingOfficer.name) : null;
+              const po1Double = team.pollingOfficer1 ? getCountingAssignment(team.pollingOfficer1.name) : null;
+              const po2Double = team.pollingOfficer2 ? getCountingAssignment(team.pollingOfficer2.name) : null;
+              const po3Double = team.pollingOfficer3 ? getCountingAssignment(team.pollingOfficer3.name) : null;
+              const asstDouble = team.pollingAssistant ? getNonTeachingAssignment(team.pollingAssistant.name).counting : null;
+              const hasDoubleDuty = !!(pDouble || po1Double || po2Double || po3Double || asstDouble);
+
               return `
-                <div class="glass rounded-xl border ${hierarchyViolation ? 'border-amber-500/70 bg-amber-950/20' : 'border-white/10'} p-4 flex flex-col justify-between space-y-3 relative group" data-booth="${b.boothNumber}">
+                <div class="glass rounded-xl border ${hierarchyViolation ? 'border-amber-500/70 bg-amber-950/20' : (hasDoubleDuty ? 'border-amber-500/50 bg-amber-950/20' : 'border-white/10')} p-4 flex flex-col justify-between space-y-3 relative group" data-booth="${b.boothNumber}">
                   <div>
                     <div class="flex items-center justify-between pb-2.5 border-b border-white/10 gap-2">
                       <div>
@@ -999,6 +1197,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         <span class="text-[11px] font-mono bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30 flex items-center gap-1 shadow-sm font-semibold" title="Total Voters Assigned to Booth ${b.boothNumber}">
                           <span>🗳️</span> <span>${getBoothVoterCount(b)} voters</span>
                         </span>
+                        ${hasDoubleDuty ? `
+                          <span class="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded flex items-center gap-1" title="One or more officials in this booth are also assigned to Counting duty">
+                            ⚠️ Double Duty Flag
+                          </span>
+                        ` : `
+                          <span class="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded border border-white/10">Fresh Team</span>
+                        `}
                         <span class="text-[11px] font-mono bg-white/10 text-slate-300 px-2 py-0.5 rounded border border-white/10" title="Assigned Classes">
                           ${b.classes ? `${b.classes.length} classes` : '0 classes'}
                         </span>
@@ -1017,7 +1222,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                       <div>
                         <div class="flex items-center justify-between mb-1">
                           <label class="text-[11px] font-bold text-amber-300 flex items-center gap-1">
-                            <span>👑</span> Presiding Officer <span class="text-[10px] text-slate-400 font-normal">(Seniormost)</span>
+                            <span>👑</span> Presiding Officer <span class="text-[10px] text-slate-400 font-normal">(Seniormost Regular Faculty)</span>
                           </label>
                           ${team.presidingOfficer ? `<span class="text-[10px] font-mono text-amber-200 bg-amber-500/20 px-1.5 py-0.2 rounded border border-amber-500/30">Rank #${team.presidingOfficer.seniority}</span>` : ''}
                         </div>
@@ -1026,13 +1231,17 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           ${faculty.map(f => {
                             const isAssignedElsewhere = getPollingAssignment(f.name) && getPollingAssignment(f.name).boothNumber !== b.boothNumber;
                             const isSelected = team.presidingOfficer?.name === f.name;
+                            const cDuty = getCountingAssignment(f.name);
+                            const tag = isGuestFaculty(f) ? '[Guest]' : isLibrarian(f) ? '[Librarian]' : '';
+                            const doubleTag = cDuty ? `[⚠️ Double Duty: Table ${cDuty.tableNumber}]` : '';
                             return `
                               <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${isAssignedElsewhere ? 'disabled' : ''}>
-                                ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)} · PEN:${f.pen}) ${isAssignedElsewhere ? `(Already in Booth ${getPollingAssignment(f.name).boothNumber})` : ''}
+                                ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)} · PEN:${f.pen || '–'}) ${tag} ${doubleTag} ${isAssignedElsewhere ? `(Already in Booth ${getPollingAssignment(f.name).boothNumber})` : ''}
                               </option>
                             `;
                           }).join('')}
                         </select>
+                        ${pDouble ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Counting Table ${pDouble.tableNumber} (${pDouble.role})</p>` : ''}
                       </div>
 
                       <!-- Polling Officer (Slot 1) -->
@@ -1048,13 +1257,17 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           ${faculty.map(f => {
                             const isAssignedElsewhere = getPollingAssignment(f.name) && getPollingAssignment(f.name).boothNumber !== b.boothNumber;
                             const isSelected = team.pollingOfficer1?.name === f.name;
+                            const cDuty = getCountingAssignment(f.name);
+                            const tag = isGuestFaculty(f) ? '[Guest]' : isLibrarian(f) ? '[Librarian]' : '';
+                            const doubleTag = cDuty ? `[⚠️ Double Duty: Table ${cDuty.tableNumber}]` : '';
                             return `
                               <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${isAssignedElsewhere ? 'disabled' : ''}>
-                                ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)} · PEN:${f.pen}) ${isAssignedElsewhere ? `(Already in Booth ${getPollingAssignment(f.name).boothNumber})` : ''}
+                                ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)} · PEN:${f.pen || '–'}) ${tag} ${doubleTag} ${isAssignedElsewhere ? `(Already in Booth ${getPollingAssignment(f.name).boothNumber})` : ''}
                               </option>
                             `;
                           }).join('')}
                         </select>
+                        ${po1Double ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Counting Table ${po1Double.tableNumber} (${po1Double.role})</p>` : ''}
                       </div>
 
                       <!-- Polling Officer (Slot 2) -->
@@ -1070,13 +1283,17 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           ${faculty.map(f => {
                             const isAssignedElsewhere = getPollingAssignment(f.name) && getPollingAssignment(f.name).boothNumber !== b.boothNumber;
                             const isSelected = team.pollingOfficer2?.name === f.name;
+                            const cDuty = getCountingAssignment(f.name);
+                            const tag = isGuestFaculty(f) ? '[Guest]' : isLibrarian(f) ? '[Librarian]' : '';
+                            const doubleTag = cDuty ? `[⚠️ Double Duty: Table ${cDuty.tableNumber}]` : '';
                             return `
                               <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${isAssignedElsewhere ? 'disabled' : ''}>
-                                ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)} · PEN:${f.pen}) ${isAssignedElsewhere ? `(Already in Booth ${getPollingAssignment(f.name).boothNumber})` : ''}
+                                ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)} · PEN:${f.pen || '–'}) ${tag} ${doubleTag} ${isAssignedElsewhere ? `(Already in Booth ${getPollingAssignment(f.name).boothNumber})` : ''}
                               </option>
                             `;
                           }).join('')}
                         </select>
+                        ${po2Double ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Counting Table ${po2Double.tableNumber} (${po2Double.role})</p>` : ''}
                       </div>
 
                       <!-- Polling Officer (Slot 3 - Optional / High Voter Booth) -->
@@ -1098,13 +1315,17 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                             ${faculty.map(f => {
                               const isAssignedElsewhere = getPollingAssignment(f.name) && getPollingAssignment(f.name).boothNumber !== b.boothNumber;
                               const isSelected = team.pollingOfficer3?.name === f.name;
+                              const cDuty = getCountingAssignment(f.name);
+                              const tag = isGuestFaculty(f) ? '[Guest]' : isLibrarian(f) ? '[Librarian]' : '';
+                              const doubleTag = cDuty ? `[⚠️ Double Duty: Table ${cDuty.tableNumber}]` : '';
                               return `
                                 <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${isAssignedElsewhere ? 'disabled' : ''}>
-                                  ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)} · PEN:${f.pen}) ${isAssignedElsewhere ? `(Already in Booth ${getPollingAssignment(f.name).boothNumber})` : ''}
+                                  ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)} · PEN:${f.pen || '–'}) ${tag} ${doubleTag} ${isAssignedElsewhere ? `(Already in Booth ${getPollingAssignment(f.name).boothNumber})` : ''}
                                 </option>
                               `;
                             }).join('')}
                           </select>
+                          ${po3Double ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Counting Table ${po3Double.tableNumber} (${po3Double.role})</p>` : ''}
                         </div>
                       ` : `
                         <div class="pt-0.5">
@@ -1130,6 +1351,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                             </option>
                           `).join('')}
                         </select>
+                        ${asstDouble ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Counting Table ${asstDouble.tableNumber} (Counting Assistant)</p>` : ''}
                       </div>
                     </div>
                   </div>
@@ -1227,9 +1449,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           ${faculty.map(f => {
                             const pAssigned = getPollingAssignment(f.name);
                             const isSelected = team.supervisor?.name === f.name;
+                            const tag = isGuestFaculty(f) ? '[Guest]' : isLibrarian(f) ? '[Librarian]' : '';
                             return `
                               <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''}>
-                                ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)}) ${pAssigned ? `[⚠️ Double Duty: Booth ${pAssigned.boothNumber}]` : ''}
+                                ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)}) ${tag} ${pAssigned ? `[⚠️ Double Duty: Booth ${pAssigned.boothNumber}]` : ''}
                               </option>
                             `;
                           }).join('')}
@@ -1250,9 +1473,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           ${faculty.map(f => {
                             const pAssigned = getPollingAssignment(f.name);
                             const isSelected = team.countingOfficer1?.name === f.name;
+                            const tag = isGuestFaculty(f) ? '[Guest]' : isLibrarian(f) ? '[Librarian]' : '';
                             return `
                               <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''}>
-                                ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)}) ${pAssigned ? `[⚠️ Double Duty: Booth ${pAssigned.boothNumber}]` : ''}
+                                ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)}) ${tag} ${pAssigned ? `[⚠️ Double Duty: Booth ${pAssigned.boothNumber}]` : ''}
                               </option>
                             `;
                           }).join('')}
@@ -1273,9 +1497,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           ${faculty.map(f => {
                             const pAssigned = getPollingAssignment(f.name);
                             const isSelected = team.countingOfficer2?.name === f.name;
+                            const tag = isGuestFaculty(f) ? '[Guest]' : isLibrarian(f) ? '[Librarian]' : '';
                             return `
                               <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''}>
-                                ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)}) ${pAssigned ? `[⚠️ Double Duty: Booth ${pAssigned.boothNumber}]` : ''}
+                                ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)}) ${tag} ${pAssigned ? `[⚠️ Double Duty: Booth ${pAssigned.boothNumber}]` : ''}
                               </option>
                             `;
                           }).join('')}
@@ -1302,9 +1527,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                             ${faculty.map(f => {
                               const pAssigned = getPollingAssignment(f.name);
                               const isSelected = team.countingOfficer3?.name === f.name;
+                              const tag = isGuestFaculty(f) ? '[Guest]' : isLibrarian(f) ? '[Librarian]' : '';
                               return `
                                 <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''}>
-                                  ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)}) ${pAssigned ? `[⚠️ Double Duty: Booth ${pAssigned.boothNumber}]` : ''}
+                                  ${f.isExcluded ? '⛔ ' : ''}#${f.seniority} ${esc(f.name)} (${esc(f.designation)}) ${tag} ${pAssigned ? `[⚠️ Double Duty: Booth ${pAssigned.boothNumber}]` : ''}
                                 </option>
                               `;
                             }).join('')}
@@ -1618,7 +1844,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // Polling Auto-Allot
     main.querySelector('#btnAutoAllotPolling')?.addEventListener('click', () => {
-      if (confirm('⚡ Auto-Allot Polling Teams?\n\nThis will assign the seniormost available faculty as Presiding Officers, followed by Polling Officers 1 & 2 for all booths based on the official Seniority List, and assign Non-Teaching Polling Assistants.\n\nProceed?')) {
+      if (confirm('⚡ Auto-Allot Polling Teams?\n\nThis will assign seniormost regular faculty as Presiding Officers, and Polling Officers (PO 1 & 2) while strictly avoiding double duty with Counting Table assignments. Guest faculty and Librarians will be utilized as Polling Officers to prevent double duty, assigning double duty only in the event of faculty unavailability.\n\nProceed?')) {
         autoAllotPolling();
       }
     });
@@ -1634,7 +1860,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // Counting Auto-Allot
     main.querySelector('#btnAutoAllotCountingFresh')?.addEventListener('click', () => {
-      if (confirm('⚡ Auto-Allot Counting Teams?\n\nThis will prioritize FRESH faculty members who are not assigned to Polling Duty. If fresh faculty is insufficient, remaining slots will be filled with polling staff with Double Duty flags.\n\nProceed?')) {
+      if (confirm('⚡ Auto-Allot Counting Teams?\n\nThis will assign seniormost regular faculty as Counting Supervisors, and Counting Officers from fresh faculty, librarians, and guest faculty who are not assigned to Polling Duty. If fresh personnel are unavailable, remaining slots will be filled with polling staff with Double Duty flags.\n\nProceed?')) {
         autoAllotCounting(true);
       }
     });
