@@ -268,7 +268,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
   const allNoms = Array.isArray(noms) ? [...noms] : [];
   const allPosts = Array.isArray(posts) ? [...posts] : [];
 
-  let activeTab = 'intake'; // 'intake' (1. All Online Submissions) | 'scrutiny' (2. Physical Copies Received)
+  let activeTab = 'intake'; // 'intake' (1. All Submissions) | 'scrutiny' (2. Physical Received) | 'not_confirmed' (3. Physical Not Yet Confirmed) | 'accepted' | 'rejected'
   let nomViewMode = localStorage.getItem('admin_verify_view_mode') || 'table'; // 'cards' | 'table' (defaults to table for admin list scrutiny)
   let arrangeMode = 'post'; // 'post' (Group by Post - Statutory) | 'latest' | 'flags' | 'serial' | 'name'
   let sortCol = null; // null | 'serial' | 'id' | 'post' | 'name' | 'status' | 'flags'
@@ -345,29 +345,36 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       <!-- Top Workflow Tabs -->
       <div class="flex flex-wrap items-center gap-2 border-b border-white/10 pb-0">
         <button type="button" id="tabBtnIntake" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-bold rounded-t-xl border-b-2 flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'intake' ? 'border-indigo-400 text-white bg-indigo-950/40 shadow-lg shadow-indigo-950/20' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'}">
-          <span>📥</span> <span>1. All Submissions &amp; Intake</span>
+          <span>📥</span> <span>1. All Submissions</span>
           <span id="tabCountIntake" class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-xs font-mono font-bold">0</span>
         </button>
         <button type="button" id="tabBtnScrutiny" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-bold rounded-t-xl border-b-2 flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'scrutiny' ? 'border-sky-400 text-white bg-sky-950/40 shadow-lg shadow-sky-950/20' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'}">
-          <span>📋</span> <span>2. Physical Received (Formal Scrutiny)</span>
+          <span>📋</span> <span>2. Physical Received</span>
           <span id="tabCountScrutiny" class="badge bg-sky-500/20 text-sky-300 border border-sky-500/40 text-xs font-mono font-bold">0</span>
         </button>
+        <button type="button" id="tabBtnNotConfirmed" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-bold rounded-t-xl border-b-2 flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'not_confirmed' ? 'border-amber-400 text-white bg-amber-950/40 shadow-lg shadow-amber-950/20' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'}">
+          <span>⏳</span> <span>3. Physical Not Yet Confirmed</span>
+          <span id="tabCountNotConfirmed" class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-mono font-bold">0</span>
+        </button>
         <button type="button" id="tabBtnAccepted" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-bold rounded-t-xl border-b-2 flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'accepted' ? 'border-emerald-400 text-white bg-emerald-950/40 shadow-lg shadow-emerald-950/20' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'}">
-          <span>✅</span> <span>3. Accepted Nominations</span>
+          <span>✅</span> <span>4. Accepted Nominations</span>
           <span id="tabCountAccepted" class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold">0</span>
         </button>
         <button type="button" id="tabBtnRejected" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-bold rounded-t-xl border-b-2 flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'rejected' ? 'border-rose-400 text-white bg-rose-950/40 shadow-lg shadow-rose-950/20' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'}">
-          <span>❌</span> <span>4. Rejected Nominations</span>
+          <span>❌</span> <span>5. Rejected Nominations</span>
           <span id="tabCountRejected" class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-xs font-mono font-bold">0</span>
         </button>
       </div>
 
       <!-- Context Information Banners -->
       <div id="bannerIntake" class="${activeTab === 'intake' ? '' : 'hidden'} text-xs bg-indigo-950/30 border border-indigo-500/30 rounded-xl p-3 text-indigo-200 leading-relaxed shadow-sm">
-        💡 <strong>Intake &amp; Physical Print Tracking:</strong> Students may submit nominations online for testing or practice. Check off the nominations below once their physical signed prints and mandatory documents (e.g. HoD certificate, attendance certificate) are formally received in the RO office. Only nominations marked as <strong>Physical Copy Received</strong> will appear in <strong>Tab 2 (Formal Scrutiny)</strong>.
+        💡 <strong>All Submissions:</strong> Complete registry of all online nominations filed by students. Mark physical prints and documents as received to advance candidates to Formal Scrutiny.
       </div>
       <div id="bannerScrutiny" class="${activeTab === 'scrutiny' ? '' : 'hidden'} text-xs bg-sky-950/30 border border-sky-500/30 rounded-xl p-3 text-sky-200 leading-relaxed shadow-sm">
-        📋 <strong>Formal Scrutiny &amp; Decisions:</strong> This view lists ONLY nominations whose signed physical copies and documents have been confirmed. Review statutory eligibility and Lyngdoh criteria, and mark each nomination as <strong>Valid</strong>, <strong>Invalid (Reject)</strong>, or <strong>Pending</strong>.
+        📋 <strong>Formal Scrutiny (Physical Received):</strong> This view lists ONLY nominations whose signed physical hard copies and certificates have been confirmed in the RO office. Mark each nomination as <strong>Valid</strong>, <strong>Invalid (Reject)</strong>, or <strong>Pending</strong>.
+      </div>
+      <div id="bannerNotConfirmed" class="${activeTab === 'not_confirmed' ? '' : 'hidden'} text-xs bg-amber-950/30 border border-amber-500/30 rounded-xl p-3 text-amber-200 leading-relaxed shadow-sm">
+        ⏳ <strong>Physical Not Yet Confirmed:</strong> These nominations were submitted online, but physical signed hard copies and supporting certificates have not yet been marked received. Review the list below and click <strong>Confirm Physical</strong> once received in the RO office.
       </div>
       <div id="bannerAccepted" class="${activeTab === 'accepted' ? '' : 'hidden'} text-xs bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-3 text-emerald-200 leading-relaxed shadow-sm">
         ✅ <strong>Accepted Nominations:</strong> These nominations have passed formal scrutiny and have been marked <strong>Valid</strong>. They are eligible for publication in the preliminary valid list unless withdrawn before the statutory withdrawal deadline.
@@ -441,7 +448,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
               <th class="sortable-th" data-sort="name" title="Sort by Candidate Name">Candidate Details <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span></th>
               <th>Proposer &amp; Seconder</th>
               <th id="thStatusOrReceipt" class="sortable-th" data-sort="status" title="Sort by Physical Receipt / Status">
-                ${activeTab === 'intake' ? 'Physical Copy' : 'Scrutiny Status'} <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span>
+                ${activeTab === 'intake' || activeTab === 'not_confirmed' ? 'Physical Copy' : 'Scrutiny Status'} <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span>
               </th>
               <th class="sortable-th" data-sort="flags" title="Sort by Flags & Alerts">Flags &amp; Alerts <span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span></th>
               <th class="text-center">Action</th>
@@ -582,6 +589,12 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
       `;
+    } else if (activeTab === 'not_confirmed') {
+      statusFilterEl.innerHTML = `
+        <option value="all">All Not Yet Confirmed</option>
+        <option value="multi">🚩 Multi-Post Candidacies</option>
+        <option value="violations">⚠️ Rule Violations Flagged</option>
+      `;
     } else if (activeTab === 'scrutiny') {
       statusFilterEl.innerHTML = `
         <option value="all">All Received Nominations</option>
@@ -661,7 +674,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     const thStatusOrReceipt = main.querySelector('#thStatusOrReceipt');
     if (thStatusOrReceipt) {
       const sortIcon = `<span class="sort-icon text-[9px] opacity-40 ml-0.5">↕</span>`;
-      if (activeTab === 'intake') thStatusOrReceipt.innerHTML = `Physical Receipt ${sortIcon}`;
+      if (activeTab === 'intake' || activeTab === 'not_confirmed') thStatusOrReceipt.innerHTML = `Physical Receipt ${sortIcon}`;
       else if (activeTab === 'accepted') thStatusOrReceipt.innerHTML = `Accepted Status ${sortIcon}`;
       else if (activeTab === 'rejected') thStatusOrReceipt.innerHTML = `Rejection Reason ${sortIcon}`;
       else thStatusOrReceipt.innerHTML = `Scrutiny Status ${sortIcon}`;
@@ -722,7 +735,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
 
         <!-- Physical Copy / Scrutiny Status -->
         <td class="py-2 px-2 text-xs">
-          ${activeTab === 'intake' ? `
+          ${activeTab === 'intake' || activeTab === 'not_confirmed' ? `
             ${!isPhysical ? `
               <button type="button" class="toggle-physical-btn btn btn-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 px-2 rounded text-xs inline-flex items-center justify-center gap-1 shadow-md transition-all active:scale-95 cursor-pointer w-full text-center flex-wrap" data-id="${esc(n.id)}" data-target="true" title="Confirm physical signed nomination copy & certificates received in office">
                 <span>📥</span> <span>Confirm Physical</span>
@@ -864,7 +877,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
               <span class="badge bg-indigo-500/25 text-indigo-200 border border-indigo-500/50 text-[10px] font-mono font-bold">
                 ${totalCount} ${totalCount === 1 ? 'Candidate' : 'Candidates'}
               </span>
-              ${activeTab === 'intake' ? `
+              ${activeTab === 'intake' || activeTab === 'not_confirmed' ? `
                 <span class="badge ${physCount === totalCount && totalCount > 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-slate-300 border-white/10'} text-[10px] font-mono font-semibold">
                   ${physCount}/${totalCount} Physical Received
                 </span>
@@ -892,7 +905,9 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
         <tr>
           <td colspan="7" class="text-center text-slate-500 py-12">
             ${activeTab === 'scrutiny' 
-              ? 'No nominations have physical copies marked as received yet. Go to Tab 1 to mark physical prints and documents received.' 
+              ? 'No nominations have physical copies marked as received yet. Go to Tab 1 or Tab 3 to mark physical prints and documents received.' 
+              : activeTab === 'not_confirmed'
+              ? 'All submitted nominations have their physical copies confirmed! None pending.'
               : activeTab === 'accepted'
               ? 'No accepted (Valid) nominations found.'
               : activeTab === 'rejected'
@@ -1030,7 +1045,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
               </button>
 
               <div class="flex items-center gap-2">
-                ${activeTab === 'intake' ? `
+                ${activeTab === 'intake' || activeTab === 'not_confirmed' ? `
                   <button type="button" class="btn btn-sm flex-1 toggle-physical-btn ${isPhysical ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10' : 'bg-emerald-600 hover:bg-emerald-500 text-white font-bold'} py-2 text-xs" data-id="${esc(n.id)}" data-target="${isPhysical ? 'false' : 'true'}">
                     <span>${isPhysical ? '↩ Unmark Physical' : '📥 Mark Received'}</span>
                   </button>
@@ -1071,13 +1086,15 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
         `;
       }).join('') : `
         <div class="col-span-full text-center text-slate-500 py-12">
-          <div class="text-3xl mb-2">🔍</div>
+          <div class="text-3xl mb-2">${activeTab === 'not_confirmed' ? '🎉' : '🔍'}</div>
           <p class="text-slate-300 font-medium text-sm">
-            ${activeTab === 'accepted' ? 'No accepted nominations found' : activeTab === 'rejected' ? 'No rejected nominations found' : 'No nominations found'}
+            ${activeTab === 'not_confirmed' ? 'All Physical Copies Confirmed' : activeTab === 'accepted' ? 'No accepted nominations found' : activeTab === 'rejected' ? 'No rejected nominations found' : 'No nominations found'}
           </p>
           <p class="text-xs text-slate-500 mt-1">
-            ${activeTab === 'scrutiny' 
-              ? 'No physical copies marked as received yet. Mark physical receipts in Tab 1.' 
+            ${activeTab === 'not_confirmed'
+              ? 'All submitted nominations have their physical copies marked as received in office.'
+              : activeTab === 'scrutiny' 
+              ? 'No physical copies marked as received yet. Mark physical receipts in Tab 1 or Tab 3.' 
               : activeTab === 'accepted'
               ? 'Scrutinize nominations in Tab 2 and mark them Valid.'
               : activeTab === 'rejected'
@@ -1272,11 +1289,14 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     // Update Tab Counts
     const intakeCount = allNoms.length;
     const receivedCount = allNoms.filter(n => n.physicalReceived === true || n.physicalReceived === 'true').length;
+    const notConfirmedCount = allNoms.filter(n => n.physicalReceived !== true && n.physicalReceived !== 'true').length;
     const acceptedCount = allNoms.filter(n => n.status === 'Valid').length;
     const rejectedCount = allNoms.filter(n => n.status === 'Rejected').length;
 
     main.querySelector('#tabCountIntake').textContent = intakeCount;
     main.querySelector('#tabCountScrutiny').textContent = receivedCount;
+    const tabCountNotConfirmedEl = main.querySelector('#tabCountNotConfirmed');
+    if (tabCountNotConfirmedEl) tabCountNotConfirmedEl.textContent = notConfirmedCount;
     main.querySelector('#tabCountAccepted').textContent = acceptedCount;
     main.querySelector('#tabCountRejected').textContent = rejectedCount;
 
@@ -1284,6 +1304,8 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     let baseList = allNoms;
     if (activeTab === 'scrutiny') {
       baseList = allNoms.filter(n => n.physicalReceived === true || n.physicalReceived === 'true');
+    } else if (activeTab === 'not_confirmed') {
+      baseList = allNoms.filter(n => n.physicalReceived !== true && n.physicalReceived !== 'true');
     } else if (activeTab === 'accepted') {
       baseList = allNoms.filter(n => n.status === 'Valid');
     } else if (activeTab === 'rejected') {
@@ -1303,6 +1325,9 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       if (activeTab === 'intake') {
         if (s === 'received' && !isPhys) return false;
         if (s === 'awaiting' && isPhys) return false;
+        if (s === 'multi' && !violations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
+        if (s === 'violations' && violations.length === 0) return false;
+      } else if (activeTab === 'not_confirmed') {
         if (s === 'multi' && !violations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
         if (s === 'violations' && violations.length === 0) return false;
       } else if (activeTab === 'scrutiny') {
@@ -1349,7 +1374,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
           const nB = b.candidateName || b.candidate?.NAME || '';
           diff = nA.localeCompare(nB);
         } else if (sortCol === 'status') {
-          if (activeTab === 'intake') {
+          if (activeTab === 'intake' || activeTab === 'not_confirmed') {
             const pA = a.physicalReceived === true || a.physicalReceived === 'true' ? 1 : 0;
             const pB = b.physicalReceived === true || b.physicalReceived === 'true' ? 1 : 0;
             diff = pB - pA;
@@ -1442,11 +1467,13 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     activeTab = tab;
     const btnI = main.querySelector('#tabBtnIntake');
     const btnS = main.querySelector('#tabBtnScrutiny');
+    const btnNC = main.querySelector('#tabBtnNotConfirmed');
     const btnA = main.querySelector('#tabBtnAccepted');
     const btnR = main.querySelector('#tabBtnRejected');
 
     const banI = main.querySelector('#bannerIntake');
     const banS = main.querySelector('#bannerScrutiny');
+    const banNC = main.querySelector('#bannerNotConfirmed');
     const banA = main.querySelector('#bannerAccepted');
     const banR = main.querySelector('#bannerRejected');
 
@@ -1455,6 +1482,9 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     }
     if (btnS) {
       btnS.className = `tab-btn px-4 py-2.5 text-xs sm:text-sm font-bold rounded-t-xl border-b-2 flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'scrutiny' ? 'border-sky-400 text-white bg-sky-950/40 shadow-lg shadow-sky-950/20' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'}`;
+    }
+    if (btnNC) {
+      btnNC.className = `tab-btn px-4 py-2.5 text-xs sm:text-sm font-bold rounded-t-xl border-b-2 flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'not_confirmed' ? 'border-amber-400 text-white bg-amber-950/40 shadow-lg shadow-amber-950/20' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'}`;
     }
     if (btnA) {
       btnA.className = `tab-btn px-4 py-2.5 text-xs sm:text-sm font-bold rounded-t-xl border-b-2 flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'accepted' ? 'border-emerald-400 text-white bg-emerald-950/40 shadow-lg shadow-emerald-950/20' : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'}`;
@@ -1465,6 +1495,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
 
     if (banI) banI.classList.toggle('hidden', activeTab !== 'intake');
     if (banS) banS.classList.toggle('hidden', activeTab !== 'scrutiny');
+    if (banNC) banNC.classList.toggle('hidden', activeTab !== 'not_confirmed');
     if (banA) banA.classList.toggle('hidden', activeTab !== 'accepted');
     if (banR) banR.classList.toggle('hidden', activeTab !== 'rejected');
 
@@ -1474,6 +1505,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
 
   main.querySelector('#tabBtnIntake')?.addEventListener('click', () => setWorkflowTab('intake'));
   main.querySelector('#tabBtnScrutiny')?.addEventListener('click', () => setWorkflowTab('scrutiny'));
+  main.querySelector('#tabBtnNotConfirmed')?.addEventListener('click', () => setWorkflowTab('not_confirmed'));
   main.querySelector('#tabBtnAccepted')?.addEventListener('click', () => setWorkflowTab('accepted'));
   main.querySelector('#tabBtnRejected')?.addEventListener('click', () => setWorkflowTab('rejected'));
 
