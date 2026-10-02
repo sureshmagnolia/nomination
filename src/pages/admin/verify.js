@@ -20,12 +20,13 @@ export async function renderAdminVerify(container) {
   `);
 
   try {
-    const [noms, settings, posts] = await Promise.all([
+    const [noms, settings, posts, roll] = await Promise.all([
       api.adminGetNominations(pwd, true),
       api.adminGetSettings(pwd).catch(() => ({})),
       api.adminGetPosts(pwd).catch(() => api.getPosts().catch(() => CONFIG.DEFAULT_POSTS || [])),
+      api.getNominalRoll().catch(() => []),
     ]);
-    renderVerifyTable(container.querySelector('#adminMain'), noms, pwd, settings, posts);
+    renderVerifyTable(container.querySelector('#adminMain'), noms, pwd, settings, posts, roll);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `
       <div class="glass p-8 rounded-2xl border border-rose-500/30 text-center max-w-lg mx-auto my-12">
@@ -52,27 +53,99 @@ export async function renderAdminVerify(container) {
  * - Duplicate endorsements by proposer or seconder for the same post
  * - Multiple candidacies across posts (Candidate must withdraw all but 1 or all get cancelled)
  */
-export function getNominationRuleViolations(nom, allPosts = [], allNominations = [], settings = {}) {
+export function getNominationRuleViolations(nom, allPosts = [], allNominations = [], settings = {}, nominalRoll = []) {
   const violations = [];
   if (!nom) return violations;
 
   const postRule = allPosts.find(p => p.post === nom.post) || {};
-  const cCls = String(nom.candidateClass || nom.candidate?.CLASS || '').toUpperCase();
-  const cDept = String(nom.candidateDept || nom.candidate?.Dept || '').toUpperCase();
+  let cCls = String(nom.candidateClass || nom.candidate?.CLASS || '').toUpperCase();
+  let cDept = String(nom.candidateDept || nom.candidate?.Dept || '').toUpperCase();
   const cSerial = String(nom.candidateSerial || nom.candidate?.['Nominal Roll Serial Number'] || '').trim();
   const cAdm = String(nom.candidateAdmission || nom.candidate?.['ADMISION NO'] || '').trim().toLowerCase();
+  const cName = nom.candidateName || nom.candidate?.NAME || '';
 
   const pName = nom.proposerName || nom.proposer?.NAME || '';
-  const pCls = String(nom.proposerClass || nom.proposer?.CLASS || '').toUpperCase();
-  const pDept = String(nom.proposerDept || nom.proposer?.Dept || '').toUpperCase();
+  let pCls = String(nom.proposerClass || nom.proposer?.CLASS || '').toUpperCase();
+  let pDept = String(nom.proposerDept || nom.proposer?.Dept || '').toUpperCase();
   const pSerial = String(nom.proposerSerial || nom.proposer?.['Nominal Roll Serial Number'] || '').trim();
   const pAdm = String(nom.proposerAdmission || nom.proposer?.['ADMISION NO'] || '').trim().toLowerCase();
 
   const sName = nom.seconderName || nom.seconder?.NAME || '';
-  const sCls = String(nom.seconderClass || nom.seconder?.CLASS || '').toUpperCase();
-  const sDept = String(nom.seconderDept || nom.seconder?.Dept || '').toUpperCase();
+  let sCls = String(nom.seconderClass || nom.seconder?.CLASS || '').toUpperCase();
+  let sDept = String(nom.seconderDept || nom.seconder?.Dept || '').toUpperCase();
   const sSerial = String(nom.seconderSerial || nom.seconder?.['Nominal Roll Serial Number'] || '').trim();
   const sAdm = String(nom.seconderAdmission || nom.seconder?.['ADMISION NO'] || '').trim().toLowerCase();
+
+  // Voter Roll Verification Helper
+  const findVoter = (sl) => {
+    if (!sl || !Array.isArray(nominalRoll) || nominalRoll.length === 0) return null;
+    const sStr = String(sl).trim();
+    return nominalRoll.find(st => String(st['Nominal Roll Serial Number'] || st.serial_number || '').trim() === sStr) || null;
+  };
+  const hasRoll = Array.isArray(nominalRoll) && nominalRoll.length > 0;
+
+  // 0A. Candidate Electoral Roll / Voter Verification
+  if (!cSerial || cSerial === '–' || cSerial === '0') {
+    violations.push({
+      type: 'MISSING_CANDIDATE_SERIAL',
+      severity: 'error',
+      message: 'Candidate Electoral Roll Serial Number is missing. Candidate must be an enrolled student voter.'
+    });
+  } else if (hasRoll) {
+    const candVoter = findVoter(cSerial);
+    if (!candVoter) {
+      violations.push({
+        type: 'NON_VOTER_CANDIDATE',
+        severity: 'error',
+        message: `Candidate Serial #${cSerial} (${cName || 'Candidate'}) is NOT FOUND in the Electoral Roll! Only enrolled students can contest.`
+      });
+    } else {
+      if (!cCls) cCls = String(candVoter['CLASS'] || candVoter.class || '').toUpperCase();
+      if (!cDept) cDept = String(candVoter['Dept'] || candVoter.dept || '').toUpperCase();
+    }
+  }
+
+  // 0B. Proposer Electoral Roll / Voter Verification
+  if (!pSerial || pSerial === '–' || pSerial === '0') {
+    violations.push({
+      type: 'MISSING_PROPOSER_SERIAL',
+      severity: 'error',
+      message: 'Proposer Electoral Roll Serial Number is missing. Proposer must be an enrolled student voter.'
+    });
+  } else if (hasRoll) {
+    const propVoter = findVoter(pSerial);
+    if (!propVoter) {
+      violations.push({
+        type: 'NON_VOTER_PROPOSER',
+        severity: 'error',
+        message: `Proposer Serial #${pSerial} (${pName || 'Proposer'}) is NOT FOUND in the Electoral Roll! Proposer is a non-voter and cannot propose.`
+      });
+    } else {
+      if (!pCls) pCls = String(propVoter['CLASS'] || propVoter.class || '').toUpperCase();
+      if (!pDept) pDept = String(propVoter['Dept'] || propVoter.dept || '').toUpperCase();
+    }
+  }
+
+  // 0C. Seconder Electoral Roll / Voter Verification
+  if (!sSerial || sSerial === '–' || sSerial === '0') {
+    violations.push({
+      type: 'MISSING_SECONDER_SERIAL',
+      severity: 'error',
+      message: 'Seconder Electoral Roll Serial Number is missing. Seconder must be an enrolled student voter.'
+    });
+  } else if (hasRoll) {
+    const secVoter = findVoter(sSerial);
+    if (!secVoter) {
+      violations.push({
+        type: 'NON_VOTER_SECONDER',
+        severity: 'error',
+        message: `Seconder Serial #${sSerial} (${sName || 'Seconder'}) is NOT FOUND in the Electoral Roll! Seconder is a non-voter and cannot second.`
+      });
+    } else {
+      if (!sCls) sCls = String(secVoter['CLASS'] || secVoter.class || '').toUpperCase();
+      if (!sDept) sDept = String(secVoter['Dept'] || secVoter.dept || '').toUpperCase();
+    }
+  }
 
   // 1. Research Scholars Lyngdoh Ineligibility (RED)
   const cLvl = getStudentYearLevel(cCls);
@@ -143,34 +216,74 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
         violations.push({
           type: 'DEPT_CANDIDATE',
           severity: 'error',
-          message: `Candidate belongs to department "${nom.candidateDept || 'N/A'}", but post requires "${reqDept}".`
+          message: `Candidate belongs to department "${nom.candidateDept || cDept || 'N/A'}", but post requires "${reqDept}".`
         });
       }
       if (!matches(pDept)) {
         violations.push({
           type: 'DEPT_PROPOSER',
           severity: 'error',
-          message: `Proposer belongs to department "${nom.proposerDept || 'N/A'}", but post requires "${reqDept}".`
+          message: `Proposer (${pName ? pName + ' - ' : ''}Dept: "${nom.proposerDept || pDept || 'N/A'}") does not belong to "${reqDept}". Only voters of "${reqDept}" department can propose.`
         });
       }
       if (!matches(sDept)) {
         violations.push({
           type: 'DEPT_SECONDER',
           severity: 'error',
-          message: `Seconder belongs to department "${nom.seconderDept || 'N/A'}", but post requires "${reqDept}".`
+          message: `Seconder (${sName ? sName + ' - ' : ''}Dept: "${nom.seconderDept || sDept || 'N/A'}") does not belong to "${reqDept}". Only voters of "${reqDept}" department can second.`
         });
       }
     }
   }
 
-  // 5. Year Level Restriction (RED)
-  if (postRule && !isYearEligible(cCls, postRule)) {
+  // 5. Year Level Restriction & Electorate Checks (RED)
+  if (postRule) {
     const desc = formatYearRuleDescription(postRule);
-    violations.push({
-      type: 'YEAR_ELIGIBILITY',
-      severity: 'error',
-      message: `Candidate class (${nom.candidateClass || 'N/A'}) does not meet the year restriction for "${nom.post}" (${desc}).`
-    });
+    
+    // Check Candidate Year Level
+    if (!cCls) {
+      violations.push({
+        type: 'MISSING_CANDIDATE_CLASS',
+        severity: 'error',
+        message: `Candidate class details are missing from nomination.`
+      });
+    } else if (!isYearEligible(cCls, postRule)) {
+      violations.push({
+        type: 'YEAR_ELIGIBILITY',
+        severity: 'error',
+        message: `Candidate class (${nom.candidateClass || cCls}) does not meet the year restriction for "${nom.post}" (${desc}).`
+      });
+    }
+
+    // Check Proposer Year Electorate (e.g. 1 UG Rep only proposed by 1 UG voters)
+    if (!pCls) {
+      violations.push({
+        type: 'MISSING_PROPOSER_CLASS',
+        severity: 'error',
+        message: `Proposer class details are missing; cannot verify voter electorate for "${nom.post}".`
+      });
+    } else if (!isYearEligible(pCls, postRule)) {
+      violations.push({
+        type: 'YEAR_PROPOSER',
+        severity: 'error',
+        message: `Proposer (${pName ? pName + ' - ' : ''}${nom.proposerClass || pCls}) does not belong to the voter electorate for "${nom.post}" (${desc}). Only voters of this electorate can propose.`
+      });
+    }
+
+    // Check Seconder Year Electorate (e.g. 1 UG Rep only seconded by 1 UG voters)
+    if (!sCls) {
+      violations.push({
+        type: 'MISSING_SECONDER_CLASS',
+        severity: 'error',
+        message: `Seconder class details are missing; cannot verify voter electorate for "${nom.post}".`
+      });
+    } else if (!isYearEligible(sCls, postRule)) {
+      violations.push({
+        type: 'YEAR_SECONDER',
+        severity: 'error',
+        message: `Seconder (${sName ? sName + ' - ' : ''}${nom.seconderClass || sCls}) does not belong to the voter electorate for "${nom.post}" (${desc}). Only voters of this electorate can second.`
+      });
+    }
   }
 
   // 6. Self Endorsement & Identity Cross-Checks (RED)
@@ -264,9 +377,10 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
   return violations;
 }
 
-function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
+function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRoll = []) {
   const allNoms = Array.isArray(noms) ? [...noms] : [];
   const allPosts = Array.isArray(posts) ? [...posts] : [];
+  const allRoll = Array.isArray(nominalRoll) ? [...nominalRoll] : [];
 
   let activeTab = 'intake'; // 'intake' (1. All Submissions) | 'not_confirmed' (2. Physical Not Received) | 'scrutiny' (3. Physical Received) | 'accepted' | 'rejected'
   let nomViewMode = localStorage.getItem('admin_verify_view_mode') || 'table'; // 'cards' | 'table' (defaults to table for admin list scrutiny)
@@ -588,12 +702,14 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
         <option value="awaiting">⏳ Awaiting Physical Copy</option>
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
+        <option value="endorser">🗳️ Invalid Endorsers / Non-Voters</option>
       `;
     } else if (activeTab === 'not_confirmed') {
       statusFilterEl.innerHTML = `
         <option value="all">All Physical Not Received</option>
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
+        <option value="endorser">🗳️ Invalid Endorsers / Non-Voters</option>
       `;
     } else if (activeTab === 'scrutiny') {
       statusFilterEl.innerHTML = `
@@ -603,6 +719,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
         <option value="Rejected">Rejected</option>
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
+        <option value="endorser">🗳️ Invalid Endorsers / Non-Voters</option>
         <option value="passed">✓ All Rules Passed</option>
       `;
     } else if (activeTab === 'accepted') {
@@ -610,6 +727,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
         <option value="all">All Accepted Nominations</option>
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
+        <option value="endorser">🗳️ Invalid Endorsers / Non-Voters</option>
         <option value="passed">✓ All Rules Passed</option>
       `;
     } else if (activeTab === 'rejected') {
@@ -617,6 +735,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
         <option value="all">All Rejected Nominations</option>
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
+        <option value="endorser">🗳️ Invalid Endorsers / Non-Voters</option>
       `;
     }
   };
@@ -681,7 +800,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     }
 
     const renderRowHtml = (n, systemSerial, showPostName = true) => {
-      const violations = getNominationRuleViolations(n, allPosts, allNoms, settings);
+      const violations = getNominationRuleViolations(n, allPosts, allNoms, settings, allRoll);
       const isRS = String(n.candidateClass || '').toUpperCase().includes('RESEARCH') || String(n.candidateClass || '').toUpperCase().includes('SCHOLAR');
       const isPhysical = n.physicalReceived === true || n.physicalReceived === 'true';
 
@@ -725,11 +844,13 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
             <span class="text-slate-500 font-mono font-semibold text-[10px]">P:</span>
             <span class="font-medium">${esc(n.proposerName || n.proposer?.NAME || 'N/A')}</span>
             <span class="text-[10px] font-mono text-slate-500 shrink-0">(#${esc(n.proposerSerial || n.proposer?.['Nominal Roll Serial Number'] || '–')})</span>
+            ${n.proposerClass ? `<div class="text-[10px] text-slate-400 pl-3 leading-tight truncate">${esc(n.proposerClass)}</div>` : ''}
           </div>
           <div class="text-[11px] text-slate-300 mt-1 break-words">
             <span class="text-slate-500 font-mono font-semibold text-[10px]">S:</span>
             <span class="font-medium">${esc(n.seconderName || n.seconder?.NAME || 'N/A')}</span>
             <span class="text-[10px] font-mono text-slate-500 shrink-0">(#${esc(n.seconderSerial || n.seconder?.['Nominal Roll Serial Number'] || '–')})</span>
+            ${n.seconderClass ? `<div class="text-[10px] text-slate-400 pl-3 leading-tight truncate">${esc(n.seconderClass)}</div>` : ''}
           </div>
         </td>
 
@@ -831,11 +952,28 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
               `;
             }
             const multiCand = violations.find(v => v.type === 'MULTIPLE_CANDIDACY');
+            const endorserIssue = violations.find(v => 
+              v.type.startsWith('NON_VOTER') || 
+              v.type.startsWith('YEAR_PROPOSER') || 
+              v.type.startsWith('YEAR_SECONDER') || 
+              v.type.startsWith('DEPT_PROPOSER') || 
+              v.type.startsWith('DEPT_SECONDER') ||
+              v.type.startsWith('MISSING_PROPOSER') ||
+              v.type.startsWith('MISSING_SECONDER') ||
+              v.type.startsWith('DUPLICATE_PROPOSER') ||
+              v.type.startsWith('DUPLICATE_SECONDER') ||
+              v.type === 'SAME_PROPOSER_SECONDER'
+            );
             return `
               <div class="flex flex-col gap-1 items-start">
                 ${multiCand ? `
                   <button type="button" class="view-nom-btn badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/50 text-[10px] px-1.5 py-0.5 font-bold inline-flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(multiCand.message)}">
                     <span>🚩 Multi-Post</span>
+                  </button>
+                ` : ''}
+                ${endorserIssue ? `
+                  <button type="button" class="view-nom-btn badge bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 text-[10px] px-1.5 py-0.5 font-bold inline-flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(endorserIssue.message)}">
+                    <span>🗳️ Endorser Alert</span>
                   </button>
                 ` : ''}
                 <button type="button" class="view-nom-btn badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] px-1.5 py-0.5 font-bold inline-flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(violations.map(v => v.message).join(' | '))}">
@@ -865,7 +1003,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       const physCount = items.filter(n => n.physicalReceived === true || n.physicalReceived === 'true').length;
       const validCount = items.filter(n => n.status === 'Valid').length;
       const rejCount = items.filter(n => n.status === 'Rejected').length;
-      const flaggedCount = items.filter(n => getNominationRuleViolations(n, allPosts, allNoms, settings).length > 0).length;
+      const flaggedCount = items.filter(n => getNominationRuleViolations(n, allPosts, allNoms, settings, allRoll).length > 0).length;
 
       return `
       <tr class="post-group-header">
@@ -944,7 +1082,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     if (cardsDiv) {
       cardsDiv.innerHTML = data.length ? data.map((n, idx) => {
         const systemSerial = idx + 1;
-        const violations = getNominationRuleViolations(n, allPosts, allNoms, settings);
+        const violations = getNominationRuleViolations(n, allPosts, allNoms, settings, allRoll);
         const isRS = String(n.candidateClass || '').toUpperCase().includes('RESEARCH') || String(n.candidateClass || '').toUpperCase().includes('SCHOLAR');
         const isPhysical = n.physicalReceived === true || n.physicalReceived === 'true';
 
@@ -990,7 +1128,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
                 <div class="text-xs text-slate-300 flex items-center gap-2 flex-wrap">
                   <span class="font-mono text-slate-400">Adm: <strong class="text-slate-200">${esc(n.candidateAdmission || n.candidate?.['ADMISION NO'] || '–')}</strong></span>
                   <span class="text-slate-500">•</span>
-                  <span>${esc(n.candidateClass || '')} (${esc(n.candidateDept || '')})</span>
+                  <span>${esc(n.candidateClass || '')}${n.candidateDept ? ` (${esc(n.candidateDept)})` : ''}</span>
                 </div>
               </div>
 
@@ -1000,11 +1138,13 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
                   <div class="text-[10px] uppercase font-bold text-slate-400">Proposer</div>
                   <div class="font-medium text-slate-200 truncate">${esc(n.proposerName || n.proposer?.NAME || 'N/A')}</div>
                   <div class="text-[10px] font-mono text-slate-400">Sl. #${esc(n.proposerSerial || n.proposer?.['Nominal Roll Serial Number'] || '–')}</div>
+                  ${n.proposerClass ? `<div class="text-[10px] text-slate-400 truncate">${esc(n.proposerClass)}</div>` : ''}
                 </div>
                 <div class="bg-black/20 p-2 rounded border border-white/5 space-y-0.5">
                   <div class="text-[10px] uppercase font-bold text-slate-400">Seconder</div>
                   <div class="font-medium text-slate-200 truncate">${esc(n.seconderName || n.seconder?.NAME || 'N/A')}</div>
                   <div class="text-[10px] font-mono text-slate-400">Sl. #${esc(n.seconderSerial || n.seconder?.['Nominal Roll Serial Number'] || '–')}</div>
+                  ${n.seconderClass ? `<div class="text-[10px] text-slate-400 truncate">${esc(n.seconderClass)}</div>` : ''}
                 </div>
               </div>
 
@@ -1019,10 +1159,27 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
                     `;
                   }
                   const multiCand = violations.find(v => v.type === 'MULTIPLE_CANDIDACY');
+                  const endorserIssue = violations.find(v => 
+                    v.type.startsWith('NON_VOTER') || 
+                    v.type.startsWith('YEAR_PROPOSER') || 
+                    v.type.startsWith('YEAR_SECONDER') || 
+                    v.type.startsWith('DEPT_PROPOSER') || 
+                    v.type.startsWith('DEPT_SECONDER') ||
+                    v.type.startsWith('MISSING_PROPOSER') ||
+                    v.type.startsWith('MISSING_SECONDER') ||
+                    v.type.startsWith('DUPLICATE_PROPOSER') ||
+                    v.type.startsWith('DUPLICATE_SECONDER') ||
+                    v.type === 'SAME_PROPOSER_SECONDER'
+                  );
                   return `
                     ${multiCand ? `
                       <div class="text-xs text-rose-200 bg-rose-950/60 border border-rose-500/50 p-2.5 rounded-lg leading-relaxed shadow-sm">
                         ${esc(multiCand.message)}
+                      </div>
+                    ` : ''}
+                    ${endorserIssue ? `
+                      <div class="text-xs text-amber-200 bg-amber-950/60 border border-amber-500/50 p-2 rounded-lg leading-relaxed shadow-sm">
+                        ⚠️ <strong>Endorser Alert:</strong> ${esc(endorserIssue.message)}
                       </div>
                     ` : ''}
                     <button type="button" class="view-nom-btn w-full badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs px-2.5 py-1.5 font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(violations.map(v => v.message).join(' | '))}">
@@ -1207,7 +1364,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     }
 
     // Scrutiny Rule Violations in RED
-    const violations = getNominationRuleViolations(nom, allPosts, allNoms, settings);
+    const violations = getNominationRuleViolations(nom, allPosts, allNoms, settings, allRoll);
 
     let scrutinyHtml = '';
     if (violations.length > 0) {
@@ -1319,27 +1476,44 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
       }
 
       // 2. Status / Feature Filter
-      const violations = getNominationRuleViolations(n, allPosts, allNoms, settings);
+      const violations = getNominationRuleViolations(n, allPosts, allNoms, settings, allRoll);
       const isPhys = n.physicalReceived === true || n.physicalReceived === 'true';
+
+      const isEndorserIssue = (vList) => vList.some(v => 
+        v.type.startsWith('NON_VOTER') || 
+        v.type.startsWith('YEAR_PROPOSER') || 
+        v.type.startsWith('YEAR_SECONDER') || 
+        v.type.startsWith('DEPT_PROPOSER') || 
+        v.type.startsWith('DEPT_SECONDER') ||
+        v.type.startsWith('MISSING_PROPOSER') ||
+        v.type.startsWith('MISSING_SECONDER') ||
+        v.type.startsWith('DUPLICATE_PROPOSER') ||
+        v.type.startsWith('DUPLICATE_SECONDER') ||
+        v.type === 'SAME_PROPOSER_SECONDER'
+      );
 
       if (activeTab === 'intake') {
         if (s === 'received' && !isPhys) return false;
         if (s === 'awaiting' && isPhys) return false;
         if (s === 'multi' && !violations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
         if (s === 'violations' && violations.length === 0) return false;
+        if (s === 'endorser' && !isEndorserIssue(violations)) return false;
       } else if (activeTab === 'not_confirmed') {
         if (s === 'multi' && !violations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
         if (s === 'violations' && violations.length === 0) return false;
+        if (s === 'endorser' && !isEndorserIssue(violations)) return false;
       } else if (activeTab === 'scrutiny') {
         if (s === 'violations' && violations.length === 0) return false;
         if (s === 'multi' && !violations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
+        if (s === 'endorser' && !isEndorserIssue(violations)) return false;
         if (s === 'passed' && violations.length > 0) return false;
-        if (s !== 'all' && s !== 'violations' && s !== 'multi' && s !== 'passed') {
+        if (s !== 'all' && s !== 'violations' && s !== 'multi' && s !== 'endorser' && s !== 'passed') {
           if (n.status !== s) return false;
         }
       } else if (activeTab === 'accepted' || activeTab === 'rejected') {
         if (s === 'violations' && violations.length === 0) return false;
         if (s === 'multi' && !violations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
+        if (s === 'endorser' && !isEndorserIssue(violations)) return false;
         if (s === 'passed' && violations.length > 0) return false;
       }
 
@@ -1382,8 +1556,8 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
             diff = String(a.status || '').localeCompare(String(b.status || ''));
           }
         } else if (sortCol === 'flags') {
-          const vA = getNominationRuleViolations(a, allPosts, allNoms, settings).length;
-          const vB = getNominationRuleViolations(b, allPosts, allNoms, settings).length;
+          const vA = getNominationRuleViolations(a, allPosts, allNoms, settings, allRoll).length;
+          const vB = getNominationRuleViolations(b, allPosts, allNoms, settings, allRoll).length;
           diff = vB - vA;
         }
         return sortAsc ? diff : -diff;
@@ -1410,8 +1584,8 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
         });
       } else if (arrangeMode === 'flags') {
         filtered.sort((a, b) => {
-          const vA = getNominationRuleViolations(a, allPosts, allNoms, settings);
-          const vB = getNominationRuleViolations(b, allPosts, allNoms, settings);
+          const vA = getNominationRuleViolations(a, allPosts, allNoms, settings, allRoll);
+          const vB = getNominationRuleViolations(b, allPosts, allNoms, settings, allRoll);
           const multiA = vA.some(v => v.type === 'MULTIPLE_CANDIDACY') ? 1 : 0;
           const multiB = vB.some(v => v.type === 'MULTIPLE_CANDIDACY') ? 1 : 0;
           if (multiA !== multiB) return multiB - multiA;
@@ -1585,13 +1759,15 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     if (btn) btn.disabled = true;
     if (icon) icon.classList.add('animate-spin');
     try {
-      const [freshNoms, freshPosts] = await Promise.all([
+      const [freshNoms, freshPosts, freshRoll] = await Promise.all([
         api.adminGetNominations(pwd, true),
         api.adminGetPosts(pwd).catch(() => allPosts),
+        api.getNominalRoll().catch(() => allRoll),
       ]);
       allNoms.length = 0;
       if (Array.isArray(freshNoms)) allNoms.push(...freshNoms);
       if (Array.isArray(freshPosts)) { allPosts.length = 0; allPosts.push(...freshPosts); }
+      if (Array.isArray(freshRoll)) { allRoll.length = 0; allRoll.push(...freshRoll); }
       updatePostFilterOptions();
       applyFilters();
       showToast('Nomination list & rules refreshed.', 'info');
@@ -1632,7 +1808,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     if (!currentDetailNomId) return;
     const id = currentDetailNomId;
     const nom = allNoms.find(n => n.id === id);
-    const violations = getNominationRuleViolations(nom, allPosts, allNoms, settings);
+    const violations = getNominationRuleViolations(nom, allPosts, allNoms, settings, allRoll);
     const defaultReason = violations.length > 0 ? violations[0].message : 'Serial number or eligibility requirement not met';
 
     const reason = prompt(`Please enter the statutory reason for rejecting Nomination #${id}:`, defaultReason);
@@ -1758,7 +1934,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = []) {
     let reason = null;
     if (status === 'Rejected') {
       const nom = allNoms.find(n => String(n.id) === String(id));
-      const violations = getNominationRuleViolations(nom, allPosts, allNoms, settings);
+      const violations = getNominationRuleViolations(nom, allPosts, allNoms, settings, allRoll);
       const defaultReason = violations.length > 0 ? violations[0].message : 'Serial number or eligibility requirement not met';
       reason = prompt(`Please enter the statutory reason for rejecting Nomination #${id}:`, defaultReason);
       if (reason === null) return;
