@@ -538,8 +538,8 @@ function personBlock(role, label, isCandidate, isAdminDirect = false) {
       <label class="text-xs text-slate-400 block mb-1">Date of Birth <span class="text-rose-400">*</span></label>
       <div class="flex gap-1.5 items-center">
         <select id="dob-day"   class="field dob-sel" style="flex: 1; min-width: 0;"><option value="">Day</option></select>
-        <select id="dob-month" class="field dob-sel" style="flex: 1.25; min-width: 0;"><option value="">Month</option></select>
-        <select id="dob-year"  class="field dob-sel" style="flex: 1.25; min-width: 0;"><option value="">Year</option></select>
+        <select id="dob-month" class="field dob-sel" style="flex: 1.5; min-width: 0;"><option value="">Month</option></select>
+        <select id="dob-year"  class="field dob-sel" style="flex: 1.1; min-width: 0;"><option value="">Year</option></select>
       </div>
     </div>` : ''}
   </div>`;
