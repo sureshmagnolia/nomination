@@ -10,6 +10,10 @@ import { esc, showToast, setLoading } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 import { printOfficialNotice, printBoothDoorPoster, printBatchBoothDoorPosters, printCampusMasterDirectory } from '../../noticesPrinter.js';
 import { getDefaultStatutoryNotices } from '../../noticesTemplates.js';
+import { generateAndPrintBallots, generateAndPrintBallotPressSummary } from './ballots.js';
+import { generateAndPrintElectoralRolls, generateAndPrintBallotAccounts } from './booths.js';
+import { openPrintRollModal } from '../../rollPrinter.js';
+
 
 export async function renderAdminNotices(container) {
   const pwd = getAdminPassword();
@@ -84,14 +88,14 @@ async function loadAdminNoticesData(main, pwd) {
       });
     });
 
-    renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts);
+    renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts, nominalRoll);
   } catch (err) {
     console.error('Error loading admin notices:', err);
     main.innerHTML = `<div class="alert alert-error">❌ ${esc(err.message || 'Failed to load notices')}</div>`;
   }
 }
 
-function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts = []) {
+function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts = [], nominalRoll = []) {
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
   const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
   const year = settings.electionYear || new Date().getFullYear();
@@ -105,8 +109,8 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
       <!-- Top Action Bar -->
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h3 class="text-xl font-bold text-white">Official Notices &amp; Polling Posters Center</h3>
-          <p class="text-slate-400 text-sm">Generate high-contrast door posters, print campus directory banners, and publish formal election circulars.</p>
+          <h3 class="text-xl font-bold text-white">Official Notices, Posters &amp; Master Prints</h3>
+          <p class="text-slate-400 text-sm">Unified statutory publishing center: ballots, press summaries, marked rolls, booth accounts, door posters, and notices.</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <button id="btnDraftNewNotice" class="btn btn-primary btn-sm flex items-center gap-1.5 shadow-lg shadow-indigo-500/20">
@@ -142,28 +146,429 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
         </div>
 
         <div class="glass rounded-xl p-4 border border-white/10">
-          <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Public Lookup</div>
-          <div class="text-2xl font-bold text-white mt-1">Active</div>
-          <div class="text-xs text-slate-400 mt-0.5">Find My Booth Widget Live</div>
+          <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Statutory Print Hub</div>
+          <div class="text-2xl font-bold text-white mt-1">Ready</div>
+          <div class="text-xs text-emerald-400 mt-0.5">5 Official Packets Active</div>
         </div>
       </div>
 
       <!-- Primary Tabs -->
       <div class="glass rounded-2xl overflow-hidden border border-white/10">
-        <div class="flex border-b border-white/10 bg-slate-900/60 p-2 gap-2">
-          <button id="adminTabPosters" class="px-5 py-2.5 text-xs font-bold rounded-xl transition bg-indigo-600 text-white shadow-lg">
+        <div class="flex border-b border-white/10 bg-slate-900/60 p-2 gap-2 overflow-x-auto">
+          <button id="adminTabMasterPrint" class="px-5 py-2.5 text-xs font-bold rounded-xl transition bg-indigo-600 text-white shadow-lg flex items-center gap-1.5 shrink-0">
+            <span>🖨️</span> Master Print Hub (All Documents)
+          </button>
+          <button id="adminTabPosters" class="px-5 py-2.5 text-xs font-bold rounded-xl transition text-slate-400 hover:text-white shrink-0">
             🚪 Polling Booth Posters (${booths.length})
           </button>
-          <button id="adminTabNotices" class="px-5 py-2.5 text-xs font-bold rounded-xl transition text-slate-400 hover:text-white">
+          <button id="adminTabNotices" class="px-5 py-2.5 text-xs font-bold rounded-xl transition text-slate-400 hover:text-white shrink-0">
             📢 Official Notifications (${notices.length})
           </button>
-          <button id="adminTabIndex" class="px-5 py-2.5 text-xs font-bold rounded-xl transition text-slate-400 hover:text-white">
+          <button id="adminTabIndex" class="px-5 py-2.5 text-xs font-bold rounded-xl transition text-slate-400 hover:text-white shrink-0">
             📋 Class-to-Booth Master Index
           </button>
         </div>
 
+        <!-- PANEL 0: MASTER PRINT & DISPATCH HUB -->
+        <div id="adminPanelMasterPrint" class="p-6 space-y-8">
+          
+          <!-- Banner Overview -->
+          <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/30 p-6 shadow-2xl">
+            <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
+              <div class="space-y-2 max-w-2xl">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-xs font-bold uppercase tracking-wider">
+                  <span>🏛️</span> Returning Officer Master Dispatch Center
+                </div>
+                <h3 class="text-2xl font-black text-white tracking-tight">Master Print &amp; Statutory Dispatch Hub</h3>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                  Consolidated election dispatch headquarters. Generate, preview, and print every statutory document, printing press ballot bundles with book serial numbers, presiding officer booth packets, official duty orders, and counting tallies from a single unified hub.
+                </p>
+              </div>
+              <div class="flex flex-wrap items-center gap-3 shrink-0">
+                <button id="btnHubQuickNominalRoll" class="btn bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2">
+                  <span>📜</span> Print Master Roll
+                </button>
+                <button id="btnHubQuickPressSummary" class="btn bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black px-4 py-2.5 rounded-xl shadow-lg shadow-amber-500/20 flex items-center gap-2">
+                  <span>🗳️</span> Press Summary Sheet
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5 Statutory Packets Grid -->
+          <div class="space-y-6">
+
+            <!-- PACKET 1: BALLOT PAPERS & PRINTING PRESS -->
+            <div class="glass rounded-2xl border border-amber-500/30 overflow-hidden shadow-xl">
+              <div class="bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent px-6 py-4 border-b border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <span class="text-2xl p-2 rounded-xl bg-amber-500/20 border border-amber-500/30">🗳️</span>
+                  <div>
+                    <h4 class="text-base font-bold text-white flex items-center gap-2">
+                      1. Ballot Papers &amp; Printing Press Bundles
+                      <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">Press Requisition</span>
+                    </h4>
+                    <p class="text-xs text-slate-400">Government / Commercial Printing Press packets, master bundle serial registries, and candidate voting sheets.</p>
+                  </div>
+                </div>
+                <a href="#/admin/ballots" class="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1">
+                  <span>⚙️</span> Go to Ballot Setup &rarr;
+                </a>
+              </div>
+
+              <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Press Summary -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">Master Docket</span>
+                      <span class="text-[10px] font-mono text-slate-400">A4 Portrait</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Printing Press Summary &amp; Serial Ledger</h5>
+                    <p class="text-xs text-slate-400 mt-1">Full serial ranges (e.g. G1001-G2500), book numbers, total quantities per booth, and color-coded paper stocks for delivery to the printer.</p>
+                  </div>
+                  <button id="btnHubPressSummary" class="btn bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 shadow-md">
+                    <span>🖨️</span> Print Press Summary
+                  </button>
+                </div>
+
+                <!-- General Ballots -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 bg-indigo-400/10 px-2 py-0.5 rounded border border-indigo-400/20">Executive Posts</span>
+                      <span class="text-[10px] font-mono text-slate-400">A3 / Split</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">General Union Ballot Papers</h5>
+                    <p class="text-xs text-slate-400 mt-1">Chairman, Vice-Chairman, General Secretary, Joint Secretary, UUC, Arts Club, Student Editor, and Sports with counterfoils.</p>
+                  </div>
+                  <button id="btnHubPrintGeneral" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 hover:bg-white/10">
+                    <span>🖨️</span> Print General Ballots
+                  </button>
+                </div>
+
+                <!-- Year Rep Ballots -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">Class Batches</span>
+                      <span class="text-[10px] font-mono text-slate-400">A5 Portrait</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Year Representative Ballots</h5>
+                    <p class="text-xs text-slate-400 mt-1">Year-wise representative voting slips for I DC, II DC, III DC, I PG, II PG, and Research Scholars across all allotted booths.</p>
+                  </div>
+                  <button id="btnHubPrintRep" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 hover:bg-white/10">
+                    <span>🖨️</span> Print Year Rep Ballots
+                  </button>
+                </div>
+
+                <!-- Association Ballots -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-purple-400 bg-purple-400/10 px-2 py-0.5 rounded border border-purple-400/20">Departments</span>
+                      <span class="text-[10px] font-mono text-slate-400">A5 Portrait</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Subject Association Ballots</h5>
+                    <p class="text-xs text-slate-400 mt-1">Department-specific Association Secretary ballots distributed strictly to eligible major students with book ID tracking.</p>
+                  </div>
+                  <button id="btnHubPrintAssoc" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 hover:bg-white/10">
+                    <span>🖨️</span> Print Assoc. Ballots
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- PACKET 2: POLLING BOOTH KITS (FOR PRESIDING OFFICERS) -->
+            <div class="glass rounded-2xl border border-emerald-500/30 overflow-hidden shadow-xl">
+              <div class="bg-gradient-to-r from-emerald-500/15 via-emerald-500/5 to-transparent px-6 py-4 border-b border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <span class="text-2xl p-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30">🏢</span>
+                  <div>
+                    <h4 class="text-base font-bold text-white flex items-center gap-2">
+                      2. Polling Booth Kits (Presiding Officer Packets)
+                      <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Station Statutory Kit</span>
+                    </h4>
+                    <p class="text-xs text-slate-400">Marked copies of electoral rolls, statutory ballot account covers, and public door guidance notices.</p>
+                  </div>
+                </div>
+                <a href="#/admin/booths" class="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                  <span>⚙️</span> Go to Booth Allotment &rarr;
+                </a>
+              </div>
+
+              <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Marked Electoral Rolls -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-emerald-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">Voter Signature Roll</span>
+                      <span class="text-[10px] font-mono text-slate-400">A4 Portrait</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Marked Copy of Electoral Rolls</h5>
+                    <p class="text-xs text-slate-400 mt-1">Official booth-wise register with Sl.No, Admission No, Name, Class, and signature column with Booth Facing Sheet.</p>
+                  </div>
+                  <button id="btnHubPrintElectoralRolls" class="btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 shadow-md">
+                    <span>🖨️</span> Print Marked Rolls
+                  </button>
+                </div>
+
+                <!-- Ballots & Books Account (Form 2) -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-emerald-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">Form 2 Statutory</span>
+                      <span class="text-[10px] font-mono text-slate-400">A4 Portrait</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Ballots &amp; Books Account</h5>
+                    <p class="text-xs text-slate-400 mt-1">Statutory account of ballot papers received, issued to electors, and returned unused or cancelled in sealed covers.</p>
+                  </div>
+                  <button id="btnHubPrintBallotAccounts" class="btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 shadow-md">
+                    <span>🖨️</span> Print Ballot Accounts
+                  </button>
+                </div>
+
+                <!-- Batch Polling Booth Door Posters -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-emerald-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 bg-indigo-400/10 px-2 py-0.5 rounded border border-indigo-400/20">Public Display</span>
+                      <span class="text-[10px] font-mono text-slate-400">Batch A4</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Booth Door Posters (All Booths)</h5>
+                    <p class="text-xs text-slate-400 mt-1">High-visibility posters for classroom doors specifying booth numbers, venues, and allotted departments/classes.</p>
+                  </div>
+                  <button id="btnHubPrintBatchPosters" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 hover:bg-white/10">
+                    <span>🖨️</span> Print ALL Door Posters
+                  </button>
+                </div>
+
+                <!-- Campus Master Directory -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-emerald-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-sky-400 bg-sky-400/10 px-2 py-0.5 rounded border border-sky-400/20">Notice Board</span>
+                      <span class="text-[10px] font-mono text-slate-400">A4 / Banner</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Campus Master Directory</h5>
+                    <p class="text-xs text-slate-400 mt-1">Complete alphabetical class-to-booth guide for college notice boards, entry gates, and help desks.</p>
+                  </div>
+                  <button id="btnHubPrintCampusDirectory" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 hover:bg-white/10">
+                    <span>🖨️</span> Print Campus Directory
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- PACKET 3: STATUTORY NOTIFICATIONS, ROLLS & CANDIDATE LISTS -->
+            <div class="glass rounded-2xl border border-indigo-500/30 overflow-hidden shadow-xl">
+              <div class="bg-gradient-to-r from-indigo-500/15 via-indigo-500/5 to-transparent px-6 py-4 border-b border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <span class="text-2xl p-2 rounded-xl bg-indigo-500/20 border border-indigo-500/30">📦</span>
+                  <div>
+                    <h4 class="text-base font-bold text-white flex items-center gap-2">
+                      3. Statutory Notifications, Rolls &amp; Candidate Lists
+                      <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Official Gazettes</span>
+                    </h4>
+                    <p class="text-xs text-slate-400">Nominal rolls, university election notices, code of conduct, voter guidelines, and candidate registers.</p>
+                  </div>
+                </div>
+                <a href="#/admin/publish" class="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                  <span>⚙️</span> Go to Candidate Publishing &rarr;
+                </a>
+              </div>
+
+              <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Nominal Roll Studio -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-indigo-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 bg-indigo-400/10 px-2 py-0.5 rounded border border-indigo-400/20">Master Roll</span>
+                      <span class="text-[10px] font-mono text-slate-400">Studio Modal</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Nominal Roll (Draft / Final)</h5>
+                    <p class="text-xs text-slate-400 mt-1">Full interactive print engine: single/two column format, department filter, and statutory certification.</p>
+                  </div>
+                  <button id="btnHubOpenRollModal" class="btn bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 shadow-md">
+                    <span>📜</span> Open Roll Print Studio
+                  </button>
+                </div>
+
+                <!-- Notice #1 -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-indigo-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">Statutory #1</span>
+                      <span class="text-[10px] font-mono text-slate-400">Formal Order</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Election Notification &amp; Schedule</h5>
+                    <p class="text-xs text-slate-400 mt-1">Statutory order under University Regulation with schedule of nominations, scrutiny, and polling.</p>
+                  </div>
+                  <button id="btnHubPrintNotice1" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 hover:bg-white/10">
+                    <span>📢</span> Print Notice #1
+                  </button>
+                </div>
+
+                <!-- Notice #2 -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-indigo-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-rose-400 bg-rose-400/10 px-2 py-0.5 rounded border border-rose-400/20">Statutory #2</span>
+                      <span class="text-[10px] font-mono text-slate-400">Conduct Code</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Model Code of Conduct</h5>
+                    <p class="text-xs text-slate-400 mt-1">Campaign rules, spending caps, noise restrictions, and disciplinary sanctions for contestants.</p>
+                  </div>
+                  <button id="btnHubPrintNotice2" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 hover:bg-white/10">
+                    <span>📢</span> Print Notice #2
+                  </button>
+                </div>
+
+                <!-- Notice #3 -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-indigo-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-sky-400 bg-sky-400/10 px-2 py-0.5 rounded border border-sky-400/20">Statutory #3</span>
+                      <span class="text-[10px] font-mono text-slate-400">Voter Rules</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Voter Guidelines &amp; ID Proofs</h5>
+                    <p class="text-xs text-slate-400 mt-1">Approved photo identity cards, ballot marking instructions, and secret ballot safeguards.</p>
+                  </div>
+                  <button id="btnHubPrintNotice3" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 hover:bg-white/10">
+                    <span>📢</span> Print Notice #3
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- PACKET 4: OFFICIALS & PERSONNEL DUTY ORDERS -->
+            <div class="glass rounded-2xl border border-purple-500/30 overflow-hidden shadow-xl">
+              <div class="bg-gradient-to-r from-purple-500/15 via-purple-500/5 to-transparent px-6 py-4 border-b border-purple-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <span class="text-2xl p-2 rounded-xl bg-purple-500/20 border border-purple-500/30">👥</span>
+                  <div>
+                    <h4 class="text-base font-bold text-white flex items-center gap-2">
+                      4. Election Personnel &amp; Staff Duty Orders
+                      <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">Official Orders</span>
+                    </h4>
+                    <p class="text-xs text-slate-400">Presiding Officer and Polling Officer duty orders, counting team rosters, and individual appointment slips.</p>
+                  </div>
+                </div>
+                <a href="#/admin/officials" class="text-xs font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1">
+                  <span>⚙️</span> Go to Officials Hub &rarr;
+                </a>
+              </div>
+
+              <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Polling Duty Orders -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-purple-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-purple-400 bg-purple-400/10 px-2 py-0.5 rounded border border-purple-400/20">Polling Day</span>
+                      <span class="text-[10px] font-mono text-slate-400">Landscape Roster + Slips</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Polling Personnel Appointment Orders &amp; Slips</h5>
+                    <p class="text-xs text-slate-400 mt-1">Consolidated duty roster for all polling booths, along with individualized appointment slips with cut-off acknowledgement coupons.</p>
+                  </div>
+                  <a href="#/admin/officials" class="btn bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 shadow-md">
+                    <span>📜</span> Open Polling Orders &amp; Slips Studio
+                  </a>
+                </div>
+
+                <!-- Counting Duty Orders -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-purple-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-rose-400 bg-rose-400/10 px-2 py-0.5 rounded border border-rose-400/20">Counting Day</span>
+                      <span class="text-[10px] font-mono text-slate-400">Table Allocations</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Counting Supervisors &amp; Tabulators Orders</h5>
+                    <p class="text-xs text-slate-400 mt-1">Table allocation orders for counting assistants, tabulators, and hall supervisors with reporting schedules.</p>
+                  </div>
+                  <a href="#/admin/officials" class="btn bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 shadow-md">
+                    <span>📜</span> Open Counting Orders &amp; Slips Studio
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- PACKET 5: COUNTING HALL & RESULTS FORMS -->
+            <div class="glass rounded-2xl border border-rose-500/30 overflow-hidden shadow-xl">
+              <div class="bg-gradient-to-r from-rose-500/15 via-rose-500/5 to-transparent px-6 py-4 border-b border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <span class="text-2xl p-2 rounded-xl bg-rose-500/20 border border-rose-500/30">🧮</span>
+                  <div>
+                    <h4 class="text-base font-bold text-white flex items-center gap-2">
+                      5. Counting Hall Forms &amp; Result Proclamations
+                      <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">Statutory Forms 6 &amp; 7</span>
+                    </h4>
+                    <p class="text-xs text-slate-400">Working tabulator tally sheets, 25-ballot milestones, and Form 7 declaration of winners.</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <a href="#/admin/counting" class="text-xs font-bold text-rose-400 hover:text-rose-300 flex items-center gap-1">
+                    <span>⚙️</span> Counting Hall &rarr;
+                  </a>
+                  <a href="#/admin/results" class="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                    <span>🏆</span> Results Proclamation &rarr;
+                  </a>
+                </div>
+              </div>
+
+              <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Milestone Sheets -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-rose-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-rose-400 bg-rose-400/10 px-2 py-0.5 rounded border border-rose-400/20">Progressive Tally</span>
+                      <span class="text-[10px] font-mono text-slate-400">25-Ballot Bundles</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Milestone Working Sheets</h5>
+                    <p class="text-xs text-slate-400 mt-1">Live working calculation sheets for counting tables to tally candidate votes in progressive 25-ballot bundles.</p>
+                  </div>
+                  <a href="#/admin/counting" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 hover:bg-white/10">
+                    <span>🧮</span> Generate Milestone Sheets
+                  </a>
+                </div>
+
+                <!-- Form 6 -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-rose-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">Form 6 Statutory</span>
+                      <span class="text-[10px] font-mono text-slate-400">Table Tally Sheet</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Form 6 Counting Sheets</h5>
+                    <p class="text-xs text-slate-400 mt-1">Official round-wise counting sheets with candidate names, supervisor signatures, and seal verification.</p>
+                  </div>
+                  <a href="#/admin/counting" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 hover:bg-white/10">
+                    <span>📋</span> Print Form 6 Sheets
+                  </a>
+                </div>
+
+                <!-- Form 7 -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-rose-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">Form 7 Proclamation</span>
+                      <span class="text-[10px] font-mono text-slate-400">Final Declaration</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Form 7 — Results Proclamation</h5>
+                    <p class="text-xs text-slate-400 mt-1">Official Declaration of Results and Certificate of Election signed by the Returning Officer for publication.</p>
+                  </div>
+                  <a href="#/admin/results" class="btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 shadow-md">
+                    <span>🏆</span> Open Form 7 Proclamation
+                  </a>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
         <!-- PANEL 1: POLLING BOOTH POSTERS -->
-        <div id="adminPanelPosters" class="p-6 space-y-6">
+        <div id="adminPanelPosters" class="p-6 space-y-6 hidden">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/5 p-4 rounded-xl border border-white/10">
             <div>
               <h4 class="font-bold text-white text-base">Polling Booth Door Posters &amp; Notice Board Banners</h4>
@@ -441,33 +846,134 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
   `;
 
   // Attach event handlers
-  attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts);
+  attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts, nominalRoll);
 }
 
-function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts = []) {
-  // Navigation Tabs: Posters vs Notices vs Index
+function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts = [], nominalRoll = []) {
+  // Navigation Tabs: Master Print vs Posters vs Notices vs Index
+  const tabMaster = main.querySelector('#adminTabMasterPrint');
   const tabPosters = main.querySelector('#adminTabPosters');
   const tabNotices = main.querySelector('#adminTabNotices');
   const tabIndex = main.querySelector('#adminTabIndex');
+  const panelMaster = main.querySelector('#adminPanelMasterPrint');
   const panelPosters = main.querySelector('#adminPanelPosters');
   const panelNotices = main.querySelector('#adminPanelNotices');
   const panelIndex = main.querySelector('#adminPanelIndex');
 
   const switchTab = (activeTab, activePanel) => {
-    [tabPosters, tabNotices, tabIndex].forEach(t => {
+    [tabMaster, tabPosters, tabNotices, tabIndex].forEach(t => {
+      if (!t) return;
       t.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
       t.classList.add('text-slate-400');
     });
-    [panelPosters, panelNotices, panelIndex].forEach(p => p.classList.add('hidden'));
+    [panelMaster, panelPosters, panelNotices, panelIndex].forEach(p => {
+      if (!p) return;
+      p.classList.add('hidden');
+    });
 
-    activeTab.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
-    activeTab.classList.remove('text-slate-400');
-    activePanel.classList.remove('hidden');
+    if (activeTab) {
+      activeTab.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
+      activeTab.classList.remove('text-slate-400');
+    }
+    if (activePanel) {
+      activePanel.classList.remove('hidden');
+    }
   };
 
+  tabMaster?.addEventListener('click', () => switchTab(tabMaster, panelMaster));
   tabPosters?.addEventListener('click', () => switchTab(tabPosters, panelPosters));
   tabNotices?.addEventListener('click', () => switchTab(tabNotices, panelNotices));
   tabIndex?.addEventListener('click', () => switchTab(tabIndex, panelIndex));
+
+  // ── Master Hub 1-Click Print Actions ─────────────────────────────────────
+  
+  // Press Summary
+  const handlePrintPressSummary = () => {
+    generateAndPrintBallotPressSummary(pwd);
+  };
+  main.querySelector('#btnHubPressSummary')?.addEventListener('click', handlePrintPressSummary);
+  main.querySelector('#btnHubQuickPressSummary')?.addEventListener('click', handlePrintPressSummary);
+
+  // Ballots
+  main.querySelector('#btnHubPrintGeneral')?.addEventListener('click', () => {
+    generateAndPrintBallots(pwd, 'general');
+  });
+  main.querySelector('#btnHubPrintRep')?.addEventListener('click', () => {
+    generateAndPrintBallots(pwd, 'rep');
+  });
+  main.querySelector('#btnHubPrintAssoc')?.addEventListener('click', () => {
+    generateAndPrintBallots(pwd, 'assoc');
+  });
+
+  // Marked Rolls & Ballot Accounts
+  main.querySelector('#btnHubPrintElectoralRolls')?.addEventListener('click', () => {
+    generateAndPrintElectoralRolls(pwd);
+  });
+  main.querySelector('#btnHubPrintBallotAccounts')?.addEventListener('click', () => {
+    generateAndPrintBallotAccounts(pwd);
+  });
+
+  // Batch Door Posters & Campus Directory
+  main.querySelector('#btnHubPrintBatchPosters')?.addEventListener('click', () => {
+    if (!booths.length) {
+      showToast('No polling booths configured to print.', 'error');
+      return;
+    }
+    printBatchBoothDoorPosters(booths, settings, schedule);
+  });
+  main.querySelector('#btnHubPrintCampusDirectory')?.addEventListener('click', () => {
+    if (!booths.length) {
+      showToast('No polling booths configured to print.', 'error');
+      return;
+    }
+    printCampusMasterDirectory(booths, settings, schedule);
+  });
+
+  // Nominal Roll Studio
+  const handleOpenRollModal = () => {
+    const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME || 'COLLEGE UNION ELECTION';
+    const year = settings.electionYear || new Date().getFullYear();
+    openPrintRollModal({
+      students: nominalRoll,
+      isFinal: true,
+      isDraft: false,
+      collegeName,
+      collegeLogo: settings.collegeLogo || '',
+      electionYear: year,
+      draftRollEnd: schedule.draftRollEnd || ''
+    });
+  };
+  main.querySelector('#btnHubOpenRollModal')?.addEventListener('click', handleOpenRollModal);
+  main.querySelector('#btnHubQuickNominalRoll')?.addEventListener('click', handleOpenRollModal);
+
+  // Statutory Notices #1, #2, #3
+  main.querySelector('#btnHubPrintNotice1')?.addEventListener('click', () => {
+    const n = notices.find(item => item.id === 'statutory_notice_election_notification') || notices[0];
+    if (n) {
+      printOfficialNotice(n, settings, schedule, booths, posts);
+    } else {
+      showToast('Notice #1 not found. Click "Load Statutory Templates" first.', 'error');
+    }
+  });
+
+  main.querySelector('#btnHubPrintNotice2')?.addEventListener('click', () => {
+    const n = notices.find(item => item.id === 'statutory_notice_code_of_conduct') || notices[1];
+    if (n) {
+      printOfficialNotice(n, settings, schedule, booths, posts);
+    } else {
+      showToast('Code of Conduct Notice not found. Click "Load Statutory Templates" first.', 'error');
+    }
+  });
+
+  main.querySelector('#btnHubPrintNotice3')?.addEventListener('click', () => {
+    const n = notices.find(item => item.id === 'statutory_notice_voter_guidelines') || notices[2];
+    if (n) {
+      printOfficialNotice(n, settings, schedule, booths, posts);
+    } else {
+      showToast('Voter Guidelines Notice not found. Click "Load Statutory Templates" first.', 'error');
+    }
+  });
+
 
   // Print ALL Door Posters
   main.querySelector('#btnPrintAllDoorPosters')?.addEventListener('click', () => {

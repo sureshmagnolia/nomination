@@ -7,6 +7,21 @@ import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading, comparePosts, sortPosts } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 
+export const isAssocPostCheck = (p) => {
+  const name = String(p?.post || p?.name || '').toUpperCase();
+  return name.includes('ASSOCIATION') || name.includes('ASSOC') || !!p?.deptRestriction;
+};
+export const isUUCPostCheck = (p) => {
+  const name = String(p?.post || p?.name || '').toUpperCase();
+  return name.includes('UUC') || name.includes('UNIVERSITY UNION COUNCILLOR');
+};
+export const isYearPostCheck = (p) => {
+  if (isAssocPostCheck(p) || isUUCPostCheck(p)) return false;
+  const name = String(p?.post || p?.name || '').toUpperCase();
+  return name.includes('REPRESENTATIVE') || name.includes('REP');
+};
+export const isGeneralPostCheck = (p) => !isAssocPostCheck(p) && !isYearPostCheck(p);
+
 export async function renderAdminBallots(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
 
@@ -36,20 +51,10 @@ export async function renderAdminBallots(container) {
     console.warn('Error fetching initial ballot data:', err);
   }
 
-  const isAssoc = (p) => {
-    const name = String(p.post || p.name || '').toUpperCase();
-    return name.includes('ASSOCIATION') || name.includes('ASSOC') || !!p.deptRestriction;
-  };
-  const isUUC = (p) => {
-    const name = String(p.post || p.name || '').toUpperCase();
-    return name.includes('UUC') || name.includes('UNIVERSITY UNION COUNCILLOR');
-  };
-  const isYear = (p) => {
-    if (isAssoc(p) || isUUC(p)) return false;
-    const name = String(p.post || p.name || '').toUpperCase();
-    return name.includes('REPRESENTATIVE') || name.includes('REP');
-  };
-  const isGeneral = (p) => !isAssoc(p) && !isYear(p);
+  const isAssoc = isAssocPostCheck;
+  const isUUC = isUUCPostCheck;
+  const isYear = isYearPostCheck;
+  const isGeneral = isGeneralPostCheck;
 
   const generalPosts = posts.filter(isGeneral);
 
@@ -649,143 +654,244 @@ export async function renderAdminBallots(container) {
     });
   };
 
-  const triggerPrint = (html) => {
-    const printWin = window.open('', '_blank');
-    if (!printWin) {
-      alert('Popup blocked! Please allow popups for this site to print.');
-      return;
-    }
-    printWin.document.write(`
-      <html>
-        <head>
-          <title>Official Ballots - ${CONFIG.COLLEGE_SHORT_NAME} Election</title>
-          <style>
-            @media print {
-              .no-print { display: none !important; }
-              .page-break { page-break-after: always; }
-              body { background: white !important; }
-              .ballot-container { margin: 0 !important; box-shadow: none !important; }
-            }
-            body { margin: 0; padding: 0; background: #eee; }
-            
-            .ballot-container {
-              background: white;
-              color: black;
-              font-family: "Times New Roman", Times, serif;
-              margin: 20px auto;
-              box-shadow: 0 0 10px rgba(0,0,0,0.2);
-              box-sizing: border-box;
-              overflow: hidden;
-            }
-
-            .a3 { width: 297mm; min-height: 420mm; padding: 45px; }
-            .a4 { width: 210mm; min-height: 297mm; padding: 30px; }
-            .a5 { width: 148mm; min-height: 210mm; padding: 25px; }
-
-            .ballot-header { text-align: center; border-bottom: 3px double #000; margin-bottom: 25px; padding-bottom: 10px; }
-            .ballot-header h1 { font-size: 20px; margin: 0; text-transform: uppercase; }
-            .ballot-header h2 { font-size: 16px; margin: 5px 0 0 0; }
-            
-            .a3 .ballot-grid { 
-              display: grid; 
-              grid-template-columns: 1fr 1fr; 
-              gap: 30px; 
-              width: 100%;
-              align-items: flex-start;
-            }
-            .a4 .ballot-grid { 
-              display: grid; 
-              grid-template-columns: 1fr 1fr; 
-              gap: 20px; 
-              width: 100%;
-              align-items: flex-start;
-            }
-            .a5 .ballot-grid { display: block; }
-
-            .post-box { 
-              border: 2px solid #000; 
-              padding: 0; 
-              display: flex; 
-              flex-direction: column; 
-              margin-bottom: 22px; 
-              break-inside: avoid; 
-              -webkit-column-break-inside: avoid;
-              page-break-inside: avoid;
-              width: 100%;
-            }
-            .post-title { background: #ccc; color: #000; text-align: center; padding: 7px; font-weight: bold; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #000; }
-            
-            .candidate-row { display: flex; align-items: center; border-bottom: 1px solid #000; height: 50px; }
-            .candidate-row:last-child { border-bottom: none; }
-            
-            .sl-no { width: 40px; text-align: center; border-right: 1px solid #000; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 15px; }
-            .c-name { flex-grow: 1; padding: 0 15px; font-weight: bold; display: flex; flex-direction: column; justify-content: center; }
-            .stamp-box { width: 70px; height: 100%; border-left: 1px solid #000; display: flex; align-items: center; justify-content: center; position: relative; }
-            .stamp-box::after { content: ""; width: 32px; height: 32px; border: 1px dashed #ccc; border-radius: 4px; }
-            
-            .instr-box { text-align: center; border: 1px solid #000; padding: 7px; margin-bottom: 20px; font-weight: bold; font-size: 12px; text-transform: uppercase; }
-            .meta-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; font-size: 13px; }
-          </style>
-        </head>
-        <body>
-          ${html}
-        </body>
-      </html>
-    `);
-    printWin.document.close();
+  const handlePreview = async (type) => {
+    await generateAndPrintBallots(pwd, type, currentConfig);
   };
 
-  const generateBallotsHTML = async (filterType = 'all') => {
-    let postsData, candidatesResponse, schedule, settings;
-    try {
-      [postsData, candidatesResponse, schedule, settings] = await Promise.all([
-        api.adminGetPosts(pwd),
-        api.adminGetFinalNominations(pwd).catch(async () => {
-          const all = await api.adminGetNominations(pwd).catch(() => []);
-          return {
-            active: all.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved'),
-            withdrawn: all.filter(n => n.withdrawalStatus === 'Approved'),
-            isPublished: false
-          };
-        }),
-        api.getPublicSchedule(),
-        api.adminGetSettings(pwd).catch(() => ({}))
-      ]);
-    } catch (err) {
-      throw new Error(err.message.includes('not published') 
-        ? 'Final List Not Published. Please finalize and publish the list first.' 
-        : err.message);
-    }
+  const handleSummaryReport = async () => {
+    await generateAndPrintBallotPressSummary(pwd);
+  };
 
-    const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
-    const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
-    const collegeLogo = settings.collegeLogo || '';
-    const year = settings.electionYear || schedule.electionYear || new Date().getFullYear().toString();
-    const candidates = Array.isArray(candidatesResponse) ? candidatesResponse : (candidatesResponse?.active || []);
-    if (candidates.length === 0) throw new Error('No active candidates found. Please ensure candidates are nominated and verified.');
+  renderUI();
+}
 
-    // Contestable Posts
-    const contestablePosts = postsData.filter(p => {
-      const pCands = candidates.filter(c => c.post === p.post);
-      return pCands.length > 1;
+export const triggerBallotPrint = (html) => {
+  const printWin = window.open('', '_blank');
+  if (!printWin) {
+    alert('Popup blocked! Please allow popups for this site to print.');
+    return;
+  }
+  printWin.document.write(`
+    <html>
+      <head>
+        <title>Official Ballots - ${CONFIG.COLLEGE_SHORT_NAME} Election</title>
+        <style>
+          @media print {
+            .no-print { display: none !important; }
+            .page-break { page-break-after: always; }
+            body { background: white !important; }
+            .ballot-container { margin: 0 !important; box-shadow: none !important; }
+          }
+          body { margin: 0; padding: 0; background: #eee; }
+          
+          .ballot-container {
+            background: white;
+            color: black;
+            font-family: "Times New Roman", Times, serif;
+            margin: 20px auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            box-sizing: border-box;
+            overflow: hidden;
+          }
+
+          .a3 { width: 297mm; min-height: 420mm; padding: 45px; }
+          .a4 { width: 210mm; min-height: 297mm; padding: 30px; }
+          .a5 { width: 148mm; min-height: 210mm; padding: 25px; }
+
+          .ballot-header { text-align: center; border-bottom: 3px double #000; margin-bottom: 25px; padding-bottom: 10px; }
+          .ballot-header h1 { font-size: 20px; margin: 0; text-transform: uppercase; }
+          .ballot-header h2 { font-size: 16px; margin: 5px 0 0 0; }
+          
+          .a3 .ballot-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 30px; 
+            width: 100%;
+            align-items: flex-start;
+          }
+          .a4 .ballot-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 20px; 
+            width: 100%;
+            align-items: flex-start;
+          }
+          .a5 .ballot-grid { display: block; }
+
+          .post-box { 
+            border: 2px solid #000; 
+            padding: 0; 
+            display: flex; 
+            flex-direction: column; 
+            margin-bottom: 22px; 
+            break-inside: avoid; 
+            -webkit-column-break-inside: avoid;
+            page-break-inside: avoid;
+            width: 100%;
+          }
+          .post-title { background: #ccc; color: #000; text-align: center; padding: 7px; font-weight: bold; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #000; }
+          
+          .candidate-row { display: flex; align-items: center; border-bottom: 1px solid #000; height: 50px; }
+          .candidate-row:last-child { border-bottom: none; }
+          
+          .sl-no { width: 40px; text-align: center; border-right: 1px solid #000; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 15px; }
+          .c-name { flex-grow: 1; padding: 0 15px; font-weight: bold; display: flex; flex-direction: column; justify-content: center; }
+          .stamp-box { width: 70px; height: 100%; border-left: 1px solid #000; display: flex; align-items: center; justify-content: center; position: relative; }
+          .stamp-box::after { content: ""; width: 32px; height: 32px; border: 1px dashed #ccc; border-radius: 4px; }
+          
+          .instr-box { text-align: center; border: 1px solid #000; padding: 7px; margin-bottom: 20px; font-weight: bold; font-size: 12px; text-transform: uppercase; }
+          .meta-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; font-size: 13px; }
+        </style>
+      </head>
+      <body>
+        ${html}
+      </body>
+    </html>
+  `);
+  printWin.document.close();
+};
+
+export function buildBallotsSheetHtml({ postsData = [], candidatesResponse, schedule = {}, settings = {}, currentConfig = {}, filterType = 'all' }) {
+  const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
+  const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
+  const collegeLogo = settings.collegeLogo || '';
+  const year = settings.electionYear || schedule.electionYear || new Date().getFullYear().toString();
+  const candidates = Array.isArray(candidatesResponse) ? candidatesResponse : (candidatesResponse?.active || []);
+  if (candidates.length === 0) throw new Error('No active candidates found. Please ensure candidates are nominated and verified.');
+
+  const contestablePosts = postsData.filter(p => {
+    const pCands = candidates.filter(c => c.post === p.post);
+    return pCands.length > 1;
+  });
+
+  const isSplit = !!currentConfig.isSplit;
+  let html = '';
+
+  const renderGeneralBallotPart = (partConfig, partPosts) => {
+    if (!partPosts || partPosts.length === 0) return '';
+    const paperClass = (partConfig.paperSize || 'A3').toLowerCase();
+    const prefix = partConfig.shortCode === 'G' ? 'G' : (partConfig.shortCode || 'G1') + '-';
+    const partTitle = partConfig.title || 'OFFICIAL BALLOT PAPER (GENERAL)';
+
+    const sorted = [...partPosts].sort((a, b) => comparePosts(a, b));
+
+    let col1Html = '', col2Html = '';
+    sorted.forEach((p, idx) => {
+      const pCands = candidates.filter(c => c.post === p.post).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
+      const pContent = `
+        <div class="post-box">
+          <div class="post-title">${esc(p.post.toUpperCase())}</div>
+          ${pCands.map((c, i) => `
+            <div class="candidate-row">
+              <div class="sl-no">${i + 1}</div>
+              <div class="c-name">
+                <div style="font-size: 13px; text-transform: uppercase;">${esc(c.candidateName)}</div>
+                <div style="font-size: 10px; font-weight: normal; color: #444;">${esc(c.candidateClass)}</div>
+              </div>
+              <div class="stamp-box"></div>
+            </div>
+          `).join('')}
+          <div class="candidate-row"><div class="sl-no">${pCands.length + 1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
+        </div>
+      `;
+      if (idx % 2 === 0) col1Html += pContent;
+      else col2Html += pContent;
     });
 
-    const isSplit = !!currentConfig.isSplit;
-    let html = '';
+    return `
+      <div class="ballot-container ${paperClass} page-break">
+        <!-- Counterfoil -->
+        <div style="border-bottom: 2px dotted #000; padding-bottom: 18px; margin-bottom: 25px; text-align: center;">
+          ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:40px;max-width:110px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+          <h1 style="font-size: 16px; margin: 2px 0; text-transform: uppercase;">${esc(collegeName)}</h1>
+          <h2 style="font-size: 14px; margin: 2px 0; font-weight: bold;">COLLEGE UNION ELECTION ${year}</h2>
+          <h3 style="font-size: 13px; margin: 2px 0 0 0;">${esc(partTitle.toUpperCase())} - COUNTERFOIL</h3>
+          <div style="margin-top: 12px; font-weight: bold; text-align: left; display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span>SL.NO. ${prefix}____________</span>
+              <span style="font-size: 10px; color: #666; font-style: italic;">(To be detached before voting)</span>
+            </div>
+            <div style="font-size: 12px;">Sl. No of Voter in Marked Copy: ____________</div>
+          </div>
+        </div>
 
-    // Render a General Ballot Part
-    const renderGeneralBallotPart = (partConfig, partPosts) => {
-      if (!partPosts || partPosts.length === 0) return '';
-      const paperClass = (partConfig.paperSize || 'A3').toLowerCase();
-      const prefix = partConfig.shortCode === 'G' ? 'G' : (partConfig.shortCode || 'G1') + '-';
-      const partTitle = partConfig.title || 'OFFICIAL BALLOT PAPER (GENERAL)';
+        <div class="ballot-header">
+          ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:45px;max-width:120px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+          <h1>${esc(collegeName)}</h1>
+          <h2>COLLEGE UNION ELECTION ${year}</h2>
+          <h3>${esc(partTitle.toUpperCase())}</h3>
+        </div>
+        <div class="meta-row"><div>SL.NO. ${prefix}____________</div><div>Signature of PRO</div></div>
+        <div class="instr-box">MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED</div>
+        <div class="ballot-grid">
+          <div class="ballot-col">${col1Html}</div>
+          <div class="ballot-col">${col2Html}</div>
+        </div>
+      </div>
+    `;
+  };
 
-      const sorted = [...partPosts].sort((a, b) => comparePosts(a, b));
+  // 1. General Ballots
+  if (filterType === 'all' || filterType === 'general' || filterType.startsWith('general_part:')) {
+    const gPosts = contestablePosts.filter(isGeneralPostCheck);
 
-      let col1Html = '', col2Html = '';
-      sorted.forEach((p, idx) => {
-        const pCands = candidates.filter(c => c.post === p.post).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
-        const pContent = `
+    if (isSplit) {
+      let partsToGenerate = currentConfig.ballots || [];
+      if (filterType.startsWith('general_part:')) {
+        const targetId = filterType.replace('general_part:', '');
+        partsToGenerate = (currentConfig.ballots || []).filter(b => b.id === targetId);
+      }
+
+      partsToGenerate.forEach(partConfig => {
+        const partPosts = gPosts.filter(p => (partConfig.posts || []).includes(p.post));
+        html += renderGeneralBallotPart(partConfig, partPosts);
+      });
+    } else {
+      const singleConfig = {
+        title: 'OFFICIAL BALLOT PAPER (GENERAL)',
+        shortCode: 'G',
+        paperSize: 'A3'
+      };
+      html += renderGeneralBallotPart(singleConfig, gPosts);
+    }
+  }
+
+  // 2. Year Rep & Association Ballots (A5, One post per page)
+  const otherPosts = contestablePosts.filter(p => isYearPostCheck(p) || isAssocPostCheck(p)).sort(comparePosts);
+  if (filterType === 'all' || filterType === 'year' || filterType === 'assoc') {
+    const filteredOthers = otherPosts.filter(p => 
+      (filterType === 'all') || 
+      (filterType === 'year' && isYearPostCheck(p)) || 
+      (filterType === 'assoc' && isAssocPostCheck(p))
+    );
+
+    filteredOthers.forEach(p => {
+      const pCands = candidates.filter(c => c.post === p.post).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
+      const prefix = isYearPostCheck(p) ? 'R' : 'A';
+      html += `
+        <div class="ballot-container a5 page-break">
+          <!-- Counterfoil -->
+          <div style="border-bottom: 2px dotted #000; padding-bottom: 15px; margin-bottom: 20px; text-align: center;">
+            ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:35px;max-width:90px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+            <h1 style="font-size: 15px; margin: 2px 0;">${esc(collegeName)}</h1>
+            <h2 style="font-size: 13px; margin: 0; font-weight: bold;">COLLEGE UNION ELECTION ${year}</h2>
+            <h3 style="font-size: 11px; margin: 2px 0 0 0;">OFFICIAL BALLOT (${prefix}) - COUNTERFOIL</h3>
+            <div style="margin-top: 10px; font-weight: bold; text-align: left; display: flex; flex-direction: column; gap: 5px; font-size: 11px;">
+              <div style="display: flex; justify-content: space-between;">
+                <span>SL.NO. ${prefix}____________</span>
+                <span style="font-size: 9px; color: #666; font-style: italic;">(To be detached)</span>
+              </div>
+              <div>Sl. No of Voter in Marked Copy: ____________</div>
+            </div>
+          </div>
+
+          <div class="ballot-header">
+            ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:40px;max-width:100px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+            <h1>${esc(collegeName)}</h1>
+            <h2 style="font-size: 14px; margin: 2px 0; font-weight: bold;">COLLEGE UNION ELECTION ${year}</h2>
+            <h3 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER (${prefix})</h3>
+          </div>
+          <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ${prefix}____________</div><div>PRO Sign</div></div>
           <div class="post-box">
             <div class="post-title">${esc(p.post.toUpperCase())}</div>
             ${pCands.map((c, i) => `
@@ -800,343 +906,261 @@ export async function renderAdminBallots(container) {
             `).join('')}
             <div class="candidate-row"><div class="sl-no">${pCands.length + 1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
           </div>
-        `;
-        if (idx % 2 === 0) col1Html += pContent;
-        else col2Html += pContent;
-      });
-
-      return `
-        <div class="ballot-container ${paperClass} page-break">
-          <!-- Counterfoil -->
-          <div style="border-bottom: 2px dotted #000; padding-bottom: 18px; margin-bottom: 25px; text-align: center;">
-            ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:40px;max-width:110px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
-            <h1 style="font-size: 16px; margin: 2px 0; text-transform: uppercase;">${esc(collegeName)}</h1>
-            <h2 style="font-size: 14px; margin: 2px 0; font-weight: bold;">COLLEGE UNION ELECTION ${year}</h2>
-            <h3 style="font-size: 13px; margin: 2px 0 0 0;">${esc(partTitle.toUpperCase())} - COUNTERFOIL</h3>
-            <div style="margin-top: 12px; font-weight: bold; text-align: left; display: flex; flex-direction: column; gap: 6px;">
-              <div style="display: flex; justify-content: space-between;">
-                <span>SL.NO. ${prefix}____________</span>
-                <span style="font-size: 10px; color: #666; font-style: italic;">(To be detached before voting)</span>
-              </div>
-              <div style="font-size: 12px;">Sl. No of Voter in Marked Copy: ____________</div>
-            </div>
-          </div>
-
-          <div class="ballot-header">
-            ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:45px;max-width:120px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
-            <h1>${esc(collegeName)}</h1>
-            <h2>COLLEGE UNION ELECTION ${year}</h2>
-            <h3>${esc(partTitle.toUpperCase())}</h3>
-          </div>
-          <div class="meta-row"><div>SL.NO. ${prefix}____________</div><div>Signature of PRO</div></div>
-          <div class="instr-box">MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED</div>
-          <div class="ballot-grid">
-            <div class="ballot-col">${col1Html}</div>
-            <div class="ballot-col">${col2Html}</div>
-          </div>
         </div>
       `;
+    });
+  }
+
+  return html;
+}
+
+export async function generateAndPrintBallots(pwd, filterType = 'all', overrideConfig = null) {
+  try {
+    showToast('Generating ballots...', 'info');
+    const [postsData, candidatesResponse, schedule, settings, ballotConfig] = await Promise.all([
+      api.adminGetPosts(pwd),
+      api.adminGetFinalNominations(pwd).catch(async () => {
+        const all = await api.adminGetNominations(pwd).catch(() => []);
+        return {
+          active: all.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved'),
+          withdrawn: all.filter(n => n.withdrawalStatus === 'Approved'),
+          isPublished: false
+        };
+      }),
+      api.getPublicSchedule(),
+      api.adminGetSettings(pwd).catch(() => ({})),
+      overrideConfig ? Promise.resolve(overrideConfig) : api.adminGetBallotConfig(pwd).catch(() => null)
+    ]);
+
+    const activeConfig = overrideConfig || ballotConfig || {
+      isSplit: false,
+      ballots: [
+        { id: 'gen_main', title: 'General Union Posts', shortCode: 'G', paperSize: 'A3', posts: [] }
+      ]
     };
 
-    // 1. General Ballots
-    if (filterType === 'all' || filterType === 'general' || filterType.startsWith('general_part:')) {
-      const gPosts = contestablePosts.filter(isGeneral);
+    const html = buildBallotsSheetHtml({
+      postsData,
+      candidatesResponse,
+      schedule,
+      settings,
+      currentConfig: activeConfig,
+      filterType
+    });
 
-      if (isSplit) {
-        let partsToGenerate = currentConfig.ballots;
-        if (filterType.startsWith('general_part:')) {
-          const targetId = filterType.replace('general_part:', '');
-          partsToGenerate = currentConfig.ballots.filter(b => b.id === targetId);
-        }
-
-        partsToGenerate.forEach(partConfig => {
-          const partPosts = gPosts.filter(p => (partConfig.posts || []).includes(p.post));
-          html += renderGeneralBallotPart(partConfig, partPosts);
-        });
-      } else {
-        // Single unified A3 ballot
-        const singleConfig = {
-          title: 'OFFICIAL BALLOT PAPER (GENERAL)',
-          shortCode: 'G',
-          paperSize: 'A3'
-        };
-        html += renderGeneralBallotPart(singleConfig, gPosts);
-      }
-    }
-
-    // 2. Year Rep & Association Ballots (A5, One post per page)
-    const otherPosts = contestablePosts.filter(p => isYear(p) || isAssoc(p)).sort(comparePosts);
-    if (filterType === 'all' || filterType === 'year' || filterType === 'assoc') {
-      const filteredOthers = otherPosts.filter(p => 
-        (filterType === 'all') || 
-        (filterType === 'year' && isYear(p)) || 
-        (filterType === 'assoc' && isAssoc(p))
-      );
-
-      filteredOthers.forEach(p => {
-        const pCands = candidates.filter(c => c.post === p.post).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
-        const prefix = isYear(p) ? 'R' : 'A';
-        html += `
-          <div class="ballot-container a5 page-break">
-            <!-- Counterfoil -->
-            <div style="border-bottom: 2px dotted #000; padding-bottom: 15px; margin-bottom: 20px; text-align: center;">
-              ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:35px;max-width:90px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
-              <h1 style="font-size: 15px; margin: 2px 0;">${esc(collegeName)}</h1>
-              <h2 style="font-size: 13px; margin: 0; font-weight: bold;">COLLEGE UNION ELECTION ${year}</h2>
-              <h3 style="font-size: 11px; margin: 2px 0 0 0;">OFFICIAL BALLOT (${prefix}) - COUNTERFOIL</h3>
-              <div style="margin-top: 10px; font-weight: bold; text-align: left; display: flex; flex-direction: column; gap: 5px; font-size: 11px;">
-                <div style="display: flex; justify-content: space-between;">
-                  <span>SL.NO. ${prefix}____________</span>
-                  <span style="font-size: 9px; color: #666; font-style: italic;">(To be detached)</span>
-                </div>
-                <div>Sl. No of Voter in Marked Copy: ____________</div>
-              </div>
-            </div>
-
-            <div class="ballot-header">
-              ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:40px;max-width:100px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
-              <h1>${esc(collegeName)}</h1>
-              <h2 style="font-size: 14px; margin: 2px 0; font-weight: bold;">COLLEGE UNION ELECTION ${year}</h2>
-              <h3 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER (${prefix})</h3>
-            </div>
-            <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ${prefix}____________</div><div>PRO Sign</div></div>
-            <div class="post-box">
-              <div class="post-title">${esc(p.post.toUpperCase())}</div>
-              ${pCands.map((c, i) => `
-                <div class="candidate-row">
-                  <div class="sl-no">${i + 1}</div>
-                  <div class="c-name">
-                    <div style="font-size: 13px; text-transform: uppercase;">${esc(c.candidateName)}</div>
-                    <div style="font-size: 10px; font-weight: normal; color: #444;">${esc(c.candidateClass)}</div>
-                  </div>
-                  <div class="stamp-box"></div>
-                </div>
-              `).join('')}
-              <div class="candidate-row"><div class="sl-no">${pCands.length + 1}</div><div class="c-name">NOTA</div><div class="stamp-box"></div></div>
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    return html;
-  };
-
-  const handlePreview = async (type) => {
-    try {
-      showToast('Generating ballots...', 'info');
-      const html = await generateBallotsHTML(type);
-      triggerPrint(html);
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
-  };
-
-  const handleSummaryReport = async () => {
-    try {
-      showToast('Calculating Master Plan...', 'info');
-      const [schedule, settings, planResponse] = await Promise.all([
-        api.getPublicSchedule(),
-        api.adminGetSettings(pwd).catch(() => ({})),
-        api.adminGetBallotPlan(pwd).catch(() => null)
-      ]);
-      
-      let masterPlan = planResponse;
-      if (!masterPlan) {
-        if (confirm('No Master Plan found. Generate it now based on current final list and booths?')) {
-          await api.adminGenerateBallotPlan(pwd);
-          masterPlan = await api.adminGetBallotPlan(pwd).catch(() => null);
-        } else {
-          return;
-        }
-      }
-
-      const year = settings.electionYear || schedule.electionYear || new Date().getFullYear().toString();
-      const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
-      const collegeLogo = settings.collegeLogo || '';
-
-      const renderBooks = (booksOrHtml) => {
-        if (!booksOrHtml || (Array.isArray(booksOrHtml) && booksOrHtml.length === 0)) return '-';
-        if (typeof booksOrHtml === 'string') return booksOrHtml;
-        const books = booksOrHtml;
-        return `
-          <table style="width:100%; border-collapse:collapse; font-size:10px; background:rgba(0,0,0,0.02);">
-            ${books.map(b => `
-              <tr>
-                <td style="padding:4px; border:1px solid #eee; font-weight:bold; width:45px;">${b.qty} x ${b.size}</td>
-                <td style="padding:4px; border:1px solid #eee; line-height:1.4;">
-                  ${b.items.map(it => `<span style="display:inline-block; margin-right:8px;"><strong style="color:#4f46e5;">${it.id}:</strong> ${it.range}</span>`).join(' ')}
-                </td>
-              </tr>
-            `).join('')}
-          </table>
-        `;
-      };
-
-      const isSplitPlan = !!(masterPlan.isSplit && Array.isArray(masterPlan.generalParts) && masterPlan.generalParts.length > 1);
-
-      const reportHtml = `
-        <div style="padding: 40px; font-family: sans-serif; color: #333;">
-          <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
-            ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:55px;max-width:130px;margin:0 auto 6px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
-            <h2 style="margin: 0; font-size: 18px; color: #333; font-weight: bold;">${esc(collegeName)}</h2>
-            <h1 style="margin: 6px 0 0 0; font-size: 22px;">College Union Election ${year} — Ballot Printing Summary</h1>
-          </div>
-
-          <p style="font-size: 14px; margin-bottom: 20px;">
-            This document provides the sequential serial number ranges and booklet packaging for each ballot category.
-            ${isSplitPlan ? '<br><strong>Note:</strong> General Union posts are split into <strong>' + masterPlan.generalParts.length + ' separate ballot papers</strong> with distinct series numbering and booklet codes.' : ''}
-          </p>
-
-          ${isSplitPlan ? `
-            <!-- Split General Parts Tables -->
-            ${masterPlan.generalParts.map((part, pIdx) => `
-              <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #4f46e5; margin-top: 25px;">
-                1.${pIdx + 1} ${esc(part.title)} (Series: ${part.shortCode}-1, ${part.shortCode}-2... / Books: ${part.bookPrefix}1...)
-              </h3>
-              <div style="font-size: 12px; margin-bottom: 8px; color: #555;">
-                <strong>Assigned Posts:</strong> ${(part.posts || []).map(p => esc(p)).join(', ')}
-              </div>
-              <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; border: 2px solid #000;">
-                <thead>
-                  <tr style="background: #f8fafc;">
-                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left; width: 15%;">Booth No</th>
-                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 10%;">Voters</th>
-                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 15%;">Sl No From</th>
-                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 15%;">Sl No To</th>
-                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left; width: 45%;">Book Breakdowns</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${part.results.map(s => `
-                    <tr>
-                      <td style="border: 1px solid #ddd; padding: 8px;">Booth ${s.booth}</td>
-                      <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${s.count}</td>
-                      <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">${part.shortCode}-${s.start}</td>
-                      <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">${part.shortCode}-${s.end}</td>
-                      <td style="border: 1px solid #ddd; padding: 4px;">${renderBooks(s.books)}</td>
-                    </tr>
-                  `).join('')}
-                  <tr style="background: #f1f5f9; font-weight: bold;">
-                    <td style="border: 1px solid #ddd; padding: 8px;">TOTAL PART ${pIdx + 1}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${part.total}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${part.shortCode}-1</td>
-                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${part.shortCode}-${part.total}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">—</td>
-                  </tr>
-                </tbody>
-              </table>
-            `).join('')}
-          ` : `
-            <!-- Single General Ballots Table -->
-            <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #4f46e5;">1. General Union Ballots (Series: G1, G2, G3...)</h3>
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; border: 2px solid #000;">
-              <thead>
-                <tr style="background: #f8fafc;">
-                  <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 15%;">Booth No</th>
-                  <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">Voters</th>
-                  <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 15%;">Sl No From</th>
-                  <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 15%;">Sl No To</th>
-                  <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 45%;">Book Breakdowns</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${(masterPlan.general?.results || []).map(s => `
-                  <tr>
-                    <td style="border: 1px solid #ddd; padding: 10px;">Booth ${s.booth}</td>
-                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
-                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${s.start}</td>
-                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${s.end}</td>
-                    <td style="border: 1px solid #ddd; padding: 4px;">${renderBooks(s.books || s.bookHtml)}</td>
-                  </tr>
-                `).join('')}
-                <tr style="background: #f1f5f9; font-weight: bold;">
-                  <td style="border: 1px solid #ddd; padding: 10px;">TOTAL GENERAL</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${masterPlan.general?.total || 0}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G1</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G${masterPlan.general?.total || 0}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
-                </tr>
-              </tbody>
-            </table>
-          `}
-
-          <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #10b981; margin-top: 30px;">2. Year Representative Ballots (Series: R1, R2, R3...)</h3>
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; border: 2px solid #000;">
-            <thead>
-              <tr style="background: #f8fafc;">
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">Post Name</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 10%;">Booth</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">Voters</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">From</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">To</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 35%;">Book Breakdowns</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(masterPlan.reps?.results || []).map(s => `
-                <tr>
-                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${esc(s.post)}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">B${s.booth}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${s.start}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${s.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${renderBooks(s.books || s.bookHtml)}</td>
-                </tr>
-              `).join('')}
-              <tr style="background: #f1f5f9; font-weight: bold;">
-                <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL REPRESENTATIVE</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${masterPlan.reps?.total || 0}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R1</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${masterPlan.reps?.total || 0}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #f59e0b;">3. Association Secretary Ballots (Series: A1, A2, A3...)</h3>
-          <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
-            <thead>
-              <tr style="background: #f8fafc;">
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">Post Name</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 10%;">Booth</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">Voters</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">From</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">To</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 35%;">Book Breakdowns</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(masterPlan.assocs?.results || []).slice().sort((a, b) => String(a.post || '').localeCompare(String(b.post || ''))).map(s => `
-                <tr>
-                  <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${esc(s.post)}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">B${s.booth}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${s.start}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${s.end}</td>
-                  <td style="border: 1px solid #ddd; padding: 4px;">${renderBooks(s.books || s.bookHtml)}</td>
-                </tr>
-              `).join('')}
-              <tr style="background: #f1f5f9; font-weight: bold;">
-                <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL ASSOCIATION</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${masterPlan.assocs?.total || 0}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A1</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${masterPlan.assocs?.total || 0}</td>
-                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px; font-size: 12px; color: #666; text-align: center;">
-            Generated on ${new Date().toLocaleString()} | Official ${CONFIG.COLLEGE_SHORT_NAME} Election Portal
-          </div>
-        </div>
-      `;
-      triggerPrint(reportHtml);
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
-  };
-
-  renderUI();
+    triggerBallotPrint(html);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
 }
+
+export function buildBallotPressSummaryHtml(masterPlan, settings = {}, schedule = {}) {
+  const year = settings.electionYear || schedule.electionYear || new Date().getFullYear().toString();
+  const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
+  const collegeLogo = settings.collegeLogo || '';
+
+  const renderBooks = (booksOrHtml) => {
+    if (!booksOrHtml || (Array.isArray(booksOrHtml) && booksOrHtml.length === 0)) return '-';
+    if (typeof booksOrHtml === 'string') return booksOrHtml;
+    const books = booksOrHtml;
+    return `
+      <table style="width:100%; border-collapse:collapse; font-size:10px; background:rgba(0,0,0,0.02);">
+        ${books.map(b => `
+          <tr>
+            <td style="padding:4px; border:1px solid #eee; font-weight:bold; width:45px;">${b.qty} x ${b.size}</td>
+            <td style="padding:4px; border:1px solid #eee; line-height:1.4;">
+              ${b.items.map(it => `<span style="display:inline-block; margin-right:8px;"><strong style="color:#4f46e5;">${it.id}:</strong> ${it.range}</span>`).join(' ')}
+            </td>
+          </tr>
+        `).join('')}
+      </table>
+    `;
+  };
+
+  const isSplitPlan = !!(masterPlan.isSplit && Array.isArray(masterPlan.generalParts) && masterPlan.generalParts.length > 1);
+
+  return `
+    <div style="padding: 40px; font-family: sans-serif; color: #333;">
+      <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
+        ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:55px;max-width:130px;margin:0 auto 6px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+        <h2 style="margin: 0; font-size: 18px; color: #333; font-weight: bold;">${esc(collegeName)}</h2>
+        <h1 style="margin: 6px 0 0 0; font-size: 22px;">College Union Election ${year} — Ballot Printing Summary</h1>
+      </div>
+
+      <p style="font-size: 14px; margin-bottom: 20px;">
+        This document provides the sequential serial number ranges and booklet packaging for each ballot category.
+        ${isSplitPlan ? '<br><strong>Note:</strong> General Union posts are split into <strong>' + masterPlan.generalParts.length + ' separate ballot papers</strong> with distinct series numbering and booklet codes.' : ''}
+      </p>
+
+      ${isSplitPlan ? `
+        <!-- Split General Parts Tables -->
+        ${masterPlan.generalParts.map((part, pIdx) => `
+          <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #4f46e5; margin-top: 25px;">
+            1.${pIdx + 1} ${esc(part.title)} (Series: ${part.shortCode}-1, ${part.shortCode}-2... / Books: ${part.bookPrefix}1...)
+          </h3>
+          <div style="font-size: 12px; margin-bottom: 8px; color: #555;">
+            <strong>Assigned Posts:</strong> ${(part.posts || []).map(p => esc(p)).join(', ')}
+          </div>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; border: 2px solid #000;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; width: 15%;">Booth No</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 10%;">Voters</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 15%;">Sl No From</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; width: 15%;">Sl No To</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; width: 45%;">Book Breakdowns</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${part.results.map(s => `
+                <tr>
+                  <td style="border: 1px solid #ddd; padding: 8px;">Booth ${s.booth}</td>
+                  <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${s.count}</td>
+                  <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">${part.shortCode}-${s.start}</td>
+                  <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">${part.shortCode}-${s.end}</td>
+                  <td style="border: 1px solid #ddd; padding: 4px;">${renderBooks(s.books)}</td>
+                </tr>
+              `).join('')}
+              <tr style="background: #f1f5f9; font-weight: bold;">
+                <td style="border: 1px solid #ddd; padding: 8px;">TOTAL PART ${pIdx + 1}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${part.total}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${part.shortCode}-1</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${part.shortCode}-${part.total}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">—</td>
+              </tr>
+            </tbody>
+          </table>
+        `).join('')}
+      ` : `
+        <!-- Single General Ballots Table -->
+        <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #4f46e5;">1. General Union Ballots (Series: G1, G2, G3...)</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; border: 2px solid #000;">
+          <thead>
+            <tr style="background: #f8fafc;">
+              <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 15%;">Booth No</th>
+              <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">Voters</th>
+              <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 15%;">Sl No From</th>
+              <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 15%;">Sl No To</th>
+              <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 45%;">Book Breakdowns</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(masterPlan.general?.results || []).map(s => `
+              <tr>
+                <td style="border: 1px solid #ddd; padding: 10px;">Booth ${s.booth}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${s.start}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">G${s.end}</td>
+                <td style="border: 1px solid #ddd; padding: 4px;">${renderBooks(s.books || s.bookHtml)}</td>
+              </tr>
+            `).join('')}
+            <tr style="background: #f1f5f9; font-weight: bold;">
+              <td style="border: 1px solid #ddd; padding: 10px;">TOTAL GENERAL</td>
+              <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${masterPlan.general?.total || 0}</td>
+              <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G1</td>
+              <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">G${masterPlan.general?.total || 0}</td>
+              <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
+            </tr>
+          </tbody>
+        </table>
+      `}
+
+      <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #10b981; margin-top: 30px;">2. Year Representative Ballots (Series: R1, R2, R3...)</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; border: 2px solid #000;">
+        <thead>
+          <tr style="background: #f8fafc;">
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">Post Name</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 10%;">Booth</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">Voters</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">From</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">To</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 35%;">Book Breakdowns</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${(masterPlan.reps?.results || []).map(s => `
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${esc(s.post)}</td>
+              <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">B${s.booth}</td>
+              <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
+              <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${s.start}</td>
+              <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">R${s.end}</td>
+              <td style="border: 1px solid #ddd; padding: 4px;">${renderBooks(s.books || s.bookHtml)}</td>
+            </tr>
+          `).join('')}
+          <tr style="background: #f1f5f9; font-weight: bold;">
+            <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL REPRESENTATIVE</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${masterPlan.reps?.total || 0}</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R1</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">R${masterPlan.reps?.total || 0}</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="background: #eee; padding: 8px 15px; border-left: 5px solid #f59e0b;">3. Association Secretary Ballots (Series: A1, A2, A3...)</h3>
+      <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
+        <thead>
+          <tr style="background: #f8fafc;">
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">Post Name</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 10%;">Booth</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">Voters</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">From</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">To</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 35%;">Book Breakdowns</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${(masterPlan.assocs?.results || []).slice().sort((a, b) => String(a.post || '').localeCompare(String(b.post || ''))).map(s => `
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 10px; font-size: 11px;">${esc(s.post)}</td>
+              <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">B${s.booth}</td>
+              <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${s.count}</td>
+              <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${s.start}</td>
+              <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">A${s.end}</td>
+              <td style="border: 1px solid #ddd; padding: 4px;">${renderBooks(s.books || s.bookHtml)}</td>
+            </tr>
+          `).join('')}
+          <tr style="background: #f1f5f9; font-weight: bold;">
+            <td colspan="2" style="border: 1px solid #ddd; padding: 10px;">TOTAL ASSOCIATION</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${masterPlan.assocs?.total || 0}</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A1</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">A${masterPlan.assocs?.total || 0}</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">—</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px; font-size: 12px; color: #666; text-align: center;">
+        Generated on ${new Date().toLocaleString()} | Official ${CONFIG.COLLEGE_SHORT_NAME} Election Portal
+      </div>
+    </div>
+  `;
+}
+
+export async function generateAndPrintBallotPressSummary(pwd) {
+  try {
+    showToast('Calculating Master Plan...', 'info');
+    const [schedule, settings, planResponse] = await Promise.all([
+      api.getPublicSchedule(),
+      api.adminGetSettings(pwd).catch(() => ({})),
+      api.adminGetBallotPlan(pwd).catch(() => null)
+    ]);
+    
+    let masterPlan = planResponse;
+    if (!masterPlan) {
+      showToast('Generating Master Ballot Plan...', 'info');
+      await api.adminGenerateBallotPlan(pwd);
+      masterPlan = await api.adminGetBallotPlan(pwd).catch(() => null);
+    }
+    if (!masterPlan) {
+      throw new Error('Master Ballot Plan could not be generated. Please ensure nominations and booths are configured.');
+    }
+
+    const reportHtml = buildBallotPressSummaryHtml(masterPlan, settings, schedule);
+    triggerBallotPrint(reportHtml);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
