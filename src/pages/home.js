@@ -31,8 +31,8 @@ export async function renderHome(container) {
     const now = new Date();
 
     // 1. Nominal Roll
-  const isRollFinal = sets.nominalRollFinalized === 'true' || sets.isRollFinalized === 'true' || schedule.isRollFinalized === 'true';
-  const isDraftRoll = !isRollFinal && (sets.draftRollPublished === 'true' || schedule.draftRollPublished === 'true');
+  const isRollFinal = sets.nominalRollFinalized === 'true' || sets.isRollFinalized === 'true' || schedule.isRollFinalized === 'true' || schedule.finalRollOverride === 'FORCE_OPEN';
+  const isDraftRoll = !isRollFinal && (sets.draftRollPublished === 'true' || schedule.draftRollPublished === 'true' || schedule.draftRollOverride === 'FORCE_OPEN');
   let rollBadge = `<span class="badge bg-slate-500/20 text-slate-400 border border-slate-500/30 text-[10px]">⏳ Unpublished</span>`;
   let rollDesc = 'View the official voter list for the election.';
   if (isRollFinal) {
@@ -43,61 +43,53 @@ export async function renderHome(container) {
     rollDesc = 'Draft nominal roll published for student verification.';
   }
 
-  // 2. Submit Nomination
-  const nomStart = schedule.nominationStart ? new Date(schedule.nominationStart) : null;
-  const nomEnd = schedule.nominationDeadline ? new Date(schedule.nominationDeadline) : null;
+  // 2. Submit Nomination (Manual Returning Officer Control)
+  const isNomOpen = schedule.isNominationActive === true || schedule.isNomActive === true || schedule.nominationOpen === 'true' || sets.nominationOpen === 'true' || schedule.nominationOverride === 'FORCE_OPEN';
   let nomBadge = '';
   let nomDesc = 'New nomination form with automatic eligibility check.';
   if (!isRollFinal) {
     nomBadge = `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px]">⏳ Awaiting Final Roll</span>`;
-    nomDesc = 'Opens only after the Final Nominal Roll is published.';
-  } else if (nomStart && !isNaN(nomStart.getTime()) && now < nomStart) {
-    nomBadge = `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px]">📅 Opens ${nomStart.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}</span>`;
-    nomDesc = `Filing begins on ${nomStart.toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.`;
-  } else if (nomEnd && !isNaN(nomEnd.getTime()) && now > nomEnd) {
-    nomBadge = `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px]">🔴 Filing Closed</span>`;
-    nomDesc = 'The official deadline for filing nominations has passed.';
-  } else {
+    nomDesc = 'Opens only after the Final Nominal Roll is published by Returning Officer.';
+  } else if (isNomOpen) {
     nomBadge = `<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px]">🟢 Open Now</span>`;
     nomDesc = 'Submit your candidate nomination online.';
+  } else {
+    nomBadge = `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px]">🔴 Filing Closed</span>`;
+    nomDesc = 'Nomination filing is currently closed by the Returning Officer.';
   }
 
   // 3. Find My Nomination
   const findBadge = `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px]">🔍 Lookup</span>`;
 
-  // 4. Withdraw Nomination
-  const isValidPublished = sets.validListPublished === 'true' || schedule.validListPublished === 'true';
-  const withStart = schedule.withdrawalStart ? new Date(schedule.withdrawalStart) : null;
-  const withEnd = schedule.withdrawalEnd ? new Date(schedule.withdrawalEnd) : null;
+  // 4. Withdraw Nomination (Manual Returning Officer Control)
+  const isValidPublished = sets.validListPublished === 'true' || schedule.validListPublished === 'true' || schedule.isValidListActive === true || schedule.validListOverride === 'FORCE_OPEN';
+  const isWithOpen = schedule.isWithdrawalActive === true || schedule.isWithActive === true || schedule.withdrawalOpen === 'true' || sets.withdrawalOpen === 'true' || schedule.withdrawalOverride === 'FORCE_OPEN';
   let withBadge = '';
   let withDesc = 'Submit formal withdrawal of your candidature.';
   if (!isValidPublished) {
     withBadge = `<span class="badge bg-slate-500/20 text-slate-400 border border-slate-500/30 text-[10px]">⏳ Awaiting Scrutiny</span>`;
     withDesc = 'Opens after the Valid Nominations List is published.';
-  } else if (withStart && !isNaN(withStart.getTime()) && now < withStart) {
-    withBadge = `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px]">📅 Opens ${withStart.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}</span>`;
-    withDesc = `Opens on ${withStart.toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.`;
-  } else if (withEnd && !isNaN(withEnd.getTime()) && now > withEnd) {
-    withBadge = `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px]">🔴 Closed</span>`;
-    withDesc = 'The official deadline for withdrawals has ended.';
-  } else {
+  } else if (isWithOpen) {
     withBadge = `<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px]">🟢 Open Now</span>`;
     withDesc = 'Withdraw your nomination with admission number verification.';
+  } else {
+    withBadge = `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px]">🔴 Closed</span>`;
+    withDesc = 'Withdrawal window is currently closed by the Returning Officer.';
   }
 
-  // 5. Valid Nominations
+  // 5. Valid Nominations (Manual Returning Officer Control)
   const validBadge = isValidPublished 
     ? `<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px]">🟢 Published</span>`
     : `<span class="badge bg-slate-500/20 text-slate-400 border border-slate-500/30 text-[10px]">⏳ Pending Scrutiny</span>`;
 
-  // 6. Final Candidate List
-  const isFinalPublished = sets.finalListPublished === 'true' || schedule.finalListPublished === 'true';
+  // 6. Final Candidate List (Manual Returning Officer Control)
+  const isFinalPublished = sets.finalListPublished === 'true' || schedule.finalListPublished === 'true' || schedule.isFinalListActive === true || schedule.finalListOverride === 'FORCE_OPEN';
   const finalBadge = isFinalPublished
     ? `<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px]">🏆 Published</span>`
     : `<span class="badge bg-slate-500/20 text-slate-400 border border-slate-500/30 text-[10px]">⏳ Pending Final List</span>`;
 
-  // 7. Live Results
-  const isResultsPublished = sets.resultsPublished === 'true' || schedule.resultsPublished === 'true';
+  // 7. Live Results (Manual Returning Officer Control)
+  const isResultsPublished = sets.resultsPublished === 'true' || schedule.resultsPublished === 'true' || schedule.isResultsActive === true || schedule.resultsOverride === 'FORCE_OPEN';
   const isCountingActive = sets.countingActive === 'true' || schedule.countingActive === 'true';
   let resultsBadge = '';
   let resultsDesc = 'View live vote counting and official declarations.';

@@ -1,8 +1,10 @@
 /**
  * pages/admin/schedule.js
  * Central Election Lifecycle & Operations Hub
- * Provides Dual-Control Architecture (Automated Schedule + Real-time Manual Override)
- * across all 8 election operations:
+ * Strictly Manual Administrative Control Architecture.
+ * Dates are stored as official reference points for statutory notices, printouts, and students.
+ * No automatic publishing or status switching occurs based on date or time.
+ * All 8 operations are controlled strictly manually by the Returning Officer:
  *   1. Draft Nominal Roll Publication & Claims
  *   2. Final Nominal Roll Publication (Roll Lock)
  *   3. Nomination Window (Start & Deadline)
@@ -54,120 +56,26 @@ function renderScheduleHub(main, pwd, schedule) {
     return isNaN(d.getTime()) ? '' : d.toISOString();
   };
 
-  // Helper to compute stage status badge and description
+  // Helper to compute stage status badge and description (Strictly manual administrative control)
   const computeStageMeta = (override, startIso, endIso, legacyActive, stageId = '') => {
-    // 8. Results is strictly manual push only — never auto-scheduled live
-    if (stageId === 'results') {
-      const isLive = (override === 'FORCE_OPEN' || legacyActive === 'true' || legacyActive === true) && override !== 'FORCE_CLOSED';
-      if (isLive) {
-        return {
-          badge: '<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold animate-pulse">📢 RESULTS ARE LIVE (Manually Pushed)</span>',
-          statusText: 'Published publicly to student portal via Admin Manual Push',
-          color: 'emerald',
-          isActive: true
-        };
-      } else {
-        return {
-          badge: '<span class="badge bg-slate-700 text-slate-300 border border-slate-600 text-xs font-bold">🔒 RESULTS HIDDEN (Manual Push Only)</span>',
-          statusText: 'Offline. Results will ONLY go live when Admin manually clicks Push Results Live.',
-          color: 'slate',
-          isActive: false
-        };
-      }
-    }
+    const isLive = override === 'FORCE_OPEN' || override === 'FORCE_PUBLISHED' || ((override === 'AUTO' || !override) && (legacyActive === 'true' || legacyActive === true));
 
-    const now = new Date();
-    const s = startIso ? new Date(startIso) : null;
-    const e = endIso ? new Date(endIso) : null;
-    const hasValidStart = s && !isNaN(s.getTime());
-    const hasValidEnd = e && !isNaN(e.getTime());
-
-    if (override === 'FORCE_OPEN') {
+    if (isLive) {
       return {
-        badge: '<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold animate-pulse">⚡ MANUAL OVERRIDE (FORCED OPEN / LIVE)</span>',
-        statusText: 'Active immediately via Administrator Manual Override (Schedule bypassed)',
+        badge: '<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold animate-pulse">🟢 ACTIVE / LIVE (Manual)</span>',
+        statusText: 'Published & active via Returning Officer manual action.',
         color: 'emerald',
         isActive: true
       };
-    }
-    if (override === 'FORCE_CLOSED') {
+    } else {
       return {
-        badge: '<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-xs font-bold">🛑 MANUAL OVERRIDE (FORCED CLOSED)</span>',
-        statusText: 'Closed / Hidden immediately via Administrator Manual Override',
-        color: 'rose',
+        badge: '<span class="badge bg-slate-700 text-slate-300 border border-slate-600 text-xs font-bold">🔒 INACTIVE / CLOSED (Manual)</span>',
+        statusText: 'Closed / unpublished. Waiting for Returning Officer manual action.',
+        color: 'slate',
         isActive: false
       };
     }
-
-    // AUTO Mode (Follow Schedule)
-    if (hasValidStart && hasValidEnd) {
-      if (now < s) {
-        return {
-          badge: `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold">🟡 SCHEDULED (Opens ${s.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} at ${s.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })})</span>`,
-          statusText: `Opens in ${formatTimeRemaining(s - now)} (Auto-Schedule)`,
-          color: 'amber',
-          isActive: false
-        };
-      } else if (now > e) {
-        return {
-          badge: '<span class="badge bg-slate-700 text-slate-300 border border-slate-600 text-xs font-bold">🔴 CLOSED (Schedule ended)</span>',
-          statusText: `Window expired on ${e.toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
-          color: 'slate',
-          isActive: false
-        };
-      } else {
-        return {
-          badge: '<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold">🟢 ACTIVE (Auto Schedule)</span>',
-          statusText: `Currently live until ${e.toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
-          color: 'emerald',
-          isActive: true
-        };
-      }
-    } else if (hasValidStart) {
-      if (now < s) {
-        return {
-          badge: `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold">🟡 SCHEDULED (Opens ${s.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })})</span>`,
-          statusText: `Opens in ${formatTimeRemaining(s - now)} (Auto-Schedule)`,
-          color: 'amber',
-          isActive: false
-        };
-      } else {
-        return {
-          badge: '<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold">🟢 ACTIVE (Published via Schedule)</span>',
-          statusText: `Published on ${s.toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
-          color: 'emerald',
-          isActive: true
-        };
-      }
-    }
-
-    // Default when no schedule set
-    if (legacyActive === true || legacyActive === 'true') {
-      return {
-        badge: '<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold">🟢 ACTIVE (Flag Active)</span>',
-        statusText: 'Active (No timed schedule configured; follow manual flag)',
-        color: 'emerald',
-        isActive: true
-      };
-    }
-
-    return {
-      badge: '<span class="badge bg-slate-800 text-slate-400 border border-slate-700 text-xs">⚪ NOT SET / INACTIVE</span>',
-      statusText: 'Schedule timing not set (Set dates or force manual override)',
-      color: 'slate',
-      isActive: false
-    };
   };
-
-  function formatTimeRemaining(ms) {
-    if (ms <= 0) return '0m';
-    const mins = Math.floor(ms / (1000 * 60));
-    const hours = Math.floor(mins / 60);
-    const days = Math.floor(hours / 24);
-    if (days > 0) return `${days}d ${hours % 24}h`;
-    if (hours > 0) return `${hours}h ${mins % 60}m`;
-    return `${mins}m`;
-  }
 
   main.innerHTML = `
     <div class="page-enter space-y-8 max-w-5xl mx-auto pb-16">
@@ -175,11 +83,11 @@ function renderScheduleHub(main, pwd, schedule) {
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/10 pb-5">
         <div>
           <div class="flex items-center gap-2">
-            <h3 class="text-2xl font-black text-white tracking-tight">Election Lifecycle & Operations Hub</h3>
-            <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs">Dual-Control</span>
+            <h3 class="text-2xl font-black text-white tracking-tight">Election Lifecycle & Schedule Hub</h3>
+            <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold">100% Manual Admin Control</span>
           </div>
           <p class="text-slate-400 text-sm mt-1">
-            Automate stage publications by specific date and time, or exercise real-time Returning Officer manual overrides for all 8 milestones.
+            Official election schedule and reference timings. Dates are recorded for statutory notices and student informational reference; all milestone publications and state transitions are controlled strictly manually by the Returning Officer.
           </p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
@@ -200,7 +108,7 @@ function renderScheduleHub(main, pwd, schedule) {
             <h4 class="text-sm font-bold text-white tracking-wide">Calicut University Revised Schedule (U.O. 13009/2026/Admn)</h4>
           </div>
           <p class="text-xs text-slate-300 max-w-2xl leading-relaxed">
-            Order dated 22.09.2026. (Draft Roll: 24.09 11 AM, Claims Deadline: 25.09 4 PM, Final Roll: 28.09 4 PM, Nominations: 29.09 to 05.10 12 Noon, Polling: 15.10). Click to auto-fill all schedule fields below. You can freely modify any dates as needed.
+            Order dated 22.09.2026. (Draft Roll: 24.09 11 AM, Claims Deadline: 25.09 4 PM, Final Roll: 28.09 4 PM, Nominations: 29.09 to 05.10 12 Noon, Polling: 15.10). Click to auto-fill all schedule reference fields below.
           </p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
@@ -251,26 +159,23 @@ function renderScheduleHub(main, pwd, schedule) {
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Scheduled Publication</label>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Scheduled Reference Publication</label>
                 <input type="datetime-local" id="draftRollStart" class="field w-full text-xs font-mono" value="${toLocal(schedule.draftRollStart)}">
               </div>
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Claims / Objections Deadline (Corrections)</label>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Claims / Objections Deadline (Notice)</label>
                 <input type="datetime-local" id="draftRollEnd" class="field w-full text-xs font-mono" value="${toLocal(schedule.draftRollEnd)}">
-                <p class="text-[11px] text-amber-300/80 mt-1">📌 Dynamically displayed on Draft Nominal Roll footnote as the statutory deadline for corrections.</p>
+                <p class="text-[11px] text-amber-300/80 mt-1">📌 Displayed on Draft Nominal Roll footnote as statutory deadline for student corrections.</p>
               </div>
             </div>
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-2">
-              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Real-Time Override:</div>
+              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Returning Officer Action:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override ${schedule.draftRollOverride === 'FORCE_OPEN' ? 'bg-emerald-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="draftRoll" data-mode="FORCE_OPEN">
-                  ⚡ Force Publish
+                <button type="button" class="btn btn-sm btn-override" data-stage="draftRoll" data-mode="FORCE_OPEN">
+                  ⚡ Publish Draft Roll
                 </button>
-                <button type="button" class="btn btn-sm btn-override ${schedule.draftRollOverride === 'FORCE_CLOSED' ? 'bg-rose-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="draftRoll" data-mode="FORCE_CLOSED">
-                  🛑 Force Unpublish
-                </button>
-                <button type="button" class="btn btn-sm btn-override ${(!schedule.draftRollOverride || schedule.draftRollOverride === 'AUTO') ? 'bg-indigo-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="draftRoll" data-mode="AUTO">
-                  🔄 Auto (Schedule)
+                <button type="button" class="btn btn-sm btn-override" data-stage="draftRoll" data-mode="FORCE_CLOSED">
+                  🛑 Unpublish Draft Roll
                 </button>
               </div>
             </div>
@@ -293,24 +198,21 @@ function renderScheduleHub(main, pwd, schedule) {
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Scheduled Finalization Time</label>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Scheduled Reference Finalization Time</label>
                 <input type="datetime-local" id="finalRollStart" class="field w-full text-xs font-mono" value="${toLocal(schedule.finalRollStart)}">
               </div>
               <div class="flex items-end">
-                <p class="text-[11px] text-slate-400">When final roll becomes active, student correction claims close and official candidate nominations unlock.</p>
+                <p class="text-[11px] text-slate-400">Finalizing closes student correction claims and enables candidate nomination filing.</p>
               </div>
             </div>
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-2">
-              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Real-Time Override:</div>
+              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Returning Officer Action:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override ${schedule.finalRollOverride === 'FORCE_OPEN' ? 'bg-emerald-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="finalRoll" data-mode="FORCE_OPEN">
-                  ⚡ Force Finalize
+                <button type="button" class="btn btn-sm btn-override" data-stage="finalRoll" data-mode="FORCE_OPEN">
+                  🔒 Finalize Voter List
                 </button>
-                <button type="button" class="btn btn-sm btn-override ${schedule.finalRollOverride === 'FORCE_CLOSED' ? 'bg-rose-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="finalRoll" data-mode="FORCE_CLOSED">
-                  🔓 Force Unfinalize
-                </button>
-                <button type="button" class="btn btn-sm btn-override ${(!schedule.finalRollOverride || schedule.finalRollOverride === 'AUTO') ? 'bg-indigo-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="finalRoll" data-mode="AUTO">
-                  🔄 Auto (Schedule)
+                <button type="button" class="btn btn-sm btn-override" data-stage="finalRoll" data-mode="FORCE_CLOSED">
+                  🔓 Unfinalize (Draft Mode)
                 </button>
               </div>
             </div>
@@ -325,7 +227,7 @@ function renderScheduleHub(main, pwd, schedule) {
                 <span class="text-xl">📝</span>
                 <h4 class="font-bold text-white text-base">3. Nomination Submission Window</h4>
               </div>
-              <p class="text-slate-400 text-xs mt-0.5">Online candidate nomination filing window for candidates, proposers, and seconders.</p>
+              <p class="text-slate-400 text-xs mt-0.5">Candidate nomination filing window for candidates, proposers, and seconders.</p>
             </div>
             <div id="badge_nomination"></div>
           </div>
@@ -333,25 +235,22 @@ function renderScheduleHub(main, pwd, schedule) {
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Nomination Start Date & Time</label>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Scheduled Reference Start Time</label>
                 <input type="datetime-local" id="nominationStart" class="field w-full text-xs font-mono" value="${toLocal(schedule.nominationStart)}">
               </div>
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Nomination Deadline Date & Time</label>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Scheduled Reference Deadline</label>
                 <input type="datetime-local" id="nominationDeadline" class="field w-full text-xs font-mono" value="${toLocal(schedule.nominationDeadline)}">
               </div>
             </div>
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-2">
-              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Real-Time Override:</div>
+              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Returning Officer Action:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override ${schedule.nominationOverride === 'FORCE_OPEN' ? 'bg-emerald-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="nomination" data-mode="FORCE_OPEN">
-                  ⚡ Force Open
+                <button type="button" class="btn btn-sm btn-override" data-stage="nomination" data-mode="FORCE_OPEN">
+                  ⚡ Open Nominations
                 </button>
-                <button type="button" class="btn btn-sm btn-override ${schedule.nominationOverride === 'FORCE_CLOSED' ? 'bg-rose-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="nomination" data-mode="FORCE_CLOSED">
-                  🛑 Force Close
-                </button>
-                <button type="button" class="btn btn-sm btn-override ${(!schedule.nominationOverride || schedule.nominationOverride === 'AUTO') ? 'bg-indigo-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="nomination" data-mode="AUTO">
-                  🔄 Auto (Schedule)
+                <button type="button" class="btn btn-sm btn-override" data-stage="nomination" data-mode="FORCE_CLOSED">
+                  🛑 Close Nominations
                 </button>
               </div>
             </div>
@@ -374,24 +273,21 @@ function renderScheduleHub(main, pwd, schedule) {
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Scheduled Publication Date & Time</label>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Scheduled Reference Publication</label>
                 <input type="datetime-local" id="validListStart" class="field w-full text-xs font-mono" value="${toLocal(schedule.validListStart)}">
               </div>
               <div class="flex items-end">
-                <p class="text-[11px] text-slate-400">Publishing this list allows candidates whose papers were accepted to inspect valid contestants and submit withdrawals.</p>
+                <p class="text-[11px] text-slate-400">Publishing allows accepted candidates to inspect opponents and submit withdrawals.</p>
               </div>
             </div>
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-2">
-              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Real-Time Override:</div>
+              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Returning Officer Action:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override ${schedule.validListOverride === 'FORCE_OPEN' ? 'bg-emerald-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="validList" data-mode="FORCE_OPEN">
-                  ⚡ Force Publish
+                <button type="button" class="btn btn-sm btn-override" data-stage="validList" data-mode="FORCE_OPEN">
+                  ⚡ Publish Valid List
                 </button>
-                <button type="button" class="btn btn-sm btn-override ${schedule.validListOverride === 'FORCE_CLOSED' ? 'bg-rose-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="validList" data-mode="FORCE_CLOSED">
-                  🛑 Force Unpublish
-                </button>
-                <button type="button" class="btn btn-sm btn-override ${(!schedule.validListOverride || schedule.validListOverride === 'AUTO') ? 'bg-indigo-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="validList" data-mode="AUTO">
-                  🔄 Auto (Schedule)
+                <button type="button" class="btn btn-sm btn-override" data-stage="validList" data-mode="FORCE_CLOSED">
+                  🛑 Unpublish Valid List
                 </button>
               </div>
             </div>
@@ -414,25 +310,22 @@ function renderScheduleHub(main, pwd, schedule) {
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Withdrawal Start Date & Time</label>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Scheduled Reference Start</label>
                 <input type="datetime-local" id="withdrawalStart" class="field w-full text-xs font-mono" value="${toLocal(schedule.withdrawalStart)}">
               </div>
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Withdrawal Deadline Date & Time</label>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Scheduled Reference Deadline</label>
                 <input type="datetime-local" id="withdrawalEnd" class="field w-full text-xs font-mono" value="${toLocal(schedule.withdrawalEnd)}">
               </div>
             </div>
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-2">
-              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Real-Time Override:</div>
+              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Returning Officer Action:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override ${schedule.withdrawalOverride === 'FORCE_OPEN' ? 'bg-emerald-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="withdrawal" data-mode="FORCE_OPEN">
-                  ⚡ Force Open
+                <button type="button" class="btn btn-sm btn-override" data-stage="withdrawal" data-mode="FORCE_OPEN">
+                  ⚡ Open Withdrawals
                 </button>
-                <button type="button" class="btn btn-sm btn-override ${schedule.withdrawalOverride === 'FORCE_CLOSED' ? 'bg-rose-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="withdrawal" data-mode="FORCE_CLOSED">
-                  🛑 Force Close
-                </button>
-                <button type="button" class="btn btn-sm btn-override ${(!schedule.withdrawalOverride || schedule.withdrawalOverride === 'AUTO') ? 'bg-indigo-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="withdrawal" data-mode="AUTO">
-                  🔄 Auto (Schedule)
+                <button type="button" class="btn btn-sm btn-override" data-stage="withdrawal" data-mode="FORCE_CLOSED">
+                  🛑 Close Withdrawals
                 </button>
               </div>
             </div>
@@ -455,7 +348,7 @@ function renderScheduleHub(main, pwd, schedule) {
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Scheduled Publication Date & Time</label>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Scheduled Reference Publication</label>
                 <input type="datetime-local" id="finalListStart" class="field w-full text-xs font-mono" value="${toLocal(schedule.finalListStart)}">
               </div>
               <div class="flex items-end">
@@ -463,16 +356,13 @@ function renderScheduleHub(main, pwd, schedule) {
               </div>
             </div>
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-2">
-              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Real-Time Override:</div>
+              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Returning Officer Action:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override ${schedule.finalListOverride === 'FORCE_OPEN' ? 'bg-emerald-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="finalList" data-mode="FORCE_OPEN">
-                  ⚡ Force Publish
+                <button type="button" class="btn btn-sm btn-override" data-stage="finalList" data-mode="FORCE_OPEN">
+                  ⚡ Publish Final List
                 </button>
-                <button type="button" class="btn btn-sm btn-override ${schedule.finalListOverride === 'FORCE_CLOSED' ? 'bg-rose-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="finalList" data-mode="FORCE_CLOSED">
-                  🛑 Force Unpublish
-                </button>
-                <button type="button" class="btn btn-sm btn-override ${(!schedule.finalListOverride || schedule.finalListOverride === 'AUTO') ? 'bg-indigo-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="finalList" data-mode="AUTO">
-                  🔄 Auto (Schedule)
+                <button type="button" class="btn btn-sm btn-override" data-stage="finalList" data-mode="FORCE_CLOSED">
+                  🛑 Unpublish Final List
                 </button>
               </div>
             </div>
@@ -495,25 +385,22 @@ function renderScheduleHub(main, pwd, schedule) {
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Polling Commencement Date & Time</label>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Polling Commencement Reference</label>
                 <input type="datetime-local" id="pollingStart" class="field w-full text-xs font-mono" value="${toLocal(schedule.pollingStart)}">
               </div>
               <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Polling Conclusion Date & Time</label>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Polling Conclusion Reference</label>
                 <input type="datetime-local" id="pollingEnd" class="field w-full text-xs font-mono" value="${toLocal(schedule.pollingEnd)}">
               </div>
             </div>
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-2">
-              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Real-Time Override:</div>
+              <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Returning Officer Action:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override ${schedule.pollingOverride === 'FORCE_OPEN' ? 'bg-emerald-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="polling" data-mode="FORCE_OPEN">
-                  ⚡ Force Open Polling
+                <button type="button" class="btn btn-sm btn-override" data-stage="polling" data-mode="FORCE_OPEN">
+                  ⚡ Open Polling
                 </button>
-                <button type="button" class="btn btn-sm btn-override ${schedule.pollingOverride === 'FORCE_CLOSED' ? 'bg-rose-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="polling" data-mode="FORCE_CLOSED">
-                  🛑 Force Close Polling
-                </button>
-                <button type="button" class="btn btn-sm btn-override ${(!schedule.pollingOverride || schedule.pollingOverride === 'AUTO') ? 'bg-indigo-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="polling" data-mode="AUTO">
-                  🔄 Auto (Schedule)
+                <button type="button" class="btn btn-sm btn-override" data-stage="polling" data-mode="FORCE_CLOSED">
+                  🛑 Close Polling
                 </button>
               </div>
             </div>
@@ -554,11 +441,11 @@ function renderScheduleHub(main, pwd, schedule) {
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-3">
               <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Real-Time Live Push:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override ${schedule.resultsPublished === 'true' || schedule.resultsOverride === 'FORCE_OPEN' ? 'bg-emerald-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="results" data-mode="FORCE_OPEN">
-                  📢 Push Results Live (Manual)
+                <button type="button" class="btn btn-sm btn-override" data-stage="results" data-mode="FORCE_OPEN">
+                  📢 Push Results Live
                 </button>
-                <button type="button" class="btn btn-sm btn-override ${schedule.resultsPublished !== 'true' && schedule.resultsOverride !== 'FORCE_OPEN' ? 'bg-rose-600 text-white font-bold' : 'btn-secondary text-xs'}" data-stage="results" data-mode="FORCE_CLOSED">
-                  🔒 Keep Results Hidden / Offline
+                <button type="button" class="btn btn-sm btn-override" data-stage="results" data-mode="FORCE_CLOSED">
+                  🔒 Keep Results Hidden
                 </button>
               </div>
               <div class="text-[11px] text-amber-300/90 font-medium bg-amber-500/10 p-2 rounded border border-amber-500/20">
@@ -570,13 +457,9 @@ function renderScheduleHub(main, pwd, schedule) {
 
       </div>
 
-      <!-- Bottom Save Action -->
-      <div class="glass rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div>
-          <h4 class="font-bold text-white text-base">Save All Schedule Changes</h4>
-          <p class="text-slate-400 text-xs">All scheduled dates, times, and overrides will be recorded into system settings.</p>
-        </div>
-        <button id="btnSaveScheduleBottom" class="btn btn-primary px-8 py-3 font-bold text-base flex items-center gap-2">
+      <!-- Bottom Save Action Bar -->
+      <div class="flex justify-end gap-3 pt-6 border-t border-white/10">
+        <button id="btnSaveScheduleBottom" class="btn btn-primary px-8 py-3 text-sm font-bold shadow-xl flex items-center gap-2">
           <span>💾</span> Save All Election Schedules
         </button>
       </div>
@@ -586,13 +469,13 @@ function renderScheduleHub(main, pwd, schedule) {
 
   // Local state tracker for overrides
   const overrides = {
-    draftRoll: schedule.draftRollOverride || 'AUTO',
-    finalRoll: schedule.finalRollOverride || 'AUTO',
-    nomination: schedule.nominationOverride || 'AUTO',
-    validList: schedule.validListOverride || 'AUTO',
-    withdrawal: schedule.withdrawalOverride || 'AUTO',
-    finalList: schedule.finalListOverride || 'AUTO',
-    polling: schedule.pollingOverride || 'AUTO',
+    draftRoll: (schedule.draftRollPublished === 'true' || schedule.draftRollOverride === 'FORCE_OPEN') ? 'FORCE_OPEN' : 'FORCE_CLOSED',
+    finalRoll: (schedule.isRollFinalized === 'true' || schedule.finalRollOverride === 'FORCE_OPEN') ? 'FORCE_OPEN' : 'FORCE_CLOSED',
+    nomination: (schedule.nominationOpen === 'true' || schedule.isNomActive === true || schedule.nominationOverride === 'FORCE_OPEN') ? 'FORCE_OPEN' : 'FORCE_CLOSED',
+    validList: (schedule.validListPublished === 'true' || schedule.validListOverride === 'FORCE_OPEN') ? 'FORCE_OPEN' : 'FORCE_CLOSED',
+    withdrawal: (schedule.withdrawalOpen === 'true' || schedule.isWithActive === true || schedule.withdrawalOverride === 'FORCE_OPEN') ? 'FORCE_OPEN' : 'FORCE_CLOSED',
+    finalList: (schedule.finalListPublished === 'true' || schedule.finalListOverride === 'FORCE_OPEN') ? 'FORCE_OPEN' : 'FORCE_CLOSED',
+    polling: (schedule.pollingActive === 'true' || schedule.pollingOverride === 'FORCE_OPEN') ? 'FORCE_OPEN' : 'FORCE_CLOSED',
     results: (schedule.resultsPublished === 'true' || schedule.resultsOverride === 'FORCE_OPEN') ? 'FORCE_OPEN' : 'FORCE_CLOSED'
   };
 
@@ -623,7 +506,7 @@ function renderScheduleHub(main, pwd, schedule) {
         start: toIso(main.querySelector('#nominationStart')?.value),
         end: toIso(main.querySelector('#nominationDeadline')?.value),
         override: overrides.nomination,
-        legacy: false
+        legacy: schedule.nominationOpen || schedule.isNomActive
       },
       {
         id: 'validList',
@@ -641,7 +524,7 @@ function renderScheduleHub(main, pwd, schedule) {
         start: toIso(main.querySelector('#withdrawalStart')?.value),
         end: toIso(main.querySelector('#withdrawalEnd')?.value),
         override: overrides.withdrawal,
-        legacy: false
+        legacy: schedule.withdrawalOpen || schedule.isWithActive
       },
       {
         id: 'finalList',
@@ -659,7 +542,7 @@ function renderScheduleHub(main, pwd, schedule) {
         start: toIso(main.querySelector('#pollingStart')?.value),
         end: toIso(main.querySelector('#pollingEnd')?.value),
         override: overrides.polling,
-        legacy: false
+        legacy: schedule.pollingActive
       },
       {
         id: 'results',
@@ -672,7 +555,7 @@ function renderScheduleHub(main, pwd, schedule) {
       }
     ];
 
-    // 1. Update individual card badges
+    // 1. Update individual card badges and buttons
     stages.forEach(st => {
       const meta = computeStageMeta(st.override, st.start, st.end, st.legacy, st.id);
       const bEl = main.querySelector(`#badge_${st.id}`);
@@ -684,9 +567,9 @@ function renderScheduleHub(main, pwd, schedule) {
         card.querySelectorAll('.btn-override').forEach(btn => {
           const mode = btn.dataset.mode;
           if (mode === st.override) {
-            btn.className = `btn btn-sm btn-override ${mode === 'FORCE_OPEN' ? 'bg-emerald-600 text-white font-bold' : (mode === 'FORCE_CLOSED' ? 'bg-rose-600 text-white font-bold' : 'bg-indigo-600 text-white font-bold')}`;
+            btn.className = `btn btn-sm btn-override ${mode === 'FORCE_OPEN' ? 'bg-emerald-600 text-white font-bold ring-2 ring-emerald-400/50 shadow-lg' : 'bg-rose-600 text-white font-bold ring-2 ring-rose-400/50 shadow-lg'}`;
           } else {
-            btn.className = 'btn btn-sm btn-override btn-secondary text-xs';
+            btn.className = 'btn btn-sm btn-override btn-secondary text-xs opacity-75 hover:opacity-100';
           }
         });
       }
@@ -715,7 +598,7 @@ function renderScheduleHub(main, pwd, schedule) {
 
   updateBadgesAndPipeline();
 
-  // Re-evaluate badges on any input change
+  // Re-evaluate pipeline on input changes
   main.querySelectorAll('input').forEach(inp => {
     inp.addEventListener('input', updateBadgesAndPipeline);
     inp.addEventListener('change', updateBadgesAndPipeline);
@@ -723,7 +606,7 @@ function renderScheduleHub(main, pwd, schedule) {
 
   // Handle Quick Override Buttons (Instant Real-time Toggle)
   main.querySelectorAll('.btn-override').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
+    btn.addEventListener('click', async () => {
       const stage = btn.dataset.stage;
       const mode = btn.dataset.mode;
       if (!stage || !mode) return;
@@ -732,13 +615,19 @@ function renderScheduleHub(main, pwd, schedule) {
       try {
         await api.adminSetStageOverride(pwd, stage, mode);
         overrides[stage] = mode;
-        if (stage === 'results') {
-          schedule.resultsPublished = mode === 'FORCE_OPEN' ? 'true' : 'false';
-        }
-        showToast(`${stage.toUpperCase()} override updated to ${mode}!`, 'success');
+        if (stage === 'draftRoll') schedule.draftRollPublished = mode === 'FORCE_OPEN' ? 'true' : 'false';
+        if (stage === 'finalRoll') schedule.isRollFinalized = mode === 'FORCE_OPEN' ? 'true' : 'false';
+        if (stage === 'nomination') schedule.nominationOpen = mode === 'FORCE_OPEN' ? 'true' : 'false';
+        if (stage === 'validList') schedule.validListPublished = mode === 'FORCE_OPEN' ? 'true' : 'false';
+        if (stage === 'withdrawal') schedule.withdrawalOpen = mode === 'FORCE_OPEN' ? 'true' : 'false';
+        if (stage === 'finalList') schedule.finalListPublished = mode === 'FORCE_OPEN' ? 'true' : 'false';
+        if (stage === 'polling') schedule.pollingActive = mode === 'FORCE_OPEN' ? 'true' : 'false';
+        if (stage === 'results') schedule.resultsPublished = mode === 'FORCE_OPEN' ? 'true' : 'false';
+
+        showToast(`${stage.toUpperCase()} is now ${mode === 'FORCE_OPEN' ? 'OPEN / PUBLISHED' : 'CLOSED / HIDDEN'}!`, 'success');
         updateBadgesAndPipeline();
       } catch (err) {
-        showToast(`Override failed: ${err.message}`, 'error');
+        showToast(`Action failed: ${err.message}`, 'error');
       } finally {
         setLoading(btn, false);
         updateBadgesAndPipeline();

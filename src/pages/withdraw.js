@@ -71,66 +71,38 @@ export async function renderWithdraw(container) {
       return;
     }
 
-    const withOverride = schedule.withdrawalOverride || 'AUTO';
-    const isForceOpen = withOverride === 'FORCE_OPEN';
-    const isForceClosed = withOverride === 'FORCE_CLOSED';
+    const isWithOpen = schedule?.isWithdrawalActive === true || 
+                       schedule?.isWithActive === true || 
+                       schedule?.withdrawalOpen === 'true' || 
+                       sets?.withdrawalOpen === 'true' || 
+                       schedule?.withdrawalOverride === 'FORCE_OPEN';
 
-    if (!isForceOpen) {
-      if (isForceClosed) {
-        area.innerHTML = `
-          <div class="glass p-12 text-center rounded-2xl border border-rose-500/20 max-w-2xl mx-auto page-enter">
-            <div class="text-6xl mb-6">🛑</div>
-            <h3 class="text-2xl font-bold text-white mb-3">Withdrawal Window Closed</h3>
-            <p class="text-slate-400 mb-6">Withdrawal of candidature has been officially closed by the Returning Officer.</p>
-            <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
-            <div class="mt-8 pt-4 border-t border-white/5 text-center">
-              <button type="button" class="btn-blank-with-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
-                <span>📄</span> Need to submit physically? Print Blank Withdrawal Form
-              </button>
-            </div>
-          </div>
-        `;
-        area.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
-        area.querySelectorAll('.btn-blank-with-trigger').forEach(b => b.onclick = () => triggerBlankWithdrawalAlert(sets));
-        return;
-      }
+    if (!isWithOpen) {
+      const startStr = start && !isNaN(start.getTime()) ? start.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' }) : '';
+      const endStr = end && !isNaN(end.getTime()) ? end.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' }) : '';
 
-      if (start && now < start) {
-        area.innerHTML = `
-          <div class="glass p-12 text-center rounded-2xl border border-amber-500/20 max-w-2xl mx-auto page-enter">
-            <div class="text-6xl mb-6">📅</div>
-            <h3 class="text-2xl font-bold text-white mb-3">Withdrawal Window Pending</h3>
-            <p class="text-slate-400 mb-6">The withdrawal window is scheduled to open on <strong>${new Date(start).toLocaleString()}</strong>.</p>
-            <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
-            <div class="mt-8 pt-4 border-t border-white/5 text-center">
-              <button type="button" class="btn-blank-with-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
-                <span>📄</span> Need to submit physically? Print Blank Withdrawal Form
-              </button>
-            </div>
+      area.innerHTML = `
+        <div class="glass p-12 text-center rounded-2xl border border-rose-500/20 max-w-2xl mx-auto page-enter">
+          <div class="text-6xl mb-6">🛑</div>
+          <div class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 px-3 py-1 text-xs font-bold uppercase tracking-widest mb-3 inline-block">
+            Withdrawals Closed
           </div>
-        `;
-        area.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
-        area.querySelectorAll('.btn-blank-with-trigger').forEach(b => b.onclick = () => triggerBlankWithdrawalAlert(sets));
-        return;
-      }
-      if (end && now > end) {
-        area.innerHTML = `
-          <div class="glass p-12 text-center rounded-2xl border border-rose-500/20 max-w-2xl mx-auto page-enter">
-            <div class="text-6xl mb-6">⏳</div>
-            <h3 class="text-2xl font-bold text-white mb-3">Withdrawal Window Closed</h3>
-            <p class="text-slate-400 mb-6">The official deadline for withdrawal requests was <strong>${new Date(end).toLocaleString()}</strong>.</p>
-            <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
-            <div class="mt-8 pt-4 border-t border-white/5 text-center">
-              <button type="button" class="btn-blank-with-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
-                <span>📄</span> Need to submit physically? Print Blank Withdrawal Form
-              </button>
-            </div>
+          <h3 class="text-2xl font-bold text-white mb-3">Withdrawal Window Closed</h3>
+          <p class="text-slate-400 mb-6 leading-relaxed">
+            Withdrawal of candidature is currently closed by the Returning Officer.
+            ${startStr ? `<br><span class="text-xs text-slate-500 mt-3 inline-block">Official Reference Schedule: <strong>${startStr}</strong> ${endStr ? `to <strong>${endStr}</strong>` : ''}</span>` : ''}
+          </p>
+          <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
+          <div class="mt-8 pt-4 border-t border-white/5 text-center">
+            <button type="button" class="btn-blank-with-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
+              <span>📄</span> Need to submit physically? Print Blank Withdrawal Form
+            </button>
           </div>
-        `;
-        area.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
-        area.querySelectorAll('.btn-blank-with-trigger').forEach(b => b.onclick = () => triggerBlankWithdrawalAlert(sets));
-        return;
-      }
+        </div>
+      `;
+      area.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
+      area.querySelectorAll('.btn-blank-with-trigger').forEach(b => b.onclick = () => triggerBlankWithdrawalAlert(sets));
+      return;
     }
 
     area.innerHTML = `

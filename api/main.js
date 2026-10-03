@@ -189,35 +189,12 @@ const setSetting = async (key, value) => {
   `;
 };
 
-// Stage Evaluation Helper: Manual Override trumps Schedule; AUTO follows Date/Time
-function evaluateStageStatus(overrideMode, legacyFlag, scheduledStart, scheduledEnd) {
+// Stage Evaluation Helper: Strictly Manual Administrative Control.
+// Dates are stored solely as informational references for system notices, official orders, and student reference.
+// No automatic publishing or status switching occurs based on calendar date or time.
+function evaluateStageStatus(overrideMode, legacyFlag) {
   if (overrideMode === 'FORCE_OPEN' || overrideMode === 'FORCE_PUBLISHED') return true;
   if (overrideMode === 'FORCE_CLOSED' || overrideMode === 'FORCE_UNPUBLISHED') return false;
-
-  const now = new Date();
-  const hasStart = scheduledStart && typeof scheduledStart === 'string' && scheduledStart.trim();
-  const hasEnd = scheduledEnd && typeof scheduledEnd === 'string' && scheduledEnd.trim();
-
-  if (hasStart || hasEnd) {
-    if (hasStart && hasEnd) {
-      const s = new Date(scheduledStart);
-      const e = new Date(scheduledEnd);
-      if (!isNaN(s.getTime()) && !isNaN(e.getTime())) {
-        return now >= s && now <= e;
-      }
-    } else if (hasStart) {
-      const s = new Date(scheduledStart);
-      if (!isNaN(s.getTime())) {
-        return now >= s;
-      }
-    } else if (hasEnd) {
-      const e = new Date(scheduledEnd);
-      if (!isNaN(e.getTime())) {
-        return now <= e;
-      }
-    }
-  }
-
   return legacyFlag === 'true' || legacyFlag === true;
 }
 
@@ -225,34 +202,34 @@ async function getFullElectionStatus() {
   const [
     draftRollOverride, draftRollStart, draftRollEnd, legacyDraftPub,
     finalRollOverride, finalRollStart, finalRollEnd, legacyRollFinal,
-    nomOverride, nomStart, nomDeadline,
+    nomOverride, nomStart, nomDeadline, legacyNomOpen,
     validListOverride, validListStart, validListEnd, legacyValidPub,
-    withOverride, withStart, withEnd,
+    withOverride, withStart, withEnd, legacyWithOpen,
     finalListOverride, finalListStart, finalListEnd, legacyFinalPub,
-    pollingOverride, pollingStart, pollingEnd,
+    pollingOverride, pollingStart, pollingEnd, legacyPollingActive,
     resultsOverride, resultsStart, resultsEnd, legacyResPub,
     countingActive, resultsLocked,
     electionYear, notificationDate
   ] = await Promise.all([
     getSetting('draftRollOverride'), getSetting('draftRollStart'), getSetting('draftRollEnd'), getSetting('draftRollPublished'),
     getSetting('finalRollOverride'), getSetting('finalRollStart'), getSetting('finalRollEnd'), getSetting('isRollFinalized'),
-    getSetting('nominationOverride'), getSetting('nominationStart'), getSetting('nominationDeadline'),
+    getSetting('nominationOverride'), getSetting('nominationStart'), getSetting('nominationDeadline'), getSetting('nominationOpen'),
     getSetting('validListOverride'), getSetting('validListStart'), getSetting('validListEnd'), getSetting('validListPublished'),
-    getSetting('withdrawalOverride'), getSetting('withdrawalStart'), getSetting('withdrawalEnd'),
+    getSetting('withdrawalOverride'), getSetting('withdrawalStart'), getSetting('withdrawalEnd'), getSetting('withdrawalOpen'),
     getSetting('finalListOverride'), getSetting('finalListStart'), getSetting('finalListEnd'), getSetting('finalListPublished'),
-    getSetting('pollingOverride'), getSetting('pollingStart'), getSetting('pollingEnd'),
+    getSetting('pollingOverride'), getSetting('pollingStart'), getSetting('pollingEnd'), getSetting('pollingActive'),
     getSetting('resultsOverride'), getSetting('resultsStart'), getSetting('resultsEnd'), getSetting('resultsPublished'),
     getSetting('countingActive'), getSetting('resultsLocked'),
     getSetting('electionYear'), getSetting('notificationDate')
   ]);
 
-  const isFinalRollActive = evaluateStageStatus(finalRollOverride || 'AUTO', legacyRollFinal || 'false', finalRollStart, finalRollEnd);
-  const isDraftRollActive = evaluateStageStatus(draftRollOverride || 'AUTO', legacyDraftPub || 'false', draftRollStart, draftRollEnd);
-  const isNomActive       = evaluateStageStatus(nomOverride || 'AUTO', 'false', nomStart, nomDeadline);
-  const isValidListActive = evaluateStageStatus(validListOverride || 'AUTO', legacyValidPub || 'false', validListStart, validListEnd);
-  const isWithActive      = evaluateStageStatus(withOverride || 'AUTO', 'false', withStart, withEnd);
-  const isFinalListActive = evaluateStageStatus(finalListOverride || 'AUTO', legacyFinalPub || 'false', finalListStart, finalListEnd);
-  const isPollingActive   = evaluateStageStatus(pollingOverride || 'AUTO', 'false', pollingStart, pollingEnd);
+  const isFinalRollActive = evaluateStageStatus(finalRollOverride, legacyRollFinal || 'false');
+  const isDraftRollActive = evaluateStageStatus(draftRollOverride, legacyDraftPub || 'false');
+  const isNomActive       = evaluateStageStatus(nomOverride, legacyNomOpen || 'false');
+  const isValidListActive = evaluateStageStatus(validListOverride, legacyValidPub || 'false');
+  const isWithActive      = evaluateStageStatus(withOverride, legacyWithOpen || 'false');
+  const isFinalListActive = evaluateStageStatus(finalListOverride, legacyFinalPub || 'false');
+  const isPollingActive   = evaluateStageStatus(pollingOverride, legacyPollingActive || 'false');
   // Results strictly go live ONLY on manual push/publish by the Admin. No automatic scheduled live.
   const isResultsActive   = (resultsOverride === 'FORCE_OPEN' || legacyResPub === 'true') && resultsOverride !== 'FORCE_CLOSED';
 
@@ -280,6 +257,8 @@ async function getFullElectionStatus() {
     nominationDeadline: nomDeadline || '',
     nominationOverride: nomOverride || 'AUTO',
     isNominationActive: isNomActive,
+    isNomActive,
+    nominationOpen: isNomActive ? 'true' : 'false',
 
     // 4. Valid List
     validListStart: validListStart || '',
@@ -293,6 +272,8 @@ async function getFullElectionStatus() {
     withdrawalEnd: withEnd || '',
     withdrawalOverride: withOverride || 'AUTO',
     isWithdrawalActive: isWithActive,
+    isWithActive,
+    withdrawalOpen: isWithActive ? 'true' : 'false',
 
     // 6. Final List
     finalListStart: finalListStart || '',
@@ -306,6 +287,7 @@ async function getFullElectionStatus() {
     pollingEnd: pollingEnd || '',
     pollingOverride: pollingOverride || 'AUTO',
     isPollingActive,
+    pollingActive: isPollingActive ? 'true' : 'false',
 
     // 8. Results & Counting (Manual Push Only - No auto-scheduled live)
     resultsStart: resultsStart || '',
@@ -996,9 +978,7 @@ export default async function handler(req, res) {
     if (action === 'getValidNominations') {
       const validOverride = (await getSetting('validListOverride')) || 'AUTO';
       const legacyPublished = await getSetting('validListPublished');
-      const validStart = await getSetting('validListStart');
-      const validEnd = await getSetting('validListEnd');
-      const published = evaluateStageStatus(validOverride, legacyPublished, validStart, validEnd);
+      const published = evaluateStageStatus(validOverride, legacyPublished);
       if (!published) return jsonOut(res, []);
       const noms = await sql`
         SELECT * FROM nominations 
@@ -1024,9 +1004,7 @@ export default async function handler(req, res) {
     if (action === 'getFinalNominations') {
       const finalOverride = (await getSetting('finalListOverride')) || 'AUTO';
       const legacyPublished = await getSetting('finalListPublished');
-      const finalStart = await getSetting('finalListStart');
-      const finalEnd = await getSetting('finalListEnd');
-      const published = evaluateStageStatus(finalOverride, legacyPublished, finalStart, finalEnd);
+      const published = evaluateStageStatus(finalOverride, legacyPublished);
       if (!published) return jsonOut(res, { active: [], withdrawn: [] });
       const noms = await sql`
         SELECT * FROM nominations 
@@ -1063,9 +1041,7 @@ export default async function handler(req, res) {
     if (action === 'adminGetFinalNominations') {
       const finalOverride = (await getSetting('finalListOverride')) || 'AUTO';
       const legacyPublished = await getSetting('finalListPublished');
-      const finalStart = await getSetting('finalListStart');
-      const finalEnd = await getSetting('finalListEnd');
-      const isPublished = evaluateStageStatus(finalOverride, legacyPublished, finalStart, finalEnd);
+      const isPublished = evaluateStageStatus(finalOverride, legacyPublished);
 
       const noms = await sql`
         SELECT * FROM nominations 
@@ -1711,37 +1687,74 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       // 1. Draft Roll
       if (body.draftRollStart !== undefined) updates.draftRollStart = body.draftRollStart || '';
       if (body.draftRollEnd !== undefined) updates.draftRollEnd = body.draftRollEnd || '';
-      if (body.draftRollOverride !== undefined) updates.draftRollOverride = body.draftRollOverride || 'AUTO';
+      if (body.draftRollOverride !== undefined) {
+        updates.draftRollOverride = body.draftRollOverride;
+        if (body.draftRollOverride === 'FORCE_OPEN') updates.draftRollPublished = 'true';
+        else if (body.draftRollOverride === 'FORCE_CLOSED') updates.draftRollPublished = 'false';
+      }
 
       // 2. Final Roll
       if (body.finalRollStart !== undefined) updates.finalRollStart = body.finalRollStart || '';
       if (body.finalRollEnd !== undefined) updates.finalRollEnd = body.finalRollEnd || '';
-      if (body.finalRollOverride !== undefined) updates.finalRollOverride = body.finalRollOverride || 'AUTO';
+      if (body.finalRollOverride !== undefined) {
+        updates.finalRollOverride = body.finalRollOverride;
+        if (body.finalRollOverride === 'FORCE_OPEN') {
+          updates.isRollFinalized = 'true';
+          updates.nominalRollFinalized = 'true';
+          updates.draftRollPublished = 'true';
+        } else if (body.finalRollOverride === 'FORCE_CLOSED') {
+          updates.isRollFinalized = 'false';
+          updates.nominalRollFinalized = 'false';
+        }
+      }
 
       // 3. Nomination Window
       if (body.nominationStart !== undefined) updates.nominationStart = body.nominationStart || '';
       if (body.nominationDeadline !== undefined) updates.nominationDeadline = body.nominationDeadline || '';
-      if (body.nominationOverride !== undefined) updates.nominationOverride = body.nominationOverride || 'AUTO';
+      if (body.nominationOverride !== undefined) {
+        updates.nominationOverride = body.nominationOverride;
+        if (body.nominationOverride === 'FORCE_OPEN') updates.nominationOpen = 'true';
+        else if (body.nominationOverride === 'FORCE_CLOSED') updates.nominationOpen = 'false';
+      }
 
       // 4. Valid List
       if (body.validListStart !== undefined) updates.validListStart = body.validListStart || '';
       if (body.validListEnd !== undefined) updates.validListEnd = body.validListEnd || '';
-      if (body.validListOverride !== undefined) updates.validListOverride = body.validListOverride || 'AUTO';
+      if (body.validListOverride !== undefined) {
+        updates.validListOverride = body.validListOverride;
+        if (body.validListOverride === 'FORCE_OPEN') updates.validListPublished = 'true';
+        else if (body.validListOverride === 'FORCE_CLOSED') {
+          updates.validListPublished = 'false';
+          updates.finalListPublished = 'false';
+        }
+      }
 
       // 5. Withdrawal Window
       if (body.withdrawalStart !== undefined) updates.withdrawalStart = body.withdrawalStart || '';
       if (body.withdrawalEnd !== undefined) updates.withdrawalEnd = body.withdrawalEnd || '';
-      if (body.withdrawalOverride !== undefined) updates.withdrawalOverride = body.withdrawalOverride || 'AUTO';
+      if (body.withdrawalOverride !== undefined) {
+        updates.withdrawalOverride = body.withdrawalOverride;
+        if (body.withdrawalOverride === 'FORCE_OPEN') updates.withdrawalOpen = 'true';
+        else if (body.withdrawalOverride === 'FORCE_CLOSED') updates.withdrawalOpen = 'false';
+      }
 
       // 6. Final List
       if (body.finalListStart !== undefined) updates.finalListStart = body.finalListStart || '';
       if (body.finalListEnd !== undefined) updates.finalListEnd = body.finalListEnd || '';
-      if (body.finalListOverride !== undefined) updates.finalListOverride = body.finalListOverride || 'AUTO';
+      if (body.finalListOverride !== undefined) {
+        updates.finalListOverride = body.finalListOverride;
+        if (body.finalListOverride === 'FORCE_OPEN') updates.finalListPublished = 'true';
+        else if (body.finalListOverride === 'FORCE_CLOSED') updates.finalListPublished = 'false';
+      }
 
       // 7. Polling Window
       if (body.pollingStart !== undefined) updates.pollingStart = body.pollingStart || '';
       if (body.pollingEnd !== undefined) updates.pollingEnd = body.pollingEnd || '';
-      if (body.pollingOverride !== undefined) updates.pollingOverride = body.pollingOverride || 'AUTO';
+      if (body.pollingOverride !== undefined) {
+        updates.pollingOverride = body.pollingOverride;
+        if (body.pollingOverride === 'FORCE_OPEN') updates.pollingActive = 'true';
+        else if (body.pollingOverride === 'FORCE_CLOSED') updates.pollingActive = 'false';
+      }
 
       // 8. Results & Counting (Manual Push Only - No auto-scheduled live)
       if (body.resultsStart !== undefined) updates.resultsStart = body.resultsStart || '';
@@ -1771,7 +1784,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
 
     if (action === 'adminSetStageOverride') {
       const stage = body.stage;
-      const mode = body.mode; // 'AUTO' | 'FORCE_OPEN' | 'FORCE_CLOSED'
+      const mode = body.mode; // 'FORCE_OPEN' | 'FORCE_CLOSED'
       if (!stage || !mode) return errOut(res, 'Stage and mode are required.');
 
       await setSetting(`${stage}Override`, mode);
@@ -1782,19 +1795,30 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       } else if (stage === 'finalRoll') {
         if (mode === 'FORCE_OPEN') {
           await setSetting('isRollFinalized', 'true');
+          await setSetting('nominalRollFinalized', 'true');
           await setSetting('draftRollPublished', 'true');
         } else if (mode === 'FORCE_CLOSED') {
           await setSetting('isRollFinalized', 'false');
+          await setSetting('nominalRollFinalized', 'false');
         }
+      } else if (stage === 'nomination') {
+        if (mode === 'FORCE_OPEN') await setSetting('nominationOpen', 'true');
+        else if (mode === 'FORCE_CLOSED') await setSetting('nominationOpen', 'false');
       } else if (stage === 'validList') {
         if (mode === 'FORCE_OPEN') await setSetting('validListPublished', 'true');
         else if (mode === 'FORCE_CLOSED') {
           await setSetting('validListPublished', 'false');
           await setSetting('finalListPublished', 'false');
         }
+      } else if (stage === 'withdrawal') {
+        if (mode === 'FORCE_OPEN') await setSetting('withdrawalOpen', 'true');
+        else if (mode === 'FORCE_CLOSED') await setSetting('withdrawalOpen', 'false');
       } else if (stage === 'finalList') {
         if (mode === 'FORCE_OPEN') await setSetting('finalListPublished', 'true');
         else if (mode === 'FORCE_CLOSED') await setSetting('finalListPublished', 'false');
+      } else if (stage === 'polling') {
+        if (mode === 'FORCE_OPEN') await setSetting('pollingActive', 'true');
+        else if (mode === 'FORCE_CLOSED') await setSetting('pollingActive', 'false');
       } else if (stage === 'results') {
         if (mode === 'FORCE_OPEN') {
           await setSetting('resultsPublished', 'true');
@@ -1819,37 +1843,19 @@ All students are directed to strictly adhere to the University Code of Conduct, 
     if (action === 'submitNomination') {
       const rollOverride = (await getSetting('finalRollOverride')) || 'AUTO';
       const legacyRollFinal = (await getSetting('isRollFinalized')) === 'true' || (await getSetting('nominalRollFinalized')) === 'true';
-      const finalRollStart = await getSetting('finalRollStart');
-      const isRollFinal = evaluateStageStatus(rollOverride, legacyRollFinal ? 'true' : 'false', finalRollStart);
+      const isRollFinal = evaluateStageStatus(rollOverride, legacyRollFinal ? 'true' : 'false');
 
       if (!isRollFinal && !body.password) {
         return errOut(res, 'Nominations can only be submitted after the Final Nominal Roll is published by the Returning Officer.');
       }
 
-      // Schedule window and override check
-      const now = new Date();
+      // Manual window check (strictly controlled by Returning Officer)
       const nomOverride = (await getSetting('nominationOverride')) || 'AUTO';
-      const nomStart = await getSetting('nominationStart');
-      const nomEnd = await getSetting('nominationDeadline');
-      const isNomActive = evaluateStageStatus(nomOverride, 'false', nomStart, nomEnd);
+      const legacyNomOpen = (await getSetting('nominationOpen')) === 'true';
+      const isNomActive = evaluateStageStatus(nomOverride, legacyNomOpen ? 'true' : 'false');
 
       if (!isNomActive && !body.password) {
-        if (nomOverride === 'FORCE_CLOSED') {
-          return errOut(res, 'Nomination submission window has been manually closed by the Returning Officer.');
-        }
-        if (nomStart && nomStart.trim()) {
-          const startDate = new Date(nomStart);
-          if (!isNaN(startDate.getTime()) && now < startDate) {
-            return errOut(res, `Nomination submission has not opened yet (Opens on ${startDate.toLocaleString('en-IN')}).`);
-          }
-        }
-        if (nomEnd && nomEnd.trim()) {
-          const endDate = new Date(nomEnd);
-          if (!isNaN(endDate.getTime()) && now > endDate) {
-            return errOut(res, 'Nomination submission window has closed.');
-          }
-        }
-        return errOut(res, 'Nomination submission window is currently closed.');
+        return errOut(res, 'Nomination submission window is currently closed by the Returning Officer.');
       }
 
       // Basic Identity Rules
@@ -1958,38 +1964,19 @@ All students are directed to strictly adhere to the University Code of Conduct, 
     if (action === 'submitWithdrawal') {
       const validOverride = (await getSetting('validListOverride')) || 'AUTO';
       const validLegacy = (await getSetting('validListPublished')) === 'true';
-      const validStart = await getSetting('validListStart');
-      const validEnd = await getSetting('validListEnd');
-      const validPublished = evaluateStageStatus(validOverride, validLegacy ? 'true' : 'false', validStart, validEnd);
+      const validPublished = evaluateStageStatus(validOverride, validLegacy ? 'true' : 'false');
 
       if (!validPublished && !body.password) {
-        return errOut(res, 'Withdrawals can only be submitted after the Valid Nominations List is published.');
+        return errOut(res, 'Withdrawals can only be submitted after the Valid Nominations List is published by the Returning Officer.');
       }
 
-      // Schedule window and override check
-      const now = new Date();
+      // Manual window check (strictly controlled by Returning Officer)
       const withOverride = (await getSetting('withdrawalOverride')) || 'AUTO';
-      const withStart = await getSetting('withdrawalStart');
-      const withEnd = await getSetting('withdrawalEnd');
-      const isWithActive = evaluateStageStatus(withOverride, 'false', withStart, withEnd);
+      const legacyWithOpen = (await getSetting('withdrawalOpen')) === 'true';
+      const isWithActive = evaluateStageStatus(withOverride, legacyWithOpen ? 'true' : 'false');
 
       if (!isWithActive && !body.password) {
-        if (withOverride === 'FORCE_CLOSED') {
-          return errOut(res, 'Withdrawal window has been manually closed by the Returning Officer.');
-        }
-        if (withStart && withStart.trim()) {
-          const startDate = new Date(withStart);
-          if (!isNaN(startDate.getTime()) && now < startDate) {
-            return errOut(res, `Withdrawal window has not opened yet (Opens on ${startDate.toLocaleString('en-IN')}).`);
-          }
-        }
-        if (withEnd && withEnd.trim()) {
-          const endDate = new Date(withEnd);
-          if (!isNaN(endDate.getTime()) && now > endDate) {
-            return errOut(res, 'Withdrawal window has closed.');
-          }
-        }
-        return errOut(res, 'Withdrawal window is currently closed.');
+        return errOut(res, 'Withdrawal window is currently closed by the Returning Officer.');
       }
 
       const id = body.id;
@@ -2740,14 +2727,11 @@ All students are directed to strictly adhere to the University Code of Conduct, 
     if (action === 'submitRollCorrection') {
       const draftOverride = (await getSetting('draftRollOverride')) || 'AUTO';
       const legacyDraft = await getSetting('draftRollPublished');
-      const draftStart = await getSetting('draftRollStart');
-      const draftEnd = await getSetting('draftRollEnd');
-      const isDraftOpen = evaluateStageStatus(draftOverride, legacyDraft, draftStart, draftEnd);
+      const isDraftOpen = evaluateStageStatus(draftOverride, legacyDraft);
 
       const rollOverride = (await getSetting('finalRollOverride')) || 'AUTO';
       const legacyFinal = await getSetting('isRollFinalized');
-      const finalStart = await getSetting('finalRollStart');
-      const isFinal = evaluateStageStatus(rollOverride, legacyFinal, finalStart);
+      const isFinal = evaluateStageStatus(rollOverride, legacyFinal);
 
       if (isFinal) {
         return errOut(res, 'The Nominal Roll has been finalized. Correction requests are no longer accepted.');

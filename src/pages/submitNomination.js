@@ -127,83 +127,43 @@ function renderForm(container, year, collegeName, setsData = {}, isAdminDirect =
     return;
   }
 
-  // 2. Enforce Schedule Windows & Manual Overrides (Start and End)
-  const nomOverride = electionSchedule.nominationOverride || 'AUTO';
-  const isForceOpen = nomOverride === 'FORCE_OPEN';
-  const isForceClosed = nomOverride === 'FORCE_CLOSED';
+  // 2. Nomination Window Access Gate (Strictly Manual Administrative Control)
+  // Schedule dates are for informational guidance and statutory reference only.
+  const nomOverride = electionSchedule.nominationOverride;
+  const isNomOpen = electionSchedule.isNominationActive === true || 
+                    electionSchedule.isNomActive === true || 
+                    electionSchedule.nominationOpen === 'true' || 
+                    setsData?.nominationOpen === 'true' || 
+                    nomOverride === 'FORCE_OPEN';
 
-  const now = new Date();
-  const start = electionSchedule.nominationStart ? new Date(electionSchedule.nominationStart) : null;
-  const deadline = electionSchedule.nominationDeadline ? new Date(electionSchedule.nominationDeadline) : null;
+  if (!window.ADMIN_BYPASS_PWD && !isNomOpen) {
+    const start = electionSchedule.nominationStart ? new Date(electionSchedule.nominationStart) : null;
+    const deadline = electionSchedule.nominationDeadline ? new Date(electionSchedule.nominationDeadline) : null;
+    const startStr = start && !isNaN(start.getTime()) ? start.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' }) : '';
+    const endStr = deadline && !isNaN(deadline.getTime()) ? deadline.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' }) : '';
 
-  if (!window.ADMIN_BYPASS_PWD && !isForceOpen) {
-    if (isForceClosed) {
-      formArea.innerHTML = `
-        <div class="glass p-12 text-center rounded-2xl border border-rose-500/20 max-w-2xl mx-auto page-enter">
-          <div class="text-6xl mb-6">🛑</div>
-          <div class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 px-3 py-1 text-xs font-bold uppercase tracking-widest mb-3 inline-block">
-            Filing Closed
-          </div>
-          <h3 class="text-2xl font-bold text-white mb-3">Nomination Window Closed</h3>
-          <p class="text-slate-400 mb-6 leading-relaxed">Nomination submission has been officially closed by the Returning Officer.</p>
-          <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
-          <div class="mt-8 pt-4 border-t border-white/5 text-center">
-            <button type="button" class="btn-blank-nom-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
-              <span>📄</span> Need to fill manually? Print Blank Nomination Form
-            </button>
-          </div>
+    formArea.innerHTML = `
+      <div class="glass p-12 text-center rounded-2xl border border-rose-500/20 max-w-2xl mx-auto page-enter">
+        <div class="text-6xl mb-6">🛑</div>
+        <div class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 px-3 py-1 text-xs font-bold uppercase tracking-widest mb-3 inline-block">
+          Filing Closed
         </div>
-      `;
-      formArea.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
-      formArea.querySelectorAll('.btn-blank-nom-trigger').forEach(b => b.onclick = () => triggerBlankNominationAlert(setsData));
-      return;
-    }
-
-    if (start && !isNaN(start.getTime()) && now < start) {
-      formArea.innerHTML = `
-        <div class="glass p-12 text-center rounded-2xl border border-amber-500/20 max-w-2xl mx-auto page-enter">
-          <div class="text-6xl mb-6">📅</div>
-          <div class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-1 text-xs font-bold uppercase tracking-widest mb-3 inline-block">
-            Scheduled Opening
-          </div>
-          <h3 class="text-2xl font-bold text-white mb-3">Nomination Filing Not Started</h3>
-          <p class="text-slate-400 mb-6 leading-relaxed">
-            Nomination submissions are scheduled to open on <strong>${start.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })}</strong>.
-          </p>
-          <button id="pendingBackBtn" class="btn btn-secondary">← Back to Home</button>
-          <div class="mt-8 pt-4 border-t border-white/5 text-center">
-            <button type="button" class="btn-blank-nom-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
-              <span>📄</span> Need to fill manually? Print Blank Nomination Form
-            </button>
-          </div>
+        <h3 class="text-2xl font-bold text-white mb-3">Nomination Window Closed</h3>
+        <p class="text-slate-400 mb-6 leading-relaxed">
+          Candidate nomination submissions are currently closed by the Returning Officer.
+          ${startStr ? `<br><span class="text-xs text-slate-500 mt-3 inline-block">Official Reference Schedule: <strong>${startStr}</strong> ${endStr ? `to <strong>${endStr}</strong>` : ''}</span>` : ''}
+        </p>
+        <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
+        <div class="mt-8 pt-4 border-t border-white/5 text-center">
+          <button type="button" class="btn-blank-nom-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
+            <span>📄</span> Need to fill manually? Print Blank Nomination Form
+          </button>
         </div>
-      `;
-      formArea.querySelector('#pendingBackBtn').onclick = () => router.navigate('/');
-      formArea.querySelectorAll('.btn-blank-nom-trigger').forEach(b => b.onclick = () => triggerBlankNominationAlert(setsData));
-      return;
-    }
-
-    if (deadline && !isNaN(deadline.getTime()) && now > deadline) {
-      formArea.innerHTML = `
-        <div class="glass p-12 text-center rounded-2xl border border-rose-500/20 max-w-2xl mx-auto page-enter">
-          <div class="text-6xl mb-6">⏳</div>
-          <div class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 px-3 py-1 text-xs font-bold uppercase tracking-widest mb-3 inline-block">
-            Filing Ended
-          </div>
-          <h3 class="text-2xl font-bold text-white mb-3">Nomination Window Closed</h3>
-          <p class="text-slate-400 mb-6 leading-relaxed">The official deadline for filing nominations was <strong>${deadline.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })}</strong>.</p>
-          <button id="expiredBackBtn" class="btn btn-secondary">← Back to Home</button>
-          <div class="mt-8 pt-4 border-t border-white/5 text-center">
-            <button type="button" class="btn-blank-nom-trigger text-xs text-slate-400 hover:text-slate-300 underline underline-offset-4 transition inline-flex items-center gap-1.5 opacity-75 hover:opacity-100 cursor-pointer">
-              <span>📄</span> Need to fill manually? Print Blank Nomination Form
-            </button>
-          </div>
-        </div>
-      `;
-      formArea.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
-      formArea.querySelectorAll('.btn-blank-nom-trigger').forEach(b => b.onclick = () => triggerBlankNominationAlert(setsData));
-      return;
-    }
+      </div>
+    `;
+    formArea.querySelector('#expiredBackBtn').onclick = () => router.navigate('/');
+    formArea.querySelectorAll('.btn-blank-nom-trigger').forEach(b => b.onclick = () => triggerBlankNominationAlert(setsData));
+    return;
   }
 
   const sortedPosts = sortPosts(allPosts);
