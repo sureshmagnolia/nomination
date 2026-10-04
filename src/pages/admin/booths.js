@@ -715,7 +715,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             
             <div class="flex gap-2 mb-4">
               <input type="text" id="newLocationInput" class="field flex-1" placeholder="Add room or location name (e.g. Room 101, Auditorium)...">
-              <button id="btnAddLocation" class="btn btn-secondary whitespace-nowrap">➕ Add</button>
+              <button id="btnAddLocation" class="btn btn-secondary whitespace-nowrap" title="Action: Adds this room or hall name to the available locations list and saves it to the database.&#10;Prerequisite: Enter a valid, non-duplicate room name.">➕ Add</button>
             </div>
 
             <!-- Scrollable Locations List -->
@@ -726,8 +726,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-white/10">
               <span class="text-xs text-slate-400">💡 Click <strong>✏️ Edit</strong> or double-click to rename.</span>
               <div class="flex gap-2">
-                <button id="btnCloseLocationsModal2" class="btn btn-secondary">Close</button>
-                <button id="btnSaveLocations" class="btn btn-primary">💾 Save Locations</button>
+                <button id="btnCloseLocationsModal2" class="btn btn-secondary" title="Close this modal without additional changes">Close</button>
+                <button id="btnSaveLocations" class="btn btn-primary" title="Action: Saves the full list of campus room locations and current booth assignments to the database.&#10;Prerequisite: Complete your room name edits or additions.">💾 Save Locations</button>
               </div>
             </div>
           </div>
@@ -793,14 +793,14 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             <p class="text-slate-400 text-sm">Designate rooms and allot classes to polling booths.</p>
           </div>
           <div class="flex flex-wrap gap-2">
-            <button id="btnClearAll" class="btn btn-secondary border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white">🗑️ Clear All</button>
-            <button id="btnAutoAllot" class="btn btn-secondary">⚡ Auto Allot</button>
-            <a href="#/admin/officials" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white">👥 Allot Officials (Team Builder)</a>
-            <button id="btnManageLocations" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📍 Manage Locations</button>
-            <button id="btnSaveBooths" class="btn btn-primary">💾 Save Configuration</button>
-            <button id="btnRegenPlan" class="btn btn-primary border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 px-4">🔄 Finalize Master Plan</button>
-            <button id="btnPrintRolls" class="btn btn-secondary">🖨️ Print Marked Copy (Electoral Rolls)</button>
-            <button id="btnPrintBallotAccounts" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white">📑 Print Ballot Accounts</button>
+            <button id="btnClearAll" class="btn btn-secondary border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white" title="Action: Unassigns all classes from all booths to reset allotments to blank.&#10;Prerequisite: Ensure you want to wipe current assignments; you will need to re-allot classes manually or via Auto Allot.">🗑️ Clear All</button>
+            <button id="btnAutoAllot" class="btn btn-secondary" title="Action: Analyzes voter loads and automatically distributes classes evenly with minimal department splits.&#10;Prerequisite: Set the total booth count first and ensure the Nominal Roll has been imported.">⚡ Auto Allot</button>
+            <a href="#/admin/officials" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white" title="Action: Opens the Election Officials Team Builder to allot Presiding Officers, Polling Officers, and Peons to booths.&#10;Prerequisite: Configure booths and assign room locations first so polling stations exist for staffing.">👥 Allot Officials (Team Builder)</a>
+            <button id="btnManageLocations" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white" title="Action: Opens Location Manager to add, rename, or delete campus rooms and halls for polling booths.&#10;Prerequisite: Have your list of room numbers / hall names ready.">📍 Manage Locations</button>
+            <button id="btnSaveBooths" class="btn btn-primary" title="Action: Saves all assigned room locations and class-to-booth allocations to the database.&#10;Prerequisite: Assign room locations and ensure all classes are allocated to booths before saving.">💾 Save Configuration</button>
+            <button id="btnRegenPlan" class="btn btn-primary border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 px-4" title="Action: Calculates voter counts, generates official ballot slip serial ranges (G, R, A), bundles 50-slip books, and freezes the Master Plan.&#10;Prerequisite: Click '💾 Save Configuration' first to ensure your latest booth and class allocations are saved in the database.">🔄 Finalize Master Plan</button>
+            <button id="btnPrintRolls" class="btn btn-secondary" title="Action: Generates official printable Marked Copies of the Electoral Roll for each booth with voter details and ballot checkboxes.&#10;Prerequisite: Complete class allotments, save configuration, and click '🔄 Finalize Master Plan' first.">🖨️ Print Marked Copy (Electoral Rolls)</button>
+            <button id="btnPrintBallotAccounts" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white" title="Action: Generates statutory Presiding Officer Ballot Paper Accounts (Form 4 / Form V) pre-filled with official book numbers and serial ranges.&#10;Prerequisite: Click '🔄 Finalize Master Plan' first so ballot serial number ranges and book counts are generated.">📑 Print Ballot Accounts</button>
           </div>
         </div>
         <div id="printArea" class="hidden"></div>
@@ -861,8 +861,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             </div>
             <div class="flex gap-2 items-center">
               <label class="text-sm text-slate-300 mb-0 whitespace-nowrap">Total Booths:</label>
-              <input type="number" id="numBoothsInput" class="field w-20 py-1 font-mono text-center font-bold" min="1" max="50" value="${booths.length}">
-              <button id="btnUpdateBoothCount" class="btn btn-primary btn-sm bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center gap-1 px-3">
+              <input type="number" id="numBoothsInput" class="field w-20 py-1 font-mono text-center font-bold" min="1" max="50" value="${booths.length}" title="Enter the total number of physical polling booths (1 to 50)">
+              <button id="btnUpdateBoothCount" class="btn btn-primary btn-sm bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center gap-1 px-3" title="Action: Updates the total number of polling booths and immediately saves to database.&#10;Prerequisite: Enter the desired booth count (1–50) in the input field.">
                 <span>🔢</span> <span>Update & Save</span>
               </button>
             </div>
