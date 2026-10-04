@@ -1119,11 +1119,11 @@ function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, collegeN
   const batches = getUucBatchesForVoterCount(numVoters);
   const batchesSummary = getUucBatchesSummaryText(batches, numVoters);
 
-  // Column width calculations
+  // Column width calculations - optimized to maximize writing space for tally marks in batch columns
   const numBatches = batches.length;
-  const indexWidth = 3;
-  const nameWidth = numBatches > 6 ? 22 : (numBatches > 4 ? 25 : 28);
-  const finalWidth = numBatches > 6 ? 11 : 13;
+  const indexWidth = 2.5;
+  const nameWidth = numBatches > 6 ? 15 : (numBatches > 4 ? 17 : 19);
+  const finalWidth = numBatches > 6 ? 6.5 : 7.5;
   const remainingWidth = 100 - (indexWidth + nameWidth + finalWidth);
   const batchColWidth = (remainingWidth / numBatches).toFixed(1);
 
@@ -1194,70 +1194,72 @@ function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, collegeN
       <thead>
         <tr>
           <th style="width:${indexWidth}%;text-align:center;padding:3px 1px;">#</th>
-          <th style="width:${nameWidth}%;text-align:left;padding:3px 5px;">Candidate Name &amp; Class</th>
+          <th style="width:${nameWidth}%;text-align:left;padding:3px 3px;">
+            <div style="font-size:${numBatches > 5 ? '8.5px' : '9.5px'};line-height:1.1;">Candidate Name &amp; Class</div>
+          </th>
           ${batches.map(b => `
             <th style="width:${batchColWidth}%;text-align:center;padding:3px 1px;">
-              <div style="font-weight:bold;font-size:${numBatches > 6 ? '9px' : '10px'}">${esc(b.name)}</div>
+              <div style="font-weight:bold;font-size:${numBatches > 6 ? '8.5px' : '9.5px'}">${esc(b.name)}</div>
               <div style="font-size:7.5px;font-weight:normal;color:#333">${esc(b.range)}</div>
               <div style="font-size:7.5px;font-weight:normal;color:#555">Target: ${b.targetVotes} v</div>
             </th>
           `).join('')}
-          <th style="width:${finalWidth}%;text-align:center;padding:3px 2px;background:#e0e7ff;">
-            <div style="font-weight:bold;font-size:10px;">FINAL TOTAL</div>
-            <div style="font-size:7.5px;font-weight:normal;color:#1e40af">To Form 6</div>
+          <th style="width:${finalWidth}%;text-align:center;padding:3px 1px;background:#e0e7ff;">
+            <div style="font-weight:bold;font-size:8.5px;line-height:1.1;">TOTAL</div>
+            <div style="font-size:6.5px;font-weight:normal;color:#1e40af;line-height:1;">To Form 6</div>
           </th>
         </tr>
       </thead>
       <tbody>
         ${candsList.map((c, i) => `
           <tr>
-            <td style="text-align:center;font-weight:bold;padding:4px 2px;">${i + 1}</td>
-            <td style="font-weight:bold;padding:4px 5px;">
-              <div style="font-size:${numBatches > 6 ? '9.5px' : '10.5px'}">${esc(c.candidateName)}</div>
-              <div style="font-size:8px;font-weight:normal;color:#555">${esc(c.candidateClass || '')}</div>
+            <td style="text-align:center;font-weight:bold;padding:4px 1px;">${i + 1}</td>
+            <td style="font-weight:bold;padding:4px 3px;line-height:1.15;">
+              <div style="font-size:${numBatches > 6 ? '8.5px' : (numBatches > 4 ? '9px' : '9.5px')};white-space:normal;word-break:break-word;">${esc(c.candidateName)}</div>
+              <div style="font-size:7.5px;font-weight:normal;color:#555;">${esc(c.candidateClass || '')}</div>
             </td>
             ${batches.map(() => `<td style="padding:4px 2px;"></td>`).join('')}
-            <td style="padding:4px 2px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;"></td>
+            <td style="padding:4px 1px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;"></td>
           </tr>
         `).join('')}
         <tr>
-          <td style="text-align:center;font-weight:bold;padding:4px 2px;">–</td>
-          <td style="font-weight:bold;padding:4px 5px;">NOTA</td>
+          <td style="text-align:center;font-weight:bold;padding:4px 1px;">–</td>
+          <td style="font-weight:bold;padding:4px 3px;font-size:9.5px;">NOTA</td>
           ${batches.map(() => `<td style="padding:4px 2px;"></td>`).join('')}
-          <td style="padding:4px 2px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;"></td>
+          <td style="padding:4px 1px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;"></td>
         </tr>
         <tr>
-          <td style="text-align:center;font-weight:bold;padding:4px 2px;">–</td>
-          <td style="padding:4px 5px;">
-            <strong style="color:#b91c1c;">INVALID</strong>
-            <div style="font-size:7.5px;color:#555;">(1-choice, Overvote &gt;2, Blank)</div>
+          <td style="text-align:center;font-weight:bold;padding:4px 1px;">–</td>
+          <td style="padding:4px 3px;line-height:1.15;">
+            <strong style="color:#b91c1c;font-size:9px;">INVALID</strong>
+            <div style="font-size:7px;color:#555;">(1-choice, &gt;2, Blank)</div>
           </td>
           ${batches.map(() => `<td style="padding:4px 2px;"></td>`).join('')}
-          <td style="padding:4px 2px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;color:#b91c1c;"></td>
+          <td style="padding:4px 1px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;color:#b91c1c;"></td>
         </tr>
 
         <!-- Batch Milestone Verification Subtotal Row -->
         <tr style="background:#fef3c7;font-weight:bold;border-top:2px solid #000;">
-          <td colspan="2" style="text-align:right;padding:4px 5px;font-size:9.5px;letter-spacing:0.5px;">
-            BATCH TOTAL VOTES:
+          <td colspan="2" style="text-align:right;padding:4px 3px;font-size:8.5px;letter-spacing:0.3px;">
+            BATCH TOTAL:
           </td>
           ${batches.map(() => `
             <td style="text-align:center;padding:4px 1px;font-size:10px;font-family:monospace;">[ &nbsp;&nbsp;&nbsp; ]</td>
           `).join('')}
-          <td style="text-align:center;padding:4px 2px;background:#dbeafe;font-size:12px;font-weight:black;"></td>
+          <td style="text-align:center;padding:4px 1px;background:#dbeafe;font-size:11px;font-weight:black;"></td>
         </tr>
 
         <!-- Batch Balance Check (Must Equal Target) -->
-        <tr style="background:#f9fafb;font-size:9px;border-bottom:2px double #000;">
-          <td colspan="2" style="text-align:right;padding:3px 5px;font-weight:bold;color:#444;">
-            MILESTONE CHECK:
+        <tr style="background:#f9fafb;font-size:8.5px;border-bottom:2px double #000;">
+          <td colspan="2" style="text-align:right;padding:3px 3px;font-weight:bold;color:#444;font-size:8px;">
+            CHECK:
           </td>
           ${batches.map(b => `
             <td style="text-align:center;padding:2px 1px;color:#15803d;font-weight:bold;font-size:8px;">
               = ${b.targetVotes} [ &nbsp; ]
             </td>
           `).join('')}
-          <td style="text-align:center;padding:2px 1px;font-weight:bold;color:#1e40af;font-size:8.5px;">GRAND TOTAL</td>
+          <td style="text-align:center;padding:2px 1px;font-weight:bold;color:#1e40af;font-size:7.5px;">TOTAL</td>
         </tr>
       </tbody>
     </table>
