@@ -197,9 +197,6 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             <p class="text-slate-400 text-sm mt-0.5">${T} tables · ${totalRounds} rounds · ${postsList.length} posts total</p>
           </div>
           <div class="flex gap-2 flex-wrap items-center">
-            <a href="#/admin/results?openPanelColors=true" class="btn btn-secondary border-purple-500/40 text-purple-300 hover:bg-purple-500/20 text-xs font-semibold flex items-center gap-1.5" title="Confidential candidate panel colors">
-              <span>🎨</span> Set Candidate Colors
-            </a>
             <a href="#/admin/officials" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold flex items-center gap-1.5">
               <span>👥</span> Allot Counting Teams
             </a>

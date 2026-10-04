@@ -38,7 +38,7 @@ export const router = {
 
     resolveCurrent({});
   },
-  _resolve(path, params) {
+  _resolve(path, params = {}) {
     if (typeof currentCleanup === 'function') {
       try {
         currentCleanup();
@@ -47,8 +47,9 @@ export const router = {
       }
       currentCleanup = null;
     }
-    window.dispatchEvent(new CustomEvent('app:route-changed', { detail: { path, params } }));
-    const handler = routes[path] || routes[defaultRoute];
+    const cleanPath = (path || '').split('?')[0] || defaultRoute;
+    window.dispatchEvent(new CustomEvent('app:route-changed', { detail: { path: cleanPath, fullPath: path, params } }));
+    const handler = routes[cleanPath] || routes[defaultRoute];
     if (handler) handler(params);
   }
 };
