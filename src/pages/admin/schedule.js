@@ -156,17 +156,46 @@ function renderScheduleHub(main, pwd, schedule) {
 
       <!-- General Statutory Foundation -->
       <div class="glass rounded-2xl p-6 border-l-4 border-l-indigo-500 space-y-4">
-        <h4 class="text-sm font-bold uppercase tracking-wider text-indigo-300">🏛️ General Statutory Framework</h4>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-white/10 pb-3">
           <div>
-            <label class="block text-xs font-bold text-slate-300 uppercase mb-2">Election Year</label>
-            <input type="number" id="electionYear" class="field w-full font-mono text-base" value="${schedule.electionYear || new Date().getFullYear()}">
-            <p class="text-[11px] text-slate-400 mt-1">Rendered on all ballot papers, nominal rolls, lists, and declarations.</p>
+            <h4 class="text-sm font-bold uppercase tracking-wider text-indigo-300 flex items-center gap-2">
+              <span>🏛️</span> General Statutory Framework &amp; Candidate Age Limits
+            </h4>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Official University election dates and Lyngdoh Committee candidate age cut-off criteria.
+            </p>
+          </div>
+          <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[10px] font-bold">Statutory Cut-Offs</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-1.5">Election Year</label>
+            <input type="number" id="electionYear" class="field w-full font-mono text-sm" value="${schedule.electionYear || new Date().getFullYear()}">
+            <p class="text-[11px] text-slate-400 mt-1">Rendered on ballot papers, rolls, and declarations.</p>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-300 uppercase mb-2">Notification Date (Lyngdoh Age Cut-Off)</label>
-            <input type="date" id="notificationDate" class="field w-full font-mono text-base" value="${schedule.notificationDate || ''}">
-            <p class="text-[11px] text-slate-400 mt-1">Student age limits (UG: &lt;22, PG: &lt;25) are strictly computed as of this official date.</p>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-1.5">Notification Date</label>
+            <input type="date" id="notificationDate" class="field w-full font-mono text-sm" value="${schedule.notificationDate || ''}">
+            <p class="text-[11px] text-slate-400 mt-1">Official date of election notification (29/09/2026).</p>
+          </div>
+          <div class="bg-indigo-950/30 p-3 rounded-xl border border-indigo-500/30 space-y-1">
+            <label class="block text-xs font-bold text-indigo-200 uppercase flex items-center gap-1.5">
+              <span>🎓</span> UG Born On or After
+            </label>
+            <input type="date" id="ugDobCutoff" class="field w-full font-mono text-sm bg-slate-900 border-indigo-500/40 text-indigo-100" value="${schedule.ugDobCutoff || '2004-09-29'}">
+            <p class="text-[11px] text-indigo-300/80 leading-tight">
+              UG max 22 yrs (<strong class="text-indigo-200">29/09/2004</strong>). Students born before this date will be flagged ineligible in scrutiny.
+            </p>
+          </div>
+          <div class="bg-purple-950/30 p-3 rounded-xl border border-purple-500/30 space-y-1">
+            <label class="block text-xs font-bold text-purple-200 uppercase flex items-center gap-1.5">
+              <span>📚</span> PG Born On or After
+            </label>
+            <input type="date" id="pgDobCutoff" class="field w-full font-mono text-sm bg-slate-900 border-purple-500/40 text-purple-100" value="${schedule.pgDobCutoff || '2001-09-29'}">
+            <p class="text-[11px] text-purple-300/80 leading-tight">
+              PG max 25 yrs (<strong class="text-purple-200">29/09/2001</strong>). Students born before this date will be flagged ineligible in scrutiny.
+            </p>
           </div>
         </div>
       </div>
@@ -683,6 +712,8 @@ function renderScheduleHub(main, pwd, schedule) {
     const payload = {
       electionYear: main.querySelector('#electionYear')?.value || new Date().getFullYear().toString(),
       notificationDate: main.querySelector('#notificationDate')?.value || '',
+      ugDobCutoff: main.querySelector('#ugDobCutoff')?.value || '2004-09-29',
+      pgDobCutoff: main.querySelector('#pgDobCutoff')?.value || '2001-09-29',
 
       draftRollStart: toIso(main.querySelector('#draftRollStart')?.value),
       draftRollEnd: toIso(main.querySelector('#draftRollEnd')?.value),
@@ -731,6 +762,8 @@ function renderScheduleHub(main, pwd, schedule) {
     };
     setVal('electionYear', '2026');
     setVal('notificationDate', '2026-09-29');
+    setVal('ugDobCutoff', '2004-09-29');
+    setVal('pgDobCutoff', '2001-09-29');
     setVal('draftRollStart', '2026-09-24T11:00');
     setVal('draftRollEnd', '2026-09-25T16:00');
     setVal('finalRollStart', '2026-09-28T16:00');

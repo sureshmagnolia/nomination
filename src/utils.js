@@ -259,6 +259,41 @@ export function displayDob(day, month, year) {
   return `${String(day).padStart(2,'0')}/${String(month).padStart(2,'0')}/${year}`;
 }
 
+export function formatDobDate(dob) {
+  if (!dob) return '';
+  const s = String(dob).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const parts = s.substring(0, 10).split('-');
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}/.test(s)) {
+    const p = s.split(/[\/\-]/);
+    return `${p[0].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[2]}`;
+  }
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  }
+  return s;
+}
+
+export function parseDobToIso(dob) {
+  if (!dob) return '';
+  const s = String(dob).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    return s.substring(0, 10);
+  }
+  if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}/.test(s)) {
+    const p = s.split(/[\/\-]/);
+    return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+  }
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  return '';
+}
+
 // ─── Print helper ──────────────────────────────────────────────────────────────
 export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLogo = '') {
   const win = window.open('', '_blank');

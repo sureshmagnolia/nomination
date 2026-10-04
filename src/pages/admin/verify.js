@@ -6,7 +6,7 @@
  */
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast, triggerPrint, calculateAge, getStudentYearLevel, isYearEligible, formatYearRuleDescription, sortPosts, comparePosts } from '../../utils.js';
+import { esc, showToast, triggerPrint, calculateAge, getStudentYearLevel, isYearEligible, formatYearRuleDescription, sortPosts, comparePosts, formatDobDate, parseDobToIso } from '../../utils.js';
 import { buildNominationPaper } from '../submitNomination.js';
 import { CONFIG } from '../../config.js';
 
@@ -166,40 +166,72 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
     });
   }
 
-  // 3. Age Limit Check (Lyngdoh Committee Statutory Limits) (RED)
+  // 3. Age Limit Check (Calicut University & Lyngdoh Committee Statutory Limits) (RED)
+  const ugCutoffStr = parseDobToIso(settings?.ugDobCutoff) || '2004-09-29';
+  const pgCutoffStr = parseDobToIso(settings?.pgDobCutoff) || '2001-09-29';
+  const ugCutoffDisplay = formatDobDate(ugCutoffStr) || '29/09/2004';
+  const pgCutoffDisplay = formatDobDate(pgCutoffStr) || '29/09/2001';
+
   if (nom.dob) {
-    const d = new Date(nom.dob);
-    if (!isNaN(d.getTime())) {
-      const cutoffDate = settings.electionDate ? new Date(settings.electionDate) : new Date();
-      let ageYears = cutoffDate.getFullYear() - d.getFullYear();
-      const m = cutoffDate.getMonth() - d.getMonth();
-      if (m < 0 || (m === 0 && cutoffDate.getDate() < d.getDate())) {
-        ageYears--;
-      }
+    const candDobIso = parseDobToIso(nom.dob);
+    const candDobDisplay = formatDobDate(nom.dob) || nom.dob;
 
+    if (candDobIso) {
       const isPG = cLvl === '1_PG' || cLvl === '2_PG';
-      const isUG = cLvl === '1_UG' || cLvl === '2_UG' || cLvl === '3_UG';
+      const isRS = cLvl === 'RS' || cCls.includes('RESEARCH') || cCls.includes('SCHOLAR') || cCls.includes('PHD');
+      const isUG = !isPG && !isRS;
 
-      if (isUG && ageYears > 22) {
+      if (isUG && candDobIso < ugCutoffStr) {
         violations.push({
-          type: 'AGE_LIMIT_UG',
+          type: 'AGE_OVER_LIMIT_UG',
           severity: 'error',
-          message: `Candidate age is ${ageYears} years, exceeding the maximum statutory UG age limit of 22 years (Lyngdoh Committee recommendations).`
+          badgeLabel: `Born before ${ugCutoffDisplay}`,
+          shortBadge: `Over Age (<${ugCutoffDisplay})`,
+          message: `Statutory Age Bar (UG): Candidate was born on ${candDobDisplay}, which is before the University cut-off date (${ugCutoffDisplay}). Maximum UG age limit is 22 years as of the Notification Date (must be born on or after ${ugCutoffDisplay}).`
         });
-      } else if (isPG && ageYears > 25) {
+      } else if (isPG && candDobIso < pgCutoffStr) {
         violations.push({
-          type: 'AGE_LIMIT_PG',
+          type: 'AGE_OVER_LIMIT_PG',
           severity: 'error',
-          message: `Candidate age is ${ageYears} years, exceeding the maximum statutory PG age limit of 25 years (Lyngdoh Committee recommendations).`
+          badgeLabel: `Born before ${pgCutoffDisplay}`,
+          shortBadge: `Over Age (<${pgCutoffDisplay})`,
+          message: `Statutory Age Bar (PG): Candidate was born on ${candDobDisplay}, which is before the University cut-off date (${pgCutoffDisplay}). Maximum PG age limit is 25 years as of the Notification Date (must be born on or after ${pgCutoffDisplay}).`
         });
-      } else if (cLvl === 'RS' && ageYears > 28) {
-        violations.push({
-          type: 'AGE_LIMIT_RS',
-          severity: 'error',
-          message: `Candidate age is ${ageYears} years, exceeding the maximum Research Scholar age limit of 28 years.`
-        });
+      } else if (isRS) {
+        const d = new Date(candDobIso);
+        const notifDate = settings?.notificationDate ? new Date(settings.notificationDate) : new Date('2026-09-29');
+        let ageYears = notifDate.getFullYear() - d.getFullYear();
+        const m = notifDate.getMonth() - d.getMonth();
+        if (m < 0 || (m === 0 && notifDate.getDate() < d.getDate())) {
+          ageYears--;
+        }
+        if (ageYears > 28) {
+          violations.push({
+            type: 'AGE_LIMIT_RS',
+            severity: 'error',
+            badgeLabel: 'Age > 28 (RS)',
+            shortBadge: 'Over Age (>28)',
+            message: `Candidate age is ${ageYears} years, exceeding the maximum Research Scholar age limit of 28 years.`
+          });
+        }
       }
+    } else {
+      violations.push({
+        type: 'INVALID_DOB',
+        severity: 'error',
+        badgeLabel: 'Invalid DOB',
+        shortBadge: 'Invalid DOB',
+        message: `Candidate Date of Birth "${nom.dob}" could not be parsed. Unable to verify statutory age eligibility.`
+      });
     }
+  } else {
+    violations.push({
+      type: 'MISSING_DOB',
+      severity: 'error',
+      badgeLabel: 'Missing DOB',
+      shortBadge: 'Missing DOB',
+      message: 'Candidate Date of Birth (DOB) is missing from nomination. Age cannot be verified against statutory limits.'
+    });
   }
 
   // 4. Department Restriction (Association Secretaries) (RED)
@@ -498,6 +530,19 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         ❌ <strong>Rejected Nominations:</strong> These nominations were rejected during formal scrutiny. The statutory reason for rejection is recorded and viewable below. You can view the full paper or revert/re-scrutinize if needed upon appeal.
       </div>
 
+      <!-- University Statutory Age Cut-Offs Reference Banner -->
+      <div class="glass p-3 rounded-xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/40 via-purple-950/30 to-slate-900/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-300 shadow-md">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-bold text-[11px] px-2 py-0.5">🏛️ Statutory Age Eligibility</span>
+          <span>🎓 UG: Born on or after <strong class="text-indigo-200 font-mono text-xs">${formatDobDate(settings?.ugDobCutoff || '2004-09-29')}</strong> (&lt;22 yrs)</span>
+          <span class="text-slate-600 hidden sm:inline">•</span>
+          <span>📚 PG: Born on or after <strong class="text-purple-200 font-mono text-xs">${formatDobDate(settings?.pgDobCutoff || '2001-09-29')}</strong> (&lt;25 yrs)</span>
+        </div>
+        <a href="#admin/schedule" class="btn btn-secondary btn-xs bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-[11px] px-2.5 py-1 rounded font-semibold inline-flex items-center gap-1 shrink-0 transition-colors">
+          <span>⚙️</span> <span>Edit Dates in Schedule</span>
+        </a>
+      </div>
+
       <!-- Search & Filters -->
       <div class="glass rounded-xl p-3 sm:p-4 flex flex-wrap gap-2.5 items-center w-full shadow-lg">
         <div class="relative flex-1 min-w-[200px]">
@@ -510,6 +555,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
             <option value="post" selected>🏛️ Group by Post (Statutory)</option>
             <option value="latest">🕒 Latest Submitted 1st</option>
             <option value="flags">🚩 Flags &amp; Alerts 1st</option>
+            <option value="age_bar">🔞 Age Ineligible 1st</option>
             <option value="serial">📋 Roll Serial (#1..N)</option>
             <option value="name">🔤 Candidate Name (A-Z)</option>
           </select>
@@ -701,6 +747,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         <option value="all">All Submissions</option>
         <option value="received">✅ Physical Copy Received</option>
         <option value="awaiting">⏳ Awaiting Physical Copy</option>
+        <option value="age_bar">🔞 Age Ineligible (Born before Cut-Off)</option>
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
         <option value="endorser">🗳️ Invalid Endorsers / Non-Voters</option>
@@ -708,6 +755,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
     } else if (activeTab === 'not_confirmed') {
       statusFilterEl.innerHTML = `
         <option value="all">All Physical Not Received</option>
+        <option value="age_bar">🔞 Age Ineligible (Born before Cut-Off)</option>
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
         <option value="endorser">🗳️ Invalid Endorsers / Non-Voters</option>
@@ -718,6 +766,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         <option value="Pending">Pending Decision</option>
         <option value="Valid">Valid</option>
         <option value="Rejected">Rejected</option>
+        <option value="age_bar">🔞 Age Ineligible (Born before Cut-Off)</option>
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
         <option value="endorser">🗳️ Invalid Endorsers / Non-Voters</option>
@@ -726,6 +775,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
     } else if (activeTab === 'accepted') {
       statusFilterEl.innerHTML = `
         <option value="all">All Accepted Nominations</option>
+        <option value="age_bar">🔞 Age Ineligible (Born before Cut-Off)</option>
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
         <option value="endorser">🗳️ Invalid Endorsers / Non-Voters</option>
@@ -734,6 +784,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
     } else if (activeTab === 'rejected') {
       statusFilterEl.innerHTML = `
         <option value="all">All Rejected Nominations</option>
+        <option value="age_bar">🔞 Age Ineligible (Born before Cut-Off)</option>
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
         <option value="endorser">🗳️ Invalid Endorsers / Non-Voters</option>
@@ -804,9 +855,11 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
       const violations = getNominationRuleViolations(n, allPosts, allNoms, settings, allRoll);
       const isRS = String(n.candidateClass || '').toUpperCase().includes('RESEARCH') || String(n.candidateClass || '').toUpperCase().includes('SCHOLAR');
       const isPhysical = n.physicalReceived === true || n.physicalReceived === 'true';
+      const ageViolation = violations.find(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'));
+      const candDobFormatted = formatDobDate(n.dob);
 
       return `
-      <tr id="row-${esc(n.id)}" class="nom-row hover:bg-white/[0.03] transition-colors">
+      <tr id="row-${esc(n.id)}" class="nom-row hover:bg-white/[0.03] transition-colors ${ageViolation ? 'bg-rose-950/10' : ''}">
         <!-- # / ID -->
         <td class="text-center py-2 px-1 bg-black/15">
           <div class="font-mono font-bold text-xs text-indigo-300">#${systemSerial}</div>
@@ -830,12 +883,14 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
               #${esc(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || '–')}
             </span>
             ${isRS ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[9px] px-1 py-0 font-bold shrink-0">⚠️ RS</span>` : ''}
+            ${ageViolation ? `<span class="badge bg-rose-600/30 text-rose-200 border border-rose-500/50 text-[9px] px-1 py-0 font-bold shrink-0" title="${esc(ageViolation.message)}">🔞 ${esc(ageViolation.shortBadge || 'Over Age')}</span>` : ''}
           </div>
           <div class="text-[11px] text-slate-300 leading-tight mt-0.5 break-words">
             ${esc(n.candidateClass || '')}${n.candidateDept ? ` · <span class="text-slate-400 text-[10px]">${esc(n.candidateDept)}</span>` : ''}
           </div>
-          <div class="text-[10px] text-slate-400 font-mono leading-tight mt-0.5">
-            Adm: ${esc(n.candidateAdmission || n.candidate?.['ADMISION NO'] || '–')}
+          <div class="text-[10px] text-slate-400 font-mono leading-tight mt-0.5 flex items-center gap-1.5 flex-wrap">
+            <span>Adm: ${esc(n.candidateAdmission || n.candidate?.['ADMISION NO'] || '–')}</span>
+            ${candDobFormatted ? `<span>· DOB: <strong class="${ageViolation ? 'text-rose-400 font-bold' : 'text-slate-300'}">${esc(candDobFormatted)}</strong></span>` : ''}
           </div>
         </td>
 
@@ -953,6 +1008,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
               `;
             }
             const multiCand = violations.find(v => v.type === 'MULTIPLE_CANDIDACY');
+            const ageViolation = violations.find(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'));
             const endorserIssue = violations.find(v => 
               v.type.startsWith('NON_VOTER') || 
               v.type.startsWith('YEAR_PROPOSER') || 
@@ -970,6 +1026,11 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
                 ${multiCand ? `
                   <button type="button" class="view-nom-btn badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/50 text-[10px] px-1.5 py-0.5 font-bold inline-flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(multiCand.message)}">
                     <span>🚩 Multi-Post</span>
+                  </button>
+                ` : ''}
+                ${ageViolation ? `
+                  <button type="button" class="view-nom-btn badge bg-rose-600/30 hover:bg-rose-600/50 text-rose-100 border border-rose-500/60 text-[10px] px-1.5 py-0.5 font-bold inline-flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(ageViolation.message)}">
+                    <span>🔞 ${esc(ageViolation.badgeLabel || 'Age Bar')}</span>
                   </button>
                 ` : ''}
                 ${endorserIssue ? `
@@ -1086,6 +1147,8 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         const violations = getNominationRuleViolations(n, allPosts, allNoms, settings, allRoll);
         const isRS = String(n.candidateClass || '').toUpperCase().includes('RESEARCH') || String(n.candidateClass || '').toUpperCase().includes('SCHOLAR');
         const isPhysical = n.physicalReceived === true || n.physicalReceived === 'true';
+        const ageViolation = violations.find(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'));
+        const candDobFormatted = formatDobDate(n.dob);
 
         return `
           <div class="bg-slate-900/80 backdrop-blur-md p-4 rounded-xl border ${violations.length ? 'border-rose-500/40 bg-rose-950/10' : 'border-white/10'} hover:border-indigo-500/40 transition-all flex flex-col justify-between space-y-3.5 shadow-xl">
@@ -1125,11 +1188,13 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
                     Sl. #${esc(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || '–')}
                   </span>
                   ${isRS ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] px-1.5 py-0.2 font-semibold">⚠️ Ineligible (RS)</span>` : ''}
+                  ${ageViolation ? `<span class="badge bg-rose-600/30 text-rose-200 border border-rose-500/50 text-[10px] px-1.5 py-0.2 font-bold">🔞 ${esc(ageViolation.shortBadge || 'Over Age')}</span>` : ''}
                 </div>
                 <div class="text-xs text-slate-300 flex items-center gap-2 flex-wrap">
                   <span class="font-mono text-slate-400">Adm: <strong class="text-slate-200">${esc(n.candidateAdmission || n.candidate?.['ADMISION NO'] || '–')}</strong></span>
                   <span class="text-slate-500">•</span>
                   <span>${esc(n.candidateClass || '')}${n.candidateDept ? ` (${esc(n.candidateDept)})` : ''}</span>
+                  ${candDobFormatted ? `<span class="text-slate-500">•</span><span class="font-mono ${ageViolation ? 'text-rose-400 font-bold' : 'text-slate-400'}">DOB: ${esc(candDobFormatted)}</span>` : ''}
                 </div>
               </div>
 
@@ -1160,6 +1225,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
                     `;
                   }
                   const multiCand = violations.find(v => v.type === 'MULTIPLE_CANDIDACY');
+                  const ageViolation = violations.find(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'));
                   const endorserIssue = violations.find(v => 
                     v.type.startsWith('NON_VOTER') || 
                     v.type.startsWith('YEAR_PROPOSER') || 
@@ -1176,6 +1242,14 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
                     ${multiCand ? `
                       <div class="text-xs text-rose-200 bg-rose-950/60 border border-rose-500/50 p-2.5 rounded-lg leading-relaxed shadow-sm">
                         ${esc(multiCand.message)}
+                      </div>
+                    ` : ''}
+                    ${ageViolation ? `
+                      <div class="text-xs text-rose-200 bg-rose-950/70 border border-rose-500/60 p-2.5 rounded-lg leading-relaxed shadow-sm flex items-start gap-2">
+                        <span class="text-sm shrink-0">🔞</span>
+                        <div>
+                          <strong class="text-rose-100">${esc(ageViolation.badgeLabel)}:</strong> ${esc(ageViolation.message)}
+                        </div>
                       </div>
                     ` : ''}
                     ${endorserIssue ? `
@@ -1349,7 +1423,10 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         <div class="bg-slate-900/90 p-3 rounded-xl border border-white/10 shadow-md">
           <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Candidate (Sl. #${esc(candSerial)})</div>
           <div class="font-bold text-white text-sm mt-1 truncate" title="${esc(candName)}">${esc(candName)}</div>
-          <div class="text-[11px] text-slate-400 font-mono mt-0.5">Adm: <span class="text-slate-200">${esc(candAdm)}</span> • ${esc(candCls)}${candDept ? ` (${esc(candDept)})` : ''}</div>
+          <div class="text-[11px] text-slate-400 font-mono mt-0.5">
+            Adm: <span class="text-slate-200">${esc(candAdm)}</span> • ${esc(candCls)}${candDept ? ` (${esc(candDept)})` : ''}
+            ${nom.dob ? `<div class="mt-0.5 font-sans">DOB: <strong class="${violations.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT')) ? 'text-rose-400 font-bold' : 'text-slate-200'}">${esc(formatDobDate(nom.dob))}</strong></div>` : ''}
+          </div>
         </div>
         <div class="bg-slate-900/90 p-3 rounded-xl border border-white/10 shadow-md">
           <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Proposer (Sl. #${esc(propSerial)})</div>
@@ -1496,22 +1573,26 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
       if (activeTab === 'intake') {
         if (s === 'received' && !isPhys) return false;
         if (s === 'awaiting' && isPhys) return false;
+        if (s === 'age_bar' && !violations.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'))) return false;
         if (s === 'multi' && !violations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
         if (s === 'violations' && violations.length === 0) return false;
         if (s === 'endorser' && !isEndorserIssue(violations)) return false;
       } else if (activeTab === 'not_confirmed') {
+        if (s === 'age_bar' && !violations.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'))) return false;
         if (s === 'multi' && !violations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
         if (s === 'violations' && violations.length === 0) return false;
         if (s === 'endorser' && !isEndorserIssue(violations)) return false;
       } else if (activeTab === 'scrutiny') {
+        if (s === 'age_bar' && !violations.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'))) return false;
         if (s === 'violations' && violations.length === 0) return false;
         if (s === 'multi' && !violations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
         if (s === 'endorser' && !isEndorserIssue(violations)) return false;
         if (s === 'passed' && violations.length > 0) return false;
-        if (s !== 'all' && s !== 'violations' && s !== 'multi' && s !== 'endorser' && s !== 'passed') {
+        if (s !== 'all' && s !== 'violations' && s !== 'multi' && s !== 'endorser' && s !== 'passed' && s !== 'age_bar') {
           if (n.status !== s) return false;
         }
       } else if (activeTab === 'accepted' || activeTab === 'rejected') {
+        if (s === 'age_bar' && !violations.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'))) return false;
         if (s === 'violations' && violations.length === 0) return false;
         if (s === 'multi' && !violations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
         if (s === 'endorser' && !isEndorserIssue(violations)) return false;
@@ -1590,6 +1671,19 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
           const multiA = vA.some(v => v.type === 'MULTIPLE_CANDIDACY') ? 1 : 0;
           const multiB = vB.some(v => v.type === 'MULTIPLE_CANDIDACY') ? 1 : 0;
           if (multiA !== multiB) return multiB - multiA;
+          const ageA = vA.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT')) ? 1 : 0;
+          const ageB = vB.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT')) ? 1 : 0;
+          if (ageA !== ageB) return ageB - ageA;
+          if (vA.length !== vB.length) return vB.length - vA.length;
+          return comparePosts(a.post, b.post);
+        });
+      } else if (arrangeMode === 'age_bar') {
+        filtered.sort((a, b) => {
+          const vA = getNominationRuleViolations(a, allPosts, allNoms, settings, allRoll);
+          const vB = getNominationRuleViolations(b, allPosts, allNoms, settings, allRoll);
+          const ageA = vA.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT')) ? 1 : 0;
+          const ageB = vB.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT')) ? 1 : 0;
+          if (ageA !== ageB) return ageB - ageA;
           if (vA.length !== vB.length) return vB.length - vA.length;
           return comparePosts(a.post, b.post);
         });

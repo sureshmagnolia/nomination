@@ -209,7 +209,8 @@ async function getFullElectionStatus() {
     pollingOverride, pollingStart, pollingEnd, legacyPollingActive,
     resultsOverride, resultsStart, resultsEnd, legacyResPub,
     countingActive, resultsLocked,
-    electionYear, notificationDate
+    electionYear, notificationDate,
+    ugDobCutoff, pgDobCutoff
   ] = await Promise.all([
     getSetting('draftRollOverride'), getSetting('draftRollStart'), getSetting('draftRollEnd'), getSetting('draftRollPublished'),
     getSetting('finalRollOverride'), getSetting('finalRollStart'), getSetting('finalRollEnd'), getSetting('isRollFinalized'),
@@ -220,7 +221,8 @@ async function getFullElectionStatus() {
     getSetting('pollingOverride'), getSetting('pollingStart'), getSetting('pollingEnd'), getSetting('pollingActive'),
     getSetting('resultsOverride'), getSetting('resultsStart'), getSetting('resultsEnd'), getSetting('resultsPublished'),
     getSetting('countingActive'), getSetting('resultsLocked'),
-    getSetting('electionYear'), getSetting('notificationDate')
+    getSetting('electionYear'), getSetting('notificationDate'),
+    getSetting('ugDobCutoff'), getSetting('pgDobCutoff')
   ]);
 
   const isFinalRollActive = evaluateStageStatus(finalRollOverride, legacyRollFinal || 'false');
@@ -236,6 +238,8 @@ async function getFullElectionStatus() {
   return {
     electionYear: electionYear || new Date().getFullYear().toString(),
     notificationDate: notificationDate || '',
+    ugDobCutoff: ugDobCutoff || '2004-09-29',
+    pgDobCutoff: pgDobCutoff || '2001-09-29',
 
     // 1. Draft Roll
     draftRollStart: draftRollStart || '',
@@ -1683,6 +1687,8 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       // General
       if (body.electionYear !== undefined) updates.electionYear = body.electionYear || new Date().getFullYear().toString();
       if (body.notificationDate !== undefined) updates.notificationDate = body.notificationDate || '';
+      if (body.ugDobCutoff !== undefined) updates.ugDobCutoff = body.ugDobCutoff || '2004-09-29';
+      if (body.pgDobCutoff !== undefined) updates.pgDobCutoff = body.pgDobCutoff || '2001-09-29';
 
       // 1. Draft Roll
       if (body.draftRollStart !== undefined) updates.draftRollStart = body.draftRollStart || '';

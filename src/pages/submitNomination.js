@@ -10,7 +10,7 @@ import {
   checkEligibility, generateCaptcha, populateDobSelects,
   buildDobString, displayDob, calculateAge, esc,
   setLoading, showToast, todayFormatted, triggerPrint,
-  formatYearRuleDescription, sortPosts
+  formatYearRuleDescription, sortPosts, formatDobDate, getStudentYearLevel
 } from '../utils.js';
 import { printBlankNominationForm } from '../noticesPrinter.js';
 
@@ -541,6 +541,7 @@ function personBlock(role, label, isCandidate, isAdminDirect = false) {
         <select id="dob-month" class="field dob-sel" style="flex: 1.5; min-width: 0;"><option value="">Month</option></select>
         <select id="dob-year"  class="field dob-sel" style="flex: 1.1; min-width: 0;"><option value="">Year</option></select>
       </div>
+      <p class="text-[11px] text-slate-400 mt-1">Statutory Age Bar: UG born on or after <strong class="text-indigo-300">${formatDobDate(electionSchedule?.ugDobCutoff || '2004-09-29')}</strong>; PG born on or after <strong class="text-purple-300">${formatDobDate(electionSchedule?.pgDobCutoff || '2001-09-29')}</strong>.</p>
     </div>` : ''}
   </div>`;
 }
@@ -626,6 +627,30 @@ function runValidation(formArea, isAdminDirect = false) {
   students.forEach((st, i) => {
     if (st) warnings.push(...checkEligibility(st, postName, roleLabels[i], i === 0 ? gender : null, allPosts, existingNominations, isAdminDirect));
   });
+
+  // Candidate DOB age limit check
+  const day = formArea.querySelector('#dob-day')?.value;
+  const month = formArea.querySelector('#dob-month')?.value;
+  const year = formArea.querySelector('#dob-year')?.value;
+  if (day && month && year && candStudent) {
+    const formattedDob = buildDobString(day, month, year);
+    const candCls = String(candStudent['CLASS'] || '').toUpperCase();
+    const candLvl = getStudentYearLevel(candCls);
+    const isPG = candLvl === '1_PG' || candLvl === '2_PG';
+    const isRS = candLvl === 'RS' || candCls.includes('RESEARCH') || candCls.includes('SCHOLAR') || candCls.includes('PHD');
+    const isUG = !isPG && !isRS;
+
+    const ugCutoff = electionSchedule?.ugDobCutoff || '2004-09-29';
+    const pgCutoff = electionSchedule?.pgDobCutoff || '2001-09-29';
+    const ugCutoffDisplay = formatDobDate(ugCutoff) || '29/09/2004';
+    const pgCutoffDisplay = formatDobDate(pgCutoff) || '29/09/2001';
+
+    if (isUG && formattedDob < ugCutoff) {
+      warnings.push(`Statutory Age Bar (UG): Candidate Date of Birth (${displayDob(day, month, year)}) is before the University cut-off date (${ugCutoffDisplay}). Maximum UG age limit is 22 years (candidate must be born on or after ${ugCutoffDisplay}).`);
+    } else if (isPG && formattedDob < pgCutoff) {
+      warnings.push(`Statutory Age Bar (PG): Candidate Date of Birth (${displayDob(day, month, year)}) is before the University cut-off date (${pgCutoffDisplay}). Maximum PG age limit is 25 years (candidate must be born on or after ${pgCutoffDisplay}).`);
+    }
+  }
 
   const infoNotices = [];
 
