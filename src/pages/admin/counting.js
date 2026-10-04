@@ -44,7 +44,7 @@ export async function renderAdminCounting(container) {
     }
 
     // Cache metadata in IndexedDB for offline access
-    await saveCountingMeta({ savedMatrix, posts: postsList, finalList, booths: boothsList, settings, countingTeams });
+    await saveCountingMeta({ savedMatrix, posts: postsList, finalList, booths: boothsList, settings, countingTeams, nominalRoll: nominalRollList });
 
     renderCountingUI(container.querySelector('#adminMain'), pwd, savedMatrix, postsList, finalList, boothsList, nominalRollList, settings, false, countingTeams);
   } catch (e) {
@@ -58,7 +58,7 @@ export async function renderAdminCounting(container) {
         cached.posts || [],
         cached.finalList || [],
         cached.booths || [],
-        [],
+        cached.nominalRoll || [],
         cached.settings || {},
         true,
         cached.countingTeams || []
@@ -112,6 +112,12 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     return [];
   };
 
+  // Helper to get voter count for a table/booth
+  const getVoterCountForTable = (tableNum) => {
+    const b = boothsList.find(booth => Number(booth?.boothNumber) === Number(tableNum)) || boothsList[Number(tableNum) - 1];
+    return getBoothVoterCount(b, nominalRollList);
+  };
+
   // ── Render Display ─────────────────────────────────────────────────────────
   const renderDisplay = (data) => {
     const matrix = Array.isArray(data?.matrix) ? data.matrix : [];
@@ -138,10 +144,12 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         const post = matrix[t] ? matrix[t][r] : null;
         if (!post) continue;
         const pn = pName(post);
-        const bNum = boothsList[t]?.boothNumber || (t + 1);
-        const roomName = boothsList[t]?.roomName || `Table ${bNum}`;
+        const b = boothsList[t];
+        const bNum = b?.boothNumber || (t + 1);
+        const roomName = b?.roomName || `Table ${bNum}`;
         const serial = formSerials[`${t}-${r}`] || `${t + 1}-${r + 1}`;
         const supName = getSupervisorNameForTable(bNum, countingTeams);
+        const voterCount = getBoothVoterCount(b, nominalRollList);
         if (!postTableMap[pn]) postTableMap[pn] = [];
         postTableMap[pn].push({
           tIndex: t,
@@ -150,7 +158,9 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
           roundNum: r + 1,
           roomName,
           serial,
-          supervisorName: supName
+          supervisorName: supName,
+          voterCount,
+          booth: b
         });
       }
     }
@@ -298,15 +308,19 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                 ${boothsList.map((b, t) => {
                   const bNum = b.boothNumber || (t + 1);
                   const supName = getSupervisorNameForTable(bNum, countingTeams);
+                  const voterCount = getBoothVoterCount(b, nominalRollList);
                   const tableRow = Array.isArray(matrix[t]) 
                     ? matrix[t] 
                     : Array.from({ length: totalRounds }, () => null);
                   return `
                   <tr>
                     <td class="font-bold text-indigo-300 whitespace-nowrap bg-black/15">
-                      <div class="flex items-center gap-1.5">
-                        <span class="text-sm">🪑</span>
-                        <span>Table ${bNum}</span>
+                      <div class="flex items-center justify-between gap-1.5">
+                        <div class="flex items-center gap-1.5">
+                          <span class="text-sm">🪑</span>
+                          <span>Table ${bNum}</span>
+                        </div>
+                        ${voterCount > 0 ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[9px] px-1.5 py-0.5 border border-indigo-500/30" title="${voterCount} registered voters allotted">${voterCount} Voters</span>` : ''}
                       </div>
                       <div class="text-[11px] text-slate-400 font-normal truncate max-w-[140px]" title="${esc(b.roomName || '')}">
                         ${esc(b.roomName || `Room ${bNum}`)}
@@ -320,11 +334,17 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                       const pn = pName(post);
                       const isPostUuc = isUuc(pn);
                       const serial = formSerials[`${t}-${r}`] || `${t + 1}-${r + 1}`;
+                      const batches = isPostUuc ? getUucBatchesForVoterCount(voterCount) : [];
+                      const batchSummary = isPostUuc ? getUucBatchesSummaryText(batches, voterCount) : '';
                       return `
                       <td class="align-top py-2.5 min-w-[110px]">
                         <div class="flex items-center justify-between gap-1 mb-1">
                           <span class="text-[10px] text-slate-400 font-mono font-bold">#${esc(serial)}</span>
-                          ${isPostUuc ? '<span class="px-1 py-0.2 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">2-Seat</span>' : ''}
+                          ${isPostUuc ? `
+                            <button type="button" class="print-single-uuc-btn px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-all cursor-pointer" data-table="${bNum}" title="Print UUC Tally Sheet for Table ${bNum} (${voterCount} allotted voters: ${batchSummary})">
+                              🧮 ${voterCount ? `${voterCount}v` : '2-Seat'}
+                            </button>
+                          ` : ''}
                         </div>
                         <div class="badge ${isPostUuc ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30' : 'badge-valid'} block text-left truncate cursor-pointer hover:underline" data-quick-post="${esc(pn)}" title="Click to filter print options to ${esc(pn)}">
                           ${esc(pn)}
@@ -555,7 +575,8 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
 
         tables.forEach(tInfo => {
           if (tableFilter && String(tInfo.tableNum) !== String(tableFilter)) return;
-          html += buildUucTallySheetHtml(tInfo.tableNum, tInfo.roundNum, tInfo.serial, cands, collegeName, electionYear, collegeLogo, tInfo.supervisorName, tInfo.roomName, isRecount);
+          const vCount = tInfo.voterCount || getVoterCountForTable(tInfo.tableNum);
+          html += buildUucTallySheetHtml(tInfo.tableNum, tInfo.roundNum, tInfo.serial, cands, collegeName, electionYear, collegeLogo, tInfo.supervisorName, tInfo.roomName, isRecount, vCount);
           count++;
         });
       });
@@ -590,7 +611,8 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         // Second: If UUC, append UUC Tally Sheets for all tables (ordered Table 1 to N)
         if (isPostUuc) {
           tables.forEach(tInfo => {
-            html += buildUucTallySheetHtml(tInfo.tableNum, tInfo.roundNum, tInfo.serial, cands, collegeName, electionYear, collegeLogo, tInfo.supervisorName, tInfo.roomName, isRecount);
+            const vCount = tInfo.voterCount || getVoterCountForTable(tInfo.tableNum);
+            html += buildUucTallySheetHtml(tInfo.tableNum, tInfo.roundNum, tInfo.serial, cands, collegeName, electionYear, collegeLogo, tInfo.supervisorName, tInfo.roomName, isRecount, vCount);
           });
         }
 
@@ -623,6 +645,12 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     });
     main.querySelectorAll('.quick-print-uuc').forEach(btn => {
       btn.addEventListener('click', () => executePrintUucTally());
+    });
+    main.querySelectorAll('.print-single-uuc-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        executePrintUucTally(btn.dataset.table);
+      });
     });
     main.querySelectorAll('.quick-print-dossier').forEach(btn => {
       btn.addEventListener('click', () => executePrintPackage(btn.dataset.post));
@@ -976,62 +1004,183 @@ function buildConsolidationHtml(postName, tableEntries, candidates, collegeName 
 }
 
 /**
+ * Calculates the exact number of voters allotted to a booth / hall.
+ * Cross-references the booth's assigned classes against nominalRollList,
+ * with fallback to b.totalStudents or b.voterCount.
+ */
+export function getBoothVoterCount(b, nominalRollList = []) {
+  if (!b) return 0;
+  const bClasses = Array.isArray(b.classes)
+    ? b.classes
+    : (typeof b.classes === 'string' ? b.classes.split(',').map(s => s.trim()).filter(Boolean) : []);
+
+  if (Array.isArray(nominalRollList) && nominalRollList.length > 0 && bClasses.length > 0) {
+    let count = 0;
+    nominalRollList.forEach(s => {
+      const rawClass = String(s['CLASS'] || s['Class'] || s.class || '').trim();
+      const dept = String(s['Dept'] || s['Department'] || s.dept || '').trim();
+      const upper = rawClass.toUpperCase();
+      const key = (upper.includes('RESEARCH') || upper.includes('SCHOLAR') || upper.includes('PH.D') || upper.includes('PHD'))
+        ? `RESEARCH SCHOLAR - ${dept}`
+        : rawClass;
+      if (bClasses.includes(key) || bClasses.includes(rawClass)) {
+        count++;
+      }
+    });
+    if (count > 0) return count;
+  }
+
+  if (typeof b.totalStudents === 'number' && b.totalStudents > 0) return b.totalStudents;
+  if (typeof b.totalVoters === 'number' && b.totalVoters > 0) return b.totalVoters;
+  if (typeof b.voterCount === 'number' && b.voterCount > 0) return b.voterCount;
+  if (typeof b.voters === 'number' && b.voters > 0) return b.voters;
+  return 0;
+}
+
+/**
+ * Computes dynamic batch definitions for UUC dual-vote counting tally sheet (Form 6-T).
+ * E.g. If voter count is 130: 5 batches of 25 + Rest (5).
+ * If voter count is 100: 4 batches of 25.
+ * If voter count <= 0: defaults to standard 4 batches of 25 + Remainder.
+ */
+export function getUucBatchesForVoterCount(voterCount) {
+  const count = Number(voterCount) || 0;
+  if (count <= 0) {
+    // Default fallback if voter count is unconfigured or 0: 4 batches of 25 + Rest
+    return [
+      { id: 1, name: 'Batch 1', range: '1–25', ballots: 25, targetVotes: 50, isRest: false },
+      { id: 2, name: 'Batch 2', range: '26–50', ballots: 25, targetVotes: 50, isRest: false },
+      { id: 3, name: 'Batch 3', range: '51–75', ballots: 25, targetVotes: 50, isRest: false },
+      { id: 4, name: 'Batch 4', range: '76–100', ballots: 25, targetVotes: 50, isRest: false },
+      { id: 5, name: 'Remainder Batch', range: 'Remainder', ballots: 0, targetVotes: '2 × Rem', isRest: true }
+    ];
+  }
+
+  const batchSize = 25;
+  const numFull = Math.floor(count / batchSize);
+  const remainder = count % batchSize;
+  const batches = [];
+
+  for (let i = 1; i <= numFull; i++) {
+    const start = (i - 1) * batchSize + 1;
+    const end = i * batchSize;
+    batches.push({
+      id: i,
+      name: `Batch ${i}`,
+      range: `${start}–${end}`,
+      ballots: batchSize,
+      targetVotes: batchSize * 2,
+      isRest: false
+    });
+  }
+
+  if (remainder > 0) {
+    const start = numFull * batchSize + 1;
+    const end = count;
+    batches.push({
+      id: numFull + 1,
+      name: `Rest (${remainder})`,
+      range: `${start}–${end}`,
+      ballots: remainder,
+      targetVotes: remainder * 2,
+      isRest: true
+    });
+  }
+
+  return batches;
+}
+
+export function getUucBatchesSummaryText(batches, voterCount) {
+  const count = Number(voterCount) || 0;
+  if (count <= 0) return '4 Batches of 25 + Rest';
+  const fullCount = batches.filter(b => !b.isRest).length;
+  const restBatch = batches.find(b => b.isRest);
+  if (fullCount > 0 && restBatch) {
+    return `${fullCount} ${fullCount === 1 ? 'Batch' : 'Batches'} of 25 + Rest ${restBatch.ballots}`;
+  }
+  if (fullCount > 0 && !restBatch) {
+    return `${fullCount} ${fullCount === 1 ? 'Batch' : 'Batches'} of 25`;
+  }
+  if (restBatch) {
+    return `Rest ${restBatch.ballots}`;
+  }
+  return '';
+}
+
+/**
  * Form 6-T (UUC) — Batch-of-25 Dual-Vote Counting Tally Sheet
  * Implements the 25-Ballot Milestone Check Method for foolproof UUC tallying.
+ * Dynamically computes batches based on the exact voters allotted to that table / hall / booth.
  */
-function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, collegeName = CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad', electionYear = '', collegeLogo = '', supervisorName = '', roomName = '', isRecount = false) {
+function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, collegeName = CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad', electionYear = '', collegeLogo = '', supervisorName = '', roomName = '', isRecount = false, voterCount = 0) {
   const yearStr = electionYear || new Date().getFullYear().toString();
   const candsList = Array.isArray(candidates) ? candidates : [];
+  const numVoters = Number(voterCount) || 0;
+  const batches = getUucBatchesForVoterCount(numVoters);
+  const batchesSummary = getUucBatchesSummaryText(batches, numVoters);
+
+  // Column width calculations
+  const numBatches = batches.length;
+  const indexWidth = 3;
+  const nameWidth = numBatches > 6 ? 22 : (numBatches > 4 ? 25 : 28);
+  const finalWidth = numBatches > 6 ? 11 : 13;
+  const remainingWidth = 100 - (indexWidth + nameWidth + finalWidth);
+  const batchColWidth = (remainingWidth / numBatches).toFixed(1);
 
   return `<div class="pg pg-tally" style="page-break-inside:avoid;">
     ${isRecount ? `<div style="position:absolute;top:6px;right:6px;border:2px solid #b91c1c;color:#b91c1c;padding:3px 10px;font-size:12px;font-weight:bold;letter-spacing:1px;background:#fff;">🔁 RECOUNTING</div>` : ''}
     <div style="text-align:center;border-bottom:1.5px solid #000;padding-bottom:5px;margin-bottom:6px;">
-      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:32px;max-width:100px;margin:0 auto 2px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
-      <div style="font-size:11.5px;font-weight:bold;color:#111;text-transform:uppercase;">${esc(collegeName)}</div>
-      <div style="font-size:10.5px;font-weight:bold;color:#444;margin-top:1px;">College Union Election ${esc(yearStr)}</div>
-      <h2 style="margin:2px 0 0;font-size:15px;text-transform:uppercase;letter-spacing:1px">
+      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:30px;max-width:100px;margin:0 auto 2px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+      <div style="font-size:11px;font-weight:bold;color:#111;text-transform:uppercase;">${esc(collegeName)}</div>
+      <div style="font-size:10px;font-weight:bold;color:#444;margin-top:1px;">College Union Election ${esc(yearStr)}</div>
+      <h2 style="margin:2px 0 0;font-size:14px;text-transform:uppercase;letter-spacing:1px">
         FORM 6-T (UUC) — BATCH-OF-25 DUAL-VOTE TALLY SHEET ${isRecount ? '<span style="color:#b91c1c;">(RECOUNT)</span>' : ''}
       </h2>
-      <div style="font-size:11.5px;font-weight:bold;margin-top:1px;text-decoration:underline">
+      <div style="font-size:11px;font-weight:bold;margin-top:1px;text-decoration:underline">
         POST: UNIVERSITY UNION COUNCILLOR (TWO VACANCIES)
       </div>
       
-      <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:11.5px;font-weight:bold;background:#f3f4f6;padding:4px 8px;border:1px solid #000;">
+      <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:10.5px;font-weight:bold;background:#f3f4f6;padding:3px 8px;border:1px solid #000;flex-wrap:wrap;gap:4px;">
         <span>TABLE NO: <u>${tableNum}</u> ${roomName ? `<span style="font-weight:normal;color:#555">(${esc(roomName)})</span>` : ''}</span>
+        ${numVoters > 0 ? `<span>ALLOTTED VOTERS: <u>${numVoters}</u> <span style="font-weight:normal;color:#555">(${esc(batchesSummary)})</span></span>` : ''}
         <span>ROUND NO: <u>${roundNum}</u></span>
-        <span>REF COUNTING FORM: <u>#${serial}</u></span>
+        <span>REF FORM: <u>#${serial}</u></span>
         <span>SUPERVISOR: <u>${esc(supervisorName || '__________________')}</u></span>
       </div>
     </div>
 
     <!-- The 3-Step Milestone Rule Guide -->
-    <div style="border:1.5px solid #000;padding:5px 8px;margin-bottom:6px;font-size:10px;background:#fefce8;line-height:1.35;">
+    <div style="border:1.5px solid #000;padding:4px 8px;margin-bottom:5px;font-size:9.5px;background:#fefce8;line-height:1.3;">
       <strong>📌 BATCH-OF-25 COUNTING PROTOCOL (AVOIDS END-OF-ROUND RECOUNTS):</strong>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:3px;">
-        <div style="background:#fff;padding:3px 6px;border:1px solid #eab308;border-radius:3px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:2px;">
+        <div style="background:#fff;padding:2px 5px;border:1px solid #eab308;border-radius:3px;">
           <strong>1. Pre-Bundle in 25s:</strong> Rubber-band physical ballots into packets of <strong>25 ballots</strong>.
         </div>
-        <div style="background:#fff;padding:3px 6px;border:1px solid #eab308;border-radius:3px;">
+        <div style="background:#fff;padding:2px 5px;border:1px solid #eab308;border-radius:3px;">
           <strong>2. Milestone Rule:</strong> Each 25-ballot packet MUST yield <strong>exactly 50 votes</strong> (2 × 25).
         </div>
-        <div style="background:#fff;padding:3px 6px;border:1px solid #eab308;border-radius:3px;">
-          <strong>3. Lock &amp; Proceed:</strong> Verify subtotal = 50 before opening the next batch. Sum rows at the end.
+        <div style="background:#fff;padding:2px 5px;border:1px solid #eab308;border-radius:3px;">
+          <strong>3. Lock &amp; Proceed:</strong> Verify subtotal = 50 before opening next batch. Sum rows at the end.
         </div>
       </div>
     </div>
 
     <!-- Section 1: Ballot & Batch Target Account -->
-    <table style="width:100%;margin-bottom:6px;font-size:10.5px;">
+    <table style="width:100%;margin-bottom:5px;font-size:10px;">
       <tr>
-        <td style="width:35%;padding:4px 6px;font-weight:bold;background:#f3f4f6">
+        <td style="width:35%;padding:3px 6px;font-weight:bold;background:#f3f4f6">
           Total Physical Ballots in Box: <br>
-          <span style="font-size:14px;font-family:monospace">[ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ] Ballots</span>
+          <span style="font-size:12.5px;font-family:monospace">
+            ${numVoters > 0 ? `Allotted: <strong>${numVoters}</strong> | Actual: [ &nbsp;&nbsp;&nbsp; ]` : `[ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ] Ballots`}
+          </span>
         </td>
-        <td style="width:35%;padding:4px 6px;font-weight:bold;background:#e0e7ff;text-align:center">
-          Expected Total Accountable Votes: <br>
-          <span style="font-size:14px;font-family:monospace;color:#1e40af">[ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ] = 2 × Ballots</span>
+        <td style="width:35%;padding:3px 6px;font-weight:bold;background:#e0e7ff;text-align:center">
+          Expected Accountable Votes: <br>
+          <span style="font-size:12.5px;font-family:monospace;color:#1e40af">
+            ${numVoters > 0 ? `Max: <strong>${numVoters * 2}</strong> | 2 × Ballots = [ &nbsp;&nbsp;&nbsp; ]` : `[ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ] = 2 × Ballots`}
+          </span>
         </td>
-        <td style="width:30%;padding:4px 6px;font-size:9.5px;background:#f9fafb;line-height:1.3">
+        <td style="width:30%;padding:3px 6px;font-size:8.5px;background:#f9fafb;line-height:1.2">
           <strong>Dual-Vote Rule Reminder:</strong><br>
           • 2 candidates marked = 1 vote to each<br>
           • 1 candidate marked = 1 Valid + 1 Invalid<br>
@@ -1040,108 +1189,81 @@ function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, collegeN
       </tr>
     </table>
 
-    <!-- Section 2: Batch-of-25 Milestone Tally Matrix -->
-    <table style="width:100%;border-collapse:collapse;margin-bottom:6px;font-size:10.5px;">
+    <!-- Section 2: Dynamic Batch-of-25 Milestone Tally Matrix -->
+    <table style="width:100%;border-collapse:collapse;margin-bottom:5px;font-size:10px;">
       <thead>
         <tr>
-          <th style="width:3%;text-align:center;padding:4px 2px;">#</th>
-          <th style="width:25%;text-align:left;padding:4px 6px;">Candidate Name &amp; Class</th>
-          <th style="width:12%;text-align:center;padding:4px 2px;">
-            Batch 1 (1–25)
-            <div style="font-size:8.5px;font-weight:normal;color:#555">Target: 50 votes</div>
-          </th>
-          <th style="width:12%;text-align:center;padding:4px 2px;">
-            Batch 2 (26–50)
-            <div style="font-size:8.5px;font-weight:normal;color:#555">Target: 50 votes</div>
-          </th>
-          <th style="width:12%;text-align:center;padding:4px 2px;">
-            Batch 3 (51–75)
-            <div style="font-size:8.5px;font-weight:normal;color:#555">Target: 50 votes</div>
-          </th>
-          <th style="width:12%;text-align:center;padding:4px 2px;">
-            Batch 4 (76–100)
-            <div style="font-size:8.5px;font-weight:normal;color:#555">Target: 50 votes</div>
-          </th>
-          <th style="width:11%;text-align:center;padding:4px 2px;">
-            Remainder Batch
-            <div style="font-size:8.5px;font-weight:normal;color:#555">Target: 2 × Rem</div>
-          </th>
-          <th style="width:13%;text-align:center;padding:4px 2px;background:#e0e7ff;">
-            FINAL TOTAL
-            <div style="font-size:8.5px;font-weight:normal;color:#1e40af">Transfer to Form 6</div>
+          <th style="width:${indexWidth}%;text-align:center;padding:3px 1px;">#</th>
+          <th style="width:${nameWidth}%;text-align:left;padding:3px 5px;">Candidate Name &amp; Class</th>
+          ${batches.map(b => `
+            <th style="width:${batchColWidth}%;text-align:center;padding:3px 1px;">
+              <div style="font-weight:bold;font-size:${numBatches > 6 ? '9px' : '10px'}">${esc(b.name)}</div>
+              <div style="font-size:7.5px;font-weight:normal;color:#333">${esc(b.range)}</div>
+              <div style="font-size:7.5px;font-weight:normal;color:#555">Target: ${b.targetVotes} v</div>
+            </th>
+          `).join('')}
+          <th style="width:${finalWidth}%;text-align:center;padding:3px 2px;background:#e0e7ff;">
+            <div style="font-weight:bold;font-size:10px;">FINAL TOTAL</div>
+            <div style="font-size:7.5px;font-weight:normal;color:#1e40af">To Form 6</div>
           </th>
         </tr>
       </thead>
       <tbody>
         ${candsList.map((c, i) => `
           <tr>
-            <td style="text-align:center;font-weight:bold;padding:5px 2px;">${i + 1}</td>
-            <td style="font-weight:bold;padding:5px 6px;">
-              ${esc(c.candidateName)}
-              <div style="font-size:8.5px;font-weight:normal;color:#555">${esc(c.candidateClass || '')}</div>
+            <td style="text-align:center;font-weight:bold;padding:4px 2px;">${i + 1}</td>
+            <td style="font-weight:bold;padding:4px 5px;">
+              <div style="font-size:${numBatches > 6 ? '9.5px' : '10.5px'}">${esc(c.candidateName)}</div>
+              <div style="font-size:8px;font-weight:normal;color:#555">${esc(c.candidateClass || '')}</div>
             </td>
-            <td style="padding:5px 4px;"></td>
-            <td style="padding:5px 4px;"></td>
-            <td style="padding:5px 4px;"></td>
-            <td style="padding:5px 4px;"></td>
-            <td style="padding:5px 4px;"></td>
-            <td style="padding:5px 4px;background:#f8fafc;font-weight:bold;font-size:12px;text-align:center;"></td>
+            ${batches.map(() => `<td style="padding:4px 2px;"></td>`).join('')}
+            <td style="padding:4px 2px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;"></td>
           </tr>
         `).join('')}
         <tr>
-          <td style="text-align:center;font-weight:bold;padding:5px 2px;">–</td>
-          <td style="font-weight:bold;padding:5px 6px;">NOTA</td>
-          <td style="padding:5px 4px;"></td>
-          <td style="padding:5px 4px;"></td>
-          <td style="padding:5px 4px;"></td>
-          <td style="padding:5px 4px;"></td>
-          <td style="padding:5px 4px;"></td>
-          <td style="padding:5px 4px;background:#f8fafc;font-weight:bold;font-size:12px;text-align:center;"></td>
+          <td style="text-align:center;font-weight:bold;padding:4px 2px;">–</td>
+          <td style="font-weight:bold;padding:4px 5px;">NOTA</td>
+          ${batches.map(() => `<td style="padding:4px 2px;"></td>`).join('')}
+          <td style="padding:4px 2px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;"></td>
         </tr>
         <tr>
-          <td style="text-align:center;font-weight:bold;padding:5px 2px;">–</td>
-          <td style="padding:5px 6px;">
+          <td style="text-align:center;font-weight:bold;padding:4px 2px;">–</td>
+          <td style="padding:4px 5px;">
             <strong style="color:#b91c1c;">INVALID</strong>
-            <div style="font-size:8.5px;color:#555;">(Unmatched 1-choice, Overvote &gt;2, Blank)</div>
+            <div style="font-size:7.5px;color:#555;">(1-choice, Overvote &gt;2, Blank)</div>
           </td>
-          <td style="padding:5px 4px;"></td>
-          <td style="padding:5px 4px;"></td>
-          <td style="padding:5px 4px;"></td>
-          <td style="padding:5px 4px;"></td>
-          <td style="padding:5px 4px;"></td>
-          <td style="padding:5px 4px;background:#f8fafc;font-weight:bold;font-size:12px;text-align:center;color:#b91c1c;"></td>
+          ${batches.map(() => `<td style="padding:4px 2px;"></td>`).join('')}
+          <td style="padding:4px 2px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;color:#b91c1c;"></td>
         </tr>
 
         <!-- Batch Milestone Verification Subtotal Row -->
         <tr style="background:#fef3c7;font-weight:bold;border-top:2px solid #000;">
-          <td colspan="2" style="text-align:right;padding:5px 6px;font-size:10px;letter-spacing:0.5px;">
+          <td colspan="2" style="text-align:right;padding:4px 5px;font-size:9.5px;letter-spacing:0.5px;">
             BATCH TOTAL VOTES:
           </td>
-          <td style="text-align:center;padding:5px;font-size:11px;font-family:monospace;">[ &nbsp;&nbsp;&nbsp;&nbsp; ]</td>
-          <td style="text-align:center;padding:5px;font-size:11px;font-family:monospace;">[ &nbsp;&nbsp;&nbsp;&nbsp; ]</td>
-          <td style="text-align:center;padding:5px;font-size:11px;font-family:monospace;">[ &nbsp;&nbsp;&nbsp;&nbsp; ]</td>
-          <td style="text-align:center;padding:5px;font-size:11px;font-family:monospace;">[ &nbsp;&nbsp;&nbsp;&nbsp; ]</td>
-          <td style="text-align:center;padding:5px;font-size:11px;font-family:monospace;">[ &nbsp;&nbsp;&nbsp;&nbsp; ]</td>
-          <td style="text-align:center;padding:5px;background:#dbeafe;font-size:13px;font-weight:black;"></td>
+          ${batches.map(() => `
+            <td style="text-align:center;padding:4px 1px;font-size:10px;font-family:monospace;">[ &nbsp;&nbsp;&nbsp; ]</td>
+          `).join('')}
+          <td style="text-align:center;padding:4px 2px;background:#dbeafe;font-size:12px;font-weight:black;"></td>
         </tr>
 
         <!-- Batch Balance Check (Must Equal Target) -->
-        <tr style="background:#f9fafb;font-size:9.5px;border-bottom:2px double #000;">
-          <td colspan="2" style="text-align:right;padding:4px 6px;font-weight:bold;color:#444;">
+        <tr style="background:#f9fafb;font-size:9px;border-bottom:2px double #000;">
+          <td colspan="2" style="text-align:right;padding:3px 5px;font-weight:bold;color:#444;">
             MILESTONE CHECK:
           </td>
-          <td style="text-align:center;padding:3px;color:#15803d;font-weight:bold;">= 50 [ &nbsp; ]</td>
-          <td style="text-align:center;padding:3px;color:#15803d;font-weight:bold;">= 50 [ &nbsp; ]</td>
-          <td style="text-align:center;padding:3px;color:#15803d;font-weight:bold;">= 50 [ &nbsp; ]</td>
-          <td style="text-align:center;padding:3px;color:#15803d;font-weight:bold;">= 50 [ &nbsp; ]</td>
-          <td style="text-align:center;padding:3px;color:#15803d;font-weight:bold;">= 2×Rem [ &nbsp; ]</td>
-          <td style="text-align:center;padding:3px;font-weight:bold;color:#1e40af;">GRAND TOTAL</td>
+          ${batches.map(b => `
+            <td style="text-align:center;padding:2px 1px;color:#15803d;font-weight:bold;font-size:8px;">
+              = ${b.targetVotes} [ &nbsp; ]
+            </td>
+          `).join('')}
+          <td style="text-align:center;padding:2px 1px;font-weight:bold;color:#1e40af;font-size:8.5px;">GRAND TOTAL</td>
         </tr>
       </tbody>
     </table>
 
-    <div style="margin-top:6px;border-top:1px dashed #777;padding-top:4px;font-size:9.5px;color:#555;font-style:italic;text-align:center;">
-      * Working tally sheet for Table Counting Officers. Verify each 25-ballot packet milestone before opening the next. Transfer final verified totals directly onto official Counting Form (Form 6). No signatures required.
+    <div style="margin-top:5px;border-top:1px dashed #777;padding-top:3px;font-size:9px;color:#555;font-style:italic;text-align:center;">
+      * Working tally sheet for Table Counting Officers. Allotted: ${numVoters || 'General'} voters (${esc(batchesSummary)}). Verify each batch milestone before opening the next. Transfer final verified totals directly onto official Counting Form (Form 6). No signatures required.
     </div>
   </div>`;
 }
