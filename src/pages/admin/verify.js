@@ -399,13 +399,13 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
       }
       #nomTable th {
         padding: 0.55rem 0.35rem !important;
-        background: rgba(15, 23, 42, 0.95) !important;
-        color: #94a3b8 !important;
+        background: var(--table-th-bg, rgba(15, 23, 42, 0.95)) !important;
+        color: var(--table-th-text, #94a3b8) !important;
         font-size: 0.6875rem !important;
         font-weight: 700 !important;
         text-transform: uppercase !important;
         letter-spacing: 0.04em !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-bottom: 2px solid var(--table-th-border, rgba(255, 255, 255, 0.08)) !important;
         user-select: none;
         overflow: hidden;
         white-space: normal !important;
@@ -417,20 +417,21 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         transition: color 0.15s ease, background 0.15s ease;
       }
       #nomTable th.sortable-th:hover {
-        color: #ffffff !important;
-        background: rgba(30, 41, 59, 0.95) !important;
+        color: var(--text-heading, #ffffff) !important;
+        background: var(--table-hover-bg, rgba(30, 41, 59, 0.95)) !important;
       }
       #nomTable td {
         padding: 0.45rem 0.35rem !important;
         font-size: 0.8125rem !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+        border-bottom: 1px solid var(--table-td-border, rgba(255, 255, 255, 0.04)) !important;
+        color: var(--table-td-text, #cbd5e1) !important;
         vertical-align: middle !important;
         overflow-wrap: break-word !important;
         word-break: break-word !important;
         white-space: normal !important;
       }
       #nomTable tr.nom-row:hover td {
-        background: rgba(99, 102, 241, 0.04) !important;
+        background: var(--table-hover-bg, rgba(99, 102, 241, 0.04)) !important;
       }
       #nomTable tr.post-group-header td {
         padding: 0.45rem 0.75rem !important;
@@ -1007,11 +1008,11 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
 
       return `
       <tr class="post-group-header">
-        <td colspan="7" class="bg-gradient-to-r from-indigo-950/85 via-slate-900/95 to-slate-950/90 py-2 px-3 border-y border-indigo-500/30 shadow-sm">
+        <td colspan="7" class="post-group-header-cell py-2 px-3 border-y shadow-sm">
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-2">
-              <span class="text-indigo-400 text-sm">🏛️</span>
-              <span class="font-bold text-white text-xs sm:text-sm tracking-wide uppercase font-mono">${esc(postName)}</span>
+              <span class="text-indigo-500 text-sm">🏛️</span>
+              <span class="font-bold text-xs sm:text-sm tracking-wide uppercase font-mono post-group-title">${esc(postName)}</span>
               <span class="badge bg-indigo-500/25 text-indigo-200 border border-indigo-500/50 text-[10px] font-mono font-bold">
                 ${totalCount} ${totalCount === 1 ? 'Candidate' : 'Candidates'}
               </span>
@@ -1029,7 +1030,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
                 </span>
               ` : ''}
             </div>
-            <div class="text-[11px] text-slate-400 font-mono hidden sm:block">
+            <div class="text-[11px] font-mono hidden sm:block post-group-subtitle">
               Statutory Scrutiny Group
             </div>
           </div>
