@@ -93,7 +93,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         <div class="text-4xl mb-3">🗳️</div>
         <h3 class="text-lg font-bold text-white mb-2">No Polling Booths Configured</h3>
         <p class="text-slate-400 text-xs leading-relaxed mb-6">Polling booths must be created before the counting matrix can allocate counting tables.</p>
-        <button id="btnGoToBooths" class="btn btn-primary btn-sm text-xs font-bold">Go to Polling Booths Setup</button>
+        <button id="btnGoToBooths" class="btn btn-primary btn-sm text-xs font-bold" title="Action: Navigates to Polling Booths configuration to set up physical booths and class allocations.&#10;Prerequisite: Ensure Nominal Roll has been imported.">Go to Polling Booths Setup</button>
       </div>
     `;
     main.querySelector('#btnGoToBooths')?.addEventListener('click', () => router.navigate('/admin/booths'));
@@ -181,7 +181,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                 <span>The saved counting matrix was generated for <strong>${matrix.length} tables</strong>, but there are currently <strong>${T} polling booths</strong> configured.</span>
               </div>
             </div>
-            <button id="btnNoticeRegenerate" class="btn btn-sm bg-amber-500 hover:bg-amber-600 text-black font-bold shrink-0">
+            <button id="btnNoticeRegenerate" class="btn btn-sm bg-amber-500 hover:bg-amber-600 text-black font-bold shrink-0" title="Action: Regenerates the table × round counting matrix to adapt to the updated number of polling booths.&#10;Prerequisite: Confirm that current booth configurations are finalized.">
               🔄 Regenerate Matrix Now
             </button>
           </div>
@@ -197,10 +197,10 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             <p class="text-slate-400 text-sm mt-0.5">${T} tables · ${totalRounds} rounds · ${postsList.length} posts total</p>
           </div>
           <div class="flex gap-2 flex-wrap items-center">
-            <a href="#/admin/officials" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold flex items-center gap-1.5">
+            <a href="#/admin/officials" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold flex items-center gap-1.5" title="Action: Opens the Election Officials Team Builder to allot Counting Supervisors and Counting Assistants to tables.&#10;Prerequisite: Configure booths/tables and upload staff rosters first.">
               <span>👥</span> Allot Counting Teams
             </a>
-            <button id="btnRegenerate" class="btn btn-secondary bg-white/5 border-white/10 hover:bg-white/10 text-xs font-semibold flex items-center gap-1.5">
+            <button id="btnRegenerate" class="btn btn-secondary bg-white/5 border-white/10 hover:bg-white/10 text-xs font-semibold flex items-center gap-1.5" title="Action: Re-runs the statutory counting allocation algorithm to rebalance rounds and table assignments across booths.&#10;Prerequisite: Recommended if candidate lists or booth configurations have changed.">
               <span>🔄</span> Regenerate Matrix
             </button>
           </div>
@@ -216,7 +216,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
               <label for="selPostPrint" class="text-xs font-bold text-indigo-300 shrink-0 uppercase tracking-wide flex items-center gap-1.5">
                 <span>🎯</span> Target Post:
               </label>
-              <select id="selPostPrint" class="field text-xs py-2 px-3 bg-black/40 border border-white/20 hover:border-indigo-400/50 rounded-xl text-white font-medium flex-1 focus:outline-none focus:border-indigo-400 shadow-inner transition-colors">
+              <select id="selPostPrint" class="field text-xs py-2 px-3 bg-black/40 border border-white/20 hover:border-indigo-400/50 rounded-xl text-white font-medium flex-1 focus:outline-none focus:border-indigo-400 shadow-inner transition-colors" title="Action: Filters print scope and matrix display to a single election post or all posts.&#10;Prerequisite: Select post to print targeted post packets or enter recount mode.">
                 <option value="all">🌟 All Posts (Complete Election Batch)</option>
                 ${sortedPostObjects.map(p => {
                   const pn = pName(p);
@@ -232,14 +232,14 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
               <!-- Orientation Selector -->
               <div class="flex items-center gap-1.5 bg-black/40 border border-white/15 px-3 py-1.5 rounded-xl text-xs shadow-inner">
                 <label for="selOrientation" class="text-[11px] font-semibold text-slate-400">Layout:</label>
-                <select id="selOrientation" class="bg-transparent text-white font-semibold text-xs focus:outline-none cursor-pointer">
+                <select id="selOrientation" class="bg-transparent text-white font-semibold text-xs focus:outline-none cursor-pointer" title="Action: Switches print layout format between Portrait and Landscape for optimal table column readability.&#10;Prerequisite: Adjust before sending counting forms or registers to the printer.">
                   <option value="portrait" class="bg-slate-900 text-white">📄 Portrait</option>
                   <option value="landscape" class="bg-slate-900 text-white">📄 Landscape</option>
                 </select>
               </div>
 
               <!-- Recount Mode Toggle -->
-              <label class="flex items-center gap-2 cursor-pointer text-xs font-bold px-3 py-1.5 rounded-xl select-none transition-all border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 shadow-sm" title="Enable to stamp forms and consolidation sheets with RECOUNTING label">
+              <label class="flex items-center gap-2 cursor-pointer text-xs font-bold px-3 py-1.5 rounded-xl select-none transition-all border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 shadow-sm" title="Action: Toggles statutory Recount Mode, adding high-visibility 'RECOUNTING' headers and audit stamps to all printed forms.&#10;Prerequisite: Use when a recount has been formally requested or ordered.">
                 <input type="checkbox" id="chkRecountMode" class="rounded accent-amber-500 w-4 h-4 cursor-pointer">
                 <span>🔁 Recounting Mode</span>
               </label>
@@ -249,25 +249,25 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
           <!-- Row 2: Print Actions Grid (Balanced 4 Equal Columns) -->
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <!-- 1. Counting Forms -->
-            <button type="button" id="btnPrintForms" class="btn btn-primary text-xs font-bold py-2.5 px-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Print Counting Forms (Form 6) ordered Table 1 to ${T}">
+            <button type="button" id="btnPrintForms" class="btn btn-primary text-xs font-bold py-2.5 px-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Action: Prints statutory Form 6 Counting Sheets ordered Table 1 to ${T} for polling booths and supervisor tallying.&#10;Prerequisite: Generate the Counting Matrix and ensure candidates are finalized.">
               <span>🖨️</span>
               <span id="labelPrintForms" class="truncate">Print Counting Forms</span>
             </button>
 
             <!-- 2. Tabulation Sheet -->
-            <button type="button" id="btnPrintConsolidation" class="btn btn-secondary text-xs font-semibold py-2.5 px-3.5 rounded-xl border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Print Manual Tabulation & Consolidation Register (fits 1 A4 page in Portrait/Landscape)">
+            <button type="button" id="btnPrintConsolidation" class="btn btn-secondary text-xs font-semibold py-2.5 px-3.5 rounded-xl border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Action: Prints the official Manual Tabulation & Consolidation Register (Form 7) across all counting tables for the selected post or all posts.&#10;Prerequisite: Finalize candidate lists and verify counting table assignments.">
               <span>📊</span>
               <span id="labelPrintConsolidation" class="truncate">Tabulation Sheet</span>
             </button>
 
             <!-- 3. UUC Tally Sheet -->
-            <button type="button" id="btnPrintUucTally" class="btn btn-secondary text-xs font-semibold py-2.5 px-3.5 rounded-xl border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Print Working Dual-Vote Tally Sheet for University Union Councillor">
+            <button type="button" id="btnPrintUucTally" class="btn btn-secondary text-xs font-semibold py-2.5 px-3.5 rounded-xl border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Action: Prints dual-vote batch tally sheets for University Union Councillor (Form 6-T) with calculated batch capacities.&#10;Prerequisite: Applicable for UUC post; booths and voter counts should be allotted.">
               <span>🧮</span>
               <span id="labelPrintUuc" class="truncate">UUC Tally Sheet</span>
             </button>
 
             <!-- 4. Full Post Dossier -->
-            <button type="button" id="btnPrintPackage" class="btn btn-secondary text-xs font-bold py-2.5 px-3.5 rounded-xl border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98] shadow-md" title="Print complete set for Post (Tabulation Sheet + Tally Sheet + Counting Forms)">
+            <button type="button" id="btnPrintPackage" class="btn btn-secondary text-xs font-bold py-2.5 px-3.5 rounded-xl border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98] shadow-md" title="Action: Generates a complete comprehensive counting packet (Tabulation Register + Dual-Vote Tally Sheet + Table Counting Forms) for the selected post.&#10;Prerequisite: Select the desired election post from the dropdown above.">
               <span>📑</span>
               <span id="labelPrintDossier" class="truncate">Full Post Dossier</span>
             </button>
@@ -390,18 +390,18 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                   </div>
 
                   <div class="flex items-center gap-1.5 pt-2 border-t border-white/5 flex-wrap">
-                    <button type="button" class="btn btn-secondary btn-xs py-1 px-2 text-[11px] quick-print-forms" data-post="${esc(pn)}" title="Print counting forms for ${esc(pn)}">
+                    <button type="button" class="btn btn-secondary btn-xs py-1 px-2 text-[11px] quick-print-forms" data-post="${esc(pn)}" title="Action: Prints counting forms (Form 6) for ${esc(pn)}.&#10;Prerequisite: Verify candidate list for ${esc(pn)}.">
                       🖨️ Forms
                     </button>
-                    <button type="button" class="btn btn-secondary btn-xs py-1 px-2 text-[11px] quick-print-tab" data-post="${esc(pn)}" title="Print manual consolidation sheet for ${esc(pn)}">
+                    <button type="button" class="btn btn-secondary btn-xs py-1 px-2 text-[11px] quick-print-tab" data-post="${esc(pn)}" title="Action: Prints manual consolidation tabulation sheet (Form 7) for ${esc(pn)}.&#10;Prerequisite: Confirm counting tables and rounds.">
                       📊 Tabulation
                     </button>
                     ${postUuc ? `
-                      <button type="button" class="btn btn-secondary btn-xs py-1 px-2 text-[11px] border-amber-500/40 text-amber-300 quick-print-uuc" data-post="${esc(pn)}" title="Print Dual-Vote Tally Sheet for ${esc(pn)}">
+                      <button type="button" class="btn btn-secondary btn-xs py-1 px-2 text-[11px] border-amber-500/40 text-amber-300 quick-print-uuc" data-post="${esc(pn)}" title="Action: Prints dual-vote batch tally sheet (Form 6-T) for ${esc(pn)}.&#10;Prerequisite: UUC dual vacancy candidate tallying.">
                         🧮 Tally
                       </button>
                     ` : ''}
-                    <button type="button" class="btn btn-primary btn-xs py-1 px-2 text-[11px] quick-print-dossier" data-post="${esc(pn)}" title="Print complete dossier for ${esc(pn)}">
+                    <button type="button" class="btn btn-primary btn-xs py-1 px-2 text-[11px] quick-print-dossier" data-post="${esc(pn)}" title="Action: Prints complete post package (Forms + Tabulation + Tally) for ${esc(pn)}.&#10;Prerequisite: Ready to dispatch to counting hall.">
                       📑 All
                     </button>
                   </div>

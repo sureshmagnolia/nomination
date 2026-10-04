@@ -515,7 +515,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           </div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <button id="btnPublishBanner" class="btn btn-sm ${isPublic ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'btn-primary'} font-bold shadow-lg flex items-center gap-1.5">
+          <button id="btnPublishBanner" class="btn btn-sm ${isPublic ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'btn-primary'} font-bold shadow-lg flex items-center gap-1.5" title="Action: ${isPublic ? 'Hides election results from public portal view.' : 'Publishes final verified election results to the public portal.'}&#10;Prerequisite: Verify all round counts and finalize declarations.">
             <span>${isPublic ? '🔒' : '📢'}</span> ${isPublic ? 'Hide from Public' : 'Push Live to Public'}
           </button>
         </div>
@@ -531,7 +531,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
               <div class="text-xs text-slate-400">${isCountingActive ? 'Public sees "Counting in Progress"' : 'Public sees "Counting Not Started"'}</div>
             </div>
           </div>
-          <button id="btnToggleCounting" class="btn btn-sm ${isCountingActive ? 'bg-rose-500/80 hover:bg-rose-600 text-white font-bold' : 'bg-amber-500 hover:bg-amber-600 text-black font-bold'}">
+          <button id="btnToggleCounting" class="btn btn-sm ${isCountingActive ? 'bg-rose-500/80 hover:bg-rose-600 text-white font-bold' : 'bg-amber-500 hover:bg-amber-600 text-black font-bold'}" title="Action: ${isCountingActive ? 'Deactivates counting status mode.' : 'Marks counting active and informs public portal counting is underway.'}&#10;Prerequisite: Polling concluded and ballot boxes received at counting hall.">
             ${isCountingActive ? '⏸️ Stop Counting' : '⚡ Set Counting Active'}
           </button>
         </div>
@@ -544,7 +544,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
               <div class="text-xs text-slate-400">${isLocked ? 'Vote entry blocked' : 'Vote entry portal open'}</div>
             </div>
           </div>
-          <button id="btnToggleLock" class="btn btn-sm ${isLocked ? 'btn-secondary' : 'bg-amber-500 hover:bg-amber-600 text-black font-bold'}">
+          <button id="btnToggleLock" class="btn btn-sm ${isLocked ? 'btn-secondary' : 'bg-amber-500 hover:bg-amber-600 text-black font-bold'}" title="Action: ${isLocked ? 'Unlocks vote entry portal for further additions or corrections.' : 'Freezes and locks all vote entries against edits.'}&#10;Prerequisite: Verify all counting rounds against Form 7 tabulation sheets.">
             ${isLocked ? '🔓 Unlock' : '🔒 Freeze / Lock'}
           </button>
         </div>
@@ -557,7 +557,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
               <div class="text-xs text-slate-400">${isPublic ? 'Results visible to everyone' : 'Only admin sees live counts'}</div>
             </div>
           </div>
-          <button id="btnTogglePublic" class="btn btn-sm ${isPublic ? 'bg-rose-500/80 hover:bg-rose-600 text-white font-bold' : 'btn-success font-bold'}">
+          <button id="btnTogglePublic" class="btn btn-sm ${isPublic ? 'bg-rose-500/80 hover:bg-rose-600 text-white font-bold' : 'btn-success font-bold'}" title="Action: ${isPublic ? 'Hides candidate scores and winner declarations from public.' : 'Broadcasts results and winner declarations to public portal.'}&#10;Prerequisite: Returning Officer approval of final count.">
             ${isPublic ? '👁️‍🗨️ Hide' : '📢 Publish'}
           </button>
         </div>
@@ -581,31 +581,31 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
         </div>
         <div class="flex flex-wrap items-center gap-2.5">
           ${!isOffline ? `
-            <button id="btnToggleAutoRefresh" class="btn btn-secondary px-3.5 text-xs flex items-center gap-1.5 font-mono">
+            <button id="btnToggleAutoRefresh" class="btn btn-secondary px-3.5 text-xs flex items-center gap-1.5 font-mono" title="Action: Toggles automatic background polling (every 4 seconds) on or off.">
               <span>${isLivePolling ? '🟢' : '⏸️'}</span> Live Polling: ${isLivePolling ? 'ON (4s)' : 'PAUSED'}
             </button>
-            <button id="btnAdminRefreshResults" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5">
+            <button id="btnAdminRefreshResults" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5" title="Action: Immediately re-fetches latest vote records and updates margin calculations.">
               <span>🔄</span> Refresh
             </button>
           ` : ''}
-          <button id="btnResultsExportBackup" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10" title="Download complete JSON backup to USB drive">
+          <button id="btnResultsExportBackup" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10" title="Action: Downloads full JSON backup file containing all counting entries and timestamps.&#10;Prerequisite: Save to external USB drive for audit safety.">
             <span>📥</span> Backup (JSON)
           </button>
-          <button id="btnResultsExportCSV" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10" title="Export printable CSV summary">
+          <button id="btnResultsExportCSV" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10" title="Action: Exports a comprehensive CSV spreadsheet of candidate scores and margins.">
             <span>📊</span> CSV
           </button>
-          <button id="btnOpenPanelSetup" class="btn btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 ${panelStandings.hasAssignedColors ? 'border-purple-500/50 bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 font-bold' : 'border-purple-500/40 bg-purple-950/40 text-purple-200 hover:bg-purple-900/60 font-bold'} shadow-md" title="Confidential Candidate Panel Colors (Admin PC Only)">
+          <button id="btnOpenPanelSetup" class="btn btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 ${panelStandings.hasAssignedColors ? 'border-purple-500/50 bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 font-bold' : 'border-purple-500/40 bg-purple-950/40 text-purple-200 hover:bg-purple-900/60 font-bold'} shadow-md" title="Action: Assigns confidential color tags to candidates to track panel tally on Admin PC only.">
             <span class="text-sm">🎨</span> ${panelStandings.hasAssignedColors ? `Candidate Colors (${panelStandings.assignedCandidateCount})` : 'Set Candidate Colors'}
           </button>
           ${panelStandings.hasAssignedColors ? `
-            <button id="btnToolbarTogglePanelDrawer" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 border-purple-500/40 text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 font-bold" title="Open Confidential Panel Tally">
+            <button id="btnToolbarTogglePanelDrawer" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 border-purple-500/40 text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 font-bold" title="Action: Opens side drawer showing confidential panel standings and lead summary.">
               <span>📊</span> Panel Tally (${panelStandings.totalWon}W / ${panelStandings.totalLeading}L)
             </button>
           ` : ''}
-          <a href="#/trends" target="_blank" class="btn btn-secondary px-3.5 text-xs flex items-center gap-1.5 font-bold text-sky-300 border-sky-500/30 hover:bg-sky-500/10">
+          <a href="#/trends" target="_blank" class="btn btn-secondary px-3.5 text-xs flex items-center gap-1.5 font-bold text-sky-300 border-sky-500/30 hover:bg-sky-500/10" title="Action: Opens projector-friendly trends and live declaration screen in a new window.">
             <span>🎯</span> Trends Screen
           </a>
-          <button id="btnPrintOfficial" class="btn btn-primary px-5 text-xs flex items-center gap-1.5 font-bold shadow-lg">
+          <button id="btnPrintOfficial" class="btn btn-primary px-5 text-xs flex items-center gap-1.5 font-bold shadow-lg" title="Action: Generates official University Form 8 Declaration of Results printable sheet.&#10;Prerequisite: Ensure all post counts are verified and finalized.">
             <span>🖨️</span> Print Official Result Sheet
           </button>
         </div>

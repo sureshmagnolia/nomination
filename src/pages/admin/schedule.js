@@ -77,6 +77,42 @@ function renderScheduleHub(main, pwd, schedule) {
     }
   };
 
+  // Canonical action button labels for manual overrides
+  const STAGE_ACTION_LABELS = {
+    draftRoll: {
+      FORCE_OPEN: '⚡ Publish Draft Roll',
+      FORCE_CLOSED: '🛑 Unpublish Draft Roll'
+    },
+    finalRoll: {
+      FORCE_OPEN: '🔒 Finalize Voter List',
+      FORCE_CLOSED: '🔓 Unfinalize (Draft Mode)'
+    },
+    nomination: {
+      FORCE_OPEN: '⚡ Open Nominations',
+      FORCE_CLOSED: '🛑 Close Nominations'
+    },
+    validList: {
+      FORCE_OPEN: '⚡ Publish Valid List',
+      FORCE_CLOSED: '🛑 Unpublish Valid List'
+    },
+    withdrawal: {
+      FORCE_OPEN: '⚡ Open Withdrawals',
+      FORCE_CLOSED: '🛑 Close Withdrawals'
+    },
+    finalList: {
+      FORCE_OPEN: '⚡ Publish Final List',
+      FORCE_CLOSED: '🛑 Unpublish Final List'
+    },
+    polling: {
+      FORCE_OPEN: '⚡ Open Polling',
+      FORCE_CLOSED: '🛑 Close Polling'
+    },
+    results: {
+      FORCE_OPEN: '📢 Push Results Live',
+      FORCE_CLOSED: '🔒 Keep Results Hidden'
+    }
+  };
+
   main.innerHTML = `
     <div class="page-enter space-y-8 max-w-5xl mx-auto pb-16">
       <!-- Header Banner -->
@@ -171,10 +207,10 @@ function renderScheduleHub(main, pwd, schedule) {
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-2">
               <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Returning Officer Action:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override" data-stage="draftRoll" data-mode="FORCE_OPEN">
+                <button type="button" class="btn btn-sm btn-override" data-stage="draftRoll" data-mode="FORCE_OPEN" data-default-text="⚡ Publish Draft Roll">
                   ⚡ Publish Draft Roll
                 </button>
-                <button type="button" class="btn btn-sm btn-override" data-stage="draftRoll" data-mode="FORCE_CLOSED">
+                <button type="button" class="btn btn-sm btn-override" data-stage="draftRoll" data-mode="FORCE_CLOSED" data-default-text="🛑 Unpublish Draft Roll">
                   🛑 Unpublish Draft Roll
                 </button>
               </div>
@@ -208,10 +244,10 @@ function renderScheduleHub(main, pwd, schedule) {
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-2">
               <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Returning Officer Action:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override" data-stage="finalRoll" data-mode="FORCE_OPEN">
+                <button type="button" class="btn btn-sm btn-override" data-stage="finalRoll" data-mode="FORCE_OPEN" data-default-text="🔒 Finalize Voter List">
                   🔒 Finalize Voter List
                 </button>
-                <button type="button" class="btn btn-sm btn-override" data-stage="finalRoll" data-mode="FORCE_CLOSED">
+                <button type="button" class="btn btn-sm btn-override" data-stage="finalRoll" data-mode="FORCE_CLOSED" data-default-text="🔓 Unfinalize (Draft Mode)">
                   🔓 Unfinalize (Draft Mode)
                 </button>
               </div>
@@ -246,10 +282,10 @@ function renderScheduleHub(main, pwd, schedule) {
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-2">
               <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Returning Officer Action:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override" data-stage="nomination" data-mode="FORCE_OPEN">
+                <button type="button" class="btn btn-sm btn-override" data-stage="nomination" data-mode="FORCE_OPEN" data-default-text="⚡ Open Nominations">
                   ⚡ Open Nominations
                 </button>
-                <button type="button" class="btn btn-sm btn-override" data-stage="nomination" data-mode="FORCE_CLOSED">
+                <button type="button" class="btn btn-sm btn-override" data-stage="nomination" data-mode="FORCE_CLOSED" data-default-text="🛑 Close Nominations">
                   🛑 Close Nominations
                 </button>
               </div>
@@ -283,10 +319,10 @@ function renderScheduleHub(main, pwd, schedule) {
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-2">
               <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Returning Officer Action:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override" data-stage="validList" data-mode="FORCE_OPEN">
+                <button type="button" class="btn btn-sm btn-override" data-stage="validList" data-mode="FORCE_OPEN" data-default-text="⚡ Publish Valid List">
                   ⚡ Publish Valid List
                 </button>
-                <button type="button" class="btn btn-sm btn-override" data-stage="validList" data-mode="FORCE_CLOSED">
+                <button type="button" class="btn btn-sm btn-override" data-stage="validList" data-mode="FORCE_CLOSED" data-default-text="🛑 Unpublish Valid List">
                   🛑 Unpublish Valid List
                 </button>
               </div>
@@ -321,10 +357,10 @@ function renderScheduleHub(main, pwd, schedule) {
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-2">
               <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Returning Officer Action:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override" data-stage="withdrawal" data-mode="FORCE_OPEN">
+                <button type="button" class="btn btn-sm btn-override" data-stage="withdrawal" data-mode="FORCE_OPEN" data-default-text="⚡ Open Withdrawals">
                   ⚡ Open Withdrawals
                 </button>
-                <button type="button" class="btn btn-sm btn-override" data-stage="withdrawal" data-mode="FORCE_CLOSED">
+                <button type="button" class="btn btn-sm btn-override" data-stage="withdrawal" data-mode="FORCE_CLOSED" data-default-text="🛑 Close Withdrawals">
                   🛑 Close Withdrawals
                 </button>
               </div>
@@ -358,10 +394,10 @@ function renderScheduleHub(main, pwd, schedule) {
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-2">
               <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Returning Officer Action:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override" data-stage="finalList" data-mode="FORCE_OPEN">
+                <button type="button" class="btn btn-sm btn-override" data-stage="finalList" data-mode="FORCE_OPEN" data-default-text="⚡ Publish Final List">
                   ⚡ Publish Final List
                 </button>
-                <button type="button" class="btn btn-sm btn-override" data-stage="finalList" data-mode="FORCE_CLOSED">
+                <button type="button" class="btn btn-sm btn-override" data-stage="finalList" data-mode="FORCE_CLOSED" data-default-text="🛑 Unpublish Final List">
                   🛑 Unpublish Final List
                 </button>
               </div>
@@ -396,10 +432,10 @@ function renderScheduleHub(main, pwd, schedule) {
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-2">
               <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Returning Officer Action:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override" data-stage="polling" data-mode="FORCE_OPEN">
+                <button type="button" class="btn btn-sm btn-override" data-stage="polling" data-mode="FORCE_OPEN" data-default-text="⚡ Open Polling">
                   ⚡ Open Polling
                 </button>
-                <button type="button" class="btn btn-sm btn-override" data-stage="polling" data-mode="FORCE_CLOSED">
+                <button type="button" class="btn btn-sm btn-override" data-stage="polling" data-mode="FORCE_CLOSED" data-default-text="🛑 Close Polling">
                   🛑 Close Polling
                 </button>
               </div>
@@ -441,10 +477,10 @@ function renderScheduleHub(main, pwd, schedule) {
             <div class="lg:col-span-5 bg-black/20 p-3.5 rounded-xl border border-white/5 space-y-3">
               <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide">Manual Real-Time Live Push:</div>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-override" data-stage="results" data-mode="FORCE_OPEN">
+                <button type="button" class="btn btn-sm btn-override" data-stage="results" data-mode="FORCE_OPEN" data-default-text="📢 Push Results Live">
                   📢 Push Results Live
                 </button>
-                <button type="button" class="btn btn-sm btn-override" data-stage="results" data-mode="FORCE_CLOSED">
+                <button type="button" class="btn btn-sm btn-override" data-stage="results" data-mode="FORCE_CLOSED" data-default-text="🔒 Keep Results Hidden">
                   🔒 Keep Results Hidden
                 </button>
               </div>
@@ -561,11 +597,16 @@ function renderScheduleHub(main, pwd, schedule) {
       const bEl = main.querySelector(`#badge_${st.id}`);
       if (bEl) bEl.innerHTML = meta.badge;
 
-      // Update override button styles on the card
+      // Update override button styles and labels on the card
       const card = main.querySelector(`#card_${st.id}`);
       if (card) {
         card.querySelectorAll('.btn-override').forEach(btn => {
           const mode = btn.dataset.mode;
+          // Ensure button text is ALWAYS correct and never 'undefined'
+          const expectedLabel = STAGE_ACTION_LABELS[st.id]?.[mode];
+          if (expectedLabel && (!btn.disabled || btn.innerHTML.includes('undefined'))) {
+            btn.innerHTML = expectedLabel;
+          }
           if (mode === st.override) {
             btn.className = `btn btn-sm btn-override ${mode === 'FORCE_OPEN' ? 'bg-emerald-600 text-white font-bold ring-2 ring-emerald-400/50 shadow-lg' : 'bg-rose-600 text-white font-bold ring-2 ring-rose-400/50 shadow-lg'}`;
           } else {
@@ -611,7 +652,8 @@ function renderScheduleHub(main, pwd, schedule) {
       const mode = btn.dataset.mode;
       if (!stage || !mode) return;
 
-      setLoading(btn, true, '...');
+      const targetLabel = STAGE_ACTION_LABELS[stage]?.[mode] || btn.dataset.defaultText || btn.innerHTML.trim();
+      setLoading(btn, true, 'Updating...');
       try {
         await api.adminSetStageOverride(pwd, stage, mode);
         overrides[stage] = mode;
@@ -625,11 +667,10 @@ function renderScheduleHub(main, pwd, schedule) {
         if (stage === 'results') schedule.resultsPublished = mode === 'FORCE_OPEN' ? 'true' : 'false';
 
         showToast(`${stage.toUpperCase()} is now ${mode === 'FORCE_OPEN' ? 'OPEN / PUBLISHED' : 'CLOSED / HIDDEN'}!`, 'success');
-        updateBadgesAndPipeline();
       } catch (err) {
         showToast(`Action failed: ${err.message}`, 'error');
       } finally {
-        setLoading(btn, false);
+        setLoading(btn, false, targetLabel);
         updateBadgesAndPipeline();
       }
     });

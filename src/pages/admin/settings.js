@@ -334,7 +334,7 @@ export async function renderSettings(container) {
       if (!resetPwd) return showToast('Password required', 'error');
       
       const btn = e.target;
-      const oldText = btn.textContent;
+      const oldHtml = btn.innerHTML;
       btn.textContent = 'Sending...';
       btn.disabled = true;
       try {
@@ -344,7 +344,7 @@ export async function renderSettings(container) {
         resetStep2.classList.remove('hidden');
       } catch (err) {
         showToast(err.message, 'error');
-        btn.textContent = oldText;
+        btn.innerHTML = oldHtml;
         btn.disabled = false;
       }
     });

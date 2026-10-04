@@ -448,12 +448,34 @@ export function esc(str) {
 
 // ─── Loading state helper ─────────────────────────────────────────────────────
 export function setLoading(btn, isLoading, defaultText) {
+  if (!btn) return;
   if (isLoading) {
+    // Preserve original HTML if valid, non-empty, and not already 'undefined' or spinner
+    if (!btn.dataset.originalHtml && btn.innerHTML && !btn.innerHTML.includes('undefined') && !btn.innerHTML.includes('spinner')) {
+      btn.dataset.originalHtml = btn.innerHTML;
+    }
     btn.disabled = true;
-    btn.innerHTML = `<span class="spinner"></span> Please wait...`;
+    const msg = (typeof defaultText === 'string' && defaultText !== '...' && defaultText.trim())
+      ? defaultText
+      : 'Please wait...';
+    const hasHtml = /<[a-z][\s\S]*>/i.test(msg);
+    const label = hasHtml ? msg : esc(msg);
+    btn.innerHTML = `<span class="spinner"></span> ${label}`;
   } else {
     btn.disabled = false;
-    btn.innerHTML = defaultText;
+    // Determine the content to restore, never assigning undefined or "undefined"
+    if (defaultText !== undefined && defaultText !== null && String(defaultText).trim() !== '' && defaultText !== 'undefined') {
+      btn.innerHTML = defaultText;
+    } else if (btn.dataset.originalHtml && btn.dataset.originalHtml.trim() !== '' && !btn.dataset.originalHtml.includes('undefined')) {
+      btn.innerHTML = btn.dataset.originalHtml;
+    } else {
+      // Emergency cleanup: strip spinner if present, ensure not "undefined"
+      const clean = btn.innerHTML ? btn.innerHTML.replace(/<span class="spinner"><\/span>\s*/g, '').trim() : '';
+      if (clean && clean !== 'undefined' && clean !== 'Please wait...') {
+        btn.innerHTML = clean;
+      }
+    }
+    delete btn.dataset.originalHtml;
   }
 }
 

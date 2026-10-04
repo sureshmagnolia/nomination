@@ -1943,7 +1943,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
     }
 
     btn.disabled = true;
-    const oldText = btn.textContent;
+    const oldHtml = btn.innerHTML;
     btn.innerHTML = '<span class="spinner" style="width:1rem;height:1rem;border-width:2px;"></span>';
     
     try {
@@ -1958,7 +1958,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
     } catch (err) {
       showToast(`Failed: ${err.message}`, 'error');
       btn.disabled = false;
-      btn.textContent = oldText;
+      btn.innerHTML = oldHtml;
     }
   });
 

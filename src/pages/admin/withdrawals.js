@@ -220,21 +220,21 @@ function renderWithdrawalUI(main, allNoms, pwd) {
           ${isApproved ? `
             <button class="btn btn-sm unapprove-btn" data-id="${esc(n.id)}"
               style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.4);"
-              title="Undo approval and restore candidate to active Valid list">
+              title="Action: Reverts withdrawal approval and restores candidate back to active Valid List.&#10;Prerequisite: Verified withdrawal revocation within legal withdrawal window.">
               ↺ Restore Approval
             </button>
           ` : isPending ? `
             <div class="flex items-center gap-1.5">
-              <button class="btn btn-primary btn-sm approve-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white" data-id="${esc(n.id)}" title="Approve withdrawal and withdraw candidate">
+              <button class="btn btn-primary btn-sm approve-btn bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white" data-id="${esc(n.id)}" title="Action: Approves withdrawal and removes candidate from the contesting ballot.&#10;Prerequisite: Verify candidate identity and receipt before withdrawal deadline.">
                 ✅ Approve
               </button>
               <button class="btn btn-sm reject-btn" data-id="${esc(n.id)}"
-                style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3);" title="Reject request; keep candidate active">
+                style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3);" title="Action: Rejects withdrawal notice; candidate remains actively nominated.&#10;Prerequisite: Notice submitted after statutory deadline or unauthorized.">
                 ❌ Reject
               </button>
             </div>
           ` : `
-            <button class="btn btn-sm approve-btn text-xs bg-slate-700/50 hover:bg-emerald-600/30 text-slate-300 hover:text-emerald-300 border border-white/10" data-id="${esc(n.id)}" title="Re-evaluate and approve withdrawal">
+            <button class="btn btn-sm approve-btn text-xs bg-slate-700/50 hover:bg-emerald-600/30 text-slate-300 hover:text-emerald-300 border border-white/10" data-id="${esc(n.id)}" title="Action: Re-evaluates and approves this withdrawal request.">
               Approve
             </button>
           `}
@@ -268,20 +268,20 @@ function renderWithdrawalUI(main, allNoms, pwd) {
               ${isApproved ? `
                 <button class="btn btn-sm w-full unapprove-btn py-1.5 text-xs font-semibold" data-id="${esc(n.id)}"
                   style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.4);"
-                  title="Undo approval and restore candidate to active Valid list">
+                  title="Action: Reverts withdrawal approval and restores candidate to active Valid List.">
                   ↺ Restore Approval
                 </button>
               ` : isPending ? `
                 <div class="flex gap-2">
-                  <button class="btn btn-primary btn-sm flex-1 approve-btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 text-xs" data-id="${esc(n.id)}">
+                  <button class="btn btn-primary btn-sm flex-1 approve-btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 text-xs" data-id="${esc(n.id)}" title="Action: Approves withdrawal and removes candidate from the ballot.">
                     ✅ Approve
                   </button>
-                  <button class="btn btn-sm flex-1 reject-btn bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 font-bold py-1.5 text-xs" data-id="${esc(n.id)}">
+                  <button class="btn btn-sm flex-1 reject-btn bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 font-bold py-1.5 text-xs" data-id="${esc(n.id)}" title="Action: Rejects withdrawal notice; candidate remains actively nominated.">
                     ❌ Reject
                   </button>
                 </div>
               ` : `
-                <button class="btn btn-sm w-full approve-btn text-xs bg-slate-700/50 hover:bg-emerald-600/30 text-slate-300 hover:text-emerald-300 border border-white/10 py-1.5" data-id="${esc(n.id)}">
+                <button class="btn btn-sm w-full approve-btn text-xs bg-slate-700/50 hover:bg-emerald-600/30 text-slate-300 hover:text-emerald-300 border border-white/10 py-1.5" data-id="${esc(n.id)}" title="Action: Re-evaluates and approves this withdrawal request.">
                   Approve
                 </button>
               `}
@@ -429,7 +429,8 @@ function renderWithdrawalUI(main, allNoms, pwd) {
           <button class="btn btn-sm direct-withdraw-btn" data-id="${esc(n.id)}"
             style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3);"
             onmouseover="this.style.background='rgba(239,68,68,0.8)';this.style.color='white';"
-            onmouseout="this.style.background='rgba(239,68,68,0.15)';this.style.color='#f87171';">
+            onmouseout="this.style.background='rgba(239,68,68,0.15)';this.style.color='#f87171';"
+            title="Action: Immediately records Returning Officer direct withdrawal for this candidate.&#10;Prerequisite: Verified signed physical withdrawal notice or statutory authority order.">
             ⚡ Withdraw Now
           </button>
         </td>
@@ -450,7 +451,8 @@ function renderWithdrawalUI(main, allNoms, pwd) {
           </div>
           <div class="pt-2 border-t border-white/10">
             <button class="btn btn-sm w-full direct-withdraw-btn py-1.5 text-xs font-bold" data-id="${esc(n.id)}"
-              style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3);">
+              style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3);"
+              title="Action: Records Returning Officer direct withdrawal for this candidate.">
               ⚡ Withdraw Now
             </button>
           </div>
@@ -484,7 +486,7 @@ function renderWithdrawalUI(main, allNoms, pwd) {
             style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.35);"
             onmouseover="this.style.background='rgba(16,185,129,0.8)';this.style.color='white';"
             onmouseout="this.style.background='rgba(16,185,129,0.15)';this.style.color='#34d399';"
-            title="Restore this nomination back to the active Valid List">
+            title="Action: Restores this withdrawn nomination back to the active Valid List.&#10;Prerequisite: Order revoking withdrawal issued before final candidate list publication.">
             ↺ Restore to Valid List
           </button>
         </td>
@@ -510,7 +512,8 @@ function renderWithdrawalUI(main, allNoms, pwd) {
             </div>
             <div class="pt-2 border-t border-white/10">
               <button class="btn btn-sm w-full restore-withdraw-btn flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold" data-id="${esc(n.id)}"
-                style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.35);">
+                style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.35);"
+                title="Action: Restores this nomination back to the active Valid List.">
                 ↺ Restore Candidate
               </button>
             </div>
