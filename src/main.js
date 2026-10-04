@@ -104,11 +104,14 @@ document.addEventListener('click', (e) => {
     router.navigate(el.dataset.nav);
     return;
   }
-  const hashAnchor = e.target.closest('a[href^="#/"]');
+  const hashAnchor = e.target.closest('a[href^="#"]');
   if (hashAnchor) {
-    e.preventDefault();
-    const target = hashAnchor.getAttribute('href').replace(/^#/, '');
-    router.navigate(target);
+    const href = hashAnchor.getAttribute('href');
+    if (href && href !== '#' && !href.startsWith('#modal') && !href.startsWith('#nom') && !href.startsWith('#row-') && !href.startsWith('#tab') && !href.startsWith('#btn')) {
+      e.preventDefault();
+      const target = href.replace(/^#/, '').trim();
+      router.navigate(target);
+    }
   }
 });
 

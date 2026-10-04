@@ -538,7 +538,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
           <span class="text-slate-600 hidden sm:inline">•</span>
           <span>📚 PG: Born on or after <strong class="text-purple-200 font-mono text-xs">${formatDobDate(settings?.pgDobCutoff || '2001-09-29')}</strong> (&lt;25 yrs)</span>
         </div>
-        <a href="#admin/schedule" class="btn btn-secondary btn-xs bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-[11px] px-2.5 py-1 rounded font-semibold inline-flex items-center gap-1 shrink-0 transition-colors">
+        <a href="#/admin/schedule" data-nav="/admin/schedule" class="btn btn-secondary btn-xs bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-[11px] px-2.5 py-1 rounded font-semibold inline-flex items-center gap-1 shrink-0 transition-colors">
           <span>⚙️</span> <span>Edit Dates in Schedule</span>
         </a>
       </div>
@@ -1413,6 +1413,9 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
     const secSerial = nom.seconderSerial || nom.seconder?.['Nominal Roll Serial Number'] || nom.seconder?.serial_number || '–';
     const secCls = nom.seconderClass || nom.seconder?.['CLASS'] || nom.seconder?.class || '';
 
+    // Scrutiny Rule Violations in RED (computed first so summaryBar and scrutinyZone can both access it)
+    const violations = getNominationRuleViolations(nom, allPosts, allNoms, settings, allRoll);
+
     if (summaryBar) {
       summaryBar.innerHTML = `
         <div class="bg-slate-900/90 p-3 rounded-xl border border-indigo-500/30 shadow-md">
@@ -1440,9 +1443,6 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         </div>
       `;
     }
-
-    // Scrutiny Rule Violations in RED
-    const violations = getNominationRuleViolations(nom, allPosts, allNoms, settings, allRoll);
 
     let scrutinyHtml = '';
     if (violations.length > 0) {
