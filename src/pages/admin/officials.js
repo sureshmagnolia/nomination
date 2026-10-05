@@ -112,28 +112,87 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const collegeLogo = settings?.collegeLogo || '';
   const collegeShortName = settings?.collegeShortName || CONFIG.COLLEGE_SHORT_NAME || 'GCC';
 
-  // 1. Initialize State with saved data or clean empty defaults
+  // 1. Initialize State with intelligent two-way merge between Server and Local Storage
+  // This guarantees that exclusions saved on either the server or locally are NEVER overwritten or lost
   let faculty = [];
+  let localFaculty = [];
   const cachedFac = localStorage.getItem('gcc_faculty_roster');
   if (cachedFac !== null) {
-    try { faculty = JSON.parse(cachedFac); } catch (_) { faculty = []; }
-  } else if (initialOfficialsData && Array.isArray(initialOfficialsData.faculty)) {
-    faculty = initialOfficialsData.faculty;
+    try { localFaculty = JSON.parse(cachedFac); } catch (_) { localFaculty = []; }
+  }
+  const serverFaculty = (initialOfficialsData && Array.isArray(initialOfficialsData.faculty)) ? initialOfficialsData.faculty : [];
+
+  if (serverFaculty.length > 0 && localFaculty.length > 0) {
+    const base = serverFaculty.length >= localFaculty.length ? serverFaculty : localFaculty;
+    const other = serverFaculty.length >= localFaculty.length ? localFaculty : serverFaculty;
+
+    faculty = base.map(f => {
+      const match = other.find(o => {
+        const op = String(o.pen || '').trim().toLowerCase();
+        const on = String(o.name || '').trim().toLowerCase();
+        const fp = String(f.pen || '').trim().toLowerCase();
+        const fn = String(f.name || '').trim().toLowerCase();
+        return (fp && op && fp === op) || (fn && on && fn === on);
+      });
+      const isEx = !!(f.isExcluded || f.excluded || f.is_excluded || match?.isExcluded || match?.excluded || match?.is_excluded || String(f.status || '').toLowerCase() === 'excluded' || String(match?.status || '').toLowerCase() === 'excluded');
+      const exReason = (f.exclusionReason || match?.exclusionReason || '').trim();
+      return {
+        ...f,
+        isExcluded: isEx,
+        excluded: isEx,
+        is_excluded: isEx,
+        status: isEx ? 'Excluded' : (f.status || 'Available'),
+        exclusionReason: exReason
+      };
+    });
+  } else if (serverFaculty.length > 0) {
+    faculty = serverFaculty;
+  } else if (localFaculty.length > 0) {
+    faculty = localFaculty;
   } else {
     faculty = Array.isArray(DEFAULT_FACULTY_ROSTER) ? [...DEFAULT_FACULTY_ROSTER] : [];
-    localStorage.setItem('gcc_faculty_roster', JSON.stringify(faculty));
   }
+  localStorage.setItem('gcc_faculty_roster', JSON.stringify(faculty));
 
   let nonTeaching = [];
+  let localNT = [];
   const cachedNT = localStorage.getItem('gcc_non_teaching_roster');
   if (cachedNT !== null) {
-    try { nonTeaching = JSON.parse(cachedNT); } catch (_) { nonTeaching = []; }
-  } else if (initialOfficialsData && Array.isArray(initialOfficialsData.nonTeaching)) {
-    nonTeaching = initialOfficialsData.nonTeaching;
+    try { localNT = JSON.parse(cachedNT); } catch (_) { localNT = []; }
+  }
+  const serverNT = (initialOfficialsData && Array.isArray(initialOfficialsData.nonTeaching)) ? initialOfficialsData.nonTeaching : [];
+
+  if (serverNT.length > 0 && localNT.length > 0) {
+    const baseNT = serverNT.length >= localNT.length ? serverNT : localNT;
+    const otherNT = serverNT.length >= localNT.length ? localNT : serverNT;
+
+    nonTeaching = baseNT.map(nt => {
+      const match = otherNT.find(o => {
+        const op = String(o.pen || '').trim().toLowerCase();
+        const on = String(o.name || '').trim().toLowerCase();
+        const ntp = String(nt.pen || '').trim().toLowerCase();
+        const ntn = String(nt.name || '').trim().toLowerCase();
+        return (ntp && op && ntp === op) || (ntn && on && ntn === on);
+      });
+      const isEx = !!(nt.isExcluded || nt.excluded || nt.is_excluded || match?.isExcluded || match?.excluded || match?.is_excluded || String(nt.status || '').toLowerCase() === 'excluded' || String(match?.status || '').toLowerCase() === 'excluded');
+      const exReason = (nt.exclusionReason || match?.exclusionReason || '').trim();
+      return {
+        ...nt,
+        isExcluded: isEx,
+        excluded: isEx,
+        is_excluded: isEx,
+        status: isEx ? 'Excluded' : (nt.status || 'Available'),
+        exclusionReason: exReason
+      };
+    });
+  } else if (serverNT.length > 0) {
+    nonTeaching = serverNT;
+  } else if (localNT.length > 0) {
+    nonTeaching = localNT;
   } else {
     nonTeaching = Array.isArray(DEFAULT_NON_TEACHING_ROSTER) ? [...DEFAULT_NON_TEACHING_ROSTER] : [];
-    localStorage.setItem('gcc_non_teaching_roster', JSON.stringify(nonTeaching));
   }
+  localStorage.setItem('gcc_non_teaching_roster', JSON.stringify(nonTeaching));
 
   // Auto-sanitize department names across loaded rosters (corrects typos like 'Botony' -> 'Botany' generically)
   faculty.forEach(f => {
@@ -309,45 +368,60 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     });
   };
 
-  // Helper: Determine if an official is excluded by flag, reason, status or matching record in rosters
+  // Helper: Determine if an official is excluded by flag, reason, status, returning officer designation, or matching record in rosters
   const isPersonExcluded = (p) => {
     if (!p) return false;
+
+    const pName = typeof p === 'string' ? p : (p.name || '');
+    const pPen = typeof p === 'string' ? '' : (p.pen || '');
+    const cleanName = String(pName).trim().toLowerCase();
+    const cleanPen = String(pPen).trim().toLowerCase();
+
+    // Auto-exclude Returning Officer & AROs (Returning Officer issues and signs the order, never on standby/reserve)
+    const roName = String(settings?.returningOfficerName || 'Suresh P').trim().toLowerCase();
+    if (roName && (cleanName === roName || cleanName.includes('suresh p') || cleanName.includes('suresh.p') || cleanPen === '616638')) {
+      return true;
+    }
+
+    if (typeof p === 'object') {
+      const reasonLower = String(p.exclusionReason || '').trim().toLowerCase();
+      const desigLower = String(p.designation || '').trim().toLowerCase();
+      if (reasonLower.includes('returning officer') || reasonLower.includes('aro') || desigLower.includes('returning officer')) {
+        return true;
+      }
+      if (p.isExcluded === true || p.isExcluded === 'true' || p.isExcluded === 1 || p.isExcluded === '1') return true;
+      if (p.excluded === true || p.excluded === 'true' || p.excluded === 1 || p.excluded === '1') return true;
+      if (p.is_excluded === true || p.is_excluded === 'true') return true;
+      if (p.status && String(p.status).trim().toLowerCase() === 'excluded') return true;
+      if (p.exclusionReason && String(p.exclusionReason).trim() !== '') return true;
+    }
+
     if (typeof p === 'string') {
-      const clean = p.trim().toLowerCase();
       const match = faculty.find(f => {
         const fn = String(f.name || '').trim().toLowerCase();
         const fp = String(f.pen || '').trim().toLowerCase();
-        return (fp && fp === clean) || (fn && fn === clean);
+        return (fp && fp === cleanName) || (fn && fn === cleanName);
       }) || nonTeaching.find(nt => {
         const ntn = String(nt.name || '').trim().toLowerCase();
         const ntp = String(nt.pen || '').trim().toLowerCase();
-        return (ntp && ntp === clean) || (ntn && ntn === clean);
+        return (ntp && ntp === cleanName) || (ntn && ntn === cleanName);
       });
       if (match) return isPersonExcluded(match);
       return false;
     }
 
-    if (p.isExcluded === true || p.isExcluded === 'true' || p.isExcluded === 1 || p.isExcluded === '1') return true;
-    if (p.excluded === true || p.excluded === 'true' || p.excluded === 1 || p.excluded === '1') return true;
-    if (p.is_excluded === true || p.is_excluded === 'true') return true;
-    if (p.status && String(p.status).trim().toLowerCase() === 'excluded') return true;
-    if (p.exclusionReason && String(p.exclusionReason).trim() !== '') return true;
-
     // Cross-check against rosters by name or PEN
-    const pName = String(p.name || '').trim().toLowerCase();
-    const pPen = String(p.pen || '').trim().toLowerCase();
-
-    if (pName || pPen) {
+    if (cleanName || cleanPen) {
       const match = faculty.find(f => {
         if (f === p) return false;
         const fn = String(f.name || '').trim().toLowerCase();
         const fp = String(f.pen || '').trim().toLowerCase();
-        return (pPen && fp && pPen === fp) || (pName && fn && pName === fn);
+        return (cleanPen && fp && cleanPen === fp) || (cleanName && fn && cleanName === fn);
       }) || nonTeaching.find(nt => {
         if (nt === p) return false;
         const ntn = String(nt.name || '').trim().toLowerCase();
         const ntp = String(nt.pen || '').trim().toLowerCase();
-        return (pPen && ntp && pPen === ntp) || (pName && ntn && pName === ntn);
+        return (cleanPen && ntp && cleanPen === ntp) || (cleanName && ntn && cleanName === ntn);
       });
 
       if (match) {
@@ -500,13 +574,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         return { role: 'Counting Supervisor', tableNumber: tbl, boothNumber: tbl, slot: 'supervisor' };
       }
       if (team.countingOfficer1 && String(team.countingOfficer1.name).trim().toLowerCase() === clean) {
-        return { role: 'Counting Officer 1', tableNumber: tbl, boothNumber: tbl, slot: 'countingOfficer1' };
+        return { role: 'Counting Officer', tableNumber: tbl, boothNumber: tbl, slot: 'countingOfficer1' };
       }
       if (team.countingOfficer2 && String(team.countingOfficer2.name).trim().toLowerCase() === clean) {
-        return { role: 'Counting Officer 2', tableNumber: tbl, boothNumber: tbl, slot: 'countingOfficer2' };
+        return { role: 'Counting Officer', tableNumber: tbl, boothNumber: tbl, slot: 'countingOfficer2' };
       }
       if (team.countingOfficer3 && String(team.countingOfficer3.name).trim().toLowerCase() === clean) {
-        return { role: 'Counting Officer 3', tableNumber: tbl, boothNumber: tbl, slot: 'countingOfficer3' };
+        return { role: 'Counting Officer', tableNumber: tbl, boothNumber: tbl, slot: 'countingOfficer3' };
       }
     }
     return null;
@@ -768,6 +842,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         // Regular Faculty List Parsing (Generic for any college)
         let headerIdx = -1;
         let seniorityCol = 0, nameCol = 1, penCol = 2, desigCol = 3, dateCol = 4, deptCol = -1;
+        let statusCol = -1, excludeCol = -1, reasonCol = -1;
 
         for (let r = 0; r < Math.min(10, jsonRows.length); r++) {
           const rawRow = jsonRows[r] || [];
@@ -791,6 +866,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               if (c.includes('desig') || c.includes('post') || c.includes('rank') || c.includes('role')) desigCol = i;
               if (c.includes('date') || c.includes('joining') || c.includes('doj')) dateCol = i;
               if (c.includes('dept') || c.includes('department') || c.includes('subject') || c.includes('branch') || c.includes('discipline')) deptCol = i;
+              if (c.includes('status') || c.includes('avail')) statusCol = i;
+              if (c.includes('exclude') || c.includes('exempt')) excludeCol = i;
+              if (c.includes('reason') || c.includes('remark')) reasonCol = i;
             });
             break;
           }
@@ -812,6 +890,17 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           let dt = dateCol >= 0 && row[dateCol] !== undefined ? formatExcelDate(row[dateCol]) : '';
           let dept = deptCol >= 0 && row[deptCol] !== undefined ? normalizeDepartment(row[deptCol]) : '';
 
+          const rawStatus = statusCol >= 0 && row[statusCol] !== undefined ? String(row[statusCol]).trim() : '';
+          const rawExclude = excludeCol >= 0 && row[excludeCol] !== undefined ? String(row[excludeCol]).trim() : '';
+          const rawReason = reasonCol >= 0 && row[reasonCol] !== undefined ? String(row[reasonCol]).trim() : '';
+
+          const isEx = rawStatus.toLowerCase() === 'excluded' || 
+                       rawExclude.toLowerCase() === 'yes' || 
+                       rawExclude.toLowerCase() === 'true' || 
+                       rawExclude.toLowerCase() === '1' || 
+                       rawExclude.toLowerCase() === 'excluded' || 
+                       (rawReason && rawReason.toLowerCase() !== 'available');
+
           parsedFaculty.push({
             seniority: isNaN(rawSl) ? parsedFaculty.length + 1 : rawSl,
             name: name,
@@ -819,8 +908,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             designation: desig,
             department: dept,
             joiningDate: dt,
-            isExcluded: false,
-            exclusionReason: ''
+            isExcluded: isEx,
+            excluded: isEx,
+            is_excluded: isEx,
+            status: isEx ? 'Excluded' : 'Available',
+            exclusionReason: isEx ? (rawReason || 'Excluded from Duty') : ''
           });
         }
 
@@ -829,8 +921,21 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           return;
         }
 
-        if (confirm(`📥 Successfully parsed ${parsedFaculty.length} teaching faculty records from "${file.name}".\n\nReplace current teaching faculty roster with this list?`)) {
-          faculty = parsedFaculty;
+        if (confirm(`📥 Successfully parsed ${parsedFaculty.length} teaching faculty records from "${file.name}".\n\nApply this teaching faculty roster (existing exclusion flags and duty notes will be preserved)?`)) {
+          // Preserve any existing exclusions or manual edits
+          faculty = parsedFaculty.map(pf => {
+            const existing = faculty.find(f => (pf.pen && f.pen && String(pf.pen) === String(f.pen)) || (pf.name && f.name && pf.name.toLowerCase() === f.name.toLowerCase()));
+            const isEx = pf.isExcluded || existing?.isExcluded || existing?.excluded || false;
+            const exReason = pf.exclusionReason || existing?.exclusionReason || '';
+            return {
+              ...pf,
+              isExcluded: isEx,
+              excluded: isEx,
+              is_excluded: isEx,
+              status: isEx ? 'Excluded' : 'Available',
+              exclusionReason: exReason
+            };
+          });
           saveAll(false);
           showToast(`Imported ${parsedFaculty.length} faculty records!`, 'success');
           renderUI();
@@ -861,6 +966,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         // Scan for header row
         let headerIdx = -1;
         let nameCol = 2, desigCol = 3, penCol = 1, deptCol = 4;
+        let statusCol = -1, excludeCol = -1, reasonCol = -1;
 
         for (let r = 0; r < Math.min(10, jsonRows.length); r++) {
           const rawRow = jsonRows[r] || [];
@@ -881,6 +987,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               if (c.includes('desig') || c.includes('post') || c.includes('cadre') || c.includes('role')) desigCol = i;
               if (c.includes('pen') || c.includes('id') || c.includes('code')) penCol = i;
               if (c.includes('dept') || c.includes('department') || c.includes('subject') || c.includes('branch') || c.includes('discipline') || c.includes('section')) deptCol = i;
+              if (c.includes('status') || c.includes('avail')) statusCol = i;
+              if (c.includes('exclude') || c.includes('exempt')) excludeCol = i;
+              if (c.includes('reason') || c.includes('remark')) reasonCol = i;
             });
             break;
           }
@@ -901,13 +1010,26 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           const pen = row[penCol] !== undefined ? String(row[penCol]).trim() : '';
           const dept = row[deptCol] !== undefined ? normalizeDepartment(row[deptCol]) : '';
 
+          const rawStatus = statusCol >= 0 && row[statusCol] !== undefined ? String(row[statusCol]).trim() : '';
+          const rawExclude = excludeCol >= 0 && row[excludeCol] !== undefined ? String(row[excludeCol]).trim() : '';
+          const rawReason = reasonCol >= 0 && row[reasonCol] !== undefined ? String(row[reasonCol]).trim() : '';
+
+          const isEx = rawStatus.toLowerCase() === 'excluded' || 
+                       rawExclude.toLowerCase() === 'yes' || 
+                       rawExclude.toLowerCase() === 'true' || 
+                       rawExclude.toLowerCase() === '1' || 
+                       rawExclude.toLowerCase() === 'excluded' || 
+                       (rawReason && rawReason.toLowerCase() !== 'available');
+
           // Check if UGC Librarian, Librarian Gr.IV, or any Librarian
           if (desig.toLowerCase().includes('librarian')) {
             detectedLibrarians.push({
               name: name,
               designation: desig,
               pen: pen,
-              department: normalizeDepartment(dept || 'Library')
+              department: normalizeDepartment(dept || 'Library'),
+              isExcluded: isEx,
+              exclusionReason: isEx ? (rawReason || 'Excluded from Duty') : ''
             });
           } else {
             parsedNT.push({
@@ -916,8 +1038,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               designation: desig,
               pen: pen,
               department: dept,
-              isExcluded: false,
-              exclusionReason: ''
+              isExcluded: isEx,
+              excluded: isEx,
+              is_excluded: isEx,
+              status: isEx ? 'Excluded' : 'Available',
+              exclusionReason: isEx ? (rawReason || 'Excluded from Duty') : ''
             });
           }
         }
@@ -931,14 +1056,28 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         if (detectedLibrarians.length > 0) {
           confirmMsg += `\n\n📚 Identified ${detectedLibrarians.length} Librarian(s):\n${detectedLibrarians.map(l => '• ' + l.name + ' (' + l.designation + ')').join('\n')}\nPer election guidelines, Librarians are included in the Teaching Faculty Roster and excluded from Non-Teaching Staff.`;
         }
-        confirmMsg += `\n\nApply this update to your election rosters?`;
+        confirmMsg += `\n\nApply this update to your election rosters (existing exclusion flags will be preserved)?`;
 
         if (confirm(confirmMsg)) {
-          nonTeaching = parsedNT;
+          // Preserve any existing manual exclusions
+          nonTeaching = parsedNT.map(pnt => {
+            const existing = nonTeaching.find(nt => (pnt.pen && nt.pen && String(pnt.pen) === String(nt.pen)) || (pnt.name && nt.name && pnt.name.toLowerCase() === nt.name.toLowerCase()));
+            const isEx = pnt.isExcluded || existing?.isExcluded || existing?.excluded || false;
+            const exReason = pnt.exclusionReason || existing?.exclusionReason || '';
+            return {
+              ...pnt,
+              isExcluded: isEx,
+              excluded: isEx,
+              is_excluded: isEx,
+              status: isEx ? 'Excluded' : 'Available',
+              exclusionReason: exReason
+            };
+          });
+
           // Add librarians to faculty if not already present
           let libAdded = 0;
           detectedLibrarians.forEach(lib => {
-            if (!faculty.some(f => f.pen === lib.pen || f.name.toLowerCase() === lib.name.toLowerCase())) {
+            if (!faculty.some(f => (lib.pen && f.pen && String(f.pen) === String(lib.pen)) || f.name.toLowerCase() === lib.name.toLowerCase())) {
               faculty.push({
                 seniority: faculty.length + 1,
                 name: lib.name,
@@ -946,8 +1085,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 designation: lib.designation,
                 department: lib.department,
                 joiningDate: '',
-                isExcluded: false,
-                exclusionReason: ''
+                isExcluded: lib.isExcluded || false,
+                excluded: lib.isExcluded || false,
+                is_excluded: lib.isExcluded || false,
+                status: lib.isExcluded ? 'Excluded' : 'Available',
+                exclusionReason: lib.exclusionReason || ''
               });
               libAdded++;
             }
@@ -1660,16 +1802,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // Calculate Summary Metrics
     const totalFaculty = faculty.length;
-    const activeFaculty = faculty.filter(f => !f.isExcluded).length;
+    const activeFaculty = faculty.filter(f => !isPersonExcluded(f)).length;
     const excludedFaculty = totalFaculty - activeFaculty;
-    const postedFaculty = faculty.filter(f => !f.isExcluded && (isObserver(f.name) || isDiscipline(f.name) || isGrievance(f.name) || getPollingAssignment(f.name) || getCountingAssignment(f.name))).length;
+    const postedFaculty = faculty.filter(f => !isPersonExcluded(f) && (isObserver(f.name) || isDiscipline(f.name) || isGrievance(f.name) || getPollingAssignment(f.name) || getCountingAssignment(f.name))).length;
     const reserveFaculty = Math.max(0, activeFaculty - postedFaculty);
 
     const totalNT = nonTeaching.length;
-    const activeNT = nonTeaching.filter(n => !n.isExcluded).length;
+    const activeNT = nonTeaching.filter(n => !isPersonExcluded(n)).length;
     const postedNT = nonTeaching.filter(nt => {
       const a = getNonTeachingAssignment(nt.name);
-      return !nt.isExcluded && (isObserver(nt.name) || isDiscipline(nt.name) || isGrievance(nt.name) || a.polling || a.counting);
+      return !isPersonExcluded(nt) && (isObserver(nt.name) || isDiscipline(nt.name) || isGrievance(nt.name) || a.polling || a.counting);
     }).length;
     const reserveNT = Math.max(0, activeNT - postedNT);
 
@@ -2396,10 +2538,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                       const cDuty = getCountingAssignment(f.name);
                       const isPosted = isObs || isDisc || isGriev || pDuty || cDuty;
 
-                      if (facultyFilter === 'active' && f.isExcluded) return false;
-                      if (facultyFilter === 'excluded' && !f.isExcluded) return false;
-                      if (facultyFilter === 'posted' && (f.isExcluded || !isPosted)) return false;
-                      if (facultyFilter === 'reserve' && (f.isExcluded || isPosted)) return false;
+                      const isEx = isPersonExcluded(f);
+                      if (facultyFilter === 'active' && isEx) return false;
+                      if (facultyFilter === 'excluded' && !isEx) return false;
+                      if (facultyFilter === 'posted' && (isEx || !isPosted)) return false;
+                      if (facultyFilter === 'reserve' && (isEx || isPosted)) return false;
                       if (facultySearch) {
                         const s = facultySearch.toLowerCase().trim();
                         return (f.name || '').toLowerCase().includes(s) ||
@@ -2529,10 +2672,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                       const asstDuty = getNonTeachingAssignment(nt.name);
                       const isPosted = isObs || isDisc || isGriev || asstDuty.polling || asstDuty.counting;
 
-                      if (nonTeachingFilter === 'active' && nt.isExcluded) return false;
-                      if (nonTeachingFilter === 'excluded' && !nt.isExcluded) return false;
-                      if (nonTeachingFilter === 'posted' && (nt.isExcluded || !isPosted)) return false;
-                      if (nonTeachingFilter === 'reserve' && (nt.isExcluded || isPosted)) return false;
+                      const isEx = isPersonExcluded(nt);
+                      if (nonTeachingFilter === 'active' && isEx) return false;
+                      if (nonTeachingFilter === 'excluded' && !isEx) return false;
+                      if (nonTeachingFilter === 'posted' && (isEx || !isPosted)) return false;
+                      if (nonTeachingFilter === 'reserve' && (isEx || isPosted)) return false;
                       if (nonTeachingSearch) {
                         const s = nonTeachingSearch.toLowerCase().trim();
                         return (nt.name || '').toLowerCase().includes(s) ||
@@ -2867,26 +3011,36 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     });
 
     // Delegated click handler on Faculty table body so dynamically filtered rows respond immediately
-    main.querySelector('#facultyTableBody')?.addEventListener('click', (e) => {
+    main.querySelector('#facultyTableBody')?.addEventListener('click', async (e) => {
       const btn = e.target.closest('.btn-toggle-exclude-fac');
       if (!btn) return;
-      const pen = btn.dataset.pen;
-      const target = faculty.find(f => String(f.pen) === pen || f.name === pen);
+      const pen = String(btn.dataset.pen || '').trim().toLowerCase();
+      const target = faculty.find(f => {
+        const fp = String(f.pen || '').trim().toLowerCase();
+        const fn = String(f.name || '').trim().toLowerCase();
+        return (fp && fp === pen) || fn === pen;
+      });
       if (!target) return;
 
-      if (target.isExcluded) {
+      if (isPersonExcluded(target)) {
         target.isExcluded = false;
+        target.excluded = false;
+        target.is_excluded = false;
+        target.status = 'Available';
         target.exclusionReason = '';
         showToast(`${target.name} is now Available for election duty.`, 'success');
       } else {
-        const reason = prompt(`Enter reason for excluding ${target.name} from election duty:\n(e.g., Returning Officer, ARO, Medical Leave, Observer, On Deputation):`, 'Returning Officer / Official Duty');
-        if (reason !== null) {
-          target.isExcluded = true;
-          target.exclusionReason = reason.trim() || 'Official Duty';
-          showToast(`${target.name} excluded from duty (${target.exclusionReason}).`, 'info');
-        }
+        const cleanName = String(target.name || '').toLowerCase();
+        const defaultReason = cleanName.includes('suresh') ? 'Returning Officer' : 'Excluded from Election Duty';
+        const reason = prompt(`Enter reason for excluding ${target.name} from election duty:\n(e.g., Returning Officer, ARO, Medical Leave, Observer, On Deputation):`, defaultReason);
+        target.isExcluded = true;
+        target.excluded = true;
+        target.is_excluded = true;
+        target.status = 'Excluded';
+        target.exclusionReason = (reason && reason.trim()) ? reason.trim() : 'Official Duty / Excluded';
+        showToast(`${target.name} excluded from duty (${target.exclusionReason}).`, 'info');
       }
-      saveAll(false);
+      await saveAll(false);
       renderUI();
     });
 
@@ -2919,26 +3073,34 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     });
 
     // Delegated click handler on Non-Teaching table body
-    main.querySelector('#nonTeachingTableBody')?.addEventListener('click', (e) => {
+    main.querySelector('#nonTeachingTableBody')?.addEventListener('click', async (e) => {
       const excludeBtn = e.target.closest('.btn-toggle-exclude-nt');
       if (excludeBtn) {
-        const name = excludeBtn.dataset.name;
-        const target = nonTeaching.find(n => n.name === name);
+        const name = String(excludeBtn.dataset.name || '').trim().toLowerCase();
+        const target = nonTeaching.find(n => {
+          const np = String(n.pen || '').trim().toLowerCase();
+          const nn = String(n.name || '').trim().toLowerCase();
+          return (np && np === name) || nn === name;
+        });
         if (!target) return;
 
-        if (target.isExcluded) {
+        if (isPersonExcluded(target)) {
           target.isExcluded = false;
+          target.excluded = false;
+          target.is_excluded = false;
+          target.status = 'Available';
           target.exclusionReason = '';
           showToast(`${target.name} is now Available for duty.`, 'success');
         } else {
           const reason = prompt(`Enter reason for excluding ${target.name} from duty:\n(e.g., Essential Office Duty, Leave):`, 'Office Duty');
-          if (reason !== null) {
-            target.isExcluded = true;
-            target.exclusionReason = reason.trim() || 'Office Duty';
-            showToast(`${target.name} excluded (${target.exclusionReason}).`, 'info');
-          }
+          target.isExcluded = true;
+          target.excluded = true;
+          target.is_excluded = true;
+          target.status = 'Excluded';
+          target.exclusionReason = (reason && reason.trim()) ? reason.trim() : 'Office Duty';
+          showToast(`${target.name} excluded (${target.exclusionReason}).`, 'info');
         }
-        saveAll(false);
+        await saveAll(false);
         renderUI();
         return;
       }
@@ -4089,16 +4251,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     });
 
     // Double-check final reserve filter so NO excluded or on-duty person can EVER slip in:
+    const safePersonnel = personnel.filter(p => !isPersonExcluded(p));
     const safeReserveList = reserveList.filter(res => !isPersonExcluded(res) && !isPersonOnDuty(res));
 
-    personnel.sort(compareOfficials);
+    safePersonnel.sort(compareOfficials);
     safeReserveList.sort(compareOfficials);
 
-    return { obsList, discList, grievList, personnel, reserveList: safeReserveList };
+    return { obsList, discList, grievList, personnel: safePersonnel, reserveList: safeReserveList };
   };
 
   const openMasterDutyListWindow = () => {
-    const orderNo = `GCC/ELEC/${electionYear}/MASTER-DUTY-01`;
     const orderDate = new Date().toLocaleDateString('en-GB');
 
     const win = window.open('', '_blank');
@@ -4107,16 +4269,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       return;
     }
 
-    const pageHtml = buildStandaloneMasterDutyListPage(orderNo, orderDate);
+    const pageHtml = buildStandaloneMasterDutyListPage(orderDate);
     win.document.open();
     win.document.write(pageHtml);
     win.document.close();
   };
 
-  const buildStandaloneMasterDutyListPage = (orderNo, orderDate) => {
+  const buildStandaloneMasterDutyListPage = (orderDate) => {
     const title = `Master_Duty_List_Polling_Counting_${electionYear}`;
-    const deptWiseHtml = buildDeptWiseMasterRollHtml(orderNo, orderDate);
-    const boothWiseHtml = buildBoothWiseDeploymentHtml(orderNo, orderDate);
+    const deptWiseHtml = buildDeptWiseMasterRollHtml(orderDate);
+    const boothWiseHtml = buildBoothWiseDeploymentHtml(orderDate);
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -4515,7 +4677,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 </html>`;
   };
 
-  const buildDeptWiseMasterRollHtml = (orderNo, orderDate) => {
+  const buildDeptWiseMasterRollHtml = (orderDate) => {
     const { obsList, discList, grievList, personnel, reserveList } = getMasterDutyData();
     const totalPersonnelCount = obsList.length + discList.length + grievList.length + personnel.length;
     const activeDutyCount = obsList.length + discList.length + grievList.length + personnel.filter(p => !p.isReserve).length;
@@ -4537,9 +4699,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         </div>
 
         <!-- Meta Bar -->
-        <div class="meta-bar">
-          <span>Order No: ${esc(orderNo)}</span>
-          <span>Ref: Election Notification No. ${esc(collegeShortName)}/ELEC/${esc(electionYear)}/01</span>
+        <div class="meta-bar" style="justify-content: flex-end;">
           <span>Date: ${esc(orderDate)}</span>
         </div>
 
@@ -4836,7 +4996,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     `;
   };
 
-  const buildBoothWiseDeploymentHtml = (orderNo, orderDate) => {
+  const buildBoothWiseDeploymentHtml = (orderDate) => {
     const { obsList, discList, grievList, reserveList } = getMasterDutyData();
 
     const obsHasDept = obsList.some(o => o.department && o.department.trim() && o.department !== '–' && o.department !== 'N/A' && o.department !== '-');
@@ -4877,9 +5037,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         </div>
 
         <!-- Meta Bar -->
-        <div class="meta-bar">
-          <span>Order No: ${esc(orderNo)}</span>
-          <span>Ref: Election Notification No. ${esc(collegeShortName)}/ELEC/${esc(electionYear)}/01</span>
+        <div class="meta-bar" style="justify-content: flex-end;">
           <span>Date: ${esc(orderDate)}</span>
         </div>
 
@@ -5164,11 +5322,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               const team = countingTeams.find(t => t.tableNumber === b.boothNumber) || {};
               const slots = [
                 { role: 'Counting Supervisor', person: team.supervisor, isHead: true },
-                { role: 'Counting Officer 1', person: team.countingOfficer1 },
-                { role: 'Counting Officer 2', person: team.countingOfficer2 },
-                { role: 'Counting Officer 3 (Addl)', person: team.countingOfficer3 },
+                { role: 'Counting Officer', person: team.countingOfficer1 },
+                { role: 'Counting Officer', person: team.countingOfficer2 },
+                { role: 'Counting Officer', person: team.countingOfficer3, isAddl: true },
                 { role: 'Counting Assistant', person: team.countingAssistant, isAssistant: true }
-              ].filter(s => s.role !== 'Counting Officer 3 (Addl)' || team.countingOfficer3);
+              ].filter(s => !s.isAddl || team.countingOfficer3);
 
               return slots.map((s, sIdx) => {
                 const personObj = s.person ? getPerson(s.person.name) : null;
@@ -5849,20 +6007,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>
                     <div style="margin-bottom: 5px;">
                       ${isO1Valid ? `
-                        <span class="staff-name">1. ${esc(o1.name)}</span>
-                        <span class="staff-meta" style="margin-left: 14px;">${esc(o1.designation || 'Faculty')}${o1.pen ? ` · PEN: ${esc(o1.pen)}` : ''}</span>
-                      ` : '<span class="unassigned">1. – Not Assigned –</span>'}
+                        <span class="staff-name">${isPolling ? '1. ' : ''}${esc(o1.name)}</span>
+                        <span class="staff-meta" style="${isPolling ? 'margin-left: 14px;' : ''}">${esc(o1.designation || 'Faculty')}${o1.pen ? ` · PEN: ${esc(o1.pen)}` : ''}</span>
+                      ` : `<span class="unassigned">${isPolling ? '1. ' : ''}– Not Assigned –</span>`}
                     </div>
                     <div style="border-top: 1px dashed #cbd5e1; padding-top: 4px;">
                       ${isO2Valid ? `
-                        <span class="staff-name">2. ${esc(o2.name)}</span>
-                        <span class="staff-meta" style="margin-left: 14px;">${esc(o2.designation || 'Faculty')}${o2.pen ? ` · PEN: ${esc(o2.pen)}` : ''}</span>
-                      ` : '<span class="unassigned">2. – Not Assigned –</span>'}
+                        <span class="staff-name">${isPolling ? '2. ' : ''}${esc(o2.name)}</span>
+                        <span class="staff-meta" style="${isPolling ? 'margin-left: 14px;' : ''}">${esc(o2.designation || 'Faculty')}${o2.pen ? ` · PEN: ${esc(o2.pen)}` : ''}</span>
+                      ` : `<span class="unassigned">${isPolling ? '2. ' : ''}– Not Assigned –</span>`}
                     </div>
                     ${isO3Valid ? `
                       <div style="border-top: 1px dashed #cbd5e1; padding-top: 4px; margin-top: 4px;">
-                        <span class="staff-name">3. ${esc(o3.name)} <span style="font-size: 8.5px; color: #4338ca; font-weight: bold; background: #e0e7ff; padding: 1px 4px; border-radius: 3px;">Optional / Addl</span></span>
-                        <span class="staff-meta" style="margin-left: 14px;">${esc(o3.designation || 'Faculty')}${o3.pen ? ` · PEN: ${esc(o3.pen)}` : ''}</span>
+                        <span class="staff-name">${isPolling ? '3. ' : ''}${esc(o3.name)} <span style="font-size: 8.5px; color: #4338ca; font-weight: bold; background: #e0e7ff; padding: 1px 4px; border-radius: 3px;">Optional / Addl</span></span>
+                        <span class="staff-meta" style="${isPolling ? 'margin-left: 14px;' : ''}">${esc(o3.designation || 'Faculty')}${o3.pen ? ` · PEN: ${esc(o3.pen)}` : ''}</span>
                       </div>
                     ` : ''}
                   </td>
