@@ -24,6 +24,12 @@ export function exportNominationsToExcel(list = [], type = 'valid', options = {}
 
   // 1. Group nominations by post
   const grouped = {};
+  if (Array.isArray(options.posts)) {
+    options.posts.forEach(p => {
+      const pName = typeof p === 'string' ? p : p.post;
+      if (pName && !grouped[pName]) grouped[pName] = [];
+    });
+  }
   list.forEach(n => {
     const p = n.post || 'Unknown Post';
     if (!grouped[p]) grouped[p] = [];
@@ -51,8 +57,25 @@ export function exportNominationsToExcel(list = [], type = 'valid', options = {}
   let totalCandidateCount = 0;
 
   orderedPostNames.forEach(post => {
-    const noms = grouped[post];
+    const noms = grouped[post] || [];
     const isUncontested = isFinal && noms.length === 1;
+
+    if (noms.length === 0) {
+      const row = [
+        post,
+        '–',
+        'NO VALID NOMINATIONS',
+        '–',
+        '–',
+        '–',
+        '–'
+      ];
+      if (isFinal) {
+        row.push('NO VALID NOMINATIONS');
+      }
+      candidateRows.push(row);
+      return;
+    }
 
     // Sort alphabetically by candidate name within post
     noms.sort((a, b) => String(a.candidateName || a.candidate?.NAME || '').localeCompare(String(b.candidateName || b.candidate?.NAME || '')));
@@ -109,12 +132,13 @@ export function exportNominationsToExcel(list = [], type = 'valid', options = {}
   ];
 
   orderedPostNames.forEach((post, i) => {
-    const count = grouped[post].length;
+    const count = grouped[post]?.length || 0;
     let status = `${count} Candidate${count > 1 ? 's' : ''}`;
-    if (isFinal) {
+    if (count === 0) {
+      status = 'NO VALID NOMINATIONS';
+    } else if (isFinal) {
       if (count === 1) status = 'ELECTED UNOPPOSED (Uncontested)';
       else if (count > 1) status = `CONTESTING (${count} Candidates)`;
-      else status = 'NO CANDIDATES';
     }
     summaryRows.push([i + 1, post, count, status]);
   });

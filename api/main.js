@@ -1009,7 +1009,7 @@ export default async function handler(req, res) {
       const finalOverride = (await getSetting('finalListOverride')) || 'AUTO';
       const legacyPublished = await getSetting('finalListPublished');
       const published = evaluateStageStatus(finalOverride, legacyPublished);
-      if (!published) return jsonOut(res, { active: [], withdrawn: [] });
+      if (!published) return jsonOut(res, { active: [], withdrawn: [], nominatedPosts: [] });
       const noms = await sql`
         SELECT * FROM nominations 
         WHERE status = 'Valid'
@@ -1020,6 +1020,12 @@ export default async function handler(req, res) {
           END ASC,
           candidate_name ASC
       `;
+      let nominatedPosts = [];
+      try {
+        const pRows = await sql`SELECT DISTINCT post FROM nominations WHERE post IS NOT NULL`;
+        nominatedPosts = pRows.map(r => r.post).filter(Boolean);
+      } catch (e) {}
+
       return jsonOut(res, {
         active: noms.filter(n => n.withdrawal_status !== 'Approved').map(n => ({ 
           id: n.id, 
@@ -1038,7 +1044,8 @@ export default async function handler(req, res) {
           candidateName: n.candidate_name, 
           candidateClass: n.candidate_class, 
           candidateDept: n.candidate_dept 
-        }))
+        })),
+        nominatedPosts
       });
     }
 
@@ -1057,6 +1064,12 @@ export default async function handler(req, res) {
           END ASC,
           candidate_name ASC
       `;
+      let nominatedPosts = [];
+      try {
+        const pRows = await sql`SELECT DISTINCT post FROM nominations WHERE post IS NOT NULL`;
+        nominatedPosts = pRows.map(r => r.post).filter(Boolean);
+      } catch (e) {}
+
       return jsonOut(res, {
         isPublished,
         active: noms.filter(n => n.withdrawal_status !== 'Approved').map(n => ({ 
@@ -1076,7 +1089,8 @@ export default async function handler(req, res) {
           candidateName: n.candidate_name, 
           candidateClass: n.candidate_class, 
           candidateDept: n.candidate_dept 
-        }))
+        })),
+        nominatedPosts
       });
     }
 

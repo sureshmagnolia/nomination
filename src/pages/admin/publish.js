@@ -191,10 +191,10 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-2 shrink-0">
-            <button id="btnPrintValid" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${validList.length === 0 ? 'disabled title="Disabled: No nominations have been verified as Valid yet. Scrutinize & mark nominations as Valid in Review Nominations."' : 'title="Print official List of Valid Nominations"'}>
+            <button id="btnPrintValid" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${validList.length === 0 && (!nominations || nominations.length === 0) && (!postsData || postsData.length === 0) ? 'disabled title="Disabled: No nominations or posts available."' : 'title="Print official List of Valid Nominations"'}>
               <span>🖨️</span> Print Valid List
             </button>
-            <button id="btnDownloadValidExcel" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${validList.length === 0 ? 'disabled title="Disabled: No nominations have been verified as Valid yet."' : 'title="Download official List of Valid Nominations in Excel (.xlsx)"'}>
+            <button id="btnDownloadValidExcel" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${validList.length === 0 && (!nominations || nominations.length === 0) && (!postsData || postsData.length === 0) ? 'disabled title="Disabled: No nominations or posts available."' : 'title="Download official List of Valid Nominations in Excel (.xlsx)"'}>
               <span>📊</span> Download Excel
             </button>
             <button data-nav="/admin/verify" class="btn btn-secondary btn-sm">✅ Review Nominations</button>
@@ -204,7 +204,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
         ${!validPublished ? `
         <div class="alert alert-warning text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <span>⚠️ Ensure all received nomination papers have been verified by the Returning Officer before publishing.</span>
-          <button id="publishValidBtn" class="btn btn-primary shrink-0" ${validList.length === 0 ? 'disabled title="No valid candidates to publish"' : ''}>
+          <button id="publishValidBtn" class="btn btn-primary shrink-0" ${(!nominations || nominations.length === 0) && (!postsData || postsData.length === 0) ? 'disabled title="No nominations or posts to publish"' : ''}>
             📢 Publish Valid Nominations List
           </button>
         </div>` : `
@@ -230,10 +230,10 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-2 shrink-0">
-            <button id="btnPrintFinal" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${finalList.length === 0 ? 'disabled title="Disabled: No approved contesting candidates available yet. Verify nominations and complete withdrawals first."' : 'title="Print official Final List of Eligible Contesting Candidates"'}>
+            <button id="btnPrintFinal" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${finalList.length === 0 && (!nominations || nominations.length === 0) && (!postsData || postsData.length === 0) ? 'disabled title="Disabled: No nominations or posts available."' : 'title="Print official Final List of Eligible Contesting Candidates"'}>
               <span>🖨️</span> Print Final List
             </button>
-            <button id="btnDownloadFinalExcel" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${finalList.length === 0 ? 'disabled title="Disabled: No approved contesting candidates available yet."' : 'title="Download official Final List of Eligible Contesting Candidates in Excel (.xlsx)"'}>
+            <button id="btnDownloadFinalExcel" class="btn btn-secondary btn-sm flex items-center gap-1.5" ${finalList.length === 0 && (!nominations || nominations.length === 0) && (!postsData || postsData.length === 0) ? 'disabled title="Disabled: No nominations or posts available."' : 'title="Download official Final List of Eligible Contesting Candidates in Excel (.xlsx)"'}>
               <span>📊</span> Download Excel
             </button>
             <button data-nav="/admin/withdrawals" class="btn btn-secondary btn-sm">↩️ Withdrawals</button>
@@ -356,16 +356,29 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
     const isFinal = type === 'final';
     const list = isFinal ? finalList : validList;
     
-    if (list.length === 0) {
+    if (list.length === 0 && (!postsData || postsData.length === 0)) {
       alert(isFinal ? 'No approved contesting candidates found to print.' : 'No valid nominations found to print.');
       return;
     }
 
-    // Group by post
+    // Group by post: ensure all configured posts and any posts from nominations (even rejected) are included
     const grouped = {};
+    if (Array.isArray(postsData)) {
+      postsData.forEach(p => {
+        const pName = typeof p === 'string' ? p : p.post;
+        if (pName && !grouped[pName]) grouped[pName] = [];
+      });
+    }
+    if (Array.isArray(nominations)) {
+      nominations.forEach(n => {
+        if (n.post && !grouped[n.post]) grouped[n.post] = [];
+      });
+    }
     list.forEach(n => {
-      if (!grouped[n.post]) grouped[n.post] = [];
-      grouped[n.post].push(n);
+      if (n.post) {
+        if (!grouped[n.post]) grouped[n.post] = [];
+        grouped[n.post].push(n);
+      }
     });
 
     // Use official post order and ensure Association Secretaries are alphabetically sorted
@@ -403,39 +416,50 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
     `;
 
     orderedPostNames.forEach(post => {
-      const noms = grouped[post];
+      const noms = grouped[post] || [];
       const isUncontested = isFinal && noms.length === 1;
+      const hasNoValid = noms.length === 0;
 
       html += `
         <tr>
           <td colspan="${isFinal ? '7' : '6'}" style="border:1px solid #000;padding:8px;background:#f3f4f6;font-weight:bold;text-transform:uppercase;font-size:13px">
             POST: ${esc(post)}
-            <span style="font-size:11px;font-weight:normal;float:right">
-              ${noms.length} Candidate${noms.length > 1 ? 's' : ''} ${isUncontested ? '— (UNCONTESTED)' : ''}
+            <span style="font-size:11px;font-weight:normal;float:right;color:${hasNoValid ? '#b91c1c' : '#111'}">
+              ${hasNoValid ? '<strong style="color:#b91c1c">NO VALID NOMINATIONS</strong>' : `${noms.length} Candidate${noms.length > 1 ? 's' : ''} ${isUncontested ? '— (UNCONTESTED)' : ''}`}
             </span>
           </td>
         </tr>
       `;
 
-      noms.forEach((n, idx) => {
-        const sl  = n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || n.candidate?.serial_number || '–';
-        const adm = n.candidate?.['ADMISION NO'] || n.candidateAdmission || n.candidate?.admission_no || '–';
+      if (hasNoValid) {
         html += `
           <tr>
-            <td style="border:1px solid #000;padding:6px;text-align:center;font-weight:bold">${idx + 1}</td>
-            <td style="border:1px solid #000;padding:6px 8px;font-weight:bold">${esc(n.candidateName)}</td>
-            <td style="border:1px solid #000;padding:6px 8px;text-align:center;font-family:monospace;font-weight:bold">${esc(sl)}</td>
-            <td style="border:1px solid #000;padding:6px 8px;text-align:center;font-family:monospace">${esc(adm)}</td>
-            <td style="border:1px solid #000;padding:6px 8px">${esc(n.candidateClass)}</td>
-            <td style="border:1px solid #000;padding:6px 8px">${esc(n.candidateDept)}</td>
-            ${isFinal ? `
-              <td style="border:1px solid #000;padding:6px 8px;text-align:center;font-weight:bold;font-size:11px">
-                ${isUncontested ? '<span style="color:#047857">ELECTED UNOPPOSED</span>' : '<span style="color:#1d4ed8">CONTESTING</span>'}
-              </td>
-            ` : ''}
+            <td colspan="${isFinal ? '7' : '6'}" style="border:1px solid #000;padding:9px 12px;text-align:center;color:#b91c1c;font-weight:bold;font-size:11px;background:#fff5f5;letter-spacing:0.5px">
+              ⚠️ NO VALID NOMINATIONS
+            </td>
           </tr>
         `;
-      });
+      } else {
+        noms.forEach((n, idx) => {
+          const sl  = n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || n.candidate?.serial_number || '–';
+          const adm = n.candidate?.['ADMISION NO'] || n.candidateAdmission || n.candidate?.admission_no || '–';
+          html += `
+            <tr>
+              <td style="border:1px solid #000;padding:6px;text-align:center;font-weight:bold">${idx + 1}</td>
+              <td style="border:1px solid #000;padding:6px 8px;font-weight:bold">${esc(n.candidateName)}</td>
+              <td style="border:1px solid #000;padding:6px 8px;text-align:center;font-family:monospace;font-weight:bold">${esc(sl)}</td>
+              <td style="border:1px solid #000;padding:6px 8px;text-align:center;font-family:monospace">${esc(adm)}</td>
+              <td style="border:1px solid #000;padding:6px 8px">${esc(n.candidateClass)}</td>
+              <td style="border:1px solid #000;padding:6px 8px">${esc(n.candidateDept)}</td>
+              ${isFinal ? `
+                <td style="border:1px solid #000;padding:6px 8px;text-align:center;font-weight:bold;font-size:11px">
+                  ${isUncontested ? '<span style="color:#047857">ELECTED UNOPPOSED</span>' : '<span style="color:#1d4ed8">CONTESTING</span>'}
+                </td>
+              ` : ''}
+            </tr>
+          `;
+        });
+      }
     });
 
     html += `
@@ -503,7 +527,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
   // ── Download Excel Handlers ────────────────────────────────────────────────
   main.querySelector('#btnDownloadValidExcel')?.addEventListener('click', () => {
     try {
-      const fileName = exportNominationsToExcel(validList, 'valid', { collegeName, year, shortName });
+      const fileName = exportNominationsToExcel(validList, 'valid', { collegeName, year, shortName, posts: postsData });
       showToast(`Excel downloaded: ${fileName}`, 'success');
     } catch (err) {
       showToast(err.message, 'error');
@@ -512,7 +536,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
 
   main.querySelector('#btnDownloadFinalExcel')?.addEventListener('click', () => {
     try {
-      const fileName = exportNominationsToExcel(finalList, 'final', { collegeName, year, shortName });
+      const fileName = exportNominationsToExcel(finalList, 'final', { collegeName, year, shortName, posts: postsData });
       showToast(`Excel downloaded: ${fileName}`, 'success');
     } catch (err) {
       showToast(err.message, 'error');

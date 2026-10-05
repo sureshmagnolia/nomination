@@ -11,15 +11,20 @@ import { exportNominationsToExcel } from '../excelExporter.js';
 export async function renderFinalList(container) {
   let year = new Date().getFullYear();
   let shortName = CONFIG.COLLEGE_SHORT_NAME;
+  let allPosts = [];
+  let isPublished = false;
   try {
-    const [s, sets] = await Promise.all([
+    const [s, sets, postsData] = await Promise.all([
       api.getPublicSchedule().catch(() => ({})),
-      api.getSettings().catch(() => ({}))
+      api.getSettings().catch(() => ({})),
+      api.getPosts().catch(() => [])
     ]);
     if (s.electionYear) year = s.electionYear;
     if (sets.electionYear) year = sets.electionYear;
     if (sets.collegeShortName) shortName = sets.collegeShortName;
     else if (sets.shortName) shortName = sets.shortName;
+    allPosts = postsData || [];
+    isPublished = s.isFinalListActive === true || s.finalListPublished === 'true' || sets.finalListPublished === 'true' || s.finalListOverride === 'FORCE_OPEN';
   } catch(e) {}
 
   container.innerHTML = publicLayout('Final Candidates List', `
@@ -29,30 +34,63 @@ export async function renderFinalList(container) {
 
   try {
     const data = await api.getFinalNominations();
-    // getFinalNominations returns { active: [], withdrawn: [] }
-    renderList(container.querySelector('main'), data?.active || [], year, shortName);
+    // getFinalNominations returns { active: [], withdrawn: [], nominatedPosts: [] }
+    const active = data?.active || [];
+    const withdrawn = data?.withdrawn || [];
+    const nominatedPosts = data?.nominatedPosts || [];
+    if (!isPublished && active.length === 0) {
+      renderPending(container.querySelector('main'));
+      return;
+    }
+    renderList(container.querySelector('main'), active, year, shortName, allPosts, withdrawn, nominatedPosts);
   } catch (e) {
-    renderList(container.querySelector('main'), [], year, shortName);
+    if (!isPublished) {
+      renderPending(container.querySelector('main'));
+    } else {
+      renderList(container.querySelector('main'), [], year, shortName, allPosts, [], []);
+    }
   }
 }
 
-function renderList(main, nominations, year, shortName = null) {
-  if (!nominations || nominations.length === 0) {
-    main.innerHTML = `
-      <div class="glass rounded-3xl p-20 text-center border-dashed border-white/10">
-        <div class="text-6xl mb-6">🏁</div>
-        <h2 class="text-2xl font-bold text-white mb-2">Final List Pending</h2>
-        <p class="text-slate-400 max-w-md mx-auto">The final candidate list will be published after the withdrawal period and scrutiny. Please check back later.</p>
-      </div>
-    `;
+function renderPending(main) {
+  main.innerHTML = `
+    <div class="glass rounded-3xl p-20 text-center border-dashed border-white/10">
+      <div class="text-6xl mb-6">🏁</div>
+      <h2 class="text-2xl font-bold text-white mb-2">Final List Pending</h2>
+      <p class="text-slate-400 max-w-md mx-auto">The final candidate list will be published after the withdrawal period and scrutiny. Please check back later.</p>
+    </div>
+  `;
+}
+
+function renderList(main, nominations, year, shortName = null, allPosts = [], withdrawnNominations = [], nominatedPosts = []) {
+  if ((!nominations || nominations.length === 0) && (!allPosts || allPosts.length === 0) && (!nominatedPosts || nominatedPosts.length === 0)) {
+    renderPending(main);
     return;
   }
   
   // Group by post and sort posts (Association Secretaries alphabetically sorted)
   const byPost = {};
+  if (Array.isArray(allPosts)) {
+    allPosts.forEach(p => {
+      const pName = typeof p === 'string' ? p : p.post;
+      if (pName && !byPost[pName]) byPost[pName] = [];
+    });
+  }
+  if (Array.isArray(nominatedPosts)) {
+    nominatedPosts.forEach(pName => {
+      if (pName && !byPost[pName]) byPost[pName] = [];
+    });
+  }
+  if (Array.isArray(withdrawnNominations)) {
+    withdrawnNominations.forEach(n => {
+      if (n.post && !byPost[n.post]) byPost[n.post] = [];
+    });
+  }
   nominations.forEach(n => {
-    if (!byPost[n.post]) byPost[n.post] = [];
-    byPost[n.post].push(n);
+    if (n.post) {
+      if (!byPost[n.post]) byPost[n.post] = [];
+      byPost[n.post].push(n);
+    }
   });
 
   const sortedPosts = Object.keys(byPost).sort(comparePosts);
@@ -74,6 +112,25 @@ function renderList(main, nominations, year, shortName = null) {
       <div class="space-y-12">
         ${sortedPosts.map(post => {
           const noms = byPost[post] || [];
+          const hasNoValid = noms.length === 0;
+
+          if (hasNoValid) {
+            return `
+            <div class="glass rounded-2xl overflow-hidden shadow-2xl border border-rose-500/30 bg-rose-950/10">
+              <div class="px-6 py-4 bg-gradient-to-r from-rose-500/15 via-red-950/20 to-slate-900 border-b border-rose-500/20 flex justify-between items-center">
+                <h3 class="font-bold text-rose-300 text-sm uppercase tracking-widest">${esc(post)}</h3>
+                <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold">
+                  ⚠️ NO VALID NOMINATIONS
+                </span>
+              </div>
+              <div class="p-6 text-center text-slate-400 text-xs space-y-1">
+                <p class="font-bold text-rose-200 text-sm tracking-wide">No Valid Nominations</p>
+                <p class="text-[11px] text-slate-400">All nominations for this post were rejected during scrutiny or withdrawn.</p>
+              </div>
+            </div>
+            `;
+          }
+
           noms.sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
           return `
           <div class="glass rounded-2xl overflow-hidden shadow-2xl border border-white/5">
@@ -155,7 +212,7 @@ function renderList(main, nominations, year, shortName = null) {
 
   main.querySelector('#btnExportFinalExcel')?.addEventListener('click', () => {
     try {
-      exportNominationsToExcel(nominations, 'final', { year, shortName });
+      exportNominationsToExcel(nominations, 'final', { year, shortName, posts: allPosts });
     } catch (e) {
       alert(e.message);
     }
