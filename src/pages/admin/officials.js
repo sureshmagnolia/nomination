@@ -117,6 +117,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     return observers.some(o => o.name === name);
   };
 
+  let disciplineCharge = [];
+  const cachedDisc = localStorage.getItem('gcc_election_discipline');
+  if (cachedDisc !== null) {
+    try { disciplineCharge = JSON.parse(cachedDisc); } catch (_) { disciplineCharge = []; }
+  } else if (Array.isArray(initialOfficialsData?.disciplineCharge)) {
+    disciplineCharge = initialOfficialsData.disciplineCharge;
+    localStorage.setItem('gcc_election_discipline', JSON.stringify(disciplineCharge));
+  }
+
+  const isDiscipline = (name) => {
+    if (!name) return false;
+    return disciplineCharge.some(d => d.name === name);
+  };
+
   // Active UI state
   let activeTab = 'polling'; // 'polling' | 'counting' | 'faculty' | 'nonteaching'
   let facultySearch = '';
@@ -146,6 +160,55 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const getFaculty = (identifier) => {
     if (!identifier) return null;
     return faculty.find(f => f.pen === identifier || f.name === identifier || `${f.name} (${f.pen})` === identifier);
+  };
+
+  // Helper: Get person from either Teaching Faculty or Non-Teaching Staff roster
+  const getPerson = (identifier) => {
+    if (!identifier) return null;
+    const fac = faculty.find(f => f.pen === identifier || f.name === identifier || `${f.name} (${f.pen})` === identifier);
+    if (fac) return { ...fac, type: 'Teaching Faculty' };
+    const nt = nonTeaching.find(n => n.pen === identifier || n.name === identifier || `${n.name} (${n.pen})` === identifier);
+    if (nt) return { ...nt, type: 'Non-Teaching Staff' };
+    return null;
+  };
+
+  // Helper: Render all roster options (Teaching Faculty + Non-Teaching Staff) with optgroups for Observers and Discipline Charge modals
+  const renderAllRosterOptions = (currentSelectedName, draftList, currentIdx, placeholder = '-- Select Official from Roster --') => {
+    let html = `<option value="">${placeholder}</option>`;
+
+    // Group 1: Teaching Faculty
+    html += `<optgroup label="Teaching Faculty (${faculty.length})">`;
+    faculty.forEach(f => {
+      const isCur = currentSelectedName === f.name;
+      const isChosenInOther = draftList.some((item, i) => i !== currentIdx && item.name === f.name);
+      let prefix = '';
+      if (f.isExcluded) prefix += '⛔ [Excluded] ';
+      if (isChosenInOther) prefix += '🚩 [Selected in another slot] ';
+      html += `
+        <option value="${esc(f.name)}" ${isCur ? 'selected' : ''} ${isChosenInOther ? 'disabled' : ''}>
+          ${prefix}#${f.seniority} ${esc(f.name)} (${esc(f.designation)} · ${esc(f.department || 'Academic')} · PEN:${f.pen || '–'})
+        </option>
+      `;
+    });
+    html += `</optgroup>`;
+
+    // Group 2: Non-Teaching Staff
+    html += `<optgroup label="Non-Teaching Staff (${nonTeaching.length})">`;
+    nonTeaching.forEach((nt) => {
+      const isCur = currentSelectedName === nt.name;
+      const isChosenInOther = draftList.some((item, i) => i !== currentIdx && item.name === nt.name);
+      let prefix = '';
+      if (nt.isExcluded) prefix += '⛔ [Excluded] ';
+      if (isChosenInOther) prefix += '🚩 [Selected in another slot] ';
+      html += `
+        <option value="${esc(nt.name)}" ${isCur ? 'selected' : ''} ${isChosenInOther ? 'disabled' : ''}>
+          ${prefix}${esc(nt.name)} (${esc(nt.designation || 'Staff')} · ${esc(nt.department || 'Office')} · PEN:${nt.pen || '–'})
+        </option>
+      `;
+    });
+    html += `</optgroup>`;
+
+    return html;
   };
 
   // Helper: Check if faculty is on polling duty
@@ -209,10 +272,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <td>
           <div class="flex items-center gap-1.5 flex-wrap">
             ${isObserver(f.name) ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">⚖️ Observer</span>` : ''}
+            ${isDiscipline(f.name) ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold">🛡️ Discipline</span>` : ''}
             ${pDuty ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">Booth ${pDuty.boothNumber} (${pDuty.role})</span>` : ''}
             ${cDuty ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-semibold">Table ${cDuty.tableNumber} (${cDuty.role})</span>` : ''}
             ${pDuty && cDuty ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">⚠️ Double Duty</span>` : ''}
-            ${!isObserver(f.name) && !pDuty && !cDuty ? `<span class="text-slate-500 text-[11px]">–</span>` : ''}
+            ${!isObserver(f.name) && !isDiscipline(f.name) && !pDuty && !cDuty ? `<span class="text-slate-500 text-[11px]">–</span>` : ''}
           </div>
         </td>
         <td>
@@ -254,7 +318,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           ${nt.pen || '–'}
         </td>
         <td>
-          ${asstDuty.polling ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">Booth ${asstDuty.polling.boothNumber}</span>` : '<span class="text-slate-500">–</span>'}
+          <div class="flex items-center gap-1 flex-wrap">
+            ${isObserver(nt.name) ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">⚖️ Observer</span>` : ''}
+            ${isDiscipline(nt.name) ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold">🛡️ Discipline</span>` : ''}
+            ${asstDuty.polling ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">Booth ${asstDuty.polling.boothNumber}</span>` : ''}
+            ${!isObserver(nt.name) && !isDiscipline(nt.name) && !asstDuty.polling ? '<span class="text-slate-500">–</span>' : ''}
+          </div>
         </td>
         <td>
           ${asstDuty.counting ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-semibold">Table ${asstDuty.counting.tableNumber}</span>` : '<span class="text-slate-500">–</span>'}
@@ -711,6 +780,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     localStorage.setItem('gcc_polling_teams', JSON.stringify(pollingTeams));
     localStorage.setItem('gcc_counting_teams', JSON.stringify(countingTeams));
     localStorage.setItem('gcc_election_observers', JSON.stringify(observers));
+    localStorage.setItem('gcc_election_discipline', JSON.stringify(disciplineCharge));
 
     try {
       await api.adminSaveOfficials(pwd, {
@@ -718,7 +788,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         nonTeaching,
         pollingTeams,
         countingTeams,
-        observers
+        observers,
+        disciplineCharge
       });
       if (!quiet) showToast('Officials and rosters saved successfully!', 'success');
     } catch (e) {
@@ -758,6 +829,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const preservedPollingFacultyNames = new Set();
     const preservedPollingAssistantNames = new Set();
     observers.forEach(o => { if (o.name) preservedPollingFacultyNames.add(o.name); });
+    disciplineCharge.forEach(d => { if (d.name) preservedPollingFacultyNames.add(d.name); });
     pollingTeams.forEach(t => {
       if (t.presidingOfficer?.name) preservedPollingFacultyNames.add(t.presidingOfficer.name);
       if (t.pollingOfficer1?.name) preservedPollingFacultyNames.add(t.pollingOfficer1.name);
@@ -800,9 +872,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     }
 
     const observerNames = new Set(observers.map(o => o.name));
-    // Candidate active, non-excluded faculty not already allotted in Polling or Observers
+    const disciplineNames = new Set(disciplineCharge.map(d => d.name));
+    // Candidate active, non-excluded faculty not already allotted in Polling, Observers, or Discipline Charge
     const candidateFaculty = faculty
-      .filter(f => !f.isExcluded && !preservedPollingFacultyNames.has(f.name) && !observerNames.has(f.name))
+      .filter(f => !f.isExcluded && !preservedPollingFacultyNames.has(f.name) && !observerNames.has(f.name) && !disciplineNames.has(f.name))
       .sort((a, b) => a.seniority - b.seniority);
 
     let filledCount = 0;
@@ -867,7 +940,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     // 4. Fill Empty Polling Assistants (Non-Teaching Staff)
     if (emptyAssistantBooths.length > 0) {
       const countingAsstNames = new Set(countingTeams.map(t => t.countingAssistant?.name).filter(Boolean));
-      const availableNT = nonTeaching.filter(nt => !nt.isExcluded && !preservedPollingAssistantNames.has(nt.name));
+      const availableNT = nonTeaching.filter(nt => !nt.isExcluded && !preservedPollingAssistantNames.has(nt.name) && !observerNames.has(nt.name) && !disciplineNames.has(nt.name));
       const freshNT = availableNT.filter(nt => !countingAsstNames.has(nt.name));
       const doubleDutyNT = availableNT.filter(nt => countingAsstNames.has(nt.name));
       const ntPool = [...freshNT, ...doubleDutyNT];
@@ -932,6 +1005,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const preservedCountingFacultyNames = new Set();
     const preservedCountingAssistantNames = new Set();
     observers.forEach(o => { if (o.name) preservedCountingFacultyNames.add(o.name); });
+    disciplineCharge.forEach(d => { if (d.name) preservedCountingFacultyNames.add(d.name); });
     countingTeams.forEach(t => {
       if (t.supervisor?.name) preservedCountingFacultyNames.add(t.supervisor.name);
       if (t.countingOfficer1?.name) preservedCountingFacultyNames.add(t.countingOfficer1.name);
@@ -974,9 +1048,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     }
 
     const observerNames = new Set(observers.map(o => o.name));
-    // Candidate active, non-excluded faculty not already allotted in Counting or Observers
+    const disciplineNames = new Set(disciplineCharge.map(d => d.name));
+    // Candidate active, non-excluded faculty not already allotted in Counting, Observers, or Discipline Charge
     const candidateFaculty = faculty
-      .filter(f => !f.isExcluded && !preservedCountingFacultyNames.has(f.name) && !observerNames.has(f.name))
+      .filter(f => !f.isExcluded && !preservedCountingFacultyNames.has(f.name) && !observerNames.has(f.name) && !disciplineNames.has(f.name))
       .sort((a, b) => a.seniority - b.seniority);
 
     let filledCount = 0;
@@ -1041,7 +1116,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     // 4. Fill Empty Counting Assistants (Non-Teaching Staff)
     if (emptyAssistantTables.length > 0) {
       const pollingAsstNames = new Set(pollingTeams.map(t => t.pollingAssistant?.name).filter(Boolean));
-      const availableNT = nonTeaching.filter(nt => !nt.isExcluded && !preservedCountingAssistantNames.has(nt.name));
+      const availableNT = nonTeaching.filter(nt => !nt.isExcluded && !preservedCountingAssistantNames.has(nt.name) && !observerNames.has(nt.name) && !disciplineNames.has(nt.name));
       const freshNT = availableNT.filter(nt => !pollingAsstNames.has(nt.name));
       const doubleDutyNT = availableNT.filter(nt => pollingAsstNames.has(nt.name));
       const ntPool = [...freshNT, ...doubleDutyNT];
@@ -1083,6 +1158,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     return faculty.map(f => {
       const isSelected = currentSelectedName === f.name;
       const isObs = isObserver(f.name);
+      const isDisc = isDiscipline(f.name);
       const pDuty = getPollingAssignment(f.name);
       // Already allotted to another polling slot (either another booth or another role in this booth)
       const isAllottedInPolling = pDuty && !(pDuty.boothNumber === boothNumber && pDuty.slot === currentRole);
@@ -1092,6 +1168,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       if (f.isExcluded) prefix += '⛔ ';
       if (isObs) {
         prefix += '⚖️ [Allotted: Observer] ';
+      } else if (isDisc) {
+        prefix += '🛡️ [Allotted: Discipline Charge] ';
       } else if (isAllottedInPolling) {
         prefix += `🚩 [Allotted: Booth ${pDuty.boothNumber} - ${pDuty.role}] `;
       } else if (isSelected) {
@@ -1102,7 +1180,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const doubleTag = cDuty ? `[⚠️ Double Duty: Table ${cDuty.tableNumber}]` : '';
 
       return `
-        <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${(isAllottedInPolling || isObs) && !isSelected ? 'disabled' : ''}>
+        <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${(isAllottedInPolling || isObs || isDisc) && !isSelected ? 'disabled' : ''}>
           ${prefix}#${f.seniority} ${esc(f.name)} (${esc(f.designation)} · PEN:${f.pen || '–'}) ${tag} ${doubleTag}
         </option>
       `;
@@ -1114,6 +1192,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     return faculty.map(f => {
       const isSelected = currentSelectedName === f.name;
       const isObs = isObserver(f.name);
+      const isDisc = isDiscipline(f.name);
       const cDuty = getCountingAssignment(f.name);
       // Already allotted to another counting slot (either another table or another role on this table)
       const isAllottedInCounting = cDuty && !(cDuty.tableNumber === tableNumber && cDuty.slot === currentRole);
@@ -1123,6 +1202,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       if (f.isExcluded) prefix += '⛔ ';
       if (isObs) {
         prefix += '⚖️ [Allotted: Observer] ';
+      } else if (isDisc) {
+        prefix += '🛡️ [Allotted: Discipline Charge] ';
       } else if (isAllottedInCounting) {
         prefix += `🚩 [Allotted: Table ${cDuty.tableNumber} - ${cDuty.role}] `;
       } else if (isSelected) {
@@ -1133,7 +1214,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const doubleTag = pDuty ? `[⚠️ Double Duty: Booth ${pDuty.boothNumber}]` : '';
 
       return `
-        <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${(isAllottedInCounting || isObs) && !isSelected ? 'disabled' : ''}>
+        <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${(isAllottedInCounting || isObs || isDisc) && !isSelected ? 'disabled' : ''}>
           ${prefix}#${f.seniority} ${esc(f.name)} (${esc(f.designation)} · PEN:${f.pen || '–'}) ${tag} ${doubleTag}
         </option>
       `;
@@ -1144,12 +1225,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const renderPollingNonTeachingOptions = (boothNumber, currentSelectedName) => {
     return nonTeaching.map(nt => {
       const isSelected = currentSelectedName === nt.name;
+      const isObs = isObserver(nt.name);
+      const isDisc = isDiscipline(nt.name);
       const ntAssigned = getNonTeachingAssignment(nt.name);
       const isAllottedInPolling = ntAssigned.polling && ntAssigned.polling.boothNumber !== boothNumber;
 
       let prefix = '';
       if (nt.isExcluded) prefix += '⛔ ';
-      if (isAllottedInPolling) {
+      if (isObs) {
+        prefix += '⚖️ [Allotted: Observer] ';
+      } else if (isDisc) {
+        prefix += '🛡️ [Allotted: Discipline Charge] ';
+      } else if (isAllottedInPolling) {
         prefix += `🚩 [Allotted: Booth ${ntAssigned.polling.boothNumber} - Polling Assistant] `;
       } else if (isSelected) {
         prefix += '✓ (Current) ';
@@ -1158,7 +1245,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const doubleTag = ntAssigned.counting ? `[⚠️ Double Duty: Table ${ntAssigned.counting.tableNumber}]` : '';
 
       return `
-        <option value="${esc(nt.name)}" ${isSelected ? 'selected' : ''} ${isAllottedInPolling ? 'disabled' : ''}>
+        <option value="${esc(nt.name)}" ${isSelected ? 'selected' : ''} ${(isAllottedInPolling || isObs || isDisc) && !isSelected ? 'disabled' : ''}>
           ${prefix}${esc(nt.name)} (${esc(nt.designation)}${nt.pen ? ` · PEN:${nt.pen}` : ''}) ${doubleTag}
         </option>
       `;
@@ -1169,12 +1256,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const renderCountingNonTeachingOptions = (tableNumber, currentSelectedName) => {
     return nonTeaching.map(nt => {
       const isSelected = currentSelectedName === nt.name;
+      const isObs = isObserver(nt.name);
+      const isDisc = isDiscipline(nt.name);
       const ntAssigned = getNonTeachingAssignment(nt.name);
       const isAllottedInCounting = ntAssigned.counting && ntAssigned.counting.tableNumber !== tableNumber;
 
       let prefix = '';
       if (nt.isExcluded) prefix += '⛔ ';
-      if (isAllottedInCounting) {
+      if (isObs) {
+        prefix += '⚖️ [Allotted: Observer] ';
+      } else if (isDisc) {
+        prefix += '🛡️ [Allotted: Discipline Charge] ';
+      } else if (isAllottedInCounting) {
         prefix += `🚩 [Allotted: Table ${ntAssigned.counting.tableNumber} - Counting Assistant] `;
       } else if (isSelected) {
         prefix += '✓ (Current) ';
@@ -1183,7 +1276,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const doubleTag = ntAssigned.polling ? `[⚠️ Double Duty: Booth ${ntAssigned.polling.boothNumber}]` : '';
 
       return `
-        <option value="${esc(nt.name)}" ${isSelected ? 'selected' : ''} ${isAllottedInCounting ? 'disabled' : ''}>
+        <option value="${esc(nt.name)}" ${isSelected ? 'selected' : ''} ${(isAllottedInCounting || isObs || isDisc) && !isSelected ? 'disabled' : ''}>
           ${prefix}${esc(nt.name)} (${esc(nt.designation)}${nt.pen ? ` · PEN:${nt.pen}` : ''}) ${doubleTag}
         </option>
       `;
@@ -1210,6 +1303,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const totalNT = nonTeaching.length;
     const activeNT = nonTeaching.filter(n => !n.isExcluded).length;
     const totalObservers = observers.length;
+    const totalDiscipline = disciplineCharge.length;
 
     let pollingSlotsFilled = 0;
     let pollingAsstFilled = 0;
@@ -1245,7 +1339,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <span class="text-3xl">👥</span>
               <div>
                 <h3 class="text-xl font-bold text-white tracking-wide">Election Officials & Team Builder</h3>
-                <p class="text-slate-400 text-xs">Allot Observers, Presiding Officers, Polling Officers, Counting Supervisors, and Assistants.</p>
+                <p class="text-slate-400 text-xs">Allot Observers, Discipline Squad, Presiding Officers, Polling Officers, Counting Supervisors, and Assistants.</p>
               </div>
             </div>
           </div>
@@ -1269,7 +1363,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         </div>
 
         <!-- Metric Ribbon -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 no-print">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5 no-print">
           <div class="glass p-3 rounded-xl border border-amber-500/40 flex flex-col justify-between bg-amber-950/20">
             <span class="text-[11px] uppercase tracking-wider text-amber-300 font-semibold">General Observers</span>
             <div class="flex items-baseline gap-2 mt-1">
@@ -1277,6 +1371,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <span class="text-xs text-slate-400">Appointed</span>
             </div>
             <span class="text-[10px] text-amber-400 mt-1">Overall Process Supervision</span>
+          </div>
+
+          <div class="glass p-3 rounded-xl border border-rose-500/40 flex flex-col justify-between bg-rose-950/20">
+            <span class="text-[11px] uppercase tracking-wider text-rose-300 font-semibold">Discipline Squad</span>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span class="text-2xl font-bold text-rose-200 font-mono">${totalDiscipline}</span>
+              <span class="text-xs text-slate-400">In Charge</span>
+            </div>
+            <span class="text-[10px] text-rose-400 mt-1">Campus Order &amp; Vigilance</span>
           </div>
 
           <div class="glass p-3 rounded-xl border border-white/10 flex flex-col justify-between">
@@ -1354,10 +1457,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <button id="btnAutoAllotPolling" class="btn btn-primary bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow" title="Auto-allot empty polling slots while preserving all manually chosen officials">
                 ⚡ Auto-Allot Polling Teams
               </button>
-              <button id="btnOpenObserverModal" class="btn btn-secondary border-amber-500/50 text-amber-300 hover:text-white hover:bg-amber-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Appoint faculty as statutory Observers for the total election process">
+              <button id="btnOpenObserverModal" class="btn btn-secondary border-amber-500/50 text-amber-300 hover:text-white hover:bg-amber-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Appoint personnel as statutory Observers for the total election process">
                 ⚖️ Allot Observers (${observers.length})
               </button>
-              <button id="btnPrintMasterDutyListPolling" class="btn btn-primary bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs px-3.5 py-2 flex items-center gap-1.5 shadow" title="Print Master Duty List with Observers 1st and Department-wise Officials">
+              <button id="btnOpenDisciplineModal" class="btn btn-secondary border-rose-500/50 text-rose-300 hover:text-white hover:bg-rose-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Appoint personnel for Campus Discipline and Vigilance Charge">
+                🛡️ Allot Discipline (${disciplineCharge.length})
+              </button>
+              <button id="btnPrintMasterDutyListPolling" class="btn btn-primary bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs px-3.5 py-2 flex items-center gap-1.5 shadow" title="Print Master Duty List with Observers &amp; Discipline Squad 1st and Department-wise Officials">
                 🖨️ Master Duty List
               </button>
               <button id="btnPrintPollingOrders" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5">
@@ -1379,7 +1485,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     General Election Observers (Total Process Supervision)
                     <span class="text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full">${observers.length} Appointed</span>
                   </h5>
-                  <p class="text-[11px] text-slate-400">Senior faculty appointed to oversee the entire election process across both polling booths and counting tables. Displayed 1st on the Master Duty List.</p>
+                  <p class="text-[11px] text-slate-400">Senior officials (Teaching Faculty or Non-Teaching Staff) appointed to oversee the entire election process across both polling booths and counting tables. Displayed 1st on the Master Duty List.</p>
                 </div>
               </div>
               <button id="btnManageObserversBanner" class="btn btn-secondary border-amber-500/50 text-amber-300 hover:bg-amber-500/20 text-xs px-3 py-1.5 flex items-center gap-1 font-semibold">
@@ -1388,7 +1494,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             </div>
             ${observers.length === 0 ? `
               <div class="py-3 text-center text-slate-400 text-xs">
-                No observers appointed yet. Click <button class="text-amber-300 underline font-semibold btn-manage-observers-inline">Allot Observers</button> to appoint faculty as statutory observers for the total election process.
+                No observers appointed yet. Click <button class="text-amber-300 underline font-semibold btn-manage-observers-inline">Allot Observers</button> to appoint faculty or staff as statutory observers for the total election process.
               </div>
             ` : `
               <div class="flex items-center gap-2 flex-wrap pt-3">
@@ -1397,9 +1503,46 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     <span class="text-amber-400 text-xs font-mono font-bold">#${idx + 1}</span>
                     <div>
                       <div class="font-bold text-white text-xs">${esc(obs.name)}</div>
-                      <div class="text-[10px] text-slate-400">${esc(obs.department || 'Faculty')}${obs.pen ? ` · PEN: ${esc(obs.pen)}` : ''}</div>
+                      <div class="text-[10px] text-slate-400">${esc(obs.department || obs.designation || 'Official')}${obs.pen ? ` · PEN: ${esc(obs.pen)}` : ''}</div>
                     </div>
                     <button class="text-rose-400 hover:text-rose-200 text-xs ml-1.5 btn-quick-remove-observer" data-name="${esc(obs.name)}" title="Remove observer">✖</button>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+
+          <!-- Campus Discipline & Security Squad In-Charge -->
+          <div class="glass rounded-xl border border-rose-500/30 bg-gradient-to-r from-rose-950/30 via-slate-900/60 to-slate-900/40 p-4 shadow-lg no-print">
+            <div class="flex items-center justify-between flex-wrap gap-2 pb-2.5 border-b border-rose-500/20">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-300 flex items-center justify-center text-lg shadow-inner">🛡️</div>
+                <div>
+                  <h5 class="font-bold text-white text-sm flex items-center gap-2">
+                    Campus Discipline In-Charge &amp; Security Squad
+                    <span class="text-[10px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full">${disciplineCharge.length} Appointed</span>
+                  </h5>
+                  <p class="text-[11px] text-slate-400">Officials appointed from Teaching Faculty or Non-Teaching Staff for campus vigilance, entry security, and maintaining order. Displayed 2nd on the Master Duty List.</p>
+                </div>
+              </div>
+              <button id="btnManageDisciplineBanner" class="btn btn-secondary border-rose-500/50 text-rose-300 hover:bg-rose-500/20 text-xs px-3 py-1.5 flex items-center gap-1 font-semibold">
+                ➕ Add / Manage Discipline Charge
+              </button>
+            </div>
+            ${disciplineCharge.length === 0 ? `
+              <div class="py-3 text-center text-slate-400 text-xs">
+                No discipline in-charge personnel appointed yet. Click <button class="text-rose-300 underline font-semibold btn-manage-discipline-inline">Allot Discipline</button> to appoint faculty or staff for campus vigilance and security.
+              </div>
+            ` : `
+              <div class="flex items-center gap-2 flex-wrap pt-3">
+                ${disciplineCharge.map((disc, idx) => `
+                  <div class="flex items-center gap-2 bg-slate-900/90 border border-rose-500/40 rounded-lg px-3 py-1.5 shadow-sm">
+                    <span class="text-rose-400 text-xs font-mono font-bold">#${idx + 1}</span>
+                    <div>
+                      <div class="font-bold text-white text-xs">${esc(disc.name)}</div>
+                      <div class="text-[10px] text-slate-400">${esc(disc.department || disc.designation || 'Staff')}${disc.pen ? ` · PEN: ${esc(disc.pen)}` : ''}</div>
+                    </div>
+                    <button class="text-rose-400 hover:text-rose-200 text-xs ml-1.5 btn-quick-remove-discipline" data-name="${esc(disc.name)}" title="Remove from discipline charge">✖</button>
                   </div>
                 `).join('')}
               </div>
@@ -2431,10 +2574,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         pollingTeams = [];
         countingTeams = [];
         observers = [];
+        disciplineCharge = [];
         localStorage.removeItem('gcc_election_observers');
+        localStorage.removeItem('gcc_election_discipline');
         localStorage.setItem('gcc_roster_migrated_v2', 'true');
         await saveAll(false);
-        showToast('All rosters, team assignments, and observers cleared!', 'info');
+        showToast('All rosters, team assignments, observers, and discipline squad cleared!', 'info');
         renderUI();
       }
     });
@@ -2596,6 +2741,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     main.querySelector('#btnManageObserversBanner')?.addEventListener('click', () => openObserverModal());
     main.querySelector('.btn-manage-observers-inline')?.addEventListener('click', () => openObserverModal());
 
+    // Open Discipline Charge Allotment Modal
+    main.querySelector('#btnOpenDisciplineModal')?.addEventListener('click', () => openDisciplineModal());
+    main.querySelector('#btnManageDisciplineBanner')?.addEventListener('click', () => openDisciplineModal());
+    main.querySelector('.btn-manage-discipline-inline')?.addEventListener('click', () => openDisciplineModal());
+
     // Quick remove observer from banner
     main.querySelectorAll('.btn-quick-remove-observer').forEach(btn => {
       btn.addEventListener('click', async (e) => {
@@ -2604,6 +2754,19 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           observers = observers.filter(o => o.name !== name);
           await saveAll(false);
           showToast(`Removed "${name}" from Observers.`, 'info');
+          renderUI();
+        }
+      });
+    });
+
+    // Quick remove discipline from banner
+    main.querySelectorAll('.btn-quick-remove-discipline').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const name = e.currentTarget.dataset.name;
+        if (confirm(`Remove "${name}" from Campus Discipline Charge?`)) {
+          disciplineCharge = disciplineCharge.filter(d => d.name !== name);
+          await saveAll(false);
+          showToast(`Removed "${name}" from Discipline Charge.`, 'info');
           renderUI();
         }
       });
@@ -2618,7 +2781,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     let draftObservers = observers.map(o => ({ ...o }));
     if (draftObservers.length === 0) {
-      draftObservers.push({ name: '', pen: '', department: '', designation: '', seniority: 999 });
+      draftObservers.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
     }
 
     const modal = document.createElement('div');
@@ -2636,7 +2799,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               </div>
               <div>
                 <h4 class="font-bold text-white text-base">Election Observers Allotment</h4>
-                <p class="text-xs text-slate-400">Appoint faculty members as statutory observers for the total election process. Observers appear first on the Master Duty List.</p>
+                <p class="text-xs text-slate-400">Appoint officials from the roster as statutory observers for the total election process. Observers appear first on the Master Duty List.</p>
               </div>
             </div>
             <button id="btnCloseObsModal" class="text-slate-400 hover:text-white text-2xl font-bold px-2 py-1 leading-none">&times;</button>
@@ -2653,7 +2816,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
             <div class="space-y-3" id="observerRowsContainer">
               ${draftObservers.map((obs, idx) => {
-                const facSelected = faculty.find(f => f.name === obs.name);
+                const personSelected = getPerson(obs.name);
                 return `
                   <div class="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-2 relative" data-obs-idx="${idx}">
                     <div class="flex items-center justify-between">
@@ -2667,31 +2830,19 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
                     <div class="grid grid-cols-1 gap-2">
                       <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-amber-400 focus:outline-none obs-faculty-select" data-idx="${idx}">
-                        <option value="">-- Select Faculty Member for Observer Duty --</option>
-                        ${faculty.map(f => {
-                          const isCur = obs.name === f.name;
-                          const isChosenInOther = draftObservers.some((o, i) => i !== idx && o.name === f.name);
-                          let prefix = '';
-                          if (f.isExcluded) prefix += '⛔ ';
-                          if (isChosenInOther) prefix += '🚩 [Selected in another slot] ';
-                          return `
-                            <option value="${esc(f.name)}" ${isCur ? 'selected' : ''} ${isChosenInOther ? 'disabled' : ''}>
-                              ${prefix}#${f.seniority} ${esc(f.name)} (${esc(f.designation)} · ${esc(f.department || 'General')} · PEN:${f.pen || '–'})
-                            </option>
-                          `;
-                        }).join('')}
+                        ${renderAllRosterOptions(obs.name, draftObservers, idx, '-- Select Official (Teaching Faculty or Non-Teaching Staff) for Observer Duty --')}
                       </select>
                     </div>
 
-                    ${facSelected ? `
+                    ${personSelected ? `
                       <div class="flex items-center gap-2 flex-wrap text-[11px] text-slate-300 bg-black/30 p-2 rounded-lg border border-white/5 font-mono">
-                        <span class="text-amber-300 font-semibold">Rank #${facSelected.seniority}</span>
+                        <span class="text-amber-300 font-semibold">${personSelected.type}</span>
                         <span>•</span>
-                        <span>Dept: <strong class="text-white">${esc(facSelected.department || '–')}</strong></span>
+                        <span>Dept: <strong class="text-white">${esc(personSelected.department || '–')}</strong></span>
                         <span>•</span>
-                        <span>PEN: <strong class="text-white">${esc(facSelected.pen || '–')}</strong></span>
+                        <span>PEN: <strong class="text-white">${esc(personSelected.pen || '–')}</strong></span>
                         <span>•</span>
-                        <span>Desig: <strong class="text-white">${esc(facSelected.designation || 'Faculty')}</strong></span>
+                        <span>Desig: <strong class="text-white">${esc(personSelected.designation || 'Official')}</strong></span>
                       </div>
                     ` : ''}
                   </div>
@@ -2702,7 +2853,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
           <!-- Modal Footer -->
           <div class="p-4 border-t border-white/10 flex items-center justify-between bg-white/5">
-            <span class="text-[11px] text-slate-400">Add as many observers as needed. Saved to cloud database.</span>
+            <span class="text-[11px] text-slate-400">All personnel across Faculty and Staff rosters can be appointed. Saved to cloud database.</span>
             <div class="flex items-center gap-2">
               <button type="button" id="btnCancelObsModal" class="btn btn-secondary text-xs px-4 py-2">Cancel</button>
               <button type="button" id="btnSaveObsModal" class="btn btn-primary bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow">
@@ -2717,7 +2868,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       modal.querySelector('#btnCancelObsModal').onclick = () => modal.remove();
 
       modal.querySelector('#btnAddObserverRow').onclick = () => {
-        draftObservers.push({ name: '', pen: '', department: '', designation: '', seniority: 999 });
+        draftObservers.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
         renderModal();
       };
 
@@ -2726,7 +2877,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           const idx = parseInt(btn.dataset.idx, 10);
           draftObservers.splice(idx, 1);
           if (draftObservers.length === 0) {
-            draftObservers.push({ name: '', pen: '', department: '', designation: '', seniority: 999 });
+            draftObservers.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
           }
           renderModal();
         };
@@ -2735,18 +2886,19 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       modal.querySelectorAll('.obs-faculty-select').forEach(sel => {
         sel.onchange = (e) => {
           const idx = parseInt(sel.dataset.idx, 10);
-          const fName = e.target.value;
-          const fac = faculty.find(f => f.name === fName);
-          if (fac) {
+          const pName = e.target.value;
+          const p = getPerson(pName);
+          if (p) {
             draftObservers[idx] = {
-              name: fac.name,
-              pen: fac.pen || '',
-              department: fac.department || '',
-              designation: fac.designation || 'Faculty',
-              seniority: fac.seniority
+              name: p.name,
+              pen: p.pen || '',
+              department: p.department || '',
+              designation: p.designation || (p.type === 'Teaching Faculty' ? 'Faculty' : 'Staff'),
+              seniority: p.seniority || 999,
+              type: p.type
             };
           } else {
-            draftObservers[idx] = { name: '', pen: '', department: '', designation: '', seniority: 999 };
+            draftObservers[idx] = { name: '', pen: '', department: '', designation: '', seniority: 999, type: '' };
           }
           renderModal();
         };
@@ -2766,31 +2918,192 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     document.body.appendChild(modal);
   };
 
+  // ─── Discipline Charge Allotment Modal ────────────────────────────────────────
+
+  const openDisciplineModal = () => {
+    const existing = document.getElementById('disciplineModalContainer');
+    if (existing) existing.remove();
+
+    let draftDiscipline = disciplineCharge.map(d => ({ ...d }));
+    if (draftDiscipline.length === 0) {
+      draftDiscipline.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'disciplineModalContainer';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+
+    const renderModal = () => {
+      modal.innerHTML = `
+        <div class="glass border border-rose-500/40 rounded-2xl w-full max-w-2xl bg-slate-900/95 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <!-- Modal Header -->
+          <div class="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-rose-950/40 via-slate-900 to-slate-900">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-300 flex items-center justify-center text-xl shadow-inner border border-rose-500/30">
+                🛡️
+              </div>
+              <div>
+                <h4 class="font-bold text-white text-base">Campus Discipline In-Charge &amp; Security Squad Allotment</h4>
+                <p class="text-xs text-slate-400">Appoint officials from Teaching Faculty or Non-Teaching Staff for campus vigilance, entry security, and order. Listed 2nd on the Master Duty List.</p>
+              </div>
+            </div>
+            <button id="btnCloseDiscModal" class="text-slate-400 hover:text-white text-2xl font-bold px-2 py-1 leading-none">&times;</button>
+          </div>
+
+          <!-- Modal Body: Discipline List -->
+          <div class="p-5 overflow-y-auto space-y-4 flex-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-rose-300">Discipline Appointments (${draftDiscipline.length})</span>
+              <button type="button" id="btnAddDisciplineRow" class="btn btn-secondary border-rose-500/40 text-rose-300 hover:bg-rose-500/20 text-xs px-3 py-1.5 flex items-center gap-1 font-semibold">
+                ➕ Add Another Official
+              </button>
+            </div>
+
+            <div class="space-y-3" id="disciplineRowsContainer">
+              ${draftDiscipline.map((disc, idx) => {
+                const person = getPerson(disc.name);
+                return `
+                  <div class="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-2 relative" data-disc-idx="${idx}">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-bold text-rose-300 font-mono flex items-center gap-1.5">
+                        <span>🛡️</span> Discipline In-Charge #${idx + 1}
+                      </span>
+                      <button type="button" class="text-xs text-rose-400 hover:text-rose-200 hover:underline btn-remove-disc-row flex items-center gap-1" data-idx="${idx}">
+                        <span>✖</span> Remove
+                      </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-2">
+                      <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-rose-400 focus:outline-none disc-person-select" data-idx="${idx}">
+                        ${renderAllRosterOptions(disc.name, draftDiscipline, idx, '-- Select Official (Teaching Faculty or Non-Teaching Staff) for Discipline Charge --')}
+                      </select>
+                    </div>
+
+                    ${person ? `
+                      <div class="flex items-center gap-2 flex-wrap text-[11px] text-slate-300 bg-black/30 p-2 rounded-lg border border-white/5 font-mono">
+                        <span class="text-rose-300 font-semibold">${person.type}</span>
+                        <span>•</span>
+                        <span>Dept: <strong class="text-white">${esc(person.department || '–')}</strong></span>
+                        <span>•</span>
+                        <span>PEN: <strong class="text-white">${esc(person.pen || '–')}</strong></span>
+                        <span>•</span>
+                        <span>Desig: <strong class="text-white">${esc(person.designation || '–')}</strong></span>
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="p-4 border-t border-white/10 flex items-center justify-between bg-white/5">
+            <span class="text-[11px] text-slate-400">All roster personnel (Faculty &amp; Staff) are available. Saved to cloud database.</span>
+            <div class="flex items-center gap-2">
+              <button type="button" id="btnCancelDiscModal" class="btn btn-secondary text-xs px-4 py-2">Cancel</button>
+              <button type="button" id="btnSaveDiscModal" class="btn btn-primary bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow">
+                💾 Save Discipline Charge
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      modal.querySelector('#btnCloseDiscModal').onclick = () => modal.remove();
+      modal.querySelector('#btnCancelDiscModal').onclick = () => modal.remove();
+
+      modal.querySelector('#btnAddDisciplineRow').onclick = () => {
+        draftDiscipline.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+        renderModal();
+      };
+
+      modal.querySelectorAll('.btn-remove-disc-row').forEach(btn => {
+        btn.onclick = () => {
+          const idx = parseInt(btn.dataset.idx, 10);
+          draftDiscipline.splice(idx, 1);
+          if (draftDiscipline.length === 0) {
+            draftDiscipline.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+          }
+          renderModal();
+        };
+      });
+
+      modal.querySelectorAll('.disc-person-select').forEach(sel => {
+        sel.onchange = (e) => {
+          const idx = parseInt(sel.dataset.idx, 10);
+          const pName = e.target.value;
+          const p = getPerson(pName);
+          if (p) {
+            draftDiscipline[idx] = {
+              name: p.name,
+              pen: p.pen || '',
+              department: p.department || '',
+              designation: p.designation || (p.type === 'Teaching Faculty' ? 'Faculty' : 'Staff'),
+              seniority: p.seniority || 999,
+              type: p.type
+            };
+          } else {
+            draftDiscipline[idx] = { name: '', pen: '', department: '', designation: '', seniority: 999, type: '' };
+          }
+          renderModal();
+        };
+      });
+
+      modal.querySelector('#btnSaveDiscModal').onclick = async () => {
+        const validDisc = draftDiscipline.filter(d => d.name && d.name.trim().length > 0);
+        disciplineCharge = validDisc;
+        await saveAll(false);
+        modal.remove();
+        showToast(`Appointed ${disciplineCharge.length} Discipline In-Charge Official(s) successfully!`, 'success');
+        renderUI();
+      };
+    };
+
+    renderModal();
+    document.body.appendChild(modal);
+  };
+
   // ─── Master Duty List Standalone Print Engine (Both Polling & Counting) ─────
 
   const getMasterDutyData = () => {
     // 1. Observers (Listed 1st)
     const obsList = observers.map((obs, idx) => {
-      const fac = faculty.find(f => f.name === obs.name);
+      const p = getPerson(obs.name);
       return {
         slNo: `Obs-${idx + 1}`,
         name: obs.name,
-        designation: fac?.designation || obs.designation || 'Faculty',
-        department: fac?.department || obs.department || 'Academic',
-        pen: fac?.pen || obs.pen || '–',
-        duty: 'General Election Observer (Overall Supervision · Polling & Counting)',
+        designation: p?.designation || obs.designation || 'Faculty',
+        department: p?.department || obs.department || 'Academic',
+        pen: p?.pen || obs.pen || '–',
+        duty: 'Statutory Election Observer (Overall Supervision · Polling & Counting)',
         station: 'Central Election Control Room / All Stations',
         reportingTime: '07:30 AM',
-        type: 'Observer'
+        type: p?.type || 'Observer'
       };
     });
 
-    // 2. Department-wise Officials (Teaching Faculty & Non-Teaching Staff)
+    // 2. Campus Discipline In-Charge & Security Squad (Listed 2nd)
+    const discList = disciplineCharge.map((disc, idx) => {
+      const p = getPerson(disc.name);
+      return {
+        slNo: `Disc-${idx + 1}`,
+        name: disc.name,
+        designation: p?.designation || disc.designation || (p?.type === 'Teaching Faculty' ? 'Faculty' : 'Staff'),
+        department: p?.department || disc.department || (p?.type === 'Teaching Faculty' ? 'Academic' : 'Administration'),
+        pen: p?.pen || disc.pen || '–',
+        duty: 'Campus Discipline & Security Squad In-Charge (Vigilance & Campus Order)',
+        station: 'Campus Gates, Corridors & Polling/Counting Precincts',
+        reportingTime: '07:30 AM',
+        type: p?.type || 'Discipline In-Charge'
+      };
+    });
+
+    // 3. Department-wise Officials (Teaching Faculty & Non-Teaching Staff)
     const personnel = [];
 
     // Faculty members assigned to polling or counting
     faculty.forEach(f => {
-      if (isObserver(f.name)) return; // Observers already isolated in Section 1
+      if (isObserver(f.name) || isDiscipline(f.name)) return; // Observers and Discipline Squad isolated in dedicated statutory sections
       const pDuty = getPollingAssignment(f.name);
       const cDuty = getCountingAssignment(f.name);
       if (!pDuty && !cDuty) return;
@@ -2823,6 +3136,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // Non-Teaching Staff assigned to polling or counting
     nonTeaching.forEach(nt => {
+      if (isObserver(nt.name) || isDiscipline(nt.name)) return;
       const ntAssigned = getNonTeachingAssignment(nt.name);
       if (!ntAssigned.polling && !ntAssigned.counting) return;
 
@@ -2861,7 +3175,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       return a.name.localeCompare(b.name);
     });
 
-    return { obsList, personnel };
+    return { obsList, discList, personnel };
   };
 
   const openMasterDutyListWindow = () => {
@@ -3202,7 +3516,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     </div>
     <div class="action-bar-right">
       <button id="btnViewDept" onclick="switchMasterView('dept')" class="btn-tab-toggle active">
-        📋 Department-Wise Master Roll (Observers 1st)
+        📋 Department-Wise Master Roll (Observers &amp; Discipline 1st)
       </button>
       <button id="btnViewBooth" onclick="switchMasterView('booth')" class="btn-tab-toggle">
         🏫 Booth &amp; Table-Wise Deployment Schedule
@@ -3283,8 +3597,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   };
 
   const buildDeptWiseMasterRollHtml = (orderNo, orderDate) => {
-    const { obsList, personnel } = getMasterDutyData();
-    const totalAssigned = obsList.length + personnel.length;
+    const { obsList, discList, personnel } = getMasterDutyData();
+    const totalAssigned = obsList.length + discList.length + personnel.length;
     const doubleDutyCount = personnel.filter(p => p.hasDoubleDuty).length;
 
     return `
@@ -3307,7 +3621,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <!-- Preamble -->
         <p class="preamble-text">
           In exercise of statutory powers vested with the Returning Officer under the College Union Election Rules and Constitution, 
-          the following Teaching Faculty and Non-Teaching Staff are hereby appointed for Election Duty as <strong>Statutory Observers, Polling Personnel, and Counting Personnel</strong> 
+          the following Teaching Faculty and Non-Teaching Staff are hereby appointed for Election Duty as <strong>Statutory Observers, Campus Discipline In-Charge Squad, Polling Personnel, and Counting Personnel</strong> 
           for <strong>College Union Election ${esc(electionYear)}</strong>. Officials are sorted department-wise for administrative convenience and must report promptly for duty at their designated stations. 
           Election duty is statutory; absence without prior written permission of the Returning Officer constitutes dereliction of duty.
         </p>
@@ -3317,6 +3631,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <span><strong>Total Personnel Deployed:</strong> ${totalAssigned}</span>
           <span>•</span>
           <span><strong>Observers:</strong> ${obsList.length}</span>
+          <span>•</span>
+          <span><strong>Discipline Squad:</strong> ${discList.length}</span>
           <span>•</span>
           <span><strong>Teaching Faculty:</strong> ${personnel.filter(p => p.type === 'Teaching Faculty').length}</span>
           <span>•</span>
@@ -3381,9 +3697,68 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </table>
         `}
 
-        <!-- SECTION 2: CONSOLIDATED MASTER DUTY ROLL (SORTED DEPARTMENT-WISE) -->
-        <div class="section-title-box">
-          <span>📋 SECTION 2: CONSOLIDATED MASTER DUTY ROLL (SORTED DEPARTMENT-WISE)</span>
+        <!-- SECTION 2: CAMPUS DISCIPLINE & SECURITY SQUAD IN-CHARGE (CAMPUS VIGILANCE & ORDER) -->
+        <div class="section-title-box" style="margin-top: 14px;">
+          <span>🛡️ SECTION 2: CAMPUS DISCIPLINE &amp; SECURITY SQUAD IN-CHARGE (CAMPUS VIGILANCE &amp; ORDER)</span>
+          <span style="font-size: 8.5px; font-weight: normal;">Gate Control, Corridor Order &amp; Campus Discipline</span>
+        </div>
+
+        ${discList.length === 0 ? `
+          <div style="border: 1px dashed #cbd5e1; padding: 10px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
+            No campus discipline squad appointed. Campus order and discipline overseen by the Principal, Returning Officer &amp; College Security.
+          </div>
+        ` : `
+          <table class="master-table">
+            <colgroup>
+              <col style="width: 6%;">
+              <col style="width: 22%;">
+              <col style="width: 16%;">
+              <col style="width: 14%;">
+              <col style="width: 10%;">
+              <col style="width: 20%;">
+              <col style="width: 12%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-center">Sl #</th>
+                <th>Name of Official</th>
+                <th>Department</th>
+                <th>Designation / Type</th>
+                <th>PEN #</th>
+                <th>Duty Assigned &amp; Station</th>
+                <th class="col-center">Signature</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${discList.map(disc => `
+                <tr style="background: #f0fdf4 !important;">
+                  <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(disc.slNo)}</td>
+                  <td>
+                    <span class="staff-name">${esc(disc.name)}</span>
+                    <span class="staff-meta" style="color: #15803d; font-weight: 600;">Discipline In-Charge</span>
+                  </td>
+                  <td><span class="dept-badge" style="color: #166534;">${esc(disc.department)}</span></td>
+                  <td>
+                    <span>${esc(disc.designation)}</span>
+                    <span class="staff-meta" style="color: ${disc.type === 'Teaching Faculty' ? '#4338ca' : '#047857'}; font-weight: 600;">${esc(disc.type)}</span>
+                  </td>
+                  <td style="font-family: monospace; font-weight: 600;">${esc(disc.pen)}</td>
+                  <td>
+                    <strong style="color: #166534;">${esc(disc.duty)}</strong><br>
+                    <span class="staff-meta">${esc(disc.station)} · Reporting: ${esc(disc.reportingTime)}</span>
+                  </td>
+                  <td class="col-sign">
+                    <div class="sign-box"></div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `}
+
+        <!-- SECTION 3: CONSOLIDATED MASTER DUTY ROLL (SORTED DEPARTMENT-WISE) -->
+        <div class="section-title-box" style="margin-top: 14px;">
+          <span>📋 SECTION 3: CONSOLIDATED MASTER DUTY ROLL (SORTED DEPARTMENT-WISE)</span>
           <span style="font-size: 8.5px; font-weight: normal;">Acquittance &amp; Attendance Register</span>
         </div>
 
@@ -3446,9 +3821,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <div class="footer-row">
           <div class="copy-block">
             <strong>Copy communicated for strict compliance:</strong><br>
-            1. All Appointed Observers, Polling Personnel &amp; Counting Personnel<br>
+            1. All Appointed Observers, Discipline Squad, Polling Personnel &amp; Counting Personnel<br>
             2. The Principal, ${esc(collegeName)}<br>
-            3. Election Observer File &amp; Notice Board<br>
+            3. Election Observer &amp; Discipline Vigilance File<br>
             4. Guard File / Record File
           </div>
           <div class="ro-sign-block">
@@ -3463,7 +3838,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   };
 
   const buildBoothWiseDeploymentHtml = (orderNo, orderDate) => {
-    const { obsList } = getMasterDutyData();
+    const { obsList, discList } = getMasterDutyData();
 
     return `
       <div class="master-booth-page">
@@ -3527,7 +3902,55 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </table>
         `}
 
-        <!-- SECTION 2: POLLING BOOTHS DEPLOYMENT -->
+        <!-- SECTION 2: CAMPUS DISCIPLINE & SECURITY SQUAD IN-CHARGE -->
+        <div class="section-title-box" style="margin-top: 14px;">
+          <span>🛡️ CAMPUS DISCIPLINE &amp; SECURITY SQUAD IN-CHARGE (CAMPUS VIGILANCE &amp; ORDER)</span>
+          <span style="font-size: 8.5px; font-weight: normal;">Station: Campus Gates &amp; Corridors · Reporting: 07:30 AM</span>
+        </div>
+
+        ${discList.length === 0 ? `
+          <div style="border: 1px dashed #cbd5e1; padding: 8px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
+            No separate discipline squad appointed.
+          </div>
+        ` : `
+          <table class="master-table">
+            <colgroup>
+              <col style="width: 8%;">
+              <col style="width: 25%;">
+              <col style="width: 18%;">
+              <col style="width: 14%;">
+              <col style="width: 21%;">
+              <col style="width: 14%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-center">Slot #</th>
+                <th>Name of Official</th>
+                <th>Department</th>
+                <th>PEN #</th>
+                <th>Duty Assignment</th>
+                <th class="col-center">Signature</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${discList.map(disc => `
+                <tr style="background: #f0fdf4 !important;">
+                  <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(disc.slNo)}</td>
+                  <td>
+                    <span class="staff-name">${esc(disc.name)}</span>
+                    <span class="staff-meta" style="color: ${disc.type === 'Teaching Faculty' ? '#4338ca' : '#047857'}; font-weight: 600;">${esc(disc.designation)} (${esc(disc.type)})</span>
+                  </td>
+                  <td><span class="dept-badge" style="color: #166534;">${esc(disc.department)}</span></td>
+                  <td style="font-family: monospace; font-weight: 600;">${esc(disc.pen)}</td>
+                  <td><strong style="color: #166534;">Campus Discipline In-Charge (Gates &amp; Corridors)</strong></td>
+                  <td class="col-sign"><div class="sign-box"></div></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `}
+
+        <!-- SECTION 3: POLLING BOOTHS DEPLOYMENT -->
         <div class="section-title-box">
           <span>🏫 PART A: POLLING BOOTH STATIONS DEPLOYMENT (BOOTHS 1 TO ${booths.length})</span>
           <span style="font-size: 8.5px; font-weight: normal;">Reporting: 08:00 AM · Polling: 09:30 AM – 01:30 PM</span>
@@ -3674,9 +4097,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <div class="footer-row">
           <div class="copy-block">
             <strong>Copy communicated for strict compliance:</strong><br>
-            1. All Appointed Observers, Polling Personnel &amp; Counting Personnel<br>
+            1. All Appointed Observers, Discipline Squad, Polling Personnel &amp; Counting Personnel<br>
             2. The Principal, ${esc(collegeName)}<br>
-            3. Election Observer File &amp; Notice Board<br>
+            3. Election Observer &amp; Discipline Vigilance File<br>
             4. Guard File / Record File
           </div>
           <div class="ro-sign-block">

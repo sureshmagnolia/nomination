@@ -1091,19 +1091,21 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminGetOfficials') {
-      const [facRaw, ntRaw, pollRaw, countRaw, obsRaw] = await Promise.all([
+      const [facRaw, ntRaw, pollRaw, countRaw, obsRaw, discRaw] = await Promise.all([
         getSetting('election_faculty_roster'),
         getSetting('election_non_teaching_roster'),
         getSetting('polling_teams_officials'),
         getSetting('counting_teams_officials'),
-        getSetting('election_observers')
+        getSetting('election_observers'),
+        getSetting('election_discipline')
       ]);
       return jsonOut(res, {
         faculty: safeJsonParse(facRaw, null),
         nonTeaching: safeJsonParse(ntRaw, null),
         pollingTeams: safeJsonParse(pollRaw, []),
         countingTeams: safeJsonParse(countRaw, []),
-        observers: safeJsonParse(obsRaw, [])
+        observers: safeJsonParse(obsRaw, []),
+        disciplineCharge: safeJsonParse(discRaw, [])
       });
     }
 
@@ -2198,13 +2200,14 @@ All students are directed to strictly adhere to the University Code of Conduct, 
     }
 
     if (action === 'adminSaveOfficials') {
-      const { faculty, nonTeaching, pollingTeams, countingTeams, observers } = body;
+      const { faculty, nonTeaching, pollingTeams, countingTeams, observers, disciplineCharge } = body;
       const tasks = [];
       if (faculty !== undefined) tasks.push(setSetting('election_faculty_roster', JSON.stringify(faculty)));
       if (nonTeaching !== undefined) tasks.push(setSetting('election_non_teaching_roster', JSON.stringify(nonTeaching)));
       if (pollingTeams !== undefined) tasks.push(setSetting('polling_teams_officials', JSON.stringify(pollingTeams)));
       if (countingTeams !== undefined) tasks.push(setSetting('counting_teams_officials', JSON.stringify(countingTeams)));
       if (observers !== undefined) tasks.push(setSetting('election_observers', JSON.stringify(observers)));
+      if (disciplineCharge !== undefined) tasks.push(setSetting('election_discipline', JSON.stringify(disciplineCharge)));
       await Promise.all(tasks);
       return jsonOut(res, { ok: true });
     }
