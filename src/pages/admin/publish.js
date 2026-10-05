@@ -391,14 +391,6 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
       }
     });
 
-    const hasAnyDept = orderedPostNames.some(post =>
-      (grouped[post] || []).some(n => {
-        const d = (n.candidateDept || n.candidate?.Dept || n.candidate?.Department || '').trim();
-        return d && d !== '–' && d !== 'N/A' && d !== '-';
-      })
-    );
-    const colCount = 5 + (hasAnyDept ? 1 : 0) + (isFinal ? 1 : 0);
-
     let html = `
       <div style="text-align:center;margin-bottom:25px;border-bottom:2px solid #000;padding-bottom:12px">
         ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:55px;max-width:140px;margin:0 auto 6px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
@@ -416,7 +408,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
             <th style="border:1px solid #000;padding:6px 8px;text-align:center;width:80px">Roll Sl. No</th>
             <th style="border:1px solid #000;padding:6px 8px;text-align:center;width:90px">Adm. No</th>
             <th style="border:1px solid #000;padding:6px 8px;text-align:left">Class</th>
-            ${hasAnyDept ? '<th style="border:1px solid #000;padding:6px 8px;text-align:left">Department</th>' : ''}
+            <th style="border:1px solid #000;padding:6px 8px;text-align:left">Department</th>
             ${isFinal ? '<th style="border:1px solid #000;padding:6px 8px;text-align:center;width:140px">Remarks</th>' : ''}
           </tr>
         </thead>
@@ -430,7 +422,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
 
       html += `
         <tr>
-          <td colspan="${colCount}" style="border:1px solid #000;padding:8px;background:#f3f4f6;font-weight:bold;text-transform:uppercase;font-size:13px">
+          <td colspan="${isFinal ? '7' : '6'}" style="border:1px solid #000;padding:8px;background:#f3f4f6;font-weight:bold;text-transform:uppercase;font-size:13px">
             POST: ${esc(post)}
             <span style="font-size:11px;font-weight:normal;float:right;color:${hasNoValid ? '#b91c1c' : '#111'}">
               ${hasNoValid ? '<strong style="color:#b91c1c">NO VALID NOMINATIONS</strong>' : `${noms.length} Candidate${noms.length > 1 ? 's' : ''} ${isUncontested ? '— (UNCONTESTED)' : ''}`}
@@ -442,7 +434,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
       if (hasNoValid) {
         html += `
           <tr>
-            <td colspan="${colCount}" style="border:1px solid #000;padding:9px 12px;text-align:center;color:#b91c1c;font-weight:bold;font-size:11px;background:#fff5f5;letter-spacing:0.5px">
+            <td colspan="${isFinal ? '7' : '6'}" style="border:1px solid #000;padding:9px 12px;text-align:center;color:#b91c1c;font-weight:bold;font-size:11px;background:#fff5f5;letter-spacing:0.5px">
               ⚠️ NO VALID NOMINATIONS
             </td>
           </tr>
@@ -458,7 +450,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
               <td style="border:1px solid #000;padding:6px 8px;text-align:center;font-family:monospace;font-weight:bold">${esc(sl)}</td>
               <td style="border:1px solid #000;padding:6px 8px;text-align:center;font-family:monospace">${esc(adm)}</td>
               <td style="border:1px solid #000;padding:6px 8px">${esc(n.candidateClass)}</td>
-              ${hasAnyDept ? `<td style="border:1px solid #000;padding:6px 8px">${esc(n.candidateDept || n.candidate?.Dept || n.candidate?.Department || '–')}</td>` : ''}
+              <td style="border:1px solid #000;padding:6px 8px">${esc(n.candidateDept)}</td>
               ${isFinal ? `
                 <td style="border:1px solid #000;padding:6px 8px;text-align:center;font-weight:bold;font-size:11px">
                   ${isUncontested ? '<span style="color:#047857">ELECTED UNOPPOSED</span>' : '<span style="color:#1d4ed8">CONTESTING</span>'}

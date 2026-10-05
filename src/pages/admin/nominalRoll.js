@@ -52,12 +52,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
   const PAGE_SIZE = 50;
   let adminViewMode = 'cards'; // 'cards' (card type for phone & mobile ease) | 'table'
 
-  const hasDept = nominalRoll.some(s => {
-    const d = String(s['Dept'] || s['DEPT'] || s['department'] || '').trim();
-    return d && d !== '-' && d !== '–' && d !== 'N/A';
-  });
-
-  const allDepts = [...new Set(nominalRoll.map(s => String(s['Dept'] || s['DEPT'] || s['department'] || '').trim()).filter(d => d && d !== '-' && d !== '–' && d !== 'N/A'))].sort();
+  const allDepts = [...new Set(nominalRoll.map(s => String(s['Dept'] || '').trim()).filter(d => d && d !== '-' && d !== '–'))].sort();
 
   const getAvailableClasses = (dept) => {
     return Array.from(new Set(
@@ -469,7 +464,6 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
 
           <!-- Bottom Row: Department Filter + Class Filter + Arrange Order + Reset -->
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-2.5 items-center pt-1 border-t border-white/5">
-            ${hasDept ? `
             <!-- Department Filter -->
             <div class="md:col-span-3">
               <select id="adminDeptFilter" class="field text-xs bg-slate-900 border-white/10 text-white w-full py-2" title="Filter by Department">
@@ -477,10 +471,9 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
                 ${allDepts.map(d => `<option value="${esc(d)}" ${selectedDept.toLowerCase() === d.toLowerCase() ? 'selected' : ''}>${esc(d)}</option>`).join('')}
               </select>
             </div>
-            ` : ''}
 
             <!-- Class Filter -->
-            <div class="${hasDept ? 'md:col-span-4' : 'md:col-span-6'}">
+            <div class="md:col-span-4">
               <select id="adminClassFilter" class="field text-xs bg-slate-900 border-white/10 text-white w-full py-2 font-medium" title="Filter by Class">
                 <option value="">🎓 All Classes (${availableClasses.length})</option>
                 ${availableClasses.map(c => `<option value="${esc(c)}" ${selectedClass.toLowerCase() === c.toLowerCase() ? 'selected' : ''}>${esc(c)}</option>`).join('')}
@@ -488,7 +481,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
             </div>
 
             <!-- Arrangement Select -->
-            <div class="${hasDept ? 'md:col-span-4' : 'md:col-span-5'}">
+            <div class="md:col-span-4">
               <select id="adminArrangeSelect" class="field text-xs bg-slate-900 border-white/10 text-white w-full py-2">
                 <option value="dept-class" ${adminArrangeMode === 'dept-class' ? 'selected' : ''}>🏢 Sort: Dept ➔ Class ➔ Name (A-Z)</option>
                 <option value="serial" ${adminArrangeMode === 'serial' ? 'selected' : ''}>🔢 Sort: Serial Number</option>
@@ -528,12 +521,10 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
                           <span class="text-slate-400 font-medium">🎓 Class:</span>
                           <span class="text-slate-200 font-medium">${esc(s['CLASS'])}</span>
                         </div>
-                        ${hasDept ? `
                         <div class="flex items-center gap-1.5 flex-wrap">
                           <span class="text-slate-400 font-medium">🏢 Dept:</span>
                           <span class="text-slate-300">${esc(s['Dept'] || '–')}</span>
                         </div>
-                        ` : ''}
                       </div>
                     </div>
                   </div>
@@ -571,7 +562,7 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
                   <th>Admission No</th>
                   <th>Name</th>
                   <th>Class</th>
-                  ${hasDept ? '<th>Department</th>' : ''}
+                  <th>Department</th>
                   <th>Actions</th>
                 </tr></thead>
                 <tbody id="adminRollTableBody">
@@ -581,13 +572,13 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
                       <td class="font-mono text-xs">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
                       <td class="text-white font-medium">${esc(s['NAME'])}</td>
                       <td class="text-slate-300 text-sm">${esc(s['CLASS'])}</td>
-                      ${hasDept ? `<td class="text-slate-400 text-xs">${esc(s['Dept'] || '–')}</td>` : ''}
+                      <td class="text-slate-400 text-xs">${esc(s['Dept'] || '–')}</td>
                       <td>
                         <button class="text-indigo-400 hover:text-indigo-300 edit-student mr-3" data-serial="${esc(s['Nominal Roll Serial Number'])}" data-name="${esc(s['NAME'])}" data-class="${esc(s['CLASS'])}" data-adm="${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '')}" data-dept="${esc(s['Dept'] || '')}">Edit</button>
                         <button class="text-rose-400 hover:text-rose-300 delete-student" data-serial="${s['Nominal Roll Serial Number']}" data-name="${esc(s['NAME'])}">Delete</button>
                       </td>
                     </tr>
-                  `).join('') : `<tr><td colspan="${hasDept ? 6 : 5}" class="text-center py-10 text-slate-500">No students found matching your search.</td></tr>`}
+                  `).join('') : `<tr><td colspan="6" class="text-center py-10 text-slate-500">No students found matching your search.</td></tr>`}
                 </tbody>
               </table>
             </div>

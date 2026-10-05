@@ -55,11 +55,6 @@ function renderPublicRollUI(container, nominalRoll, settings) {
   students.sort((a, b) => compareSl(a, b));
   
   // Extract unique departments and classes
-  const hasDept = students.some(s => {
-    const d = (s['Dept'] || s['DEPT'] || s['department'] || '').trim();
-    return d && d !== '–' && d !== 'N/A' && d !== '-';
-  });
-
   const allDepartments = Array.from(new Set(
     students.map(s => (s['Dept'] || s['DEPT'] || s['department'] || '').trim()).filter(Boolean)
   )).sort((a, b) => a.localeCompare(b));
@@ -189,7 +184,7 @@ function renderPublicRollUI(container, nominalRoll, settings) {
       <div class="glass rounded-xl p-4 space-y-3 shadow-xl">
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 items-center">
           <!-- Text Search -->
-          <div class="relative ${hasDept ? 'md:col-span-4' : 'md:col-span-5'}">
+          <div class="relative md:col-span-4">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
             <input type="text" id="searchInput" class="field pl-10 w-full text-sm py-2" placeholder="Search name, adm. no, serial...">
           </div>
@@ -203,7 +198,6 @@ function renderPublicRollUI(container, nominalRoll, settings) {
             </select>
           </div>
 
-          ${hasDept ? `
           <!-- Department Filter -->
           <div class="md:col-span-2">
             <select id="deptFilter" class="field text-xs sm:text-sm py-2 w-full bg-slate-900 border-white/10 text-white">
@@ -211,10 +205,9 @@ function renderPublicRollUI(container, nominalRoll, settings) {
               ${allDepartments.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}
             </select>
           </div>
-          ` : ''}
 
           <!-- Class Filter -->
-          <div class="${hasDept ? 'md:col-span-2' : 'md:col-span-3'}">
+          <div class="md:col-span-2">
             <select id="classFilter" class="field text-xs sm:text-sm py-2 w-full bg-slate-900 border-white/10 text-white">
               <option value="">All Classes</option>
             </select>
@@ -248,7 +241,7 @@ function renderPublicRollUI(container, nominalRoll, settings) {
               <th>Admission No</th>
               <th>Name</th>
               <th>Class</th>
-              ${hasDept ? '<th>Department</th>' : ''}
+              <th>Department</th>
             </tr></thead>
             <tbody id="rollTableBody"></tbody>
           </table>
@@ -310,7 +303,7 @@ function renderPublicRollUI(container, nominalRoll, settings) {
     if (pageStudents.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="${hasDept ? 5 : 4}" class="text-center py-12 text-slate-500">
+          <td colspan="5" class="text-center py-12 text-slate-500">
             <div class="text-3xl mb-2">🔍</div>
             <p class="text-slate-300 font-medium text-sm">No students found</p>
             <p class="text-xs text-slate-500 mt-1">Try broadening your search term or resetting the class/department filters.</p>
@@ -323,7 +316,7 @@ function renderPublicRollUI(container, nominalRoll, settings) {
           <td class="font-mono text-xs text-slate-300">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
           <td class="text-white font-medium">${esc(s['NAME'])}</td>
           <td class="text-slate-300 text-sm">${esc(getStudentDeptClassKey(s))}</td>
-          ${hasDept ? `<td class="text-slate-400 text-xs">${esc(s['Dept'] || s['DEPT'] || s['department'] || '–')}</td>` : ''}
+          <td class="text-slate-400 text-xs">${esc(s['Dept'] || '–')}</td>
         </tr>
       `).join('');
     }
@@ -403,14 +396,12 @@ function renderPublicRollUI(container, nominalRoll, settings) {
 
   // Department dropdown
   const deptSelect = container.querySelector('#deptFilter');
-  if (deptSelect) {
-    deptSelect.addEventListener('change', (e) => {
-      selectedDept = e.target.value;
-      populateClassDropdown(selectedDept);
-      currentPage = 1;
-      updateTableAndPagination();
-    });
-  }
+  deptSelect.addEventListener('change', (e) => {
+    selectedDept = e.target.value;
+    populateClassDropdown(selectedDept);
+    currentPage = 1;
+    updateTableAndPagination();
+  });
 
   // Class dropdown
   const classSelect = container.querySelector('#classFilter');
@@ -438,7 +429,7 @@ function renderPublicRollUI(container, nominalRoll, settings) {
     arrangeMode = 'dept-class';
     currentPage = 1;
     searchInput.value = '';
-    if (deptSelect) deptSelect.value = '';
+    deptSelect.value = '';
     if (arrangeSelect) arrangeSelect.value = 'dept-class';
     populateClassDropdown('');
     updateTableAndPagination();

@@ -48,15 +48,7 @@ export function exportNominationsToExcel(list = [], type = 'valid', options = {}
     [] // Blank row separator
   ];
 
-  const hasDept = list.some(n => {
-    const d = (n.candidateDept || n.candidate?.Dept || n.candidate?.Department || '').trim();
-    return d && d !== '–' && d !== 'N/A' && d !== '-';
-  });
-
-  const headers = ['Post', 'Sl. No.', 'Candidate Name', 'Roll Sl. No.', 'Admission No.', 'Class'];
-  if (hasDept) {
-    headers.push('Department');
-  }
+  const headers = ['Post', 'Sl. No.', 'Candidate Name', 'Roll Sl. No.', 'Admission No.', 'Class', 'Department'];
   if (isFinal) {
     headers.push('Remarks');
   }
@@ -75,11 +67,9 @@ export function exportNominationsToExcel(list = [], type = 'valid', options = {}
         'NO VALID NOMINATIONS',
         '–',
         '–',
+        '–',
         '–'
       ];
-      if (hasDept) {
-        row.push('–');
-      }
       if (isFinal) {
         row.push('NO VALID NOMINATIONS');
       }
@@ -104,11 +94,9 @@ export function exportNominationsToExcel(list = [], type = 'valid', options = {}
         name,
         sl,
         adm,
-        cls
+        cls,
+        dept
       ];
-      if (hasDept) {
-        row.push(dept);
-      }
       if (isFinal) {
         row.push(isUncontested ? 'ELECTED UNOPPOSED' : 'CONTESTING');
       }
@@ -130,7 +118,7 @@ export function exportNominationsToExcel(list = [], type = 'valid', options = {}
     { wch: 14 }, // Roll Sl. No
     { wch: 14 }, // Admission No
     { wch: 18 }, // Class
-    ...(hasDept ? [{ wch: 22 }] : []), // Department
+    { wch: 22 }, // Department
     ...(isFinal ? [{ wch: 22 }] : []) // Remarks
   ];
 
@@ -195,16 +183,7 @@ export function exportNominalRollToExcel(students = [], options = {}) {
     throw new Error('Nominal Roll is empty.');
   }
 
-  const hasDept = students.some(s => {
-    const d = (s['Dept'] || s.dept || s.department || s['DEPT'] || '').trim();
-    return d && d !== '–' && d !== 'N/A' && d !== '-';
-  });
-
-  const rollHeaders = ['Roll Sl. No.', 'Admission No.', 'Student Name', 'Class'];
-  if (hasDept) {
-    rollHeaders.push('Department');
-  }
-  rollHeaders.push('Gender', 'Second Language');
+  const rollType = isFinal ? 'FINAL ELECTORAL ROLL' : (isDraft ? 'DRAFT ELECTORAL ROLL' : 'ELECTORAL ROLL');
 
   const rows = [
     [collegeName.toUpperCase()],
@@ -212,7 +191,7 @@ export function exportNominalRollToExcel(students = [], options = {}) {
     [rollType],
     [`Total Voters: ${students.length} | Generated: ${new Date().toLocaleString('en-IN')}`],
     [],
-    rollHeaders
+    ['Roll Sl. No.', 'Admission No.', 'Student Name', 'Class', 'Department', 'Gender', 'Second Language']
   ];
 
   // Sort by serial number cleanly
@@ -234,12 +213,7 @@ export function exportNominalRollToExcel(students = [], options = {}) {
     const gen  = s['Gender'] || s.gender || '';
     const lang = s['Second Language'] || s.secondLanguage || s.lang || '';
 
-    const row = [sl, adm, name, cls];
-    if (hasDept) {
-      row.push(dept);
-    }
-    row.push(gen, lang);
-    rows.push(row);
+    rows.push([sl, adm, name, cls, dept, gen, lang]);
   });
 
   const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -248,7 +222,7 @@ export function exportNominalRollToExcel(students = [], options = {}) {
     { wch: 16 }, // Admission No.
     { wch: 30 }, // Student Name
     { wch: 18 }, // Class
-    ...(hasDept ? [{ wch: 22 }] : []), // Department
+    { wch: 22 }, // Department
     { wch: 10 }, // Gender
     { wch: 18 }  // Second Language
   ];
