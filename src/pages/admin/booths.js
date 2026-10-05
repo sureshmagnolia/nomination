@@ -14,15 +14,25 @@ export async function renderAdminBooths(container) {
   `);
 
   try {
-    const [nominalRoll, booths, locations, posts, nominations, plan, settings] = await Promise.all([
+    const [nominalRoll, booths, locations, posts, finalNomsRes, allNomsList, plan, settings] = await Promise.all([
       api.getNominalRoll(),
       api.adminGetBooths(pwd, true).catch(err => { console.error('GetBooths error:', err); return null; }),
       api.adminGetLocations(pwd, true).catch(err => { console.error('GetLocations error:', err); return null; }),
       api.adminGetPosts(pwd).catch(() => []),
-      api.adminGetFinalNominations(pwd).catch(() => api.getFinalNominations()).catch(() => ({ active: [] })),
+      api.adminGetFinalNominations(pwd).catch(() => api.getFinalNominations()).catch(() => null),
+      api.adminGetNominations(pwd, true).catch(() => []),
       api.adminGetBallotPlan(pwd).catch(() => null),
       api.adminGetSettings(pwd).catch(() => ({}))
     ]);
+
+    let resolvedNominations = [];
+    if (finalNomsRes && Array.isArray(finalNomsRes.active) && finalNomsRes.active.length > 0) {
+      resolvedNominations = finalNomsRes.active;
+    } else if (Array.isArray(finalNomsRes) && finalNomsRes.length > 0) {
+      resolvedNominations = finalNomsRes;
+    } else if (Array.isArray(allNomsList) && allNomsList.length > 0) {
+      resolvedNominations = allNomsList.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved');
+    }
 
     if (booths === null || locations === null) {
       container.querySelector('#adminMain').innerHTML = `
@@ -36,7 +46,7 @@ export async function renderAdminBooths(container) {
       return;
     }
 
-    renderBoothsUI(container.querySelector('#adminMain'), pwd, nominalRoll, booths, locations, posts, nominations, plan, settings);
+    renderBoothsUI(container.querySelector('#adminMain'), pwd, nominalRoll, booths, locations, posts, resolvedNominations, plan, settings);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
   }
@@ -98,6 +108,69 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
   let currentProposals = [];
 
+  // Helper to determine if a department has an active Association Secretary contest
+  const getDeptAssocContestInfo = (deptName) => {
+    const dClean = String(deptName || '').trim();
+    const dUpper = dClean.toUpperCase();
+
+    // 1. If Ballot Plan is already generated and has association records,
+    // only departments present in plan.assocs.results have an active contest
+    if (plan && plan.assocs && Array.isArray(plan.assocs.results) && plan.assocs.results.length > 0) {
+      const hasPlanContest = plan.assocs.results.some(r => {
+        const pPost = String(r.post || '').toUpperCase();
+        return pPost.includes(dUpper) || (pPost.startsWith('ASSOCIATION SECRETARY') && pPost.includes(dUpper));
+      });
+      if (hasPlanContest) {
+        return { hasContest: true, candidateCount: 2, post: `Association Secretary ${dClean}`, reason: 'plan_active' };
+      }
+    }
+
+    // 2. Locate the Association Secretary post rule for this department
+    const assocPost = (posts || []).find(p => {
+      const pName = String(p.post || '').toUpperCase().trim();
+      const pDept = String(p.restrictedDept || '').toUpperCase().trim();
+      const isAssoc = pName.includes('ASSOCIATION') || pName.includes('ASSOC') || !!p.deptRestriction;
+      if (!isAssoc) return false;
+      if (pDept && pDept === dUpper) return true;
+      if (pName.startsWith('ASSOCIATION SECRETARY')) {
+        const target = pName.replace('ASSOCIATION SECRETARY', '').trim();
+        return target === dUpper || target.includes(dUpper) || dUpper.includes(target);
+      }
+      return false;
+    });
+
+    if (!assocPost) {
+      // If there's no Association Secretary post configured for this department at all, no association contest
+      return { hasContest: false, candidateCount: 0, post: null, reason: 'no_post' };
+    }
+
+    const postName = String(assocPost.post || '').trim();
+
+    // 3. Count candidates from nominations (resolvedNominations: valid, non-withdrawn)
+    if (Array.isArray(nominations) && nominations.length > 0) {
+      const activeCands = nominations.filter(n => {
+        const nPost = String(n.post || '').trim();
+        const isMatch = nPost.toLowerCase() === postName.toLowerCase();
+        const isValid = (!n.status || n.status === 'Valid');
+        const notWithdrawn = (n.withdrawalStatus !== 'Approved');
+        return isMatch && isValid && notWithdrawn;
+      });
+
+      const candidateCount = activeCands.length;
+      // Contest requires >= 2 candidates. If 0 or 1 candidate, no contest / unopposed / no ballot.
+      const hasContest = candidateCount >= 2;
+      return {
+        hasContest,
+        candidateCount,
+        post: postName,
+        reason: hasContest ? 'contested' : (candidateCount === 1 ? 'unopposed' : 'no_candidates')
+      };
+    }
+
+    // 4. Default: If no nominations data exists in system yet, assume contested
+    return { hasContest: true, candidateCount: 2, post: postName, reason: 'assumed_contested' };
+  };
+
   const openSplitModal = (splitDepts, intactCount, totalDepts) => {
     const modal = main.querySelector('#splitAlertModal');
     const content = main.querySelector('#splitAlertModalContent');
@@ -116,9 +189,20 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           <div class="border border-white/15 bg-white/5 rounded-xl p-4 space-y-2">
             <div class="flex justify-between items-center border-b border-white/10 pb-2">
               <h5 class="font-bold text-base text-white">🏛️ ${esc(sd.name)}</h5>
-              <span class="text-xs font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
-                Total: ${sd.part1.count + sd.part2.count} Voters
-              </span>
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
+                  Total: ${sd.part1.count + sd.part2.count} Voters
+                </span>
+                ${!sd.hasAssocContest ? `
+                  <span class="text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded border border-rose-500/30">
+                    No Assoc Contest
+                  </span>
+                ` : `
+                  <span class="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                    Contested Assoc
+                  </span>
+                `}
+              </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -127,7 +211,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                   <span>📍 Booth ${sd.part1.boothNumber}</span>
                   <span class="text-[10px] text-slate-400 font-normal">(${esc(sd.part1.label)})</span>
                 </div>
-                <div class="text-lg font-mono font-bold text-white mb-1">${sd.part1.count} <span class="text-xs font-normal text-slate-400">voters</span></div>
+                <div class="text-lg font-mono font-bold text-white mb-1">
+                  ${sd.part1.count} <span class="text-xs font-normal text-slate-400">voters</span>
+                  <span class="text-xs font-normal text-indigo-300 ml-1">(${sd.part1.ballots} ballots)</span>
+                </div>
                 <div class="text-[11px] text-slate-300 line-clamp-2">
                   ${sd.part1.classes.map(c => esc(c)).join(', ')}
                 </div>
@@ -138,7 +225,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                   <span>📍 Booth ${sd.part2.boothNumber}</span>
                   <span class="text-[10px] text-slate-400 font-normal">(${esc(sd.part2.label)})</span>
                 </div>
-                <div class="text-lg font-mono font-bold text-white mb-1">${sd.part2.count} <span class="text-xs font-normal text-slate-400">voters</span></div>
+                <div class="text-lg font-mono font-bold text-white mb-1">
+                  ${sd.part2.count} <span class="text-xs font-normal text-slate-400">voters</span>
+                  <span class="text-xs font-normal text-amber-300 ml-1">(${sd.part2.ballots} ballots)</span>
+                </div>
                 <div class="text-[11px] text-slate-300 line-clamp-2">
                   ${sd.part2.classes.map(c => esc(c)).join(', ')}
                 </div>
@@ -146,7 +236,9 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             </div>
 
             <p class="text-[11px] text-amber-300/90 pt-1">
-              💡 <em>Counting instruction: During vote counting, ballots from Booth ${sd.part1.boothNumber} and Booth ${sd.part2.boothNumber} for ${esc(sd.name)} association will need to be aggregated together.</em>
+              ${!sd.hasAssocContest 
+                ? `ℹ️ <em>${esc(sd.name)} has no Association Secretary contest (no departmental association ballot issued). Staff only need to issue General Union ballots for this department.</em>` 
+                : `💡 <em>Counting instruction: During vote counting, ballots from Booth ${sd.part1.boothNumber} and Booth ${sd.part2.boothNumber} for ${esc(sd.name)} association will need to be aggregated together.</em>`}
             </p>
           </div>
         `).join('')}
@@ -186,14 +278,20 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                 <p class="text-xs text-slate-300 leading-relaxed">${esc(p.tagline)}</p>
               </div>
 
-              <div class="bg-black/40 rounded-xl p-3 space-y-1.5 text-xs border border-white/5">
+              <div class="bg-black/40 rounded-xl p-3 space-y-2 text-xs border border-white/5">
                 <div class="flex justify-between items-center">
-                  <span class="text-slate-400">Voter Range / Booth:</span>
-                  <span class="font-mono font-bold text-white">${p.minBooth} – ${p.maxBooth} voters</span>
+                  <span class="text-slate-400">Voter Queue Range:</span>
+                  <span class="font-mono font-bold text-white">${p.minBooth} – ${p.maxBooth} voters <span class="text-[11px] ${p.spread <= 70 ? 'text-emerald-400' : 'text-amber-400'}">(${p.spread} spread)</span></span>
                 </div>
                 <div class="flex justify-between items-center">
-                  <span class="text-slate-400">Max Disparity (Spread):</span>
-                  <span class="font-mono font-bold ${p.spread <= 70 ? 'text-emerald-400' : 'text-amber-400'}">${p.spread} voters</span>
+                  <span class="text-slate-400">Ballot Paper Workload:</span>
+                  <span class="font-mono font-bold text-indigo-300">${p.minBallots} – ${p.maxBallots} ballots <span class="text-[11px] ${p.ballotSpread <= 110 ? 'text-emerald-400' : 'text-amber-400'}">(${p.ballotSpread} spread)</span></span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400">Assoc. Ballot Series / Books:</span>
+                  <span class="font-bold ${p.minAssoc > 0 ? 'text-emerald-300' : 'text-amber-300'}">
+                    ${p.minAssoc} – ${p.maxAssoc} books / booth
+                  </span>
                 </div>
                 <div class="flex justify-between items-center">
                   <span class="text-slate-400">Department Integrity:</span>
@@ -207,6 +305,19 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                 </div>
               </div>
 
+              <!-- Hardship Equalization Callout -->
+              ${p.uncontestedDepts && p.uncontestedDepts.length > 0 ? `
+                <div class="text-[11px] bg-indigo-500/10 border border-indigo-500/25 rounded-lg p-2.5 text-indigo-200">
+                  <div class="font-bold text-indigo-300 flex items-center gap-1.5 mb-1">
+                    <span>⚖️</span> <span>Equal Hardship Mixing Active:</span>
+                  </div>
+                  <p class="text-[10px] text-slate-300 leading-normal">
+                    <strong>${esc(p.uncontestedDepts.join(', '))}</strong> have no association contest (1 ballot/voter). 
+                    The optimizer interleaved them with contested departments (${p.minAssoc}–${p.maxAssoc} association books per booth) to equalize staff hardship and avoid easy-job clustering.
+                  </p>
+                </div>
+              ` : ''}
+
               <!-- Split Details -->
               ${p.splitDepts.length > 0 ? `
                 <div class="space-y-1.5">
@@ -217,14 +328,17 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                     <div class="text-[11px] bg-amber-500/10 border border-amber-500/20 rounded-lg p-2 text-amber-200 space-y-1">
                       <div class="font-bold text-white flex justify-between">
                         <span>🏛️ ${esc(sd.name)}</span>
-                        <span class="font-mono text-amber-400 text-[10px]">${sd.part1.count + sd.part2.count} total</span>
+                        <div class="flex items-center gap-1.5">
+                          <span class="font-mono text-amber-400 text-[10px]">${sd.part1.count + sd.part2.count} voters</span>
+                          ${!sd.hasAssocContest ? `<span class="text-[9px] bg-rose-500/20 text-rose-300 px-1 py-0.2 rounded font-bold">Uncontested Assoc</span>` : ''}
+                        </div>
                       </div>
                       <div class="grid grid-cols-2 gap-1.5 text-[10px]">
                         <div class="bg-black/30 p-1 rounded">
-                          <span class="font-bold text-amber-300">Booth ${sd.part1.boothNumber}:</span> ${sd.part1.count} (${esc(sd.part1.label)})
+                          <span class="font-bold text-amber-300">Booth ${sd.part1.boothNumber}:</span> ${sd.part1.count} voters (${sd.part1.ballots} ballots) &bull; ${esc(sd.part1.label)}
                         </div>
                         <div class="bg-black/30 p-1 rounded">
-                          <span class="font-bold text-amber-300">Booth ${sd.part2.boothNumber}:</span> ${sd.part2.count} (${esc(sd.part2.label)})
+                          <span class="font-bold text-amber-300">Booth ${sd.part2.boothNumber}:</span> ${sd.part2.count} voters (${sd.part2.ballots} ballots) &bull; ${esc(sd.part2.label)}
                         </div>
                       </div>
                     </div>
@@ -241,14 +355,23 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                 <button type="button" class="btn btn-secondary btn-xs w-full text-slate-300 toggle-proposal-booths-btn hover:text-white" data-pid="${p.id}">
                   🔍 Preview All ${p.booths.length} Booths
                 </button>
-                <div id="booths-preview-${p.id}" class="hidden mt-2 max-h-48 overflow-y-auto space-y-1 bg-black/50 rounded-lg p-2 border border-white/10 text-[11px]">
+                <div id="booths-preview-${p.id}" class="hidden mt-2 max-h-52 overflow-y-auto space-y-1.5 bg-black/50 rounded-lg p-2 border border-white/10 text-[11px]">
                   ${p.booths.map(b => `
-                    <div class="flex items-center justify-between gap-2 p-1.5 rounded bg-white/5 hover:bg-white/10 transition-colors">
-                      <span class="font-bold text-indigo-300 font-mono whitespace-nowrap">Booth ${b.boothNumber}:</span>
-                      <span class="text-slate-300 truncate flex-1 text-[10px]" title="${esc(b.classes.join(', '))}">
+                    <div class="p-2 rounded bg-white/5 hover:bg-white/10 transition-colors space-y-1">
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="font-bold text-indigo-300 font-mono">Booth ${b.boothNumber}:</span>
+                        <div class="flex items-center gap-1.5">
+                          <span class="font-mono text-white text-[11px] px-1.5 py-0.5 rounded bg-white/10">${b.totalStudents} Voters</span>
+                          <span class="font-mono text-indigo-300 text-[11px] px-1.5 py-0.5 rounded bg-indigo-500/20 border border-indigo-500/30 font-bold">${b.totalBallots} Ballots</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between gap-2 text-[10px] text-slate-400">
+                        <span>📚 Books: <strong class="text-slate-200">1 General + ${b.assocBooksCount} Assoc</strong></span>
+                        ${b.uncontestedDepts.length > 0 ? `<span class="text-amber-300/80 font-medium">No Contest: ${esc(b.uncontestedDepts.join(', '))}</span>` : '<span class="text-emerald-400/80">All Contested</span>'}
+                      </div>
+                      <div class="text-slate-300 text-[10px] truncate" title="${esc(b.classes.join(', '))}">
                         ${esc(b.classes.join(', '))}
-                      </span>
-                      <span class="font-mono font-bold text-white whitespace-nowrap px-1.5 py-0.5 rounded bg-white/10 text-[11px]">${b.totalStudents}</span>
+                      </div>
                     </div>
                   `).join('')}
                 </div>
@@ -303,6 +426,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       if (pb) {
         booths[i].classes = [...pb.classes];
         booths[i].totalStudents = pb.totalStudents;
+        booths[i].totalBallots = pb.totalBallots;
       }
     }
     try {
@@ -325,21 +449,37 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     const numBooths = booths.length;
     if (numBooths === 0) return [];
 
-    // 1. Group all classes by Department (Research Scholars are grouped with their department!)
+    // 1. Group all classes by Department and determine Association Secretary contest status
     const deptsMap = {};
     allClasses.forEach(cls => {
       const deptName = String(cls.dept || 'Unknown').trim();
       if (!deptsMap[deptName]) {
-        deptsMap[deptName] = { name: deptName, total: 0, classes: [] };
+        const cInfo = getDeptAssocContestInfo(deptName);
+        deptsMap[deptName] = {
+          name: deptName,
+          total: 0,
+          classes: [],
+          hasAssocContest: cInfo.hasContest,
+          assocCandidateCount: cInfo.candidateCount,
+          assocPost: cInfo.post,
+          ballotsPerVoter: cInfo.hasContest ? 2 : 1, // 1 General + 1 Association if contested
+          totalBallots: 0
+        };
       }
       deptsMap[deptName].classes.push(cls);
       deptsMap[deptName].total += cls.count;
+      deptsMap[deptName].totalBallots += cls.count * deptsMap[deptName].ballotsPerVoter;
     });
 
     const depts = Object.values(deptsMap);
     const totalStudents = nominalRoll.length || depts.reduce((sum, d) => sum + d.total, 0);
-    const mean = totalStudents / numBooths;
+    const meanVoters = totalStudents / numBooths;
+    const totalBallots = depts.reduce((sum, d) => sum + d.totalBallots, 0);
+    const meanBallots = totalBallots / numBooths;
     const numDepts = depts.length;
+
+    const contestedDeptsCount = depts.filter(d => d.hasAssocContest).length;
+    const uncontestedDeptsList = depts.filter(d => !d.hasAssocContest).map(d => d.name);
 
     const isUG = (c) => {
       const u = (c.name || '').toUpperCase();
@@ -395,8 +535,32 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       };
 
       return [
-        { name: dept.name, partLabel: getLabel(bestA), total: totalA, classes: bestA, isSplit: true, deptName: dept.name },
-        { name: dept.name, partLabel: getLabel(bestB), total: totalB, classes: bestB, isSplit: true, deptName: dept.name }
+        {
+          name: dept.name,
+          partLabel: getLabel(bestA),
+          total: totalA,
+          totalBallots: totalA * dept.ballotsPerVoter,
+          hasAssocContest: dept.hasAssocContest,
+          assocCandidateCount: dept.assocCandidateCount,
+          assocPost: dept.assocPost,
+          ballotsPerVoter: dept.ballotsPerVoter,
+          classes: bestA,
+          isSplit: true,
+          deptName: dept.name
+        },
+        {
+          name: dept.name,
+          partLabel: getLabel(bestB),
+          total: totalB,
+          totalBallots: totalB * dept.ballotsPerVoter,
+          hasAssocContest: dept.hasAssocContest,
+          assocCandidateCount: dept.assocCandidateCount,
+          assocPost: dept.assocPost,
+          ballotsPerVoter: dept.ballotsPerVoter,
+          classes: bestB,
+          isSplit: true,
+          deptName: dept.name
+        }
       ];
     }
 
@@ -411,32 +575,113 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       const ugTotal = ugClasses.reduce((s, c) => s + c.count, 0);
       const pgTotal = pgClasses.reduce((s, c) => s + c.count, 0);
       return [
-        { name: dept.name, partLabel: 'UG', total: ugTotal, classes: ugClasses, isSplit: true, deptName: dept.name },
-        { name: dept.name, partLabel: 'PG & Scholars', total: pgTotal, classes: pgClasses, isSplit: true, deptName: dept.name }
+        {
+          name: dept.name,
+          partLabel: 'UG',
+          total: ugTotal,
+          totalBallots: ugTotal * dept.ballotsPerVoter,
+          hasAssocContest: dept.hasAssocContest,
+          assocCandidateCount: dept.assocCandidateCount,
+          assocPost: dept.assocPost,
+          ballotsPerVoter: dept.ballotsPerVoter,
+          classes: ugClasses,
+          isSplit: true,
+          deptName: dept.name
+        },
+        {
+          name: dept.name,
+          partLabel: 'PG & Scholars',
+          total: pgTotal,
+          totalBallots: pgTotal * dept.ballotsPerVoter,
+          hasAssocContest: dept.hasAssocContest,
+          assocCandidateCount: dept.assocCandidateCount,
+          assocPost: dept.assocPost,
+          ballotsPerVoter: dept.ballotsPerVoter,
+          classes: pgClasses,
+          isSplit: true,
+          deptName: dept.name
+        }
       ];
     }
 
     // Partition Solver with multi-restart and local hill-climbing
-    function solvePartition(items, B, penalty = 75, numRestarts = 350) {
+    // Factors in:
+    // 1. Voter disparity across booths
+    // 2. Physical ballot paper issuance workload (1 for uncontested, 2 for contested)
+    // 3. Spreading uncontested departments across booths (preventing clustering of easy jobs)
+    // 4. Equalizing contested association books across booths
+    function solvePartition(items, B, penalty = 75, numRestarts = 400) {
       let bestAlloc = null, bestLoss = Infinity;
       const constraint = (b, it) => it.isSplit && b.items.some(o => o.isSplit && o.deptName === it.deptName);
 
       function calcLoss(alloc) {
-        let sumSq = 0, max = -Infinity, min = Infinity;
+        let voterSumSq = 0, ballotSumSq = 0;
+        let maxV = -Infinity, minV = Infinity;
+        let maxB = -Infinity, minB = Infinity;
+        let maxAssoc = -Infinity, minAssoc = Infinity;
+        let zeroAssocCount = 0;
+        let clusterPenalty = 0;
+
         for (const b of alloc) {
-          const diff = b.total - mean;
-          sumSq += diff * diff;
-          if (b.total > max) max = b.total;
-          if (b.total < min) min = b.total;
+          // Voter metrics
+          const vDiff = b.total - meanVoters;
+          voterSumSq += vDiff * vDiff;
+          if (b.total > maxV) maxV = b.total;
+          if (b.total < minV) minV = b.total;
+
+          // Ballot paper workload metrics
+          const bDiff = b.totalBallots - meanBallots;
+          ballotSumSq += bDiff * bDiff;
+          if (b.totalBallots > maxB) maxB = b.totalBallots;
+          if (b.totalBallots < minB) minB = b.totalBallots;
+
+          // Association contest books and uncontested departments in this booth
+          const deptsInBooth = new Set();
+          let assocCount = 0;
+          let uncontestedCount = 0;
+
+          for (const it of b.items) {
+            const dName = it.deptName || it.name;
+            if (!deptsInBooth.has(dName)) {
+              deptsInBooth.add(dName);
+              if (it.hasAssocContest) {
+                assocCount++;
+              } else {
+                uncontestedCount++;
+              }
+            }
+          }
+
+          if (assocCount > maxAssoc) maxAssoc = assocCount;
+          if (assocCount < minAssoc) minAssoc = assocCount;
+
+          // If there are enough contested depts for booths to have at least one,
+          // heavily penalize leaving a booth with zero association ballots (an easy free ride)
+          if (assocCount === 0 && contestedDeptsCount >= B) {
+            zeroAssocCount++;
+          }
+
+          // Penalize clustering multiple uncontested departments into the same booth
+          if (uncontestedCount > 1) {
+            clusterPenalty += (uncontestedCount - 1) * 450;
+          }
         }
-        return sumSq + (max - min) * penalty;
+
+        const vWeight = 1.0;
+        const bWeight = 0.45;
+        const spreadLoss = (maxV - minV) * penalty + (maxB - minB) * (penalty * 0.4);
+        const assocSpreadLoss = (maxAssoc - minAssoc) * 80;
+        const zeroAssocPenalty = zeroAssocCount * 1200;
+
+        return (voterSumSq * vWeight) + (ballotSumSq * bWeight) + spreadLoss + assocSpreadLoss + zeroAssocPenalty + clusterPenalty;
       }
 
       for (let r = 0; r < numRestarts; r++) {
-        const alloc = Array.from({ length: B }, (_, i) => ({ id: i, total: 0, items: [] }));
+        const alloc = Array.from({ length: B }, (_, i) => ({ id: i, total: 0, totalBallots: 0, items: [] }));
         const sorted = [...items];
-        if (r === 0) sorted.sort((a, b) => b.total - a.total);
-        else if (r === 1) sorted.sort((a, b) => a.total - b.total);
+        if (r === 0) sorted.sort((a, b) => b.totalBallots - a.totalBallots || b.total - a.total);
+        else if (r === 1) sorted.sort((a, b) => b.total - a.total);
+        else if (r === 2) sorted.sort((a, b) => (b.hasAssocContest ? 1 : 0) - (a.hasAssocContest ? 1 : 0));
         else sorted.sort(() => Math.random() - 0.5);
 
         let valid = true;
@@ -444,14 +689,20 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           let bestB = null, minAddLoss = Infinity;
           for (const b of alloc) {
             if (constraint(b, it)) continue;
-            const projectedDiff = (b.total + it.total) - mean;
-            const cost = projectedDiff * projectedDiff;
+            b.items.push(it);
+            b.total += it.total;
+            b.totalBallots += it.totalBallots;
+            const cost = calcLoss(alloc);
+            b.items.pop();
+            b.total -= it.total;
+            b.totalBallots -= it.totalBallots;
+
             if (cost < minAddLoss) { minAddLoss = cost; bestB = b; }
           }
           if (!bestB) {
             const validBooths = alloc.filter(b => !constraint(b, it));
             if (validBooths.length > 0) {
-              validBooths.sort((a, b) => a.total - b.total);
+              validBooths.sort((a, b) => a.totalBallots - b.totalBallots || a.total - b.total);
               bestB = validBooths[0];
             } else {
               valid = false;
@@ -460,25 +711,42 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           }
           bestB.items.push(it);
           bestB.total += it.total;
+          bestB.totalBallots += it.totalBallots;
         }
         if (!valid) continue;
 
         let currentLoss = calcLoss(alloc), improved = true, step = 0;
         while (improved && step < 60) {
           improved = false; step++;
+
+          // 1. Single item transfer
           for (let i = 0; i < B; i++) {
             for (let j = 0; j < B; j++) {
               if (i === j) continue;
               for (let k = 0; k < alloc[i].items.length; k++) {
                 const it = alloc[i].items[k];
                 if (constraint(alloc[j], it)) continue;
-                alloc[i].total -= it.total; alloc[j].total += it.total;
+
+                alloc[i].total -= it.total;
+                alloc[i].totalBallots -= it.totalBallots;
+                alloc[j].total += it.total;
+                alloc[j].totalBallots += it.totalBallots;
+                alloc[i].items.splice(k, 1);
+                alloc[j].items.push(it);
+
                 const newLoss = calcLoss(alloc);
                 if (newLoss < currentLoss - 0.001) {
-                  alloc[i].items.splice(k, 1); alloc[j].items.push(it);
-                  currentLoss = newLoss; improved = true; break;
+                  currentLoss = newLoss;
+                  improved = true;
+                  break;
                 } else {
-                  alloc[i].total += it.total; alloc[j].total -= it.total;
+                  // Revert
+                  alloc[j].items.pop();
+                  alloc[i].items.splice(k, 0, it);
+                  alloc[i].total += it.total;
+                  alloc[i].totalBallots += it.totalBallots;
+                  alloc[j].total -= it.total;
+                  alloc[j].totalBallots -= it.totalBallots;
                 }
               }
               if (improved) break;
@@ -487,20 +755,34 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           }
           if (improved) continue;
 
+          // 2. Pairwise swap
           for (let i = 0; i < B; i++) {
             for (let j = i + 1; j < B; j++) {
               for (let ki = 0; ki < alloc[i].items.length; ki++) {
                 for (let kj = 0; kj < alloc[j].items.length; kj++) {
                   const itA = alloc[i].items[ki], itB = alloc[j].items[kj];
                   if (constraint(alloc[j], itA) || constraint(alloc[i], itB)) continue;
-                  const gain = itA.total - itB.total;
-                  alloc[i].total -= gain; alloc[j].total += gain;
+
+                  alloc[i].total += itB.total - itA.total;
+                  alloc[i].totalBallots += itB.totalBallots - itA.totalBallots;
+                  alloc[j].total += itA.total - itB.total;
+                  alloc[j].totalBallots += itA.totalBallots - itB.totalBallots;
+                  alloc[i].items[ki] = itB;
+                  alloc[j].items[kj] = itA;
+
                   const newLoss = calcLoss(alloc);
                   if (newLoss < currentLoss - 0.001) {
-                    alloc[i].items[ki] = itB; alloc[j].items[kj] = itA;
-                    currentLoss = newLoss; improved = true; break;
+                    currentLoss = newLoss;
+                    improved = true;
+                    break;
                   } else {
-                    alloc[i].total += gain; alloc[j].total -= gain;
+                    // Revert
+                    alloc[i].items[ki] = itA;
+                    alloc[j].items[kj] = itB;
+                    alloc[i].total += itA.total - itB.total;
+                    alloc[i].totalBallots += itA.totalBallots - itB.totalBallots;
+                    alloc[j].total += itB.total - itA.total;
+                    alloc[j].totalBallots += itB.totalBallots - itA.totalBallots;
                   }
                 }
                 if (improved) break;
@@ -524,10 +806,28 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       alloc.sort((a, b) => a.id - b.id);
       const boothsRes = alloc.map((b, i) => {
         const cList = [];
-        b.items.forEach(it => it.classes.forEach(c => cList.push(c.name)));
+        let bBallots = 0;
+        const bAssocs = new Set();
+        const bUncontested = new Set();
+
+        b.items.forEach(it => {
+          it.classes.forEach(c => cList.push(c.name));
+          bBallots += (it.totalBallots || (it.total * (it.hasAssocContest ? 2 : 1)));
+          const dName = it.deptName || it.name;
+          if (it.hasAssocContest) {
+            bAssocs.add(dName);
+          } else {
+            bUncontested.add(dName);
+          }
+        });
+
         return {
           boothNumber: i + 1,
           totalStudents: b.total,
+          totalBallots: bBallots,
+          assocBooksCount: bAssocs.size,
+          assocDepts: Array.from(bAssocs),
+          uncontestedDepts: Array.from(bUncontested),
           classes: cList,
           items: b.items
         };
@@ -538,17 +838,20 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         const part2Booth = boothsRes.find(b => b.classes.includes(sd.halves[1].classes[0]?.name));
         return {
           name: sd.dept.name,
+          hasAssocContest: sd.dept.hasAssocContest,
           part1: {
             boothNumber: part1Booth ? part1Booth.boothNumber : '?',
             label: sd.halves[0].partLabel,
             classes: sd.halves[0].classes.map(c => c.name),
-            count: sd.halves[0].total
+            count: sd.halves[0].total,
+            ballots: sd.halves[0].totalBallots
           },
           part2: {
             boothNumber: part2Booth ? part2Booth.boothNumber : '?',
             label: sd.halves[1].partLabel,
             classes: sd.halves[1].classes.map(c => c.name),
-            count: sd.halves[1].total
+            count: sd.halves[1].total,
+            ballots: sd.halves[1].totalBallots
           }
         };
       });
@@ -556,6 +859,14 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       const totals = boothsRes.map(b => b.totalStudents);
       const minBooth = Math.min(...totals);
       const maxBooth = Math.max(...totals);
+
+      const ballotTotals = boothsRes.map(b => b.totalBallots);
+      const minBallots = Math.min(...ballotTotals);
+      const maxBallots = Math.max(...ballotTotals);
+
+      const assocCounts = boothsRes.map(b => b.assocBooksCount);
+      const minAssoc = Math.min(...assocCounts);
+      const maxAssoc = Math.max(...assocCounts);
 
       return {
         id,
@@ -566,6 +877,13 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         minBooth,
         maxBooth,
         spread: maxBooth - minBooth,
+        minBallots,
+        maxBallots,
+        ballotSpread: maxBallots - minBallots,
+        minAssoc,
+        maxAssoc,
+        uncontestedDepts: uncontestedDeptsList,
+        contestedDeptsCount,
         intactCount: numDepts - splitSummary.length,
         totalDepts: numDepts,
         splitDepts: splitSummary,
@@ -574,23 +892,31 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     }
 
     const proposals = [];
-    const largeDepts = depts.filter(d => d.total > mean * 0.75 && d.classes.length > 1).sort((a, b) => b.total - a.total);
+    const largeDepts = depts.filter(d => d.total > meanVoters * 0.75 && d.classes.length > 1).sort((a, b) => b.total - a.total);
 
     // Check Plan 0: 100% Pure Integrity (0 Splits)
-    const tier0Alloc = solvePartition(depts, numBooths, 60, 250);
+    const tier0Alloc = solvePartition(depts, numBooths, 60, 300);
     if (tier0Alloc) {
       const t0Totals = tier0Alloc.map(b => b.total);
+      const t0Ballots = tier0Alloc.map(b => b.totalBallots);
       const t0Min = Math.min(...t0Totals);
       const t0Max = Math.max(...t0Totals);
       const t0Spread = t0Max - t0Min;
-      const isTier0Balanced = (t0Max <= Math.round(mean * 1.25)) && (t0Min >= Math.round(mean * 0.75)) && (t0Spread <= 50);
+      const t0BMin = Math.min(...t0Ballots);
+      const t0BMax = Math.max(...t0Ballots);
+      const t0BSpread = t0BMax - t0BMin;
+
+      const isTier0Balanced = (t0Max <= Math.round(meanVoters * 1.25)) && 
+                              (t0Min >= Math.round(meanVoters * 0.75)) && 
+                              (t0Spread <= 55) &&
+                              (t0BSpread <= 90);
       if (isTier0Balanced) {
         proposals.push(formatProposal(
           'pure',
           'Plan 0: Pure Integrity',
           '✨ 100% Whole (0 Splits)',
           'emerald',
-          'Zero departments are split. Every single department sits whole in a single booth.',
+          'Zero departments are split. Every department sits whole in a single booth with equalized staff hardship and balanced ballot loads.',
           tier0Alloc,
           []
         ));
@@ -603,14 +929,14 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       const h1 = splitSmartBalanced(d1);
       if (h1) {
         const items1 = [...depts.filter(d => d.name !== d1.name), h1[0], h1[1]];
-        const alloc1 = solvePartition(items1, numBooths, 65, 300);
+        const alloc1 = solvePartition(items1, numBooths, 65, 350);
         if (alloc1) {
           proposals.push(formatProposal(
             'minimal',
             'Plan A: Minimal Splitting',
             '🛡️ Easiest Counting',
             'emerald',
-            `Maximizes whole departments. Only 1 department (${esc(d1.name)}) is split; all other ${numDepts - 1} departments remain 100% whole.`,
+            `Maximizes whole departments. Only 1 department (${esc(d1.name)}) is split; all other ${numDepts - 1} departments remain 100% whole with equalized ballot loads.`,
             alloc1,
             [{ dept: d1, halves: h1 }]
           ));
@@ -624,14 +950,14 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       const h1 = splitSmartBalanced(d1), h2 = splitSmartBalanced(d2);
       if (h1 && h2) {
         const items2 = [...depts.filter(d => d.name !== d1.name && d.name !== d2.name), h1[0], h1[1], h2[0], h2[1]];
-        const alloc2 = solvePartition(items2, numBooths, 85, 350);
+        const alloc2 = solvePartition(items2, numBooths, 85, 400);
         if (alloc2) {
           proposals.push(formatProposal(
             'balanced',
             'Plan B: Balanced Queues',
             '⚖️ Recommended • Optimal Flow',
             'indigo',
-            `Divides ${esc(d1.name)} and ${esc(d2.name)} into balanced 50/50 halves to equalize officer workloads and avoid crowded hallways.`,
+            `Divides ${esc(d1.name)} and ${esc(d2.name)} into balanced 50/50 halves to equalize officer workloads, ballot issuance burdens, and avoid crowded hallways.`,
             alloc2,
             [{ dept: d1, halves: h1 }, { dept: d2, halves: h2 }]
           ));
@@ -645,14 +971,14 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       const h1 = splitAcademicCohort(d1), h2 = splitAcademicCohort(d2);
       if (h1 && h2) {
         const items3 = [...depts.filter(d => d.name !== d1.name && d.name !== d2.name), h1[0], h1[1], h2[0], h2[1]];
-        const alloc3 = solvePartition(items3, numBooths, 50, 300);
+        const alloc3 = solvePartition(items3, numBooths, 55, 350);
         if (alloc3) {
           proposals.push(formatProposal(
             'cohort',
             'Plan C: Academic Cohort',
             '🎓 UG vs PG Segregation',
             'amber',
-            `Separates Undergraduates from Postgraduates & Scholars for clean degree-level physical campus navigation.`,
+            `Separates Undergraduates from Postgraduates & Scholars while interleaving uncontested departments to maintain equal staff workload across all booths.`,
             alloc3,
             [{ dept: d1, halves: h1 }, { dept: d2, halves: h2 }]
           ));
@@ -869,13 +1195,34 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           </div>
           
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="boothsContainer">
-            ${booths.map((b, i) => `
+            ${booths.map((b, i) => {
+              const bClasses = b.classes || [];
+              let bBallots = 0;
+              const bAssocDepts = new Set();
+              const bNoContestDepts = new Set();
+
+              bClasses.forEach(cName => {
+                const cls = classStats[cName];
+                if (cls) {
+                  const cInfo = getDeptAssocContestInfo(cls.dept);
+                  const perVoter = cInfo.hasContest ? 2 : 1;
+                  bBallots += cls.count * perVoter;
+                  if (cInfo.hasContest) bAssocDepts.add(cls.dept);
+                  else bNoContestDepts.add(cls.dept);
+                }
+              });
+
+              return `
               <div class="border border-white/10 rounded-lg p-3 bg-white/5 shadow-inner">
-                <div class="text-[10px] text-slate-500 font-bold uppercase mb-1 flex justify-between">
-                  <span>Booth ${i + 1}</span>
-                  <span class="${b.totalStudents > 0 ? 'text-indigo-400' : ''}">${b.totalStudents} Students</span>
+                <div class="text-[10px] text-slate-400 font-bold uppercase mb-1 flex justify-between items-center">
+                  <span class="text-white font-mono">Booth ${i + 1}</span>
+                  <div class="flex items-center gap-1.5 font-mono text-[10px]">
+                    <span class="${b.totalStudents > 0 ? 'text-white font-semibold' : ''}">${b.totalStudents} Voters</span>
+                    <span>&bull;</span>
+                    <span class="${bBallots > 0 ? 'text-indigo-300 font-bold' : ''}">${bBallots} Ballots</span>
+                  </div>
                 </div>
-                <div class="flex gap-1.5 items-center mb-2">
+                <div class="flex gap-1.5 items-center mb-1.5">
                   <select class="field text-sm py-1 flex-1 room-name-select" data-idx="${i}">
                     <option value="">-- Assign Location --</option>
                     ${locations.map(loc => `
@@ -892,11 +1239,16 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                     </button>
                   ` : ''}
                 </div>
+                <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1 px-0.5">
+                  <span>Assoc Books: <strong class="text-indigo-300 font-semibold">${bAssocDepts.size}</strong></span>
+                  ${bNoContestDepts.size > 0 ? `<span class="text-amber-300/80 truncate max-w-[140px]" title="No Assoc Contest: ${esc(Array.from(bNoContestDepts).join(', '))}">Uncontested: ${esc(Array.from(bNoContestDepts).join(', '))}</span>` : '<span class="text-slate-500">All Contested</span>'}
+                </div>
                 <div class="text-xs text-slate-500 h-16 overflow-y-auto bg-black/20 rounded p-1">
                   ${b.classes.length ? b.classes.map(c => `<div class="whitespace-nowrap overflow-hidden text-ellipsis">• ${esc(c)} (${classStats[c]?.count || 0})</div>`).join('') : '<em class="opacity-30">No classes assigned</em>'}
                 </div>
               </div>
-            `).join('')}
+            `;
+            }).join('')}
           </div>
         </div>
 
