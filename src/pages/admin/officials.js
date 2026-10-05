@@ -711,7 +711,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
   // ─── Team Builder Algorithms ────────────────────────────────────────────────
 
-  // Auto-allot Polling Teams
+  // Auto-allot Polling Teams (Fills empty slots only, strictly preserving all manual allotments)
   const autoAllotPolling = () => {
     const numBooths = booths.length;
     if (numBooths === 0) {
@@ -719,7 +719,36 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       return;
     }
 
-    // Identify faculty already assigned to Counting Duty to avoid double duty
+    // Ensure every booth has a team entry in pollingTeams
+    booths.forEach(b => {
+      let team = pollingTeams.find(t => t.boothNumber === b.boothNumber);
+      if (!team) {
+        team = {
+          boothNumber: b.boothNumber,
+          roomName: b.roomName || `Booth ${b.boothNumber}`,
+          presidingOfficer: null,
+          pollingOfficer1: null,
+          pollingOfficer2: null,
+          pollingOfficer3: null,
+          showPollingOfficer3: false,
+          pollingAssistant: null
+        };
+        pollingTeams.push(team);
+      }
+    });
+
+    // 1. Identify all currently assigned/manual faculty & assistants in polling
+    const preservedPollingFacultyNames = new Set();
+    const preservedPollingAssistantNames = new Set();
+    pollingTeams.forEach(t => {
+      if (t.presidingOfficer?.name) preservedPollingFacultyNames.add(t.presidingOfficer.name);
+      if (t.pollingOfficer1?.name) preservedPollingFacultyNames.add(t.pollingOfficer1.name);
+      if (t.pollingOfficer2?.name) preservedPollingFacultyNames.add(t.pollingOfficer2.name);
+      if (t.pollingOfficer3?.name) preservedPollingFacultyNames.add(t.pollingOfficer3.name);
+      if (t.pollingAssistant?.name) preservedPollingAssistantNames.add(t.pollingAssistant.name);
+    });
+
+    // Identify counting assignments to minimize double duty
     const countingAssignedNames = new Set();
     countingTeams.forEach(t => {
       if (t.supervisor?.name) countingAssignedNames.add(t.supervisor.name);
@@ -728,140 +757,113 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       if (t.countingOfficer3?.name) countingAssignedNames.add(t.countingOfficer3.name);
     });
 
-    // Check for any manually preserved 3rd Polling Officers to prevent duplicate booth assignment
-    const preservedPO3Names = new Set();
-    pollingTeams.forEach(t => {
-      if (t.pollingOfficer3?.name) preservedPO3Names.add(t.pollingOfficer3.name);
+    // Identify which slots are empty across all polling booths
+    const emptyPresidingBooths = [];
+    const emptyPO1Booths = [];
+    const emptyPO2Booths = [];
+    const emptyPO3Booths = [];
+    const emptyAssistantBooths = [];
+
+    booths.forEach(b => {
+      const team = pollingTeams.find(t => t.boothNumber === b.boothNumber);
+      if (!team) return;
+      if (!team.presidingOfficer) emptyPresidingBooths.push(team);
+      if (!team.pollingOfficer1) emptyPO1Booths.push(team);
+      if (!team.pollingOfficer2) emptyPO2Booths.push(team);
+      if (team.showPollingOfficer3 && !team.pollingOfficer3) emptyPO3Booths.push(team);
+      if (!team.pollingAssistant) emptyAssistantBooths.push(team);
     });
 
-    // Active, non-excluded faculty sorted by seniority rank (1 = seniormost)
-    const activeFaculty = faculty
-      .filter(f => !f.isExcluded && !preservedPO3Names.has(f.name))
-      .sort((a, b) => a.seniority - b.seniority);
+    const totalEmptySlots = emptyPresidingBooths.length + emptyPO1Booths.length + emptyPO2Booths.length + emptyPO3Booths.length + emptyAssistantBooths.length;
 
-    if (activeFaculty.length === 0) {
-      showToast('No active faculty members found. Please upload your Faculty Seniority List in the "Teaching Faculty Roster" tab.', 'error');
+    if (totalEmptySlots === 0) {
+      showToast('All polling slots are already filled! No empty slots to auto-allot.', 'info');
       return;
     }
 
-    // Classify into Regular Teaching Faculty, Librarians, and Guest Faculty
-    const activeRegular = activeFaculty.filter(isRegularFaculty);
-    const activeLibrarians = activeFaculty.filter(isLibrarian);
-    const activeGuest = activeFaculty.filter(isGuestFaculty);
+    // Candidate active, non-excluded faculty not already allotted in Polling
+    const candidateFaculty = faculty
+      .filter(f => !f.isExcluded && !preservedPollingFacultyNames.has(f.name))
+      .sort((a, b) => a.seniority - b.seniority);
 
-    const totalEligible = activeFaculty.length;
-    const requiredFaculty = numBooths * 3;
-    if (totalEligible < requiredFaculty) {
-      showToast(`Warning: Only ${totalEligible} active personnel available for ${requiredFaculty} polling positions.`, 'warning');
-    }
-
-    const availableNT = nonTeaching.filter(nt => !nt.isExcluded);
-    if (availableNT.length === 0) {
-      showToast('Notice: No active Non-Teaching Staff available. Please upload the Non-Teaching Staff list in the "Non-Teaching Staff" tab.', 'info');
-    }
-
-    // 1. Presiding Officers: Must be regular teaching faculty (seniormost)
-    // Priority: Fresh regular faculty without counting duty
-    const freshRegular = activeRegular.filter(f => !countingAssignedNames.has(f.name));
-    const doubleDutyRegular = activeRegular.filter(f => countingAssignedNames.has(f.name));
-
-    let presidingPool = [];
-    let remainingFreshRegular = [];
-    let remainingDoubleDutyRegular = [];
-
-    if (freshRegular.length >= numBooths) {
-      // Sufficient fresh regular faculty: 0 double duty for Presiding Officers
-      presidingPool = freshRegular.slice(0, numBooths);
-      remainingFreshRegular = freshRegular.slice(numBooths);
-      remainingDoubleDutyRegular = [...doubleDutyRegular];
-    } else {
-      // Shortage of fresh regular faculty: Fall back to double duty regular faculty only for the shortfall
-      presidingPool = [...freshRegular];
-      const shortfall = numBooths - presidingPool.length;
-      presidingPool.push(...doubleDutyRegular.slice(0, shortfall));
-      remainingFreshRegular = [];
-      remainingDoubleDutyRegular = doubleDutyRegular.slice(shortfall);
-    }
-    presidingPool.sort((a, b) => a.seniority - b.seniority);
-
-    // 2. Polling Officers (PO1 & PO2): Can be regular faculty, librarians, or guest faculty
-    // Priority: Avoid double duty by filling from fresh staff first (fresh regular + fresh librarians + fresh guest)
-    const freshLibrarians = activeLibrarians.filter(f => !countingAssignedNames.has(f.name));
-    const freshGuest = activeGuest.filter(f => !countingAssignedNames.has(f.name));
-
-    const doubleDutyLibrarians = activeLibrarians.filter(f => countingAssignedNames.has(f.name));
-    const doubleDutyGuest = activeGuest.filter(f => countingAssignedNames.has(f.name));
-
-    // Combine fresh pool in seniority order: Regular faculty -> Librarians -> Guest faculty
-    const freshPollingPool = [
-      ...remainingFreshRegular,
-      ...freshLibrarians,
-      ...freshGuest
-    ].sort((a, b) => a.seniority - b.seniority);
-
-    // Double duty fallback pool (only used if fresh personnel are unavailable)
-    const doubleDutyPollingPool = [
-      ...remainingDoubleDutyRegular,
-      ...doubleDutyLibrarians,
-      ...doubleDutyGuest
-    ].sort((a, b) => a.seniority - b.seniority);
-
-    const neededPollingOfficers = numBooths * 2;
-    let pollingOfficersPool = [];
-
-    if (freshPollingPool.length >= neededPollingOfficers) {
-      pollingOfficersPool = freshPollingPool.slice(0, neededPollingOfficers);
-    } else {
-      // Fresh pool exhausted: Allot double duty ONLY for the remaining unfilled slots
-      const shortfall = neededPollingOfficers - freshPollingPool.length;
-      pollingOfficersPool = [
-        ...freshPollingPool,
-        ...doubleDutyPollingPool.slice(0, shortfall)
-      ];
-    }
-
-    const newTeams = [];
+    let filledCount = 0;
     let doubleDutyCount = 0;
-    let guestCount = 0;
     let librarianCount = 0;
+    let guestCount = 0;
+    const newlyAssignedFacultyNames = new Set();
 
-    for (let i = 0; i < numBooths; i++) {
-      const b = booths[i];
-      const pOfficer = presidingPool[i] || null;
-      const po1 = pollingOfficersPool[i * 2] || null;
-      const po2 = pollingOfficersPool[i * 2 + 1] || null;
-      const assistant = availableNT.length > 0 ? (availableNT[i % availableNT.length] || null) : null;
+    // 2. Fill Empty Presiding Officers (Must be Regular Teaching Faculty, seniormost)
+    if (emptyPresidingBooths.length > 0) {
+      const activeRegular = candidateFaculty.filter(isRegularFaculty);
+      const freshRegular = activeRegular.filter(f => !countingAssignedNames.has(f.name));
+      const doubleDutyRegular = activeRegular.filter(f => countingAssignedNames.has(f.name));
+      const presidingPool = [...freshRegular, ...doubleDutyRegular];
 
-      // Preserve any manually assigned 3rd Polling Officer
-      const existingTeam = pollingTeams.find(t => t.boothNumber === b.boothNumber);
-      const existingPO3 = existingTeam?.pollingOfficer3 || null;
-      const existingShowPO3 = existingTeam?.showPollingOfficer3 || false;
-
-      // Sort polling officers by seniority
-      const pollingOfficers = [po1, po2, existingPO3].filter(Boolean);
-      pollingOfficers.sort((a, b) => a.seniority - b.seniority);
-
-      // Verify hierarchy: Presiding Officer is seniormost regular faculty
-      const allTeamFaculty = [pOfficer, ...pollingOfficers].filter(Boolean);
-      allTeamFaculty.forEach(f => {
-        if (countingAssignedNames.has(f.name)) doubleDutyCount++;
-        if (isGuestFaculty(f)) guestCount++;
-        if (isLibrarian(f)) librarianCount++;
-      });
-
-      newTeams.push({
-        boothNumber: b.boothNumber,
-        roomName: b.roomName || `Booth ${b.boothNumber}`,
-        presidingOfficer: pOfficer,
-        pollingOfficer1: pollingOfficers[0] || null,
-        pollingOfficer2: pollingOfficers[1] || null,
-        pollingOfficer3: pollingOfficers[2] || null,
-        showPollingOfficer3: existingShowPO3 || !!existingPO3,
-        pollingAssistant: assistant ? { name: assistant.name, designation: assistant.designation, pen: assistant.pen || '' } : null
+      let pIdx = 0;
+      emptyPresidingBooths.forEach(team => {
+        while (pIdx < presidingPool.length && newlyAssignedFacultyNames.has(presidingPool[pIdx].name)) {
+          pIdx++;
+        }
+        if (pIdx < presidingPool.length) {
+          const selected = presidingPool[pIdx];
+          team.presidingOfficer = selected;
+          newlyAssignedFacultyNames.add(selected.name);
+          filledCount++;
+          if (countingAssignedNames.has(selected.name)) doubleDutyCount++;
+          pIdx++;
+        }
       });
     }
 
-    pollingTeams = newTeams;
+    // 3. Fill Empty Polling Officers (PO1, PO2, PO3)
+    const emptyPOSlots = [];
+    emptyPO1Booths.forEach(t => emptyPOSlots.push({ team: t, role: 'pollingOfficer1' }));
+    emptyPO2Booths.forEach(t => emptyPOSlots.push({ team: t, role: 'pollingOfficer2' }));
+    emptyPO3Booths.forEach(t => emptyPOSlots.push({ team: t, role: 'pollingOfficer3' }));
+
+    if (emptyPOSlots.length > 0) {
+      const remainingCandidates = candidateFaculty.filter(f => !newlyAssignedFacultyNames.has(f.name));
+      const freshCandidates = remainingCandidates.filter(f => !countingAssignedNames.has(f.name));
+      const doubleDutyCandidates = remainingCandidates.filter(f => countingAssignedNames.has(f.name));
+      const poPool = [...freshCandidates, ...doubleDutyCandidates];
+
+      let poIdx = 0;
+      emptyPOSlots.forEach(slot => {
+        while (poIdx < poPool.length && newlyAssignedFacultyNames.has(poPool[poIdx].name)) {
+          poIdx++;
+        }
+        if (poIdx < poPool.length) {
+          const selected = poPool[poIdx];
+          slot.team[slot.role] = selected;
+          newlyAssignedFacultyNames.add(selected.name);
+          filledCount++;
+          if (countingAssignedNames.has(selected.name)) doubleDutyCount++;
+          if (isGuestFaculty(selected)) guestCount++;
+          if (isLibrarian(selected)) librarianCount++;
+          poIdx++;
+        }
+      });
+    }
+
+    // 4. Fill Empty Polling Assistants (Non-Teaching Staff)
+    if (emptyAssistantBooths.length > 0) {
+      const countingAsstNames = new Set(countingTeams.map(t => t.countingAssistant?.name).filter(Boolean));
+      const availableNT = nonTeaching.filter(nt => !nt.isExcluded && !preservedPollingAssistantNames.has(nt.name));
+      const freshNT = availableNT.filter(nt => !countingAsstNames.has(nt.name));
+      const doubleDutyNT = availableNT.filter(nt => countingAsstNames.has(nt.name));
+      const ntPool = [...freshNT, ...doubleDutyNT];
+
+      let ntIdx = 0;
+      emptyAssistantBooths.forEach(team => {
+        if (ntIdx < ntPool.length) {
+          const selected = ntPool[ntIdx];
+          team.pollingAssistant = { name: selected.name, designation: selected.designation, pen: selected.pen || '' };
+          filledCount++;
+          ntIdx++;
+        }
+      });
+    }
+
     saveAll(false);
 
     const extraDetails = [];
@@ -869,15 +871,19 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     if (guestCount > 0) extraDetails.push(`${guestCount} Guest Faculty`);
     const extraStr = extraDetails.length > 0 ? ` (Utilized ${extraDetails.join(' & ')} as Polling Officers)` : '';
 
-    if (doubleDutyCount > 0) {
-      showToast(`Polling teams allotted. Note: ${doubleDutyCount} double duty assignment(s) required due to active faculty shortage.${extraStr}`, 'warning');
+    if (filledCount > 0) {
+      if (doubleDutyCount > 0) {
+        showToast(`Auto-allotted ${filledCount} empty slot(s) while preserving manual selections (${doubleDutyCount} double duty required).${extraStr}`, 'warning');
+      } else {
+        showToast(`Auto-allotted ${filledCount} empty slot(s) cleanly while preserving manual selections!${extraStr}`, 'success');
+      }
     } else {
-      showToast(`Polling teams allotted cleanly with 0 double duties!${extraStr}`, 'success');
+      showToast('Could not fill any empty slots. Please check faculty and non-teaching rosters.', 'warning');
     }
     renderUI();
   };
 
-  // Auto-allot Counting Teams
+  // Auto-allot Counting Teams (Fills empty slots only, strictly preserving all manual allotments)
   const autoAllotCounting = (preferFresh = true) => {
     const numTables = booths.length;
     if (numTables === 0) {
@@ -885,7 +891,36 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       return;
     }
 
-    // Assigned polling faculty names to avoid double duty
+    // Ensure every table has a team entry in countingTeams
+    booths.forEach(b => {
+      let team = countingTeams.find(t => t.tableNumber === b.boothNumber);
+      if (!team) {
+        team = {
+          tableNumber: b.boothNumber,
+          roomName: b.roomName || `Table ${b.boothNumber}`,
+          supervisor: null,
+          countingOfficer1: null,
+          countingOfficer2: null,
+          countingOfficer3: null,
+          showCountingOfficer3: false,
+          countingAssistant: null
+        };
+        countingTeams.push(team);
+      }
+    });
+
+    // 1. Identify all currently assigned/manual faculty & assistants in counting
+    const preservedCountingFacultyNames = new Set();
+    const preservedCountingAssistantNames = new Set();
+    countingTeams.forEach(t => {
+      if (t.supervisor?.name) preservedCountingFacultyNames.add(t.supervisor.name);
+      if (t.countingOfficer1?.name) preservedCountingFacultyNames.add(t.countingOfficer1.name);
+      if (t.countingOfficer2?.name) preservedCountingFacultyNames.add(t.countingOfficer2.name);
+      if (t.countingOfficer3?.name) preservedCountingFacultyNames.add(t.countingOfficer3.name);
+      if (t.countingAssistant?.name) preservedCountingAssistantNames.add(t.countingAssistant.name);
+    });
+
+    // Identify polling duty assignments to minimize double duty
     const pollingAssignedNames = new Set();
     pollingTeams.forEach(t => {
       if (t.presidingOfficer?.name) pollingAssignedNames.add(t.presidingOfficer.name);
@@ -894,127 +929,113 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       if (t.pollingOfficer3?.name) pollingAssignedNames.add(t.pollingOfficer3.name);
     });
 
-    // Check for any manually preserved 3rd Counting Officers
-    const preservedCO3Names = new Set();
-    countingTeams.forEach(t => {
-      if (t.countingOfficer3?.name) preservedCO3Names.add(t.countingOfficer3.name);
+    // Identify which slots are empty across all counting tables
+    const emptySupervisorTables = [];
+    const emptyCO1Tables = [];
+    const emptyCO2Tables = [];
+    const emptyCO3Tables = [];
+    const emptyAssistantTables = [];
+
+    booths.forEach(b => {
+      const team = countingTeams.find(t => t.tableNumber === b.boothNumber);
+      if (!team) return;
+      if (!team.supervisor) emptySupervisorTables.push(team);
+      if (!team.countingOfficer1) emptyCO1Tables.push(team);
+      if (!team.countingOfficer2) emptyCO2Tables.push(team);
+      if (team.showCountingOfficer3 && !team.countingOfficer3) emptyCO3Tables.push(team);
+      if (!team.countingAssistant) emptyAssistantTables.push(team);
     });
 
-    const activeFaculty = faculty
-      .filter(f => !f.isExcluded && !preservedCO3Names.has(f.name))
-      .sort((a, b) => a.seniority - b.seniority);
+    const totalEmptySlots = emptySupervisorTables.length + emptyCO1Tables.length + emptyCO2Tables.length + emptyCO3Tables.length + emptyAssistantTables.length;
 
-    if (activeFaculty.length === 0) {
-      showToast('No active faculty members found. Please upload your Faculty Seniority List in the "Teaching Faculty Roster" tab.', 'error');
+    if (totalEmptySlots === 0) {
+      showToast('All counting slots are already filled! No empty slots to auto-allot.', 'info');
       return;
     }
 
-    const activeRegular = activeFaculty.filter(isRegularFaculty);
-    const activeLibrarians = activeFaculty.filter(isLibrarian);
-    const activeGuest = activeFaculty.filter(isGuestFaculty);
+    // Candidate active, non-excluded faculty not already allotted in Counting
+    const candidateFaculty = faculty
+      .filter(f => !f.isExcluded && !preservedCountingFacultyNames.has(f.name))
+      .sort((a, b) => a.seniority - b.seniority);
 
-    // 1. Counting Supervisors: Must be regular faculty (seniormost)
-    const freshRegular = activeRegular.filter(f => !pollingAssignedNames.has(f.name));
-    const doubleDutyRegular = activeRegular.filter(f => pollingAssignedNames.has(f.name));
-
-    let supervisorPool = [];
-    let remainingFreshRegular = [];
-    let remainingDoubleDutyRegular = [];
-
-    if (preferFresh && freshRegular.length >= numTables) {
-      supervisorPool = freshRegular.slice(0, numTables);
-      remainingFreshRegular = freshRegular.slice(numTables);
-      remainingDoubleDutyRegular = [...doubleDutyRegular];
-    } else if (preferFresh) {
-      supervisorPool = [...freshRegular];
-      const shortfall = numTables - supervisorPool.length;
-      supervisorPool.push(...doubleDutyRegular.slice(0, shortfall));
-      remainingFreshRegular = [];
-      remainingDoubleDutyRegular = doubleDutyRegular.slice(shortfall);
-    } else {
-      supervisorPool = activeRegular.slice(0, numTables);
-      const supSet = new Set(supervisorPool.map(s => s.name));
-      remainingFreshRegular = freshRegular.filter(f => !supSet.has(f.name));
-      remainingDoubleDutyRegular = doubleDutyRegular.filter(f => !supSet.has(f.name));
-    }
-    supervisorPool.sort((a, b) => a.seniority - b.seniority);
-
-    // 2. Counting Officers: Can be regular faculty, librarians, or guest faculty
-    const freshLibrarians = activeLibrarians.filter(f => !pollingAssignedNames.has(f.name));
-    const freshGuest = activeGuest.filter(f => !pollingAssignedNames.has(f.name));
-
-    const doubleDutyLibrarians = activeLibrarians.filter(f => pollingAssignedNames.has(f.name));
-    const doubleDutyGuest = activeGuest.filter(f => pollingAssignedNames.has(f.name));
-
-    const freshOfficerPool = [
-      ...remainingFreshRegular,
-      ...freshLibrarians,
-      ...freshGuest
-    ].sort((a, b) => a.seniority - b.seniority);
-
-    const doubleDutyOfficerPool = [
-      ...remainingDoubleDutyRegular,
-      ...doubleDutyLibrarians,
-      ...doubleDutyGuest
-    ].sort((a, b) => a.seniority - b.seniority);
-
-    const neededOfficers = numTables * 2;
-    let officerPool = [];
-
-    if (preferFresh && freshOfficerPool.length >= neededOfficers) {
-      officerPool = freshOfficerPool.slice(0, neededOfficers);
-    } else if (preferFresh) {
-      const shortfall = neededOfficers - freshOfficerPool.length;
-      officerPool = [
-        ...freshOfficerPool,
-        ...doubleDutyOfficerPool.slice(0, shortfall)
-      ];
-    } else {
-      officerPool = [...freshOfficerPool, ...doubleDutyOfficerPool].slice(0, neededOfficers);
-    }
-
-    const availableNT = nonTeaching.filter(nt => !nt.isExcluded);
-
-    const newCountingTeams = [];
+    let filledCount = 0;
     let doubleDutyCount = 0;
-    let guestCount = 0;
     let librarianCount = 0;
+    let guestCount = 0;
+    const newlyAssignedFacultyNames = new Set();
 
-    for (let i = 0; i < numTables; i++) {
-      const b = booths[i];
-      const sup = supervisorPool[i] || null;
-      const co1 = officerPool[i * 2] || null;
-      const co2 = officerPool[i * 2 + 1] || null;
-      const assistant = availableNT.length > 0 ? (availableNT[(i + numTables) % availableNT.length] || null) : null;
+    // 2. Fill Empty Counting Supervisors (Must be Regular Teaching Faculty, seniormost)
+    if (emptySupervisorTables.length > 0) {
+      const activeRegular = candidateFaculty.filter(isRegularFaculty);
+      const freshRegular = activeRegular.filter(f => !pollingAssignedNames.has(f.name));
+      const doubleDutyRegular = activeRegular.filter(f => pollingAssignedNames.has(f.name));
+      const supervisorPool = preferFresh ? [...freshRegular, ...doubleDutyRegular] : [...activeRegular];
 
-      // Preserve any manually assigned 3rd Counting Officer
-      const existingTeam = countingTeams.find(t => t.tableNumber === b.boothNumber);
-      const existingCO3 = existingTeam?.countingOfficer3 || null;
-      const existingShowCO3 = existingTeam?.showCountingOfficer3 || false;
-
-      const countingOfficers = [co1, co2, existingCO3].filter(Boolean);
-      countingOfficers.sort((a, b) => a.seniority - b.seniority);
-
-      const allTeamFaculty = [sup, ...countingOfficers].filter(Boolean);
-      allTeamFaculty.forEach(f => {
-        if (pollingAssignedNames.has(f.name)) doubleDutyCount++;
-        if (isGuestFaculty(f)) guestCount++;
-        if (isLibrarian(f)) librarianCount++;
-      });
-
-      newCountingTeams.push({
-        tableNumber: b.boothNumber,
-        roomName: b.roomName || `Table ${b.boothNumber}`,
-        supervisor: sup,
-        countingOfficer1: countingOfficers[0] || null,
-        countingOfficer2: countingOfficers[1] || null,
-        countingOfficer3: countingOfficers[2] || null,
-        showCountingOfficer3: existingShowCO3 || !!existingCO3,
-        countingAssistant: assistant ? { name: assistant.name, designation: assistant.designation, pen: assistant.pen || '' } : null
+      let sIdx = 0;
+      emptySupervisorTables.forEach(team => {
+        while (sIdx < supervisorPool.length && newlyAssignedFacultyNames.has(supervisorPool[sIdx].name)) {
+          sIdx++;
+        }
+        if (sIdx < supervisorPool.length) {
+          const selected = supervisorPool[sIdx];
+          team.supervisor = selected;
+          newlyAssignedFacultyNames.add(selected.name);
+          filledCount++;
+          if (pollingAssignedNames.has(selected.name)) doubleDutyCount++;
+          sIdx++;
+        }
       });
     }
 
-    countingTeams = newCountingTeams;
+    // 3. Fill Empty Counting Officers (CO1, CO2, CO3)
+    const emptyCOSlots = [];
+    emptyCO1Tables.forEach(t => emptyCOSlots.push({ team: t, role: 'countingOfficer1' }));
+    emptyCO2Tables.forEach(t => emptyCOSlots.push({ team: t, role: 'countingOfficer2' }));
+    emptyCO3Tables.forEach(t => emptyCOSlots.push({ team: t, role: 'countingOfficer3' }));
+
+    if (emptyCOSlots.length > 0) {
+      const remainingCandidates = candidateFaculty.filter(f => !newlyAssignedFacultyNames.has(f.name));
+      const freshCandidates = remainingCandidates.filter(f => !pollingAssignedNames.has(f.name));
+      const doubleDutyCandidates = remainingCandidates.filter(f => pollingAssignedNames.has(f.name));
+      const coPool = preferFresh ? [...freshCandidates, ...doubleDutyCandidates] : [...remainingCandidates];
+
+      let coIdx = 0;
+      emptyCOSlots.forEach(slot => {
+        while (coIdx < coPool.length && newlyAssignedFacultyNames.has(coPool[coIdx].name)) {
+          coIdx++;
+        }
+        if (coIdx < coPool.length) {
+          const selected = coPool[coIdx];
+          slot.team[slot.role] = selected;
+          newlyAssignedFacultyNames.add(selected.name);
+          filledCount++;
+          if (pollingAssignedNames.has(selected.name)) doubleDutyCount++;
+          if (isGuestFaculty(selected)) guestCount++;
+          if (isLibrarian(selected)) librarianCount++;
+          coIdx++;
+        }
+      });
+    }
+
+    // 4. Fill Empty Counting Assistants (Non-Teaching Staff)
+    if (emptyAssistantTables.length > 0) {
+      const pollingAsstNames = new Set(pollingTeams.map(t => t.pollingAssistant?.name).filter(Boolean));
+      const availableNT = nonTeaching.filter(nt => !nt.isExcluded && !preservedCountingAssistantNames.has(nt.name));
+      const freshNT = availableNT.filter(nt => !pollingAsstNames.has(nt.name));
+      const doubleDutyNT = availableNT.filter(nt => pollingAsstNames.has(nt.name));
+      const ntPool = [...freshNT, ...doubleDutyNT];
+
+      let ntIdx = 0;
+      emptyAssistantTables.forEach(team => {
+        if (ntIdx < ntPool.length) {
+          const selected = ntPool[ntIdx];
+          team.countingAssistant = { name: selected.name, designation: selected.designation, pen: selected.pen || '' };
+          filledCount++;
+          ntIdx++;
+        }
+      });
+    }
+
     saveAll(false);
 
     const extraDetails = [];
@@ -1022,10 +1043,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     if (guestCount > 0) extraDetails.push(`${guestCount} Guest Faculty`);
     const extraStr = extraDetails.length > 0 ? ` (Utilized ${extraDetails.join(' & ')} as Counting Officers)` : '';
 
-    if (doubleDutyCount > 0) {
-      showToast(`Counting teams allotted with ${doubleDutyCount} double duty personnel due to active faculty shortage.${extraStr}`, 'warning');
+    if (filledCount > 0) {
+      if (doubleDutyCount > 0) {
+        showToast(`Auto-allotted ${filledCount} empty slot(s) while preserving manual selections (${doubleDutyCount} double duty required).${extraStr}`, 'warning');
+      } else {
+        showToast(`Auto-allotted ${filledCount} empty slot(s) cleanly while preserving manual selections!${extraStr}`, 'success');
+      }
     } else {
-      showToast(`Counting teams allotted cleanly with 0 double duties!${extraStr}`, 'success');
+      showToast('Could not fill any empty slots. Please check faculty and non-teaching rosters.', 'warning');
     }
     renderUI();
   };
@@ -1286,7 +1311,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <p class="text-xs text-slate-400">Each booth needs 1 Presiding Officer (Seniormost regular faculty), 2 Polling Officers (Regular faculty, Guest faculty, or Librarians), and 1 Polling Assistant (Non-teaching staff). Double duty with counting tables is strictly minimized.</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
-              <button id="btnAutoAllotPolling" class="btn btn-primary bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow" title="Auto-allot Polling Teams avoiding double duty, utilizing Guest Faculty and Librarians as Polling Officers">
+              <button id="btnAutoAllotPolling" class="btn btn-primary bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow" title="Auto-allot empty polling slots while preserving all manually chosen officials">
                 ⚡ Auto-Allot Polling Teams
               </button>
               <button id="btnPrintPollingOrders" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5">
@@ -1461,7 +1486,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <p class="text-xs text-slate-400">Each table needs 1 Counting Supervisor (Seniormost at table), 2 Counting Officers, and 1 Counting Assistant. Staff serving polling duty are flagged with double duty.</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
-              <button id="btnAutoAllotCountingFresh" class="btn btn-primary bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow">
+              <button id="btnAutoAllotCountingFresh" class="btn btn-primary bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow" title="Auto-allot empty counting slots while preserving all manually chosen officials">
                 ⚡ Auto-Allot (Fresh Faculty First)
               </button>
               <button id="btnPrintCountingOrders" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5">
@@ -1895,7 +1920,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // Polling Auto-Allot
     main.querySelector('#btnAutoAllotPolling')?.addEventListener('click', () => {
-      if (confirm('⚡ Auto-Allot Polling Teams?\n\nThis will assign seniormost regular faculty as Presiding Officers, and Polling Officers (PO 1 & 2) while strictly avoiding double duty with Counting Table assignments. Guest faculty and Librarians will be utilized as Polling Officers to prevent double duty, assigning double duty only in the event of faculty unavailability.\n\nProceed?')) {
+      if (confirm('⚡ Auto-Allot Polling Teams?\n\nThis will automatically fill empty slots with eligible faculty and staff while preserving any manually selected officials.\n\nDouble duty with Counting Table assignments will be strictly minimized.\n\nProceed?')) {
         autoAllotPolling();
       }
     });
@@ -1911,7 +1936,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // Counting Auto-Allot
     main.querySelector('#btnAutoAllotCountingFresh')?.addEventListener('click', () => {
-      if (confirm('⚡ Auto-Allot Counting Teams?\n\nThis will assign seniormost regular faculty as Counting Supervisors, and Counting Officers from fresh faculty, librarians, and guest faculty who are not assigned to Polling Duty. If fresh personnel are unavailable, remaining slots will be filled with polling staff with Double Duty flags.\n\nProceed?')) {
+      if (confirm('⚡ Auto-Allot Counting Teams?\n\nThis will automatically fill empty slots with eligible faculty and staff while preserving any manually selected officials.\n\nFresh faculty not on polling duty will be prioritized.\n\nProceed?')) {
         autoAllotCounting(true);
       }
     });
