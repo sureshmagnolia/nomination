@@ -310,7 +310,8 @@ export const api = {
   getNominalRoll: () => get({ action: 'getNominalRoll' }),
   getPosts: () => get({ action: 'getPosts' }),
   getPublicNominations: () => get({ action: 'getPublicNominations' }),
-  getNomination: (id, admissionNo) => get({ action: 'getNomination', id, admissionNo }),
+  getNomination: (id, admissionNo, dob = null, requireDobAuth = false) =>
+    get({ action: 'getNomination', id, admissionNo, dob, requireDobAuth }),
   getValidNominations: () => get({ action: 'getValidNominations' }),
   getFinalNominations: () => get({ action: 'getFinalNominations' }),
   submitNomination: async (payload) => {
@@ -321,10 +322,12 @@ export const api = {
     invalidateCache('getFinalNominations');
     return res;
   },
-  submitWithdrawal: async (id, admissionNo) => {
-    const res = await post({ action: 'submitWithdrawal', id, admissionNo });
+  submitWithdrawal: async (id, admissionNo, dob = null) => {
+    const res = await post({ action: 'submitWithdrawal', id, admissionNo, dob });
     invalidateCache('adminGetNominations');
     invalidateCache('getPublicNominations');
+    invalidateCache('getValidNominations');
+    invalidateCache('getFinalNominations');
     return res;
   },
 

@@ -90,6 +90,9 @@ function renderList(main, nominations, year = '2026', shortName = null, allPosts
           <p class="text-slate-400 mt-2">Official list of all candidates whose nominations have been verified as valid.</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
+          <a href="#/withdraw" class="btn btn-secondary btn-sm flex items-center gap-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 font-semibold" title="Submit Candidature Withdrawal">
+            <span>↩️</span> Withdraw Candidature
+          </a>
           <button id="btnExportValidExcel" class="btn btn-secondary btn-sm flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10" title="Download Valid Nominations in Excel (.xlsx)">
             <span>📊</span> Download Excel
           </button>
@@ -143,12 +146,22 @@ function renderList(main, nominations, year = '2026', shortName = null, allPosts
                           <span>${esc(n.candidateName)}</span>
                           ${n.candidateSerial ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" title="Electoral Roll Serial Number">Roll Sl. #${esc(n.candidateSerial)}</span>` : ''}
                         </div>
-                        <div class="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
+                        <div class="text-xs text-slate-400 mt-0.5 flex flex-wrap items-center gap-2">
                           <span>${esc(n.candidateClass)}</span>
                           ${n.candidateAdmission ? `<span class="text-slate-500 font-mono">Adm: ${esc(n.candidateAdmission)}</span>` : ''}
+                          ${n.id ? `<span class="text-indigo-300 font-mono text-[11px] bg-indigo-500/15 px-1.5 py-0.5 rounded border border-indigo-500/30" title="Nomination ID">Nom ID: <strong class="font-mono text-indigo-200">${esc(n.id)}</strong></span>` : ''}
                         </div>
                       </td>
-                      <td class="text-sm text-slate-400">${esc(n.candidateDept)}</td>
+                      <td class="text-sm text-slate-400">
+                        <div class="flex items-center justify-between gap-2">
+                          <span>${esc(n.candidateDept)}</span>
+                          ${n.id ? `
+                            <a href="#/withdraw?id=${encodeURIComponent(n.id)}" class="btn btn-xs bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-[11px] px-2 py-0.5 rounded transition inline-flex items-center gap-1 font-semibold shrink-0" title="Submit Withdrawal of Candidature">
+                              <span>↩️</span> Withdraw
+                            </a>
+                          ` : ''}
+                        </div>
+                      </td>
                     </tr>
                   `).join('')}
                 </tbody>

@@ -198,6 +198,24 @@ function evaluateStageStatus(overrideMode, legacyFlag) {
   return legacyFlag === 'true' || legacyFlag === true;
 }
 
+function normalizeDob(d) {
+  if (!d) return '';
+  const s = String(d).trim();
+  const mIso = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (mIso) {
+    return `${mIso[1]}-${String(mIso[2]).padStart(2, '0')}-${String(mIso[3]).padStart(2, '0')}`;
+  }
+  const mIn = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+  if (mIn) {
+    return `${mIn[3]}-${String(mIn[2]).padStart(2, '0')}-${String(mIn[1]).padStart(2, '0')}`;
+  }
+  const parsed = new Date(s);
+  if (!isNaN(parsed.getTime())) {
+    return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+  }
+  return s;
+}
+
 async function getFullElectionStatus() {
   const [
     draftRollOverride, draftRollStart, draftRollEnd, legacyDraftPub,
@@ -966,6 +984,22 @@ export default async function handler(req, res) {
       const rows = await sql`SELECT * FROM nominations WHERE id = ${id}`;
       if (!rows.length) return errOut(res, 'Nomination not found.', 404);
       const n = rows[0];
+
+      // Security authentication: verify Date of Birth if provided or if strict auth requested
+      if (body.dob && n.dob) {
+        const storedDob = normalizeDob(n.dob);
+        const inputDob = normalizeDob(body.dob);
+        if (storedDob && inputDob && storedDob !== inputDob) {
+          return errOut(res, 'Authentication Failed: Date of Birth does not match candidate records.', 403);
+        }
+      } else if (body.requireDobAuth && n.dob) {
+        return errOut(res, 'Authentication Failed: Date of Birth password is required.', 400);
+      }
+
+      if (body.admissionNo && n.candidate_admission && String(n.candidate_admission).trim() !== String(body.admissionNo).trim()) {
+        return errOut(res, 'Authentication Failed: Invalid Admission Number.', 403);
+      }
+
       return jsonOut(res, {
         id: n.id, post: n.post, gender: n.gender, dob: n.dob, timestamp: n.timestamp,
         candidateSerial: n.candidate_serial, proposerSerial: n.proposer_serial, seconderSerial: n.seconder_serial,
@@ -995,13 +1029,15 @@ export default async function handler(req, res) {
           candidate_name ASC
       `;
       return jsonOut(res, noms.map(n => ({ 
+        id: n.id,
         post: n.post, 
         candidateSerial: n.candidate_serial,
         candidateAdmission: n.candidate_admission,
         candidateName: n.candidate_name, 
         candidateClass: n.candidate_class, 
         candidateDept: n.candidate_dept, 
-        status: n.status 
+        status: n.status,
+        withdrawalStatus: n.withdrawal_status || 'None'
       })));
     }
 
@@ -1994,7 +2030,24 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       const id = body.id;
       const nom = await sql`SELECT * FROM nominations WHERE id = ${id}`;
       if (!nom.length) return errOut(res, 'Nomination not found.');
-      if (nom[0].candidate_admission !== String(body.admissionNo)) return errOut(res, 'Authentication Failed: Invalid Admission Number.');
+
+      // DOB Verification as Password
+      if (nom[0].dob) {
+        if (!body.dob && !body.password) {
+          return errOut(res, 'Authentication Failed: Date of Birth is required as verification password.');
+        }
+        if (body.dob) {
+          const storedDob = normalizeDob(nom[0].dob);
+          const inputDob = normalizeDob(body.dob);
+          if (storedDob && inputDob && storedDob !== inputDob) {
+            return errOut(res, 'Authentication Failed: Date of Birth does not match candidate records.');
+          }
+        }
+      }
+
+      if (body.admissionNo && nom[0].candidate_admission && String(nom[0].candidate_admission).trim() !== String(body.admissionNo).trim()) {
+        return errOut(res, 'Authentication Failed: Invalid Admission Number.');
+      }
 
       await sql`UPDATE nominations SET withdrawal_status = 'Pending' WHERE id = ${id}`;
       return jsonOut(res, { ok: true });
