@@ -4,7 +4,7 @@
  */
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast, setLoading } from '../../utils.js';
+import { esc, showToast, setLoading, getStudentYearLevel } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 
 export async function renderAdminBooths(container) {
@@ -171,6 +171,139 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     return { hasContest: true, candidateCount: 2, post: postName, reason: 'assumed_contested' };
   };
 
+  // Helper to determine Representative post contest status for each cohort:
+  // '1_UG' -> I UG Representative
+  // '2_UG' -> II UG Representative
+  // '3_UG' -> III UG Representative
+  // '1_PG' | '2_PG' -> PG Representative
+  // 'RS' -> Research Scholar (no representative ballot)
+  const getRepContestInfo = (yearLevel) => {
+    if (!yearLevel || yearLevel === 'RS') {
+      return { hasContest: false, candidateCount: 0, post: null, key: 'RS' };
+    }
+
+    const repKey = (yearLevel === '1_PG' || yearLevel === '2_PG') ? 'PG' : yearLevel; // '1_UG', '2_UG', '3_UG', 'PG'
+
+    // 1. Check if Ballot Plan already exists and has reps
+    if (plan && plan.reps && Array.isArray(plan.reps.results) && plan.reps.results.length > 0) {
+      const hasPlanContest = plan.reps.results.some(r => {
+        const pPost = String(r.post || '').toUpperCase();
+        if (repKey === '1_UG' && (pPost.includes('I UG') || pPost.includes('1ST UG') || pPost.includes('I YEAR'))) return true;
+        if (repKey === '2_UG' && (pPost.includes('II UG') || pPost.includes('2ND UG') || pPost.includes('II YEAR'))) return true;
+        if (repKey === '3_UG' && (pPost.includes('III UG') || pPost.includes('3RD UG') || pPost.includes('III YEAR'))) return true;
+        if (repKey === 'PG' && pPost.includes('PG')) return true;
+        return false;
+      });
+      if (hasPlanContest) {
+        return { hasContest: true, candidateCount: 2, post: `${repKey} Representative`, key: repKey, reason: 'plan_active' };
+      }
+    }
+
+    // 2. Locate the Representative post rule from posts
+    const repPost = (posts || []).find(p => {
+      const pName = String(p.post || '').toUpperCase().trim();
+      if (pName.includes('ASSOCIATION') || pName.includes('ASSOC') || p.deptRestriction) return false;
+      if (!pName.includes('REPRESENTATIVE') && !pName.includes('REP')) return false;
+
+      if (repKey === '1_UG') {
+        return p.yearRestriction === '1' || pName.includes('I UG') || pName.includes('1ST UG') || pName.includes('I YEAR');
+      }
+      if (repKey === '2_UG') {
+        return p.yearRestriction === '2' || pName.includes('II UG') || pName.includes('2ND UG') || pName.includes('II YEAR');
+      }
+      if (repKey === '3_UG') {
+        return p.yearRestriction === '3' || pName.includes('III UG') || pName.includes('3RD UG') || pName.includes('III YEAR');
+      }
+      if (repKey === 'PG') {
+        return p.yearRestriction === 'PG' || pName.includes('PG');
+      }
+      return false;
+    });
+
+    if (!repPost) {
+      return { hasContest: false, candidateCount: 0, post: null, key: repKey, reason: 'no_post' };
+    }
+
+    const postName = String(repPost.post || '').trim();
+
+    // 3. Count candidates from nominations (resolvedNominations: valid, non-withdrawn)
+    if (Array.isArray(nominations) && nominations.length > 0) {
+      const activeCands = nominations.filter(n => {
+        const nPost = String(n.post || '').trim();
+        const isMatch = nPost.toLowerCase() === postName.toLowerCase();
+        const isValid = (!n.status || n.status === 'Valid');
+        const notWithdrawn = (n.withdrawalStatus !== 'Approved');
+        return isMatch && isValid && notWithdrawn;
+      });
+
+      const candidateCount = activeCands.length;
+      const hasContest = candidateCount >= 2;
+      return {
+        hasContest,
+        candidateCount,
+        post: postName,
+        key: repKey,
+        reason: hasContest ? 'contested' : (candidateCount === 1 ? 'unopposed' : 'no_candidates')
+      };
+    }
+
+    // 4. Default if nominations not loaded: assume contested
+    return { hasContest: true, candidateCount: 2, post: postName, key: repKey, reason: 'assumed_contested' };
+  };
+
+  // Helper to determine exact ballot paper count and eligibility for a class
+  const getClassBallotInfo = (cls) => {
+    const deptName = String(cls.dept || 'Unknown').trim();
+    const assocInfo = getDeptAssocContestInfo(deptName);
+    const yLevel = getStudentYearLevel(cls.name);
+    const repInfo = getRepContestInfo(yLevel);
+
+    // 1 General Union Ballot (always)
+    // + 1 Association Ballot (if department Association Secretary is contested)
+    // + 1 Representative Ballot (if cohort Representative post is contested)
+    const ballotsPerStudent = 1 + (assocInfo.hasContest ? 1 : 0) + (repInfo.hasContest ? 1 : 0);
+    const totalBallots = (cls.count || 0) * ballotsPerStudent;
+
+    return {
+      dept: deptName,
+      yearLevel: yLevel,
+      repKey: repInfo.key,
+      hasAssocContest: assocInfo.hasContest,
+      assocPost: assocInfo.post,
+      hasRepContest: repInfo.hasContest,
+      repPost: repInfo.post,
+      ballotsPerStudent,
+      totalBallots
+    };
+  };
+
+  // Helper to compute combined voters, ballots, cohorts and PG presence for any set of classes
+  const calcClassesWorkload = (classes, deptName) => {
+    let totalVoters = 0;
+    let totalBallots = 0;
+    const cohorts = new Set();
+    const assocInfo = getDeptAssocContestInfo(deptName);
+
+    classes.forEach(c => {
+      totalVoters += (c.count || 0);
+      const bInfo = getClassBallotInfo(c);
+      totalBallots += bInfo.totalBallots;
+      if (bInfo.repKey && bInfo.repKey !== 'RS') {
+        cohorts.add(bInfo.repKey);
+      }
+    });
+
+    return {
+      totalVoters,
+      totalBallots,
+      hasAssocContest: assocInfo.hasContest,
+      assocCandidateCount: assocInfo.candidateCount,
+      assocPost: assocInfo.post,
+      cohorts: Array.from(cohorts),
+      hasPG: cohorts.has('PG')
+    };
+  };
+
   const openSplitModal = (splitDepts, intactCount, totalDepts) => {
     const modal = main.querySelector('#splitAlertModal');
     const content = main.querySelector('#splitAlertModalContent');
@@ -189,7 +322,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           <div class="border border-white/15 bg-white/5 rounded-xl p-4 space-y-2">
             <div class="flex justify-between items-center border-b border-white/10 pb-2">
               <h5 class="font-bold text-base text-white">🏛️ ${esc(sd.name)}</h5>
-              <div class="flex items-center gap-1.5">
+              <div class="flex items-center gap-1.5 flex-wrap">
                 <span class="text-xs font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
                   Total: ${sd.part1.count + sd.part2.count} Voters
                 </span>
@@ -237,7 +370,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
             <p class="text-[11px] text-amber-300/90 pt-1">
               ${!sd.hasAssocContest 
-                ? `ℹ️ <em>${esc(sd.name)} has no Association Secretary contest (no departmental association ballot issued). Staff only need to issue General Union ballots for this department.</em>` 
+                ? `ℹ️ <em>${esc(sd.name)} has no Association Secretary contest (no departmental association ballot issued). Staff only issue General Union ballots &amp; eligible Rep ballots for this department.</em>` 
                 : `💡 <em>Counting instruction: During vote counting, ballots from Booth ${sd.part1.boothNumber} and Booth ${sd.part2.boothNumber} for ${esc(sd.name)} association will need to be aggregated together.</em>`}
             </p>
           </div>
@@ -288,10 +421,14 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                   <span class="font-mono font-bold text-indigo-300">${p.minBallots} – ${p.maxBallots} ballots <span class="text-[11px] ${p.ballotSpread <= 110 ? 'text-emerald-400' : 'text-amber-400'}">(${p.ballotSpread} spread)</span></span>
                 </div>
                 <div class="flex justify-between items-center">
-                  <span class="text-slate-400">Assoc. Ballot Series / Books:</span>
-                  <span class="font-bold ${p.minAssoc > 0 ? 'text-emerald-300' : 'text-amber-300'}">
-                    ${p.minAssoc} – ${p.maxAssoc} books / booth
+                  <span class="text-slate-400">Total Books / Booth:</span>
+                  <span class="font-bold ${p.minBooks > 0 ? 'text-emerald-300' : 'text-amber-300'}">
+                    ${p.minBooks} – ${p.maxBooks} books (1 Gen + Assoc + Reps)
                   </span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400">PG Cohort Distribution:</span>
+                  <span class="font-bold text-purple-300">${p.pgBoothsCount} of ${p.booths.length} Booths handle PG</span>
                 </div>
                 <div class="flex justify-between items-center">
                   <span class="text-slate-400">Department Integrity:</span>
@@ -306,17 +443,15 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               </div>
 
               <!-- Hardship Equalization Callout -->
-              ${p.uncontestedDepts && p.uncontestedDepts.length > 0 ? `
-                <div class="text-[11px] bg-indigo-500/10 border border-indigo-500/25 rounded-lg p-2.5 text-indigo-200">
-                  <div class="font-bold text-indigo-300 flex items-center gap-1.5 mb-1">
-                    <span>⚖️</span> <span>Equal Hardship Mixing Active:</span>
-                  </div>
-                  <p class="text-[10px] text-slate-300 leading-normal">
-                    <strong>${esc(p.uncontestedDepts.join(', '))}</strong> have no association contest (1 ballot/voter). 
-                    The optimizer interleaved them with contested departments (${p.minAssoc}–${p.maxAssoc} association books per booth) to equalize staff hardship and avoid easy-job clustering.
-                  </p>
+              <div class="text-[11px] bg-indigo-500/10 border border-indigo-500/25 rounded-lg p-2.5 text-indigo-200 space-y-1">
+                <div class="font-bold text-indigo-300 flex items-center gap-1.5">
+                  <span>⚖️</span> <span>Equal Hardship &amp; Multi-Ballot Balancing Active:</span>
                 </div>
-              ` : ''}
+                <p class="text-[10px] text-slate-300 leading-normal">
+                  Workload factors in <strong>General</strong> (1), <strong>Dept Association</strong> (${p.contestedDeptsCount} contested), and <strong>Cohort Representatives</strong> (I UG, II UG, III UG, PG). 
+                  ${p.uncontestedDepts && p.uncontestedDepts.length > 0 ? `Uncontested depts (<em>${esc(p.uncontestedDepts.join(', '))}</em>) and PG split cohorts are interleaved across separate booths to ensure equal staff burdens.` : `Staff book management (${p.minBooks}–${p.maxBooks} books/booth) and ballot issuance are tightly equalized across all booths.`}
+                </p>
+              </div>
 
               <!-- Split Details -->
               ${p.splitDepts.length > 0 ? `
@@ -355,7 +490,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                 <button type="button" class="btn btn-secondary btn-xs w-full text-slate-300 toggle-proposal-booths-btn hover:text-white" data-pid="${p.id}">
                   🔍 Preview All ${p.booths.length} Booths
                 </button>
-                <div id="booths-preview-${p.id}" class="hidden mt-2 max-h-52 overflow-y-auto space-y-1.5 bg-black/50 rounded-lg p-2 border border-white/10 text-[11px]">
+                <div id="booths-preview-${p.id}" class="hidden mt-2 max-h-56 overflow-y-auto space-y-1.5 bg-black/50 rounded-lg p-2 border border-white/10 text-[11px]">
                   ${p.booths.map(b => `
                     <div class="p-2 rounded bg-white/5 hover:bg-white/10 transition-colors space-y-1">
                       <div class="flex items-center justify-between gap-2">
@@ -366,8 +501,12 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                         </div>
                       </div>
                       <div class="flex items-center justify-between gap-2 text-[10px] text-slate-400">
-                        <span>📚 Books: <strong class="text-slate-200">1 General + ${b.assocBooksCount} Assoc</strong></span>
-                        ${b.uncontestedDepts.length > 0 ? `<span class="text-amber-300/80 font-medium">No Contest: ${esc(b.uncontestedDepts.join(', '))}</span>` : '<span class="text-emerald-400/80">All Contested</span>'}
+                        <span>📚 Books: <strong class="text-slate-200">${b.totalBooksCount}</strong> (1 Gen + ${b.assocBooksCount} Assoc + ${b.repBooksCount} Rep)</span>
+                        <span class="${b.hasPG ? 'text-purple-300' : 'text-slate-400'} font-medium">${b.hasPG ? '🎓 Includes PG' : '🏫 UG Only'}</span>
+                      </div>
+                      <div class="flex items-center justify-between gap-2 text-[10px] text-slate-400">
+                        <span class="truncate">Reps: <strong class="text-slate-300">${b.repPosts.length ? esc(b.repPosts.join(', ')) : 'None'}</strong></span>
+                        ${b.uncontestedDepts.length > 0 ? `<span class="text-amber-300/80 font-medium whitespace-nowrap">No Assoc: ${esc(b.uncontestedDepts.join(', '))}</span>` : '<span class="text-emerald-400/80 whitespace-nowrap">All Assoc Contested</span>'}
                       </div>
                       <div class="text-slate-300 text-[10px] truncate" title="${esc(b.classes.join(', '))}">
                         ${esc(b.classes.join(', '))}
@@ -449,26 +588,32 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     const numBooths = booths.length;
     if (numBooths === 0) return [];
 
-    // 1. Group all classes by Department and determine Association Secretary contest status
+    // 1. Group all classes by Department and determine Association & Representative workload
     const deptsMap = {};
     allClasses.forEach(cls => {
       const deptName = String(cls.dept || 'Unknown').trim();
       if (!deptsMap[deptName]) {
-        const cInfo = getDeptAssocContestInfo(deptName);
         deptsMap[deptName] = {
           name: deptName,
           total: 0,
           classes: [],
-          hasAssocContest: cInfo.hasContest,
-          assocCandidateCount: cInfo.candidateCount,
-          assocPost: cInfo.post,
-          ballotsPerVoter: cInfo.hasContest ? 2 : 1, // 1 General + 1 Association if contested
-          totalBallots: 0
+          totalBallots: 0,
+          cohorts: []
         };
       }
       deptsMap[deptName].classes.push(cls);
-      deptsMap[deptName].total += cls.count;
-      deptsMap[deptName].totalBallots += cls.count * deptsMap[deptName].ballotsPerVoter;
+    });
+
+    // Populate workload metrics
+    Object.values(deptsMap).forEach(d => {
+      const workload = calcClassesWorkload(d.classes, d.name);
+      d.total = workload.totalVoters;
+      d.totalBallots = workload.totalBallots;
+      d.hasAssocContest = workload.hasAssocContest;
+      d.assocCandidateCount = workload.assocCandidateCount;
+      d.assocPost = workload.assocPost;
+      d.cohorts = workload.cohorts;
+      d.hasPG = workload.hasPG;
     });
 
     const depts = Object.values(deptsMap);
@@ -522,8 +667,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         }
       }
 
-      const totalA = bestA.reduce((s, c) => s + c.count, 0);
-      const totalB = bestB.reduce((s, c) => s + c.count, 0);
+      const workloadA = calcClassesWorkload(bestA, dept.name);
+      const workloadB = calcClassesWorkload(bestB, dept.name);
 
       const getLabel = (pClasses) => {
         const allUG = pClasses.every(isUG);
@@ -538,12 +683,13 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         {
           name: dept.name,
           partLabel: getLabel(bestA),
-          total: totalA,
-          totalBallots: totalA * dept.ballotsPerVoter,
-          hasAssocContest: dept.hasAssocContest,
-          assocCandidateCount: dept.assocCandidateCount,
-          assocPost: dept.assocPost,
-          ballotsPerVoter: dept.ballotsPerVoter,
+          total: workloadA.totalVoters,
+          totalBallots: workloadA.totalBallots,
+          hasAssocContest: workloadA.hasAssocContest,
+          assocCandidateCount: workloadA.assocCandidateCount,
+          assocPost: workloadA.assocPost,
+          cohorts: workloadA.cohorts,
+          hasPG: workloadA.hasPG,
           classes: bestA,
           isSplit: true,
           deptName: dept.name
@@ -551,12 +697,13 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         {
           name: dept.name,
           partLabel: getLabel(bestB),
-          total: totalB,
-          totalBallots: totalB * dept.ballotsPerVoter,
-          hasAssocContest: dept.hasAssocContest,
-          assocCandidateCount: dept.assocCandidateCount,
-          assocPost: dept.assocPost,
-          ballotsPerVoter: dept.ballotsPerVoter,
+          total: workloadB.totalVoters,
+          totalBallots: workloadB.totalBallots,
+          hasAssocContest: workloadB.hasAssocContest,
+          assocCandidateCount: workloadB.assocCandidateCount,
+          assocPost: workloadB.assocPost,
+          cohorts: workloadB.cohorts,
+          hasPG: workloadB.hasPG,
           classes: bestB,
           isSplit: true,
           deptName: dept.name
@@ -572,18 +719,20 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       const pgClasses = classes.filter(c => !isUG(c));
       if (ugClasses.length === 0 || pgClasses.length === 0) return splitSmartBalanced(dept);
 
-      const ugTotal = ugClasses.reduce((s, c) => s + c.count, 0);
-      const pgTotal = pgClasses.reduce((s, c) => s + c.count, 0);
+      const workloadUG = calcClassesWorkload(ugClasses, dept.name);
+      const workloadPG = calcClassesWorkload(pgClasses, dept.name);
+
       return [
         {
           name: dept.name,
           partLabel: 'UG',
-          total: ugTotal,
-          totalBallots: ugTotal * dept.ballotsPerVoter,
-          hasAssocContest: dept.hasAssocContest,
-          assocCandidateCount: dept.assocCandidateCount,
-          assocPost: dept.assocPost,
-          ballotsPerVoter: dept.ballotsPerVoter,
+          total: workloadUG.totalVoters,
+          totalBallots: workloadUG.totalBallots,
+          hasAssocContest: workloadUG.hasAssocContest,
+          assocCandidateCount: workloadUG.assocCandidateCount,
+          assocPost: workloadUG.assocPost,
+          cohorts: workloadUG.cohorts,
+          hasPG: false,
           classes: ugClasses,
           isSplit: true,
           deptName: dept.name
@@ -591,12 +740,13 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         {
           name: dept.name,
           partLabel: 'PG & Scholars',
-          total: pgTotal,
-          totalBallots: pgTotal * dept.ballotsPerVoter,
-          hasAssocContest: dept.hasAssocContest,
-          assocCandidateCount: dept.assocCandidateCount,
-          assocPost: dept.assocPost,
-          ballotsPerVoter: dept.ballotsPerVoter,
+          total: workloadPG.totalVoters,
+          totalBallots: workloadPG.totalBallots,
+          hasAssocContest: workloadPG.hasAssocContest,
+          assocCandidateCount: workloadPG.assocCandidateCount,
+          assocPost: workloadPG.assocPost,
+          cohorts: workloadPG.cohorts,
+          hasPG: true,
           classes: pgClasses,
           isSplit: true,
           deptName: dept.name
@@ -607,9 +757,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     // Partition Solver with multi-restart and local hill-climbing
     // Factors in:
     // 1. Voter disparity across booths
-    // 2. Physical ballot paper issuance workload (1 for uncontested, 2 for contested)
+    // 2. Physical ballot paper issuance workload (General + Assoc + Rep ballots per cohort)
     // 3. Spreading uncontested departments across booths (preventing clustering of easy jobs)
-    // 4. Equalizing contested association books across booths
+    // 4. Balancing total physical ballot books managed (1 General + Assoc books + Rep books)
+    // 5. PG cohort presence/distribution across booths
     function solvePartition(items, B, penalty = 75, numRestarts = 400) {
       let bestAlloc = null, bestLoss = Infinity;
       const constraint = (b, it) => it.isSplit && b.items.some(o => o.isSplit && o.deptName === it.deptName);
@@ -618,7 +769,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         let voterSumSq = 0, ballotSumSq = 0;
         let maxV = -Infinity, minV = Infinity;
         let maxB = -Infinity, minB = Infinity;
-        let maxAssoc = -Infinity, minAssoc = Infinity;
+        let maxBooks = -Infinity, minBooks = Infinity;
         let zeroAssocCount = 0;
         let clusterPenalty = 0;
 
@@ -629,14 +780,15 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           if (b.total > maxV) maxV = b.total;
           if (b.total < minV) minV = b.total;
 
-          // Ballot paper workload metrics
+          // Ballot paper workload metrics (accounts for General + Assoc + Reps!)
           const bDiff = b.totalBallots - meanBallots;
           ballotSumSq += bDiff * bDiff;
           if (b.totalBallots > maxB) maxB = b.totalBallots;
           if (b.totalBallots < minB) minB = b.totalBallots;
 
-          // Association contest books and uncontested departments in this booth
+          // Association contest books and Representative books in this booth
           const deptsInBooth = new Set();
+          const cohortsInBooth = new Set();
           let assocCount = 0;
           let uncontestedCount = 0;
 
@@ -650,10 +802,20 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                 uncontestedCount++;
               }
             }
+            if (Array.isArray(it.cohorts)) {
+              it.cohorts.forEach(ch => cohortsInBooth.add(ch));
+            }
           }
 
-          if (assocCount > maxAssoc) maxAssoc = assocCount;
-          if (assocCount < minAssoc) minAssoc = assocCount;
+          let repBooksCount = 0;
+          cohortsInBooth.forEach(ch => {
+            const rInfo = getRepContestInfo(ch);
+            if (rInfo.hasContest) repBooksCount++;
+          });
+
+          const totalBooks = 1 + assocCount + repBooksCount; // 1 General + Assoc + Reps
+          if (totalBooks > maxBooks) maxBooks = totalBooks;
+          if (totalBooks < minBooks) minBooks = totalBooks;
 
           // If there are enough contested depts for booths to have at least one,
           // heavily penalize leaving a booth with zero association ballots (an easy free ride)
@@ -668,12 +830,12 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         }
 
         const vWeight = 1.0;
-        const bWeight = 0.45;
-        const spreadLoss = (maxV - minV) * penalty + (maxB - minB) * (penalty * 0.4);
-        const assocSpreadLoss = (maxAssoc - minAssoc) * 80;
+        const bWeight = 0.50;
+        const spreadLoss = (maxV - minV) * penalty + (maxB - minB) * (penalty * 0.45);
+        const bookSpreadLoss = (maxBooks - minBooks) * 85;
         const zeroAssocPenalty = zeroAssocCount * 1200;
 
-        return (voterSumSq * vWeight) + (ballotSumSq * bWeight) + spreadLoss + assocSpreadLoss + zeroAssocPenalty + clusterPenalty;
+        return (voterSumSq * vWeight) + (ballotSumSq * bWeight) + spreadLoss + bookSpreadLoss + zeroAssocPenalty + clusterPenalty;
       }
 
       for (let r = 0; r < numRestarts; r++) {
@@ -682,6 +844,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         if (r === 0) sorted.sort((a, b) => b.totalBallots - a.totalBallots || b.total - a.total);
         else if (r === 1) sorted.sort((a, b) => b.total - a.total);
         else if (r === 2) sorted.sort((a, b) => (b.hasAssocContest ? 1 : 0) - (a.hasAssocContest ? 1 : 0));
+        else if (r === 3) sorted.sort((a, b) => (b.hasPG ? 1 : 0) - (a.hasPG ? 1 : 0));
         else sorted.sort(() => Math.random() - 0.5);
 
         let valid = true;
@@ -808,26 +971,47 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         const cList = [];
         let bBallots = 0;
         const bAssocs = new Set();
-        const bUncontested = new Set();
+        const bUncontestedAssocs = new Set();
+        const bCohorts = new Set();
+        const bRepPosts = new Set();
 
         b.items.forEach(it => {
-          it.classes.forEach(c => cList.push(c.name));
-          bBallots += (it.totalBallots || (it.total * (it.hasAssocContest ? 2 : 1)));
+          it.classes.forEach(c => {
+            cList.push(c.name);
+            const bInfo = getClassBallotInfo(c);
+            bBallots += bInfo.totalBallots;
+            if (bInfo.repKey && bInfo.repKey !== 'RS') {
+              bCohorts.add(bInfo.repKey);
+              if (bInfo.hasRepContest) {
+                bRepPosts.add(bInfo.repPost || `${bInfo.repKey} Rep`);
+              }
+            }
+          });
           const dName = it.deptName || it.name;
           if (it.hasAssocContest) {
             bAssocs.add(dName);
           } else {
-            bUncontested.add(dName);
+            bUncontestedAssocs.add(dName);
           }
         });
+
+        const hasPG = bCohorts.has('PG');
+        const assocBooksCount = bAssocs.size;
+        const repBooksCount = bRepPosts.size;
+        const totalBooksCount = 1 + assocBooksCount + repBooksCount; // 1 General + Assoc + Reps
 
         return {
           boothNumber: i + 1,
           totalStudents: b.total,
           totalBallots: bBallots,
-          assocBooksCount: bAssocs.size,
+          assocBooksCount,
           assocDepts: Array.from(bAssocs),
-          uncontestedDepts: Array.from(bUncontested),
+          uncontestedDepts: Array.from(bUncontestedAssocs),
+          cohorts: Array.from(bCohorts),
+          hasPG,
+          repBooksCount,
+          repPosts: Array.from(bRepPosts),
+          totalBooksCount,
           classes: cList,
           items: b.items
         };
@@ -864,9 +1048,11 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       const minBallots = Math.min(...ballotTotals);
       const maxBallots = Math.max(...ballotTotals);
 
-      const assocCounts = boothsRes.map(b => b.assocBooksCount);
-      const minAssoc = Math.min(...assocCounts);
-      const maxAssoc = Math.max(...assocCounts);
+      const bookTotals = boothsRes.map(b => b.totalBooksCount);
+      const minBooks = Math.min(...bookTotals);
+      const maxBooks = Math.max(...bookTotals);
+
+      const pgBoothsCount = boothsRes.filter(b => b.hasPG).length;
 
       return {
         id,
@@ -880,8 +1066,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         minBallots,
         maxBallots,
         ballotSpread: maxBallots - minBallots,
-        minAssoc,
-        maxAssoc,
+        minBooks,
+        maxBooks,
+        bookSpread: maxBooks - minBooks,
+        pgBoothsCount,
         uncontestedDepts: uncontestedDeptsList,
         contestedDeptsCount,
         intactCount: numDepts - splitSummary.length,
@@ -1200,17 +1388,32 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
               let bBallots = 0;
               const bAssocDepts = new Set();
               const bNoContestDepts = new Set();
+              const bCohorts = new Set();
+              const bRepPosts = new Set();
 
               bClasses.forEach(cName => {
                 const cls = classStats[cName];
                 if (cls) {
-                  const cInfo = getDeptAssocContestInfo(cls.dept);
-                  const perVoter = cInfo.hasContest ? 2 : 1;
-                  bBallots += cls.count * perVoter;
-                  if (cInfo.hasContest) bAssocDepts.add(cls.dept);
-                  else bNoContestDepts.add(cls.dept);
+                  const bInfo = getClassBallotInfo(cls);
+                  bBallots += bInfo.totalBallots;
+                  if (bInfo.hasAssocContest) {
+                    bAssocDepts.add(cls.dept);
+                  } else {
+                    bNoContestDepts.add(cls.dept);
+                  }
+                  if (bInfo.repKey && bInfo.repKey !== 'RS') {
+                    bCohorts.add(bInfo.repKey);
+                    if (bInfo.hasRepContest) {
+                      bRepPosts.add(bInfo.repPost || `${bInfo.repKey} Rep`);
+                    }
+                  }
                 }
               });
+
+              const hasPG = bCohorts.has('PG');
+              const assocBooksCount = bAssocDepts.size;
+              const repBooksCount = bRepPosts.size;
+              const totalBooks = 1 + assocBooksCount + repBooksCount;
 
               return `
               <div class="border border-white/10 rounded-lg p-3 bg-white/5 shadow-inner">
@@ -1240,8 +1443,12 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                   ` : ''}
                 </div>
                 <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1 px-0.5">
-                  <span>Assoc Books: <strong class="text-indigo-300 font-semibold">${bAssocDepts.size}</strong></span>
-                  ${bNoContestDepts.size > 0 ? `<span class="text-amber-300/80 truncate max-w-[140px]" title="No Assoc Contest: ${esc(Array.from(bNoContestDepts).join(', '))}">Uncontested: ${esc(Array.from(bNoContestDepts).join(', '))}</span>` : '<span class="text-slate-500">All Contested</span>'}
+                  <span>📚 Books: <strong class="text-indigo-300 font-semibold">${totalBooks}</strong> <span class="text-[9px] text-slate-500">(1G + ${assocBooksCount}A + ${repBooksCount}R)</span></span>
+                  <span class="${hasPG ? 'text-purple-300 font-medium' : 'text-slate-400'}">${hasPG ? '🎓 PG + UG' : '🏫 UG Only'}</span>
+                </div>
+                <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1 px-0.5">
+                  <span class="truncate" title="Representatives: ${esc(Array.from(bRepPosts).join(', ') || 'None')}">Reps: <strong class="text-slate-300">${bRepPosts.size ? esc(Array.from(bRepPosts).map(r => r.replace(' Representative', ' Rep')).join(', ')) : 'None'}</strong></span>
+                  ${bNoContestDepts.size > 0 ? `<span class="text-amber-300/80 truncate max-w-[130px]" title="No Assoc Contest: ${esc(Array.from(bNoContestDepts).join(', '))}">No Assoc: ${esc(Array.from(bNoContestDepts).join(', '))}</span>` : '<span class="text-emerald-400/80">All Contested</span>'}
                 </div>
                 <div class="text-xs text-slate-500 h-16 overflow-y-auto bg-black/20 rounded p-1">
                   ${b.classes.length ? b.classes.map(c => `<div class="whitespace-nowrap overflow-hidden text-ellipsis">• ${esc(c)} (${classStats[c]?.count || 0})</div>`).join('') : '<em class="opacity-30">No classes assigned</em>'}
