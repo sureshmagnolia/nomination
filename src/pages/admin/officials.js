@@ -309,6 +309,102 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     });
   };
 
+  // Helper: Determine if an official is excluded by flag, reason, status or matching record in rosters
+  const isPersonExcluded = (p) => {
+    if (!p) return false;
+    if (typeof p === 'string') {
+      const clean = p.trim().toLowerCase();
+      const match = faculty.find(f => {
+        const fn = String(f.name || '').trim().toLowerCase();
+        const fp = String(f.pen || '').trim().toLowerCase();
+        return (fp && fp === clean) || (fn && fn === clean);
+      }) || nonTeaching.find(nt => {
+        const ntn = String(nt.name || '').trim().toLowerCase();
+        const ntp = String(nt.pen || '').trim().toLowerCase();
+        return (ntp && ntp === clean) || (ntn && ntn === clean);
+      });
+      if (match) return isPersonExcluded(match);
+      return false;
+    }
+
+    if (p.isExcluded === true || p.isExcluded === 'true' || p.isExcluded === 1 || p.isExcluded === '1') return true;
+    if (p.excluded === true || p.excluded === 'true' || p.excluded === 1 || p.excluded === '1') return true;
+    if (p.is_excluded === true || p.is_excluded === 'true') return true;
+    if (p.status && String(p.status).trim().toLowerCase() === 'excluded') return true;
+    if (p.exclusionReason && String(p.exclusionReason).trim() !== '') return true;
+
+    // Cross-check against rosters by name or PEN
+    const pName = String(p.name || '').trim().toLowerCase();
+    const pPen = String(p.pen || '').trim().toLowerCase();
+
+    if (pName || pPen) {
+      const match = faculty.find(f => {
+        if (f === p) return false;
+        const fn = String(f.name || '').trim().toLowerCase();
+        const fp = String(f.pen || '').trim().toLowerCase();
+        return (pPen && fp && pPen === fp) || (pName && fn && pName === fn);
+      }) || nonTeaching.find(nt => {
+        if (nt === p) return false;
+        const ntn = String(nt.name || '').trim().toLowerCase();
+        const ntp = String(nt.pen || '').trim().toLowerCase();
+        return (pPen && ntp && pPen === ntp) || (pName && ntn && pName === ntn);
+      });
+
+      if (match) {
+        if (match.isExcluded === true || match.isExcluded === 'true' || match.isExcluded === 1 || match.isExcluded === '1') return true;
+        if (match.excluded === true || match.excluded === 'true' || match.excluded === 1 || match.excluded === '1') return true;
+        if (match.is_excluded === true || match.is_excluded === 'true') return true;
+        if (match.status && String(match.status).trim().toLowerCase() === 'excluded') return true;
+        if (match.exclusionReason && String(match.exclusionReason).trim() !== '') return true;
+      }
+    }
+
+    return false;
+  };
+
+  // Helper: Check if a person is assigned to ANY active election duty (Observer, Discipline, Grievance, Polling, Counting)
+  const isPersonOnDuty = (p) => {
+    if (!p) return false;
+    const pName = typeof p === 'string' ? p : (p.name || '');
+    const pPen = typeof p === 'string' ? '' : (p.pen || '');
+    const cleanName = String(pName).trim().toLowerCase();
+    const cleanPen = String(pPen).trim().toLowerCase();
+    if (!cleanName && !cleanPen) return false;
+
+    const matches = (slotPerson) => {
+      if (!slotPerson) return false;
+      const sName = typeof slotPerson === 'string' ? slotPerson : (slotPerson.name || '');
+      const sPen = typeof slotPerson === 'string' ? '' : (slotPerson.pen || '');
+      const sn = String(sName).trim().toLowerCase();
+      const sp = String(sPen).trim().toLowerCase();
+      if (cleanPen && sp && cleanPen === sp) return true;
+      if (cleanName && sn && cleanName === sn) return true;
+      return false;
+    };
+
+    if (observers.some(matches)) return true;
+    if (disciplineCharge.some(matches)) return true;
+    if (grievanceCell.some(matches)) return true;
+
+    for (const team of pollingTeams) {
+      if (matches(team.presidingOfficer)) return true;
+      if (matches(team.pollingOfficer1)) return true;
+      if (matches(team.pollingOfficer2)) return true;
+      if (matches(team.pollingOfficer3)) return true;
+      if (matches(team.pollingAssistant)) return true;
+    }
+
+    for (const team of countingTeams) {
+      if (matches(team.supervisor)) return true;
+      if (matches(team.countingOfficer1)) return true;
+      if (matches(team.countingOfficer2)) return true;
+      if (matches(team.countingOfficer3)) return true;
+      if (matches(team.countingAssistant)) return true;
+    }
+
+    return false;
+  };
+
   // Helper: Get person from either Teaching Faculty or Non-Teaching Staff roster
   const getPerson = (identifier) => {
     if (!identifier) return null;
@@ -319,14 +415,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const combo = `${name} (${pen})`;
       return (pen && pen === clean) || name === clean || combo === clean;
     });
-    if (fac) return { ...fac, type: 'Teaching Faculty' };
+    if (fac) return { ...fac, type: 'Teaching Faculty', isExcluded: isPersonExcluded(fac) };
     const nt = nonTeaching.find(n => {
       const pen = String(n.pen || '').trim().toLowerCase();
       const name = String(n.name || '').trim().toLowerCase();
       const combo = `${name} (${pen})`;
       return (pen && pen === clean) || name === clean || combo === clean;
     });
-    if (nt) return { ...nt, type: 'Non-Teaching Staff' };
+    if (nt) return { ...nt, type: 'Non-Teaching Staff', isExcluded: isPersonExcluded(nt) };
     return null;
   };
 
@@ -437,6 +533,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
   // Helper: Generate HTML for a single faculty table row
   const getFacultyRowHtml = (f) => {
+    const isExcluded = isPersonExcluded(f);
     const pDuty = getPollingAssignment(f.name);
     const cDuty = getCountingAssignment(f.name);
     const isObs = isObserver(f.name);
@@ -445,7 +542,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const isPosted = isObs || isDisc || isGriev || pDuty || cDuty;
 
     return `
-      <tr class="${f.isExcluded ? 'bg-red-950/20 opacity-70' : 'hover:bg-white/5'} transition-colors">
+      <tr class="${isExcluded ? 'bg-red-950/20 opacity-70' : 'hover:bg-white/5'} transition-colors">
         <td class="text-center font-mono font-bold ${f.seniority <= 15 ? 'text-amber-300' : 'text-slate-300'}">
           #${f.seniority}
         </td>
@@ -469,11 +566,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             ${pDuty ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">Booth ${pDuty.boothNumber} (${pDuty.role})</span>` : ''}
             ${cDuty ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-semibold">Table ${cDuty.tableNumber} (${cDuty.role})</span>` : ''}
             ${pDuty && cDuty ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">⚠️ Double Duty</span>` : ''}
-            ${!isPosted ? (f.isExcluded ? `<span class="text-slate-500 text-[11px]">–</span>` : `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-semibold" title="Standby Duty at Central Control Room">📋 Reserve Pool</span>`) : ''}
+            ${!isPosted ? (isExcluded ? `<span class="text-slate-500 text-[11px]">–</span>` : `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-semibold" title="Standby Duty at Central Control Room">📋 Reserve Pool</span>`) : ''}
           </div>
         </td>
         <td>
-          ${f.isExcluded ? `
+          ${isExcluded ? `
             <span class="badge bg-red-500/20 text-red-300 border border-red-500/40 text-[10px] font-bold" title="${esc(f.exclusionReason || 'Excluded from election duties')}">
               ⛔ Excluded${f.exclusionReason ? `: ${esc(f.exclusionReason)}` : ''}
             </span>
@@ -488,8 +585,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           `)}
         </td>
         <td class="text-right">
-          <button class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-exclude-fac ${f.isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-pen="${f.pen || f.name}">
-            ${f.isExcluded ? '✓ Make Available' : '⛔ Exclude'}
+          <button class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-exclude-fac ${isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-pen="${f.pen || f.name}">
+            ${isExcluded ? '✓ Make Available' : '⛔ Exclude'}
           </button>
         </td>
       </tr>
@@ -498,6 +595,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
   // Helper: Generate HTML for a single non-teaching table row
   const getNonTeachingRowHtml = (nt, idx) => {
+    const isExcluded = isPersonExcluded(nt);
     const asstDuty = getNonTeachingAssignment(nt.name);
     const isObs = isObserver(nt.name);
     const isDisc = isDiscipline(nt.name);
@@ -505,7 +603,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const isPosted = isObs || isDisc || isGriev || asstDuty.polling || asstDuty.counting;
 
     return `
-      <tr class="${nt.isExcluded ? 'bg-red-950/20 opacity-70' : 'hover:bg-white/5'} transition-colors">
+      <tr class="${isExcluded ? 'bg-red-950/20 opacity-70' : 'hover:bg-white/5'} transition-colors">
         <td class="text-center font-mono text-slate-400">
           ${idx + 1}
         </td>
@@ -524,14 +622,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             ${isDisc ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold">🛡️ Discipline</span>` : ''}
             ${isGriev ? `<span class="badge bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-bold">🤝 Grievance</span>` : ''}
             ${asstDuty.polling ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">Booth ${asstDuty.polling.boothNumber}</span>` : ''}
-            ${!isPosted ? (nt.isExcluded ? '<span class="text-slate-500">–</span>' : '<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-semibold" title="Standby Duty at Central Control Room">📋 Reserve Pool</span>') : ''}
+            ${!isPosted ? (isExcluded ? '<span class="text-slate-500">–</span>' : '<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-semibold" title="Standby Duty at Central Control Room">📋 Reserve Pool</span>') : ''}
           </div>
         </td>
         <td>
           ${asstDuty.counting ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-semibold">Table ${asstDuty.counting.tableNumber}</span>` : '<span class="text-slate-500">–</span>'}
         </td>
         <td>
-          ${nt.isExcluded ? `
+          ${isExcluded ? `
             <span class="badge bg-red-500/20 text-red-300 border border-red-500/40 text-[10px] font-bold" title="${esc(nt.exclusionReason || 'Excluded from election duties')}">
               ⛔ Excluded${nt.exclusionReason ? `: ${esc(nt.exclusionReason)}` : ''}
             </span>
@@ -546,8 +644,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           `)}
         </td>
         <td class="text-right whitespace-nowrap space-x-1">
-          <button class="btn btn-secondary text-[11px] py-1 px-2 btn-toggle-exclude-nt ${nt.isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-name="${esc(nt.name)}">
-            ${nt.isExcluded ? '✓ Enable' : '⛔ Exclude'}
+          <button class="btn btn-secondary text-[11px] py-1 px-2 btn-toggle-exclude-nt ${isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-name="${esc(nt.name)}">
+            ${isExcluded ? '✓ Enable' : '⛔ Exclude'}
           </button>
           <button class="btn btn-secondary text-[11px] py-1 px-1.5 text-red-400 hover:bg-red-500/20 btn-delete-nt" data-name="${esc(nt.name)}" title="Remove from roster">
             🗑️
@@ -909,10 +1007,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const cDuty = getCountingAssignment(f.name);
       const isPosted = isObs || isDisc || isGriev || pDuty || cDuty;
 
-      if (facultyFilter === 'active' && f.isExcluded) return false;
-      if (facultyFilter === 'excluded' && !f.isExcluded) return false;
-      if (facultyFilter === 'posted' && (f.isExcluded || !isPosted)) return false;
-      if (facultyFilter === 'reserve' && (f.isExcluded || isPosted)) return false;
+      const isEx = isPersonExcluded(f);
+      if (facultyFilter === 'active' && isEx) return false;
+      if (facultyFilter === 'excluded' && !isEx) return false;
+      if (facultyFilter === 'posted' && (isEx || !isPosted)) return false;
+      if (facultyFilter === 'reserve' && (isEx || isPosted)) return false;
       if (facultySearch) {
         const s = facultySearch.toLowerCase().trim();
         return (f.name || '').toLowerCase().includes(s) ||
@@ -980,10 +1079,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const asstDuty = getNonTeachingAssignment(nt.name);
       const isPosted = isObs || isDisc || isGriev || asstDuty.polling || asstDuty.counting;
 
-      if (nonTeachingFilter === 'active' && nt.isExcluded) return false;
-      if (nonTeachingFilter === 'excluded' && !nt.isExcluded) return false;
-      if (nonTeachingFilter === 'posted' && (nt.isExcluded || !isPosted)) return false;
-      if (nonTeachingFilter === 'reserve' && (nt.isExcluded || isPosted)) return false;
+      const isEx = isPersonExcluded(nt);
+      if (nonTeachingFilter === 'active' && isEx) return false;
+      if (nonTeachingFilter === 'excluded' && !isEx) return false;
+      if (nonTeachingFilter === 'posted' && (isEx || !isPosted)) return false;
+      if (nonTeachingFilter === 'reserve' && (isEx || isPosted)) return false;
       if (nonTeachingSearch) {
         const s = nonTeachingSearch.toLowerCase().trim();
         return (nt.name || '').toLowerCase().includes(s) ||
@@ -3779,10 +3879,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const getMasterDutyData = () => {
     // 1. Observers (Listed 1st) - strictly exclude any official marked as excluded
     const obsList = observers
-      .filter((obs) => {
-        const p = getPerson(obs.name);
-        return !p?.isExcluded;
-      })
+      .filter((obs) => !isPersonExcluded(obs))
       .map((obs) => {
         const p = getPerson(obs.name);
         return {
@@ -3804,10 +3901,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // 2. Campus Discipline Committee (Listed 2nd) - strictly exclude excluded
     const discList = disciplineCharge
-      .filter((disc) => {
-        const p = getPerson(disc.name);
-        return !p?.isExcluded;
-      })
+      .filter((disc) => !isPersonExcluded(disc))
       .map((disc) => {
         const p = getPerson(disc.name);
         return {
@@ -3829,10 +3923,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // 3. Grievance Redressal Committee (Listed 3rd) - strictly exclude excluded
     const grievList = grievanceCell
-      .filter((g) => {
-        const p = getPerson(g.name);
-        return !p?.isExcluded;
-      })
+      .filter((g) => !isPersonExcluded(g))
       .map((g) => {
         const p = getPerson(g.name);
         return {
@@ -3855,24 +3946,31 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     // 4. Department-wise Officials (Teaching Faculty & Non-Teaching Staff)
     const personnel = [];
     const reserveList = [];
-
-    const assignedObs = new Set(obsList.map(o => String(o.name || '').trim().toLowerCase()));
-    const assignedDisc = new Set(discList.map(d => String(d.name || '').trim().toLowerCase()));
-    const assignedGriev = new Set(grievList.map(g => String(g.name || '').trim().toLowerCase()));
+    const seenStaff = new Set();
 
     // Teaching Faculty
     faculty.forEach(f => {
-      // Excluded ones are NOT reserve and must NOT be shown anywhere
-      if (f.isExcluded) return;
+      // Excluded ones are NOT reserve and must NOT be shown anywhere in reserve or personnel
+      if (isPersonExcluded(f)) return;
 
       const fNameLower = String(f.name || '').trim().toLowerCase();
-      if (assignedObs.has(fNameLower) || assignedDisc.has(fNameLower) || assignedGriev.has(fNameLower)) {
-        return; // Handled in dedicated sections above
+      if (seenStaff.has(fNameLower)) return;
+
+      const onDuty = isPersonOnDuty(f);
+      const isObs = isObserver(f.name);
+      const isDisc = isDiscipline(f.name);
+      const isGriev = isGrievance(f.name);
+
+      if (isObs || isDisc || isGriev) {
+        seenStaff.add(fNameLower);
+        return; // Handled in dedicated sections 1, 2, 3 above
       }
+
       const pDuty = getPollingAssignment(f.name);
       const cDuty = getCountingAssignment(f.name);
 
-      if (pDuty || cDuty) {
+      if (pDuty || cDuty || onDuty) {
+        seenStaff.add(fNameLower);
         const duties = [];
         const stations = [];
         if (pDuty) {
@@ -3892,14 +3990,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           department: (f.department || '').trim() || '–',
           pen: (f.pen || '–').trim(),
           seniority: (f.seniority !== undefined && f.seniority !== null) ? f.seniority : 999,
-          duty: duties.join(' + '),
+          duty: duties.join(' + ') || 'Active Election Duty',
           hasDoubleDuty: !!(pDuty && cDuty),
           isReserve: false,
-          station: stations.join(' / '),
+          station: stations.join(' / ') || 'Duty Station',
           type: 'Teaching Faculty'
         });
       } else {
-        // Not excluded and Not posted -> ON RESERVE!
+        // ONLY people who are NOT excluded AND NOT on ANY duty are placed in Reserve!
+        seenStaff.add(fNameLower);
         const resEntry = {
           name: f.name,
           designation: (f.designation || 'Faculty').trim(),
@@ -3919,16 +4018,26 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // Non-Teaching Staff
     nonTeaching.forEach(nt => {
-      // Excluded ones are NOT reserve and must NOT be shown anywhere
-      if (nt.isExcluded) return;
+      // Excluded ones are NOT reserve and must NOT be shown anywhere in reserve or personnel
+      if (isPersonExcluded(nt)) return;
 
       const ntNameLower = String(nt.name || '').trim().toLowerCase();
-      if (assignedObs.has(ntNameLower) || assignedDisc.has(ntNameLower) || assignedGriev.has(ntNameLower)) {
+      if (seenStaff.has(ntNameLower)) return;
+
+      const onDuty = isPersonOnDuty(nt);
+      const isObs = isObserver(nt.name);
+      const isDisc = isDiscipline(nt.name);
+      const isGriev = isGrievance(nt.name);
+
+      if (isObs || isDisc || isGriev) {
+        seenStaff.add(ntNameLower);
         return;
       }
+
       const ntAssigned = getNonTeachingAssignment(nt.name);
 
-      if (ntAssigned.polling || ntAssigned.counting) {
+      if (ntAssigned.polling || ntAssigned.counting || onDuty) {
+        seenStaff.add(ntNameLower);
         const duties = [];
         const stations = [];
         if (ntAssigned.polling) {
@@ -3953,14 +4062,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           department: (nt.department || nt.section || 'Office').trim() || 'Office',
           pen: (nt.pen || '–').trim(),
           seniority: 9999,
-          duty: duties.join(' + '),
+          duty: duties.join(' + ') || 'Active Election Duty',
           hasDoubleDuty: !!(ntAssigned.polling && ntAssigned.counting),
           isReserve: false,
-          station: stations.join(' / '),
+          station: stations.join(' / ') || 'Office / Station',
           type: 'Non-Teaching Staff'
         });
       } else {
-        // Not excluded and Not posted -> ON RESERVE!
+        // ONLY people who are NOT excluded AND NOT on ANY duty are placed in Reserve!
+        seenStaff.add(ntNameLower);
         const resEntry = {
           name: nt.name,
           designation: (nt.designation || 'Staff').trim(),
@@ -3978,11 +4088,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       }
     });
 
-    // Universal Sort: Dept (A-Z) -> Permanent Faculty (Seniority) -> Guest Faculty -> Non-Teaching Staff
-    personnel.sort(compareOfficials);
-    reserveList.sort(compareOfficials);
+    // Double-check final reserve filter so NO excluded or on-duty person can EVER slip in:
+    const safeReserveList = reserveList.filter(res => !isPersonExcluded(res) && !isPersonOnDuty(res));
 
-    return { obsList, discList, grievList, personnel, reserveList };
+    personnel.sort(compareOfficials);
+    safeReserveList.sort(compareOfficials);
+
+    return { obsList, discList, grievList, personnel, reserveList: safeReserveList };
   };
 
   const openMasterDutyListWindow = () => {
@@ -4461,7 +4573,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <!-- SECTION 1: ELECTION OBSERVERS -->
         <div class="section-title-box">
           <span>⚖️ SECTION 1: ELECTION OBSERVERS</span>
-          <span style="font-size: 8.5px; font-weight: normal;">General Supervision</span>
         </div>
 
         ${obsList.length === 0 ? `
@@ -4518,7 +4629,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <!-- SECTION 2: CAMPUS DISCIPLINE -->
         <div class="section-title-box" style="margin-top: 14px;">
           <span>🛡️ SECTION 2: CAMPUS DISCIPLINE</span>
-          <span style="font-size: 8.5px; font-weight: normal;">Campus &amp; Corridor Order</span>
         </div>
 
         ${discList.length === 0 ? `
@@ -4575,7 +4685,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <!-- SECTION 3: GRIEVANCE REDRESSAL COMMITTEE -->
         <div class="section-title-box" style="margin-top: 14px;">
           <span>🤝 SECTION 3: GRIEVANCE REDRESSAL COMMITTEE</span>
-          <span style="font-size: 8.5px; font-weight: normal;">Station: Grievance Cell / Principal Office · Reporting: 08:00 AM</span>
         </div>
 
         ${grievList.length === 0 ? `
@@ -4777,7 +4886,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <!-- SECTION 1: OBSERVERS (SHOWN FIRST) -->
         <div class="section-title-box">
           <span>⚖️ ELECTION OBSERVERS</span>
-          <span style="font-size: 8.5px; font-weight: normal;">General Supervision</span>
         </div>
 
         ${obsList.length === 0 ? `
@@ -4830,7 +4938,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <!-- SECTION 2: CAMPUS DISCIPLINE -->
         <div class="section-title-box" style="margin-top: 14px;">
           <span>🛡️ CAMPUS DISCIPLINE</span>
-          <span style="font-size: 8.5px; font-weight: normal;">Station: Campus &amp; Corridors · Reporting: 07:30 AM</span>
         </div>
 
         ${discList.length === 0 ? `
@@ -4885,7 +4992,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <!-- SECTION 3: GRIEVANCE REDRESSAL COMMITTEE -->
         <div class="section-title-box" style="margin-top: 14px;">
           <span>🤝 GRIEVANCE REDRESSAL COMMITTEE</span>
-          <span style="font-size: 8.5px; font-weight: normal;">Station: Grievance Cell / Principal Office · Reporting: 08:00 AM</span>
         </div>
 
         ${grievList.length === 0 ? `
@@ -4940,7 +5046,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <!-- PART A: POLLING BOOTHS -->
         <div class="section-title-box">
           <span>🏫 PART A: POLLING BOOTHS (BOOTHS 1 TO ${booths.length})</span>
-          <span style="font-size: 8.5px; font-weight: normal;">Reporting: 08:00 AM · Polling: 09:30 AM – 01:30 PM</span>
+          <span style="font-size: 8.5px; font-weight: normal;">Reporting: 08:00 AM · Polling: 09:30 AM – 12:00 PM</span>
         </div>
 
         <table class="master-table">
@@ -4948,16 +5054,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             ${pollHasDept ? `
               <col style="width: 6%;">
               <col style="width: 14%;">
-              <col style="width: 15%;">
               <col style="width: 24%;">
+              <col style="width: 15%;">
               <col style="width: 18%;">
               <col style="width: 9%;">
               <col style="width: 14%;">
             ` : `
               <col style="width: 7%;">
               <col style="width: 16%;">
-              <col style="width: 18%;">
               <col style="width: 30%;">
+              <col style="width: 18%;">
               <col style="width: 13%;">
               <col style="width: 16%;">
             `}
@@ -4966,8 +5072,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <tr>
               <th class="col-center">Booth #</th>
               <th>Station / Venue</th>
-              <th>Designated Role</th>
               <th>Name of Official</th>
+              <th>Designated Role</th>
               ${pollHasDept ? '<th>Department</th>' : ''}
               <th>PEN #</th>
               <th class="col-center">Signature</th>
@@ -4999,13 +5105,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         ${esc(b.roomName || `Booth ${b.boothNumber}`)}
                       </td>
                     ` : ''}
-                    <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: ${s.isHead ? '#b45309' : (s.isAssistant ? '#047857' : '#0f172a')};">
-                      ${esc(s.role)}
-                    </td>
                     <td>
                       ${s.person && s.person.name && !personObj?.isExcluded ? `
                         <span class="staff-name">${esc(s.person.name)}</span>
                       ` : (personObj?.isExcluded ? '<span style="color: #94a3b8; font-style: italic;">– Excluded Official –</span>' : '<span style="color: #94a3b8; font-style: italic;">– Unassigned –</span>')}
+                    </td>
+                    <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: ${s.isHead ? '#b45309' : (s.isAssistant ? '#047857' : '#0f172a')};">
+                      ${esc(s.role)}
                     </td>
                     ${pollHasDept ? `<td><span class="dept-badge">${esc(personObj?.isExcluded ? '–' : dept)}</span></td>` : ''}
                     <td style="font-family: monospace;">${esc(personObj?.isExcluded ? '–' : pen)}</td>
@@ -5028,16 +5134,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             ${countHasDept ? `
               <col style="width: 6%;">
               <col style="width: 14%;">
-              <col style="width: 15%;">
               <col style="width: 24%;">
+              <col style="width: 15%;">
               <col style="width: 18%;">
               <col style="width: 9%;">
               <col style="width: 14%;">
             ` : `
               <col style="width: 7%;">
               <col style="width: 16%;">
-              <col style="width: 18%;">
               <col style="width: 30%;">
+              <col style="width: 18%;">
               <col style="width: 13%;">
               <col style="width: 16%;">
             `}
@@ -5046,8 +5152,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <tr>
               <th class="col-center">Table #</th>
               <th>Station / Venue</th>
-              <th>Designated Role</th>
               <th>Name of Official</th>
+              <th>Designated Role</th>
               ${countHasDept ? '<th>Department</th>' : ''}
               <th>PEN #</th>
               <th class="col-center">Signature</th>
@@ -5079,13 +5185,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         ${esc(b.roomName || `Table ${b.boothNumber}`)}
                       </td>
                     ` : ''}
-                    <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: ${s.isHead ? '#7e22ce' : (s.isAssistant ? '#047857' : '#0f172a')};">
-                      ${esc(s.role)}
-                    </td>
                     <td>
                       ${s.person && s.person.name && !personObj?.isExcluded ? `
                         <span class="staff-name">${esc(s.person.name)}</span>
                       ` : (personObj?.isExcluded ? '<span style="color: #94a3b8; font-style: italic;">– Excluded Official –</span>' : '<span style="color: #94a3b8; font-style: italic;">– Unassigned –</span>')}
+                    </td>
+                    <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: ${s.isHead ? '#7e22ce' : (s.isAssistant ? '#047857' : '#0f172a')};">
+                      ${esc(s.role)}
                     </td>
                     ${countHasDept ? `<td><span class="dept-badge">${esc(personObj?.isExcluded ? '–' : dept)}</span></td>` : ''}
                     <td style="font-family: monospace;">${esc(personObj?.isExcluded ? '–' : pen)}</td>
@@ -5778,7 +5884,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <strong>GENERAL GUIDELINES &amp; INSTRUCTIONS:</strong>
           <ol>
             <li><strong>Reporting &amp; Material Collection:</strong> Appointed officials are kindly requested to report at the Central Distribution Counter at <strong>${esc(reportingTime)}</strong> to collect ballot boxes/materials, voter registers, and envelopes.</li>
-            <li><strong>Timing:</strong> ${isPolling ? 'Polling commences at 09:30 AM and closes at 01:30 PM. All electors standing in queue at 01:30 PM will be issued tokens.' : 'Counting commences at 02:00 PM and will proceed continuously until the declaration of results.'}</li>
+            <li><strong>Timing:</strong> ${isPolling ? 'Polling commences at 09:30 AM and closes at 12:00 PM. All electors standing in queue at 12:00 PM will be issued tokens.' : 'Counting commences at 02:00 PM and will proceed continuously until the declaration of results.'}</li>
             <li><strong>Support &amp; Relief:</strong> Appointed officials are requested to extend their kind cooperation. In case of any unavoidable difficulty, please inform the Returning Officer promptly so that relief arrangements can be made from the Reserve Pool.</li>
             <li><strong>Handover:</strong> Immediately upon completion of duties, please hand over all sealed packets and materials to the Returning Officer under receipt.</li>
           </ol>
