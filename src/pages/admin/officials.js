@@ -326,13 +326,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
   // Helper: Check if non-teaching staff is assigned
   const getNonTeachingAssignment = (ntName) => {
-    if (!ntName) return { polling: null, counting: null };
+    if (!ntName) return { polling: null, counting: null, countingTables: [] };
     const clean = String(ntName).trim().toLowerCase();
     const p = pollingTeams.find(t => t.pollingAssistant && String(t.pollingAssistant.name).trim().toLowerCase() === clean);
-    const c = countingTeams.find(t => t.countingAssistant && String(t.countingAssistant.name).trim().toLowerCase() === clean);
+    const cList = countingTeams.filter(t => t.countingAssistant && String(t.countingAssistant.name).trim().toLowerCase() === clean);
+    const countingTables = cList.map(t => t.tableNumber || t.boothNumber).sort((a, b) => a - b);
     return {
       polling: p ? { boothNumber: p.boothNumber, role: 'Polling Assistant' } : null,
-      counting: c ? { tableNumber: c.tableNumber || c.boothNumber, role: 'Counting Assistant' } : null
+      counting: cList.length > 0 ? {
+        tableNumber: countingTables.join(', '),
+        tableNumbers: countingTables,
+        count: countingTables.length,
+        role: 'Counting Assistant'
+      } : null,
+      countingTables
     };
   };
 
@@ -1215,16 +1222,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const freshNT = availableNT.filter(nt => !pollingAsstNames.has(nt.name));
       const doubleDutyNT = availableNT.filter(nt => pollingAsstNames.has(nt.name));
       const ntPool = [...freshNT, ...doubleDutyNT];
+      const effectivePool = ntPool.length > 0 ? ntPool : nonTeaching.filter(nt => !nt.isExcluded && !observerNames.has(nt.name) && !disciplineNames.has(nt.name) && !grievanceNames.has(nt.name));
 
-      let ntIdx = 0;
-      emptyAssistantTables.forEach(team => {
-        if (ntIdx < ntPool.length) {
-          const selected = ntPool[ntIdx];
+      if (effectivePool.length > 0) {
+        let ntIdx = 0;
+        emptyAssistantTables.forEach(team => {
+          // Round-robin assignment across available staff when there is a staff shortage
+          const selected = effectivePool[ntIdx % effectivePool.length];
           team.countingAssistant = { name: selected.name, designation: selected.designation, pen: selected.pen || '' };
           filledCount++;
           ntIdx++;
-        }
-      });
+        });
+      }
     }
 
     saveAll(false);
@@ -1367,7 +1376,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const isDisc = isDiscipline(nt.name);
       const isGriev = isGrievance(nt.name);
       const ntAssigned = getNonTeachingAssignment(nt.name);
-      const isAllottedInCounting = ntAssigned.counting && ntAssigned.counting.tableNumber !== tableNumber;
+      const otherTables = (ntAssigned.countingTables || []).filter(t => t !== tableNumber);
+      const isAlreadyOnOtherTables = otherTables.length > 0;
 
       let prefix = '';
       if (nt.isExcluded) prefix += '⛔ ';
@@ -1377,18 +1387,22 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         prefix += '🛡️ [Allotted: Discipline Charge] ';
       } else if (isGriev) {
         prefix += '🤝 [Allotted: Grievance Cell] ';
-      } else if (isAllottedInCounting) {
-        prefix += `🚩 [Allotted: Table ${ntAssigned.counting.tableNumber} - Counting Assistant] `;
       } else if (isSelected) {
         prefix += '✓ (Current) ';
+      } else if (isAlreadyOnOtherTables) {
+        prefix += `🤝 [Assigned: Table ${otherTables.join(', ')}] `;
       }
 
       const doubleTag = ntAssigned.polling ? `[⚠️ Double Duty: Booth ${ntAssigned.polling.boothNumber}]` : '';
+      const multiTag = ntAssigned.countingTables && ntAssigned.countingTables.length > 1 ? `[${ntAssigned.countingTables.length} Tables]` : '';
       const deptStr = (nt.department || nt.section || 'Office').trim();
 
+      // Note: Do NOT disable for counting table overlap - staff shortage allows same assistant on multiple tables!
+      const isDisabled = (isObs || isDisc || isGriev) && !isSelected;
+
       return `
-        <option value="${esc(nt.name)}" ${isSelected ? 'selected' : ''} ${(isAllottedInCounting || isObs || isDisc || isGriev) && !isSelected ? 'disabled' : ''}>
-          ${prefix}${esc(nt.name)} (${esc(nt.designation || 'Staff')}${deptStr ? ` · ${esc(deptStr)}` : ''}${nt.pen ? ` · PEN:${nt.pen}` : ''}) ${doubleTag}
+        <option value="${esc(nt.name)}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}>
+          ${prefix}${esc(nt.name)} (${esc(nt.designation || 'Staff')}${deptStr ? ` · ${esc(deptStr)}` : ''}${nt.pen ? ` · PEN:${nt.pen}` : ''}) ${multiTag} ${doubleTag}
         </option>
       `;
     }).join('');
@@ -1873,6 +1887,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <p class="text-xs text-slate-400">Each table needs 1 Counting Supervisor (Seniormost at table), 2 Counting Officers, and 1 Counting Assistant. Staff serving polling duty are flagged with double duty.</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
+              <button id="btnAssignCountingAssistantMulti" class="btn btn-secondary border-emerald-500/50 text-emerald-300 hover:text-white hover:bg-emerald-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Assign the same Counting Assistant to multiple tables simultaneously due to staff shortage">
+                🤝 Multi-Table Assistant
+              </button>
               <button id="btnAutoAllotCountingFresh" class="btn btn-primary bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow" title="Auto-allot empty counting slots while preserving all manually chosen officials">
                 ⚡ Auto-Allot (Fresh Faculty First)
               </button>
@@ -2028,6 +2045,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           <option value="">-- Select Non-Teaching Staff --</option>
                           ${renderCountingNonTeachingOptions(b.boothNumber, team.countingAssistant?.name)}
                         </select>
+                        ${(() => {
+                          const asstAssignment = team.countingAssistant ? getNonTeachingAssignment(team.countingAssistant.name) : null;
+                          const otherTables = asstAssignment ? (asstAssignment.countingTables || []).filter(t => t !== b.boothNumber) : [];
+                          if (otherTables.length > 0) {
+                            return `<p class="text-[10px] text-purple-300 font-semibold mt-1 flex items-center gap-1"><span>🔗</span> Also assisting Table ${otherTables.join(', ')} (${asstAssignment.countingTables.length} tables total)</p>`;
+                          }
+                          return '';
+                        })()}
                         ${asstDouble ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Polling Booth ${asstDouble.boothNumber}</p>` : ''}
                       </div>
                     </div>
@@ -2512,15 +2537,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         const tableNum = parseInt(e.target.dataset.table, 10);
         const selectedName = e.target.value;
 
-        // Release from any other counting assistant slot to avoid duplicates
-        if (selectedName) {
-          countingTeams.forEach(t => {
-            if (t.countingAssistant && t.countingAssistant.name === selectedName && t.tableNumber !== tableNum) {
-              t.countingAssistant = null;
-            }
-          });
-        }
-
+        // Note: Same counting assistant CAN be assigned to multiple tables due to staff shortage.
+        // Do NOT release them from other counting tables.
         let team = countingTeams.find(t => t.tableNumber === tableNum);
         if (!team) {
           team = { tableNumber: tableNum, roomName: `Table ${tableNum}`, supervisor: null, countingOfficer1: null, countingOfficer2: null, countingOfficer3: null, countingAssistant: null };
@@ -2915,6 +2933,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     main.querySelector('#btnOpenGrievanceModal')?.addEventListener('click', () => openGrievanceModal());
     main.querySelector('#btnManageGrievanceBanner')?.addEventListener('click', () => openGrievanceModal());
     main.querySelector('.btn-manage-grievance-inline')?.addEventListener('click', () => openGrievanceModal());
+
+    // Open Multi-Table Counting Assistant Allotment Modal
+    main.querySelector('#btnAssignCountingAssistantMulti')?.addEventListener('click', () => openMultiTableAssistantModal());
 
     // Quick remove observer from banner
     main.querySelectorAll('.btn-quick-remove-observer').forEach(btn => {
@@ -3391,6 +3412,186 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     document.body.appendChild(modal);
   };
 
+  // ─── Multi-Table Counting Assistant Allotment Modal ─────────────────────────
+
+  const openMultiTableAssistantModal = () => {
+    const existing = document.getElementById('multiAssistantModalContainer');
+    if (existing) existing.remove();
+
+    const sortedNT = [...nonTeaching].sort(compareOfficials);
+    if (sortedNT.length === 0) {
+      showToast('No non-teaching staff found in the roster.', 'error');
+      return;
+    }
+
+    let selectedStaffName = sortedNT[0].name;
+
+    const modal = document.createElement('div');
+    modal.id = 'multiAssistantModalContainer';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+
+    const renderModal = () => {
+      const selectedStaff = nonTeaching.find(n => n.name === selectedStaffName) || sortedNT[0];
+      const ntAssignment = getNonTeachingAssignment(selectedStaff.name);
+      const currentlyAssignedTables = new Set(ntAssignment.countingTables || []);
+
+      modal.innerHTML = `
+        <div class="glass border border-emerald-500/40 rounded-2xl w-full max-w-2xl bg-slate-900/95 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <!-- Modal Header -->
+          <div class="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-xl shadow-inner border border-emerald-500/30">
+                🤝
+              </div>
+              <div>
+                <h4 class="font-bold text-white text-base">Assign Counting Assistant to Multiple Tables</h4>
+                <p class="text-xs text-slate-400">Allot the same non-teaching staff member to assist across multiple counting tables simultaneously to resolve staff shortages.</p>
+              </div>
+            </div>
+            <button id="btnCloseMultiAsstModal" class="text-slate-400 hover:text-white text-2xl font-bold px-2 py-1 leading-none">&times;</button>
+          </div>
+
+          <!-- Modal Body -->
+          <div class="p-5 overflow-y-auto space-y-4 flex-1">
+            <!-- Step 1: Choose Assistant -->
+            <div class="p-4 rounded-xl border border-white/10 bg-white/5 space-y-2">
+              <label class="block text-xs font-bold uppercase tracking-wider text-emerald-300">
+                1. Select Non-Teaching Staff Member
+              </label>
+              <select id="selectModalStaff" class="w-full bg-slate-950 border border-white/20 rounded-lg p-2.5 text-xs text-white focus:border-emerald-400 focus:outline-none">
+                ${sortedNT.map(nt => {
+                  const asst = getNonTeachingAssignment(nt.name);
+                  const isCur = nt.name === selectedStaff.name;
+                  const tableInfo = asst.countingTables.length > 0 ? ` [Currently on Tables: ${asst.countingTables.join(', ')}]` : ' [Not assigned to counting]';
+                  const excl = nt.isExcluded ? ' ⛔ [Excluded]' : '';
+                  return `
+                    <option value="${esc(nt.name)}" ${isCur ? 'selected' : ''}>
+                      ${esc(nt.name)} (${esc(nt.designation || 'Staff')}${nt.department ? ` · ${esc(nt.department)}` : ''})${tableInfo}${excl}
+                    </option>
+                  `;
+                }).join('')}
+              </select>
+              <div class="text-[11px] text-slate-300 flex items-center justify-between pt-1">
+                <span>Designation: <strong>${esc(selectedStaff.designation || 'Staff')}</strong></span>
+                <span>Department: <strong>${esc(selectedStaff.department || selectedStaff.section || 'Office')}</strong></span>
+                <span>PEN: <strong class="font-mono">${esc(selectedStaff.pen || '–')}</strong></span>
+              </div>
+            </div>
+
+            <!-- Step 2: Choose Tables -->
+            <div class="p-4 rounded-xl border border-white/10 bg-white/5 space-y-3">
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300">
+                  2. Select Counting Tables to Assign to
+                </label>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <button type="button" id="btnSelectAllTables" class="btn btn-secondary text-[11px] py-0.5 px-2 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border-purple-500/40">Select All</button>
+                  <button type="button" id="btnClearAllTables" class="btn btn-secondary text-[11px] py-0.5 px-2 text-slate-300">Clear All</button>
+                  <button type="button" id="btnSelectOddTables" class="btn btn-secondary text-[11px] py-0.5 px-2 text-slate-300">Odd Tables</button>
+                  <button type="button" id="btnSelectEvenTables" class="btn btn-secondary text-[11px] py-0.5 px-2 text-slate-300">Even Tables</button>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto p-1" id="tableCheckboxesContainer">
+                ${booths.map(b => {
+                  const currentTeam = countingTeams.find(t => t.tableNumber === b.boothNumber);
+                  const isAssignedToThis = currentTeam?.countingAssistant?.name === selectedStaff.name;
+                  const otherAssistant = currentTeam?.countingAssistant && !isAssignedToThis ? currentTeam.countingAssistant.name : null;
+
+                  return `
+                    <label class="flex items-center gap-2 p-2.5 rounded-lg border ${isAssignedToThis ? 'border-emerald-500/60 bg-emerald-950/30' : 'border-white/10 bg-slate-900/60 hover:border-white/20'} cursor-pointer transition select-none">
+                      <input type="checkbox" class="chk-modal-table rounded bg-slate-950 border-white/20 text-emerald-500 focus:ring-0" data-table="${b.boothNumber}" ${isAssignedToThis ? 'checked' : ''}>
+                      <div class="text-xs leading-tight">
+                        <div class="font-bold text-white flex items-center gap-1">
+                          <span>Table ${b.boothNumber}</span>
+                          ${isAssignedToThis ? '<span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1 rounded">Current</span>' : ''}
+                        </div>
+                        <div class="text-[10px] text-slate-400 truncate max-w-[140px]">${esc(b.roomName || `Table ${b.boothNumber}`)}</div>
+                        ${otherAssistant ? `<div class="text-[9px] text-amber-300/80 truncate max-w-[140px]" title="Currently has ${esc(otherAssistant)}">Has: ${esc(otherAssistant)}</div>` : ''}
+                      </div>
+                    </label>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="p-4 border-t border-white/10 bg-slate-950 flex items-center justify-between">
+            <button type="button" id="btnCancelMultiAsstModal" class="btn btn-secondary text-xs px-4 py-2 text-slate-300">
+              Cancel
+            </button>
+            <button type="button" id="btnApplyMultiAsst" class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2 flex items-center gap-1.5 shadow">
+              <span>✓</span> Apply Table Allotments
+            </button>
+          </div>
+        </div>
+      `;
+
+      modal.querySelector('#btnCloseMultiAsstModal').onclick = () => modal.remove();
+      modal.querySelector('#btnCancelMultiAsstModal').onclick = () => modal.remove();
+
+      modal.querySelector('#selectModalStaff').onchange = (e) => {
+        selectedStaffName = e.target.value;
+        renderModal();
+      };
+
+      modal.querySelector('#btnSelectAllTables').onclick = () => {
+        modal.querySelectorAll('.chk-modal-table').forEach(chk => { chk.checked = true; });
+      };
+
+      modal.querySelector('#btnClearAllTables').onclick = () => {
+        modal.querySelectorAll('.chk-modal-table').forEach(chk => { chk.checked = false; });
+      };
+
+      modal.querySelector('#btnSelectOddTables').onclick = () => {
+        modal.querySelectorAll('.chk-modal-table').forEach(chk => {
+          const num = parseInt(chk.dataset.table, 10);
+          chk.checked = (num % 2 === 1);
+        });
+      };
+
+      modal.querySelector('#btnSelectEvenTables').onclick = () => {
+        modal.querySelectorAll('.chk-modal-table').forEach(chk => {
+          const num = parseInt(chk.dataset.table, 10);
+          chk.checked = (num % 2 === 0);
+        });
+      };
+
+      modal.querySelector('#btnApplyMultiAsst').onclick = async () => {
+        const staffObj = nonTeaching.find(n => n.name === selectedStaffName);
+        if (!staffObj) return;
+
+        const checkedTables = [];
+        modal.querySelectorAll('.chk-modal-table').forEach(chk => {
+          const tableNum = parseInt(chk.dataset.table, 10);
+          let team = countingTeams.find(t => t.tableNumber === tableNum);
+          if (!team) {
+            team = { tableNumber: tableNum, roomName: `Table ${tableNum}`, supervisor: null, countingOfficer1: null, countingOfficer2: null, countingOfficer3: null, countingAssistant: null };
+            countingTeams.push(team);
+          }
+
+          if (chk.checked) {
+            team.countingAssistant = { name: staffObj.name, designation: staffObj.designation, pen: staffObj.pen || '' };
+            checkedTables.push(tableNum);
+          } else {
+            if (team.countingAssistant && team.countingAssistant.name === staffObj.name) {
+              team.countingAssistant = null;
+            }
+          }
+        });
+
+        await saveAll(true);
+        modal.remove();
+        showToast(`Assigned ${staffObj.name} to ${checkedTables.length} table(s): ${checkedTables.length > 0 ? `Tables ${checkedTables.sort((a,b)=>a-b).join(', ')}` : 'None'}!`, 'success');
+        renderUI();
+      };
+    };
+
+    renderModal();
+    document.body.appendChild(modal);
+  };
+
   // ─── Master Duty List Standalone Print Engine (Both Polling & Counting) ─────
 
   const getMasterDutyData = () => {
@@ -3533,9 +3734,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           stations.push(b?.roomName || `Booth ${ntAssigned.polling.boothNumber}`);
         }
         if (ntAssigned.counting) {
-          duties.push(`Table ${ntAssigned.counting.tableNumber} (Counting Assistant)`);
-          const b = booths.find(x => x.boothNumber === ntAssigned.counting.tableNumber);
-          stations.push(b?.roomName || `Table ${ntAssigned.counting.tableNumber}`);
+          const cTables = ntAssigned.countingTables && ntAssigned.countingTables.length > 0 ? ntAssigned.countingTables : [ntAssigned.counting.tableNumber];
+          const tableLabel = cTables.length > 1 ? `Tables ${cTables.join(', ')}` : `Table ${cTables[0]}`;
+          duties.push(`${tableLabel} (Counting Assistant)`);
+          const stationNames = cTables.map(num => {
+            const b = booths.find(x => x.boothNumber === num);
+            return b?.roomName || `Table ${num}`;
+          });
+          stations.push([...new Set(stationNames)].join(' / '));
         }
 
         personnel.push({
@@ -5346,6 +5552,39 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       }
     });
 
+    // In counting mode, consolidate assistants assigned to multiple tables into one slip
+    if (!isPolling) {
+      const consolidated = [];
+      const asstMap = new Map();
+
+      personnel.forEach(p => {
+        if (p.role === 'Counting Assistant') {
+          if (!asstMap.has(p.name)) {
+            const entry = { ...p, tables: [p.boothNumber], venues: [p.venue] };
+            asstMap.set(p.name, entry);
+            consolidated.push(entry);
+          } else {
+            const entry = asstMap.get(p.name);
+            entry.tables.push(p.boothNumber);
+            entry.venues.push(p.venue);
+          }
+        } else {
+          consolidated.push(p);
+        }
+      });
+
+      asstMap.forEach(entry => {
+        if (entry.tables.length > 1) {
+          entry.tables.sort((a, b) => a - b);
+          entry.boothNumber = `Tables ${entry.tables.join(', ')}`;
+          entry.venue = [...new Set(entry.venues)].join(' / ');
+        }
+      });
+
+      personnel.length = 0;
+      personnel.push(...consolidated);
+    }
+
     if (personnel.length === 0) {
       return `
         <div style="padding: 40px; text-align: center; color: #64748b;">
@@ -5359,6 +5598,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const isSecondOnPage = (idx % 2 === 1);
       const isLast = (idx === personnel.length - 1);
       const apptOrderNo = `${orderNo}/APPT-${String(idx + 1).padStart(2, '0')}`;
+      const stationText = isPolling 
+        ? `Polling Booth ${p.boothNumber}` 
+        : (String(p.boothNumber).startsWith('Tables') ? `Counting ${p.boothNumber}` : `Counting Table ${p.boothNumber}`);
 
       return `
         <div class="slip-container ${isSecondOnPage && !isLast ? 'slip-page-break' : ''}">
@@ -5385,7 +5627,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <div class="slip-body">
             <p>
               In exercise of powers vested with the Returning Officer under the College Union Election Rules and Constitution, 
-              you are hereby appointed as <strong>${esc(p.role)}</strong> for <strong>${isPolling ? 'Polling Booth' : 'Counting Table'} ${p.boothNumber} (${esc(p.venue)})</strong> 
+              you are hereby appointed as <strong>${esc(p.role)}</strong> for <strong>${stationText} (${esc(p.venue)})</strong> 
               for the conduct of <strong>College Union Election ${esc(electionYear)}</strong>.
             </p>
             <p>
@@ -5414,7 +5656,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <div class="slip-ack-section">
             <div class="slip-ack-cut">✂ - - - - - - - - - - - - - - - - - - - TEAR OFF &amp; RETURN TO RETURNING OFFICER - - - - - - - - - - - - - - - - - - -</div>
             <div style="display: flex; justify-content: space-between; font-size: 9px; margin-top: 4px;">
-              <span><strong>ACKNOWLEDGEMENT:</strong> Received Order No. ${esc(apptOrderNo)} for duty as <strong>${esc(p.role)}</strong> at ${isPolling ? 'Booth' : 'Table'} ${p.boothNumber}.</span>
+              <span><strong>ACKNOWLEDGEMENT:</strong> Received Order No. ${esc(apptOrderNo)} for duty as <strong>${esc(p.role)}</strong> at ${stationText}.</span>
             </div>
             <div class="slip-ack-sign-line">
               <span>Signature of Official: __________________________</span>
