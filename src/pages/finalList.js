@@ -132,6 +132,11 @@ function renderList(main, nominations, year, shortName = null, allPosts = [], wi
           }
 
           noms.sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
+          const hasDept = noms.some(n => {
+            const d = (n.candidateDept || n.candidate?.Dept || n.candidate?.Department || '').trim();
+            return d && d !== '–' && d !== 'N/A';
+          });
+
           return `
           <div class="glass rounded-2xl overflow-hidden shadow-2xl border border-white/5">
             <div class="px-6 py-4 bg-gradient-to-r from-emerald-500/10 to-indigo-500/5 border-b border-white/10 flex justify-between items-center">
@@ -151,11 +156,13 @@ function renderList(main, nominations, year, shortName = null, allPosts = [], wi
                   <tr>
                     <th class="w-16">#</th>
                     <th>Candidate Details</th>
-                    <th>Department</th>
+                    ${hasDept ? '<th>Department</th>' : ''}
                   </tr>
                 </thead>
                 <tbody>
-                  ${noms.map((n, i) => `
+                  ${noms.map((n, i) => {
+                    const deptVal = (n.candidateDept || n.candidate?.Dept || n.candidate?.Department || '').trim();
+                    return `
                     <tr class="hover:bg-white/[0.02] transition-colors">
                       <td class="text-slate-600 font-mono text-xs text-center">${i + 1}</td>
                       <td>
@@ -168,9 +175,10 @@ function renderList(main, nominations, year, shortName = null, allPosts = [], wi
                           ${n.candidateAdmission ? `<span class="text-slate-500 font-mono">Adm: ${esc(n.candidateAdmission)}</span>` : ''}
                         </div>
                       </td>
-                      <td class="text-sm text-slate-400">${esc(n.candidateDept)}</td>
+                      ${hasDept ? `<td class="text-sm text-slate-400">${esc(deptVal || '–')}</td>` : ''}
                     </tr>
-                  `).join('')}
+                    `;
+                  }).join('')}
                 </tbody>
               </table>
             </div>

@@ -122,6 +122,12 @@ function renderList(main, nominations, year = '2026', shortName = null, allPosts
           }
 
           noms.sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
+          const hasDept = noms.some(n => {
+            const d = (n.candidateDept || n.candidate?.Dept || n.candidate?.Department || '').trim();
+            return d && d !== '–' && d !== 'N/A';
+          });
+          const hasAnyWithdraw = noms.some(n => n.id);
+
           return `
           <div class="glass rounded-2xl overflow-hidden shadow-2xl border border-white/5">
             <div class="px-6 py-4 bg-gradient-to-r from-indigo-500/10 to-purple-500/5 border-b border-white/10 flex justify-between items-center">
@@ -134,11 +140,13 @@ function renderList(main, nominations, year = '2026', shortName = null, allPosts
                   <tr>
                     <th class="w-16">#</th>
                     <th>Candidate Details</th>
-                    <th>Department</th>
+                    ${hasDept ? '<th>Department</th>' : (hasAnyWithdraw ? '<th class="w-28 text-right">Action</th>' : '')}
                   </tr>
                 </thead>
                 <tbody>
-                  ${noms.map((n, i) => `
+                  ${noms.map((n, i) => {
+                    const deptVal = (n.candidateDept || n.candidate?.Dept || n.candidate?.Department || '').trim();
+                    return `
                     <tr class="hover:bg-white/[0.02] transition-colors">
                       <td class="text-slate-600 font-mono text-xs text-center">${i + 1}</td>
                       <td>
@@ -152,18 +160,29 @@ function renderList(main, nominations, year = '2026', shortName = null, allPosts
                           ${n.id ? `<span class="text-indigo-300 font-mono text-[11px] bg-indigo-500/15 px-1.5 py-0.5 rounded border border-indigo-500/30" title="Nomination ID">Nom ID: <strong class="font-mono text-indigo-200">${esc(n.id)}</strong></span>` : ''}
                         </div>
                       </td>
-                      <td class="text-sm text-slate-400">
-                        <div class="flex items-center justify-between gap-2">
-                          <span>${esc(n.candidateDept)}</span>
+                      ${hasDept ? `
+                        <td class="text-sm text-slate-400">
+                          <div class="flex items-center justify-between gap-2">
+                            <span>${esc(deptVal || '–')}</span>
+                            ${n.id ? `
+                              <a href="#/withdraw?id=${encodeURIComponent(n.id)}" class="btn btn-xs bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-[11px] px-2 py-0.5 rounded transition inline-flex items-center gap-1 font-semibold shrink-0" title="Submit Withdrawal of Candidature">
+                                <span>↩️</span> Withdraw
+                              </a>
+                            ` : ''}
+                          </div>
+                        </td>
+                      ` : (hasAnyWithdraw ? `
+                        <td class="text-right">
                           ${n.id ? `
                             <a href="#/withdraw?id=${encodeURIComponent(n.id)}" class="btn btn-xs bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-[11px] px-2 py-0.5 rounded transition inline-flex items-center gap-1 font-semibold shrink-0" title="Submit Withdrawal of Candidature">
                               <span>↩️</span> Withdraw
                             </a>
                           ` : ''}
-                        </div>
-                      </td>
+                        </td>
+                      ` : '')}
                     </tr>
-                  `).join('')}
+                    `;
+                  }).join('')}
                 </tbody>
               </table>
             </div>

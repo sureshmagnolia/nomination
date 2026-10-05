@@ -4206,6 +4206,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const activeDutyCount = obsList.length + discList.length + grievList.length + personnel.filter(p => !p.isReserve).length;
     const doubleDutyCount = personnel.filter(p => p.hasDoubleDuty).length;
 
+    const obsHasDept = obsList.some(o => o.department && o.department.trim() && o.department !== '–' && o.department !== 'N/A' && o.department !== '-');
+    const discHasDept = discList.some(d => d.department && d.department.trim() && d.department !== '–' && d.department !== 'N/A' && d.department !== '-');
+    const grievHasDept = grievList.some(g => g.department && g.department.trim() && g.department !== '–' && g.department !== 'N/A' && g.department !== '-');
+    const personnelHasDept = personnel.some(p => p.department && p.department.trim() && p.department !== '–' && p.department !== 'N/A' && p.department !== '-');
+
     return `
       <div class="master-duty-page">
         <!-- Header -->
@@ -4262,18 +4267,26 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         ` : `
           <table class="master-table">
             <colgroup>
-              <col style="width: 7%;">
-              <col style="width: 28%;">
-              <col style="width: 22%;">
-              <col style="width: 18%;">
-              <col style="width: 11%;">
-              <col style="width: 14%;">
+              ${obsHasDept ? `
+                <col style="width: 7%;">
+                <col style="width: 28%;">
+                <col style="width: 22%;">
+                <col style="width: 18%;">
+                <col style="width: 11%;">
+                <col style="width: 14%;">
+              ` : `
+                <col style="width: 8%;">
+                <col style="width: 38%;">
+                <col style="width: 24%;">
+                <col style="width: 14%;">
+                <col style="width: 16%;">
+              `}
             </colgroup>
             <thead>
               <tr>
                 <th class="col-center">Sl #</th>
                 <th>Name of Observer</th>
-                <th>Department</th>
+                ${obsHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
                 <th>PEN #</th>
                 <th class="col-center">Signature</th>
@@ -4286,7 +4299,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>
                     <span class="staff-name">${esc(obs.name)}</span>
                   </td>
-                  <td><span class="dept-badge">${esc(obs.department)}</span></td>
+                  ${obsHasDept ? `<td><span class="dept-badge">${esc(obs.department)}</span></td>` : ''}
                   <td>${esc(obs.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(obs.pen)}</td>
                   <td class="col-sign">
@@ -4311,18 +4324,26 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         ` : `
           <table class="master-table">
             <colgroup>
-              <col style="width: 7%;">
-              <col style="width: 28%;">
-              <col style="width: 22%;">
-              <col style="width: 18%;">
-              <col style="width: 11%;">
-              <col style="width: 14%;">
+              ${discHasDept ? `
+                <col style="width: 7%;">
+                <col style="width: 28%;">
+                <col style="width: 22%;">
+                <col style="width: 18%;">
+                <col style="width: 11%;">
+                <col style="width: 14%;">
+              ` : `
+                <col style="width: 8%;">
+                <col style="width: 38%;">
+                <col style="width: 24%;">
+                <col style="width: 14%;">
+                <col style="width: 16%;">
+              `}
             </colgroup>
             <thead>
               <tr>
                 <th class="col-center">Sl #</th>
                 <th>Name of Official</th>
-                <th>Department</th>
+                ${discHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
                 <th>PEN #</th>
                 <th class="col-center">Signature</th>
@@ -4335,7 +4356,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>
                     <span class="staff-name">${esc(disc.name)}</span>
                   </td>
-                  <td><span class="dept-badge" style="color: #166534;">${esc(disc.department)}</span></td>
+                  ${discHasDept ? `<td><span class="dept-badge" style="color: #166534;">${esc(disc.department)}</span></td>` : ''}
                   <td>${esc(disc.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(disc.pen)}</td>
                   <td class="col-sign">
@@ -4360,18 +4381,26 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         ` : `
           <table class="master-table">
             <colgroup>
-              <col style="width: 7%;">
-              <col style="width: 28%;">
-              <col style="width: 22%;">
-              <col style="width: 18%;">
-              <col style="width: 11%;">
-              <col style="width: 14%;">
+              ${grievHasDept ? `
+                <col style="width: 7%;">
+                <col style="width: 28%;">
+                <col style="width: 22%;">
+                <col style="width: 18%;">
+                <col style="width: 11%;">
+                <col style="width: 14%;">
+              ` : `
+                <col style="width: 8%;">
+                <col style="width: 38%;">
+                <col style="width: 24%;">
+                <col style="width: 14%;">
+                <col style="width: 16%;">
+              `}
             </colgroup>
             <thead>
               <tr>
                 <th class="col-center">Sl #</th>
                 <th>Name of Official</th>
-                <th>Department</th>
+                ${grievHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
                 <th>PEN #</th>
                 <th class="col-center">Signature</th>
@@ -4384,7 +4413,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>
                     <span class="staff-name">${esc(g.name)}</span>
                   </td>
-                  <td><span class="dept-badge" style="color: #0369a1;">${esc(g.department)}</span></td>
+                  ${grievHasDept ? `<td><span class="dept-badge" style="color: #0369a1;">${esc(g.department)}</span></td>` : ''}
                   <td>${esc(g.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(g.pen)}</td>
                   <td class="col-sign">
@@ -4409,19 +4438,28 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         ` : `
           <table class="master-table">
             <colgroup>
-              <col style="width: 5%;">
-              <col style="width: 22%;">
-              <col style="width: 16%;">
-              <col style="width: 14%;">
-              <col style="width: 10%;">
-              <col style="width: 21%;">
-              <col style="width: 12%;">
+              ${personnelHasDept ? `
+                <col style="width: 5%;">
+                <col style="width: 22%;">
+                <col style="width: 16%;">
+                <col style="width: 14%;">
+                <col style="width: 10%;">
+                <col style="width: 21%;">
+                <col style="width: 12%;">
+              ` : `
+                <col style="width: 6%;">
+                <col style="width: 28%;">
+                <col style="width: 18%;">
+                <col style="width: 12%;">
+                <col style="width: 24%;">
+                <col style="width: 12%;">
+              `}
             </colgroup>
             <thead>
               <tr>
                 <th class="col-center">Sl #</th>
                 <th>Name of Official</th>
-                <th>Department</th>
+                ${personnelHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
                 <th>PEN #</th>
                 <th>Duty Assigned &amp; Station</th>
@@ -4437,9 +4475,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     ${p.hasDoubleDuty ? `<span style="font-size: 8px; color: #b45309; font-weight: bold; background: #fef3c7; padding: 1px 4px; border-radius: 3px; display: inline-block; margin-top: 1px;">⚠️ Double Duty (Polling &amp; Counting)</span>` : ''}
                     ${p.isReserve ? `<span style="font-size: 8px; color: #475569; font-weight: 600; background: #e2e8f0; padding: 1px 5px; border-radius: 3px; display: inline-block; margin-top: 1px;">Reserve Official</span>` : ''}
                   </td>
+                  ${personnelHasDept ? `
                   <td>
                     <span class="dept-badge">${esc(p.department)}</span>
                   </td>
+                  ` : ''}
                   <td>
                     <span>${esc(p.designation)}</span>
                   </td>
@@ -4486,6 +4526,33 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const buildBoothWiseDeploymentHtml = (orderNo, orderDate) => {
     const { obsList, discList, grievList, reserveList } = getMasterDutyData();
 
+    const obsHasDept = obsList.some(o => o.department && o.department.trim() && o.department !== '–' && o.department !== 'N/A' && o.department !== '-');
+    const discHasDept = discList.some(d => d.department && d.department.trim() && d.department !== '–' && d.department !== 'N/A' && d.department !== '-');
+    const grievHasDept = grievList.some(g => g.department && g.department.trim() && g.department !== '–' && g.department !== 'N/A' && g.department !== '-');
+    const resHasDept = reserveList.some(r => r.department && r.department.trim() && r.department !== '–' && r.department !== 'N/A' && r.department !== '-');
+
+    const pollHasDept = booths.some(b => {
+      const team = pollingTeams.find(t => t.boothNumber === b.boothNumber) || {};
+      const slots = [team.presidingOfficer, team.pollingOfficer1, team.pollingOfficer2, team.pollingOfficer3, team.pollingAssistant];
+      return slots.some(s => {
+        if (!s || !s.name) return false;
+        const personObj = getPerson(s.name);
+        const dept = (personObj?.department || (s.isAssistant ? 'Office' : '')).trim();
+        return dept && dept !== '–' && dept !== 'N/A' && dept !== '-';
+      });
+    });
+
+    const countHasDept = booths.some(b => {
+      const team = countingTeams.find(t => t.tableNumber === b.boothNumber) || {};
+      const slots = [team.supervisor, team.countingOfficer1, team.countingOfficer2, team.countingOfficer3, team.countingAssistant];
+      return slots.some(s => {
+        if (!s || !s.name) return false;
+        const personObj = getPerson(s.name);
+        const dept = (personObj?.department || (s.isAssistant ? 'Office' : '')).trim();
+        return dept && dept !== '–' && dept !== 'N/A' && dept !== '-';
+      });
+    });
+
     return `
       <div class="master-booth-page">
         <!-- Header -->
@@ -4516,18 +4583,26 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         ` : `
           <table class="master-table">
             <colgroup>
-              <col style="width: 8%;">
-              <col style="width: 28%;">
-              <col style="width: 22%;">
-              <col style="width: 16%;">
-              <col style="width: 12%;">
-              <col style="width: 14%;">
+              ${obsHasDept ? `
+                <col style="width: 8%;">
+                <col style="width: 28%;">
+                <col style="width: 22%;">
+                <col style="width: 16%;">
+                <col style="width: 12%;">
+                <col style="width: 14%;">
+              ` : `
+                <col style="width: 8%;">
+                <col style="width: 38%;">
+                <col style="width: 22%;">
+                <col style="width: 16%;">
+                <col style="width: 16%;">
+              `}
             </colgroup>
             <thead>
               <tr>
                 <th class="col-center">Slot #</th>
                 <th>Name of Observer</th>
-                <th>Department</th>
+                ${obsHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
                 <th>PEN #</th>
                 <th class="col-center">Signature</th>
@@ -4538,7 +4613,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <tr style="background: #fffbeb !important;">
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(obs.slNo)}</td>
                   <td><span class="staff-name">${esc(obs.name)}</span></td>
-                  <td><span class="dept-badge">${esc(obs.department)}</span></td>
+                  ${obsHasDept ? `<td><span class="dept-badge">${esc(obs.department)}</span></td>` : ''}
                   <td>${esc(obs.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(obs.pen)}</td>
                   <td class="col-sign"><div class="sign-box"></div></td>
@@ -4561,18 +4636,26 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         ` : `
           <table class="master-table">
             <colgroup>
-              <col style="width: 8%;">
-              <col style="width: 28%;">
-              <col style="width: 22%;">
-              <col style="width: 16%;">
-              <col style="width: 12%;">
-              <col style="width: 14%;">
+              ${discHasDept ? `
+                <col style="width: 8%;">
+                <col style="width: 28%;">
+                <col style="width: 22%;">
+                <col style="width: 16%;">
+                <col style="width: 12%;">
+                <col style="width: 14%;">
+              ` : `
+                <col style="width: 8%;">
+                <col style="width: 38%;">
+                <col style="width: 22%;">
+                <col style="width: 16%;">
+                <col style="width: 16%;">
+              `}
             </colgroup>
             <thead>
               <tr>
                 <th class="col-center">Slot #</th>
                 <th>Name of Official</th>
-                <th>Department</th>
+                ${discHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
                 <th>PEN #</th>
                 <th class="col-center">Signature</th>
@@ -4585,7 +4668,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>
                     <span class="staff-name">${esc(disc.name)}</span>
                   </td>
-                  <td><span class="dept-badge" style="color: #166534;">${esc(disc.department)}</span></td>
+                  ${discHasDept ? `<td><span class="dept-badge" style="color: #166534;">${esc(disc.department)}</span></td>` : ''}
                   <td>${esc(disc.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(disc.pen)}</td>
                   <td class="col-sign"><div class="sign-box"></div></td>
@@ -4608,18 +4691,26 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         ` : `
           <table class="master-table">
             <colgroup>
-              <col style="width: 8%;">
-              <col style="width: 28%;">
-              <col style="width: 22%;">
-              <col style="width: 16%;">
-              <col style="width: 12%;">
-              <col style="width: 14%;">
+              ${grievHasDept ? `
+                <col style="width: 8%;">
+                <col style="width: 28%;">
+                <col style="width: 22%;">
+                <col style="width: 16%;">
+                <col style="width: 12%;">
+                <col style="width: 14%;">
+              ` : `
+                <col style="width: 8%;">
+                <col style="width: 38%;">
+                <col style="width: 22%;">
+                <col style="width: 16%;">
+                <col style="width: 16%;">
+              `}
             </colgroup>
             <thead>
               <tr>
                 <th class="col-center">Slot #</th>
                 <th>Name of Official</th>
-                <th>Department</th>
+                ${grievHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
                 <th>PEN #</th>
                 <th class="col-center">Signature</th>
@@ -4632,7 +4723,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>
                     <span class="staff-name">${esc(g.name)}</span>
                   </td>
-                  <td><span class="dept-badge" style="color: #0369a1;">${esc(g.department)}</span></td>
+                  ${grievHasDept ? `<td><span class="dept-badge" style="color: #0369a1;">${esc(g.department)}</span></td>` : ''}
                   <td>${esc(g.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(g.pen)}</td>
                   <td class="col-sign"><div class="sign-box"></div></td>
@@ -4650,13 +4741,22 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
         <table class="master-table">
           <colgroup>
-            <col style="width: 6%;">
-            <col style="width: 14%;">
-            <col style="width: 15%;">
-            <col style="width: 24%;">
-            <col style="width: 18%;">
-            <col style="width: 9%;">
-            <col style="width: 14%;">
+            ${pollHasDept ? `
+              <col style="width: 6%;">
+              <col style="width: 14%;">
+              <col style="width: 15%;">
+              <col style="width: 24%;">
+              <col style="width: 18%;">
+              <col style="width: 9%;">
+              <col style="width: 14%;">
+            ` : `
+              <col style="width: 7%;">
+              <col style="width: 16%;">
+              <col style="width: 18%;">
+              <col style="width: 30%;">
+              <col style="width: 13%;">
+              <col style="width: 16%;">
+            `}
           </colgroup>
           <thead>
             <tr>
@@ -4664,7 +4764,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <th>Station / Venue</th>
               <th>Designated Role</th>
               <th>Name of Official</th>
-              <th>Department</th>
+              ${pollHasDept ? '<th>Department</th>' : ''}
               <th>PEN #</th>
               <th class="col-center">Signature</th>
             </tr>
@@ -4703,7 +4803,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         <span class="staff-name">${esc(s.person.name)}</span>
                       ` : '<span style="color: #94a3b8; font-style: italic;">– Unassigned –</span>'}
                     </td>
-                    <td><span class="dept-badge">${esc(dept)}</span></td>
+                    ${pollHasDept ? `<td><span class="dept-badge">${esc(dept)}</span></td>` : ''}
                     <td style="font-family: monospace;">${esc(pen)}</td>
                     <td class="col-sign"><div class="sign-box"></div></td>
                   </tr>
@@ -4721,13 +4821,22 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
         <table class="master-table">
           <colgroup>
-            <col style="width: 6%;">
-            <col style="width: 14%;">
-            <col style="width: 15%;">
-            <col style="width: 24%;">
-            <col style="width: 18%;">
-            <col style="width: 9%;">
-            <col style="width: 14%;">
+            ${countHasDept ? `
+              <col style="width: 6%;">
+              <col style="width: 14%;">
+              <col style="width: 15%;">
+              <col style="width: 24%;">
+              <col style="width: 18%;">
+              <col style="width: 9%;">
+              <col style="width: 14%;">
+            ` : `
+              <col style="width: 7%;">
+              <col style="width: 16%;">
+              <col style="width: 18%;">
+              <col style="width: 30%;">
+              <col style="width: 13%;">
+              <col style="width: 16%;">
+            `}
           </colgroup>
           <thead>
             <tr>
@@ -4735,7 +4844,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <th>Station / Venue</th>
               <th>Designated Role</th>
               <th>Name of Official</th>
-              <th>Department</th>
+              ${countHasDept ? '<th>Department</th>' : ''}
               <th>PEN #</th>
               <th class="col-center">Signature</th>
             </tr>
@@ -4774,7 +4883,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         <span class="staff-name">${esc(s.person.name)}</span>
                       ` : '<span style="color: #94a3b8; font-style: italic;">– Unassigned –</span>'}
                     </td>
-                    <td><span class="dept-badge">${esc(dept)}</span></td>
+                    ${countHasDept ? `<td><span class="dept-badge">${esc(dept)}</span></td>` : ''}
                     <td style="font-family: monospace;">${esc(pen)}</td>
                     <td class="col-sign"><div class="sign-box"></div></td>
                   </tr>
@@ -4797,18 +4906,26 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         ` : `
           <table class="master-table">
             <colgroup>
-              <col style="width: 8%;">
-              <col style="width: 28%;">
-              <col style="width: 22%;">
-              <col style="width: 16%;">
-              <col style="width: 12%;">
-              <col style="width: 14%;">
+              ${resHasDept ? `
+                <col style="width: 8%;">
+                <col style="width: 28%;">
+                <col style="width: 22%;">
+                <col style="width: 16%;">
+                <col style="width: 12%;">
+                <col style="width: 14%;">
+              ` : `
+                <col style="width: 8%;">
+                <col style="width: 38%;">
+                <col style="width: 22%;">
+                <col style="width: 16%;">
+                <col style="width: 16%;">
+              `}
             </colgroup>
             <thead>
               <tr>
                 <th class="col-center">Slot #</th>
                 <th>Name of Official</th>
-                <th>Department</th>
+                ${resHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
                 <th>PEN #</th>
                 <th class="col-center">Signature</th>
@@ -4819,7 +4936,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <tr style="background: #f8fafc !important;">
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">Res-${rIdx + 1}</td>
                   <td><span class="staff-name">${esc(res.name)}</span></td>
-                  <td><span class="dept-badge">${esc(res.department)}</span></td>
+                  ${resHasDept ? `<td><span class="dept-badge">${esc(res.department)}</span></td>` : ''}
                   <td>${esc(res.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(res.pen)}</td>
                   <td class="col-sign"><div class="sign-box"></div></td>
