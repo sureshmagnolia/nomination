@@ -112,6 +112,36 @@ function renderList(main, nominations, year = '2026', shortName = null) {
         `;
         }).join('')}
       </div>
+
+      <!-- Statutory Bottom Warning for Candidates -->
+      <div class="rounded-2xl p-6 border-2 border-rose-500/40 bg-gradient-to-br from-rose-950/40 via-red-950/25 to-slate-900/90 shadow-2xl backdrop-blur-md space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 flex items-center justify-center text-xl shrink-0 shadow-inner">
+            ⚠️
+          </div>
+          <div>
+            <h4 class="font-extrabold text-rose-300 text-sm sm:text-base uppercase tracking-wider">
+              Statutory Warning / Mandatory Notice to Candidates
+            </h4>
+            <p class="text-xs text-rose-200/80 font-medium">
+              Simultaneous Contesting Prohibition &amp; Automatic Cancellation Clause
+            </p>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-black/40 border border-rose-500/20 space-y-2.5 text-xs text-rose-100/90 leading-relaxed">
+          <p>
+            <strong>Mandatory Rule:</strong> Candidates who have submitted nominations for more than 1 post must withdraw all additional nominations on or before the official withdrawal deadline, so as to contest for only ONE post.
+          </p>
+          <div class="font-bold text-rose-200 bg-rose-500/15 p-3 rounded-lg border border-rose-500/30 flex items-start gap-2">
+            <span class="text-base shrink-0">🚨</span>
+            <span>If any candidate fails to withdraw their additional nominations before the stipulated withdrawal deadline, <strong>ALL nominations submitted by that candidate shall automatically get CANCELLED</strong> under the College Union Election Rules and University Statutes, and the candidate will not be permitted to contest for any post.</span>
+          </div>
+          <p class="text-[11px] text-rose-200/75 pt-2 border-t border-rose-500/20 font-sans">
+            <strong>നിയമപരമായ മുന്നറിയിപ്പ്:</strong> ഒന്നിലധികം പോസ്റ്റുകളിലേക്ക് നാമനിർദ്ദേശ പത്രിക സമർപ്പിച്ച സ്ഥാനാർത്ഥികൾ നിശ്ചിത പിൻവലിക്കൽ സമയപരിധിക്ക് മുൻപായി അധിക പത്രികകൾ പിൻവലിക്കേണ്ടതാണ് (ഒരു പോസ്റ്റിലേക്ക് മാത്രമേ മത്സരിക്കാൻ അനുവാദമുള്ളൂ). അല്ലാത്തപക്ഷം പ്രസ്തുത സ്ഥാനാർത്ഥിയുടെ <strong>എല്ലാ നാമനിർദ്ദേശ പത്രികകളും സ്വമേധയാ റദ്ദാക്കപ്പെടുന്നതും (CANCELLED)</strong>, തെരഞ്ഞെടുപ്പിൽ മത്സരിക്കാനുള്ള അർഹത പൂർണ്ണമായും നഷ്ടപ്പെടുന്നതുമാണ്.
+          </p>
+        </div>
+      </div>
     </div>`;
 
   main.querySelector('#btnExportValidExcel')?.addEventListener('click', () => {

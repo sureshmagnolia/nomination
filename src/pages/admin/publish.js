@@ -274,6 +274,13 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
           `;
         })()}
 
+        <div class="p-3.5 rounded-lg border border-rose-500/30 bg-rose-950/25 text-xs text-rose-200 space-y-1">
+          <div class="font-bold text-rose-300 flex items-center gap-1.5">
+            <span>⚠️</span> <span>Statutory Contesting Limit Notice:</span>
+          </div>
+          <p>Candidates nominated for more than 1 post must withdraw additional nominations on or before the withdrawal deadline. If any candidate fails to withdraw in time, <strong>all nominations submitted by that candidate shall automatically get cancelled</strong> under election rules.</p>
+        </div>
+
         ${!finalPublished ? `
         <div class="alert alert-warning text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <span>⚠️ Publish after the withdrawal scrutiny deadline has passed. Uncontested candidates will be flagged as elected unanimously.</span>
@@ -434,7 +441,22 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
     html += `
         </tbody>
       </table>
-      <div style="margin-top:50px;display:flex;justify-content:space-between;align-items:flex-end">
+
+      <!-- Statutory Bottom Warning for Candidates -->
+      <div style="margin-top:22px;margin-bottom:18px;border:1.5px solid #dc2626;background:#fff1f2;padding:10px 14px;border-radius:4px;page-break-inside:avoid">
+        <div style="font-weight:800;color:#991b1b;font-size:11px;text-transform:uppercase;margin-bottom:4px;display:flex;align-items:center;gap:6px">
+          <span>⚠️</span> <span>STATUTORY WARNING / MANDATORY NOTICE TO CANDIDATES:</span>
+        </div>
+        <div style="font-size:10px;color:#7f1d1d;line-height:1.45;font-weight:600">
+          Candidates who have submitted nominations for more than 1 post must withdraw their nominations for all additional posts on or before the statutory withdrawal deadline. 
+          If any candidate fails to withdraw their additional nominations before the stipulated deadline, <strong>ALL nominations submitted by that candidate shall automatically get CANCELLED</strong> under the College Union Election Rules and University Statutes, and the candidate will not be permitted to contest for any post.
+        </div>
+        <div style="font-size:9.5px;color:#991b1b;line-height:1.4;margin-top:4px;font-style:italic">
+          (ഒന്നിലധികം പോസ്റ്റുകളിലേക്ക് നാമനിർദ്ദേശ പത്രിക സമർപ്പിച്ച സ്ഥാനാർത്ഥികൾ നിശ്ചിത പിൻവലിക്കൽ സമയപരിധിക്ക് മുൻപായി അധിക പത്രികകൾ പിൻവലിക്കേണ്ടതാണ്. അല്ലാത്തപക്ഷം പ്രസ്തുത സ്ഥാനാർത്ഥിയുടെ എല്ലാ നാമനിർദ്ദേശ പത്രികകളും സ്വമേധയാ റദ്ദാക്കപ്പെടുന്നതും, തെരഞ്ഞെടുപ്പിൽ മത്സരിക്കാനുള്ള അർഹത നഷ്ടപ്പെടുന്നതുമാണ്.)
+        </div>
+      </div>
+
+      <div style="margin-top:35px;display:flex;justify-content:space-between;align-items:flex-end">
         <div style="font-size:11px;color:#555">
           <div><strong>Date of Publication:</strong> ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
           <div><strong>Place:</strong> Palakkad</div>

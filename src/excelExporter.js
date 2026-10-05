@@ -81,6 +81,10 @@ export function exportNominationsToExcel(list = [], type = 'valid', options = {}
     });
   });
 
+  candidateRows.push([]);
+  candidateRows.push(['⚠️ STATUTORY WARNING / NOTICE TO CANDIDATES:']);
+  candidateRows.push(['Candidates who have submitted nominations for more than 1 post must withdraw all additional nominations on or before the official withdrawal deadline. If any candidate fails to withdraw in time, ALL nominations submitted by that candidate shall automatically get CANCELLED under the College Union Election Rules.']);
+
   const wsCandidates = XLSX.utils.aoa_to_sheet(candidateRows);
 
   // Column widths for readability
