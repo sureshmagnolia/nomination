@@ -3160,6 +3160,11 @@ All students are directed to strictly adhere to the University Code of Conduct, 
           INSERT INTO backup_snapshots (id, snapshot_name, trigger_type, created_at, summary_json, data_json)
           VALUES (${preRestoreSnapId}, ${'Pre-Restore Safety Snapshot (' + nowIso.slice(0, 16).replace('T', ' ') + ')'}, 'pre_restore', ${nowIso}, ${JSON.stringify(preCounts)}, ${JSON.stringify(prePackage)})
         `;
+        await sql`
+          DELETE FROM backup_snapshots WHERE id NOT IN (
+            SELECT id FROM backup_snapshots ORDER BY created_at DESC LIMIT 10
+          )
+        `;
       } catch (snapErr) {
         console.error('Failed to create pre-restore snapshot:', snapErr);
       }
