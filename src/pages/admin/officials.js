@@ -103,6 +103,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   let pollingTeams = Array.isArray(initialOfficialsData?.pollingTeams) ? initialOfficialsData.pollingTeams : [];
   let countingTeams = Array.isArray(initialOfficialsData?.countingTeams) ? initialOfficialsData.countingTeams : [];
 
+  let observers = [];
+  const cachedObs = localStorage.getItem('gcc_election_observers');
+  if (cachedObs !== null) {
+    try { observers = JSON.parse(cachedObs); } catch (_) { observers = []; }
+  } else if (Array.isArray(initialOfficialsData?.observers)) {
+    observers = initialOfficialsData.observers;
+    localStorage.setItem('gcc_election_observers', JSON.stringify(observers));
+  }
+
+  const isObserver = (name) => {
+    if (!name) return false;
+    return observers.some(o => o.name === name);
+  };
+
   // Active UI state
   let activeTab = 'polling'; // 'polling' | 'counting' | 'faculty' | 'nonteaching'
   let facultySearch = '';
@@ -194,10 +208,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         </td>
         <td>
           <div class="flex items-center gap-1.5 flex-wrap">
+            ${isObserver(f.name) ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">⚖️ Observer</span>` : ''}
             ${pDuty ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">Booth ${pDuty.boothNumber} (${pDuty.role})</span>` : ''}
             ${cDuty ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-semibold">Table ${cDuty.tableNumber} (${cDuty.role})</span>` : ''}
             ${pDuty && cDuty ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">⚠️ Double Duty</span>` : ''}
-            ${!pDuty && !cDuty ? `<span class="text-slate-500 text-[11px]">–</span>` : ''}
+            ${!isObserver(f.name) && !pDuty && !cDuty ? `<span class="text-slate-500 text-[11px]">–</span>` : ''}
           </div>
         </td>
         <td>
@@ -695,13 +710,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     localStorage.setItem('gcc_non_teaching_roster', JSON.stringify(nonTeaching));
     localStorage.setItem('gcc_polling_teams', JSON.stringify(pollingTeams));
     localStorage.setItem('gcc_counting_teams', JSON.stringify(countingTeams));
+    localStorage.setItem('gcc_election_observers', JSON.stringify(observers));
 
     try {
       await api.adminSaveOfficials(pwd, {
         faculty,
         nonTeaching,
         pollingTeams,
-        countingTeams
+        countingTeams,
+        observers
       });
       if (!quiet) showToast('Officials and rosters saved successfully!', 'success');
     } catch (e) {
@@ -740,6 +757,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     // 1. Identify all currently assigned/manual faculty & assistants in polling
     const preservedPollingFacultyNames = new Set();
     const preservedPollingAssistantNames = new Set();
+    observers.forEach(o => { if (o.name) preservedPollingFacultyNames.add(o.name); });
     pollingTeams.forEach(t => {
       if (t.presidingOfficer?.name) preservedPollingFacultyNames.add(t.presidingOfficer.name);
       if (t.pollingOfficer1?.name) preservedPollingFacultyNames.add(t.pollingOfficer1.name);
@@ -781,9 +799,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       return;
     }
 
-    // Candidate active, non-excluded faculty not already allotted in Polling
+    const observerNames = new Set(observers.map(o => o.name));
+    // Candidate active, non-excluded faculty not already allotted in Polling or Observers
     const candidateFaculty = faculty
-      .filter(f => !f.isExcluded && !preservedPollingFacultyNames.has(f.name))
+      .filter(f => !f.isExcluded && !preservedPollingFacultyNames.has(f.name) && !observerNames.has(f.name))
       .sort((a, b) => a.seniority - b.seniority);
 
     let filledCount = 0;
@@ -912,6 +931,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     // 1. Identify all currently assigned/manual faculty & assistants in counting
     const preservedCountingFacultyNames = new Set();
     const preservedCountingAssistantNames = new Set();
+    observers.forEach(o => { if (o.name) preservedCountingFacultyNames.add(o.name); });
     countingTeams.forEach(t => {
       if (t.supervisor?.name) preservedCountingFacultyNames.add(t.supervisor.name);
       if (t.countingOfficer1?.name) preservedCountingFacultyNames.add(t.countingOfficer1.name);
@@ -953,9 +973,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       return;
     }
 
-    // Candidate active, non-excluded faculty not already allotted in Counting
+    const observerNames = new Set(observers.map(o => o.name));
+    // Candidate active, non-excluded faculty not already allotted in Counting or Observers
     const candidateFaculty = faculty
-      .filter(f => !f.isExcluded && !preservedCountingFacultyNames.has(f.name))
+      .filter(f => !f.isExcluded && !preservedCountingFacultyNames.has(f.name) && !observerNames.has(f.name))
       .sort((a, b) => a.seniority - b.seniority);
 
     let filledCount = 0;
@@ -1061,6 +1082,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const renderPollingFacultyOptions = (boothNumber, currentRole, currentSelectedName) => {
     return faculty.map(f => {
       const isSelected = currentSelectedName === f.name;
+      const isObs = isObserver(f.name);
       const pDuty = getPollingAssignment(f.name);
       // Already allotted to another polling slot (either another booth or another role in this booth)
       const isAllottedInPolling = pDuty && !(pDuty.boothNumber === boothNumber && pDuty.slot === currentRole);
@@ -1068,7 +1090,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       let prefix = '';
       if (f.isExcluded) prefix += '⛔ ';
-      if (isAllottedInPolling) {
+      if (isObs) {
+        prefix += '⚖️ [Allotted: Observer] ';
+      } else if (isAllottedInPolling) {
         prefix += `🚩 [Allotted: Booth ${pDuty.boothNumber} - ${pDuty.role}] `;
       } else if (isSelected) {
         prefix += '✓ (Current) ';
@@ -1078,7 +1102,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const doubleTag = cDuty ? `[⚠️ Double Duty: Table ${cDuty.tableNumber}]` : '';
 
       return `
-        <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${isAllottedInPolling ? 'disabled' : ''}>
+        <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${(isAllottedInPolling || isObs) && !isSelected ? 'disabled' : ''}>
           ${prefix}#${f.seniority} ${esc(f.name)} (${esc(f.designation)} · PEN:${f.pen || '–'}) ${tag} ${doubleTag}
         </option>
       `;
@@ -1089,6 +1113,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const renderCountingFacultyOptions = (tableNumber, currentRole, currentSelectedName) => {
     return faculty.map(f => {
       const isSelected = currentSelectedName === f.name;
+      const isObs = isObserver(f.name);
       const cDuty = getCountingAssignment(f.name);
       // Already allotted to another counting slot (either another table or another role on this table)
       const isAllottedInCounting = cDuty && !(cDuty.tableNumber === tableNumber && cDuty.slot === currentRole);
@@ -1096,7 +1121,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       let prefix = '';
       if (f.isExcluded) prefix += '⛔ ';
-      if (isAllottedInCounting) {
+      if (isObs) {
+        prefix += '⚖️ [Allotted: Observer] ';
+      } else if (isAllottedInCounting) {
         prefix += `🚩 [Allotted: Table ${cDuty.tableNumber} - ${cDuty.role}] `;
       } else if (isSelected) {
         prefix += '✓ (Current) ';
@@ -1106,7 +1133,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const doubleTag = pDuty ? `[⚠️ Double Duty: Booth ${pDuty.boothNumber}]` : '';
 
       return `
-        <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${isAllottedInCounting ? 'disabled' : ''}>
+        <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${(isAllottedInCounting || isObs) && !isSelected ? 'disabled' : ''}>
           ${prefix}#${f.seniority} ${esc(f.name)} (${esc(f.designation)} · PEN:${f.pen || '–'}) ${tag} ${doubleTag}
         </option>
       `;
@@ -1182,6 +1209,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     const totalNT = nonTeaching.length;
     const activeNT = nonTeaching.filter(n => !n.isExcluded).length;
+    const totalObservers = observers.length;
 
     let pollingSlotsFilled = 0;
     let pollingAsstFilled = 0;
@@ -1217,11 +1245,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <span class="text-3xl">👥</span>
               <div>
                 <h3 class="text-xl font-bold text-white tracking-wide">Election Officials & Team Builder</h3>
-                <p class="text-slate-400 text-xs">Allot Presiding Officers, Polling Officers, Counting Supervisors, and Non-Teaching Polling Assistants.</p>
+                <p class="text-slate-400 text-xs">Allot Observers, Presiding Officers, Polling Officers, Counting Supervisors, and Assistants.</p>
               </div>
             </div>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
+            <button id="btnPrintMasterDutyListTop" class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 flex items-center gap-1.5 shadow" title="Print Consolidated Master Duty List for all Polling and Counting Personnel">
+              🖨️ Master Duty List (Polling &amp; Counting)
+            </button>
             <button id="btnSaveAll" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow">
               💾 Save All Changes
             </button>
@@ -1238,7 +1269,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         </div>
 
         <!-- Metric Ribbon -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 no-print">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 no-print">
+          <div class="glass p-3 rounded-xl border border-amber-500/40 flex flex-col justify-between bg-amber-950/20">
+            <span class="text-[11px] uppercase tracking-wider text-amber-300 font-semibold">General Observers</span>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span class="text-2xl font-bold text-amber-200 font-mono">${totalObservers}</span>
+              <span class="text-xs text-slate-400">Appointed</span>
+            </div>
+            <span class="text-[10px] text-amber-400 mt-1">Overall Process Supervision</span>
+          </div>
+
           <div class="glass p-3 rounded-xl border border-white/10 flex flex-col justify-between">
             <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Faculty Roster</span>
             <div class="flex items-baseline gap-2 mt-1">
@@ -1254,7 +1294,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <span class="text-2xl font-bold text-emerald-200 font-mono">${activeNT}</span>
               <span class="text-xs text-slate-400">/ ${totalNT} Total</span>
             </div>
-            <span class="text-[10px] text-emerald-400 mt-1">For Polling & Counting Assistants</span>
+            <span class="text-[10px] text-emerald-400 mt-1">For Polling &amp; Counting Assistants</span>
           </div>
 
           <div class="glass p-3 rounded-xl border border-indigo-500/30 flex flex-col justify-between bg-indigo-950/20">
@@ -1281,7 +1321,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <span class="text-2xl font-bold ${doubleDutyCount > 0 ? 'text-amber-200' : 'text-emerald-200'} font-mono">${doubleDutyCount}</span>
               <span class="text-xs text-slate-400">Staff Assigned</span>
             </div>
-            <span class="text-[10px] ${doubleDutyCount > 0 ? 'text-amber-400' : 'text-emerald-400'} mt-1">${doubleDutyCount > 0 ? 'Serving Polling & Counting' : 'Clean Separation (0 Overlap)'}</span>
+            <span class="text-[10px] ${doubleDutyCount > 0 ? 'text-amber-400' : 'text-emerald-400'} mt-1">${doubleDutyCount > 0 ? 'Serving Polling &amp; Counting' : 'Clean Separation (0 Overlap)'}</span>
           </div>
         </div>
 
@@ -1314,6 +1354,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <button id="btnAutoAllotPolling" class="btn btn-primary bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow" title="Auto-allot empty polling slots while preserving all manually chosen officials">
                 ⚡ Auto-Allot Polling Teams
               </button>
+              <button id="btnOpenObserverModal" class="btn btn-secondary border-amber-500/50 text-amber-300 hover:text-white hover:bg-amber-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Appoint faculty as statutory Observers for the total election process">
+                ⚖️ Allot Observers (${observers.length})
+              </button>
+              <button id="btnPrintMasterDutyListPolling" class="btn btn-primary bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs px-3.5 py-2 flex items-center gap-1.5 shadow" title="Print Master Duty List with Observers 1st and Department-wise Officials">
+                🖨️ Master Duty List
+              </button>
               <button id="btnPrintPollingOrders" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5">
                 🖨️ Print Appointment Orders
               </button>
@@ -1321,6 +1367,43 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 🗑️ Clear All
               </button>
             </div>
+          </div>
+
+          <!-- Election Observers (Total Process Supervision) -->
+          <div class="glass rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-950/30 via-slate-900/60 to-slate-900/40 p-4 shadow-lg no-print">
+            <div class="flex items-center justify-between flex-wrap gap-2 pb-2.5 border-b border-amber-500/20">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center text-lg shadow-inner">⚖️</div>
+                <div>
+                  <h5 class="font-bold text-white text-sm flex items-center gap-2">
+                    General Election Observers (Total Process Supervision)
+                    <span class="text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full">${observers.length} Appointed</span>
+                  </h5>
+                  <p class="text-[11px] text-slate-400">Senior faculty appointed to oversee the entire election process across both polling booths and counting tables. Displayed 1st on the Master Duty List.</p>
+                </div>
+              </div>
+              <button id="btnManageObserversBanner" class="btn btn-secondary border-amber-500/50 text-amber-300 hover:bg-amber-500/20 text-xs px-3 py-1.5 flex items-center gap-1 font-semibold">
+                ➕ Add / Manage Observers
+              </button>
+            </div>
+            ${observers.length === 0 ? `
+              <div class="py-3 text-center text-slate-400 text-xs">
+                No observers appointed yet. Click <button class="text-amber-300 underline font-semibold btn-manage-observers-inline">Allot Observers</button> to appoint faculty as statutory observers for the total election process.
+              </div>
+            ` : `
+              <div class="flex items-center gap-2 flex-wrap pt-3">
+                ${observers.map((obs, idx) => `
+                  <div class="flex items-center gap-2 bg-slate-900/90 border border-amber-500/40 rounded-lg px-3 py-1.5 shadow-sm">
+                    <span class="text-amber-400 text-xs font-mono font-bold">#${idx + 1}</span>
+                    <div>
+                      <div class="font-bold text-white text-xs">${esc(obs.name)}</div>
+                      <div class="text-[10px] text-slate-400">${esc(obs.department || 'Faculty')}${obs.pen ? ` · PEN: ${esc(obs.pen)}` : ''}</div>
+                    </div>
+                    <button class="text-rose-400 hover:text-rose-200 text-xs ml-1.5 btn-quick-remove-observer" data-name="${esc(obs.name)}" title="Remove observer">✖</button>
+                  </div>
+                `).join('')}
+              </div>
+            `}
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="pollingTeamsGrid">
@@ -1488,6 +1571,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <div class="flex items-center gap-2 flex-wrap">
               <button id="btnAutoAllotCountingFresh" class="btn btn-primary bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow" title="Auto-allot empty counting slots while preserving all manually chosen officials">
                 ⚡ Auto-Allot (Fresh Faculty First)
+              </button>
+              <button id="btnPrintMasterDutyListCounting" class="btn btn-primary bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs px-3.5 py-2 flex items-center gap-1.5 shadow" title="Print Master Duty List with Observers 1st and Department-wise Officials">
+                🖨️ Master Duty List
               </button>
               <button id="btnPrintCountingOrders" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5">
                 🖨️ Print Counting Orders
@@ -2344,9 +2430,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         nonTeaching = [];
         pollingTeams = [];
         countingTeams = [];
+        observers = [];
+        localStorage.removeItem('gcc_election_observers');
         localStorage.setItem('gcc_roster_migrated_v2', 'true');
         await saveAll(false);
-        showToast('All rosters and team assignments cleared! Ready for new CSV uploads.', 'info');
+        showToast('All rosters, team assignments, and observers cleared!', 'info');
         renderUI();
       }
     });
@@ -2494,6 +2582,1112 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     main.querySelector('#btnPrintCountingOrders')?.addEventListener('click', () => {
       openDutyOrdersWindow('counting');
     });
+
+    // Print Master Duty List (Polling & Counting)
+    const handlePrintMasterDutyList = () => {
+      openMasterDutyListWindow();
+    };
+    main.querySelector('#btnPrintMasterDutyListTop')?.addEventListener('click', handlePrintMasterDutyList);
+    main.querySelector('#btnPrintMasterDutyListPolling')?.addEventListener('click', handlePrintMasterDutyList);
+    main.querySelector('#btnPrintMasterDutyListCounting')?.addEventListener('click', handlePrintMasterDutyList);
+
+    // Open Observer Allotment Modal
+    main.querySelector('#btnOpenObserverModal')?.addEventListener('click', () => openObserverModal());
+    main.querySelector('#btnManageObserversBanner')?.addEventListener('click', () => openObserverModal());
+    main.querySelector('.btn-manage-observers-inline')?.addEventListener('click', () => openObserverModal());
+
+    // Quick remove observer from banner
+    main.querySelectorAll('.btn-quick-remove-observer').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const name = e.currentTarget.dataset.name;
+        if (confirm(`Remove "${name}" from Election Observers?`)) {
+          observers = observers.filter(o => o.name !== name);
+          await saveAll(false);
+          showToast(`Removed "${name}" from Observers.`, 'info');
+          renderUI();
+        }
+      });
+    });
+  };
+
+  // ─── Observers Allotment Modal ──────────────────────────────────────────────
+
+  const openObserverModal = () => {
+    const existing = document.getElementById('observerModalContainer');
+    if (existing) existing.remove();
+
+    let draftObservers = observers.map(o => ({ ...o }));
+    if (draftObservers.length === 0) {
+      draftObservers.push({ name: '', pen: '', department: '', designation: '', seniority: 999 });
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'observerModalContainer';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+
+    const renderModal = () => {
+      modal.innerHTML = `
+        <div class="glass border border-amber-500/40 rounded-2xl w-full max-w-2xl bg-slate-900/95 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <!-- Modal Header -->
+          <div class="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center text-xl shadow-inner border border-amber-500/30">
+                ⚖️
+              </div>
+              <div>
+                <h4 class="font-bold text-white text-base">Election Observers Allotment</h4>
+                <p class="text-xs text-slate-400">Appoint faculty members as statutory observers for the total election process. Observers appear first on the Master Duty List.</p>
+              </div>
+            </div>
+            <button id="btnCloseObsModal" class="text-slate-400 hover:text-white text-2xl font-bold px-2 py-1 leading-none">&times;</button>
+          </div>
+
+          <!-- Modal Body: Observers List -->
+          <div class="p-5 overflow-y-auto space-y-4 flex-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-300">Observer Appointments (${draftObservers.length})</span>
+              <button type="button" id="btnAddObserverRow" class="btn btn-secondary border-amber-500/40 text-amber-300 hover:bg-amber-500/20 text-xs px-3 py-1.5 flex items-center gap-1 font-semibold">
+                ➕ Add Another Observer
+              </button>
+            </div>
+
+            <div class="space-y-3" id="observerRowsContainer">
+              ${draftObservers.map((obs, idx) => {
+                const facSelected = faculty.find(f => f.name === obs.name);
+                return `
+                  <div class="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-2 relative" data-obs-idx="${idx}">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-bold text-amber-300 font-mono flex items-center gap-1.5">
+                        <span>⚖️</span> Observer #${idx + 1}
+                      </span>
+                      <button type="button" class="text-xs text-rose-400 hover:text-rose-200 hover:underline btn-remove-obs-row flex items-center gap-1" data-idx="${idx}">
+                        <span>✖</span> Remove
+                      </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-2">
+                      <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-amber-400 focus:outline-none obs-faculty-select" data-idx="${idx}">
+                        <option value="">-- Select Faculty Member for Observer Duty --</option>
+                        ${faculty.map(f => {
+                          const isCur = obs.name === f.name;
+                          const isChosenInOther = draftObservers.some((o, i) => i !== idx && o.name === f.name);
+                          let prefix = '';
+                          if (f.isExcluded) prefix += '⛔ ';
+                          if (isChosenInOther) prefix += '🚩 [Selected in another slot] ';
+                          return `
+                            <option value="${esc(f.name)}" ${isCur ? 'selected' : ''} ${isChosenInOther ? 'disabled' : ''}>
+                              ${prefix}#${f.seniority} ${esc(f.name)} (${esc(f.designation)} · ${esc(f.department || 'General')} · PEN:${f.pen || '–'})
+                            </option>
+                          `;
+                        }).join('')}
+                      </select>
+                    </div>
+
+                    ${facSelected ? `
+                      <div class="flex items-center gap-2 flex-wrap text-[11px] text-slate-300 bg-black/30 p-2 rounded-lg border border-white/5 font-mono">
+                        <span class="text-amber-300 font-semibold">Rank #${facSelected.seniority}</span>
+                        <span>•</span>
+                        <span>Dept: <strong class="text-white">${esc(facSelected.department || '–')}</strong></span>
+                        <span>•</span>
+                        <span>PEN: <strong class="text-white">${esc(facSelected.pen || '–')}</strong></span>
+                        <span>•</span>
+                        <span>Desig: <strong class="text-white">${esc(facSelected.designation || 'Faculty')}</strong></span>
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="p-4 border-t border-white/10 flex items-center justify-between bg-white/5">
+            <span class="text-[11px] text-slate-400">Add as many observers as needed. Saved to cloud database.</span>
+            <div class="flex items-center gap-2">
+              <button type="button" id="btnCancelObsModal" class="btn btn-secondary text-xs px-4 py-2">Cancel</button>
+              <button type="button" id="btnSaveObsModal" class="btn btn-primary bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow">
+                💾 Save Observers
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      modal.querySelector('#btnCloseObsModal').onclick = () => modal.remove();
+      modal.querySelector('#btnCancelObsModal').onclick = () => modal.remove();
+
+      modal.querySelector('#btnAddObserverRow').onclick = () => {
+        draftObservers.push({ name: '', pen: '', department: '', designation: '', seniority: 999 });
+        renderModal();
+      };
+
+      modal.querySelectorAll('.btn-remove-obs-row').forEach(btn => {
+        btn.onclick = () => {
+          const idx = parseInt(btn.dataset.idx, 10);
+          draftObservers.splice(idx, 1);
+          if (draftObservers.length === 0) {
+            draftObservers.push({ name: '', pen: '', department: '', designation: '', seniority: 999 });
+          }
+          renderModal();
+        };
+      });
+
+      modal.querySelectorAll('.obs-faculty-select').forEach(sel => {
+        sel.onchange = (e) => {
+          const idx = parseInt(sel.dataset.idx, 10);
+          const fName = e.target.value;
+          const fac = faculty.find(f => f.name === fName);
+          if (fac) {
+            draftObservers[idx] = {
+              name: fac.name,
+              pen: fac.pen || '',
+              department: fac.department || '',
+              designation: fac.designation || 'Faculty',
+              seniority: fac.seniority
+            };
+          } else {
+            draftObservers[idx] = { name: '', pen: '', department: '', designation: '', seniority: 999 };
+          }
+          renderModal();
+        };
+      });
+
+      modal.querySelector('#btnSaveObsModal').onclick = async () => {
+        const validObs = draftObservers.filter(o => o.name && o.name.trim().length > 0);
+        observers = validObs;
+        await saveAll(false);
+        modal.remove();
+        showToast(`Appointed ${observers.length} Election Observer(s) successfully!`, 'success');
+        renderUI();
+      };
+    };
+
+    renderModal();
+    document.body.appendChild(modal);
+  };
+
+  // ─── Master Duty List Standalone Print Engine (Both Polling & Counting) ─────
+
+  const getMasterDutyData = () => {
+    // 1. Observers (Listed 1st)
+    const obsList = observers.map((obs, idx) => {
+      const fac = faculty.find(f => f.name === obs.name);
+      return {
+        slNo: `Obs-${idx + 1}`,
+        name: obs.name,
+        designation: fac?.designation || obs.designation || 'Faculty',
+        department: fac?.department || obs.department || 'Academic',
+        pen: fac?.pen || obs.pen || '–',
+        duty: 'General Election Observer (Overall Supervision · Polling & Counting)',
+        station: 'Central Election Control Room / All Stations',
+        reportingTime: '07:30 AM',
+        type: 'Observer'
+      };
+    });
+
+    // 2. Department-wise Officials (Teaching Faculty & Non-Teaching Staff)
+    const personnel = [];
+
+    // Faculty members assigned to polling or counting
+    faculty.forEach(f => {
+      if (isObserver(f.name)) return; // Observers already isolated in Section 1
+      const pDuty = getPollingAssignment(f.name);
+      const cDuty = getCountingAssignment(f.name);
+      if (!pDuty && !cDuty) return;
+
+      const duties = [];
+      const stations = [];
+      if (pDuty) {
+        duties.push(`Booth ${pDuty.boothNumber} (${pDuty.role})`);
+        const b = booths.find(x => x.boothNumber === pDuty.boothNumber);
+        stations.push(b?.roomName || `Booth ${pDuty.boothNumber}`);
+      }
+      if (cDuty) {
+        duties.push(`Table ${cDuty.tableNumber} (${cDuty.role})`);
+        const b = booths.find(x => x.boothNumber === cDuty.tableNumber);
+        stations.push(b?.roomName || `Table ${cDuty.tableNumber}`);
+      }
+
+      personnel.push({
+        name: f.name,
+        designation: f.designation || 'Faculty',
+        department: f.department ? f.department.trim() : 'General Academic',
+        pen: f.pen || '–',
+        seniority: f.seniority || 999,
+        duty: duties.join(' + '),
+        hasDoubleDuty: !!(pDuty && cDuty),
+        station: stations.join(' / '),
+        type: 'Teaching Faculty'
+      });
+    });
+
+    // Non-Teaching Staff assigned to polling or counting
+    nonTeaching.forEach(nt => {
+      const ntAssigned = getNonTeachingAssignment(nt.name);
+      if (!ntAssigned.polling && !ntAssigned.counting) return;
+
+      const duties = [];
+      const stations = [];
+      if (ntAssigned.polling) {
+        duties.push(`Booth ${ntAssigned.polling.boothNumber} (Polling Assistant)`);
+        const b = booths.find(x => x.boothNumber === ntAssigned.polling.boothNumber);
+        stations.push(b?.roomName || `Booth ${ntAssigned.polling.boothNumber}`);
+      }
+      if (ntAssigned.counting) {
+        duties.push(`Table ${ntAssigned.counting.tableNumber} (Counting Assistant)`);
+        const b = booths.find(x => x.boothNumber === ntAssigned.counting.tableNumber);
+        stations.push(b?.roomName || `Table ${ntAssigned.counting.tableNumber}`);
+      }
+
+      personnel.push({
+        name: nt.name,
+        designation: nt.designation || 'Staff',
+        department: nt.department ? nt.department.trim() : 'Administration / Non-Teaching Office',
+        pen: nt.pen || '–',
+        seniority: 9999,
+        duty: duties.join(' + '),
+        hasDoubleDuty: !!(ntAssigned.polling && ntAssigned.counting),
+        station: stations.join(' / '),
+        type: 'Non-Teaching Staff'
+      });
+    });
+
+    // Sort Department-wise (alphabetical by department name, then seniority/name)
+    personnel.sort((a, b) => {
+      const deptA = a.department.toLowerCase();
+      const deptB = b.department.toLowerCase();
+      if (deptA !== deptB) return deptA.localeCompare(deptB);
+      if (a.seniority !== b.seniority) return a.seniority - b.seniority;
+      return a.name.localeCompare(b.name);
+    });
+
+    return { obsList, personnel };
+  };
+
+  const openMasterDutyListWindow = () => {
+    const orderNo = `GCC/ELEC/${electionYear}/MASTER-DUTY-01`;
+    const orderDate = new Date().toLocaleDateString('en-GB');
+
+    const win = window.open('', '_blank');
+    if (!win) {
+      alert('Pop-up was blocked by your browser. Please allow pop-ups for this site to view and print the Master Duty List.');
+      return;
+    }
+
+    const pageHtml = buildStandaloneMasterDutyListPage(orderNo, orderDate);
+    win.document.open();
+    win.document.write(pageHtml);
+    win.document.close();
+  };
+
+  const buildStandaloneMasterDutyListPage = (orderNo, orderDate) => {
+    const title = `Master_Duty_List_Polling_Counting_${electionYear}`;
+    const deptWiseHtml = buildDeptWiseMasterRollHtml(orderNo, orderDate);
+    const boothWiseHtml = buildBoothWiseDeploymentHtml(orderNo, orderDate);
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${esc(title)}</title>
+  <style id="dynamicMasterStyle">
+    @page {
+      size: A4 landscape;
+      margin: 8mm 10mm 8mm 10mm;
+    }
+  </style>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #f1f5f9;
+      color: #000000;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 10px;
+      line-height: 1.35;
+    }
+    @media print {
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .sheet-wrapper {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .paper-sheet {
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        max-width: none !important;
+        width: 100% !important;
+      }
+    }
+    /* Action Bar on Screen */
+    .top-action-bar {
+      position: sticky;
+      top: 0;
+      z-index: 999;
+      background: #064e3b;
+      color: #ffffff;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      font-size: 13px;
+    }
+    .action-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .action-bar-left .title-badge {
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.2px;
+    }
+    .action-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-tab-toggle {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: #ffffff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+    .btn-tab-toggle:hover {
+      background: rgba(255,255,255,0.25);
+    }
+    .btn-tab-toggle.active {
+      background: #10b981;
+      border-color: #34d399;
+      color: #ffffff;
+      font-weight: 700;
+    }
+    .btn-action {
+      background: #f59e0b;
+      border: 1px solid #d97706;
+      color: #000000;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-action:hover {
+      background: #fbbf24;
+    }
+    .btn-close-win {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .btn-close-win:hover {
+      background: #ef4444;
+      color: #ffffff;
+    }
+
+    /* Paper Document Canvas */
+    .sheet-wrapper {
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+    .paper-sheet {
+      background: #ffffff;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      border: 1px solid #cbd5e1;
+      padding: 12mm 15mm;
+      max-width: 297mm;
+      min-height: 210mm;
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    /* Typography & Print Components */
+    .header-container {
+      text-align: center;
+      border-bottom: 2px solid #000000;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+    }
+    .header-logo {
+      height: 38px;
+      margin-bottom: 3px;
+      display: inline-block;
+    }
+    .college-title {
+      font-size: 15px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 0 0 2px 0;
+      color: #000000;
+    }
+    .order-title {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 2px 0 1px 0;
+      color: #064e3b;
+    }
+    .order-sub {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #1f2937;
+      margin: 0;
+      text-transform: uppercase;
+    }
+    .meta-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      font-weight: 700;
+      margin: 6px 0 8px 0;
+      padding: 3px 0;
+      border-bottom: 1px dashed #64748b;
+      color: #000000;
+    }
+    .preamble-text {
+      font-size: 9.5px;
+      line-height: 1.4;
+      margin-bottom: 8px;
+      text-align: justify;
+      color: #000000;
+    }
+    .section-title-box {
+      background: #f1f5f9;
+      border: 1px solid #000000;
+      padding: 4px 8px;
+      font-weight: 800;
+      font-size: 10px;
+      text-transform: uppercase;
+      margin: 10px 0 6px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      break-after: avoid;
+      page-break-after: avoid;
+    }
+    .master-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin-bottom: 10px;
+    }
+    .master-table th, .master-table td {
+      border: 1px solid #000000;
+      padding: 4px 5px;
+      vertical-align: middle;
+      font-size: 9px;
+      word-break: break-word;
+    }
+    .master-table th {
+      background: #f1f5f9 !important;
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 8.5px;
+      color: #000000;
+      text-align: left;
+    }
+    .master-table th.col-center, .master-table td.col-center {
+      text-align: center;
+    }
+    .master-table tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .master-table tbody tr:nth-child(even) {
+      background-color: #f8fafc !important;
+    }
+    .staff-name {
+      font-weight: 700;
+      font-size: 9.5px;
+      color: #000000;
+      display: block;
+    }
+    .staff-meta {
+      font-size: 8px;
+      color: #475569;
+      display: block;
+    }
+    .dept-badge {
+      font-weight: 700;
+      color: #064e3b;
+      font-size: 9px;
+    }
+    .col-sign {
+      width: 125px;
+      min-width: 110px;
+      text-align: center;
+    }
+    .sign-box {
+      height: 26px;
+      border: 1px dashed #94a3b8;
+      background: #ffffff;
+      margin: 2px 0;
+    }
+    .footer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 14px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .copy-block {
+      font-size: 8.5px;
+      color: #374151;
+      line-height: 1.4;
+    }
+    .ro-sign-block {
+      text-align: center;
+      width: 220px;
+    }
+    .ro-sign-line {
+      border-bottom: 1px solid #000000;
+      height: 38px;
+      margin-bottom: 3px;
+    }
+    .page-break {
+      page-break-after: always;
+      break-after: page;
+    }
+    .summary-metrics-bar {
+      display: flex;
+      gap: 12px;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      padding: 6px 10px;
+      font-size: 9px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Action Bar on Screen -->
+  <div class="no-print top-action-bar">
+    <div class="action-bar-left">
+      <span class="title-badge">📑 Master Election Duty Register (Both Polling &amp; Counting)</span>
+    </div>
+    <div class="action-bar-right">
+      <button id="btnViewDept" onclick="switchMasterView('dept')" class="btn-tab-toggle active">
+        📋 Department-Wise Master Roll (Observers 1st)
+      </button>
+      <button id="btnViewBooth" onclick="switchMasterView('booth')" class="btn-tab-toggle">
+        🏫 Booth &amp; Table-Wise Deployment Schedule
+      </button>
+      <button id="btnViewCombined" onclick="switchMasterView('combined')" class="btn-tab-toggle">
+        📑 Combined Master Dossier (All Sections)
+      </button>
+      <button onclick="window.print()" class="btn-action">
+        🖨️ Print Master Duty List
+      </button>
+      <button onclick="window.close()" class="btn-close-win">
+        ✕ Close
+      </button>
+    </div>
+  </div>
+
+  <!-- Document Sheet -->
+  <div class="sheet-wrapper">
+    <div id="paperSheet" class="paper-sheet">
+      <!-- View 1: Department-Wise Master Roll (Observers 1st) -->
+      <div id="viewDeptWise">
+        ${deptWiseHtml}
+      </div>
+
+      <!-- View 2: Booth & Table-Wise Deployment Schedule -->
+      <div id="viewBoothWise" style="display: none;">
+        ${boothWiseHtml}
+      </div>
+
+      <!-- View 3: Combined View -->
+      <div id="viewCombined" style="display: none;">
+        ${deptWiseHtml}
+        <div class="page-break" style="margin: 20px 0;"></div>
+        ${boothWiseHtml}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchMasterView(mode) {
+      const vDept = document.getElementById('viewDeptWise');
+      const vBooth = document.getElementById('viewBoothWise');
+      const vComb = document.getElementById('viewCombined');
+      const bDept = document.getElementById('btnViewDept');
+      const bBooth = document.getElementById('btnViewBooth');
+      const bComb = document.getElementById('btnViewCombined');
+
+      bDept.classList.remove('active');
+      bBooth.classList.remove('active');
+      bComb.classList.remove('active');
+
+      if (mode === 'booth') {
+        vDept.style.display = 'none';
+        vBooth.style.display = 'block';
+        vComb.style.display = 'none';
+        bBooth.classList.add('active');
+      } else if (mode === 'combined') {
+        vDept.style.display = 'none';
+        vBooth.style.display = 'none';
+        vComb.style.display = 'block';
+        bComb.classList.add('active');
+      } else {
+        vDept.style.display = 'block';
+        vBooth.style.display = 'none';
+        vComb.style.display = 'none';
+        bDept.classList.add('active');
+      }
+    }
+
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        window.print();
+      }, 350);
+    });
+  <\/script>
+</body>
+</html>`;
+  };
+
+  const buildDeptWiseMasterRollHtml = (orderNo, orderDate) => {
+    const { obsList, personnel } = getMasterDutyData();
+    const totalAssigned = obsList.length + personnel.length;
+    const doubleDutyCount = personnel.filter(p => p.hasDoubleDuty).length;
+
+    return `
+      <div class="master-duty-page">
+        <!-- Header -->
+        <div class="header-container">
+          ${collegeLogo ? `<img src="${collegeLogo}" class="header-logo" alt="College Logo">` : ''}
+          <h2 class="college-title">${esc(collegeName)}</h2>
+          <h3 class="order-title">ELECTION OFFICIALS MASTER DUTY &amp; ACQUITTANCE REGISTER</h3>
+          <p class="order-sub">College Union Election ${esc(electionYear)} · Consolidated Polling &amp; Counting Deployment Roll</p>
+        </div>
+
+        <!-- Meta Bar -->
+        <div class="meta-bar">
+          <span>Order No: ${esc(orderNo)}</span>
+          <span>Ref: Election Notification No. ${esc(collegeShortName)}/ELEC/${esc(electionYear)}/01</span>
+          <span>Date: ${esc(orderDate)}</span>
+        </div>
+
+        <!-- Preamble -->
+        <p class="preamble-text">
+          In exercise of statutory powers vested with the Returning Officer under the College Union Election Rules and Constitution, 
+          the following Teaching Faculty and Non-Teaching Staff are hereby appointed for Election Duty as <strong>Statutory Observers, Polling Personnel, and Counting Personnel</strong> 
+          for <strong>College Union Election ${esc(electionYear)}</strong>. Officials are sorted department-wise for administrative convenience and must report promptly for duty at their designated stations. 
+          Election duty is statutory; absence without prior written permission of the Returning Officer constitutes dereliction of duty.
+        </p>
+
+        <!-- Summary Metrics -->
+        <div class="summary-metrics-bar">
+          <span><strong>Total Personnel Deployed:</strong> ${totalAssigned}</span>
+          <span>•</span>
+          <span><strong>Observers:</strong> ${obsList.length}</span>
+          <span>•</span>
+          <span><strong>Teaching Faculty:</strong> ${personnel.filter(p => p.type === 'Teaching Faculty').length}</span>
+          <span>•</span>
+          <span><strong>Non-Teaching Staff:</strong> ${personnel.filter(p => p.type === 'Non-Teaching Staff').length}</span>
+          <span>•</span>
+          <span><strong>Double Duty (Polling &amp; Counting):</strong> ${doubleDutyCount}</span>
+        </div>
+
+        <!-- SECTION 1: STATUTORY ELECTION OBSERVERS (OVERALL PROCESS SUPERVISION - OBSERVERS 1ST) -->
+        <div class="section-title-box">
+          <span>⚖️ SECTION 1: STATUTORY ELECTION OBSERVERS (OVERALL ELECTION PROCESS SUPERVISION)</span>
+          <span style="font-size: 8.5px; font-weight: normal;">Supervising Polling Stations &amp; Counting Hall</span>
+        </div>
+
+        ${obsList.length === 0 ? `
+          <div style="border: 1px dashed #cbd5e1; padding: 10px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
+            No independent observers appointed yet. Overall election process supervised directly by the Returning Officer &amp; Assistant Returning Officers.
+          </div>
+        ` : `
+          <table class="master-table">
+            <colgroup>
+              <col style="width: 6%;">
+              <col style="width: 22%;">
+              <col style="width: 16%;">
+              <col style="width: 14%;">
+              <col style="width: 10%;">
+              <col style="width: 20%;">
+              <col style="width: 12%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-center">Sl #</th>
+                <th>Name of Observer</th>
+                <th>Department</th>
+                <th>Designation</th>
+                <th>PEN #</th>
+                <th>Duty Assigned</th>
+                <th class="col-center">Signature</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${obsList.map(obs => `
+                <tr style="background: #fffbeb !important;">
+                  <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(obs.slNo)}</td>
+                  <td>
+                    <span class="staff-name">${esc(obs.name)}</span>
+                    <span class="staff-meta" style="color: #b45309; font-weight: 600;">Statutory Election Observer</span>
+                  </td>
+                  <td><span class="dept-badge">${esc(obs.department)}</span></td>
+                  <td>${esc(obs.designation)}</td>
+                  <td style="font-family: monospace; font-weight: 600;">${esc(obs.pen)}</td>
+                  <td>
+                    <strong style="color: #92400e;">${esc(obs.duty)}</strong><br>
+                    <span class="staff-meta">${esc(obs.station)} · ${esc(obs.reportingTime)}</span>
+                  </td>
+                  <td class="col-sign">
+                    <div class="sign-box"></div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `}
+
+        <!-- SECTION 2: CONSOLIDATED MASTER DUTY ROLL (SORTED DEPARTMENT-WISE) -->
+        <div class="section-title-box">
+          <span>📋 SECTION 2: CONSOLIDATED MASTER DUTY ROLL (SORTED DEPARTMENT-WISE)</span>
+          <span style="font-size: 8.5px; font-weight: normal;">Acquittance &amp; Attendance Register</span>
+        </div>
+
+        ${personnel.length === 0 ? `
+          <div style="border: 1px dashed #cbd5e1; padding: 10px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
+            No personnel duty allotments recorded yet. Please complete booth and table allotments in the Team Builder first.
+          </div>
+        ` : `
+          <table class="master-table">
+            <colgroup>
+              <col style="width: 4.5%;">
+              <col style="width: 21%;">
+              <col style="width: 15%;">
+              <col style="width: 10%;">
+              <col style="width: 25.5%;">
+              <col style="width: 12%;">
+              <col style="width: 12%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-center">Sl #</th>
+                <th>Name of Official</th>
+                <th>Department</th>
+                <th>PEN #</th>
+                <th>Duty Assigned &amp; Station</th>
+                <th>Designation / Type</th>
+                <th class="col-center">Signature</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${personnel.map((p, idx) => `
+                <tr>
+                  <td class="col-center" style="font-weight: 700; font-family: monospace;">${idx + 1}</td>
+                  <td>
+                    <span class="staff-name">${esc(p.name)}</span>
+                    ${p.hasDoubleDuty ? `<span style="font-size: 8px; color: #b45309; font-weight: bold; background: #fef3c7; padding: 1px 4px; border-radius: 3px; display: inline-block; margin-top: 1px;">⚠️ Double Duty (Polling &amp; Counting)</span>` : ''}
+                  </td>
+                  <td>
+                    <span class="dept-badge">${esc(p.department)}</span>
+                  </td>
+                  <td style="font-family: monospace; font-weight: 600;">${esc(p.pen)}</td>
+                  <td>
+                    <div style="font-weight: 600; color: #0f172a;">${esc(p.duty)}</div>
+                    <span class="staff-meta">Venue: ${esc(p.station)}</span>
+                  </td>
+                  <td>
+                    <span>${esc(p.designation)}</span>
+                    <span class="staff-meta" style="color: ${p.type === 'Teaching Faculty' ? '#4338ca' : '#047857'}; font-weight: 600;">${esc(p.type)}</span>
+                  </td>
+                  <td class="col-sign">
+                    <div class="sign-box"></div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `}
+
+        <!-- Footer Signatures -->
+        <div class="footer-row">
+          <div class="copy-block">
+            <strong>Copy communicated for strict compliance:</strong><br>
+            1. All Appointed Observers, Polling Personnel &amp; Counting Personnel<br>
+            2. The Principal, ${esc(collegeName)}<br>
+            3. Election Observer File &amp; Notice Board<br>
+            4. Guard File / Record File
+          </div>
+          <div class="ro-sign-block">
+            <div class="ro-sign-line"></div>
+            <strong>RETURNING OFFICER</strong><br>
+            <span style="font-size: 9px;">College Union Election ${esc(electionYear)}</span><br>
+            <span style="font-size: 8.5px; color: #4b5563;">${esc(collegeName)}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  const buildBoothWiseDeploymentHtml = (orderNo, orderDate) => {
+    const { obsList } = getMasterDutyData();
+
+    return `
+      <div class="master-booth-page">
+        <!-- Header -->
+        <div class="header-container">
+          ${collegeLogo ? `<img src="${collegeLogo}" class="header-logo" alt="College Logo">` : ''}
+          <h2 class="college-title">${esc(collegeName)}</h2>
+          <h3 class="order-title">BOOTH-WISE &amp; TABLE-WISE ELECTION DUTY DEPLOYMENT SCHEDULE</h3>
+          <p class="order-sub">College Union Election ${esc(electionYear)} · Venue Stations &amp; Assigned Teams</p>
+        </div>
+
+        <!-- Meta Bar -->
+        <div class="meta-bar">
+          <span>Order No: ${esc(orderNo)}</span>
+          <span>Ref: Election Notification No. ${esc(collegeShortName)}/ELEC/${esc(electionYear)}/01</span>
+          <span>Date: ${esc(orderDate)}</span>
+        </div>
+
+        <!-- SECTION 1: OBSERVERS (SHOWN FIRST) -->
+        <div class="section-title-box">
+          <span>⚖️ STATUTORY ELECTION OBSERVERS (TOTAL PROCESS SUPERVISION)</span>
+          <span style="font-size: 8.5px; font-weight: normal;">Overall Station Observation</span>
+        </div>
+
+        ${obsList.length === 0 ? `
+          <div style="border: 1px dashed #cbd5e1; padding: 8px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
+            No separate observers appointed.
+          </div>
+        ` : `
+          <table class="master-table">
+            <colgroup>
+              <col style="width: 8%;">
+              <col style="width: 25%;">
+              <col style="width: 18%;">
+              <col style="width: 14%;">
+              <col style="width: 21%;">
+              <col style="width: 14%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-center">Slot #</th>
+                <th>Name of Observer</th>
+                <th>Department</th>
+                <th>PEN #</th>
+                <th>Duty Assignment</th>
+                <th class="col-center">Signature</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${obsList.map(obs => `
+                <tr style="background: #fffbeb !important;">
+                  <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(obs.slNo)}</td>
+                  <td><span class="staff-name">${esc(obs.name)}</span></td>
+                  <td><span class="dept-badge">${esc(obs.department)}</span></td>
+                  <td style="font-family: monospace; font-weight: 600;">${esc(obs.pen)}</td>
+                  <td><strong style="color: #92400e;">General Observer (Polling &amp; Counting)</strong></td>
+                  <td class="col-sign"><div class="sign-box"></div></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `}
+
+        <!-- SECTION 2: POLLING BOOTHS DEPLOYMENT -->
+        <div class="section-title-box">
+          <span>🏫 PART A: POLLING BOOTH STATIONS DEPLOYMENT (BOOTHS 1 TO ${booths.length})</span>
+          <span style="font-size: 8.5px; font-weight: normal;">Reporting: 08:00 AM · Polling: 09:30 AM – 01:30 PM</span>
+        </div>
+
+        <table class="master-table">
+          <colgroup>
+            <col style="width: 6%;">
+            <col style="width: 14%;">
+            <col style="width: 15%;">
+            <col style="width: 24%;">
+            <col style="width: 18%;">
+            <col style="width: 9%;">
+            <col style="width: 14%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="col-center">Booth #</th>
+              <th>Station / Venue</th>
+              <th>Designated Role</th>
+              <th>Name of Official</th>
+              <th>Department</th>
+              <th>PEN #</th>
+              <th class="col-center">Signature</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${booths.map(b => {
+              const team = pollingTeams.find(t => t.boothNumber === b.boothNumber) || {};
+              const slots = [
+                { role: 'Presiding Officer', person: team.presidingOfficer, isHead: true },
+                { role: 'Polling Officer 1', person: team.pollingOfficer1 },
+                { role: 'Polling Officer 2', person: team.pollingOfficer2 },
+                ...(team.pollingOfficer3 ? [{ role: 'Polling Officer 3 (Addl)', person: team.pollingOfficer3 }] : []),
+                { role: 'Polling Assistant', person: team.pollingAssistant, isAssistant: true }
+              ];
+
+              return slots.map((s, sIdx) => {
+                const f = s.person ? (getFaculty(s.person.name) || nonTeaching.find(n => n.name === s.person.name)) : null;
+                const dept = f?.department || (s.isAssistant ? 'Office / Non-Teaching' : 'Academic');
+                const pen = s.person?.pen || f?.pen || '–';
+
+                return `
+                  <tr>
+                    ${sIdx === 0 ? `
+                      <td rowspan="${slots.length}" class="col-center" style="font-weight: 800; font-family: monospace; font-size: 11px; background: #f8fafc;">
+                        Booth ${b.boothNumber}
+                      </td>
+                      <td rowspan="${slots.length}" style="font-weight: 700; background: #f8fafc;">
+                        ${esc(b.roomName || `Booth ${b.boothNumber}`)}<br>
+                        <span style="font-size: 8px; color: #4f46e5; font-weight: normal;">${getBoothVoterCount(b)} Voters</span>
+                      </td>
+                    ` : ''}
+                    <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: ${s.isHead ? '#b45309' : (s.isAssistant ? '#047857' : '#0f172a')};">
+                      ${esc(s.role)}
+                    </td>
+                    <td>
+                      ${s.person && s.person.name ? `
+                        <span class="staff-name">${esc(s.person.name)}</span>
+                      ` : '<span style="color: #94a3b8; font-style: italic;">– Unassigned –</span>'}
+                    </td>
+                    <td><span class="dept-badge">${esc(dept)}</span></td>
+                    <td style="font-family: monospace;">${esc(pen)}</td>
+                    <td class="col-sign"><div class="sign-box"></div></td>
+                  </tr>
+                `;
+              }).join('');
+            }).join('')}
+          </tbody>
+        </table>
+
+        <!-- SECTION 3: COUNTING TABLES DEPLOYMENT -->
+        <div class="section-title-box">
+          <span>🧮 PART B: COUNTING TABLES DEPLOYMENT (TABLES 1 TO ${booths.length})</span>
+          <span style="font-size: 8.5px; font-weight: normal;">Reporting: 01:30 PM · Counting: 02:00 PM Continuously</span>
+        </div>
+
+        <table class="master-table">
+          <colgroup>
+            <col style="width: 6%;">
+            <col style="width: 14%;">
+            <col style="width: 15%;">
+            <col style="width: 24%;">
+            <col style="width: 18%;">
+            <col style="width: 9%;">
+            <col style="width: 14%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="col-center">Table #</th>
+              <th>Station / Venue</th>
+              <th>Designated Role</th>
+              <th>Name of Official</th>
+              <th>Department</th>
+              <th>PEN #</th>
+              <th class="col-center">Signature</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${booths.map(b => {
+              const team = countingTeams.find(t => t.tableNumber === b.boothNumber) || {};
+              const slots = [
+                { role: 'Counting Supervisor', person: team.supervisor, isHead: true },
+                { role: 'Counting Officer 1', person: team.countingOfficer1 },
+                { role: 'Counting Officer 2', person: team.countingOfficer2 },
+                ...(team.countingOfficer3 ? [{ role: 'Counting Officer 3 (Addl)', person: team.countingOfficer3 }] : []),
+                { role: 'Counting Assistant', person: team.countingAssistant, isAssistant: true }
+              ];
+
+              return slots.map((s, sIdx) => {
+                const f = s.person ? (getFaculty(s.person.name) || nonTeaching.find(n => n.name === s.person.name)) : null;
+                const dept = f?.department || (s.isAssistant ? 'Office / Non-Teaching' : 'Academic');
+                const pen = s.person?.pen || f?.pen || '–';
+
+                return `
+                  <tr>
+                    ${sIdx === 0 ? `
+                      <td rowspan="${slots.length}" class="col-center" style="font-weight: 800; font-family: monospace; font-size: 11px; background: #f8fafc;">
+                        Table ${b.boothNumber}
+                      </td>
+                      <td rowspan="${slots.length}" style="font-weight: 700; background: #f8fafc;">
+                        ${esc(b.roomName || `Table ${b.boothNumber}`)}
+                      </td>
+                    ` : ''}
+                    <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: ${s.isHead ? '#7e22ce' : (s.isAssistant ? '#047857' : '#0f172a')};">
+                      ${esc(s.role)}
+                    </td>
+                    <td>
+                      ${s.person && s.person.name ? `
+                        <span class="staff-name">${esc(s.person.name)}</span>
+                      ` : '<span style="color: #94a3b8; font-style: italic;">– Unassigned –</span>'}
+                    </td>
+                    <td><span class="dept-badge">${esc(dept)}</span></td>
+                    <td style="font-family: monospace;">${esc(pen)}</td>
+                    <td class="col-sign"><div class="sign-box"></div></td>
+                  </tr>
+                `;
+              }).join('');
+            }).join('')}
+          </tbody>
+        </table>
+
+        <!-- Footer Signatures -->
+        <div class="footer-row">
+          <div class="copy-block">
+            <strong>Copy communicated for strict compliance:</strong><br>
+            1. All Appointed Observers, Polling Personnel &amp; Counting Personnel<br>
+            2. The Principal, ${esc(collegeName)}<br>
+            3. Election Observer File &amp; Notice Board<br>
+            4. Guard File / Record File
+          </div>
+          <div class="ro-sign-block">
+            <div class="ro-sign-line"></div>
+            <strong>RETURNING OFFICER</strong><br>
+            <span style="font-size: 9px;">College Union Election ${esc(electionYear)}</span><br>
+            <span style="font-size: 8.5px; color: #4b5563;">${esc(collegeName)}</span>
+          </div>
+        </div>
+      </div>
+    `;
   };
 
   // ─── Duty Orders Standalone Window & High-Precision Print Engine ──────────
