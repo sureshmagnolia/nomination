@@ -551,10 +551,20 @@ function fillDetails(formArea, role, isAdminDirect = false) {
   if (!box) return;
   const student = nominalRoll.find(s => String(s['Nominal Roll Serial Number'] || s.serial_number || '') === serial);
   if (!student) {
-    box.innerHTML = serial ? `
-      <div class="bg-rose-500/10 border border-rose-500/20 text-rose-300 p-2.5 rounded-lg mt-1 text-xs">
-        ⚠️ Serial <strong>#${esc(serial)}</strong> not found in the published Nominal Roll!
-      </div>` : '';
+    if (role === 'candidate') {
+      box.innerHTML = serial ? `
+        <div class="bg-rose-500/10 border border-rose-500/20 text-rose-300 p-2.5 rounded-lg mt-1 text-xs">
+          ⚠️ Serial <strong>#${esc(serial)}</strong> not found in the published Nominal Roll! Candidate must be an enrolled student voter.
+        </div>` : '';
+    } else {
+      box.innerHTML = serial ? `
+        <div class="bg-rose-500/20 border-2 border-rose-500/60 text-rose-200 p-2.5 rounded-lg mt-1 text-xs shadow-sm">
+          <div class="font-bold text-rose-100 flex items-center gap-1 mb-1">
+            <span>🚩</span> <span>REJECTION REASON (Non-Voter):</span>
+          </div>
+          Serial <strong>#${esc(serial)}</strong> is NOT found in the Electoral Roll. Submission is permitted, but this nomination will be rejected during scrutiny because endorsers must be enrolled voters.
+        </div>` : '';
+    }
     runValidation(formArea, isAdminDirect);
     return;
   }
@@ -583,31 +593,44 @@ function fillDetails(formArea, role, isAdminDirect = false) {
 }
 
 function runValidation(formArea, isAdminDirect = false) {
-  const warnings = [];
+  const candidateErrors = [];
+  const endorserFlags = [];
+  const infoNotices = [];
+
   const postName = formArea.querySelector('#postSelect')?.value;
   const gender = formArea.querySelector('[name="gender"]:checked')?.value || null;
 
   const roles = ['candidate','proposer','seconder'];
   const serials = roles.map(r => formArea.querySelector(`#serial-${r}`)?.value.trim() || '');
+  const [cS, pS, sS] = serials;
   const students = serials.map(s => s ? nominalRoll.find(st => String(st['Nominal Roll Serial Number'] || st.serial_number || '') === s) : null);
+  const [candStudent, propStudent, secStudent] = students;
 
   // Uniqueness
-  const [cS, pS, sS] = serials;
-  if (cS && cS === pS) warnings.push('Candidate and Proposer cannot be the same person.');
-  if (cS && cS === sS) warnings.push('Candidate and Seconder cannot be the same person.');
-  if (pS && pS === sS) warnings.push('Proposer and Seconder cannot be the same person.');
+  if (cS && cS === pS) candidateErrors.push('Candidate and Proposer cannot be the same person.');
+  if (cS && cS === sS) candidateErrors.push('Candidate and Seconder cannot be the same person.');
+  if (pS && sS && pS === sS) {
+    endorserFlags.push(`Proposer and Seconder cannot be the same person (Serial #${pS}). A nomination must be proposed and seconded by two distinct electors.`);
+  }
+
+  // Check if Proposer or Seconder serial is not in nominal roll
+  if (pS && !propStudent) {
+    endorserFlags.push(`Proposer Serial #${pS} was not found in the Electoral Roll (Non-Voter). Endorsers must be enrolled student voters.`);
+  }
+  if (sS && !secStudent) {
+    endorserFlags.push(`Seconder Serial #${sS} was not found in the Electoral Roll (Non-Voter). Endorsers must be enrolled student voters.`);
+  }
 
   // Real-time Candidate Admission check (only for public nominations)
   const authAdmInput = formArea.querySelector('#auth-candidate');
   const authFeedback = formArea.querySelector('#auth-feedback');
-  const candStudent = students[0];
 
   if (!isAdminDirect && authAdmInput) {
     const authAdm = authAdmInput.value.trim().toLowerCase();
     if (candStudent && authAdm) {
       const actualAdm = String(candStudent['ADMISION NO'] || candStudent['ADMISSION NO'] || candStudent.admission_no || '').trim().toLowerCase();
       if (actualAdm && authAdm !== actualAdm) {
-        warnings.push(`Authentication Failed: Entered Admission Number "${authAdmInput.value}" does NOT match Electoral Roll Serial #${candStudent['Nominal Roll Serial Number']} (${candStudent['NAME']}). A mismatched serial number will result in rejection!`);
+        candidateErrors.push(`Authentication Failed: Entered Admission Number "${authAdmInput.value}" does NOT match Electoral Roll Serial #${candStudent['Nominal Roll Serial Number']} (${candStudent['NAME']}). A mismatched serial number will result in rejection!`);
         if (authFeedback) {
           authFeedback.innerHTML = `<span class="text-rose-400 text-xs font-semibold flex items-center gap-1 mt-1">❌ Mismatch with Serial #${esc(candStudent['Nominal Roll Serial Number'])}! Registered Adm No is different.</span>`;
         }
@@ -621,28 +644,30 @@ function runValidation(formArea, isAdminDirect = false) {
     }
   }
 
-  // Eligibility (pass dynamic allPosts rules and existing noms for endorsing checks)
-  const roleLabels = ['Candidate', 'Proposer', 'Seconder'];
-  students.forEach((st, i) => {
-    if (st) warnings.push(...checkEligibility(st, postName, roleLabels[i], i === 0 ? gender : null, allPosts, existingNominations, isAdminDirect));
-  });
+  // Candidate Rule Checks (Fatal - Blocks Submission)
+  if (candStudent) {
+    const candIssues = checkEligibility(candStudent, postName, 'Candidate', gender, allPosts, existingNominations, isAdminDirect);
+    candidateErrors.push(...candIssues);
+  }
 
-  const infoNotices = [];
+  // Candidate Duplicate Nomination for same post
+  if (cS) {
+    const dupCandThisPost = existingNominations.find(n => n.post === postName && n.status !== 'Rejected' && String(n.candidateSerial) === cS);
+    if (dupCandThisPost) {
+      candidateErrors.push(`Candidate (#${cS}) has already submitted a nomination for "${postName}". Multiple nominations for the same post are not permitted.`);
+    }
+  }
 
-  // Direct Entry Notice for Duplicate Endorsements (accepted in direct entry, but flagged for admin)
-  if (isAdminDirect) {
-    if (pS) {
-      const dupP = existingNominations.find(n => n.post === postName && n.status !== 'Rejected' && (String(n.proposerSerial) === pS || String(n.seconderSerial) === pS));
-      if (dupP) {
-        infoNotices.push(`⚠️ Direct Entry Notice: Proposer (#${pS}) has already endorsed candidate "${dupP.candidateName || 'Candidate'}" for "${postName}". Allowed in direct entry, but will be flagged during scrutiny.`);
-      }
-    }
-    if (sS) {
-      const dupS = existingNominations.find(n => n.post === postName && n.status !== 'Rejected' && (String(n.proposerSerial) === sS || String(n.seconderSerial) === sS));
-      if (dupS) {
-        infoNotices.push(`⚠️ Direct Entry Notice: Seconder (#${sS}) has already endorsed candidate "${dupS.candidateName || 'Candidate'}" for "${postName}". Allowed in direct entry, but will be flagged during scrutiny.`);
-      }
-    }
+  // Proposer Rule Checks (Non-blocking, flagged in RED as rejection ground)
+  if (propStudent) {
+    const propIssues = checkEligibility(propStudent, postName, 'Proposer', null, allPosts, existingNominations, false);
+    endorserFlags.push(...propIssues);
+  }
+
+  // Seconder Rule Checks (Non-blocking, flagged in RED as rejection ground)
+  if (secStudent) {
+    const secIssues = checkEligibility(secStudent, postName, 'Seconder', null, allPosts, existingNominations, false);
+    endorserFlags.push(...secIssues);
   }
 
   // Check for multi-submissions across different posts (Informational flag - allowed)
@@ -656,29 +681,91 @@ function runValidation(formArea, isAdminDirect = false) {
 
   const box = formArea.querySelector('#warningBox');
   if (box) {
-    const allMessages = [
-      ...warnings.map(w => `<p class="text-sm font-semibold text-rose-300">• ${esc(w)}</p>`),
-      ...infoNotices.map(info => `<p class="text-xs ${info.startsWith('🚩') ? 'text-rose-300 font-semibold' : 'text-indigo-300'}">• ${esc(info)}</p>`)
-    ];
-    if (allMessages.length) {
-      box.innerHTML = `<strong class="block mb-1 text-sm ${warnings.length ? 'text-rose-200' : 'text-indigo-200'}">${warnings.length ? '⚠️ Eligibility Rejection Warnings' : 'ℹ️ Candidacy & Multi-Submission Notices'}</strong>` + allMessages.join('');
-      box.className = `alert ${warnings.length ? 'alert-warning border-rose-500/50 bg-rose-950/40 text-rose-200' : 'alert-info'} mb-4`;
+    const hasAnyContent = endorserFlags.length > 0 || candidateErrors.length > 0 || infoNotices.length > 0;
+    if (hasAnyContent) {
+      box.innerHTML = `
+        <div class="space-y-3">
+          ${endorserFlags.length > 0 ? `
+            <div class="rounded-xl border-2 border-rose-500 bg-rose-950/80 p-4 shadow-xl text-rose-200">
+              <div class="flex items-center gap-2 font-bold text-rose-100 text-sm mb-1.5">
+                <span class="text-lg">🚩</span>
+                <span>REJECTION REASON ON SCRUTINY (Ineligible Endorser):</span>
+              </div>
+              <p class="text-xs text-rose-300 mb-2 leading-relaxed">
+                <strong>Statutory Notice:</strong> Nomination submission is permitted to proceed, but your Proposer and/or Seconder do not meet statutory eligibility requirements. This nomination will be <strong>flagged in RED</strong> and will constitute grounds for rejection during formal scrutiny by the Returning Officer:
+              </p>
+              <div class="space-y-1.5 pl-2 text-xs">
+                ${endorserFlags.map(f => `
+                  <div class="flex items-start gap-1.5 font-semibold text-rose-200">
+                    <span class="text-rose-400 font-bold">•</span>
+                    <span>${esc(f)}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          ${candidateErrors.length > 0 ? `
+            <div class="rounded-xl border border-rose-500/50 bg-rose-950/60 p-3.5 shadow-md text-rose-200">
+              <strong class="block mb-1 text-sm text-rose-100 flex items-center gap-1.5">
+                <span>⛔</span> <span>Cannot Submit: Candidate Ineligible</span>
+              </strong>
+              <div class="space-y-1 pl-2 text-xs">
+                ${candidateErrors.map(e => `<div>• ${esc(e)}</div>`).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          ${infoNotices.length > 0 ? `
+            <div class="rounded-xl border border-indigo-500/30 bg-indigo-950/40 p-3 text-xs text-indigo-200">
+              <strong class="block mb-1 text-xs text-indigo-100 flex items-center gap-1.5">
+                <span>ℹ️</span> <span>Candidacy & Multi-Submission Notices</span>
+              </strong>
+              <div class="space-y-1 pl-2">
+                ${infoNotices.map(i => `<div>• ${esc(i)}</div>`).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+      box.className = 'mb-4 block';
       box.classList.remove('hidden');
     } else {
-      box.classList.add('hidden');
+      box.innerHTML = '';
+      box.className = 'hidden mb-4';
     }
   }
-  return warnings;
+
+  // Construct backward-compatible array-like result
+  const result = [...candidateErrors];
+  result.candidateErrors = candidateErrors;
+  result.endorserFlags = endorserFlags;
+  result.infoNotices = infoNotices;
+  return result;
 }
 
 async function handleSubmit(e, formArea, yearValue, collegeName, collegeLogo = '', isAdminDirect = false) {
   e.preventDefault();
-  const warnings = runValidation(formArea, isAdminDirect);
-  if (warnings.length) {
-    const msg = warnings.join('\n\n');
-    alert(`⚠️ NOMINATION SUBMISSION REJECTED:\n\n${msg}`);
-    showToast(warnings[0], 'error');
+  const validation = runValidation(formArea, isAdminDirect);
+  const candidateErrors = validation.candidateErrors || [];
+  const endorserFlags = validation.endorserFlags || [];
+
+  if (candidateErrors.length) {
+    const msg = candidateErrors.join('\n\n');
+    alert(`⚠️ CANNOT SUBMIT NOMINATION:\n\nCandidate eligibility requirements not met:\n${msg}`);
+    showToast(candidateErrors[0], 'error');
     return;
+  }
+
+  // Statutory Scrutiny Notice: Endorser ineligibility is permitted to submit, but candidate is warned
+  if (endorserFlags.length && !isAdminDirect) {
+    const proceed = confirm(
+      "🚩 STATUTORY SCRUTINY WARNING\n\n" +
+      "The Proposer and/or Seconder you entered is NOT ELIGIBLE:\n\n" +
+      endorserFlags.map(f => `• ${f}`).join('\n') +
+      "\n\nSubmission is permitted under election bylaws, but this nomination will be flagged in RED and is liable to be REJECTED by the Returning Officer during scrutiny.\n\nDo you want to proceed and submit anyway?"
+    );
+    if (!proceed) return;
   }
 
   if (!isAdminDirect) {
@@ -697,13 +784,45 @@ async function handleSubmit(e, formArea, yearValue, collegeName, collegeLogo = '
 
   const roles = ['candidate','proposer','seconder'];
   const serials = roles.map(r => formArea.querySelector(`#serial-${r}`)?.value.trim() || '');
-  const students = serials.map(s => nominalRoll.find(st => String(st['Nominal Roll Serial Number'] || st.serial_number || '') === s));
-  if (students.some(s => !s)) { showToast('One or more serial numbers are invalid.', 'error'); return; }
+  if (!serials[0]) { showToast('Candidate serial number is required.', 'error'); return; }
+  if (!serials[1] || !serials[2]) { showToast('Proposer and Seconder serial numbers are required.', 'error'); return; }
+
+  const candStudent = nominalRoll.find(st => String(st['Nominal Roll Serial Number'] || st.serial_number || '') === serials[0]);
+  if (!candStudent) { showToast('Candidate serial number was not found in the Nominal Roll.', 'error'); return; }
+
+  const propStudent = nominalRoll.find(st => String(st['Nominal Roll Serial Number'] || st.serial_number || '') === serials[1]);
+  const secStudent = nominalRoll.find(st => String(st['Nominal Roll Serial Number'] || st.serial_number || '') === serials[2]);
+
+  const students = [
+    candStudent,
+    propStudent || {
+      'Nominal Roll Serial Number': serials[1],
+      serial_number: serials[1],
+      name: 'Unknown / Non-Voter',
+      NAME: 'Unknown / Non-Voter',
+      'CLASS': '–',
+      class: '–',
+      'ADMISION NO': '–',
+      admission_no: '–',
+      'Dept': '–',
+      dept: '–'
+    },
+    secStudent || {
+      'Nominal Roll Serial Number': serials[2],
+      serial_number: serials[2],
+      name: 'Unknown / Non-Voter',
+      NAME: 'Unknown / Non-Voter',
+      'CLASS': '–',
+      class: '–',
+      'ADMISION NO': '–',
+      admission_no: '–',
+      'Dept': '–',
+      dept: '–'
+    }
+  ];
 
   let candidateAdmission = formArea.querySelector('#auth-candidate')?.value?.trim();
   if (isAdminDirect) {
-    // In admin direct mode, candidate admission is not entered manually; fetch directly from nominal roll record
-    const candStudent = students[0];
     candidateAdmission = candStudent ? String(candStudent['ADMISION NO'] || candStudent['ADMISSION NO'] || candStudent.admission_no || '').trim() : '';
   } else {
     if (!candidateAdmission) { showToast('Please enter the Candidate Admission Number.', 'error'); return; }
@@ -724,14 +843,13 @@ async function handleSubmit(e, formArea, yearValue, collegeName, collegeLogo = '
       candidateAdmission
     };
 
-    // If admin is doing direct entry, include password to bypass deadline
     if (window.ADMIN_BYPASS_PWD) {
       payload.password = window.ADMIN_BYPASS_PWD;
     }
 
     const result = await api.submitNomination(payload);
 
-    showPreview(formArea, result.id, { post, gender, day, month, year, dob: formattedDob, students }, yearValue, collegeName, collegeLogo, isAdminDirect);
+    showPreview(formArea, result.id, { post, gender, day, month, year, dob: formattedDob, students, endorserFlags }, yearValue, collegeName, collegeLogo, isAdminDirect);
     showToast(`Nomination submitted! ID: ${result.id}`, 'success');
   } catch (err) {
     showToast(`Submission failed: ${err.message}`, 'error');
@@ -740,13 +858,28 @@ async function handleSubmit(e, formArea, yearValue, collegeName, collegeLogo = '
   }
 }
 
-function showPreview(formArea, id, { post, gender, day, month, year, dob, students }, yearValue, collegeName, collegeLogo = '', isAdminDirect = false) {
+function showPreview(formArea, id, { post, gender, day, month, year, dob, students, endorserFlags = [] }, yearValue, collegeName, collegeLogo = '', isAdminDirect = false) {
   const [candidate, proposer, seconder] = students;
   const dobDisplay = displayDob(day, month, year);
   const age = calculateAge(dob);
 
   const preview = formArea.querySelector('#previewSection');
-  formArea.querySelector('#printZone').innerHTML =
+  const bannerHtml = endorserFlags && endorserFlags.length > 0 ? `
+    <div class="mb-4 p-4 rounded-xl border-2 border-rose-500 bg-rose-950/80 text-rose-200 shadow-xl flex items-start gap-3 no-print">
+      <span class="text-2xl shrink-0">🚩</span>
+      <div class="space-y-1">
+        <h4 class="font-bold text-sm text-rose-100 uppercase tracking-wide">Nomination Submitted with Ineligible Endorser (${endorserFlags.length})</h4>
+        <p class="text-xs text-rose-300 leading-relaxed">
+          Your nomination paper has been generated. However, the Proposer and/or Seconder does not satisfy statutory election eligibility. This nomination has been flagged in <strong>RED</strong> as a ground for rejection during formal scrutiny:
+        </p>
+        <ul class="text-xs text-rose-200 space-y-0.5 pl-2 list-disc list-inside">
+          ${endorserFlags.map(f => `<li>${esc(f)}</li>`).join('')}
+        </ul>
+      </div>
+    </div>
+  ` : '';
+
+  formArea.querySelector('#printZone').innerHTML = bannerHtml +
     buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, 'Pending', yearValue, collegeName, collegeLogo);
 
   preview.classList.remove('hidden');

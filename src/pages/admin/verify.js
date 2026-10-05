@@ -750,7 +750,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         <option value="age_bar">🔞 Age Ineligible (Born before Cut-Off)</option>
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
-        <option value="endorser">🗳️ Invalid Endorsers / Non-Voters</option>
+        <option value="endorser">🚩 Ineligible Endorsers (Rejection Ground)</option>
       `;
     } else if (activeTab === 'not_confirmed') {
       statusFilterEl.innerHTML = `
@@ -758,7 +758,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         <option value="age_bar">🔞 Age Ineligible (Born before Cut-Off)</option>
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
-        <option value="endorser">🗳️ Invalid Endorsers / Non-Voters</option>
+        <option value="endorser">🚩 Ineligible Endorsers (Rejection Ground)</option>
       `;
     } else if (activeTab === 'scrutiny') {
       statusFilterEl.innerHTML = `
@@ -769,7 +769,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         <option value="age_bar">🔞 Age Ineligible (Born before Cut-Off)</option>
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
-        <option value="endorser">🗳️ Invalid Endorsers / Non-Voters</option>
+        <option value="endorser">🚩 Ineligible Endorsers (Rejection Ground)</option>
         <option value="passed">✓ All Rules Passed</option>
       `;
     } else if (activeTab === 'accepted') {
@@ -778,7 +778,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         <option value="age_bar">🔞 Age Ineligible (Born before Cut-Off)</option>
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
-        <option value="endorser">🗳️ Invalid Endorsers / Non-Voters</option>
+        <option value="endorser">🚩 Ineligible Endorsers (Rejection Ground)</option>
         <option value="passed">✓ All Rules Passed</option>
       `;
     } else if (activeTab === 'rejected') {
@@ -787,7 +787,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         <option value="age_bar">🔞 Age Ineligible (Born before Cut-Off)</option>
         <option value="multi">🚩 Multi-Post Candidacies</option>
         <option value="violations">⚠️ Rule Violations Flagged</option>
-        <option value="endorser">🗳️ Invalid Endorsers / Non-Voters</option>
+        <option value="endorser">🚩 Ineligible Endorsers (Rejection Ground)</option>
       `;
     }
   };
@@ -857,6 +857,22 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
       const isPhysical = n.physicalReceived === true || n.physicalReceived === 'true';
       const ageViolation = violations.find(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'));
       const candDobFormatted = formatDobDate(n.dob);
+      const propIssues = violations.filter(v => 
+        v.type === 'NON_VOTER_PROPOSER' || 
+        v.type.startsWith('YEAR_PROPOSER') || 
+        v.type.startsWith('DEPT_PROPOSER') || 
+        v.type.startsWith('MISSING_PROPOSER') || 
+        v.type.startsWith('DUPLICATE_PROPOSER') || 
+        v.type === 'SAME_PROPOSER_SECONDER'
+      );
+      const secIssues = violations.filter(v => 
+        v.type === 'NON_VOTER_SECONDER' || 
+        v.type.startsWith('YEAR_SECONDER') || 
+        v.type.startsWith('DEPT_SECONDER') || 
+        v.type.startsWith('MISSING_SECONDER') || 
+        v.type.startsWith('DUPLICATE_SECONDER') || 
+        v.type === 'SAME_PROPOSER_SECONDER'
+      );
 
       return `
       <tr id="row-${esc(n.id)}" class="nom-row hover:bg-white/[0.03] transition-colors ${ageViolation ? 'bg-rose-950/10' : ''}">
@@ -898,14 +914,16 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         <td class="py-2 px-2 text-xs leading-snug">
           <div class="text-[11px] text-slate-300 break-words">
             <span class="text-slate-500 font-mono font-semibold text-[10px]">P:</span>
-            <span class="font-medium">${esc(n.proposerName || n.proposer?.NAME || 'N/A')}</span>
+            <span class="font-medium ${propIssues.length ? 'text-rose-300 font-bold' : ''}">${esc(n.proposerName || n.proposer?.NAME || 'N/A')}</span>
             <span class="text-[10px] font-mono text-slate-500 shrink-0">(#${esc(n.proposerSerial || n.proposer?.['Nominal Roll Serial Number'] || '–')})</span>
+            ${propIssues.length ? `<span class="badge bg-rose-600/30 text-rose-200 border border-rose-500/50 text-[9px] px-1 py-0 font-bold ml-1" title="${esc(propIssues.map(v => v.message).join('; '))}">🚩 Ineligible</span>` : ''}
             ${n.proposerClass ? `<div class="text-[10px] text-slate-400 pl-3 leading-tight truncate">${esc(n.proposerClass)}</div>` : ''}
           </div>
           <div class="text-[11px] text-slate-300 mt-1 break-words">
             <span class="text-slate-500 font-mono font-semibold text-[10px]">S:</span>
-            <span class="font-medium">${esc(n.seconderName || n.seconder?.NAME || 'N/A')}</span>
+            <span class="font-medium ${secIssues.length ? 'text-rose-300 font-bold' : ''}">${esc(n.seconderName || n.seconder?.NAME || 'N/A')}</span>
             <span class="text-[10px] font-mono text-slate-500 shrink-0">(#${esc(n.seconderSerial || n.seconder?.['Nominal Roll Serial Number'] || '–')})</span>
+            ${secIssues.length ? `<span class="badge bg-rose-600/30 text-rose-200 border border-rose-500/50 text-[9px] px-1 py-0 font-bold ml-1" title="${esc(secIssues.map(v => v.message).join('; '))}">🚩 Ineligible</span>` : ''}
             ${n.seconderClass ? `<div class="text-[10px] text-slate-400 pl-3 leading-tight truncate">${esc(n.seconderClass)}</div>` : ''}
           </div>
         </td>
@@ -977,7 +995,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
                 ${n.status === 'Rejected' ? '🔄 Valid' : '✅ Valid'}
               </button>
               <button type="button" class="btn btn-secondary btn-xs verify-btn bg-rose-600/25 hover:bg-rose-600 text-rose-400 hover:text-white px-2 py-1 text-xs font-bold rounded ${n.status === 'Rejected' ? 'opacity-40 cursor-not-allowed' : ''}" data-id="${esc(n.id)}" data-action="Rejected" ${n.status === 'Rejected' ? 'disabled' : ''} title="${n.status === 'Valid' ? 'Move from Valid to Rejected' : 'Reject'}">
-                ${n.status === 'Valid' ? '🔄 Reject' : '❌ Reject'}
+                ${n.status === 'Valid' ? '🔄 Move to Reject' : '❌ Reject'}
               </button>
               ${n.status && n.status !== 'Pending' ? `
                 <button type="button" class="btn btn-secondary btn-xs verify-btn bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 px-1.5 py-1 text-xs font-semibold" data-id="${esc(n.id)}" data-action="Pending" title="Reset nomination status to Pending">
@@ -1009,8 +1027,9 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
             }
             const multiCand = violations.find(v => v.type === 'MULTIPLE_CANDIDACY');
             const ageViolation = violations.find(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'));
-            const endorserIssue = violations.find(v => 
-              v.type.startsWith('NON_VOTER') || 
+            const endorserIssues = violations.filter(v => 
+              v.type === 'NON_VOTER_PROPOSER' || 
+              v.type === 'NON_VOTER_SECONDER' || 
               v.type.startsWith('YEAR_PROPOSER') || 
               v.type.startsWith('YEAR_SECONDER') || 
               v.type.startsWith('DEPT_PROPOSER') || 
@@ -1033,9 +1052,9 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
                     <span>🔞 ${esc(ageViolation.badgeLabel || 'Age Bar')}</span>
                   </button>
                 ` : ''}
-                ${endorserIssue ? `
-                  <button type="button" class="view-nom-btn badge bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 text-[10px] px-1.5 py-0.5 font-bold inline-flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(endorserIssue.message)}">
-                    <span>🗳️ Endorser Alert</span>
+                ${endorserIssues.length > 0 ? `
+                  <button type="button" class="view-nom-btn badge bg-rose-600/30 hover:bg-rose-600/50 text-rose-100 border border-rose-500/60 text-[10px] px-1.5 py-0.5 font-bold inline-flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(endorserIssues.map(v => v.message).join(' | '))}">
+                    <span>🚩 Ineligible Endorser (${endorserIssues.length})</span>
                   </button>
                 ` : ''}
                 <button type="button" class="view-nom-btn badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] px-1.5 py-0.5 font-bold inline-flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(violations.map(v => v.message).join(' | '))}">
@@ -1149,6 +1168,35 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         const isPhysical = n.physicalReceived === true || n.physicalReceived === 'true';
         const ageViolation = violations.find(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'));
         const candDobFormatted = formatDobDate(n.dob);
+        const propIssues = violations.filter(v => 
+          v.type === 'NON_VOTER_PROPOSER' || 
+          v.type.startsWith('YEAR_PROPOSER') || 
+          v.type.startsWith('DEPT_PROPOSER') || 
+          v.type.startsWith('MISSING_PROPOSER') || 
+          v.type.startsWith('DUPLICATE_PROPOSER') || 
+          v.type === 'SAME_PROPOSER_SECONDER'
+        );
+        const secIssues = violations.filter(v => 
+          v.type === 'NON_VOTER_SECONDER' || 
+          v.type.startsWith('YEAR_SECONDER') || 
+          v.type.startsWith('DEPT_SECONDER') || 
+          v.type.startsWith('MISSING_SECONDER') || 
+          v.type.startsWith('DUPLICATE_SECONDER') || 
+          v.type === 'SAME_PROPOSER_SECONDER'
+        );
+        const endorserIssues = violations.filter(v => 
+          v.type === 'NON_VOTER_PROPOSER' || 
+          v.type === 'NON_VOTER_SECONDER' || 
+          v.type.startsWith('YEAR_PROPOSER') || 
+          v.type.startsWith('YEAR_SECONDER') || 
+          v.type.startsWith('DEPT_PROPOSER') || 
+          v.type.startsWith('DEPT_SECONDER') || 
+          v.type.startsWith('MISSING_PROPOSER') || 
+          v.type.startsWith('MISSING_SECONDER') || 
+          v.type.startsWith('DUPLICATE_PROPOSER') || 
+          v.type.startsWith('DUPLICATE_SECONDER') || 
+          v.type === 'SAME_PROPOSER_SECONDER'
+        );
 
         return `
           <div class="bg-slate-900/80 backdrop-blur-md p-4 rounded-xl border ${violations.length ? 'border-rose-500/40 bg-rose-950/10' : 'border-white/10'} hover:border-indigo-500/40 transition-all flex flex-col justify-between space-y-3.5 shadow-xl">
@@ -1200,15 +1248,21 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
 
               <!-- Proposer & Seconder -->
               <div class="grid grid-cols-2 gap-2 text-xs">
-                <div class="bg-black/20 p-2 rounded border border-white/5 space-y-0.5">
-                  <div class="text-[10px] uppercase font-bold text-slate-400">Proposer</div>
-                  <div class="font-medium text-slate-200 truncate">${esc(n.proposerName || n.proposer?.NAME || 'N/A')}</div>
+                <div class="${propIssues.length ? 'bg-rose-950/40 border border-rose-500/50' : 'bg-black/20 border border-white/5'} p-2 rounded space-y-0.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] uppercase font-bold text-slate-400">Proposer</span>
+                    ${propIssues.length ? `<span class="badge bg-rose-600/40 text-rose-200 border border-rose-500/60 text-[8px] px-1 font-bold">🚩 Ineligible</span>` : ''}
+                  </div>
+                  <div class="font-medium ${propIssues.length ? 'text-rose-200 font-bold' : 'text-slate-200'} truncate">${esc(n.proposerName || n.proposer?.NAME || 'N/A')}</div>
                   <div class="text-[10px] font-mono text-slate-400">Sl. #${esc(n.proposerSerial || n.proposer?.['Nominal Roll Serial Number'] || '–')}</div>
                   ${n.proposerClass ? `<div class="text-[10px] text-slate-400 truncate">${esc(n.proposerClass)}</div>` : ''}
                 </div>
-                <div class="bg-black/20 p-2 rounded border border-white/5 space-y-0.5">
-                  <div class="text-[10px] uppercase font-bold text-slate-400">Seconder</div>
-                  <div class="font-medium text-slate-200 truncate">${esc(n.seconderName || n.seconder?.NAME || 'N/A')}</div>
+                <div class="${secIssues.length ? 'bg-rose-950/40 border border-rose-500/50' : 'bg-black/20 border border-white/5'} p-2 rounded space-y-0.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] uppercase font-bold text-slate-400">Seconder</span>
+                    ${secIssues.length ? `<span class="badge bg-rose-600/40 text-rose-200 border border-rose-500/60 text-[8px] px-1 font-bold">🚩 Ineligible</span>` : ''}
+                  </div>
+                  <div class="font-medium ${secIssues.length ? 'text-rose-200 font-bold' : 'text-slate-200'} truncate">${esc(n.seconderName || n.seconder?.NAME || 'N/A')}</div>
                   <div class="text-[10px] font-mono text-slate-400">Sl. #${esc(n.seconderSerial || n.seconder?.['Nominal Roll Serial Number'] || '–')}</div>
                   ${n.seconderClass ? `<div class="text-[10px] text-slate-400 truncate">${esc(n.seconderClass)}</div>` : ''}
                 </div>
@@ -1226,18 +1280,6 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
                   }
                   const multiCand = violations.find(v => v.type === 'MULTIPLE_CANDIDACY');
                   const ageViolation = violations.find(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'));
-                  const endorserIssue = violations.find(v => 
-                    v.type.startsWith('NON_VOTER') || 
-                    v.type.startsWith('YEAR_PROPOSER') || 
-                    v.type.startsWith('YEAR_SECONDER') || 
-                    v.type.startsWith('DEPT_PROPOSER') || 
-                    v.type.startsWith('DEPT_SECONDER') ||
-                    v.type.startsWith('MISSING_PROPOSER') ||
-                    v.type.startsWith('MISSING_SECONDER') ||
-                    v.type.startsWith('DUPLICATE_PROPOSER') ||
-                    v.type.startsWith('DUPLICATE_SECONDER') ||
-                    v.type === 'SAME_PROPOSER_SECONDER'
-                  );
                   return `
                     ${multiCand ? `
                       <div class="text-xs text-rose-200 bg-rose-950/60 border border-rose-500/50 p-2.5 rounded-lg leading-relaxed shadow-sm">
@@ -1252,9 +1294,12 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
                         </div>
                       </div>
                     ` : ''}
-                    ${endorserIssue ? `
-                      <div class="text-xs text-amber-200 bg-amber-950/60 border border-amber-500/50 p-2 rounded-lg leading-relaxed shadow-sm">
-                        ⚠️ <strong>Endorser Alert:</strong> ${esc(endorserIssue.message)}
+                    ${endorserIssues.length > 0 ? `
+                      <div class="text-xs text-rose-200 bg-rose-950/70 border border-rose-500/60 p-2.5 rounded-lg leading-relaxed shadow-sm space-y-1">
+                        <div class="flex items-center gap-1.5 font-bold text-rose-100">
+                          <span>🚩</span> <span>Ineligible Endorser (${endorserIssues.length} Rejection Grounds):</span>
+                        </div>
+                        ${endorserIssues.map(ei => `<div class="text-[11px] leading-tight">• ${esc(ei.message)}</div>`).join('')}
                       </div>
                     ` : ''}
                     <button type="button" class="view-nom-btn w-full badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs px-2.5 py-1.5 font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(violations.map(v => v.message).join(' | '))}">
@@ -1415,6 +1460,22 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
 
     // Scrutiny Rule Violations in RED (computed first so summaryBar and scrutinyZone can both access it)
     const violations = getNominationRuleViolations(nom, allPosts, allNoms, settings, allRoll);
+    const propIssues = violations.filter(v => 
+      v.type === 'NON_VOTER_PROPOSER' || 
+      v.type.startsWith('YEAR_PROPOSER') || 
+      v.type.startsWith('DEPT_PROPOSER') || 
+      v.type.startsWith('MISSING_PROPOSER') || 
+      v.type.startsWith('DUPLICATE_PROPOSER') || 
+      v.type === 'SAME_PROPOSER_SECONDER'
+    );
+    const secIssues = violations.filter(v => 
+      v.type === 'NON_VOTER_SECONDER' || 
+      v.type.startsWith('YEAR_SECONDER') || 
+      v.type.startsWith('DEPT_SECONDER') || 
+      v.type.startsWith('MISSING_SECONDER') || 
+      v.type.startsWith('DUPLICATE_SECONDER') || 
+      v.type === 'SAME_PROPOSER_SECONDER'
+    );
 
     if (summaryBar) {
       summaryBar.innerHTML = `
@@ -1431,15 +1492,23 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
             ${nom.dob ? `<div class="mt-0.5 font-sans">DOB: <strong class="${violations.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT')) ? 'text-rose-400 font-bold' : 'text-slate-200'}">${esc(formatDobDate(nom.dob))}</strong></div>` : ''}
           </div>
         </div>
-        <div class="bg-slate-900/90 p-3 rounded-xl border border-white/10 shadow-md">
-          <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Proposer (Sl. #${esc(propSerial)})</div>
-          <div class="font-medium text-slate-200 text-sm mt-1 truncate" title="${esc(propName)}">${esc(propName)}</div>
+        <div class="bg-slate-900/90 p-3 rounded-xl ${propIssues.length ? 'border-2 border-rose-500 bg-rose-950/40' : 'border border-white/10'} shadow-md">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Proposer (Sl. #${esc(propSerial)})</span>
+            ${propIssues.length ? `<span class="badge bg-rose-600/40 text-rose-100 border border-rose-400 text-[9px] font-bold">🚩 Ineligible</span>` : ''}
+          </div>
+          <div class="font-medium ${propIssues.length ? 'text-rose-200 font-bold' : 'text-slate-200'} text-sm mt-1 truncate" title="${esc(propName)}">${esc(propName)}</div>
           <div class="text-[11px] text-slate-400 mt-0.5">${esc(propCls)}</div>
+          ${propIssues.length ? `<div class="text-[10px] text-rose-300 mt-1 font-semibold leading-tight">⚠️ ${esc(propIssues[0].message)}</div>` : ''}
         </div>
-        <div class="bg-slate-900/90 p-3 rounded-xl border border-white/10 shadow-md">
-          <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Seconder (Sl. #${esc(secSerial)})</div>
-          <div class="font-medium text-slate-200 text-sm mt-1 truncate" title="${esc(secName)}">${esc(secName)}</div>
+        <div class="bg-slate-900/90 p-3 rounded-xl ${secIssues.length ? 'border-2 border-rose-500 bg-rose-950/40' : 'border border-white/10'} shadow-md">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Seconder (Sl. #${esc(secSerial)})</span>
+            ${secIssues.length ? `<span class="badge bg-rose-600/40 text-rose-100 border border-rose-400 text-[9px] font-bold">🚩 Ineligible</span>` : ''}
+          </div>
+          <div class="font-medium ${secIssues.length ? 'text-rose-200 font-bold' : 'text-slate-200'} text-sm mt-1 truncate" title="${esc(secName)}">${esc(secName)}</div>
           <div class="text-[11px] text-slate-400 mt-0.5">${esc(secCls)}</div>
+          ${secIssues.length ? `<div class="text-[10px] text-rose-300 mt-1 font-semibold leading-tight">⚠️ ${esc(secIssues[0].message)}</div>` : ''}
         </div>
       `;
     }
@@ -1455,12 +1524,18 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
             <span class="badge bg-rose-500/30 text-rose-200 border border-rose-500/50 text-[10px] font-bold uppercase tracking-wider">Scrutiny Alert</span>
           </div>
           <div class="text-xs text-rose-200 space-y-2 pl-1">
-            ${violations.map(v => `
-              <div class="flex items-start gap-2 ${v.type === 'MULTIPLE_CANDIDACY' ? 'bg-rose-900/50 p-2.5 rounded-lg border border-rose-500/40 font-semibold' : ''}">
-                <span class="text-rose-400 font-bold text-sm leading-none">•</span>
-                <span class="leading-relaxed">${esc(v.message)}</span>
-              </div>
-            `).join('')}
+            ${violations.map(v => {
+              const isEndorser = v.type.includes('PROPOSER') || v.type.includes('SECONDER');
+              return `
+                <div class="flex items-start gap-2 ${v.type === 'MULTIPLE_CANDIDACY' ? 'bg-rose-900/50 p-2.5 rounded-lg border border-rose-500/40 font-semibold' : isEndorser ? 'bg-rose-900/30 p-2 rounded-lg border border-rose-500/30' : ''}">
+                  <span class="text-rose-400 font-bold text-sm leading-none">•</span>
+                  <span class="leading-relaxed">
+                    ${isEndorser ? '<strong class="text-rose-100 uppercase tracking-wide text-[10px] bg-rose-600/50 px-1.5 py-0.5 rounded mr-1">Rejection Ground:</strong>' : ''}
+                    ${esc(v.message)}
+                  </span>
+                </div>
+              `;
+            }).join('')}
           </div>
         </div>`;
     } else {
@@ -1558,7 +1633,8 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
       const isPhys = n.physicalReceived === true || n.physicalReceived === 'true';
 
       const isEndorserIssue = (vList) => vList.some(v => 
-        v.type.startsWith('NON_VOTER') || 
+        v.type === 'NON_VOTER_PROPOSER' || 
+        v.type === 'NON_VOTER_SECONDER' || 
         v.type.startsWith('YEAR_PROPOSER') || 
         v.type.startsWith('YEAR_SECONDER') || 
         v.type.startsWith('DEPT_PROPOSER') || 

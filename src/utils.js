@@ -167,9 +167,7 @@ export function checkEligibility(student, postName, role, gender = null, allPost
       const studentName = student['NAME'] || student.name || `Student #${serial}`;
       const candName = dupNom.candidateName || (dupNom.candidate && dupNom.candidate.NAME) || 'another candidate';
       const endorseRole = String(dupNom.proposerSerial) === serial ? 'proposed' : 'seconded';
-      if (!isAdminDirect) {
-        warnings.push(`Student "${studentName}" (Sl #${serial}) has already ${endorseRole} candidate "${candName}" for the post of "${postName}". A student can propose or second only 1 candidate for a post.`);
-      }
+      warnings.push(`Student "${studentName}" (Sl #${serial}) has already ${endorseRole} candidate "${candName}" for the post of "${postName}". A student can propose or second only 1 candidate for a post.`);
     }
   }
 

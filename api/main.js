@@ -1864,47 +1864,45 @@ All students are directed to strictly adhere to the University Code of Conduct, 
         return errOut(res, 'Nomination submission window is currently closed by the Returning Officer.');
       }
 
-      // Basic Identity Rules
+      // Basic Identity Rules for Candidate
       if (body.candidateSerial === body.proposerSerial) return errOut(res, 'Candidate cannot propose themselves.');
       if (body.candidateSerial === body.seconderSerial) return errOut(res, 'Candidate cannot second themselves.');
-      if (body.proposerSerial === body.seconderSerial) return errOut(res, 'Proposer and Seconder cannot be the same person.');
+      // Note: Proposer and Seconder being the same person is an endorser defect; submission is allowed but flagged in RED during scrutiny.
 
       const cand = await sql`SELECT * FROM nominal_roll WHERE serial_number = ${body.candidateSerial}`;
-      const prop = await sql`SELECT * FROM nominal_roll WHERE serial_number = ${body.proposerSerial}`;
-      const sec = await sql`SELECT * FROM nominal_roll WHERE serial_number = ${body.seconderSerial}`;
-      
-      if (!cand.length || !prop.length || !sec.length) return errOut(res, 'Candidate/Proposer/Seconder serial not found.');
+      if (!cand.length) return errOut(res, 'Candidate serial not found in the published Nominal Roll.');
+
       if (!body.password && String(cand[0].admission_no || '').trim().toLowerCase() !== String(body.candidateAdmission || '').trim().toLowerCase()) {
         return errOut(res, 'Authentication Failed: Invalid Admission Number for Candidate.');
       }
 
-      // Strict Election Integrity Rules enforced on the Server
+      // Candidate cannot submit more than 1 nomination for the same post
       const existing = await sql`SELECT post, candidate_serial, proposer_serial, seconder_serial, candidate_name, proposer_name, seconder_name FROM nominations WHERE status != 'Rejected'`;
       if (existing.some(n => n.candidate_serial === body.candidateSerial && n.post === body.post)) {
         return errOut(res, 'Candidate has already submitted a nomination for this specific post.');
       }
 
-      // Proposer / Seconder Rule:
-      // A Student can propose or second only 1 candidate for 1 post.
-      // If student files via public portal (!body.password), reject with informative alert naming the student and already endorsed candidate.
-      // If admin enters via direct entry (body.password), system accepts all but flags it during scrutiny.
-      const dupProp = existing.find(n => n.post === body.post && (n.proposer_serial === body.proposerSerial || n.seconder_serial === body.proposerSerial));
-      if (dupProp) {
-        if (!body.password) {
-          const endorsedCand = dupProp.candidate_name || 'another candidate';
-          const endorseRole = dupProp.proposer_serial === body.proposerSerial ? 'proposed' : 'seconded';
-          return errOut(res, `Student "${prop[0].name}" (Sl #${body.proposerSerial}) has already ${endorseRole} candidate "${endorsedCand}" for the post of "${body.post}". A student can propose or second only 1 candidate for a post.`);
-        }
-      }
+      // Fetch Proposer and Seconder from nominal roll (fallback to non-voter placeholder if not enrolled)
+      const prop = await sql`SELECT * FROM nominal_roll WHERE serial_number = ${body.proposerSerial}`;
+      const sec = await sql`SELECT * FROM nominal_roll WHERE serial_number = ${body.seconderSerial}`;
 
-      const dupSec = existing.find(n => n.post === body.post && (n.proposer_serial === body.seconderSerial || n.seconder_serial === body.seconderSerial));
-      if (dupSec) {
-        if (!body.password) {
-          const endorsedCand = dupSec.candidate_name || 'another candidate';
-          const endorseRole = dupSec.proposer_serial === body.seconderSerial ? 'proposed' : 'seconded';
-          return errOut(res, `Student "${sec[0].name}" (Sl #${body.seconderSerial}) has already ${endorseRole} candidate "${endorsedCand}" for the post of "${body.post}". A student can propose or second only 1 candidate for a post.`);
-        }
-      }
+      const propData = prop.length ? prop[0] : {
+        serial_number: body.proposerSerial,
+        name: 'Non-Voter / Unregistered',
+        class: '–',
+        admission_no: '–',
+        dept: '–'
+      };
+
+      const secData = sec.length ? sec[0] : {
+        serial_number: body.seconderSerial,
+        name: 'Non-Voter / Unregistered',
+        class: '–',
+        admission_no: '–',
+        dept: '–'
+      };
+
+      // Candidate-only rules enforced on server
       const allPosts = await fetchPostsFromDb();
       const rule = allPosts.find(p => p.post === body.post);
       if (rule) {
@@ -1917,21 +1915,12 @@ All students are directed to strictly adhere to the University Code of Conduct, 
           return errOut(res, 'Research Scholars are not eligible to contest in College Union Elections.');
         }
 
-        const pCls = String(prop[0].class || '').toUpperCase();
-        const sCls = String(sec[0].class || '').toUpperCase();
         const cDept = String(cand[0].dept || '').toUpperCase();
-        const pDept = String(prop[0].dept || '').toUpperCase();
-        const sDept = String(sec[0].dept || '').toUpperCase();
 
         if (!isYearEligibleServer(cCls, rule)) {
           return errOut(res, `Candidate class (${cand[0].class || 'Unspecified'}) is ineligible under the year restriction for this post.`);
         }
-        if (!isYearEligibleServer(pCls, rule)) {
-          return errOut(res, `Proposer class (${prop[0].class || 'Unspecified'}) is ineligible under the year restriction for this post.`);
-        }
-        if (!isYearEligibleServer(sCls, rule)) {
-          return errOut(res, `Seconder class (${sec[0].class || 'Unspecified'}) is ineligible under the year restriction for this post.`);
-        }
+        // Note: Proposer and Seconder year restrictions do not block submission; flagged in RED on scrutiny.
 
         if (rule.deptRestriction) {
           const reqD = (rule.restrictedDept || (String(body.post).startsWith('Association Secretary ') ? body.post.replace('Association Secretary ', '').trim() : '')).trim();
@@ -1943,8 +1932,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
               return nd === nReq || nd.includes(nReq) || nReq.includes(nd);
             };
             if (!matches(cDept)) return errOut(res, `Candidate must belong to the ${reqD} department (found: ${cand[0].dept}).`);
-            if (!matches(pDept)) return errOut(res, `Proposer must belong to the ${reqD} department (found: ${prop[0].dept}).`);
-            if (!matches(sDept)) return errOut(res, `Seconder must belong to the ${reqD} department (found: ${sec[0].dept}).`);
+            // Note: Proposer and Seconder department restrictions do not block submission; flagged in RED on scrutiny.
           }
         }
       }
@@ -1960,8 +1948,8 @@ All students are directed to strictly adhere to the University Code of Conduct, 
         ) VALUES (
           ${id}, ${body.post}, ${body.gender}, ${body.dob}, ${body.candidateSerial}, ${body.proposerSerial}, ${body.seconderSerial},
           ${cand[0].name}, ${cand[0].class}, ${cand[0].admission_no}, ${cand[0].dept},
-          ${prop[0].name}, ${prop[0].class}, ${prop[0].admission_no}, ${prop[0].dept},
-          ${sec[0].name}, ${sec[0].class}, ${sec[0].admission_no}, ${sec[0].dept}
+          ${propData.name}, ${propData.class}, ${propData.admission_no}, ${propData.dept},
+          ${secData.name}, ${secData.class}, ${secData.admission_no}, ${secData.dept}
         )
       `;
       return jsonOut(res, { ok: true, id });
