@@ -5,7 +5,7 @@
  */
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast, setLoading } from '../../utils.js';
+import { esc, showToast, setLoading, sortPosts } from '../../utils.js';
 
 export async function renderAdminWithdrawals(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -61,10 +61,15 @@ function renderWithdrawalUI(main, allNoms, pwd) {
 
       <!-- Tab: Student Requests -->
       <div id="panelRequests">
-        <div class="glass rounded-xl p-4 flex items-center w-full shadow-lg mb-3">
+        <div class="glass rounded-xl p-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full shadow-lg mb-3">
           <div class="relative flex-1 w-full">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
-            <input type="text" id="withSearch" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors" placeholder="Search requests by candidate name, ID, or post...">
+            <input type="text" id="withSearch" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors text-xs" placeholder="Search requests by candidate name, ID, or post...">
+          </div>
+          <div class="w-full sm:w-auto shrink-0 min-w-[220px]">
+            <select id="withPostFilter" class="field w-full bg-black/30 focus:bg-black/50 transition-colors text-xs font-semibold py-2 px-3 border border-white/15 text-indigo-200 rounded-lg cursor-pointer" title="Filter student requests by post">
+              <option value="all">🏛️ All Posts</option>
+            </select>
           </div>
         </div>
         <div class="glass rounded-xl overflow-hidden shadow-2xl">
@@ -101,10 +106,15 @@ function renderWithdrawalUI(main, allNoms, pwd) {
             <span class="text-xs text-slate-400">Candidates currently competing</span>
           </div>
 
-          <div class="glass rounded-xl p-3 flex items-center w-full shadow-lg">
+          <div class="glass rounded-xl p-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full shadow-lg">
             <div class="relative flex-1 w-full">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
-              <input type="text" id="directSearch" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors" placeholder="Search active candidates by name, ID, or post...">
+              <input type="text" id="directSearch" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors text-xs" placeholder="Search active candidates by name, ID, or post...">
+            </div>
+            <div class="w-full sm:w-auto shrink-0 min-w-[240px]">
+              <select id="directPostFilter" class="field w-full bg-black/30 focus:bg-black/50 transition-colors text-xs font-semibold py-2 px-3 border border-white/15 text-indigo-200 rounded-lg cursor-pointer" title="Filter active candidates by post">
+                <option value="all">🏛️ All Posts</option>
+              </select>
             </div>
           </div>
 
@@ -136,10 +146,15 @@ function renderWithdrawalUI(main, allNoms, pwd) {
             <span class="text-xs text-amber-400/80">Accidentally withdrawn? Click Restore to return candidate to the Valid list</span>
           </div>
 
-          <div class="glass rounded-xl p-3 flex items-center w-full shadow-lg">
+          <div class="glass rounded-xl p-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full shadow-lg">
             <div class="relative flex-1 w-full">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
-              <input type="text" id="restoreSearch" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors" placeholder="Search withdrawn candidates to restore...">
+              <input type="text" id="restoreSearch" class="field w-full pl-10 bg-black/20 focus:bg-black/40 transition-colors text-xs" placeholder="Search withdrawn candidates to restore...">
+            </div>
+            <div class="w-full sm:w-auto shrink-0 min-w-[240px]">
+              <select id="restorePostFilter" class="field w-full bg-black/30 focus:bg-black/50 transition-colors text-xs font-semibold py-2 px-3 border border-amber-500/30 text-amber-200 rounded-lg cursor-pointer" title="Filter withdrawn candidates by post">
+                <option value="all">🏛️ All Posts</option>
+              </select>
             </div>
           </div>
 
@@ -292,17 +307,58 @@ function renderWithdrawalUI(main, allNoms, pwd) {
     }
   };
 
-  const applyRequestSearch = () => {
-    const q = main.querySelector('#withSearch').value.toLowerCase();
-    renderRequestRows(withRequests.filter(n =>
-      !q ||
-      String(n.id).toLowerCase().includes(q) ||
-      String(n.candidateName || '').toLowerCase().includes(q) ||
-      String(n.post).toLowerCase().includes(q)
-    ));
+  // ── Post Filter Population & Synchronization ────────────────────────────
+  const populatePostSelect = (selectEl, list) => {
+    if (!selectEl) return;
+    const currVal = selectEl.value || 'all';
+    const rawUniquePosts = [...new Set(list.map(n => n.post).filter(Boolean))];
+    const uniquePosts = sortPosts(rawUniquePosts);
+
+    selectEl.innerHTML = `
+      <option value="all">🏛️ All Posts (${list.length})</option>
+      ${uniquePosts.map(p => {
+        const cnt = list.filter(n => n.post === p).length;
+        return `<option value="${esc(p)}" ${currVal === p ? 'selected' : ''}>${esc(p)} (${cnt})</option>`;
+      }).join('')}
+    `;
+    if (![...selectEl.options].some(o => o.value === currVal)) {
+      selectEl.value = 'all';
+    } else {
+      selectEl.value = currVal;
+    }
   };
 
-  main.querySelector('#withSearch').addEventListener('input', applyRequestSearch);
+  const refreshAllDropdowns = () => {
+    populatePostSelect(main.querySelector('#withPostFilter'), withRequests);
+    populatePostSelect(main.querySelector('#directPostFilter'), directList);
+    populatePostSelect(main.querySelector('#restorePostFilter'), withdrawnList);
+  };
+
+  const applyRequestSearch = () => {
+    const q = (main.querySelector('#withSearch')?.value || '').toLowerCase().trim();
+    const selPost = main.querySelector('#withPostFilter')?.value || 'all';
+    const filtered = withRequests.filter(n => {
+      const matchPost = selPost === 'all' || n.post === selPost;
+      if (!matchPost) return false;
+      if (!q) return true;
+      return (
+        String(n.id).toLowerCase().includes(q) ||
+        String(n.candidateName || '').toLowerCase().includes(q) ||
+        String(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || '').toLowerCase().includes(q) ||
+        String(n.candidateClass || '').toLowerCase().includes(q) ||
+        String(n.candidateDept || '').toLowerCase().includes(q) ||
+        String(n.post || '').toLowerCase().includes(q)
+      );
+    });
+    renderRequestRows(filtered);
+    const bReq = main.querySelector('#reqCountBadge');
+    if (bReq) {
+      bReq.textContent = (selPost !== 'all' || q) ? `${filtered.length} / ${withRequests.length}` : withRequests.length;
+    }
+  };
+
+  main.querySelector('#withSearch')?.addEventListener('input', applyRequestSearch);
+  main.querySelector('#withPostFilter')?.addEventListener('change', applyRequestSearch);
   renderRequestRows(withRequests);
 
   main.querySelector('#panelRequests').addEventListener('click', async (e) => {
@@ -326,6 +382,7 @@ function renderWithdrawalUI(main, allNoms, pwd) {
           if (!withdrawnList.some(n => n.id === id)) withdrawnList.unshift(targetNom);
         }
         updateBadges();
+        refreshAllDropdowns();
         applyRequestSearch();
         applyDirectSearch();
         applyRestoreSearch();
@@ -357,6 +414,7 @@ function renderWithdrawalUI(main, allNoms, pwd) {
           if (!directList.some(n => n.id === id)) directList.unshift(targetNom);
         }
         updateBadges();
+        refreshAllDropdowns();
         applyRequestSearch();
         applyDirectSearch();
         applyRestoreSearch();
@@ -388,6 +446,7 @@ function renderWithdrawalUI(main, allNoms, pwd) {
           if (!directList.some(n => n.id === id)) directList.unshift(targetNom);
         }
         updateBadges();
+        refreshAllDropdowns();
         applyRequestSearch();
         applyDirectSearch();
         applyRestoreSearch();
@@ -524,30 +583,60 @@ function renderWithdrawalUI(main, allNoms, pwd) {
   };
 
   const applyDirectSearch = () => {
-    const q = (main.querySelector('#directSearch')?.value || '').toLowerCase();
-    renderDirectRows(directList.filter(n =>
-      !q ||
-      String(n.id).toLowerCase().includes(q) ||
-      String(n.candidateName || '').toLowerCase().includes(q) ||
-      String(n.post).toLowerCase().includes(q)
-    ));
+    const q = (main.querySelector('#directSearch')?.value || '').toLowerCase().trim();
+    const selPost = main.querySelector('#directPostFilter')?.value || 'all';
+    const filtered = directList.filter(n => {
+      const matchPost = selPost === 'all' || n.post === selPost;
+      if (!matchPost) return false;
+      if (!q) return true;
+      return (
+        String(n.id).toLowerCase().includes(q) ||
+        String(n.candidateName || '').toLowerCase().includes(q) ||
+        String(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || '').toLowerCase().includes(q) ||
+        String(n.candidateClass || '').toLowerCase().includes(q) ||
+        String(n.candidateDept || '').toLowerCase().includes(q) ||
+        String(n.post || '').toLowerCase().includes(q)
+      );
+    });
+    renderDirectRows(filtered);
+    const bAct = main.querySelector('#activeCountBadge');
+    if (bAct) {
+      bAct.textContent = (selPost !== 'all' || q) ? `${filtered.length} / ${directList.length}` : directList.length;
+    }
   };
 
   const applyRestoreSearch = () => {
-    const q = (main.querySelector('#restoreSearch')?.value || '').toLowerCase();
-    renderWithdrawnRows(withdrawnList.filter(n =>
-      !q ||
-      String(n.id).toLowerCase().includes(q) ||
-      String(n.candidateName || '').toLowerCase().includes(q) ||
-      String(n.post).toLowerCase().includes(q)
-    ));
+    const q = (main.querySelector('#restoreSearch')?.value || '').toLowerCase().trim();
+    const selPost = main.querySelector('#restorePostFilter')?.value || 'all';
+    const filtered = withdrawnList.filter(n => {
+      const matchPost = selPost === 'all' || n.post === selPost;
+      if (!matchPost) return false;
+      if (!q) return true;
+      return (
+        String(n.id).toLowerCase().includes(q) ||
+        String(n.candidateName || '').toLowerCase().includes(q) ||
+        String(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'] || '').toLowerCase().includes(q) ||
+        String(n.candidateClass || '').toLowerCase().includes(q) ||
+        String(n.candidateDept || '').toLowerCase().includes(q) ||
+        String(n.post || '').toLowerCase().includes(q)
+      );
+    });
+    renderWithdrawnRows(filtered);
+    const bWit = main.querySelector('#withdrawnCountBadge');
+    if (bWit) {
+      bWit.textContent = (selPost !== 'all' || q) ? `${filtered.length} / ${withdrawnList.length}` : withdrawnList.length;
+    }
   };
 
-  main.querySelector('#directSearch').addEventListener('input', applyDirectSearch);
-  main.querySelector('#restoreSearch').addEventListener('input', applyRestoreSearch);
+  main.querySelector('#directSearch')?.addEventListener('input', applyDirectSearch);
+  main.querySelector('#directPostFilter')?.addEventListener('change', applyDirectSearch);
 
-  renderDirectRows(directList);
-  renderWithdrawnRows(withdrawnList);
+  main.querySelector('#restoreSearch')?.addEventListener('input', applyRestoreSearch);
+  main.querySelector('#restorePostFilter')?.addEventListener('change', applyRestoreSearch);
+
+  refreshAllDropdowns();
+  applyDirectSearch();
+  applyRestoreSearch();
 
   main.querySelector('#panelDirect').addEventListener('click', async (e) => {
     // 1. Direct Withdraw action
@@ -572,6 +661,7 @@ function renderWithdrawalUI(main, allNoms, pwd) {
           }
         }
         updateBadges();
+        refreshAllDropdowns();
         applyDirectSearch();
         applyRestoreSearch();
       } catch (err) {
@@ -611,6 +701,7 @@ function renderWithdrawalUI(main, allNoms, pwd) {
         if (reqItem) reqItem.withdrawalStatus = 'Pending';
 
         updateBadges();
+        refreshAllDropdowns();
         applyDirectSearch();
         applyRestoreSearch();
         applyRequestSearch();
