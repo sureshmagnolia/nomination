@@ -108,9 +108,12 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
   let currentProposals = [];
 
-  // Helper to determine if a department has an active Association Secretary contest
+  // Memoized cache for department association contest info
+  const _deptAssocCache = new Map();
   const getDeptAssocContestInfo = (deptName) => {
     const dClean = String(deptName || '').trim();
+    if (!dClean) return { hasContest: false, candidateCount: 0, post: null, reason: 'empty_dept' };
+    if (_deptAssocCache.has(dClean)) return _deptAssocCache.get(dClean);
     const dUpper = dClean.toUpperCase();
 
     // 1. If Ballot Plan is already generated and has association records,
@@ -121,7 +124,9 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         return pPost.includes(dUpper) || (pPost.startsWith('ASSOCIATION SECRETARY') && pPost.includes(dUpper));
       });
       if (hasPlanContest) {
-        return { hasContest: true, candidateCount: 2, post: `Association Secretary ${dClean}`, reason: 'plan_active' };
+        const res = { hasContest: true, candidateCount: 2, post: `Association Secretary ${dClean}`, reason: 'plan_active' };
+        _deptAssocCache.set(dClean, res);
+        return res;
       }
     }
 
@@ -141,7 +146,9 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
     if (!assocPost) {
       // If there's no Association Secretary post configured for this department at all, no association contest
-      return { hasContest: false, candidateCount: 0, post: null, reason: 'no_post' };
+      const res = { hasContest: false, candidateCount: 0, post: null, reason: 'no_post' };
+      _deptAssocCache.set(dClean, res);
+      return res;
     }
 
     const postName = String(assocPost.post || '').trim();
@@ -159,30 +166,31 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       const candidateCount = activeCands.length;
       // Contest requires >= 2 candidates. If 0 or 1 candidate, no contest / unopposed / no ballot.
       const hasContest = candidateCount >= 2;
-      return {
+      const res = {
         hasContest,
         candidateCount,
         post: postName,
         reason: hasContest ? 'contested' : (candidateCount === 1 ? 'unopposed' : 'no_candidates')
       };
+      _deptAssocCache.set(dClean, res);
+      return res;
     }
 
     // 4. Default: If no nominations data exists in system yet, assume contested
-    return { hasContest: true, candidateCount: 2, post: postName, reason: 'assumed_contested' };
+    const res = { hasContest: true, candidateCount: 2, post: postName, reason: 'assumed_contested' };
+    _deptAssocCache.set(dClean, res);
+    return res;
   };
 
-  // Helper to determine Representative post contest status for each cohort:
-  // '1_UG' -> I UG Representative
-  // '2_UG' -> II UG Representative
-  // '3_UG' -> III UG Representative
-  // '1_PG' | '2_PG' -> PG Representative
-  // 'RS' -> Research Scholar (no representative ballot)
+  // Memoized cache for representative post contest info
+  const _repCache = new Map();
   const getRepContestInfo = (yearLevel) => {
     if (!yearLevel || yearLevel === 'RS') {
       return { hasContest: false, candidateCount: 0, post: null, key: 'RS' };
     }
 
     const repKey = (yearLevel === '1_PG' || yearLevel === '2_PG') ? 'PG' : yearLevel; // '1_UG', '2_UG', '3_UG', 'PG'
+    if (_repCache.has(repKey)) return _repCache.get(repKey);
 
     // 1. Check if Ballot Plan already exists and has reps
     if (plan && plan.reps && Array.isArray(plan.reps.results) && plan.reps.results.length > 0) {
@@ -195,7 +203,9 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         return false;
       });
       if (hasPlanContest) {
-        return { hasContest: true, candidateCount: 2, post: `${repKey} Representative`, key: repKey, reason: 'plan_active' };
+        const res = { hasContest: true, candidateCount: 2, post: `${repKey} Representative`, key: repKey, reason: 'plan_active' };
+        _repCache.set(repKey, res);
+        return res;
       }
     }
 
@@ -221,7 +231,9 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     });
 
     if (!repPost) {
-      return { hasContest: false, candidateCount: 0, post: null, key: repKey, reason: 'no_post' };
+      const res = { hasContest: false, candidateCount: 0, post: null, key: repKey, reason: 'no_post' };
+      _repCache.set(repKey, res);
+      return res;
     }
 
     const postName = String(repPost.post || '').trim();
@@ -238,17 +250,21 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
       const candidateCount = activeCands.length;
       const hasContest = candidateCount >= 2;
-      return {
+      const res = {
         hasContest,
         candidateCount,
         post: postName,
         key: repKey,
         reason: hasContest ? 'contested' : (candidateCount === 1 ? 'unopposed' : 'no_candidates')
       };
+      _repCache.set(repKey, res);
+      return res;
     }
 
     // 4. Default if nominations not loaded: assume contested
-    return { hasContest: true, candidateCount: 2, post: postName, key: repKey, reason: 'assumed_contested' };
+    const res = { hasContest: true, candidateCount: 2, post: postName, key: repKey, reason: 'assumed_contested' };
+    _repCache.set(repKey, res);
+    return res;
   };
 
   // Helper to determine exact ballot paper count and eligibility for a class
@@ -626,6 +642,28 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     const contestedDeptsCount = depts.filter(d => d.hasAssocContest).length;
     const uncontestedDeptsList = depts.filter(d => !d.hasAssocContest).map(d => d.name);
 
+    // Fast bitmask representation of rep posts: 1_UG=1, 2_UG=2, 3_UG=4, PG=8
+    function getCohortMask(cohorts) {
+      let mask = 0;
+      if (!cohorts) return 0;
+      for (let i = 0; i < cohorts.length; i++) {
+        const c = cohorts[i];
+        if (c === '1_UG') mask |= 1;
+        else if (c === '2_UG') mask |= 2;
+        else if (c === '3_UG') mask |= 4;
+        else if (c === 'PG') mask |= 8;
+      }
+      return mask;
+    }
+
+    // Attach repMask and deptIndex to all items for O(1) bitwise loss evaluation
+    const deptIndexMap = new Map();
+    depts.forEach((d, idx) => {
+      deptIndexMap.set(d.name, idx);
+      d.deptIdx = idx;
+      d.repMask = getCohortMask(d.cohorts);
+    });
+
     const isUG = (c) => {
       const u = (c.name || '').toUpperCase();
       return u.includes('B.COM') || u.includes('BCOM') || 
@@ -673,12 +711,14 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       const getLabel = (pClasses) => {
         const allUG = pClasses.every(isUG);
         const allPG = pClasses.every(c => !isUG(c));
-        const names = pClasses.map(c => c.name.replace(new RegExp(`\\s+${dept.name}`, 'gi'), '')).join(', ');
+        const safeDept = dept.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const names = pClasses.map(c => c.name.replace(new RegExp(`\\s+${safeDept}`, 'gi'), '')).join(', ');
         if (allUG) return `UG (${names})`;
         if (allPG) return `PG & Scholars (${names})`;
         return names;
       };
 
+      const dIdx = deptIndexMap.get(dept.name) ?? 0;
       return [
         {
           name: dept.name,
@@ -689,6 +729,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           assocCandidateCount: workloadA.assocCandidateCount,
           assocPost: workloadA.assocPost,
           cohorts: workloadA.cohorts,
+          repMask: getCohortMask(workloadA.cohorts),
+          deptIdx: dIdx,
           hasPG: workloadA.hasPG,
           classes: bestA,
           isSplit: true,
@@ -703,6 +745,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           assocCandidateCount: workloadB.assocCandidateCount,
           assocPost: workloadB.assocPost,
           cohorts: workloadB.cohorts,
+          repMask: getCohortMask(workloadB.cohorts),
+          deptIdx: dIdx,
           hasPG: workloadB.hasPG,
           classes: bestB,
           isSplit: true,
@@ -722,6 +766,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       const workloadUG = calcClassesWorkload(ugClasses, dept.name);
       const workloadPG = calcClassesWorkload(pgClasses, dept.name);
 
+      const dIdx = deptIndexMap.get(dept.name) ?? 0;
       return [
         {
           name: dept.name,
@@ -732,6 +777,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           assocCandidateCount: workloadUG.assocCandidateCount,
           assocPost: workloadUG.assocPost,
           cohorts: workloadUG.cohorts,
+          repMask: getCohortMask(workloadUG.cohorts),
+          deptIdx: dIdx,
           hasPG: false,
           classes: ugClasses,
           isSplit: true,
@@ -746,6 +793,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           assocCandidateCount: workloadPG.assocCandidateCount,
           assocPost: workloadPG.assocPost,
           cohorts: workloadPG.cohorts,
+          repMask: getCohortMask(workloadPG.cohorts),
+          deptIdx: dIdx,
           hasPG: true,
           classes: pgClasses,
           isSplit: true,
@@ -754,14 +803,14 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       ];
     }
 
-    // Partition Solver with multi-restart and local hill-climbing
+    // Partition Solver with multi-restart, local hill-climbing, and bitmasked O(1) evaluations
     // Factors in:
     // 1. Voter disparity across booths
     // 2. Physical ballot paper issuance workload (General + Assoc + Rep ballots per cohort)
     // 3. Spreading uncontested departments across booths (preventing clustering of easy jobs)
     // 4. Balancing total physical ballot books managed (1 General + Assoc books + Rep books)
     // 5. PG cohort presence/distribution across booths
-    function solvePartition(items, B, penalty = 75, numRestarts = 400) {
+    function solvePartition(items, B, penalty = 75, numRestarts = 25) {
       let bestAlloc = null, bestLoss = Infinity;
       const constraint = (b, it) => it.isSplit && b.items.some(o => o.isSplit && o.deptName === it.deptName);
 
@@ -773,57 +822,56 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         let zeroAssocCount = 0;
         let clusterPenalty = 0;
 
-        for (const b of alloc) {
-          // Voter metrics
+        for (let i = 0; i < B; i++) {
+          const b = alloc[i];
           const vDiff = b.total - meanVoters;
           voterSumSq += vDiff * vDiff;
           if (b.total > maxV) maxV = b.total;
           if (b.total < minV) minV = b.total;
 
-          // Ballot paper workload metrics (accounts for General + Assoc + Reps!)
           const bDiff = b.totalBallots - meanBallots;
           ballotSumSq += bDiff * bDiff;
           if (b.totalBallots > maxB) maxB = b.totalBallots;
           if (b.totalBallots < minB) minB = b.totalBallots;
 
-          // Association contest books and Representative books in this booth
-          const deptsInBooth = new Set();
-          const cohortsInBooth = new Set();
-          let assocCount = 0;
-          let uncontestedCount = 0;
+          let deptAssocMask = 0;
+          let deptUncontestedMask = 0;
+          let repMask = 0;
 
-          for (const it of b.items) {
-            const dName = it.deptName || it.name;
-            if (!deptsInBooth.has(dName)) {
-              deptsInBooth.add(dName);
-              if (it.hasAssocContest) {
-                assocCount++;
-              } else {
-                uncontestedCount++;
-              }
+          for (let k = 0; k < b.items.length; k++) {
+            const it = b.items[k];
+            if (it.hasAssocContest) {
+              deptAssocMask |= (1 << (it.deptIdx || 0));
+            } else {
+              deptUncontestedMask |= (1 << (it.deptIdx || 0));
             }
-            if (Array.isArray(it.cohorts)) {
-              it.cohorts.forEach(ch => cohortsInBooth.add(ch));
-            }
+            repMask |= (it.repMask || 0);
           }
 
-          let repBooksCount = 0;
-          cohortsInBooth.forEach(ch => {
-            const rInfo = getRepContestInfo(ch);
-            if (rInfo.hasContest) repBooksCount++;
-          });
+          // Count set bits in deptAssocMask
+          let assocCount = 0;
+          let tempA = deptAssocMask;
+          while (tempA > 0) { assocCount += (tempA & 1); tempA >>= 1; }
 
-          const totalBooks = 1 + assocCount + repBooksCount; // 1 General + Assoc + Reps
+          // Count set bits in deptUncontestedMask
+          let uncontestedCount = 0;
+          let tempU = deptUncontestedMask;
+          while (tempU > 0) { uncontestedCount += (tempU & 1); tempU >>= 1; }
+
+          // Count contested rep books from repMask
+          let repBooksCount = 0;
+          if (repMask & 1) repBooksCount++;
+          if (repMask & 2) repBooksCount++;
+          if (repMask & 4) repBooksCount++;
+          if (repMask & 8) repBooksCount++;
+
+          const totalBooks = 1 + assocCount + repBooksCount;
           if (totalBooks > maxBooks) maxBooks = totalBooks;
           if (totalBooks < minBooks) minBooks = totalBooks;
 
-          // If there are enough contested depts for booths to have at least one,
-          // heavily penalize leaving a booth with zero association ballots (an easy free ride)
           if (assocCount === 0 && contestedDeptsCount >= B) {
             zeroAssocCount++;
           }
-
-          // Penalize clustering multiple uncontested departments into the same booth
           if (uncontestedCount > 1) {
             clusterPenalty += (uncontestedCount - 1) * 450;
           }
@@ -850,7 +898,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         let valid = true;
         for (const it of sorted) {
           let bestB = null, minAddLoss = Infinity;
-          for (const b of alloc) {
+          for (let i = 0; i < B; i++) {
+            const b = alloc[i];
             if (constraint(b, it)) continue;
             b.items.push(it);
             b.total += it.total;
@@ -879,10 +928,9 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         if (!valid) continue;
 
         let currentLoss = calcLoss(alloc), improved = true, step = 0;
-        while (improved && step < 60) {
+        while (improved && step < 25) {
           improved = false; step++;
 
-          // 1. Single item transfer
           for (let i = 0; i < B; i++) {
             for (let j = 0; j < B; j++) {
               if (i === j) continue;
@@ -903,7 +951,6 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                   improved = true;
                   break;
                 } else {
-                  // Revert
                   alloc[j].items.pop();
                   alloc[i].items.splice(k, 0, it);
                   alloc[i].total += it.total;
@@ -918,7 +965,6 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           }
           if (improved) continue;
 
-          // 2. Pairwise swap
           for (let i = 0; i < B; i++) {
             for (let j = i + 1; j < B; j++) {
               for (let ki = 0; ki < alloc[i].items.length; ki++) {
@@ -939,7 +985,6 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                     improved = true;
                     break;
                   } else {
-                    // Revert
                     alloc[i].items[ki] = itA;
                     alloc[j].items[kj] = itB;
                     alloc[i].total += itA.total - itB.total;
@@ -1083,7 +1128,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     const largeDepts = depts.filter(d => d.total > meanVoters * 0.75 && d.classes.length > 1).sort((a, b) => b.total - a.total);
 
     // Check Plan 0: 100% Pure Integrity (0 Splits)
-    const tier0Alloc = solvePartition(depts, numBooths, 60, 300);
+    const tier0Alloc = solvePartition(depts, numBooths, 60, 20);
     if (tier0Alloc) {
       const t0Totals = tier0Alloc.map(b => b.total);
       const t0Ballots = tier0Alloc.map(b => b.totalBallots);
@@ -1117,7 +1162,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       const h1 = splitSmartBalanced(d1);
       if (h1) {
         const items1 = [...depts.filter(d => d.name !== d1.name), h1[0], h1[1]];
-        const alloc1 = solvePartition(items1, numBooths, 65, 350);
+        const alloc1 = solvePartition(items1, numBooths, 65, 25);
         if (alloc1) {
           proposals.push(formatProposal(
             'minimal',
@@ -1138,7 +1183,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       const h1 = splitSmartBalanced(d1), h2 = splitSmartBalanced(d2);
       if (h1 && h2) {
         const items2 = [...depts.filter(d => d.name !== d1.name && d.name !== d2.name), h1[0], h1[1], h2[0], h2[1]];
-        const alloc2 = solvePartition(items2, numBooths, 85, 400);
+        const alloc2 = solvePartition(items2, numBooths, 85, 30);
         if (alloc2) {
           proposals.push(formatProposal(
             'balanced',
@@ -1159,7 +1204,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       const h1 = splitAcademicCohort(d1), h2 = splitAcademicCohort(d2);
       if (h1 && h2) {
         const items3 = [...depts.filter(d => d.name !== d1.name && d.name !== d2.name), h1[0], h1[1], h2[0], h2[1]];
-        const alloc3 = solvePartition(items3, numBooths, 55, 350);
+        const alloc3 = solvePartition(items3, numBooths, 55, 25);
         if (alloc3) {
           proposals.push(formatProposal(
             'cohort',
