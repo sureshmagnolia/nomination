@@ -170,8 +170,36 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       list.sort((a, b) => Number(a.tableNum) - Number(b.tableNum) || Number(a.roundNum) - Number(b.roundNum));
     });
 
+    // Compile comprehensive list of all scheduled counting forms
+    const allFormsList = [];
+    for (let t = 0; t < T; t++) {
+      const bNum = boothsList[t]?.boothNumber || (t + 1);
+      const roomName = boothsList[t]?.roomName || `Table ${bNum}`;
+      const supName = getSupervisorNameForTable(bNum, countingTeams);
+      for (let r = 0; r < totalRounds; r++) {
+        const post = matrix[t] ? matrix[t][r] : null;
+        if (!post) continue;
+        const pn = pName(post);
+        const serial = formSerials[`${t}-${r}`] || `${bNum}-${r + 1}`;
+        const candsCount = candidatesList.filter(c => c.post === pn).length;
+        allFormsList.push({
+          key: `${t}-${r}`,
+          altKey: `${bNum}-${r + 1}`,
+          t,
+          r,
+          bNum,
+          roundNum: r + 1,
+          pn,
+          serial,
+          roomName,
+          supName,
+          candsCount
+        });
+      }
+    }
+
     main.innerHTML = `
-      <div class="page-enter space-y-6">
+      <div id="adminCountingRoot" class="page-enter space-y-6">
         ${isMismatch ? `
           <div class="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg">
             <div class="flex items-center gap-2.5">
@@ -194,7 +222,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
               <h3 class="text-xl font-bold text-white">Counting Matrix &amp; Forms</h3>
               ${isOffline ? '<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-semibold">Offline Mode (IndexedDB)</span>' : ''}
             </div>
-            <p class="text-slate-400 text-sm mt-0.5">${T} tables · ${totalRounds} rounds · ${postsList.length} posts total</p>
+            <p class="text-slate-400 text-sm mt-0.5">${T} tables · ${totalRounds} rounds · ${postsList.length} posts total · ${allFormsList.length} counting forms</p>
           </div>
           <div class="flex gap-2 flex-wrap items-center">
             <a href="#/admin/officials" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold flex items-center gap-1.5" title="Action: Opens the Election Officials Team Builder to allot Counting Supervisors and Counting Assistants to tables.&#10;Prerequisite: Configure booths/tables and upload staff rosters first.">
@@ -209,22 +237,74 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         <!-- Dedicated Printing & Consolidation Toolbar -->
         <div class="glass p-4 sm:p-5 rounded-2xl border border-indigo-500/30 shadow-2xl no-print space-y-4 bg-slate-900/60 backdrop-blur-md">
           
-          <!-- Row 1: Target Post Selector & Layout / Recount Controls -->
-          <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3.5 pb-3.5 border-b border-white/10">
-            <!-- Post Selector -->
-            <div class="flex items-center gap-2.5 flex-1 min-w-[300px]">
-              <label for="selPostPrint" class="text-xs font-bold text-indigo-300 shrink-0 uppercase tracking-wide flex items-center gap-1.5">
+          <!-- Row 1: Flexible Scope & Filter Selectors -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pb-3.5 border-b border-white/10">
+            <!-- 1. Post Selector -->
+            <div>
+              <label for="selPostPrint" class="text-[11px] font-bold text-indigo-300 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
                 <span>🎯</span> Target Post:
               </label>
-              <select id="selPostPrint" class="field text-xs py-2 px-3 bg-black/40 border border-white/20 hover:border-indigo-400/50 rounded-xl text-white font-medium flex-1 focus:outline-none focus:border-indigo-400 shadow-inner transition-colors" title="Action: Filters print scope and matrix display to a single election post or all posts.&#10;Prerequisite: Select post to print targeted post packets or enter recount mode.">
-                <option value="all">🌟 All Posts (Complete Election Batch)</option>
+              <select id="selPostPrint" class="field text-xs py-2 px-3 bg-black/40 border border-white/20 hover:border-indigo-400/50 rounded-xl text-white font-medium w-full focus:outline-none focus:border-indigo-400 shadow-inner transition-colors" title="Filter counting forms by election post">
+                <option value="all">🌟 All Posts (Complete Election)</option>
                 ${sortedPostObjects.map(p => {
                   const pn = pName(p);
                   const isPostUuc = isUuc(pn);
                   const countTbls = (postTableMap[pn] || []).length;
-                  return `<option value="${esc(pn)}">${esc(pn)} (${countTbls} table${countTbls === 1 ? '' : 's'})${isPostUuc ? ' ⭐ [2 Vacancies]' : ''}</option>`;
+                  return `<option value="${esc(pn)}">${esc(pn)} (${countTbls} table${countTbls === 1 ? '' : 's'})${isPostUuc ? ' ⭐' : ''}</option>`;
                 }).join('')}
               </select>
+            </div>
+
+            <!-- 2. Booth / Table Selector -->
+            <div>
+              <label for="selBoothPrint" class="text-[11px] font-bold text-sky-300 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
+                <span>🪑</span> Polling Booth / Table:
+              </label>
+              <select id="selBoothPrint" class="field text-xs py-2 px-3 bg-black/40 border border-white/20 hover:border-sky-400/50 rounded-xl text-white font-medium w-full focus:outline-none focus:border-sky-400 shadow-inner transition-colors" title="Filter counting forms for a specific table or all tables">
+                <option value="all">🏢 All Booths / Tables (1 to ${T})</option>
+                ${boothsList.map((b, t) => {
+                  const bNum = b.boothNumber || (t + 1);
+                  const supName = getSupervisorNameForTable(bNum, countingTeams);
+                  const room = b.roomName ? ` (${b.roomName})` : '';
+                  return `<option value="${bNum}">Table ${bNum}${esc(room)}${supName ? ` · ${esc(supName)}` : ''}</option>`;
+                }).join('')}
+              </select>
+            </div>
+
+            <!-- 3. Counting Round Selector -->
+            <div>
+              <label for="selRoundPrint" class="text-[11px] font-bold text-amber-300 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
+                <span>🔄</span> Counting Round:
+              </label>
+              <select id="selRoundPrint" class="field text-xs py-2 px-3 bg-black/40 border border-white/20 hover:border-amber-400/50 rounded-xl text-white font-medium w-full focus:outline-none focus:border-amber-400 shadow-inner transition-colors" title="Filter counting forms for a specific round or all rounds">
+                <option value="all">🔢 All Rounds (1 to ${totalRounds})</option>
+                ${Array.from({ length: totalRounds }, (_, r) => `
+                  <option value="${r + 1}">Round ${r + 1}</option>
+                `).join('')}
+              </select>
+            </div>
+
+            <!-- 4. Collate / Sorting Order -->
+            <div>
+              <label for="selCollatePrint" class="text-[11px] font-bold text-purple-300 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
+                <span>📑</span> Print Collate Order:
+              </label>
+              <select id="selCollatePrint" class="field text-xs py-2 px-3 bg-black/40 border border-white/20 hover:border-purple-400/50 rounded-xl text-white font-medium w-full focus:outline-none focus:border-purple-400 shadow-inner transition-colors" title="Select whether sheets are grouped by Table packets or Round batches">
+                <option value="table">🪑 Group by Table (Table 1 R1..Rn, Table 2...)</option>
+                <option value="round">🔄 Group by Round (Round 1 T1..Tn, Round 2...)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Filter Toolbar Actions: Quick Specific Picker & Layout / Recount Controls -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-0.5">
+            <div class="flex items-center gap-2 flex-wrap">
+              <button type="button" id="btnOpenFormPicker" class="btn btn-secondary text-xs px-3 py-1.5 rounded-xl border-purple-500/40 bg-purple-500/15 hover:bg-purple-500/25 text-purple-200 flex items-center gap-1.5 font-bold shadow-sm" title="Action: Opens interactive checklist to pick exact custom forms to print.">
+                <span>☑️</span> Pick Specific Forms...
+              </button>
+              <button type="button" id="btnResetPrintFilters" class="btn btn-secondary text-xs px-2.5 py-1.5 rounded-xl text-slate-400 hover:text-white border-white/10" title="Reset all scope filters to All Posts, All Booths, All Rounds">
+                <span>↺</span> Reset Filters
+              </button>
             </div>
 
             <!-- Settings: Orientation & Recount Mode -->
@@ -232,14 +312,14 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
               <!-- Orientation Selector -->
               <div class="flex items-center gap-1.5 bg-black/40 border border-white/15 px-3 py-1.5 rounded-xl text-xs shadow-inner">
                 <label for="selOrientation" class="text-[11px] font-semibold text-slate-400">Layout:</label>
-                <select id="selOrientation" class="bg-transparent text-white font-semibold text-xs focus:outline-none cursor-pointer" title="Action: Switches print layout format between Portrait and Landscape for optimal table column readability.&#10;Prerequisite: Adjust before sending counting forms or registers to the printer.">
+                <select id="selOrientation" class="bg-transparent text-white font-semibold text-xs focus:outline-none cursor-pointer" title="Action: Switches print layout format between Portrait and Landscape.">
                   <option value="portrait" class="bg-slate-900 text-white">📄 Portrait</option>
                   <option value="landscape" class="bg-slate-900 text-white">📄 Landscape</option>
                 </select>
               </div>
 
               <!-- Recount Mode Toggle -->
-              <label class="flex items-center gap-2 cursor-pointer text-xs font-bold px-3 py-1.5 rounded-xl select-none transition-all border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 shadow-sm" title="Action: Toggles statutory Recount Mode, adding high-visibility 'RECOUNTING' headers and audit stamps to all printed forms.&#10;Prerequisite: Use when a recount has been formally requested or ordered.">
+              <label class="flex items-center gap-2 cursor-pointer text-xs font-bold px-3 py-1.5 rounded-xl select-none transition-all border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 shadow-sm" title="Action: Toggles statutory Recount Mode, adding high-visibility 'RECOUNTING' headers and audit stamps to all printed forms.">
                 <input type="checkbox" id="chkRecountMode" class="rounded accent-amber-500 w-4 h-4 cursor-pointer">
                 <span>🔁 Recounting Mode</span>
               </label>
@@ -249,25 +329,25 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
           <!-- Row 2: Print Actions Grid (Balanced 4 Equal Columns) -->
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <!-- 1. Counting Forms -->
-            <button type="button" id="btnPrintForms" class="btn btn-primary text-xs font-bold py-2.5 px-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Action: Prints statutory Form 6 Counting Sheets ordered Table 1 to ${T} for polling booths and supervisor tallying.&#10;Prerequisite: Generate the Counting Matrix and ensure candidates are finalized.">
+            <button type="button" id="btnPrintForms" class="btn btn-primary text-xs font-bold py-2.5 px-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Action: Prints statutory Form 6 Counting Sheets matching current filters (Booth, Round, Post).">
               <span>🖨️</span>
               <span id="labelPrintForms" class="truncate">Print Counting Forms</span>
             </button>
 
             <!-- 2. Tabulation Sheet -->
-            <button type="button" id="btnPrintConsolidation" class="btn btn-secondary text-xs font-semibold py-2.5 px-3.5 rounded-xl border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Action: Prints the official Manual Tabulation & Consolidation Register (Form 7) across all counting tables for the selected post or all posts.&#10;Prerequisite: Finalize candidate lists and verify counting table assignments.">
+            <button type="button" id="btnPrintConsolidation" class="btn btn-secondary text-xs font-semibold py-2.5 px-3.5 rounded-xl border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Action: Prints the official Manual Tabulation & Consolidation Register (Form 7) across counting tables.">
               <span>📊</span>
               <span id="labelPrintConsolidation" class="truncate">Tabulation Sheet</span>
             </button>
 
             <!-- 3. UUC Tally Sheet -->
-            <button type="button" id="btnPrintUucTally" class="btn btn-secondary text-xs font-semibold py-2.5 px-3.5 rounded-xl border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Action: Prints dual-vote batch tally sheets for University Union Councillor (Form 6-T) with calculated batch capacities.&#10;Prerequisite: Applicable for UUC post; booths and voter counts should be allotted.">
+            <button type="button" id="btnPrintUucTally" class="btn btn-secondary text-xs font-semibold py-2.5 px-3.5 rounded-xl border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Action: Prints dual-vote batch tally sheets for University Union Councillor (Form 6-T).">
               <span>🧮</span>
               <span id="labelPrintUuc" class="truncate">UUC Tally Sheet</span>
             </button>
 
             <!-- 4. Full Post Dossier -->
-            <button type="button" id="btnPrintPackage" class="btn btn-secondary text-xs font-bold py-2.5 px-3.5 rounded-xl border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98] shadow-md" title="Action: Generates a complete comprehensive counting packet (Tabulation Register + Dual-Vote Tally Sheet + Table Counting Forms) for the selected post.&#10;Prerequisite: Select the desired election post from the dropdown above.">
+            <button type="button" id="btnPrintPackage" class="btn btn-secondary text-xs font-bold py-2.5 px-3.5 rounded-xl border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98] shadow-md" title="Action: Generates a complete comprehensive counting packet (Tabulation Register + Dual-Vote Tally Sheet + Table Counting Forms) for the selected post or booth.">
               <span>📑</span>
               <span id="labelPrintDossier" class="truncate">Full Post Dossier</span>
             </button>
@@ -276,14 +356,14 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
           <!-- Bottom Status & Hints Bar -->
           <div class="text-[11px] text-slate-400 flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-white/5">
             <span id="printScopeHint" class="flex items-center gap-1.5 text-slate-300">
-              💡 <strong>Scope:</strong> Printing across all ${totalRounds} rounds and ${T} tables (ordered Table 1 to ${T}). Select a specific post for recounting or single-post packet.
+              💡 <strong>Scope:</strong> Batch printing all ${allFormsList.length} counting forms across all ${totalRounds} rounds and ${T} tables.
             </span>
             <div class="flex items-center gap-2.5">
               <span id="recountBadgeStatus" class="hidden text-amber-300 font-bold text-[10.5px] bg-amber-500/15 px-2 py-0.5 rounded-md border border-amber-500/30 flex items-center gap-1">
                 <span>⚠️</span> RECOUNT MODE ACTIVE
               </span>
               <span class="text-indigo-300 font-mono text-[10px] bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">
-                Table 1..${T} Order · Supervisor Auto-filled
+                Supervisor Auto-filled · Form # Serials Active
               </span>
             </div>
           </div>
@@ -291,15 +371,27 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
 
         <!-- Counting Matrix Table -->
         <div class="glass rounded-xl overflow-hidden no-print shadow-2xl">
-          <div class="p-3 border-b border-white/10 bg-slate-900/60 flex items-center justify-between">
-            <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Table × Round Allocation Matrix</h4>
-            <span class="text-[11px] text-slate-500">Form Serials: #1 .. #${T * totalRounds}</span>
+          <div class="p-3 border-b border-white/10 bg-slate-900/60 flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Table × Round Allocation Matrix</h4>
+              <p class="text-[11px] text-slate-400 mt-0.5">Click any <strong>🖨️ Form</strong> button for 1-click printing, or click round/table headers to print entire batches.</p>
+            </div>
+            <span class="text-[11px] text-slate-500 font-mono">Form Serials: #1 .. #${T * totalRounds}</span>
           </div>
           <div class="overflow-x-auto">
             <table class="data-table text-xs">
               <thead><tr>
-                <th class="w-36">Table &amp; Supervisor</th>
-                ${roundLabels.map(l => `<th>${esc(l)}</th>`).join('')}
+                <th class="w-44">Table &amp; Supervisor</th>
+                ${roundLabels.map((l, r) => `
+                  <th class="text-center align-middle">
+                    <div class="flex flex-col items-center gap-1 py-0.5">
+                      <span class="font-bold">${esc(l)}</span>
+                      <button type="button" class="btn-print-round-header px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500 hover:text-white transition-all cursor-pointer shadow-sm" data-round="${r + 1}" title="Print all counting forms for ${esc(l)} across all tables">
+                        🖨️ All ${esc(l)}
+                      </button>
+                    </div>
+                  </th>
+                `).join('')}
               </tr></thead>
               <tbody>
                 ${boothsList.map((b, t) => {
@@ -325,23 +417,31 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                       <div class="text-[10px] text-slate-500 font-normal italic mt-0.5 truncate max-w-[140px]" title="Supervisor: ${esc(supName || 'Unassigned')}">
                         ${supName ? `👤 ${esc(supName)}` : '<span class="text-amber-400/80">⚠️ No supervisor</span>'}
                       </div>
+                      <button type="button" class="btn-print-table-row w-full mt-2 py-1 px-1.5 rounded text-[9.5px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 hover:bg-sky-500 hover:text-white transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm" data-table="${bNum}" title="Print all counting forms for Table ${bNum} across all rounds">
+                        <span>🖨️</span> Table ${bNum} Packet
+                      </button>
                     </td>
                     ${tableRow.map((post, r) => {
                       if (!post) return '<td class="align-top py-2.5 min-w-[110px] text-slate-600">–</td>';
                       const pn = pName(post);
                       const isPostUuc = isUuc(pn);
-                      const serial = formSerials[`${t}-${r}`] || `${t + 1}-${r + 1}`;
+                      const serial = formSerials[`${t}-${r}`] || `${bNum}-${r + 1}`;
                       const batches = isPostUuc ? getUucBatchesForVoterCount(voterCount) : [];
                       const batchSummary = isPostUuc ? getUucBatchesSummaryText(batches, voterCount) : '';
                       return `
-                      <td class="align-top py-2.5 min-w-[110px]">
+                      <td class="align-top py-2.5 min-w-[125px]">
                         <div class="flex items-center justify-between gap-1 mb-1">
                           <span class="text-[10px] text-slate-400 font-mono font-bold">#${esc(serial)}</span>
-                          ${isPostUuc ? `
-                            <button type="button" class="print-single-uuc-btn px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-all cursor-pointer" data-table="${bNum}" title="Print UUC Tally Sheet for Table ${bNum} (${voterCount} allotted voters: ${batchSummary})">
-                              🧮 ${voterCount ? `${voterCount}v` : '2-Seat'}
+                          <div class="flex items-center gap-1">
+                            <button type="button" class="btn-print-matrix-cell px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-white/10 text-slate-200 hover:bg-indigo-600 hover:text-white border border-white/20 transition-all cursor-pointer shadow-sm" data-table="${bNum}" data-round="${r + 1}" data-post="${esc(pn)}" title="Print single Counting Form #${esc(serial)} (Table ${bNum}, Round ${r + 1}: ${esc(pn)})">
+                              🖨️ Form
                             </button>
-                          ` : ''}
+                            ${isPostUuc ? `
+                              <button type="button" class="print-single-uuc-btn px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-all cursor-pointer shadow-sm" data-table="${bNum}" title="Print UUC Tally Sheet for Table ${bNum} (${voterCount} allotted voters: ${batchSummary})">
+                                🧮 ${voterCount ? `${voterCount}v` : '2-Seat'}
+                              </button>
+                            ` : ''}
+                          </div>
                         </div>
                         <div class="badge ${isPostUuc ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30' : 'badge-valid'} block text-left truncate cursor-pointer hover:underline" data-quick-post="${esc(pn)}" title="Click to filter print options to ${esc(pn)}">
                           ${esc(pn)}
@@ -411,10 +511,102 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
           </div>
         </div>
 
+        <!-- ── Modal: Pick Specific Counting Forms ──────────────────────────────── -->
+        <div id="modalSpecificForms" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md hidden page-enter">
+          <div class="bg-slate-900 border border-indigo-500/40 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="flex items-center justify-between p-4 border-b border-white/10 bg-slate-950/60">
+              <div class="flex items-center gap-2.5">
+                <span class="text-2xl">🖨️</span>
+                <div>
+                  <h3 class="font-bold text-white text-base">Select Specific Counting Forms to Print</h3>
+                  <p class="text-xs text-slate-400">Choose any combination of booths, rounds, or individual forms.</p>
+                </div>
+              </div>
+              <button type="button" id="btnCloseSpecificModal" class="text-slate-400 hover:text-white text-xl p-1 rounded-lg hover:bg-white/10 transition-colors">✕</button>
+            </div>
+
+            <!-- Quick Preset Actions & Search Bar -->
+            <div class="p-3.5 bg-slate-950/40 border-b border-white/10 space-y-2.5">
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                <div class="flex items-center gap-2 flex-1">
+                  <input type="text" id="inputSearchModalForms" class="field text-xs py-1.5 px-3 bg-black/40 border border-white/20 rounded-xl text-white placeholder-slate-500 w-full focus:outline-none focus:border-indigo-400" placeholder="Search by post, table, round, or supervisor...">
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <button type="button" id="btnModalSelectAll" class="btn btn-secondary btn-xs text-[11px] px-2.5 py-1">Select All (${allFormsList.length})</button>
+                  <button type="button" id="btnModalClearAll" class="btn btn-secondary btn-xs text-[11px] px-2.5 py-1 text-slate-400">Clear All</button>
+                </div>
+              </div>
+
+              <!-- Quick filters: By Round & By Table pills -->
+              <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+                <span class="text-slate-400 font-semibold mr-1">Quick Select:</span>
+                <span class="text-indigo-300 font-bold">Rounds:</span>
+                ${Array.from({ length: totalRounds }, (_, r) => `
+                  <button type="button" class="btn-modal-toggle-round px-2 py-0.5 rounded text-[10.5px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500 hover:text-white transition-colors" data-round="${r + 1}">
+                    R${r + 1}
+                  </button>
+                `).join('')}
+                <span class="text-slate-500 mx-1">|</span>
+                <span class="text-sky-300 font-bold">Tables:</span>
+                ${boothsList.map((b, t) => {
+                  const bNum = b.boothNumber || (t + 1);
+                  return `
+                    <button type="button" class="btn-modal-toggle-table px-2 py-0.5 rounded text-[10.5px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30 hover:bg-sky-500 hover:text-white transition-colors" data-table="${bNum}">
+                      T${bNum}
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <!-- Forms Checkbox Grid (Scrollable) -->
+            <div id="modalFormsListContainer" class="p-4 overflow-y-auto max-h-[50vh] grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              ${allFormsList.map(f => `
+                <label class="modal-form-item flex items-start gap-3 p-3 rounded-xl border border-white/10 bg-black/25 hover:bg-indigo-950/20 hover:border-indigo-500/30 cursor-pointer select-none transition-all" data-search="${esc(`${f.pn} table ${f.bNum} round ${f.roundNum} ${f.roomName} ${f.supName} #${f.serial}`.toLowerCase())}" data-round="${f.roundNum}" data-table="${f.bNum}">
+                  <input type="checkbox" class="chk-modal-form rounded accent-indigo-500 w-4 h-4 mt-0.5 shrink-0" data-key="${f.key}">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono text-[10px] font-bold">Form #${esc(f.serial)}</span>
+                      <div class="flex items-center gap-1.5 text-[11px] font-bold">
+                        <span class="text-sky-300">Table ${f.bNum}</span>
+                        <span class="text-slate-500">•</span>
+                        <span class="text-amber-300">Round ${f.roundNum}</span>
+                      </div>
+                    </div>
+                    <div class="font-bold text-white text-xs truncate mt-1">${esc(f.pn)}</div>
+                    <div class="flex items-center justify-between text-[10.5px] text-slate-400 mt-1">
+                      <span class="truncate max-w-[170px]" title="${esc(f.roomName)}">📍 ${esc(f.roomName)}</span>
+                      <span class="truncate max-w-[140px] text-slate-500" title="${esc(f.supName || 'No supervisor')}">${f.supName ? `👤 ${esc(f.supName)}` : '⚠️ No Sup'}</span>
+                    </div>
+                  </div>
+                </label>
+              `).join('')}
+            </div>
+
+            <!-- Footer -->
+            <div class="p-3.5 border-t border-white/10 bg-slate-950/60 flex items-center justify-between gap-3 flex-wrap">
+              <div class="text-xs text-slate-300">
+                Selected: <strong id="modalCountSelected" class="text-indigo-300 font-mono text-sm">0</strong> of <span class="font-mono">${allFormsList.length}</span> forms
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" id="btnCancelSpecificModal" class="btn btn-secondary text-xs px-3 py-1.5">Cancel</button>
+                <button type="button" id="btnConfirmPrintSpecific" class="btn btn-primary text-xs font-bold px-4 py-2 flex items-center gap-1.5 shadow-lg">
+                  <span>🖨️</span>
+                  <span>Print Selected Forms</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>`;
 
     // ─── Attach Events ────────────────────────────────────────────────────────
     const selPostPrint = main.querySelector('#selPostPrint');
+    const selBoothPrint = main.querySelector('#selBoothPrint');
+    const selRoundPrint = main.querySelector('#selRoundPrint');
+    const selCollatePrint = main.querySelector('#selCollatePrint');
     const labelPrintForms = main.querySelector('#labelPrintForms');
     const labelPrintConsolidation = main.querySelector('#labelPrintConsolidation');
     const labelPrintDossier = main.querySelector('#labelPrintDossier');
@@ -424,39 +616,162 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     const selOrientation = main.querySelector('#selOrientation');
     const recountBadgeStatus = main.querySelector('#recountBadgeStatus');
 
-    const updatePrintScopeUI = () => {
-      const selected = selPostPrint.value;
-      const isRecount = !!chkRecountMode?.checked;
-      const isPostUuc = isUuc(selected);
-
-      if (selected === 'all') {
-        labelPrintForms.textContent = isRecount ? 'Print Recount Forms' : 'Print All Forms';
-        labelPrintConsolidation.textContent = isRecount ? 'All Recount Tabulations' : 'All Tabulation Sheets';
-        if (labelPrintDossier) labelPrintDossier.textContent = isRecount ? 'Full Recount Dossier' : 'Full Election Dossier';
-        printScopeHint.innerHTML = `💡 <strong>Scope:</strong> Batch printing all ${totalRounds} rounds and ${T} tables across the entire election (ordered Table 1 to ${T}).`;
-        if (btnPrintUucTally) {
-          btnPrintUucTally.classList.remove('opacity-40');
-          btnPrintUucTally.title = 'Print Working Dual-Vote Tally Sheet for University Union Councillor';
+    // Helper: Compute matching scheduled forms based on current filters and ordering
+    const getMatchingForms = ({
+      postFilter = 'all',
+      boothFilter = 'all',
+      roundFilter = 'all',
+      collateOrder = 'table',
+      specificKeys = null
+    }) => {
+      const forms = [];
+      if (specificKeys && (specificKeys instanceof Set ? specificKeys.size > 0 : specificKeys.length > 0)) {
+        const keySet = specificKeys instanceof Set ? specificKeys : new Set(specificKeys);
+        if (collateOrder === 'round') {
+          for (let r = 0; r < totalRounds; r++) {
+            for (let t = 0; t < T; t++) {
+              const post = matrix[t] ? matrix[t][r] : null;
+              if (!post) continue;
+              const bNum = boothsList[t]?.boothNumber || (t + 1);
+              const roundNum = r + 1;
+              const key = `${t}-${r}`;
+              const keyAlt = `${bNum}-${roundNum}`;
+              if (keySet.has(key) || keySet.has(keyAlt)) {
+                forms.push({ t, r, bNum, roundNum, post, pn: pName(post) });
+              }
+            }
+          }
+        } else {
+          for (let t = 0; t < T; t++) {
+            for (let r = 0; r < totalRounds; r++) {
+              const post = matrix[t] ? matrix[t][r] : null;
+              if (!post) continue;
+              const bNum = boothsList[t]?.boothNumber || (t + 1);
+              const roundNum = r + 1;
+              const key = `${t}-${r}`;
+              const keyAlt = `${bNum}-${roundNum}`;
+              if (keySet.has(key) || keySet.has(keyAlt)) {
+                forms.push({ t, r, bNum, roundNum, post, pn: pName(post) });
+              }
+            }
+          }
         }
       } else {
-        const tblCount = (postTableMap[selected] || []).length;
-        labelPrintForms.textContent = isRecount ? `Recount Forms (${tblCount})` : `Print Forms (${tblCount})`;
-        labelPrintConsolidation.textContent = isRecount ? `Recount Tabulation` : `Tabulation Sheet`;
-        if (labelPrintDossier) labelPrintDossier.textContent = isRecount ? `Recount Dossier (${tblCount})` : `Full Post Dossier (${tblCount})`;
-        printScopeHint.innerHTML = `💡 <strong>Scope:</strong> Focused on <strong>${esc(selected)}</strong> (${tblCount} table${tblCount === 1 ? '' : 's'}, ordered Table 1 to ${T}). Ideal for recounting or single-post packets.`;
-        if (btnPrintUucTally) {
-          if (!isPostUuc) {
-            btnPrintUucTally.classList.add('opacity-40');
-            btnPrintUucTally.title = 'UUC Tally Sheet is only applicable for University Union Councillor';
-          } else {
-            btnPrintUucTally.classList.remove('opacity-40');
-            btnPrintUucTally.title = 'Print Working Dual-Vote Tally Sheet for University Union Councillor';
+        if (collateOrder === 'round') {
+          for (let r = 0; r < totalRounds; r++) {
+            const roundNum = r + 1;
+            if (roundFilter !== 'all' && String(roundNum) !== String(roundFilter)) continue;
+            for (let t = 0; t < T; t++) {
+              const bNum = boothsList[t]?.boothNumber || (t + 1);
+              if (boothFilter !== 'all' && String(bNum) !== String(boothFilter)) continue;
+              const post = matrix[t] ? matrix[t][r] : null;
+              if (!post) continue;
+              const pn = pName(post);
+              if (postFilter !== 'all' && pn !== postFilter) continue;
+              forms.push({ t, r, bNum, roundNum, post, pn });
+            }
           }
+        } else {
+          for (let t = 0; t < T; t++) {
+            const bNum = boothsList[t]?.boothNumber || (t + 1);
+            if (boothFilter !== 'all' && String(bNum) !== String(boothFilter)) continue;
+            for (let r = 0; r < totalRounds; r++) {
+              const roundNum = r + 1;
+              if (roundFilter !== 'all' && String(roundNum) !== String(roundFilter)) continue;
+              const post = matrix[t] ? matrix[t][r] : null;
+              if (!post) continue;
+              const pn = pName(post);
+              if (postFilter !== 'all' && pn !== postFilter) continue;
+              forms.push({ t, r, bNum, roundNum, post, pn });
+            }
+          }
+        }
+      }
+      return forms;
+    };
+
+    const updatePrintScopeUI = () => {
+      const postFilter = selPostPrint?.value || 'all';
+      const boothFilter = selBoothPrint?.value || 'all';
+      const roundFilter = selRoundPrint?.value || 'all';
+      const collateOrder = selCollatePrint?.value || 'table';
+      const isRecount = !!chkRecountMode?.checked;
+
+      const matchingForms = getMatchingForms({ postFilter, boothFilter, roundFilter, collateOrder });
+      const count = matchingForms.length;
+
+      // Compute clear label for the main print button
+      let formsBtnText = '';
+      if (boothFilter !== 'all' && roundFilter !== 'all') {
+        formsBtnText = `Print Form (Table ${boothFilter} · R${roundFilter})`;
+      } else if (boothFilter !== 'all') {
+        formsBtnText = `Print Table ${boothFilter} Forms (${count})`;
+      } else if (roundFilter !== 'all') {
+        formsBtnText = `Print Round ${roundFilter} Forms (${count})`;
+      } else if (postFilter !== 'all') {
+        formsBtnText = `Print ${postFilter} Forms (${count})`;
+      } else {
+        formsBtnText = `Print All Forms (${count})`;
+      }
+      if (isRecount) formsBtnText = `Recount: ` + formsBtnText;
+      if (labelPrintForms) labelPrintForms.textContent = formsBtnText;
+
+      // Scope Hint text
+      let scopeDesc = '';
+      const orderDesc = collateOrder === 'round' ? 'Ordered Round-wise (R1 T1..Tn, R2...)' : 'Ordered Table-wise (T1 R1..Rn, T2...)';
+
+      if (boothFilter !== 'all' && roundFilter !== 'all') {
+        const postLabel = matchingForms[0]?.pn ? `for post <strong>${esc(matchingForms[0].pn)}</strong>` : '';
+        scopeDesc = `💡 <strong>Scope:</strong> Printing single Counting Form for <strong>Table ${boothFilter}</strong>, <strong>Round ${roundFilter}</strong> ${postLabel}.`;
+      } else if (boothFilter !== 'all') {
+        scopeDesc = `💡 <strong>Scope:</strong> Printing all <strong>${count} counting forms</strong> for <strong>Table / Booth ${boothFilter}</strong> across its rounds. Ideal for supervisor table packets.`;
+      } else if (roundFilter !== 'all') {
+        scopeDesc = `💡 <strong>Scope:</strong> Printing all <strong>${count} counting forms</strong> for <strong>Round ${roundFilter}</strong> across all counting tables. Ideal for round-by-round counting hall distribution.`;
+      } else if (postFilter !== 'all') {
+        scopeDesc = `💡 <strong>Scope:</strong> Focused on post <strong>${esc(postFilter)}</strong> (${count} forms). ${orderDesc}.`;
+      } else {
+        scopeDesc = `💡 <strong>Scope:</strong> Batch printing all <strong>${count} forms</strong> across all ${totalRounds} rounds and ${T} tables. ${orderDesc}.`;
+      }
+      if (printScopeHint) printScopeHint.innerHTML = scopeDesc;
+
+      // Consolidation button label
+      if (labelPrintConsolidation) {
+        if (postFilter === 'all') {
+          labelPrintConsolidation.textContent = isRecount ? 'All Recount Tabulations' : 'All Tabulation Sheets';
+        } else {
+          labelPrintConsolidation.textContent = isRecount ? 'Recount Tabulation' : 'Tabulation Sheet';
+        }
+      }
+
+      // Dossier button label
+      if (labelPrintDossier) {
+        if (postFilter === 'all') {
+          labelPrintDossier.textContent = isRecount ? 'Full Recount Dossier' : 'Full Election Dossier';
+        } else {
+          labelPrintDossier.textContent = isRecount ? `Recount Dossier (${esc(postFilter)})` : `Full Dossier (${esc(postFilter)})`;
+        }
+      }
+
+      // UUC Tally Sheet state
+      if (btnPrintUucTally) {
+        const isPostUuc = postFilter === 'all' || isUuc(postFilter);
+        if (!isPostUuc) {
+          btnPrintUucTally.classList.add('opacity-40');
+          btnPrintUucTally.title = 'UUC Tally Sheet is only applicable for University Union Councillor';
+        } else {
+          btnPrintUucTally.classList.remove('opacity-40');
+          btnPrintUucTally.title = boothFilter !== 'all' 
+            ? `Print Dual-Vote Tally Sheet for Table ${boothFilter}` 
+            : 'Print Dual-Vote Tally Sheets across all UUC tables';
         }
       }
     };
 
     selPostPrint?.addEventListener('change', updatePrintScopeUI);
+    selBoothPrint?.addEventListener('change', updatePrintScopeUI);
+    selRoundPrint?.addEventListener('change', updatePrintScopeUI);
+    selCollatePrint?.addEventListener('change', updatePrintScopeUI);
+
     chkRecountMode?.addEventListener('change', () => {
       if (chkRecountMode.checked) {
         recountBadgeStatus?.classList.remove('hidden');
@@ -465,6 +780,15 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         recountBadgeStatus?.classList.add('hidden');
       }
       updatePrintScopeUI();
+    });
+
+    main.querySelector('#btnResetPrintFilters')?.addEventListener('click', () => {
+      if (selPostPrint) selPostPrint.value = 'all';
+      if (selBoothPrint) selBoothPrint.value = 'all';
+      if (selRoundPrint) selRoundPrint.value = 'all';
+      if (selCollatePrint) selCollatePrint.value = 'table';
+      updatePrintScopeUI();
+      showToast('Print filters reset to All Booths and All Rounds.', 'info');
     });
 
     // Matrix cell click shortcut to select post in dropdown
@@ -481,53 +805,65 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
 
     // ── Main Print Action Handlers ───────────────────────────────────────────
 
-    // 1. Print Counting Forms (Ordered strictly Table Number wise: 1 to T)
-    const executePrintForms = (postFilter = 'all') => {
+    // 1. Print Counting Forms (Supporting Booth filter, Round filter, Post filter, and Specific keys)
+    const executePrintForms = (options = {}) => {
+      const postFilter = options.postFilter || selPostPrint?.value || 'all';
+      const boothFilter = options.boothFilter || selBoothPrint?.value || 'all';
+      const roundFilter = options.roundFilter || selRoundPrint?.value || 'all';
+      const collateOrder = options.collateOrder || selCollatePrint?.value || 'table';
+      const specificKeys = options.specificKeys || null;
       const isRecount = !!chkRecountMode?.checked;
       const orientation = selOrientation?.value || 'portrait';
-      let html = '';
-      let count = 0;
 
-      for (let t = 0; t < T; t++) {
-        for (let r = 0; r < totalRounds; r++) {
-          const post = matrix[t] ? matrix[t][r] : null;
-          if (!post) continue;
-          const pn = pName(post);
-          if (postFilter !== 'all' && pn !== postFilter) continue;
+      const matchingForms = getMatchingForms({ postFilter, boothFilter, roundFilter, collateOrder, specificKeys });
 
-          const serial = formSerials[`${t}-${r}`] || `${t + 1}-${r + 1}`;
-          const cands = candidatesList.filter(c => c.post === pn).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
-          const bNum = boothsList[t]?.boothNumber || (t + 1);
-          const roomName = boothsList[t]?.roomName || `Table ${bNum}`;
-          const supName = getSupervisorNameForTable(bNum, countingTeams);
-
-          html += buildFormHtml(bNum, r + 1, pn, cands, serial, collegeName, electionYear, collegeLogo, supName, roomName, isRecount);
-          count++;
-        }
-      }
-
-      if (!count) {
-        showToast(postFilter === 'all' ? 'No counting forms found.' : `No tables assigned for "${postFilter}".`, 'warning');
+      if (!matchingForms.length) {
+        showToast('No matching counting forms found for the selected filter combination.', 'warning');
         return;
       }
-      const title = postFilter === 'all' 
-        ? (isRecount ? 'Recount Forms - All Posts' : 'Counting Forms - All Posts') 
-        : (isRecount ? `Recount Forms - ${postFilter}` : `Counting Forms - ${postFilter}`);
+
+      let html = '';
+      matchingForms.forEach(f => {
+        const { t, r, bNum, roundNum, pn } = f;
+        const serial = formSerials[`${t}-${r}`] || `${bNum}-${roundNum}`;
+        const cands = candidatesList.filter(c => c.post === pn).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
+        const roomName = boothsList[t]?.roomName || `Table ${bNum}`;
+        const supName = getSupervisorNameForTable(bNum, countingTeams);
+
+        html += buildFormHtml(bNum, roundNum, pn, cands, serial, collegeName, electionYear, collegeLogo, supName, roomName, isRecount);
+      });
+
+      let title = 'Counting Forms';
+      if (specificKeys) {
+        title = isRecount ? `Recount Forms - Custom Selection (${matchingForms.length} Forms)` : `Counting Forms - Custom Selection (${matchingForms.length} Forms)`;
+      } else if (boothFilter !== 'all' && roundFilter !== 'all') {
+        title = isRecount ? `Recount Form - Table ${boothFilter} Round ${roundFilter}` : `Counting Form - Table ${boothFilter} Round ${roundFilter}`;
+      } else if (boothFilter !== 'all') {
+        title = isRecount ? `Recount Forms - Table ${boothFilter} (All Rounds)` : `Counting Forms - Table ${boothFilter} (All Rounds)`;
+      } else if (roundFilter !== 'all') {
+        title = isRecount ? `Recount Forms - Round ${roundFilter} (All Tables)` : `Counting Forms - Round ${roundFilter} (All Tables)`;
+      } else if (postFilter !== 'all') {
+        title = isRecount ? `Recount Forms - ${postFilter}` : `Counting Forms - ${postFilter}`;
+      } else {
+        title = isRecount ? `Recount Forms - All Tables & Rounds (${matchingForms.length} Forms)` : `Counting Forms - All Tables & Rounds (${matchingForms.length} Forms)`;
+      }
+
       triggerCountingPrint(html, title, collegeLogo, orientation);
     };
 
     main.querySelector('#btnPrintForms')?.addEventListener('click', () => {
-      executePrintForms(selPostPrint.value);
+      executePrintForms();
     });
 
     // 2. Print Tabulation & Consolidation Sheets (Fits on 1 A4 page in Portrait/Landscape)
-    const executePrintConsolidation = (postFilter = 'all') => {
+    const executePrintConsolidation = (postFilter = null) => {
+      const activePostFilter = postFilter || selPostPrint?.value || 'all';
       const isRecount = !!chkRecountMode?.checked;
       const orientation = selOrientation?.value || 'landscape';
       let html = '';
       let count = 0;
 
-      const targetPosts = postFilter === 'all' ? sortedPostObjects.map(p => pName(p)) : [postFilter];
+      const targetPosts = activePostFilter === 'all' ? sortedPostObjects.map(p => pName(p)) : [activePostFilter];
 
       targetPosts.forEach(pn => {
         const tables = postTableMap[pn] || [];
@@ -541,14 +877,14 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         showToast('No tabulation sheets generated.', 'warning');
         return;
       }
-      const title = postFilter === 'all' 
+      const title = activePostFilter === 'all' 
         ? (isRecount ? 'Recount Consolidation Sheets - All Posts' : 'Consolidation Sheets - All Posts') 
-        : (isRecount ? `Recount Consolidation Sheet - ${postFilter}` : `Consolidation Sheet - ${postFilter}`);
+        : (isRecount ? `Recount Consolidation Sheet - ${activePostFilter}` : `Consolidation Sheet - ${activePostFilter}`);
       triggerCountingPrint(html, title, collegeLogo, orientation);
     };
 
     main.querySelector('#btnPrintConsolidation')?.addEventListener('click', () => {
-      executePrintConsolidation(selPostPrint.value);
+      executePrintConsolidation();
     });
 
     // 3. Print UUC Tally Sheet (Helper sheet for counting officers)
@@ -561,6 +897,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         return;
       }
 
+      const targetTable = tableFilter || (selBoothPrint?.value !== 'all' ? selBoothPrint?.value : null);
       let html = '';
       let count = 0;
 
@@ -571,7 +908,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         const cands = candidatesList.filter(c => c.post === pn).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
 
         tables.forEach(tInfo => {
-          if (tableFilter && String(tInfo.tableNum) !== String(tableFilter)) return;
+          if (targetTable && String(tInfo.tableNum) !== String(targetTable)) return;
           const vCount = tInfo.voterCount || getVoterCountForTable(tInfo.tableNum);
           html += buildUucTallySheetHtml(tInfo.tableNum, tInfo.roundNum, tInfo.serial, cands, collegeName, electionYear, collegeLogo, tInfo.supervisorName, tInfo.roomName, isRecount, vCount);
           count++;
@@ -579,10 +916,13 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       });
 
       if (!count) {
-        showToast('No UUC counting tables found.', 'warning');
+        showToast(targetTable ? `No UUC counting tables found for Table ${targetTable}.` : 'No UUC counting tables found.', 'warning');
         return;
       }
-      triggerCountingPrint(html, isRecount ? 'UUC Recount Tally Sheets' : 'UUC Dual-Vote Tally Sheets', collegeLogo, orientation);
+      const title = targetTable 
+        ? (isRecount ? `UUC Recount Tally Sheet - Table ${targetTable}` : `UUC Tally Sheet - Table ${targetTable}`)
+        : (isRecount ? 'UUC Recount Tally Sheets - All Tables' : 'UUC Dual-Vote Tally Sheets - All Tables');
+      triggerCountingPrint(html, title, collegeLogo, orientation);
     };
 
     main.querySelector('#btnPrintUucTally')?.addEventListener('click', () => {
@@ -590,22 +930,27 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     });
 
     // 4. Print Full Dossier (Consolidation Sheet + Tally Sheet + Counting Forms Table 1..N)
-    const executePrintPackage = (postFilter = 'all') => {
+    const executePrintPackage = (postFilter = null, boothFilter = null) => {
+      const activePostFilter = postFilter || selPostPrint?.value || 'all';
+      const activeBoothFilter = boothFilter || selBoothPrint?.value || 'all';
       const isRecount = !!chkRecountMode?.checked;
       const orientation = selOrientation?.value || 'portrait';
       let html = '';
-      const targetPosts = postFilter === 'all' ? sortedPostObjects.map(p => pName(p)) : [postFilter];
+      const targetPosts = activePostFilter === 'all' ? sortedPostObjects.map(p => pName(p)) : [activePostFilter];
 
       targetPosts.forEach(pn => {
-        const tables = postTableMap[pn] || [];
+        let tables = postTableMap[pn] || [];
         tables.sort((a, b) => Number(a.tableNum) - Number(b.tableNum) || Number(a.roundNum) - Number(b.roundNum));
+        if (activeBoothFilter !== 'all') {
+          tables = tables.filter(t => String(t.tableNum) === String(activeBoothFilter));
+        }
         const cands = candidatesList.filter(c => c.post === pn).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
         const isPostUuc = isUuc(pn);
 
         // First: Tabulation Consolidation Sheet for the Post (Form 7 - fits on 1 page)
         html += buildConsolidationHtml(pn, tables, cands, collegeName, electionYear, collegeLogo, isRecount);
 
-        // Second: If UUC, append UUC Tally Sheets for all tables (ordered Table 1 to N)
+        // Second: If UUC, append UUC Tally Sheets
         if (isPostUuc) {
           tables.forEach(tInfo => {
             const vCount = tInfo.voterCount || getVoterCountForTable(tInfo.tableNum);
@@ -613,7 +958,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
           });
         }
 
-        // Third: Counting Forms (Form 6) for each table (ordered Table 1 to N)
+        // Third: Counting Forms (Form 6) for each table
         tables.forEach(tInfo => {
           html += buildFormHtml(tInfo.tableNum, tInfo.roundNum, pn, cands, tInfo.serial, collegeName, electionYear, collegeLogo, tInfo.supervisorName, tInfo.roomName, isRecount);
         });
@@ -623,19 +968,55 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         showToast('No dossier documents generated.', 'warning');
         return;
       }
-      const title = postFilter === 'all' 
+      const title = activePostFilter === 'all' 
         ? (isRecount ? 'Complete Recount Dossier - All Posts' : 'Complete Counting Dossier') 
-        : (isRecount ? `Recount Dossier - ${postFilter}` : `Counting Dossier - ${postFilter}`);
+        : (isRecount ? `Recount Dossier - ${activePostFilter}` : `Counting Dossier - ${activePostFilter}`);
       triggerCountingPrint(html, title, collegeLogo, orientation);
     };
 
     main.querySelector('#btnPrintPackage')?.addEventListener('click', () => {
-      executePrintPackage(selPostPrint.value);
+      executePrintPackage();
     });
 
-    // ── Quick Print Buttons per Post ─────────────────────────────────────────
+    // ── 1-Click Direct Print Handlers on Matrix Table ───────────────────────
+    // Round Header 1-click batch print
+    main.querySelectorAll('.btn-print-round-header').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const rNum = btn.dataset.round;
+        if (selRoundPrint) selRoundPrint.value = rNum;
+        if (selBoothPrint) selBoothPrint.value = 'all';
+        updatePrintScopeUI();
+        executePrintForms({ roundFilter: rNum, boothFilter: 'all', postFilter: 'all' });
+      });
+    });
+
+    // Table Row 1-click table packet print
+    main.querySelectorAll('.btn-print-table-row').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const bNum = btn.dataset.table;
+        if (selBoothPrint) selBoothPrint.value = bNum;
+        if (selRoundPrint) selRoundPrint.value = 'all';
+        updatePrintScopeUI();
+        executePrintForms({ boothFilter: bNum, roundFilter: 'all', postFilter: 'all' });
+      });
+    });
+
+    // Single Matrix Cell 1-click single form print
+    main.querySelectorAll('.btn-print-matrix-cell').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const bNum = btn.dataset.table;
+        const rNum = btn.dataset.round;
+        const postName = btn.dataset.post;
+        executePrintForms({ boothFilter: bNum, roundFilter: rNum, postFilter: postName });
+      });
+    });
+
+    // ── Quick Print Buttons per Post Directory ──────────────────────────────
     main.querySelectorAll('.quick-print-forms').forEach(btn => {
-      btn.addEventListener('click', () => executePrintForms(btn.dataset.post));
+      btn.addEventListener('click', () => executePrintForms({ postFilter: btn.dataset.post, boothFilter: 'all', roundFilter: 'all' }));
     });
     main.querySelectorAll('.quick-print-tab').forEach(btn => {
       btn.addEventListener('click', () => executePrintConsolidation(btn.dataset.post));
@@ -652,6 +1033,127 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     main.querySelectorAll('.quick-print-dossier').forEach(btn => {
       btn.addEventListener('click', () => executePrintPackage(btn.dataset.post));
     });
+
+    // ── Specific Forms Picker Modal Logic ────────────────────────────────────
+    const modalSpecific = main.querySelector('#modalSpecificForms');
+    const inputModalSearch = main.querySelector('#inputSearchModalForms');
+    const modalCountEl = main.querySelector('#modalCountSelected');
+
+    const updateModalSelectionCount = () => {
+      if (!modalSpecific || !modalCountEl) return;
+      const checkedCount = modalSpecific.querySelectorAll('.chk-modal-form:checked').length;
+      modalCountEl.textContent = checkedCount;
+    };
+
+    const openSpecificModal = () => {
+      if (!modalSpecific) return;
+      modalSpecific.classList.remove('hidden');
+
+      // Pre-select based on active toolbar filters if any
+      const curBooth = selBoothPrint?.value || 'all';
+      const curRound = selRoundPrint?.value || 'all';
+      const curPost = selPostPrint?.value || 'all';
+
+      modalSpecific.querySelectorAll('.modal-form-item').forEach(item => {
+        const chk = item.querySelector('.chk-modal-form');
+        if (!chk) return;
+        const t = item.dataset.table;
+        const r = item.dataset.round;
+        const s = item.dataset.search || '';
+
+        const matchTable = curBooth === 'all' || String(t) === String(curBooth);
+        const matchRound = curRound === 'all' || String(r) === String(curRound);
+        const matchPost = curPost === 'all' || s.includes(curPost.toLowerCase());
+
+        chk.checked = matchTable && matchRound && matchPost;
+      });
+
+      if (inputModalSearch) {
+        inputModalSearch.value = '';
+        modalSpecific.querySelectorAll('.modal-form-item').forEach(i => i.classList.remove('hidden'));
+        inputModalSearch.focus();
+      }
+      updateModalSelectionCount();
+    };
+
+    const closeSpecificModal = () => {
+      if (modalSpecific) modalSpecific.classList.add('hidden');
+    };
+
+    main.querySelector('#btnOpenFormPicker')?.addEventListener('click', openSpecificModal);
+    main.querySelector('#btnCloseSpecificModal')?.addEventListener('click', closeSpecificModal);
+    main.querySelector('#btnCancelSpecificModal')?.addEventListener('click', closeSpecificModal);
+
+    // Search filter inside modal
+    inputModalSearch?.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      modalSpecific?.querySelectorAll('.modal-form-item').forEach(item => {
+        const text = item.dataset.search || '';
+        item.classList.toggle('hidden', Boolean(q && !text.includes(q)));
+      });
+    });
+
+    // Modal Select All / Clear All
+    main.querySelector('#btnModalSelectAll')?.addEventListener('click', () => {
+      modalSpecific?.querySelectorAll('.modal-form-item:not(.hidden) .chk-modal-form').forEach(chk => {
+        chk.checked = true;
+      });
+      updateModalSelectionCount();
+    });
+
+    main.querySelector('#btnModalClearAll')?.addEventListener('click', () => {
+      modalSpecific?.querySelectorAll('.chk-modal-form').forEach(chk => {
+        chk.checked = false;
+      });
+      updateModalSelectionCount();
+    });
+
+    // Modal Toggle by Round pills
+    main.querySelectorAll('.btn-modal-toggle-round').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const rNum = btn.dataset.round;
+        const matchingChks = modalSpecific?.querySelectorAll(`.modal-form-item[data-round="${rNum}"] .chk-modal-form`) || [];
+        const allChecked = Array.from(matchingChks).every(c => c.checked);
+        matchingChks.forEach(c => { c.checked = !allChecked; });
+        updateModalSelectionCount();
+      });
+    });
+
+    // Modal Toggle by Table pills
+    main.querySelectorAll('.btn-modal-toggle-table').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tNum = btn.dataset.table;
+        const matchingChks = modalSpecific?.querySelectorAll(`.modal-form-item[data-table="${tNum}"] .chk-modal-form`) || [];
+        const allChecked = Array.from(matchingChks).every(c => c.checked);
+        matchingChks.forEach(c => { c.checked = !allChecked; });
+        updateModalSelectionCount();
+      });
+    });
+
+    // Checkbox change listener
+    modalSpecific?.querySelectorAll('.chk-modal-form').forEach(chk => {
+      chk.addEventListener('change', updateModalSelectionCount);
+    });
+
+    // Confirm Print Selected Forms from Modal
+    main.querySelector('#btnConfirmPrintSpecific')?.addEventListener('click', () => {
+      const selectedKeys = new Set();
+      modalSpecific?.querySelectorAll('.chk-modal-form:checked').forEach(chk => {
+        const key = chk.dataset.key;
+        if (key) selectedKeys.add(key);
+      });
+
+      if (!selectedKeys.size) {
+        showToast('Please select at least one form to print.', 'warning');
+        return;
+      }
+
+      closeSpecificModal();
+      executePrintForms({ specificKeys: selectedKeys, collateOrder: selCollatePrint?.value || 'table' });
+    });
+
+    // Initial calculation of print labels & hints
+    updatePrintScopeUI();
 
     // Matrix Regenerate listeners
     main.querySelector('#btnRegenerate')?.addEventListener('click', () => {
