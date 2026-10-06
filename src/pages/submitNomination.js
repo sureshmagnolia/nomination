@@ -650,11 +650,49 @@ function runValidation(formArea, isAdminDirect = false) {
     candidateErrors.push(...candIssues);
   }
 
-  // Candidate Duplicate Nomination for same post
+  // Candidate Prior Online Generation / Physical Receipt Notice (Informational only - Does NOT bar generation)
   if (cS) {
-    const dupCandThisPost = existingNominations.find(n => n.post === postName && n.status !== 'Rejected' && String(n.candidateSerial) === cS);
-    if (dupCandThisPost) {
-      candidateErrors.push(`Candidate (#${cS}) has already submitted a nomination for "${postName}". Multiple nominations for the same post are not permitted.`);
+    const physReceivedNom = existingNominations.find(n => 
+      n.post === postName && 
+      (n.physicalReceived === true || n.physical_received === true) &&
+      n.status !== 'Rejected' && 
+      String(n.candidateSerial) === cS
+    );
+    const onlineGeneratedNom = existingNominations.find(n => 
+      n.post === postName && 
+      n.status !== 'Rejected' && 
+      String(n.candidateSerial) === cS
+    );
+
+    if (physReceivedNom) {
+      infoNotices.push(`ℹ️ Notice: An official nomination for this candidate was already received by the Returning Officer. You may generate another copy if required for corrections or records.`);
+    } else if (onlineGeneratedNom) {
+      infoNotices.push(`ℹ️ Notice: A nomination form was previously generated online for this candidate for "${postName}". You are permitted to generate again. Please note that online generation is only a preparatory draft; the nomination becomes official only upon physical submission of the signed hard copy to the Returning Officer.`);
+    }
+  }
+
+  // Endorser Prior Online Generation Check (Informational Only - Does NOT bar generation)
+  if (pS) {
+    const unconfirmedPropNom = existingNominations.find(n => 
+      n.post === postName && 
+      !(n.physicalReceived === true || n.physical_received === true) &&
+      n.status !== 'Rejected' && 
+      String(n.proposerSerial) === pS
+    );
+    if (unconfirmedPropNom) {
+      infoNotices.push(`ℹ️ Notice: The Proposer (Sl #${pS}) was referenced in a previously generated online draft for "${postName}". Generating this nomination is permitted as only physically received papers are recognized.`);
+    }
+  }
+
+  if (sS) {
+    const unconfirmedSecNom = existingNominations.find(n => 
+      n.post === postName && 
+      !(n.physicalReceived === true || n.physical_received === true) &&
+      n.status !== 'Rejected' && 
+      String(n.seconderSerial) === sS
+    );
+    if (unconfirmedSecNom) {
+      infoNotices.push(`ℹ️ Notice: The Seconder (Sl #${sS}) was referenced in a previously generated online draft for "${postName}". Generating this nomination is permitted as only physically received papers are recognized.`);
     }
   }
 
@@ -672,10 +710,15 @@ function runValidation(formArea, isAdminDirect = false) {
 
   // Check for multi-submissions across different posts (Informational flag - allowed)
   if (cS) {
-    const candOther = existingNominations.filter(n => n.status !== 'Rejected' && String(n.candidateSerial) === cS && n.post !== postName);
+    const candOther = existingNominations.filter(n => 
+      n.status !== 'Rejected' && 
+      (n.physicalReceived === true || n.physical_received === true) &&
+      String(n.candidateSerial) === cS && 
+      n.post !== postName
+    );
     if (candOther.length > 0) {
       const postsList = candOther.map(n => `"${n.post}"`).join(', ');
-      infoNotices.push(`🚩 MULTI-POST CANDIDACY: Candidate (#${cS}) has also submitted nomination for: ${postsList}. Statutory Rule: The candidate MUST withdraw from all but one post before withdrawal deadline; otherwise ALL nominations will be CANCELLED!`);
+      infoNotices.push(`🚩 MULTI-POST CANDIDACY: Candidate (#${cS}) has physically submitted nominations for: ${postsList}. Statutory Rule: The candidate MUST withdraw from all but one post before withdrawal deadline; otherwise ALL nominations will be CANCELLED!`);
     }
   }
 

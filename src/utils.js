@@ -156,18 +156,19 @@ export function checkEligibility(student, postName, role, gender = null, allPost
   // Find the rule for this post
   const rule = allPosts.find(p => p.post === postName) || {};
 
-  // 1. Multi-Proposing/Seconding Check (ONLY for Proposer/Seconder on the SAME post)
+  // 1. Multi-Proposing/Seconding Check (ONLY against officially physically received nominations)
   if (role === 'Proposer' || role === 'Seconder') {
-    const dupNom = existingNominations.find(n => 
+    const physicallyReceivedNom = existingNominations.find(n => 
       n.post === postName && 
+      (n.physicalReceived === true || n.physical_received === true) &&
       n.status !== 'Rejected' && 
       (String(n.proposerSerial) === serial || String(n.seconderSerial) === serial)
     );
-    if (dupNom) {
+    if (physicallyReceivedNom) {
       const studentName = student['NAME'] || student.name || `Student #${serial}`;
-      const candName = dupNom.candidateName || (dupNom.candidate && dupNom.candidate.NAME) || 'another candidate';
-      const endorseRole = String(dupNom.proposerSerial) === serial ? 'proposed' : 'seconded';
-      warnings.push(`Student "${studentName}" (Sl #${serial}) has already ${endorseRole} candidate "${candName}" for the post of "${postName}". A student can propose or second only 1 candidate for a post.`);
+      const candName = physicallyReceivedNom.candidateName || (physicallyReceivedNom.candidate && physicallyReceivedNom.candidate.NAME) || 'another candidate';
+      const endorseRole = String(physicallyReceivedNom.proposerSerial) === serial ? 'proposed' : 'seconded';
+      warnings.push(`Statutory Endorsement Conflict: Student "${studentName}" (Sl #${serial}) has already ${endorseRole} an officially received nomination for "${candName}" for "${postName}". An elector can endorse only 1 candidate for a post.`);
     }
   }
 

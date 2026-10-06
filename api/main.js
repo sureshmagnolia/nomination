@@ -360,10 +360,10 @@ async function ensureSchema() {
     try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS physical_received BOOLEAN DEFAULT false;`; } catch (_) {}
     try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS physical_received_at TIMESTAMP;`; } catch (_) {}
     try { await sql`ALTER TABLE backup_snapshots ADD COLUMN IF NOT EXISTS created_at VARCHAR(100);`; } catch (_) {}
-    // Allow candidates to submit nominations for different posts:
-    // Drop single-post unique index if present and enforce uniqueness per (candidate_serial, post)
+    // Allow candidates to generate nominations without unique constraint lockouts
+    // (Physical submission to the Returning Officer determines official receipt)
     try { await sql`DROP INDEX IF EXISTS unq_candidate_active;`; } catch (_) {}
-    try { await sql`CREATE UNIQUE INDEX IF NOT EXISTS unq_candidate_post_active ON nominations (candidate_serial, post) WHERE status != 'Rejected';`; } catch (_) {}
+    try { await sql`DROP INDEX IF EXISTS unq_candidate_post_active;`; } catch (_) {}
     
     await sql`
       CREATE TABLE IF NOT EXISTS nominal_roll (
@@ -783,9 +783,9 @@ export default async function handler(req, res) {
       `;
       try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS physical_received BOOLEAN DEFAULT false;`; } catch (_) {}
       try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS physical_received_at TIMESTAMP;`; } catch (_) {}
-      // unq_candidate_active dropped to allow nominations across multiple posts; uniqueness enforced per (candidate_serial, post)
+      // Uniqueness constraints dropped so students are not barred by unauthorized or draft online generation attempts
       try { await sql`DROP INDEX IF EXISTS unq_candidate_active;`; } catch (_) {}
-      await sql`CREATE UNIQUE INDEX IF NOT EXISTS unq_candidate_post_active ON nominations (candidate_serial, post) WHERE status != 'Rejected'`;
+      try { await sql`DROP INDEX IF EXISTS unq_candidate_post_active;`; } catch (_) {}
       await sql`
         CREATE TABLE IF NOT EXISTS roll_corrections (
           id VARCHAR(64) PRIMARY KEY,
@@ -906,9 +906,14 @@ export default async function handler(req, res) {
     // ─── GET ENDPOINTS ────────────────────────────────────────────────────────
 
     if (action === 'getPublicNominations') {
-      const noms = await sql`SELECT post, candidate_serial, proposer_serial, seconder_serial, status FROM nominations WHERE status != 'Rejected'`;
+      const noms = await sql`SELECT post, candidate_serial, proposer_serial, seconder_serial, status, physical_received FROM nominations WHERE status != 'Rejected'`;
       return jsonOut(res, noms.map(n => ({
-        post: n.post, candidateSerial: n.candidate_serial, proposerSerial: n.proposer_serial, seconderSerial: n.seconder_serial, status: n.status
+        post: n.post, 
+        candidateSerial: n.candidate_serial, 
+        proposerSerial: n.proposer_serial, 
+        seconderSerial: n.seconder_serial, 
+        status: n.status,
+        physicalReceived: n.physical_received === true || n.physical_received === 'true'
       })));
     }
     
@@ -1932,11 +1937,9 @@ All students are directed to strictly adhere to the University Code of Conduct, 
         return errOut(res, 'Authentication Failed: Invalid Admission Number for Candidate.');
       }
 
-      // Candidate cannot submit more than 1 nomination for the same post
-      const existing = await sql`SELECT post, candidate_serial, proposer_serial, seconder_serial, candidate_name, proposer_name, seconder_name FROM nominations WHERE status != 'Rejected'`;
-      if (existing.some(n => n.candidate_serial === body.candidateSerial && n.post === body.post)) {
-        return errOut(res, 'Candidate has already submitted a nomination for this specific post.');
-      }
+      // Check if previous nomination forms exist for this candidate/post (informational; physical copy determines real submission)
+      const existing = await sql`SELECT post, candidate_serial, proposer_serial, seconder_serial, candidate_name, proposer_name, seconder_name, physical_received FROM nominations WHERE status != 'Rejected'`;
+      const prevGenerated = existing.some(n => n.candidate_serial === body.candidateSerial && n.post === body.post);
 
       // Fetch Proposer and Seconder from nominal roll (fallback to non-voter placeholder if not enrolled)
       const prop = await sql`SELECT * FROM nominal_roll WHERE serial_number = ${body.proposerSerial}`;
@@ -2008,7 +2011,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
           ${secData.name}, ${secData.class}, ${secData.admission_no}, ${secData.dept}
         )
       `;
-      return jsonOut(res, { ok: true, id });
+      return jsonOut(res, { ok: true, id, alreadyGenerated: prevGenerated });
     }
 
     if (action === 'submitWithdrawal') {

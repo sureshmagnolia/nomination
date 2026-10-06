@@ -57,6 +57,26 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
   const violations = [];
   if (!nom) return violations;
 
+  const isPhys = nom.physicalReceived === true || nom.physicalReceived === 'true' || nom.physical_received === true || nom.physical_received === 'true';
+
+  // Real Submissions: only nominations that have been physically received and not rejected count as actual submissions
+  const realSubmissions = allNominations.filter(n =>
+    n && n.id !== nom.id &&
+    (n.physicalReceived === true || n.physicalReceived === 'true' || n.physical_received === true || n.physical_received === 'true') &&
+    n.status !== 'Rejected'
+  );
+
+  // If this nomination is an online generation attempt only, flag an informational status (not a barring error)
+  if (!isPhys) {
+    violations.push({
+      type: 'AWAITING_PHYSICAL_INTAKE',
+      severity: 'info',
+      badgeLabel: 'Draft Only',
+      shortBadge: 'Draft Only',
+      message: 'Online generation attempt only. Physical signed paper has not yet been received or confirmed by the Returning Officer.'
+    });
+  }
+
   const postRule = allPosts.find(p => p.post === nom.post) || {};
   let cCls = String(nom.candidateClass || nom.candidate?.CLASS || '').toUpperCase();
   let cDept = String(nom.candidateDept || nom.candidate?.Dept || '').toUpperCase();
@@ -361,11 +381,11 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
     });
   }
 
-  // 7. Duplicate Proposer / Seconder Endorsements on the SAME post (RED)
-  const otherNominationsForPost = allNominations.filter(n => n.id !== nom.id && n.post === nom.post && n.status !== 'Rejected');
+  // 7. Duplicate Proposer / Seconder Endorsements on the SAME post (Evaluated ONLY against Physically Received nominations)
+  const otherRealSubmissionsForPost = realSubmissions.filter(n => n.post === nom.post);
   
   if (pSerial || pAdm) {
-    const dupProp = otherNominationsForPost.find(n => 
+    const dupProp = otherRealSubmissionsForPost.find(n => 
       (pSerial && (String(n.proposerSerial) === pSerial || String(n.seconderSerial) === pSerial)) ||
       (pAdm && (String(n.proposerAdmission).trim().toLowerCase() === pAdm || String(n.seconderAdmission).trim().toLowerCase() === pAdm))
     );
@@ -373,13 +393,13 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
       violations.push({
         type: 'DUPLICATE_PROPOSER_ENDORSEMENT',
         severity: 'error',
-        message: `🚩 Proposer (Sl #${pSerial || '–'}, ${pName}) has already endorsed nomination #${dupProp.id} (${dupProp.candidateName || dupProp.candidate?.NAME || 'Candidate'}) for this same post ("${nom.post}"). A student can endorse only 1 candidate for the same post.`
+        message: `🚩 Proposer (Sl #${pSerial || '–'}, ${pName}) has already endorsed physically received nomination #${dupProp.id} (${dupProp.candidateName || dupProp.candidate?.NAME || 'Candidate'}) for this same post ("${nom.post}"). A student can endorse only 1 candidate for the same post.`
       });
     }
   }
 
   if (sSerial || sAdm) {
-    const dupSec = otherNominationsForPost.find(n => 
+    const dupSec = otherRealSubmissionsForPost.find(n => 
       (sSerial && (String(n.proposerSerial) === sSerial || String(n.seconderSerial) === sSerial)) ||
       (sAdm && (String(n.proposerAdmission).trim().toLowerCase() === sAdm || String(n.seconderAdmission).trim().toLowerCase() === sAdm))
     );
@@ -387,22 +407,42 @@ export function getNominationRuleViolations(nom, allPosts = [], allNominations =
       violations.push({
         type: 'DUPLICATE_SECONDER_ENDORSEMENT',
         severity: 'error',
-        message: `🚩 Seconder (Sl #${sSerial || '–'}, ${sName}) has already endorsed nomination #${dupSec.id} (${dupSec.candidateName || dupSec.candidate?.NAME || 'Candidate'}) for this same post ("${nom.post}"). A student can endorse only 1 candidate for the same post.`
+        message: `🚩 Seconder (Sl #${sSerial || '–'}, ${sName}) has already endorsed physically received nomination #${dupSec.id} (${dupSec.candidateName || dupSec.candidate?.NAME || 'Candidate'}) for this same post ("${nom.post}"). A student can endorse only 1 candidate for the same post.`
       });
     }
   }
 
-  // 8. Multi-Post Candidacy (FLAGGED IN RED WITH STATUTORY CANCELLATION WARNING)
-  const otherCandidatures = allNominations.filter(n => n.id !== nom.id && n.status !== 'Rejected' && (
+  // 8. Multi-Post Candidacy (Evaluated ONLY against Physically Received nominations)
+  const otherRealCandidatures = realSubmissions.filter(n => 
     (cSerial && String(n.candidateSerial) === cSerial) ||
     (cAdm && String(n.candidateAdmission).trim().toLowerCase() === cAdm)
-  ));
-  if (otherCandidatures.length > 0) {
-    const otherPosts = otherCandidatures.map(n => `"${n.post}" (#${n.id})`).join(', ');
+  );
+  if (otherRealCandidatures.length > 0) {
+    const otherPosts = otherRealCandidatures.map(n => `"${n.post}" (#${n.id})`).join(', ');
     violations.push({
       type: 'MULTIPLE_CANDIDACY',
       severity: 'error',
-      message: `🚩 MULTI-POST CANDIDACY: Candidate has filed nominations for ${otherCandidatures.length + 1} posts ("${nom.post}", ${otherPosts}). Statutory Rule: The candidate MUST withdraw from all but one post before withdrawal deadline; otherwise ALL nominations will be CANCELLED!`
+      message: `🚩 MULTI-POST CANDIDACY: Candidate has physically submitted nominations for ${otherRealCandidatures.length + (isPhys ? 1 : 0)} posts (${isPhys ? `"${nom.post}", ` : ''}${otherPosts}). Statutory Rule: The candidate MUST withdraw from all but one post before withdrawal deadline; otherwise ALL nominations will be CANCELLED!`
+    });
+  }
+
+  // 9. Duplicate Physical Submissions for the exact same post
+  const samePostRealSubmissions = realSubmissions.filter(n => 
+    n.post === nom.post && (
+      (cSerial && String(n.candidateSerial) === cSerial) ||
+      (cAdm && String(n.candidateAdmission).trim().toLowerCase() === cAdm)
+    )
+  );
+  if (samePostRealSubmissions.length > 0) {
+    const dupIds = samePostRealSubmissions.map(n => `#${n.id}`).join(', ');
+    violations.push({
+      type: 'DUPLICATE_CANDIDATE_SUBMISSION',
+      severity: isPhys ? 'error' : 'info',
+      badgeLabel: isPhys ? 'Duplicate Intake' : 'Prior Physical Exists',
+      shortBadge: isPhys ? 'Duplicate' : 'Draft',
+      message: isPhys 
+        ? `🚩 DUPLICATE PHYSICAL SUBMISSION: Another nomination (${dupIds}) has already been physically received for this candidate for "${nom.post}". Only 1 physical nomination can be accepted per candidate per post.`
+        : `ℹ️ Notice: A nomination (${dupIds}) has already been physically received for this candidate for "${nom.post}". This unconfirmed online draft is superfluous.`
     });
   }
 
@@ -1018,16 +1058,24 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         <!-- Flags & Alerts (Styled in RED) -->
         <td class="py-2 px-2 text-xs">
           ${(() => {
-            if (violations.length === 0) {
+            const actionableViolations = violations.filter(v => v.severity !== 'info');
+            if (actionableViolations.length === 0) {
+              if (!isPhysical) {
+                return `
+                  <span class="badge bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px] px-1.5 py-0.5 inline-flex items-center gap-1 font-medium" title="Online draft paper only. Physical copy not yet received by RO.">
+                    <span>⏳</span> Draft Only
+                  </span>
+                `;
+              }
               return `
                 <span class="badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] px-1.5 py-0.5 inline-flex items-center gap-1 font-medium">
                   <span>✓</span> Clear
                 </span>
               `;
             }
-            const multiCand = violations.find(v => v.type === 'MULTIPLE_CANDIDACY');
-            const ageViolation = violations.find(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'));
-            const endorserIssues = violations.filter(v => 
+            const multiCand = actionableViolations.find(v => v.type === 'MULTIPLE_CANDIDACY');
+            const ageViolation = actionableViolations.find(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'));
+            const endorserIssues = actionableViolations.filter(v => 
               v.type === 'NON_VOTER_PROPOSER' || 
               v.type === 'NON_VOTER_SECONDER' || 
               v.type.startsWith('YEAR_PROPOSER') || 
@@ -1057,8 +1105,8 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
                     <span>🚩 Ineligible Endorser (${endorserIssues.length})</span>
                   </button>
                 ` : ''}
-                <button type="button" class="view-nom-btn badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] px-1.5 py-0.5 font-bold inline-flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(violations.map(v => v.message).join(' | '))}">
-                  <span>⚠️ ${violations.length} ${violations.length === 1 ? 'Flag' : 'Flags'}</span>
+                <button type="button" class="view-nom-btn badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] px-1.5 py-0.5 font-bold inline-flex items-center gap-1 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(actionableViolations.map(v => v.message).join(' | '))}">
+                  <span>⚠️ ${actionableViolations.length} ${actionableViolations.length === 1 ? 'Flag' : 'Flags'}</span>
                 </button>
               </div>
             `;
@@ -1084,7 +1132,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
       const physCount = items.filter(n => n.physicalReceived === true || n.physicalReceived === 'true').length;
       const validCount = items.filter(n => n.status === 'Valid').length;
       const rejCount = items.filter(n => n.status === 'Rejected').length;
-      const flaggedCount = items.filter(n => getNominationRuleViolations(n, allPosts, allNoms, settings, allRoll).length > 0).length;
+      const flaggedCount = items.filter(n => getNominationRuleViolations(n, allPosts, allNoms, settings, allRoll).filter(v => v.severity !== 'info').length > 0).length;
 
       return `
       <tr class="post-group-header">
@@ -1271,15 +1319,23 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
               <!-- Scrutiny Audit & Violations in RED -->
               <div class="space-y-1.5">
                 ${(() => {
-                  if (violations.length === 0) {
+                  const actionableViolations = violations.filter(v => v.severity !== 'info');
+                  if (actionableViolations.length === 0) {
+                    if (!isPhysical) {
+                      return `
+                        <div class="badge bg-amber-500/10 text-amber-300 border border-amber-500/30 text-xs px-2.5 py-1 flex items-center justify-center gap-1.5 font-medium">
+                          <span>⏳</span> Online Draft Only (Awaiting Physical Intake)
+                        </div>
+                      `;
+                    }
                     return `
                       <div class="badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs px-2.5 py-1 flex items-center justify-center gap-1.5 font-medium">
                         <span>✓</span> All Statutory Rules Passed
                       </div>
                     `;
                   }
-                  const multiCand = violations.find(v => v.type === 'MULTIPLE_CANDIDACY');
-                  const ageViolation = violations.find(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'));
+                  const multiCand = actionableViolations.find(v => v.type === 'MULTIPLE_CANDIDACY');
+                  const ageViolation = actionableViolations.find(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'));
                   return `
                     ${multiCand ? `
                       <div class="text-xs text-rose-200 bg-rose-950/60 border border-rose-500/50 p-2.5 rounded-lg leading-relaxed shadow-sm">
@@ -1302,8 +1358,8 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
                         ${endorserIssues.map(ei => `<div class="text-[11px] leading-tight">• ${esc(ei.message)}</div>`).join('')}
                       </div>
                     ` : ''}
-                    <button type="button" class="view-nom-btn w-full badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs px-2.5 py-1.5 font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(violations.map(v => v.message).join(' | '))}">
-                      <span>⚠️ ${violations.length} Statutory Flag${violations.length > 1 ? 's' : ''} in RED</span>
+                    <button type="button" class="view-nom-btn w-full badge bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs px-2.5 py-1.5 font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors" data-id="${esc(n.id)}" title="${esc(actionableViolations.map(v => v.message).join(' | '))}">
+                      <span>⚠️ ${actionableViolations.length} Statutory Flag${actionableViolations.length > 1 ? 's' : ''} in RED</span>
                     </button>
                   `;
                 })()}
@@ -1513,18 +1569,21 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
       `;
     }
 
+    const actionableViolations = violations.filter(v => v.severity !== 'info');
+    const infoViolations = violations.filter(v => v.severity === 'info');
+
     let scrutinyHtml = '';
-    if (violations.length > 0) {
+    if (actionableViolations.length > 0) {
       scrutinyHtml += `
         <div class="rounded-xl border border-rose-500/50 bg-rose-950/60 p-4 space-y-2.5 shadow-lg">
           <div class="flex items-center justify-between border-b border-rose-500/30 pb-2">
             <div class="flex items-center gap-2 text-rose-300 font-bold text-sm">
-              <span class="text-base">⚠️</span> Rule Violations & Scrutiny Warnings in RED (${violations.length})
+              <span class="text-base">⚠️</span> Rule Violations & Scrutiny Warnings in RED (${actionableViolations.length})
             </div>
             <span class="badge bg-rose-500/30 text-rose-200 border border-rose-500/50 text-[10px] font-bold uppercase tracking-wider">Scrutiny Alert</span>
           </div>
           <div class="text-xs text-rose-200 space-y-2 pl-1">
-            ${violations.map(v => {
+            ${actionableViolations.map(v => {
               const isEndorser = v.type.includes('PROPOSER') || v.type.includes('SECONDER');
               return `
                 <div class="flex items-start gap-2 ${v.type === 'MULTIPLE_CANDIDACY' ? 'bg-rose-900/50 p-2.5 rounded-lg border border-rose-500/40 font-semibold' : isEndorser ? 'bg-rose-900/30 p-2 rounded-lg border border-rose-500/30' : ''}">
@@ -1546,6 +1605,16 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
             <span><strong>Statutory Scrutiny Passed:</strong> Candidate satisfies all eligibility criteria, age limits, gender, year-level, and endorsement rules.</span>
           </div>
           <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold shrink-0">ALL RULES PASSED</span>
+        </div>`;
+    }
+
+    if (infoViolations.length > 0) {
+      scrutinyHtml += `
+        <div class="rounded-xl border border-amber-500/30 bg-amber-950/30 p-3 space-y-1.5 text-xs text-amber-200 shadow-sm mt-2">
+          <div class="flex items-center gap-2 font-bold text-amber-300">
+            <span>ℹ️</span> <span>Submission Status Notice</span>
+          </div>
+          ${infoViolations.map(iv => `<div>• ${esc(iv.message)}</div>`).join('')}
         </div>`;
     }
 
@@ -1631,6 +1700,7 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
       // 2. Status / Feature Filter
       const violations = getNominationRuleViolations(n, allPosts, allNoms, settings, allRoll);
       const isPhys = n.physicalReceived === true || n.physicalReceived === 'true';
+      const actionableViolations = violations.filter(v => v.severity !== 'info');
 
       const isEndorserIssue = (vList) => vList.some(v => 
         v.type === 'NON_VOTER_PROPOSER' || 
@@ -1649,30 +1719,30 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
       if (activeTab === 'intake') {
         if (s === 'received' && !isPhys) return false;
         if (s === 'awaiting' && isPhys) return false;
-        if (s === 'age_bar' && !violations.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'))) return false;
-        if (s === 'multi' && !violations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
-        if (s === 'violations' && violations.length === 0) return false;
-        if (s === 'endorser' && !isEndorserIssue(violations)) return false;
+        if (s === 'age_bar' && !actionableViolations.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'))) return false;
+        if (s === 'multi' && !actionableViolations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
+        if (s === 'violations' && actionableViolations.length === 0) return false;
+        if (s === 'endorser' && !isEndorserIssue(actionableViolations)) return false;
       } else if (activeTab === 'not_confirmed') {
-        if (s === 'age_bar' && !violations.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'))) return false;
-        if (s === 'multi' && !violations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
-        if (s === 'violations' && violations.length === 0) return false;
-        if (s === 'endorser' && !isEndorserIssue(violations)) return false;
+        if (s === 'age_bar' && !actionableViolations.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'))) return false;
+        if (s === 'multi' && !actionableViolations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
+        if (s === 'violations' && actionableViolations.length === 0) return false;
+        if (s === 'endorser' && !isEndorserIssue(actionableViolations)) return false;
       } else if (activeTab === 'scrutiny') {
-        if (s === 'age_bar' && !violations.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'))) return false;
-        if (s === 'violations' && violations.length === 0) return false;
-        if (s === 'multi' && !violations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
-        if (s === 'endorser' && !isEndorserIssue(violations)) return false;
-        if (s === 'passed' && violations.length > 0) return false;
+        if (s === 'age_bar' && !actionableViolations.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'))) return false;
+        if (s === 'violations' && actionableViolations.length === 0) return false;
+        if (s === 'multi' && !actionableViolations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
+        if (s === 'endorser' && !isEndorserIssue(actionableViolations)) return false;
+        if (s === 'passed' && actionableViolations.length > 0) return false;
         if (s !== 'all' && s !== 'violations' && s !== 'multi' && s !== 'endorser' && s !== 'passed' && s !== 'age_bar') {
           if (n.status !== s) return false;
         }
       } else if (activeTab === 'accepted' || activeTab === 'rejected') {
-        if (s === 'age_bar' && !violations.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'))) return false;
-        if (s === 'violations' && violations.length === 0) return false;
-        if (s === 'multi' && !violations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
-        if (s === 'endorser' && !isEndorserIssue(violations)) return false;
-        if (s === 'passed' && violations.length > 0) return false;
+        if (s === 'age_bar' && !actionableViolations.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT'))) return false;
+        if (s === 'violations' && actionableViolations.length === 0) return false;
+        if (s === 'multi' && !actionableViolations.some(v => v.type === 'MULTIPLE_CANDIDACY')) return false;
+        if (s === 'endorser' && !isEndorserIssue(actionableViolations)) return false;
+        if (s === 'passed' && actionableViolations.length > 0) return false;
       }
 
       // 3. Search Filter
@@ -1714,8 +1784,8 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
             diff = String(a.status || '').localeCompare(String(b.status || ''));
           }
         } else if (sortCol === 'flags') {
-          const vA = getNominationRuleViolations(a, allPosts, allNoms, settings, allRoll).length;
-          const vB = getNominationRuleViolations(b, allPosts, allNoms, settings, allRoll).length;
+          const vA = getNominationRuleViolations(a, allPosts, allNoms, settings, allRoll).filter(v => v.severity !== 'info').length;
+          const vB = getNominationRuleViolations(b, allPosts, allNoms, settings, allRoll).filter(v => v.severity !== 'info').length;
           diff = vB - vA;
         }
         return sortAsc ? diff : -diff;
@@ -1742,8 +1812,8 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         });
       } else if (arrangeMode === 'flags') {
         filtered.sort((a, b) => {
-          const vA = getNominationRuleViolations(a, allPosts, allNoms, settings, allRoll);
-          const vB = getNominationRuleViolations(b, allPosts, allNoms, settings, allRoll);
+          const vA = getNominationRuleViolations(a, allPosts, allNoms, settings, allRoll).filter(v => v.severity !== 'info');
+          const vB = getNominationRuleViolations(b, allPosts, allNoms, settings, allRoll).filter(v => v.severity !== 'info');
           const multiA = vA.some(v => v.type === 'MULTIPLE_CANDIDACY') ? 1 : 0;
           const multiB = vB.some(v => v.type === 'MULTIPLE_CANDIDACY') ? 1 : 0;
           if (multiA !== multiB) return multiB - multiA;
@@ -1755,8 +1825,8 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
         });
       } else if (arrangeMode === 'age_bar') {
         filtered.sort((a, b) => {
-          const vA = getNominationRuleViolations(a, allPosts, allNoms, settings, allRoll);
-          const vB = getNominationRuleViolations(b, allPosts, allNoms, settings, allRoll);
+          const vA = getNominationRuleViolations(a, allPosts, allNoms, settings, allRoll).filter(v => v.severity !== 'info');
+          const vB = getNominationRuleViolations(b, allPosts, allNoms, settings, allRoll).filter(v => v.severity !== 'info');
           const ageA = vA.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT')) ? 1 : 0;
           const ageB = vB.some(v => v.type.startsWith('AGE_OVER_LIMIT') || v.type.startsWith('AGE_LIMIT')) ? 1 : 0;
           if (ageA !== ageB) return ageB - ageA;
@@ -1958,8 +2028,14 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
     const origText = btnValid.innerHTML;
     btnValid.innerHTML = '<span class="spinner" style="width:1rem;height:1rem;border-width:2px;"></span> Validating...';
     try {
-      await api.adminVerifyNomination(pwd, id, 'Valid');
       const nom = allNoms.find(n => n.id === id);
+      const isPhysical = nom && (nom.physicalReceived === true || nom.physicalReceived === 'true');
+      if (nom && !isPhysical) {
+        await api.adminTogglePhysicalReceipt(pwd, id, true).catch(() => {});
+        nom.physicalReceived = true;
+        nom.physicalReceivedAt = new Date().toISOString();
+      }
+      await api.adminVerifyNomination(pwd, id, 'Valid');
       if (nom) {
         nom.status = 'Valid';
         nom.rejectionReason = null;
@@ -1980,7 +2056,11 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
     const id = currentDetailNomId;
     const nom = allNoms.find(n => n.id === id);
     const violations = getNominationRuleViolations(nom, allPosts, allNoms, settings, allRoll);
-    const defaultReason = violations.length > 0 ? violations[0].message : 'Serial number or eligibility requirement not met';
+    const actionableViolations = violations.filter(v => v.severity !== 'info');
+    const isPhysical = nom && (nom.physicalReceived === true || nom.physicalReceived === 'true');
+    const defaultReason = actionableViolations.length > 0 
+      ? actionableViolations[0].message 
+      : (!isPhysical ? 'Physical signed copy not submitted to Returning Officer' : 'Serial number or eligibility requirement not met');
 
     const reason = prompt(`Please enter the statutory reason for rejecting Nomination #${id}:`, defaultReason);
     if (reason === null) return;
@@ -2106,7 +2186,11 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
     if (status === 'Rejected') {
       const nom = allNoms.find(n => String(n.id) === String(id));
       const violations = getNominationRuleViolations(nom, allPosts, allNoms, settings, allRoll);
-      const defaultReason = violations.length > 0 ? violations[0].message : 'Serial number or eligibility requirement not met';
+      const actionableViolations = violations.filter(v => v.severity !== 'info');
+      const isPhysical = nom && (nom.physicalReceived === true || nom.physicalReceived === 'true');
+      const defaultReason = actionableViolations.length > 0 
+        ? actionableViolations[0].message 
+        : (!isPhysical ? 'Physical signed copy not submitted to Returning Officer' : 'Serial number or eligibility requirement not met');
       reason = prompt(`Please enter the statutory reason for rejecting Nomination #${id}:`, defaultReason);
       if (reason === null) return;
       reason = reason.trim() || 'Scrutiny criteria not satisfied';
@@ -2117,8 +2201,14 @@ function renderVerifyTable(main, noms, pwd, settings = {}, posts = [], nominalRo
     btn.innerHTML = '<span class="spinner" style="width:1rem;height:1rem;border-width:2px;"></span>';
     
     try {
-      await api.adminVerifyNomination(pwd, id, status, reason);
       const nom = allNoms.find(n => String(n.id) === String(id));
+      const isPhysical = nom && (nom.physicalReceived === true || nom.physicalReceived === 'true');
+      if (status === 'Valid' && nom && !isPhysical) {
+        await api.adminTogglePhysicalReceipt(pwd, id, true).catch(() => {});
+        nom.physicalReceived = true;
+        nom.physicalReceivedAt = new Date().toISOString();
+      }
+      await api.adminVerifyNomination(pwd, id, status, reason);
       if (nom) {
         nom.status = status;
         nom.rejectionReason = status === 'Rejected' ? reason : null;
