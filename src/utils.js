@@ -318,7 +318,7 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
             padding: 0;
           }
           /* Reset dark theme classes to clean B&W for printing */
-          * { color: black !important; background: transparent !important; border-color: #333 !important; }
+          * { color: #000000 !important; background: transparent !important; border-color: #000000 !important; }
           .print-paper { width: 100%; margin: 0 auto; padding: 12px 16px 10px 16px; position: relative; }
           .watermark-global {
             position: fixed;
@@ -327,7 +327,8 @@ export function triggerPrint(htmlContent, title = 'Nomination Form', watermarkLo
             transform: translate(-50%, -50%);
             width: 450px;
             height: 450px;
-            opacity: 0.1;
+            opacity: 0.08;
+            filter: grayscale(100%);
             pointer-events: none;
             z-index: -1;
             background-size: contain;

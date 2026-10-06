@@ -2234,6 +2234,7 @@ export function triggerElectoralRollPrint(html) {
           .roll-table tr { page-break-inside: avoid; break-inside: avoid; height: 24px; }
           @media print {
             .no-print { display: none; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: #000000 !important; border-color: #000000 !important; }
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           }
         </style>
@@ -2449,7 +2450,7 @@ export function triggerBallotAccountPrint(html) {
           .stats-table th { background: #f2f2f2; font-size: 11px; text-transform: uppercase; font-weight: bold; }
           .footer { display: flex; justify-content: flex-end; margin-top: 30px; padding-right: 30px; }
           .sig-line { border-top: 1.5px solid #000; padding-top: 8px; width: 220px; text-align: center; font-size: 13px; font-weight: bold; }
-          @media print { .no-print { display: none; } .page-break { page-break-after: always; } }
+          @media print { .no-print { display: none; } .page-break { page-break-after: always; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: #000000 !important; border-color: #000000 !important; } }
         </style>
       </head>
       <body>${html}</body>

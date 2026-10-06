@@ -151,7 +151,6 @@ function renderList(main, nominations, year, shortName = null, allPosts = [], wi
                   <tr>
                     <th class="w-16">#</th>
                     <th>Candidate Details</th>
-                    <th>Department</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -168,7 +167,6 @@ function renderList(main, nominations, year, shortName = null, allPosts = [], wi
                           ${n.candidateAdmission ? `<span class="text-slate-500 font-mono">Adm: ${esc(n.candidateAdmission)}</span>` : ''}
                         </div>
                       </td>
-                      <td class="text-sm text-slate-400">${esc(n.candidateDept)}</td>
                     </tr>
                   `).join('')}
                 </tbody>

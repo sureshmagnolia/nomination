@@ -4319,6 +4319,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       line-height: 1.35;
     }
     @media print {
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color: #000000 !important;
+        border-color: #000000 !important;
+      }
       body {
         background: #ffffff !important;
         padding: 0 !important;
@@ -4463,7 +4469,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin: 2px 0 1px 0;
-      color: #064e3b;
+      color: #000000;
     }
     .order-sub {
       font-size: 9.5px;
@@ -5512,6 +5518,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       line-height: 1.35;
     }
     @media print {
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color: #000000 !important;
+        border-color: #000000 !important;
+      }
       body {
         background: #ffffff !important;
         padding: 0 !important;

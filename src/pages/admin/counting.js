@@ -799,16 +799,17 @@ function triggerCountingPrint(htmlContent, title = 'Counting Documents', college
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         font-size: 8pt;
         font-weight: bold;
-        color: #374151;
+        color: #000000;
       }
       @bottom-left {
         content: "College Union Election — Counting Record";
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         font-size: 7.5pt;
-        color: #6b7280;
+        color: #000000;
       }
     }
     @media print {
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: #000000 !important; border-color: #000000 !important; }
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       thead { display: table-header-group; }
       tr { page-break-inside: avoid; break-inside: avoid; }
@@ -821,7 +822,7 @@ function triggerCountingPrint(htmlContent, title = 'Counting Documents', college
     table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
     th, td { border: 1.5px solid #000; padding: 5px 6px; }
     th { background: #f3f4f6; }
-    .watermark-global { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 450px; height: 450px; opacity: 0.08; pointer-events: none; z-index: -1; background-size: contain; background-repeat: no-repeat; background-position: center; }
+    .watermark-global { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 450px; height: 450px; opacity: 0.08; filter: grayscale(100%); pointer-events: none; z-index: -1; background-size: contain; background-repeat: no-repeat; background-position: center; }
   </style></head><body>
     ${collegeLogo ? `<div class="watermark-global" style="background-image: url('${collegeLogo}');"></div>` : ''}
     ${htmlContent}

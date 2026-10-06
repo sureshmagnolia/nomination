@@ -143,7 +143,8 @@ export function printOfficialNotice(notice, settings = {}) {
       transform: translate(-50%, -50%);
       width: 450px;
       height: 450px;
-      opacity: 0.1;
+      opacity: 0.08;
+      filter: grayscale(100%);
       pointer-events: none;
       z-index: -1;
       background-size: contain;
@@ -281,6 +282,7 @@ export function printOfficialNotice(notice, settings = {}) {
       display: none;
     }
     @media print {
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: #000000 !important; border-color: #000000 !important; }
       body { margin: 0; padding: 0; height: 100vh; overflow: hidden; }
       .page-container { max-width: 100%; margin: 0; padding: 0; height: 100vh; page-break-after: avoid; }
       .signature-area { page-break-inside: avoid; }
@@ -487,13 +489,13 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
         font-family: Arial, sans-serif;
         font-size: 8.5pt;
         font-weight: bold;
-        color: #374151;
+        color: #000000;
       }
       @bottom-left {
         content: "College Union Election — Polling Booth Poster";
         font-family: Arial, sans-serif;
         font-size: 8pt;
-        color: #6b7280;
+        color: #000000;
       }
     }
     .watermark-global {
@@ -503,7 +505,8 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
       transform: translate(-50%, -50%);
       width: 450px;
       height: 450px;
-      opacity: 0.1;
+      opacity: 0.08;
+      filter: grayscale(100%);
       pointer-events: none;
       z-index: -1;
       background-size: contain;
@@ -656,7 +659,7 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
     .check-icon {
       font-size: 12px;
       font-weight: bold;
-      color: #059669;
+      color: #000000;
     }
     .class-text {
       font-size: 13px;
@@ -680,8 +683,8 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
       background: #fff;
     }
     .rules-box {
-      border: 1.5px solid #b91c1c;
-      background: #fef2f2;
+      border: 1.5px solid #000000;
+      background: #f9f9f9;
       border-radius: 6px;
       padding: 8px 10px;
       display: flex;
@@ -689,6 +692,7 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
       gap: 10px;
       margin-bottom: 10px;
       font-size: 11px;
+      color: #000000;
     }
     .rule-item {
       display: flex;
@@ -806,13 +810,13 @@ export function printCampusMasterDirectory(boothsList, settings = {}, schedule =
         font-family: Arial, sans-serif;
         font-size: 8.5pt;
         font-weight: bold;
-        color: #374151;
+        color: #000000;
       }
       @bottom-left {
         content: "College Union Election — Master Polling Directory";
         font-family: Arial, sans-serif;
         font-size: 8pt;
-        color: #6b7280;
+        color: #000000;
       }
     }
     .watermark-global {
@@ -822,7 +826,8 @@ export function printCampusMasterDirectory(boothsList, settings = {}, schedule =
       transform: translate(-50%, -50%);
       width: 450px;
       height: 450px;
-      opacity: 0.1;
+      opacity: 0.08;
+      filter: grayscale(100%);
       pointer-events: none;
       z-index: -1;
       background-size: contain;

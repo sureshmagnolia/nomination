@@ -861,16 +861,22 @@ export function executeRollPrint({
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
               font-size: 8.5pt;
               font-weight: 600;
-              color: #374151;
+              color: #000000;
             }
             @bottom-left {
               content: "${esc(collegeName)} — ${watermark}";
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
               font-size: 8pt;
-              color: #6b7280;
+              color: #000000;
             }
           }
           @media print {
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color: #000000 !important;
+              border-color: #000000 !important;
+            }
             body {
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;

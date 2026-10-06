@@ -43,15 +43,14 @@ export function exportNominationsToExcel(list = [], type = 'valid', options = {}
   const candidateRows = [
     [collegeName.toUpperCase()],
     [`COLLEGE UNION ELECTION ${year}`],
-    [isFinal ? 'FINAL LIST OF ELIGIBLE CONTESTING CANDIDATES' : 'LIST OF VALID NOMINATIONS'],
+    [isFinal ? 'FINAL LIST OF CANDIDATES' : 'LIST OF VALID NOMINATIONS'],
     [`Generated: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })} at ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`],
     [] // Blank row separator
   ];
 
-  const headers = ['Post', 'Sl. No.', 'Candidate Name', 'Roll Sl. No.', 'Admission No.', 'Class', 'Department'];
-  if (isFinal) {
-    headers.push('Remarks');
-  }
+  const headers = isFinal
+    ? ['Post', 'Sl. No.', 'Candidate Name', 'Roll Sl. No.', 'Admission No.', 'Class', 'Remarks']
+    : ['Post', 'Sl. No.', 'Candidate Name', 'Roll Sl. No.', 'Admission No.', 'Class', 'Department'];
   candidateRows.push(headers);
 
   let totalCandidateCount = 0;
@@ -61,7 +60,15 @@ export function exportNominationsToExcel(list = [], type = 'valid', options = {}
     const isUncontested = isFinal && noms.length === 1;
 
     if (noms.length === 0) {
-      const row = [
+      const row = isFinal ? [
+        post,
+        '–',
+        'NO VALID NOMINATIONS',
+        '–',
+        '–',
+        '–',
+        'NO VALID NOMINATIONS'
+      ] : [
         post,
         '–',
         'NO VALID NOMINATIONS',
@@ -70,9 +77,6 @@ export function exportNominationsToExcel(list = [], type = 'valid', options = {}
         '–',
         '–'
       ];
-      if (isFinal) {
-        row.push('NO VALID NOMINATIONS');
-      }
       candidateRows.push(row);
       return;
     }
@@ -88,7 +92,15 @@ export function exportNominationsToExcel(list = [], type = 'valid', options = {}
       const dept = n.candidateDept || n.candidate?.Dept || '–';
       const name = n.candidateName || n.candidate?.NAME || '–';
 
-      const row = [
+      const row = isFinal ? [
+        post,
+        idx + 1,
+        name,
+        sl,
+        adm,
+        cls,
+        isUncontested ? 'ELECTED UNOPPOSED' : 'CONTESTING'
+      ] : [
         post,
         idx + 1,
         name,
@@ -97,9 +109,6 @@ export function exportNominationsToExcel(list = [], type = 'valid', options = {}
         cls,
         dept
       ];
-      if (isFinal) {
-        row.push(isUncontested ? 'ELECTED UNOPPOSED' : 'CONTESTING');
-      }
       candidateRows.push(row);
     });
   });
@@ -113,15 +122,22 @@ export function exportNominationsToExcel(list = [], type = 'valid', options = {}
   const wsCandidates = XLSX.utils.aoa_to_sheet(candidateRows);
 
   // Column widths for readability
-  wsCandidates['!cols'] = [
+  wsCandidates['!cols'] = isFinal ? [
+    { wch: 34 }, // Post
+    { wch: 8 },  // Sl. No
+    { wch: 28 }, // Candidate Name
+    { wch: 14 }, // Roll Sl. No
+    { wch: 14 }, // Admission No
+    { wch: 20 }, // Class
+    { wch: 24 }  // Remarks
+  ] : [
     { wch: 34 }, // Post
     { wch: 8 },  // Sl. No
     { wch: 28 }, // Candidate Name
     { wch: 14 }, // Roll Sl. No
     { wch: 14 }, // Admission No
     { wch: 18 }, // Class
-    { wch: 22 }, // Department
-    ...(isFinal ? [{ wch: 22 }] : []) // Remarks
+    { wch: 22 }  // Department
   ];
 
   // 4. Build Sheet 2: Post Summary

@@ -1133,23 +1133,25 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           transform: translate(-50%, -50%);
           width: 500px;
           height: 500px;
-          opacity: 0.1;
+          opacity: 0.08;
+          filter: grayscale(100%);
           pointer-events: none;
           z-index: -1;
           background-size: contain;
           background-repeat: no-repeat;
           background-position: center;
         }
-        .header { text-align: center; border-bottom: 3px double #000; padding-bottom: 20px; margin-bottom: 30px; }
-        .header h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
-        .header h2 { margin: 5px 0 0 0; font-size: 16px; color: #444; font-weight: 600; }
-        .result-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
-        .result-table th, .result-table td { border: 1px solid #000; padding: 12px 10px; font-size: 13px; }
+        .header { text-align: center; border-bottom: 3px double #000; padding-bottom: 20px; margin-bottom: 25px; }
+        .header h1 { margin: 0; font-size: 22px; text-transform: uppercase; letter-spacing: 0.5px; color: #000; }
+        .header h2 { margin: 5px 0 0 0; font-size: 15px; color: #000; font-weight: 600; text-transform: uppercase; }
+        .post-group { page-break-inside: avoid !important; break-inside: avoid !important; margin-bottom: 14px !important; display: block !important; }
+        .result-table { width: 100%; border-collapse: collapse; page-break-inside: avoid !important; break-inside: avoid !important; }
+        .result-table th, .result-table td { border: 1px solid #000; padding: 7px 9px; font-size: 12px; color: #000; }
         .result-table th { background: #f2f2f2; text-align: left; text-transform: uppercase; font-size: 11px; }
-        .post-header { background: #f9f9f9; font-weight: bold; font-size: 14px; text-transform: uppercase; color: #000; }
-        .winner-row { background: #fafff9 !important; font-weight: bold; }
-        .footer { margin-top: 80px; display: flex; justify-content: space-between; align-items: flex-start; }
-        .sig-box { width: 250px; border-top: 1px solid #000; text-align: center; padding-top: 8px; font-size: 12px; font-weight: bold; margin-top: 40px; }
+        .post-header { background: #eaeaea; font-weight: bold; font-size: 13px; text-transform: uppercase; color: #000; padding: 9px 10px; border-bottom: 2px solid #000; }
+        .winner-row { background: #ffffff !important; font-weight: bold; }
+        .footer { margin-top: 40px; display: flex; justify-content: space-between; align-items: flex-start; page-break-inside: avoid !important; break-inside: avoid !important; }
+        .sig-box { width: 250px; border-top: 1px solid #000; text-align: center; padding-top: 8px; font-size: 12px; font-weight: bold; color: #000; margin-top: 30px; }
         @page {
           margin: 12mm 15mm 16mm 15mm;
           @bottom-right {
@@ -1157,40 +1159,47 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-size: 8.5pt;
             font-weight: 600;
-            color: #374151;
+            color: #000000;
           }
           @bottom-left {
             content: "${esc(collegeName)} — Official Results Declaration ${esc(year)}";
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-size: 8pt;
-            color: #6b7280;
+            color: #000000;
           }
         }
         @media print {
-          body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color: #000000 !important;
+            border-color: #000000 !important;
+          }
+          body { padding: 0; }
           .official-sheet { border: none; width: 100%; max-width: 100%; padding: 0; }
-          .post-header { background-color: #eee !important; -webkit-print-color-adjust: exact; }
-          .winner-row { background-color: #fafff9 !important; -webkit-print-color-adjust: exact; }
+          .post-group { page-break-inside: avoid !important; break-inside: avoid !important; }
+          .result-table { page-break-inside: avoid !important; break-inside: avoid !important; }
           thead { display: table-header-group; }
-          tr { page-break-inside: avoid; break-inside: avoid; }
+          thead tr { page-break-after: avoid !important; break-after: avoid !important; }
+          tr { page-break-inside: avoid !important; break-inside: avoid !important; }
         }
       </style>
       <div class="official-sheet">
         <div class="header">
           ${!isFinalPublished ? `
-            <div style="background:#fef3c7;border:1px solid #f59e0b;padding:8px 12px;text-align:center;font-weight:bold;color:#b45309;font-size:12px;margin-bottom:15px;text-transform:uppercase;letter-spacing:0.5px;">
+            <div style="background:#f9f9f9;border:1.5px solid #000;padding:8px 12px;text-align:center;font-weight:bold;color:#000;font-size:12px;margin-bottom:15px;text-transform:uppercase;letter-spacing:0.5px;">
               ⚠️ DRAFT RESULT PREVIEW — AWAITING OFFICIAL PUBLICATION OF FINAL CANDIDATES LIST
             </div>
           ` : ''}
-          ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:60px;max-width:140px;margin:0 auto 8px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+          ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:60px;max-width:140px;margin:0 auto 8px auto;display:block;object-fit:contain;filter:grayscale(100%)" alt="College Logo">` : ''}
           <h2>${esc(collegeName)}</h2>
           <h1>College Union Election ${year}</h1>
-          <div style="font-size: 18px; margin-top: 15px; font-weight: 900; text-decoration: underline;">
+          <div style="font-size: 18px; margin-top: 15px; font-weight: 900; text-decoration: underline; color: #000;">
             ${isFinalPublished ? 'OFFICIAL RESULT NOTIFICATION' : 'DRAFT RESULT NOTIFICATION (PROVISIONAL)'}
           </div>
         </div>
 
-        <p style="font-size: 14px; margin-bottom: 25px; text-align: justify;">
+        <p style="font-size: 13.5px; margin-bottom: 22px; text-align: justify; color: #000;">
           ${isFinalPublished ? `
             The following candidates are hereby declared to have been duly elected to the respective offices of the College Union for the academic year ${year}, 
             based on the counting of votes held on ${new Date().toLocaleDateString('en-IN', {day: 'numeric', month: 'long', year: 'numeric'})}.
@@ -1200,43 +1209,47 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           `}
         </p>
 
-        <table class="result-table">
-          <thead>
-            <tr>
-              <th style="width: 10%; text-align: center;">Sl. No.</th>
-              <th style="width: 45%;">Name of Candidate</th>
-              <th style="text-align: center; width: 15%;">Votes Secured</th>
-              <th style="width: 30%;">Remarks</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${postResults.map(res => {
-              if (res.type === 'no-candidates') return '';
-              return `
-                <tr class="post-header">
-                  <td colspan="4" style="background: #eaeaea; padding: 15px 10px; border-bottom: 2px solid #000;">
-                    ${esc(res.post)}
-                  </td>
-                </tr>
-                ${res.candidates.map((c, idx) => {
-                  const isWinner = res.winner && res.winner.id === c.id;
-                  return `
-                    <tr class="${isWinner ? 'winner-row' : ''}">
-                      <td style="text-align: center; color: #555; font-size: 12px;">${idx + 1}</td>
-                      <td style="font-weight: ${isWinner ? 'bold' : 'normal'}; font-size: 14px;">
-                        ${esc(c.candidateName)} ${c.candidateSerial ? `<span style="font-size: 11px; font-weight: normal; color: #555;">(Roll Sl. #${esc(c.candidateSerial)})</span>` : ''}
-                      </td>
-                      <td style="text-align: center; font-weight: bold; font-size: 14px;">${res.type === 'unanimous' ? '—' : (c.votes || 0)}</td>
-                      <td style="font-size: 12px; font-weight: bold;">
-                        ${isWinner ? (res.type === 'unanimous' ? 'ELECTED UNANIMOUSLY' : '✓ ELECTED') : (res.type === 'draft-single' ? 'PROVISIONAL (FINAL LIST PENDING)' : '')}
-                      </td>
+        <div class="results-container">
+          ${postResults.map(res => {
+            if (res.type === 'no-candidates') return '';
+            return `
+              <div class="post-group">
+                <table class="result-table">
+                  <thead>
+                    <tr style="page-break-after:avoid;break-after:avoid">
+                      <th colspan="4" class="post-header">
+                        POST: ${esc(res.post)}
+                      </th>
                     </tr>
-                  `;
-                }).join('')}
-              `;
-            }).join('')}
-          </tbody>
-        </table>
+                    <tr style="page-break-after:avoid;break-after:avoid">
+                      <th style="width: 10%; text-align: center;">Sl. No.</th>
+                      <th style="width: 45%;">Name of Candidate</th>
+                      <th style="text-align: center; width: 15%;">Votes Secured</th>
+                      <th style="width: 30%;">Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${res.candidates.map((c, idx) => {
+                      const isWinner = res.winner && res.winner.id === c.id;
+                      return `
+                        <tr class="${isWinner ? 'winner-row' : ''}">
+                          <td style="text-align: center; color: #000; font-size: 12px;">${idx + 1}</td>
+                          <td style="font-weight: ${isWinner ? 'bold' : 'normal'}; font-size: 13px; color: #000;">
+                            ${esc(c.candidateName)} ${c.candidateSerial ? `<span style="font-size: 11px; font-weight: normal; color: #333;">(Roll Sl. #${esc(c.candidateSerial)})</span>` : ''}
+                          </td>
+                          <td style="text-align: center; font-weight: bold; font-size: 13px; color: #000;">${res.type === 'unanimous' ? '—' : (c.votes || 0)}</td>
+                          <td style="font-size: 11.5px; font-weight: bold; color: #000;">
+                            ${isWinner ? (res.type === 'unanimous' ? 'ELECTED UNANIMOUSLY' : '✓ ELECTED') : (res.type === 'draft-single' ? 'PROVISIONAL (FINAL LIST PENDING)' : '')}
+                          </td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `;
+          }).join('')}
+        </div>
 
         <div class="footer">
           <div style="font-size: 13px;">
