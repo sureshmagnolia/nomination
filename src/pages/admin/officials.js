@@ -461,7 +461,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       flags.push('⚖️ ARO');
     }
 
-    // 3. Core Committee (Assisting RO)
+    // 3. Core Committee
     if (isCore(cleanName, cleanPen)) {
       const bInCharge = pollingTeams.find(t => t.coreInCharge && (String(t.coreInCharge.name || '').trim().toLowerCase() === cleanName || (cleanPen && String(t.coreInCharge.pen || '').trim().toLowerCase() === cleanPen)));
       const tInCharge = countingTeams.find(t => t.coreInCharge && (String(t.coreInCharge.name || '').trim().toLowerCase() === cleanName || (cleanPen && String(t.coreInCharge.pen || '').trim().toLowerCase() === cleanPen)));
@@ -861,7 +861,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         </td>
         <td class="text-right">
           <div class="flex items-center justify-end gap-1.5 flex-wrap">
-            <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-core-fac ${isCoreMan ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30 font-bold' : 'text-slate-300 hover:text-amber-300 hover:border-amber-500/40'}" data-pen="${f.pen || f.name}" title="${isCoreMan ? 'Click to remove from Core Committee' : 'Assign to Core Committee to assist RO (All faculty eligible)'}">
+            <button type="button" class="btn btn-secondary text-[11px] py-1 px-2 btn-edit-fac text-indigo-300 hover:text-white hover:bg-indigo-600/30 border-indigo-500/30 flex items-center gap-1 font-semibold" data-name="${esc(f.name)}" data-pen="${esc(f.pen || '')}" title="Edit faculty member details">
+              ✏️ Edit
+            </button>
+            <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-core-fac ${isCoreMan ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30 font-bold' : 'text-slate-300 hover:text-amber-300 hover:border-amber-500/40'}" data-pen="${f.pen || f.name}" title="${isCoreMan ? 'Click to remove from Core Committee' : 'Assign to Core Committee (All faculty eligible)'}">
               ${isCoreMan ? '⭐ In Core' : '➕ Core'}
             </button>
             <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-exclude-fac ${isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-pen="${f.pen || f.name}">
@@ -924,6 +927,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           `)}
         </td>
         <td class="text-right whitespace-nowrap space-x-1">
+          <button type="button" class="btn btn-secondary text-[11px] py-1 px-2 btn-edit-nt text-emerald-300 hover:text-white hover:bg-emerald-600/30 border-emerald-500/30 font-semibold inline-flex items-center gap-1" data-name="${esc(nt.name)}" data-pen="${esc(nt.pen || '')}" title="Edit staff member details">
+            ✏️ Edit
+          </button>
           <button class="btn btn-secondary text-[11px] py-1 px-2 btn-toggle-exclude-nt ${isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-name="${esc(nt.name)}">
             ${isExcluded ? '✓ Enable' : '⛔ Exclude'}
           </button>
@@ -2676,7 +2682,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <button id="btnOpenRoAroModalTop" class="btn btn-secondary border-yellow-500/50 text-yellow-300 hover:text-white hover:bg-yellow-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Configure Returning Officer and Assistant Returning Officers">
               👑 RO &amp; AROs (${1 + aroOfficers.length})
             </button>
-            <button id="btnOpenCoreModalTop" class="btn btn-secondary border-cyan-500/50 text-cyan-300 hover:text-white hover:bg-cyan-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Manage Core Committee members to assist RO">
+            <button id="btnOpenCoreModalTop" class="btn btn-secondary border-cyan-500/50 text-cyan-300 hover:text-white hover:bg-cyan-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Manage Core Committee members">
               ⭐ Core Committee (${coreCommittee.length})
             </button>
             <button id="btnSaveAll" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow">
@@ -2705,11 +2711,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <span class="text-[10px] text-yellow-400 mt-1">1 RO · ${aroOfficers.length} ARO${aroOfficers.length !== 1 ? 's' : ''}</span>
           </div>
 
-          <div class="glass p-3 rounded-xl border border-cyan-500/40 flex flex-col justify-between bg-cyan-950/20 cursor-pointer hover:border-cyan-400 transition" id="cardMetricCore" title="Click to manage Core Committee members assisting RO">
+          <div class="glass p-3 rounded-xl border border-cyan-500/40 flex flex-col justify-between bg-cyan-950/20 cursor-pointer hover:border-cyan-400 transition" id="cardMetricCore" title="Click to manage Core Committee members">
             <span class="text-[11px] uppercase tracking-wider text-cyan-300 font-semibold">Core Comm.</span>
             <div class="flex items-baseline gap-2 mt-1">
               <span class="text-2xl font-bold text-cyan-200 font-mono">${coreCommittee.length}</span>
-              <span class="text-xs text-slate-400">Assisting RO</span>
+              <span class="text-xs text-slate-400">Members</span>
             </div>
             <span class="text-[10px] text-cyan-400 mt-1">Booth &amp; Table In-Charge</span>
           </div>
@@ -2819,7 +2825,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <button id="btnOpenRoAroModal" class="btn btn-secondary border-yellow-500/50 text-yellow-300 hover:text-white hover:bg-yellow-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Configure Returning Officer and Assistant Returning Officers">
                 👑 Allot RO &amp; AROs (${1 + aroOfficers.length})
               </button>
-              <button id="btnOpenCoreCommitteeModal" class="btn btn-secondary border-cyan-500/50 text-cyan-300 hover:text-white hover:bg-cyan-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Appoint Core Committee members to assist RO">
+              <button id="btnOpenCoreCommitteeModal" class="btn btn-secondary border-cyan-500/50 text-cyan-300 hover:text-white hover:bg-cyan-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Appoint Core Committee members">
                 ⭐ Allot Core Committee (${coreCommittee.length})
               </button>
               <button id="btnOpenObserverModal" class="btn btn-secondary border-amber-500/50 text-amber-300 hover:text-white hover:bg-amber-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Appoint Election Observers">
@@ -2884,17 +2890,17 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             </div>
           </div>
 
-          <!-- Core Committee to Assist RO -->
+          <!-- Core Committee -->
           <div class="glass rounded-xl border border-cyan-500/30 bg-gradient-to-r from-cyan-950/30 via-slate-900/60 to-slate-900/40 p-4 shadow-lg no-print">
             <div class="flex items-center justify-between flex-wrap gap-2 pb-2.5 border-b border-cyan-500/20">
               <div class="flex items-center gap-2.5">
                 <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-lg shadow-inner">⭐</div>
                 <div>
                   <h5 class="font-bold text-white text-sm flex items-center gap-2">
-                    Core Committee to Assist RO
+                    Core Committee
                     <span class="text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 px-2 py-0.5 rounded-full">${coreCommittee.length} Members</span>
                   </h5>
-                  <p class="text-[11px] text-slate-400">Faculty members assisting RO with operations and assigned as In-Charge for Polling Booths and Counting Tables.</p>
+                  <p class="text-[11px] text-slate-400">Faculty members assigned as In-Charge for Polling Booths, Counting Tables, and election operations.</p>
                 </div>
               </div>
               <button id="btnManageCoreBanner" class="btn btn-secondary border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/20 text-xs px-3 py-1.5 flex items-center gap-1 font-semibold">
@@ -3101,11 +3107,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     ` : ''}
 
                     <div class="space-y-3 pt-3">
-                      <!-- Core Committee In-Charge (Assisting RO) -->
+                      <!-- Core Committee In-Charge -->
                       <div class="p-2.5 rounded-lg bg-cyan-950/30 border border-cyan-500/30 space-y-1">
                         <div class="flex items-center justify-between mb-0.5">
                           <label class="text-[11px] font-bold text-cyan-300 flex items-center gap-1">
-                            <span>⭐</span> Core Committee In-Charge <span class="text-[10px] text-cyan-400/80 font-normal">(Assisting RO)</span>
+                            <span>⭐</span> Core Committee In-Charge
                           </label>
                           ${team.coreInCharge ? `<span class="text-[10px] font-mono text-cyan-200 bg-cyan-500/20 px-1.5 py-0.2 rounded border border-cyan-500/30">Assigned</span>` : ''}
                         </div>
@@ -3291,11 +3297,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     ` : ''}
 
                     <div class="space-y-3 pt-3">
-                      <!-- Core Committee In-Charge (Assisting RO) -->
+                      <!-- Core Committee In-Charge -->
                       <div class="p-2.5 rounded-lg bg-cyan-950/30 border border-cyan-500/30 space-y-1">
                         <div class="flex items-center justify-between mb-0.5">
                           <label class="text-[11px] font-bold text-cyan-300 flex items-center gap-1">
-                            <span>⭐</span> Core Committee In-Charge <span class="text-[10px] text-cyan-400/80 font-normal">(Assisting RO)</span>
+                            <span>⭐</span> Core Committee In-Charge
                           </label>
                           ${team.coreInCharge ? `<span class="text-[10px] font-mono text-cyan-200 bg-cyan-500/20 px-1.5 py-0.2 rounded border border-cyan-500/30">Assigned</span>` : ''}
                         </div>
@@ -3416,8 +3422,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <p class="text-xs text-slate-400">Official seniority list for Presiding Officers and Polling Officers. Upload Excel/CSV to replace or update.</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
-              <button id="btnManageCoreToolbar" class="btn btn-secondary border-cyan-500/50 text-cyan-300 hover:text-white hover:bg-cyan-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Assign Faculty members to Core Committee to assist RO (All faculty including excluded are eligible)">
+              <button id="btnManageCoreToolbar" class="btn btn-secondary border-cyan-500/50 text-cyan-300 hover:text-white hover:bg-cyan-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Assign Faculty members to Core Committee (All faculty including excluded are eligible)">
                 ⭐ Core Committee (${coreCommittee.length})
+              </button>
+              <button id="btnAddFacultyModalBtn" class="btn btn-secondary border-indigo-500/50 text-indigo-300 hover:text-white hover:bg-indigo-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Add a faculty member manually to the seniority roster">
+                ➕ Add Faculty Member
               </button>
               <label class="btn btn-primary bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2 cursor-pointer flex items-center gap-1.5 shadow">
                 📥 Import Faculty (Excel / CSV)
@@ -3476,7 +3485,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                               <p class="text-xs text-slate-400 leading-relaxed">
                                 No teaching faculty uploaded yet. Upload your College Faculty Seniority Excel / CSV file or download our template format.
                               </p>
-                              <div class="flex items-center justify-center gap-2 pt-2">
+                              <div class="flex items-center justify-center gap-2 pt-2 flex-wrap">
+                                <button id="btnAddFacultyEmpty" class="btn btn-secondary border-indigo-500/50 text-indigo-300 hover:text-white hover:bg-indigo-600/30 font-bold text-xs px-3.5 py-2 flex items-center gap-1.5 shadow">
+                                  ➕ Add Faculty Member
+                                </button>
                                 <label class="btn btn-primary bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2 cursor-pointer flex items-center gap-1.5 shadow">
                                   📥 Import Faculty (Excel / CSV)
                                   <input type="file" id="fileFacultyImportEmpty" accept=".xlsx,.xls,.csv" class="hidden" />
@@ -3612,7 +3624,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                               <p class="text-xs text-slate-400 leading-relaxed">
                                 No non-teaching staff uploaded yet. Upload your staff list as Excel / CSV or download our template format.
                               </p>
-                              <div class="flex items-center justify-center gap-2 pt-2">
+                              <div class="flex items-center justify-center gap-2 pt-2 flex-wrap">
+                                <button id="btnAddStaffEmpty" class="btn btn-secondary border-emerald-500/50 text-emerald-300 hover:text-white hover:bg-emerald-600/30 font-bold text-xs px-3.5 py-2 flex items-center gap-1.5 shadow">
+                                  ➕ Add Staff Member
+                                </button>
                                 <label class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 cursor-pointer flex items-center gap-1.5 shadow">
                                   📥 Upload Non-Teaching (Excel / CSV)
                                   <input type="file" id="fileNonTeachingImportEmpty" accept=".xlsx,.xls,.csv" class="hidden" />
@@ -3974,6 +3989,22 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // Delegated click handler on Faculty table body so dynamically filtered rows respond immediately
     main.querySelector('#facultyTableBody')?.addEventListener('click', async (e) => {
+      // 0. Edit Faculty Member details
+      const editBtn = e.target.closest('.btn-edit-fac');
+      if (editBtn) {
+        const pen = String(editBtn.dataset.pen || '').trim().toLowerCase();
+        const name = String(editBtn.dataset.name || '').trim().toLowerCase();
+        const target = faculty.find(f => {
+          const fp = String(f.pen || '').trim().toLowerCase();
+          const fn = String(f.name || '').trim().toLowerCase();
+          return (fp && fp === pen) || fn === name;
+        });
+        if (target) {
+          openEditFacultyModal(target);
+        }
+        return;
+      }
+
       // 1. Toggle Core Committee button in faculty roster row
       const coreBtn = e.target.closest('.btn-toggle-core-fac');
       if (coreBtn) {
@@ -4003,7 +4034,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             seniority: target.seniority || 999
           });
           coreCommittee.sort(compareOfficials);
-          showToast(`Assigned "${target.name}" to Core Committee to assist RO!`, 'success');
+          showToast(`Assigned "${target.name}" to Core Committee!`, 'success');
         }
         await saveAll(false);
         renderUI();
@@ -4073,6 +4104,22 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // Delegated click handler on Non-Teaching table body
     main.querySelector('#nonTeachingTableBody')?.addEventListener('click', async (e) => {
+      // 0. Edit Non-Teaching Staff details
+      const editBtn = e.target.closest('.btn-edit-nt');
+      if (editBtn) {
+        const pen = String(editBtn.dataset.pen || '').trim().toLowerCase();
+        const name = String(editBtn.dataset.name || '').trim().toLowerCase();
+        const target = nonTeaching.find(n => {
+          const np = String(n.pen || '').trim().toLowerCase();
+          const nn = String(n.name || '').trim().toLowerCase();
+          return (np && np === pen) || nn === name;
+        });
+        if (target) {
+          openEditNonTeachingModal(target);
+        }
+        return;
+      }
+
       const excludeBtn = e.target.closest('.btn-toggle-exclude-nt');
       if (excludeBtn) {
         const name = String(excludeBtn.dataset.name || '').trim().toLowerCase();
@@ -4109,6 +4156,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         const name = delBtn.dataset.name;
         if (confirm(`Remove "${name}" from the Non-Teaching Staff roster?`)) {
           nonTeaching = nonTeaching.filter(n => n.name !== name);
+          removeOfficialFromDuties(name, delBtn.dataset.pen || '');
           saveAll(false);
           showToast(`Removed "${name}" from Non-Teaching roster.`, 'info');
           renderUI();
@@ -4116,13 +4164,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       }
     });
 
-    // Add Staff Modal Toggle
+    // Add Faculty Member Modal Triggers
+    main.querySelector('#btnAddFacultyModalBtn')?.addEventListener('click', () => {
+      openEditFacultyModal(null);
+    });
+    main.querySelector('#btnAddFacultyEmpty')?.addEventListener('click', () => {
+      openEditFacultyModal(null);
+    });
+
+    // Add Staff Modal Triggers
     main.querySelector('#btnAddStaffModalBtn')?.addEventListener('click', () => {
-      const panel = main.querySelector('#addStaffPanel');
-      if (panel) {
-        panel.classList.toggle('hidden');
-        main.querySelector('#newStaffName')?.focus();
-      }
+      openEditNonTeachingModal(null);
+    });
+    main.querySelector('#btnAddStaffEmpty')?.addEventListener('click', () => {
+      openEditNonTeachingModal(null);
     });
 
     main.querySelector('#btnCancelAddStaff')?.addEventListener('click', () => {
@@ -4506,7 +4561,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     main.querySelectorAll('.btn-quick-remove-core').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const name = e.currentTarget.dataset.name;
-        if (confirm(`Remove "${name}" from Core Committee assisting RO?`)) {
+        if (confirm(`Remove "${name}" from Core Committee?`)) {
           coreCommittee = coreCommittee.filter(c => c.name !== name);
           pollingTeams.forEach(t => { if (t.coreInCharge?.name === name) t.coreInCharge = null; });
           countingTeams.forEach(t => { if (t.coreInCharge?.name === name) t.coreInCharge = null; });
@@ -4910,7 +4965,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 ⭐
               </div>
               <div>
-                <h4 class="font-bold text-white text-base">Core Committee to Assist RO</h4>
+                <h4 class="font-bold text-white text-base">Core Committee</h4>
                 <p class="text-xs text-slate-400">All faculty members (including those marked as excluded) are eligible for Core Committee duty.</p>
               </div>
             </div>
@@ -5846,6 +5901,661 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     renderModal();
   };
 
+  // ─── Universal Cascading Update for Edited Officials ────────────────────────
+  const cascadeUpdateOfficial = (oldName, oldPen, updated) => {
+    const isMatch = (target) => {
+      if (!target) return false;
+      if (typeof target === 'string') {
+        return target.trim().toLowerCase() === String(oldName || '').trim().toLowerCase();
+      }
+      const tName = String(target.name || '').trim().toLowerCase();
+      const tPen = String(target.pen || '').trim().toLowerCase();
+      const oName = String(oldName || '').trim().toLowerCase();
+      const oPen = String(oldPen || '').trim().toLowerCase();
+      return (oName && tName === oName) || (oPen && tPen && tPen === oPen);
+    };
+
+    const updateObj = (target) => {
+      if (!target || typeof target !== 'object') return;
+      target.name = updated.name;
+      if (updated.pen !== undefined) target.pen = updated.pen;
+      if (updated.designation !== undefined) target.designation = updated.designation;
+      if (updated.department !== undefined) target.department = updated.department;
+      if (updated.seniority !== undefined) target.seniority = updated.seniority;
+    };
+
+    // 1. RO
+    if (roOfficer && isMatch(roOfficer)) {
+      updateObj(roOfficer);
+    }
+
+    // 2. AROs
+    (aroOfficers || []).forEach(a => {
+      if (isMatch(a)) updateObj(a);
+    });
+
+    // 3. Core Committee
+    (coreCommittee || []).forEach(c => {
+      if (isMatch(c)) updateObj(c);
+    });
+
+    // 4. Observers
+    (observers || []).forEach((o, i) => {
+      if (typeof o === 'string' && o.trim().toLowerCase() === String(oldName || '').trim().toLowerCase()) {
+        observers[i] = updated.name;
+      } else if (isMatch(o)) {
+        updateObj(o);
+      }
+    });
+
+    // 5. Discipline Committee
+    (disciplineCharge || []).forEach((d, i) => {
+      if (typeof d === 'string' && d.trim().toLowerCase() === String(oldName || '').trim().toLowerCase()) {
+        disciplineCharge[i] = updated.name;
+      } else if (isMatch(d)) {
+        updateObj(d);
+      }
+    });
+
+    // 6. Grievance Committee
+    (grievanceCell || []).forEach((g, i) => {
+      if (typeof g === 'string' && g.trim().toLowerCase() === String(oldName || '').trim().toLowerCase()) {
+        grievanceCell[i] = updated.name;
+      } else if (isMatch(g)) {
+        updateObj(g);
+      }
+    });
+
+    // 7. Polling Teams
+    (pollingTeams || []).forEach(t => {
+      if (isMatch(t.coreInCharge)) updateObj(t.coreInCharge);
+      if (isMatch(t.presidingOfficer)) updateObj(t.presidingOfficer);
+      if (isMatch(t.pollingOfficer1)) updateObj(t.pollingOfficer1);
+      if (isMatch(t.pollingOfficer2)) updateObj(t.pollingOfficer2);
+      if (isMatch(t.pollingOfficer3)) updateObj(t.pollingOfficer3);
+      if (isMatch(t.pollingAssistant)) updateObj(t.pollingAssistant);
+    });
+
+    // 8. Counting Teams
+    (countingTeams || []).forEach(t => {
+      if (isMatch(t.coreInCharge)) updateObj(t.coreInCharge);
+      if (isMatch(t.supervisor)) updateObj(t.supervisor);
+      if (isMatch(t.countingOfficer1)) updateObj(t.countingOfficer1);
+      if (isMatch(t.countingOfficer2)) updateObj(t.countingOfficer2);
+      if (isMatch(t.countingOfficer3)) updateObj(t.countingOfficer3);
+      if (isMatch(t.countingAssistant)) updateObj(t.countingAssistant);
+    });
+  };
+
+  // Helper to remove deleted official from all duty assignments
+  const removeOfficialFromDuties = (name, pen) => {
+    const isMatch = (target) => {
+      if (!target) return false;
+      if (typeof target === 'string') {
+        return target.trim().toLowerCase() === String(name || '').trim().toLowerCase();
+      }
+      const tName = String(target.name || '').trim().toLowerCase();
+      const tPen = String(target.pen || '').trim().toLowerCase();
+      const oName = String(name || '').trim().toLowerCase();
+      const oPen = String(pen || '').trim().toLowerCase();
+      return (oName && tName === oName) || (oPen && tPen && tPen === oPen);
+    };
+
+    if (roOfficer && isMatch(roOfficer)) roOfficer = null;
+    aroOfficers = (aroOfficers || []).filter(a => !isMatch(a));
+    coreCommittee = (coreCommittee || []).filter(c => !isMatch(c));
+    observers = (observers || []).filter(o => !isMatch(o));
+    disciplineCharge = (disciplineCharge || []).filter(d => !isMatch(d));
+    grievanceCell = (grievanceCell || []).filter(g => !isMatch(g));
+
+    (pollingTeams || []).forEach(t => {
+      if (isMatch(t.coreInCharge)) t.coreInCharge = null;
+      if (isMatch(t.presidingOfficer)) t.presidingOfficer = null;
+      if (isMatch(t.pollingOfficer1)) t.pollingOfficer1 = null;
+      if (isMatch(t.pollingOfficer2)) t.pollingOfficer2 = null;
+      if (isMatch(t.pollingOfficer3)) t.pollingOfficer3 = null;
+      if (isMatch(t.pollingAssistant)) t.pollingAssistant = null;
+    });
+
+    (countingTeams || []).forEach(t => {
+      if (isMatch(t.coreInCharge)) t.coreInCharge = null;
+      if (isMatch(t.supervisor)) t.supervisor = null;
+      if (isMatch(t.countingOfficer1)) t.countingOfficer1 = null;
+      if (isMatch(t.countingOfficer2)) t.countingOfficer2 = null;
+      if (isMatch(t.countingOfficer3)) t.countingOfficer3 = null;
+      if (isMatch(t.countingAssistant)) t.countingAssistant = null;
+    });
+  };
+
+  // ─── Faculty Roster Member Edit Modal ───────────────────────────────────────
+  const openEditFacultyModal = (targetFaculty = null) => {
+    const existing = document.getElementById('editFacultyModalContainer');
+    if (existing) existing.remove();
+
+    const isNew = !targetFaculty;
+    let draft = targetFaculty ? {
+      name: targetFaculty.name || '',
+      seniority: (targetFaculty.seniority !== undefined && targetFaculty.seniority !== null) ? targetFaculty.seniority : '',
+      pen: targetFaculty.pen || '',
+      designation: targetFaculty.designation || 'Assistant Professor',
+      department: targetFaculty.department || '',
+      joiningDate: targetFaculty.joiningDate || '',
+      isExcluded: Boolean(isPersonExcluded(targetFaculty)),
+      exclusionReason: targetFaculty.exclusionReason || ''
+    } : {
+      name: '',
+      seniority: faculty.length + 1,
+      pen: '',
+      designation: 'Assistant Professor',
+      department: '',
+      joiningDate: '',
+      isExcluded: false,
+      exclusionReason: ''
+    };
+
+    const modal = document.createElement('div');
+    modal.id = 'editFacultyModalContainer';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+    document.body.appendChild(modal);
+
+    const departments = [
+      'Arabic', 'Botany', 'Chemistry', 'Commerce', 'Computer Science',
+      'Economics', 'English', 'Hindi', 'History', 'Library',
+      'Malayalam', 'Mathematics', 'Philosophy', 'Physical Education',
+      'Physics', 'Political Science', 'Sanskrit', 'Statistics', 'Zoology'
+    ];
+
+    const designations = [
+      'Professor',
+      'Associate Professor',
+      'Assistant Professor',
+      'Guest Lecturer',
+      'UGC Librarian',
+      'Assistant Professor (Guest)'
+    ];
+
+    const renderModal = () => {
+      modal.innerHTML = `
+        <div class="glass border border-indigo-500/40 rounded-2xl w-full max-w-xl bg-slate-900/95 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+          <!-- Modal Header -->
+          <div class="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-indigo-950/40 via-slate-900 to-slate-900">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-xl shadow-inner border border-indigo-500/30">
+                👨‍🏫
+              </div>
+              <div>
+                <h4 class="font-bold text-white text-base">${isNew ? 'Add Teaching Faculty Member' : 'Edit Faculty Member Details'}</h4>
+                <p class="text-xs text-slate-400">${isNew ? 'Add a new faculty member to the seniority roster' : `Update details for "${esc(targetFaculty.name)}"`}</p>
+              </div>
+            </div>
+            <button id="btnCloseEditFacModal" class="text-slate-400 hover:text-white text-2xl font-bold px-2 py-1 leading-none">&times;</button>
+          </div>
+
+          <!-- Modal Body Form -->
+          <form id="formEditFaculty" class="p-5 overflow-y-auto space-y-4 flex-1">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Name -->
+              <div class="sm:col-span-2 space-y-1">
+                <label class="block text-xs font-bold uppercase tracking-wider text-indigo-300">
+                  Full Name <span class="text-rose-400">*</span>
+                </label>
+                <input type="text" id="facInputName" required value="${esc(draft.name)}" placeholder="e.g. Dr. K. Rajesh Kumar" class="w-full bg-slate-950/80 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400" />
+              </div>
+
+              <!-- Seniority Rank / Sl No -->
+              <div class="space-y-1">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                  <span>Seniority Rank #</span>
+                  <span class="text-[10px] text-slate-400 font-normal">#1 = Seniormost</span>
+                </label>
+                <input type="number" id="facInputSeniority" min="1" value="${draft.seniority}" placeholder="e.g. 1, 2, 3..." class="w-full bg-slate-950/80 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 font-mono font-bold" />
+              </div>
+
+              <!-- PEN Number -->
+              <div class="space-y-1">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                  <span>PEN Number</span>
+                  <span class="text-[10px] text-slate-400 font-normal">Optional</span>
+                </label>
+                <input type="text" id="facInputPen" value="${esc(draft.pen)}" placeholder="e.g. 616638" class="w-full bg-slate-950/80 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 font-mono" />
+              </div>
+
+              <!-- Designation -->
+              <div class="space-y-1">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                  Designation
+                </label>
+                <input type="text" id="facInputDesig" list="facDatalistDesig" value="${esc(draft.designation)}" placeholder="Select or type designation" class="w-full bg-slate-950/80 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400" />
+                <datalist id="facDatalistDesig">
+                  ${designations.map(d => `<option value="${esc(d)}">`).join('')}
+                </datalist>
+              </div>
+
+              <!-- Department -->
+              <div class="space-y-1">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                  Department
+                </label>
+                <input type="text" id="facInputDept" list="facDatalistDept" value="${esc(draft.department)}" placeholder="Select or type department" class="w-full bg-slate-950/80 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400" />
+                <datalist id="facDatalistDept">
+                  ${departments.map(d => `<option value="${esc(d)}">`).join('')}
+                </datalist>
+              </div>
+
+              <!-- Date of Joining / Seniority Date -->
+              <div class="sm:col-span-2 space-y-1">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                  <span>Date of Joining in Service</span>
+                  <span class="text-[10px] text-slate-400 font-normal">YYYY-MM-DD format</span>
+                </label>
+                <input type="date" id="facInputJoiningDate" value="${esc(draft.joiningDate)}" class="w-full bg-slate-950/80 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 font-mono" />
+              </div>
+
+              <!-- Duty Status (Available vs Excluded) -->
+              <div class="sm:col-span-2 p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-3">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-200">
+                      Election Duty Availability Status
+                    </label>
+                    <p class="text-[11px] text-slate-400">Mark if official is on leave, deputation, or assigned RO/special duty</p>
+                  </div>
+                  <select id="facInputExcluded" class="bg-slate-900 border border-white/20 rounded-lg px-3 py-1.5 text-xs text-white font-semibold focus:outline-none focus:border-indigo-400">
+                    <option value="false" ${!draft.isExcluded ? 'selected' : ''}>✅ Available for Duty</option>
+                    <option value="true" ${draft.isExcluded ? 'selected' : ''}>⛔ Excluded from Duty</option>
+                  </select>
+                </div>
+
+                <div id="facReasonWrapper" class="${draft.isExcluded ? '' : 'hidden'} space-y-1 pt-1 border-t border-white/10">
+                  <label class="block text-[11px] font-bold text-amber-300">
+                    Reason for Exclusion
+                  </label>
+                  <input type="text" id="facInputReason" value="${esc(draft.exclusionReason)}" placeholder="e.g. Returning Officer, Medical Leave, Observer, On Deputation" class="w-full bg-slate-950/80 border border-amber-500/40 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 font-medium" />
+                </div>
+              </div>
+            </div>
+          </form>
+
+          <!-- Modal Footer Actions -->
+          <div class="p-4 border-t border-white/10 bg-slate-950/60 flex items-center justify-between flex-wrap gap-2">
+            ${!isNew ? `
+              <button type="button" id="btnDeleteFacFromModal" class="btn btn-secondary border-rose-500/40 text-rose-300 hover:text-white hover:bg-rose-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold">
+                🗑️ Delete Member
+              </button>
+            ` : '<div></div>'}
+
+            <div class="flex items-center gap-2">
+              <button type="button" id="btnCancelEditFacModal" class="btn btn-secondary text-xs px-4 py-2 text-slate-300 hover:text-white">
+                Cancel
+              </button>
+              <button type="button" id="btnSaveEditFacModal" class="btn btn-primary bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-5 py-2 rounded-xl shadow-lg flex items-center gap-1.5">
+                💾 Save Details
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Event Listeners for Modal
+      modal.querySelector('#btnCloseEditFacModal').onclick = () => modal.remove();
+      modal.querySelector('#btnCancelEditFacModal').onclick = () => modal.remove();
+      modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+      const selectExcluded = modal.querySelector('#facInputExcluded');
+      const reasonWrapper = modal.querySelector('#facReasonWrapper');
+      selectExcluded.onchange = () => {
+        const isEx = selectExcluded.value === 'true';
+        if (isEx) {
+          reasonWrapper.classList.remove('hidden');
+          const reasonInput = modal.querySelector('#facInputReason');
+          if (reasonInput && !reasonInput.value) {
+            const curName = (modal.querySelector('#facInputName')?.value || '').toLowerCase();
+            reasonInput.value = curName.includes('suresh') ? 'Returning Officer' : 'Excluded from Duty';
+          }
+        } else {
+          reasonWrapper.classList.add('hidden');
+        }
+      };
+
+      // Delete Member
+      const btnDelete = modal.querySelector('#btnDeleteFacFromModal');
+      if (btnDelete && targetFaculty) {
+        btnDelete.onclick = async () => {
+          if (confirm(`🗑️ Delete "${targetFaculty.name}" from the Teaching Faculty Roster?\n\nThis will also remove them from any assigned committees or polling/counting duties.`)) {
+            faculty = faculty.filter(f => f !== targetFaculty && f.name !== targetFaculty.name);
+            removeOfficialFromDuties(targetFaculty.name, targetFaculty.pen);
+            faculty.sort(compareOfficials);
+            await saveAll(false);
+            modal.remove();
+            showToast(`Deleted "${targetFaculty.name}" from faculty roster.`, 'info');
+            renderUI();
+          }
+        };
+      }
+
+      // Save Member
+      modal.querySelector('#btnSaveEditFacModal').onclick = async () => {
+        const nameVal = (modal.querySelector('#facInputName')?.value || '').trim();
+        if (!nameVal) {
+          showToast('Please enter the faculty member name.', 'error');
+          modal.querySelector('#facInputName')?.focus();
+          return;
+        }
+
+        const senVal = modal.querySelector('#facInputSeniority')?.value;
+        const penVal = (modal.querySelector('#facInputPen')?.value || '').trim();
+        const desigVal = (modal.querySelector('#facInputDesig')?.value || '').trim() || 'Faculty';
+        const deptVal = normalizeDepartment((modal.querySelector('#facInputDept')?.value || '').trim());
+        const joiningVal = (modal.querySelector('#facInputJoiningDate')?.value || '').trim();
+        const isEx = modal.querySelector('#facInputExcluded')?.value === 'true';
+        const reasonVal = (modal.querySelector('#facInputReason')?.value || '').trim();
+
+        const parsedSeniority = (senVal !== '' && !isNaN(senVal)) ? parseInt(senVal, 10) : (targetFaculty?.seniority || faculty.length + 1);
+
+        if (isNew) {
+          const newFac = {
+            id: 'fac_' + Date.now(),
+            seniority: parsedSeniority,
+            name: nameVal,
+            pen: penVal,
+            designation: desigVal,
+            department: deptVal,
+            joiningDate: joiningVal,
+            isExcluded: isEx,
+            excluded: isEx,
+            is_excluded: isEx,
+            status: isEx ? 'Excluded' : 'Available',
+            exclusionReason: isEx ? (reasonVal || 'Excluded') : ''
+          };
+          faculty.push(newFac);
+          faculty.sort(compareOfficials);
+          await saveAll(false);
+          modal.remove();
+          showToast(`Added "${newFac.name}" to Teaching Faculty Roster!`, 'success');
+          renderUI();
+        } else {
+          const oldName = targetFaculty.name;
+          const oldPen = targetFaculty.pen || '';
+
+          targetFaculty.name = nameVal;
+          targetFaculty.seniority = parsedSeniority;
+          targetFaculty.pen = penVal;
+          targetFaculty.designation = desigVal;
+          targetFaculty.department = deptVal;
+          targetFaculty.joiningDate = joiningVal;
+          targetFaculty.isExcluded = isEx;
+          targetFaculty.excluded = isEx;
+          targetFaculty.is_excluded = isEx;
+          targetFaculty.status = isEx ? 'Excluded' : 'Available';
+          targetFaculty.exclusionReason = isEx ? (reasonVal || 'Excluded') : '';
+
+          // Cascade changes across all assignments and committees
+          cascadeUpdateOfficial(oldName, oldPen, {
+            name: targetFaculty.name,
+            pen: targetFaculty.pen,
+            designation: targetFaculty.designation,
+            department: targetFaculty.department,
+            seniority: targetFaculty.seniority
+          });
+
+          faculty.sort(compareOfficials);
+          await saveAll(false);
+          modal.remove();
+          showToast(`Updated details for "${targetFaculty.name}" successfully!`, 'success');
+          renderUI();
+        }
+      };
+    };
+
+    renderModal();
+  };
+
+  // ─── Non-Teaching Staff Roster Member Edit Modal ────────────────────────────
+  const openEditNonTeachingModal = (targetStaff = null) => {
+    const existing = document.getElementById('editNonTeachingModalContainer');
+    if (existing) existing.remove();
+
+    const isNew = !targetStaff;
+    let draft = targetStaff ? {
+      name: targetStaff.name || '',
+      pen: targetStaff.pen || '',
+      designation: targetStaff.designation || 'Staff',
+      department: targetStaff.department || 'Office',
+      isExcluded: Boolean(isPersonExcluded(targetStaff)),
+      exclusionReason: targetStaff.exclusionReason || ''
+    } : {
+      name: '',
+      pen: '',
+      designation: 'Senior Clerk',
+      department: 'College Office',
+      isExcluded: false,
+      exclusionReason: ''
+    };
+
+    const modal = document.createElement('div');
+    modal.id = 'editNonTeachingModalContainer';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+    document.body.appendChild(modal);
+
+    const designations = [
+      'Junior Superintendent',
+      'Head Accountant',
+      'Senior Clerk',
+      'Clerk',
+      'Office Attendant',
+      'Senior Office Attendant',
+      'Lab Assistant',
+      'Library Assistant',
+      'Mechanic',
+      'Gardener',
+      'Watchman'
+    ];
+
+    const renderModal = () => {
+      modal.innerHTML = `
+        <div class="glass border border-emerald-500/40 rounded-2xl w-full max-w-xl bg-slate-900/95 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+          <!-- Modal Header -->
+          <div class="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-xl shadow-inner border border-emerald-500/30">
+                🤝
+              </div>
+              <div>
+                <h4 class="font-bold text-white text-base">${isNew ? 'Add Non-Teaching Staff Member' : 'Edit Staff Member Details'}</h4>
+                <p class="text-xs text-slate-400">${isNew ? 'Add a new member to the Non-Teaching Staff roster' : `Update details for "${esc(targetStaff.name)}"`}</p>
+              </div>
+            </div>
+            <button id="btnCloseEditNtModal" class="text-slate-400 hover:text-white text-2xl font-bold px-2 py-1 leading-none">&times;</button>
+          </div>
+
+          <!-- Modal Body Form -->
+          <form id="formEditNonTeaching" class="p-5 overflow-y-auto space-y-4 flex-1">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Name -->
+              <div class="sm:col-span-2 space-y-1">
+                <label class="block text-xs font-bold uppercase tracking-wider text-emerald-300">
+                  Full Name <span class="text-rose-400">*</span>
+                </label>
+                <input type="text" id="ntInputName" required value="${esc(draft.name)}" placeholder="e.g. Sri. K. Ramesh" class="w-full bg-slate-950/80 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400" />
+              </div>
+
+              <!-- Designation -->
+              <div class="space-y-1">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                  Designation
+                </label>
+                <input type="text" id="ntInputDesig" list="ntDatalistDesig" value="${esc(draft.designation)}" placeholder="Select or type designation" class="w-full bg-slate-950/80 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400" />
+                <datalist id="ntDatalistDesig">
+                  ${designations.map(d => `<option value="${esc(d)}">`).join('')}
+                </datalist>
+              </div>
+
+              <!-- PEN Number -->
+              <div class="space-y-1">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                  <span>PEN Number</span>
+                  <span class="text-[10px] text-slate-400 font-normal">Optional</span>
+                </label>
+                <input type="text" id="ntInputPen" value="${esc(draft.pen)}" placeholder="e.g. 654321" class="w-full bg-slate-950/80 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 font-mono" />
+              </div>
+
+              <!-- Department / Section -->
+              <div class="sm:col-span-2 space-y-1">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                  Department / Section
+                </label>
+                <input type="text" id="ntInputDept" value="${esc(draft.department)}" placeholder="e.g. College Office, Chemistry Store, Library" class="w-full bg-slate-950/80 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400" />
+              </div>
+
+              <!-- Duty Status (Available vs Excluded) -->
+              <div class="sm:col-span-2 p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-3">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-200">
+                      Election Duty Availability Status
+                    </label>
+                    <p class="text-[11px] text-slate-400">Mark if staff member is on leave or essential office duty</p>
+                  </div>
+                  <select id="ntInputExcluded" class="bg-slate-900 border border-white/20 rounded-lg px-3 py-1.5 text-xs text-white font-semibold focus:outline-none focus:border-emerald-400">
+                    <option value="false" ${!draft.isExcluded ? 'selected' : ''}>✅ Available for Duty</option>
+                    <option value="true" ${draft.isExcluded ? 'selected' : ''}>⛔ Excluded from Duty</option>
+                  </select>
+                </div>
+
+                <div id="ntReasonWrapper" class="${draft.isExcluded ? '' : 'hidden'} space-y-1 pt-1 border-t border-white/10">
+                  <label class="block text-[11px] font-bold text-amber-300">
+                    Reason for Exclusion
+                  </label>
+                  <input type="text" id="ntInputReason" value="${esc(draft.exclusionReason)}" placeholder="e.g. Essential Office Duty, Medical Leave" class="w-full bg-slate-950/80 border border-amber-500/40 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 font-medium" />
+                </div>
+              </div>
+            </div>
+          </form>
+
+          <!-- Modal Footer Actions -->
+          <div class="p-4 border-t border-white/10 bg-slate-950/60 flex items-center justify-between flex-wrap gap-2">
+            ${!isNew ? `
+              <button type="button" id="btnDeleteNtFromModal" class="btn btn-secondary border-rose-500/40 text-rose-300 hover:text-white hover:bg-rose-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold">
+                🗑️ Delete Staff
+              </button>
+            ` : '<div></div>'}
+
+            <div class="flex items-center gap-2">
+              <button type="button" id="btnCancelEditNtModal" class="btn btn-secondary text-xs px-4 py-2 text-slate-300 hover:text-white">
+                Cancel
+              </button>
+              <button type="button" id="btnSaveEditNtModal" class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2 rounded-xl shadow-lg flex items-center gap-1.5">
+                💾 Save Details
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Event Listeners for Modal
+      modal.querySelector('#btnCloseEditNtModal').onclick = () => modal.remove();
+      modal.querySelector('#btnCancelEditNtModal').onclick = () => modal.remove();
+      modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+      const selectExcluded = modal.querySelector('#ntInputExcluded');
+      const reasonWrapper = modal.querySelector('#ntReasonWrapper');
+      selectExcluded.onchange = () => {
+        const isEx = selectExcluded.value === 'true';
+        if (isEx) {
+          reasonWrapper.classList.remove('hidden');
+          const reasonInput = modal.querySelector('#ntInputReason');
+          if (reasonInput && !reasonInput.value) {
+            reasonInput.value = 'Office Duty';
+          }
+        } else {
+          reasonWrapper.classList.add('hidden');
+        }
+      };
+
+      // Delete Staff
+      const btnDelete = modal.querySelector('#btnDeleteNtFromModal');
+      if (btnDelete && targetStaff) {
+        btnDelete.onclick = async () => {
+          if (confirm(`🗑️ Delete "${targetStaff.name}" from the Non-Teaching Staff Roster?\n\nThis will also remove them from any assigned duties.`)) {
+            nonTeaching = nonTeaching.filter(n => n !== targetStaff && n.name !== targetStaff.name);
+            removeOfficialFromDuties(targetStaff.name, targetStaff.pen);
+            nonTeaching.sort(compareOfficials);
+            await saveAll(false);
+            modal.remove();
+            showToast(`Deleted "${targetStaff.name}" from staff roster.`, 'info');
+            renderUI();
+          }
+        };
+      }
+
+      // Save Staff
+      modal.querySelector('#btnSaveEditNtModal').onclick = async () => {
+        const nameVal = (modal.querySelector('#ntInputName')?.value || '').trim();
+        if (!nameVal) {
+          showToast('Please enter the staff member name.', 'error');
+          modal.querySelector('#ntInputName')?.focus();
+          return;
+        }
+
+        const penVal = (modal.querySelector('#ntInputPen')?.value || '').trim();
+        const desigVal = (modal.querySelector('#ntInputDesig')?.value || '').trim() || 'Staff';
+        const deptVal = normalizeDepartment((modal.querySelector('#ntInputDept')?.value || '').trim()) || (modal.querySelector('#ntInputDept')?.value || '').trim() || 'Office';
+        const isEx = modal.querySelector('#ntInputExcluded')?.value === 'true';
+        const reasonVal = (modal.querySelector('#ntInputReason')?.value || '').trim();
+
+        if (isNew) {
+          const newNt = {
+            id: 'nt_' + Date.now(),
+            name: nameVal,
+            pen: penVal,
+            designation: desigVal,
+            department: deptVal,
+            isExcluded: isEx,
+            excluded: isEx,
+            is_excluded: isEx,
+            status: isEx ? 'Excluded' : 'Available',
+            exclusionReason: isEx ? (reasonVal || 'Excluded') : ''
+          };
+          nonTeaching.push(newNt);
+          nonTeaching.sort(compareOfficials);
+          await saveAll(false);
+          modal.remove();
+          showToast(`Added "${newNt.name}" to Non-Teaching Staff Roster!`, 'success');
+          renderUI();
+        } else {
+          const oldName = targetStaff.name;
+          const oldPen = targetStaff.pen || '';
+
+          targetStaff.name = nameVal;
+          targetStaff.pen = penVal;
+          targetStaff.designation = desigVal;
+          targetStaff.department = deptVal;
+          targetStaff.isExcluded = isEx;
+          targetStaff.excluded = isEx;
+          targetStaff.is_excluded = isEx;
+          targetStaff.status = isEx ? 'Excluded' : 'Available';
+          targetStaff.exclusionReason = isEx ? (reasonVal || 'Excluded') : '';
+
+          // Cascade changes across all assignments
+          cascadeUpdateOfficial(oldName, oldPen, {
+            name: targetStaff.name,
+            pen: targetStaff.pen,
+            designation: targetStaff.designation,
+            department: targetStaff.department
+          });
+
+          nonTeaching.sort(compareOfficials);
+          await saveAll(false);
+          modal.remove();
+          showToast(`Updated details for "${targetStaff.name}" successfully!`, 'success');
+          renderUI();
+        }
+      };
+    };
+
+    renderModal();
+  };
+
   // ─── Master Duty List Standalone Print Engine (Both Polling & Counting) ─────
 
   const getMasterDutyData = () => {
@@ -5884,7 +6594,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       aro.slNo = `ARO-${idx + 1}`;
     });
 
-    // 0C. Core Committee to Assist Returning Officer (RO)
+    // 0C. Core Committee
     const coreList = (coreCommittee || [])
       .filter((c) => c && c.name && c.name.trim().length > 0)
       .map((c) => {
@@ -5894,8 +6604,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         const bInCharge = pollingTeams.find(t => t.coreInCharge && (String(t.coreInCharge.name || '').trim().toLowerCase() === cleanName || (cleanPen && String(t.coreInCharge.pen || '').trim().toLowerCase() === cleanPen)));
         const tInCharge = countingTeams.find(t => t.coreInCharge && (String(t.coreInCharge.name || '').trim().toLowerCase() === cleanName || (cleanPen && String(t.coreInCharge.pen || '').trim().toLowerCase() === cleanPen)));
 
-        let stationText = 'Central Control Room / Assisting RO';
-        let dutyText = 'Core Committee Member (Assisting RO)';
+        let stationText = 'Central Control Room';
+        let dutyText = 'Core Committee Member';
         if (bInCharge && tInCharge) {
           dutyText = `Core Committee In-Charge (Polling Booth ${bInCharge.boothNumber} & Counting Table ${tInCharge.tableNumber})`;
           stationText = `Booth ${bInCharge.boothNumber} (${bInCharge.roomName || 'Polling'}) & Table ${tInCharge.tableNumber} (${tInCharge.roomName || 'Counting'})`;
@@ -6628,7 +7338,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <p class="preamble-text">
           For the smooth, fair, and orderly conduct of the <strong>College Union Election ${esc(electionYear)}</strong>, 
           the following Teaching Faculty and Non-Teaching Staff members are assigned election duties as 
-          <strong>Returning Officer, Assistant Returning Officers, Core Committee (Assisting RO), Observers, Campus Discipline Committee, Grievance Redressal Committee, Polling &amp; Counting Personnel, and Reserve Pool</strong>. 
+          <strong>Returning Officer, Assistant Returning Officers, Core Committee, Observers, Campus Discipline Committee, Grievance Redressal Committee, Polling &amp; Counting Personnel, and Reserve Pool</strong>. 
           Officials are sorted strictly by seniority across departments for administrative convenience and are kindly requested to report at their respective stations as scheduled. 
           Personnel in the Reserve Pool are requested to remain on standby at the Central Control Room for relief and support as needed. 
           Your kind cooperation and active support are earnestly requested for the successful conduct of the election.
@@ -6710,9 +7420,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </tbody>
         </table>
 
-        <!-- SECTION 2: CORE COMMITTEE TO ASSIST RETURNING OFFICER -->
+        <!-- SECTION 2: CORE COMMITTEE -->
         <div class="section-title-box" style="margin-top: 14px;">
-          <span>⭐ SECTION 2: CORE COMMITTEE TO ASSIST RETURNING OFFICER (RO)</span>
+          <span>⭐ SECTION 2: CORE COMMITTEE</span>
           <span style="font-size: 8.5px; font-weight: normal;">Election Management &amp; Booth / Table In-Charge Supervision</span>
         </div>
 
@@ -7126,9 +7836,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </tbody>
         </table>
 
-        <!-- SECTION 2: CORE COMMITTEE TO ASSIST RETURNING OFFICER -->
+        <!-- SECTION 2: CORE COMMITTEE -->
         <div class="section-title-box" style="margin-top: 14px;">
-          <span>⭐ CORE COMMITTEE TO ASSIST RETURNING OFFICER (RO)</span>
+          <span>⭐ CORE COMMITTEE</span>
         </div>
 
         ${coreList.length === 0 ? `
@@ -7376,7 +8086,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             ${booths.map(b => {
               const team = pollingTeams.find(t => t.boothNumber === b.boothNumber) || {};
               const slots = [
-                ...(team.coreInCharge ? [{ role: 'Core Committee In-Charge (Assisting RO)', person: team.coreInCharge, isCore: true }] : []),
+                ...(team.coreInCharge ? [{ role: 'Core Committee In-Charge', person: team.coreInCharge, isCore: true }] : []),
                 { role: 'Presiding Officer', person: team.presidingOfficer, isHead: true },
                 { role: 'Polling Officer', person: team.pollingOfficer1 },
                 { role: 'Polling Officer', person: team.pollingOfficer2 },
@@ -7457,7 +8167,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             ${booths.map(b => {
               const team = countingTeams.find(t => t.tableNumber === b.boothNumber) || {};
               const slots = [
-                ...(team.coreInCharge ? [{ role: 'Core Committee In-Charge (Assisting RO)', person: team.coreInCharge, isCore: true }] : []),
+                ...(team.coreInCharge ? [{ role: 'Core Committee In-Charge', person: team.coreInCharge, isCore: true }] : []),
                 { role: 'Counting Supervisor', person: team.supervisor, isHead: true },
                 { role: 'Counting Officer', person: team.countingOfficer1 },
                 { role: 'Counting Officer', person: team.countingOfficer2 },
@@ -8155,7 +8865,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     ${t.coreInCharge && t.coreInCharge.name ? `
                       <div style="margin-top: 4px; padding: 2px 5px; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 4px; font-size: 8.5px; color: #0369a1; font-weight: 700;">
                         ⭐ In-Charge: ${esc(t.coreInCharge.name)}
-                        <span style="font-size: 7.5px; font-weight: normal; display: block; color: #0284c7;">(Core Committee Assisting RO)</span>
+                        <span style="font-size: 7.5px; font-weight: normal; display: block; color: #0284c7;">(Core Committee)</span>
                       </div>
                     ` : ''}
                   </td>
@@ -8248,7 +8958,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           name: t.coreInCharge.name,
           designation: t.coreInCharge.designation || 'Faculty',
           pen: t.coreInCharge.pen || '',
-          role: 'Core Committee In-Charge (Assisting RO)',
+          role: 'Core Committee In-Charge',
           boothNumber: num,
           venue: venue
         });
@@ -8321,7 +9031,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const asstMap = new Map();
 
       personnel.forEach(p => {
-        if (p.role === 'Counting Assistant' || p.role === 'Core Committee In-Charge (Assisting RO)') {
+        if (p.role === 'Counting Assistant' || p.role === 'Core Committee In-Charge' || p.role.includes('Core Committee')) {
           const key = `${p.name}_${p.role}`;
           if (!asstMap.has(key)) {
             const entry = { ...p, tables: [p.boothNumber], venues: [p.venue] };
