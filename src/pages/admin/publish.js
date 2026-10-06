@@ -466,7 +466,8 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
         </tbody>
       </table>
 
-      <!-- Statutory Bottom Warning for Candidates -->
+      ${!isFinal ? `
+      <!-- Statutory Bottom Warning for Candidates (Valid List Only) -->
       <div style="margin-top:22px;margin-bottom:18px;border:1.5px solid #dc2626;background:#fff1f2;padding:10px 14px;border-radius:4px;page-break-inside:avoid">
         <div style="font-weight:800;color:#991b1b;font-size:11px;text-transform:uppercase;margin-bottom:4px;display:flex;align-items:center;gap:6px">
           <span>⚠️</span> <span>STATUTORY WARNING / MANDATORY NOTICE TO CANDIDATES:</span>
@@ -479,6 +480,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
           (ഒന്നിലധികം പോസ്റ്റുകളിലേക്ക് നാമനിർദ്ദേശ പത്രിക സമർപ്പിച്ച സ്ഥാനാർത്ഥികൾ നിശ്ചിത പിൻവലിക്കൽ സമയപരിധിക്ക് മുൻപായി അധിക പത്രികകൾ പിൻവലിക്കേണ്ടതാണ്. അല്ലാത്തപക്ഷം പ്രസ്തുത സ്ഥാനാർത്ഥിയുടെ എല്ലാ നാമനിർദ്ദേശ പത്രികകളും സ്വമേധയാ റദ്ദാക്കപ്പെടുന്നതും, തെരഞ്ഞെടുപ്പിൽ മത്സരിക്കാനുള്ള അർഹത നഷ്ടപ്പെടുന്നതുമാണ്.)
         </div>
       </div>
+      ` : ''}
 
       <div style="margin-top:35px;display:flex;justify-content:space-between;align-items:flex-end">
         <div style="font-size:11px;color:#555">
