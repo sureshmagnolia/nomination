@@ -822,10 +822,11 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           }).join('')}
         </div>
       `}
+    </div>
 
-      <!-- Modal: Confidential Panel Standings (Inconspicuous, Hidable Modal) -->
-      <div id="modalPanelStandings" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-sm hidden page-enter">
-        <div class="w-full max-w-2xl rounded-2xl border border-slate-700/80 bg-slate-900 shadow-2xl flex flex-col max-h-[88vh] overflow-hidden text-slate-200">
+    <!-- Modal: Confidential Panel Standings (Inconspicuous, Hidable Modal) -->
+    <div id="modalPanelStandings" class="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-sm hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999;">
+      <div class="relative z-10 w-full max-w-2xl rounded-2xl border border-slate-700/80 bg-slate-900 shadow-2xl flex flex-col max-h-[88vh] overflow-hidden text-slate-200 my-auto" style="position: relative; z-index: 10000; max-height: 88vh;">
           <!-- Modal Header -->
           <div class="px-5 py-3.5 border-b border-slate-800 bg-slate-950 flex items-center justify-between shrink-0">
             <div class="flex items-center gap-2.5">
@@ -1082,8 +1083,8 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       </div>
 
       <!-- Modal: Assign Candidate Panel Colors -->
-      <div id="modalPanelColors" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md hidden page-enter">
-        <div class="w-full max-w-3xl rounded-3xl border border-slate-700/80 bg-slate-900 shadow-2xl flex flex-col h-[650px] max-h-[92vh] overflow-hidden">
+      <div id="modalPanelColors" class="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999;">
+        <div class="relative z-10 w-full max-w-3xl rounded-3xl border border-slate-700/80 bg-slate-900 shadow-2xl flex flex-col h-[650px] max-h-[92vh] overflow-hidden my-auto" style="position: relative; z-index: 10000; max-height: 92vh;">
           <!-- Modal Header -->
           <div class="px-6 py-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between shrink-0">
             <div class="flex items-center gap-3">
@@ -1229,7 +1230,6 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           </div>
         </div>
       </div>
-    </div>
   `;
 
   main.querySelector('#btnResultsExportBackup')?.addEventListener('click', async () => {
@@ -1547,19 +1547,48 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   });
 
   // ── Confidential Panel Modals (Standings & Set Colors) ──────────────────────
+  // Check if modals were previously open before this re-render
+  const prevStandingsEl = document.getElementById('modalPanelStandings');
+  const wasStandingsOpen = prevStandingsEl && !prevStandingsEl.classList.contains('hidden');
+  const prevColorsEl = document.getElementById('modalPanelColors');
+  const wasColorsOpen = prevColorsEl && !prevColorsEl.classList.contains('hidden');
+
+  // Clean up any existing portaled modal elements in document.body
+  document.querySelectorAll('#modalPanelStandings, #modalPanelColors').forEach(el => {
+    if (el.parentElement === document.body) el.remove();
+  });
+
+  // Portal modals to document.body so they attach directly to viewport window
+  // (immune to #adminResultsRoot page-enter transform and #adminMain scroll containment)
   const standingsModal = main.querySelector('#modalPanelStandings');
+  if (standingsModal) {
+    document.body.appendChild(standingsModal);
+    if (wasStandingsOpen) standingsModal.classList.remove('hidden');
+  }
+
   const panelModal = main.querySelector('#modalPanelColors');
+  if (panelModal) {
+    document.body.appendChild(panelModal);
+    if (wasColorsOpen) panelModal.classList.remove('hidden');
+  }
+
   let workingCandidateColors = { ...(panelData.candidates || {}) };
 
-  function openStandingsModal() {
+  function openStandingsModal(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
     if (standingsModal) standingsModal.classList.remove('hidden');
   }
 
-  function closeStandingsModal() {
+  function closeStandingsModal(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
     if (standingsModal) standingsModal.classList.add('hidden');
   }
 
-  function openPanelModal() {
+  function openPanelModal(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
     closeStandingsModal();
     if (panelModal) {
       panelModal.classList.remove('hidden');
@@ -1603,7 +1632,9 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
     }
   }
 
-  function closePanelModal() {
+  function closePanelModal(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
     if (panelModal) {
       panelModal.classList.add('hidden');
       renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
@@ -1611,43 +1642,50 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   }
 
   // Standings modal triggers
-  main.querySelector('#btnOpenStandingsModal')?.addEventListener('click', openStandingsModal);
-  main.querySelector('#btnCloseStandingsModal')?.addEventListener('click', closeStandingsModal);
-  main.querySelector('#btnHideStandingsModal')?.addEventListener('click', closeStandingsModal);
-  main.querySelector('#btnStandingsOpenSetup')?.addEventListener('click', openPanelModal);
-  main.querySelector('#btnPromptSetColors')?.addEventListener('click', openPanelModal);
+  main.querySelector('#btnOpenStandingsModal')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openStandingsModal(e);
+  });
+  standingsModal?.querySelector('#btnCloseStandingsModal')?.addEventListener('click', closeStandingsModal);
+  standingsModal?.querySelector('#btnHideStandingsModal')?.addEventListener('click', closeStandingsModal);
+  standingsModal?.querySelector('#btnStandingsOpenSetup')?.addEventListener('click', openPanelModal);
+  standingsModal?.querySelector('#btnPromptSetColors')?.addEventListener('click', openPanelModal);
 
   standingsModal?.addEventListener('click', (e) => {
-    if (e.target === standingsModal) closeStandingsModal();
+    if (e.target === standingsModal) closeStandingsModal(e);
   });
 
   // Panel colors modal triggers
-  main.querySelector('#btnOpenPanelSetup')?.addEventListener('click', openPanelModal);
-  main.querySelector('#btnClosePanelModal')?.addEventListener('click', closePanelModal);
-  main.querySelector('#btnCancelPanelModal')?.addEventListener('click', closePanelModal);
+  main.querySelector('#btnOpenPanelSetup')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openPanelModal(e);
+  });
+  panelModal?.querySelector('#btnClosePanelModal')?.addEventListener('click', closePanelModal);
+  panelModal?.querySelector('#btnCancelPanelModal')?.addEventListener('click', closePanelModal);
 
   panelModal?.addEventListener('click', (e) => {
-    if (e.target === panelModal) closePanelModal();
+    if (e.target === panelModal) closePanelModal(e);
   });
 
   // ESC key dismisses modals
   const handleEscapeKey = (e) => {
     if (e.key === 'Escape' || e.key === 'Esc') {
       if (standingsModal && !standingsModal.classList.contains('hidden')) {
-        closeStandingsModal();
+        closeStandingsModal(e);
       } else if (panelModal && !panelModal.classList.contains('hidden')) {
-        closePanelModal();
+        closePanelModal(e);
       }
     }
   };
   window.addEventListener('keydown', handleEscapeKey);
   router.registerCleanup(() => {
     window.removeEventListener('keydown', handleEscapeKey);
+    document.querySelectorAll('#modalPanelStandings, #modalPanelColors').forEach(el => el.remove());
   });
 
   // Toggle Custom Panel Names in modal
-  const btnToggleLabels = main.querySelector('#btnToggleCustomLabels');
-  const sectionLabels = main.querySelector('#sectionCustomLabels');
+  const btnToggleLabels = panelModal?.querySelector('#btnToggleCustomLabels');
+  const sectionLabels = panelModal?.querySelector('#sectionCustomLabels');
   if (btnToggleLabels && sectionLabels) {
     btnToggleLabels.onclick = () => {
       sectionLabels.classList.toggle('hidden');
@@ -1655,7 +1693,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   }
 
   // Filter candidates/posts in modal
-  const inputFilter = main.querySelector('#inputFilterPanelCand');
+  const inputFilter = panelModal?.querySelector('#inputFilterPanelCand');
   if (inputFilter && panelModal) {
     inputFilter.addEventListener('input', (e) => {
       const q = e.target.value.toLowerCase().trim();
@@ -1755,7 +1793,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   }
 
   // Save Modal Changes
-  main.querySelector('#btnSavePanelColors')?.addEventListener('click', () => {
+  panelModal?.querySelector('#btnSavePanelColors')?.addEventListener('click', () => {
     const workingLabels = {};
     if (sectionLabels) {
       sectionLabels.querySelectorAll('input[data-color-label-id]').forEach(inp => {
@@ -1786,7 +1824,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
     renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
   }
 
-  main.querySelector('#btnModalClearAll')?.addEventListener('click', executeClearAllColors);
+  panelModal?.querySelector('#btnModalClearAll')?.addEventListener('click', executeClearAllColors);
 
   // Auto-open if redirected with openPanelColors flag
   if (window.location.hash.includes('openPanelColors=true')) {
