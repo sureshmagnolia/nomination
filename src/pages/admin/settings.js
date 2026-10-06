@@ -6,6 +6,7 @@ import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
 import { THEMES, getActiveTheme, applyTheme } from '../../theme.js';
+import { CONFIG } from '../../config.js';
 
 export async function renderSettings(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
@@ -71,6 +72,10 @@ export async function renderSettings(container) {
                   <label class="text-xs text-slate-400 uppercase tracking-wider block mb-2">Election Year</label>
                   <input type="text" id="inputElectionYear" class="field text-sm py-2.5" value="${esc(settings.electionYear || new Date().getFullYear().toString())}" placeholder="e.g. 2026">
                 </div>
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 uppercase tracking-wider block mb-2">College Location / Place (Appears on Official Prints)</label>
+                <input type="text" id="inputCollegePlace" class="field text-sm py-2.5" value="${esc(settings.collegePlace || CONFIG.COLLEGE_PLACE || 'Palakkad')}" placeholder="e.g. Palakkad, Chittur">
               </div>
               <button id="btnUpdateBranding" class="btn btn-primary w-full py-3 mt-2">Save Branding</button>
             </div>
@@ -254,6 +259,7 @@ export async function renderSettings(container) {
       const collegeName = container.querySelector('#inputCollegeName').value.trim();
       const collegeShortName = container.querySelector('#inputCollegeShort').value.trim();
       const electionYear = container.querySelector('#inputElectionYear').value.trim() || new Date().getFullYear().toString();
+      const collegePlace = container.querySelector('#inputCollegePlace')?.value.trim() || CONFIG.COLLEGE_PLACE || 'Palakkad';
       if (!collegeName || !collegeShortName) return showToast('Please fill all branding fields.', 'error');
 
       const btn = e.currentTarget;
@@ -263,7 +269,8 @@ export async function renderSettings(container) {
           collegeName,
           collegeShortName,
           electionYear,
-          collegeLogo: currentLogoDataUrl
+          collegeLogo: currentLogoDataUrl,
+          collegePlace
         });
         showToast('College branding & logo updated successfully! Refresh to see changes system-wide.', 'success');
       } catch (err) {

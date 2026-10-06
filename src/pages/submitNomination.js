@@ -89,6 +89,7 @@ export async function renderSubmitNomination(container, options = {}) {
 function renderForm(container, year, collegeName, setsData = {}, isAdminDirect = false) {
   const captcha = generateCaptcha();
   captchaAnswer = captcha.answer;
+  const collegePlace = setsData.collegePlace || CONFIG.COLLEGE_PLACE || 'Palakkad';
 
   container.querySelector('#loadingState').classList.add('hidden');
   const formArea = container.querySelector('#formArea');
@@ -892,7 +893,7 @@ async function handleSubmit(e, formArea, yearValue, collegeName, collegeLogo = '
 
     const result = await api.submitNomination(payload);
 
-    showPreview(formArea, result.id, { post, gender, day, month, year, dob: formattedDob, students, endorserFlags }, yearValue, collegeName, collegeLogo, isAdminDirect);
+    showPreview(formArea, result.id, { post, gender, day, month, year, dob: formattedDob, students, endorserFlags }, yearValue, collegeName, collegeLogo, isAdminDirect, collegePlace);
     showToast(`Nomination submitted! ID: ${result.id}`, 'success');
   } catch (err) {
     showToast(`Submission failed: ${err.message}`, 'error');
@@ -901,7 +902,7 @@ async function handleSubmit(e, formArea, yearValue, collegeName, collegeLogo = '
   }
 }
 
-function showPreview(formArea, id, { post, gender, day, month, year, dob, students, endorserFlags = [] }, yearValue, collegeName, collegeLogo = '', isAdminDirect = false) {
+function showPreview(formArea, id, { post, gender, day, month, year, dob, students, endorserFlags = [] }, yearValue, collegeName, collegeLogo = '', isAdminDirect = false, collegePlace = null) {
   const [candidate, proposer, seconder] = students;
   const dobDisplay = displayDob(day, month, year);
   const age = calculateAge(dob);
@@ -923,7 +924,7 @@ function showPreview(formArea, id, { post, gender, day, month, year, dob, studen
   ` : '';
 
   formArea.querySelector('#printZone').innerHTML = bannerHtml +
-    buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, 'Pending', yearValue, collegeName, collegeLogo);
+    buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, 'Pending', yearValue, collegeName, collegeLogo, collegePlace);
 
   preview.classList.remove('hidden');
   preview.scrollIntoView({ behavior: 'smooth' });
@@ -936,7 +937,7 @@ function showPreview(formArea, id, { post, gender, day, month, year, dob, studen
   });
 }
 
-export function buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, status = '', yearValue = '2026', collegeName = null, collegeLogo = '') {
+export function buildNominationPaper(id, post, gender, dobDisplay, age, candidate, proposer, seconder, status = '', yearValue = '2026', collegeName = null, collegeLogo = '', collegePlace = null) {
   const today = todayFormatted();
   const cName = collegeName || CONFIG.COLLEGE_NAME;
 
@@ -971,7 +972,7 @@ export function buildNominationPaper(id, post, gender, dobDisplay, age, candidat
       <div class="flex justify-between text-sm text-slate-400" style="margin-top: 80px;">
         <div class="space-y-3">
           <p>Date: ______ / ______ / ${yearValue}</p>
-          <p>Place: ____________________</p>
+          <p>Place: ${collegePlace ? esc(collegePlace) : '____________________'}</p>
         </div>
         <div class="text-center space-y-2">
           <p>_______________________</p>

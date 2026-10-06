@@ -821,6 +821,7 @@ export default async function handler(req, res) {
       await sql`INSERT INTO settings (key, value) VALUES ('nominationStart', '') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('collegeName', 'Government Victoria College, Palakkad') ON CONFLICT (key) DO NOTHING;`;
       await sql`INSERT INTO settings (key, value) VALUES ('collegeShortName', 'GVC') ON CONFLICT (key) DO NOTHING;`;
+      await sql`INSERT INTO settings (key, value) VALUES ('collegePlace', 'Palakkad') ON CONFLICT (key) DO NOTHING;`;
 
       return jsonOut(res, { ok: true, message: 'Database initialized' });
     }
@@ -939,16 +940,18 @@ export default async function handler(req, res) {
 
     if (action === 'getSettings' || action === 'adminGetSettings') {
       const status = await getFullElectionStatus();
-      const [colName, colShort, colLogo] = await Promise.all([
+      const [colName, colShort, colLogo, colPlace] = await Promise.all([
         getSetting('collegeName'),
         getSetting('collegeShortName'),
-        getSetting('collegeLogo')
+        getSetting('collegeLogo'),
+        getSetting('collegePlace')
       ]);
       const obj = {
         ...status,
         collegeName: colName || 'Government Victoria College, Palakkad',
         collegeShortName: colShort || 'GVC',
-        collegeLogo: colLogo || ''
+        collegeLogo: colLogo || '',
+        collegePlace: colPlace || 'Palakkad'
       };
       if (action === 'adminGetSettings') {
         const rows = await sql`SELECT value FROM settings WHERE key = 'adminEmail'`;
@@ -1904,6 +1907,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       if (body.collegeShortName !== undefined) await setSetting('collegeShortName', body.collegeShortName);
       if (body.electionYear !== undefined) await setSetting('electionYear', body.electionYear);
       if (body.collegeLogo !== undefined) await setSetting('collegeLogo', body.collegeLogo);
+      if (body.collegePlace !== undefined) await setSetting('collegePlace', body.collegePlace);
       return jsonOut(res, { ok: true });
     }
 
@@ -3090,6 +3094,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       const cName = (await getSetting('collegeName')) || 'Government Victoria College, Palakkad';
       const cShort = (await getSetting('collegeShortName')) || 'GVC';
       const eYear = (await getSetting('electionYear')) || new Date().getFullYear().toString();
+      const cPlace = (await getSetting('collegePlace')) || 'Palakkad';
 
       const counts = {
         nominalRoll: rollRows.length,
@@ -3121,6 +3126,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
           collegeName: cName,
           collegeShortName: cShort,
           electionYear: eYear,
+          collegePlace: cPlace,
           counts,
           checksum
         },

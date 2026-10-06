@@ -5,6 +5,7 @@
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, sortPosts } from '../../utils.js';
+import { CONFIG } from '../../config.js';
 import {
   getAllResultsLocally,
   syncLedgerWithServer,
@@ -399,6 +400,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   const collegeName = sets.collegeName || 'GOVERNMENT VICTORIA COLLEGE PALAKKAD';
   const shortName = sets.collegeShortName || 'GVC';
   const collegeLogo = sets.collegeLogo || '';
+  const collegePlace = sets.collegePlace || CONFIG.COLLEGE_PLACE || 'Palakkad';
   let isLocked = sets.resultsLocked === 'true';
   let isPublic = sets.resultsPublished === 'true';
   let isCountingActive = sets.countingActive === 'true' || schedule.countingActive === 'true';
@@ -1254,7 +1256,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
         <div class="footer">
           <div style="font-size: 13px;">
             <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-IN')}</p>
-            <p><strong>Place:</strong> Palakkad</p>
+            <p><strong>Place:</strong> ${esc(collegePlace)}</p>
           </div>
           <div class="sig-box">
             RETURNING OFFICER<br>

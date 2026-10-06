@@ -56,6 +56,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
   const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
   const collegeLogo = settings.collegeLogo || '';
+  const collegePlace = settings.collegePlace || CONFIG.COLLEGE_PLACE || 'Palakkad';
 
   // Filter nominations
   const validList = nominations.filter(n => n.status === 'Valid');
@@ -494,7 +495,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
       <div style="margin-top:30px;display:flex;justify-content:space-between;align-items:flex-end;page-break-inside:avoid;break-inside:avoid">
         <div style="font-size:11px;color:#000">
           <div><strong>Date of Publication:</strong> ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
-          <div><strong>Place:</strong> Palakkad</div>
+          <div><strong>Place:</strong> ${esc(collegePlace)}</div>
         </div>
         <div style="text-align:center;width:220px">
           <div style="border-top:1px solid #000;padding-top:6px;font-weight:bold;font-size:12px;color:#000">RETURNING OFFICER</div>
@@ -772,7 +773,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
         <div class="footer">
           <div style="font-size: 11px; color: #000;">
             <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-            <p><strong>Place:</strong> Palakkad</p>
+            <p><strong>Place:</strong> ${esc(collegePlace)}</p>
           </div>
           <div class="sig-box">
             RETURNING OFFICER<br>

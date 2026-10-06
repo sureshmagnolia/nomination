@@ -99,6 +99,7 @@ export function printOfficialNotice(notice, settings = {}) {
   const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
   const year = settings.electionYear || new Date().getFullYear();
   const collegeLogo = settings.collegeLogo || '';
+  const collegePlace = settings.collegePlace || CONFIG.COLLEGE_PLACE || 'Palakkad';
 
   const w = window.open('', '_blank');
   if (!w) {
@@ -308,7 +309,7 @@ export function printOfficialNotice(notice, settings = {}) {
 
     <div class="meta-bar">
       <div><strong>Ref No:</strong> ${esc(notice.refNo || 'N/A')}</div>
-      <div><strong>Date of Issue:</strong> ${esc(notice.date || new Date().toISOString().split('T')[0])}</div>
+      <div><strong>Place:</strong> ${esc(collegePlace)} &nbsp;&bull;&nbsp; <strong>Date:</strong> ${esc(notice.date || new Date().toISOString().split('T')[0])}</div>
     </div>
 
     <div class="notice-title-box">
@@ -1052,6 +1053,7 @@ export function printBlankNominationForm(settings = {}) {
   const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
   const year = settings.electionYear || new Date().getFullYear();
   const collegeLogo = settings.collegeLogo || '';
+  const collegePlace = settings.collegePlace || CONFIG.COLLEGE_PLACE || 'Palakkad';
 
   const fillLine = (width = 'flex:1') => {
     if (width.startsWith('flex')) {
@@ -1268,7 +1270,7 @@ export function printBlankNominationForm(settings = {}) {
       <div class="flex justify-between text-sm text-slate-400" style="margin-top: 80px;">
         <div class="space-y-3">
           <p>Date: ______ / ______ / ${year}</p>
-          <p>Place: ____________________</p>
+          <p>Place: ${collegePlace ? esc(collegePlace) : '____________________'}</p>
         </div>
         <div class="text-center space-y-2">
           <p>_______________________</p>
@@ -1286,10 +1288,11 @@ export function printBlankNominationForm(settings = {}) {
  * Renders the clean official withdrawal paper layout for both filled (official) and blank forms.
  * Matches the exact portal format without any Faculty Advisor/Tutor/Proposer attestation.
  */
-export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year = null, isBlank = false, collegeLogo = '') {
+export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year = null, isBlank = false, collegeLogo = '', collegePlace = null) {
   const today = isBlank ? '' : todayFormatted();
   const cName = collegeName || CONFIG.COLLEGE_NAME;
   const y = year || new Date().getFullYear();
+  const cPlace = collegePlace || CONFIG.COLLEGE_PLACE || 'Palakkad';
   const name = isBlank ? '' : (nom.candidate?.NAME || nom.candidateName || nom.name || '');
   const cls  = isBlank ? '' : (nom.candidate?.CLASS || nom.candidateClass || nom.class || '');
   const dept = isBlank ? '' : (nom.candidate?.Dept || nom.candidateDept || nom.dept || '');
@@ -1394,7 +1397,7 @@ export function buildWithdrawalPaper(id = '', nom = {}, collegeName = null, year
     <!-- Candidate Signature Section -->
     <div class="flex justify-between items-end pt-3 text-sm text-slate-400">
       <div class="space-y-2.5" style="line-height: 1.8;">
-        <p>Place: ${isBlank ? '___________________________' : 'Palakkad'}</p>
+        <p>Place: ${isBlank ? '___________________________' : esc(cPlace)}</p>
         <p>Date: ${isBlank ? `_____ / _____ / ${esc(y)}` : today}</p>
       </div>
       <div class="text-center" style="width: 260px;">
@@ -1466,7 +1469,8 @@ export function printBlankWithdrawalForm(settings = {}) {
   const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
   const year = settings.electionYear || new Date().getFullYear();
   const collegeLogo = settings.collegeLogo || '';
+  const collegePlace = settings.collegePlace || CONFIG.COLLEGE_PLACE || 'Palakkad';
 
-  const html = buildWithdrawalPaper('', {}, collegeName, year, true, collegeLogo);
+  const html = buildWithdrawalPaper('', {}, collegeName, year, true, collegeLogo, collegePlace);
   triggerPrint(html, `Blank Withdrawal Form - ${esc(shortName)} Election ${esc(year)}`, collegeLogo);
 }

@@ -451,7 +451,7 @@ export async function renderWithdraw(container) {
 
       try {
         const nom = await api.getNomination(id, adm, formattedDob, true);
-        showDetails(area.querySelector('#nominationDetails'), nom, id, adm, formattedDob, collegeName, year, sets?.collegeLogo || '');
+        showDetails(area.querySelector('#nominationDetails'), nom, id, adm, formattedDob, collegeName, year, sets?.collegeLogo || '', sets?.collegePlace || CONFIG.COLLEGE_PLACE || 'Palakkad');
       } catch (e) {
         area.querySelector('#nominationDetails').innerHTML = `
           <div class="alert alert-error text-sm p-4 rounded-xl space-y-1">
@@ -469,7 +469,7 @@ export async function renderWithdraw(container) {
   }
 }
 
-function showDetails(area, nom, id, adm, dob, collegeName = null, year = null, collegeLogo = '') {
+function showDetails(area, nom, id, adm, dob, collegeName = null, year = null, collegeLogo = '', collegePlace = null) {
   if (nom.status !== 'Valid') {
     area.innerHTML = `
       <div class="alert alert-warning text-sm p-4 rounded-xl">
@@ -559,13 +559,13 @@ function showDetails(area, nom, id, adm, dob, collegeName = null, year = null, c
           </div>
 
           <div class="print-zone mt-4">
-            ${buildWithdrawalPaper(id, nom, collegeName, year, false, collegeLogo)}
+            ${buildWithdrawalPaper(id, nom, collegeName, year, false, collegeLogo, collegePlace)}
           </div>
         </div>
       `;
 
       area.querySelector('#printWithdrawal').addEventListener('click', () => {
-        triggerPrint(buildWithdrawalPaper(id, nom, collegeName, year, false, collegeLogo), 'Withdrawal Form', collegeLogo);
+        triggerPrint(buildWithdrawalPaper(id, nom, collegeName, year, false, collegeLogo, collegePlace), 'Withdrawal Form', collegeLogo);
       });
 
       area.querySelector('#btnDoneHome')?.addEventListener('click', () => router.navigate('/'));
