@@ -298,6 +298,76 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     return grievanceCell.some(g => String(g.name || '').trim().toLowerCase() === clean);
   };
 
+  // Returning Officer (RO) State
+  let roOfficer = null;
+  const cachedRo = localStorage.getItem('gcc_election_ro');
+  if (cachedRo) {
+    try { roOfficer = JSON.parse(cachedRo); } catch (_) { roOfficer = null; }
+  } else if (initialOfficialsData?.roOfficer) {
+    roOfficer = initialOfficialsData.roOfficer;
+    localStorage.setItem('gcc_election_ro', JSON.stringify(roOfficer));
+  }
+  if (!roOfficer) {
+    const defaultRoName = settings?.returningOfficerName || 'Suresh P';
+    const match = faculty.find(f => String(f.name || '').trim().toLowerCase() === defaultRoName.trim().toLowerCase());
+    roOfficer = {
+      name: defaultRoName,
+      pen: match?.pen || settings?.returningOfficerPen || '616638',
+      designation: match?.designation || settings?.returningOfficerDesignation || 'Associate Professor',
+      department: match?.department || settings?.returningOfficerDepartment || 'Botany'
+    };
+    localStorage.setItem('gcc_election_ro', JSON.stringify(roOfficer));
+  }
+
+  // Assistant Returning Officers (AROs) State (Can have 1 or more AROs)
+  let aroOfficers = [];
+  const cachedAros = localStorage.getItem('gcc_election_aros');
+  if (cachedAros) {
+    try { aroOfficers = JSON.parse(cachedAros); } catch (_) { aroOfficers = []; }
+  } else if (Array.isArray(initialOfficialsData?.aroOfficers)) {
+    aroOfficers = initialOfficialsData.aroOfficers;
+    localStorage.setItem('gcc_election_aros', JSON.stringify(aroOfficers));
+  }
+
+  // Core Committee State (Faculty assigned to assist RO, eligible from all faculty including excluded)
+  let coreCommittee = [];
+  const cachedCore = localStorage.getItem('gcc_election_core_committee');
+  if (cachedCore) {
+    try { coreCommittee = JSON.parse(cachedCore); } catch (_) { coreCommittee = []; }
+  } else if (Array.isArray(initialOfficialsData?.coreCommittee)) {
+    coreCommittee = initialOfficialsData.coreCommittee;
+    localStorage.setItem('gcc_election_core_committee', JSON.stringify(coreCommittee));
+  }
+
+  const isRo = (name, pen) => {
+    if (!roOfficer?.name) return false;
+    const cn = String(name || '').trim().toLowerCase();
+    const cp = String(pen || '').trim().toLowerCase();
+    const ron = String(roOfficer.name || '').trim().toLowerCase();
+    const rop = String(roOfficer.pen || '').trim().toLowerCase();
+    return (cn && cn === ron) || (cp && rop && cp === rop);
+  };
+
+  const isAro = (name, pen) => {
+    const cn = String(name || '').trim().toLowerCase();
+    const cp = String(pen || '').trim().toLowerCase();
+    return aroOfficers.some(a => {
+      const an = String(a.name || '').trim().toLowerCase();
+      const ap = String(a.pen || '').trim().toLowerCase();
+      return (cn && cn === an) || (cp && ap && cp === ap);
+    });
+  };
+
+  const isCore = (name, pen) => {
+    const cn = String(name || '').trim().toLowerCase();
+    const cp = String(pen || '').trim().toLowerCase();
+    return coreCommittee.some(c => {
+      const cname = String(c.name || '').trim().toLowerCase();
+      const cpen = String(c.pen || '').trim().toLowerCase();
+      return (cn && cn === cname) || (cp && cpen && cp === cpen);
+    });
+  };
+
   // Active UI state
   let activeTab = 'polling'; // 'polling' | 'counting' | 'faculty' | 'nonteaching'
   let facultySearch = '';
@@ -326,8 +396,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   // Universal Category Rank: 1 (Permanent Faculty) < 2 (Guest Faculty) < 3 (Non-Teaching Staff)
   const getStaffCategoryRank = (person) => {
     if (!person) return 99;
+    if (person.type === 'Non-Teaching Staff' || person.isNonTeaching) return 3;
     const nameLower = String(person.name || '').trim().toLowerCase();
-    const isFac = person.type === 'Teaching Faculty' || person.isFaculty || faculty.some(f => String(f.name || '').trim().toLowerCase() === nameLower);
+    const dLower = String(person.designation || '').toLowerCase();
+    const isDesigFac = dLower.includes('professor') || dLower.includes('lecturer') || dLower.includes('teacher') || dLower.includes('faculty');
+    const isFac = person.type === 'Teaching Faculty' || person.isFaculty || isDesigFac || faculty.some(f => String(f.name || '').trim().toLowerCase() === nameLower);
     if (isFac) {
       if (isGuestFaculty(person)) return 2;
       return 1;
@@ -335,8 +408,23 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     return 3;
   };
 
-  // Universal Sorter: Department (A-Z) -> Permanent Faculty (Seniority #1, #2...) -> Guest Faculty -> Non-Teaching Staff
+  // Universal Sorter: Seniority Strictly Respected Across All Listings (Seniors Top #1, #2... Juniors to Bottom)
   const compareOfficials = (a, b) => {
+    if (!a && !b) return 0;
+    if (!a) return 1;
+    if (!b) return -1;
+
+    // 1. Permanent Faculty before Guest Faculty before Non-Teaching Staff
+    const catA = getStaffCategoryRank(a);
+    const catB = getStaffCategoryRank(b);
+    if (catA !== catB) return catA - catB;
+
+    // 2. Numerical Seniority (#1 Seniormost, #2, #3... Juniors at Bottom)
+    const senA = (a.seniority !== undefined && a.seniority !== null && !isNaN(a.seniority)) ? Number(a.seniority) : 9999;
+    const senB = (b.seniority !== undefined && b.seniority !== null && !isNaN(b.seniority)) ? Number(b.seniority) : 9999;
+    if (senA !== senB) return senA - senB;
+
+    // 3. Department A-Z fallback for tied seniority
     const deptA = String(a.department || '').trim().toLowerCase();
     const deptB = String(b.department || '').trim().toLowerCase();
     if (deptA !== deptB) {
@@ -345,15 +433,92 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       return deptA.localeCompare(deptB);
     }
 
-    const catA = getStaffCategoryRank(a);
-    const catB = getStaffCategoryRank(b);
-    if (catA !== catB) return catA - catB;
-
-    const senA = (a.seniority !== undefined && a.seniority !== null && !isNaN(a.seniority)) ? Number(a.seniority) : 9999;
-    const senB = (b.seniority !== undefined && b.seniority !== null && !isNaN(b.seniority)) ? Number(b.seniority) : 9999;
-    if (senA !== senB) return senA - senB;
-
+    // 4. Name fallback
     return String(a.name || '').trim().localeCompare(String(b.name || '').trim());
+  };
+
+  // Ensure all initial committee lists are sorted strictly by seniority (#1 Seniormost to bottom)
+  observers.sort(compareOfficials);
+  disciplineCharge.sort(compareOfficials);
+  grievanceCell.sort(compareOfficials);
+  aroOfficers.sort(compareOfficials);
+  coreCommittee.sort(compareOfficials);
+
+  // Helper: Get comprehensive existing allotment status flags for any official
+  const getOfficialStatusFlags = (fName, fPen) => {
+    const flags = [];
+    if (!fName && !fPen) return flags;
+    const cleanName = String(fName || '').trim().toLowerCase();
+    const cleanPen = String(fPen || '').trim().toLowerCase();
+
+    // 1. Returning Officer
+    if (isRo(cleanName, cleanPen)) {
+      flags.push('👑 RO');
+    }
+
+    // 2. Assistant Returning Officer (ARO)
+    if (isAro(cleanName, cleanPen)) {
+      flags.push('⚖️ ARO');
+    }
+
+    // 3. Core Committee (Assisting RO)
+    if (isCore(cleanName, cleanPen)) {
+      const bInCharge = pollingTeams.find(t => t.coreInCharge && (String(t.coreInCharge.name || '').trim().toLowerCase() === cleanName || (cleanPen && String(t.coreInCharge.pen || '').trim().toLowerCase() === cleanPen)));
+      const tInCharge = countingTeams.find(t => t.coreInCharge && (String(t.coreInCharge.name || '').trim().toLowerCase() === cleanName || (cleanPen && String(t.coreInCharge.pen || '').trim().toLowerCase() === cleanPen)));
+      if (bInCharge && tInCharge) {
+        flags.push(`⭐ Core (In-Charge: Booth ${bInCharge.boothNumber}, Table ${tInCharge.tableNumber})`);
+      } else if (bInCharge) {
+        flags.push(`⭐ Core (In-Charge: Booth ${bInCharge.boothNumber})`);
+      } else if (tInCharge) {
+        flags.push(`⭐ Core (In-Charge: Table ${tInCharge.tableNumber})`);
+      } else {
+        flags.push('⭐ Core Committee');
+      }
+    }
+
+    // 4. Observer
+    if (observers.some(o => String(o.name || '').trim().toLowerCase() === cleanName)) {
+      flags.push('⚖️ Observer');
+    }
+
+    // 5. Campus Discipline
+    if (disciplineCharge.some(d => String(d.name || '').trim().toLowerCase() === cleanName)) {
+      flags.push('🛡️ Discipline');
+    }
+
+    // 6. Grievance Cell
+    if (grievanceCell.some(g => String(g.name || '').trim().toLowerCase() === cleanName)) {
+      flags.push('🤝 Grievance');
+    }
+
+    // 7. Polling Duty
+    const pDuty = getPollingAssignment(fName);
+    if (pDuty) {
+      flags.push(`🗳️ Booth ${pDuty.boothNumber} (${pDuty.role === 'Presiding Officer' ? 'PRO' : 'PO'})`);
+    }
+
+    // 8. Counting Duty
+    const cDuty = getCountingAssignment(fName);
+    if (cDuty) {
+      flags.push(`📊 Table ${cDuty.tableNumber} (${cDuty.role === 'Counting Supervisor' ? 'Sup' : 'CO'})`);
+    }
+
+    // 9. Non-teaching Polling/Counting Assistant
+    const ntAssigned = getNonTeachingAssignment(fName);
+    if (ntAssigned.polling) {
+      flags.push(`🗳️ Booth ${ntAssigned.polling.boothNumber} (Asst)`);
+    }
+    if (ntAssigned.counting) {
+      flags.push(`📊 Table ${ntAssigned.counting.tableNumber} (Asst)`);
+    }
+
+    // 10. Excluded
+    const pObj = getPerson(fName);
+    if (pObj && isPersonExcluded(pObj)) {
+      flags.push('⛔ Excluded');
+    }
+
+    return flags;
   };
 
   // Helper: Get faculty by name or PEN
@@ -377,9 +542,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const cleanName = String(pName).trim().toLowerCase();
     const cleanPen = String(pPen).trim().toLowerCase();
 
-    // Auto-exclude Returning Officer & AROs (Returning Officer issues and signs the order, never on standby/reserve)
-    const roName = String(settings?.returningOfficerName || 'Suresh P').trim().toLowerCase();
-    if (roName && (cleanName === roName || cleanName.includes('suresh p') || cleanName.includes('suresh.p') || cleanPen === '616638')) {
+    // Auto-exclude Returning Officer & AROs (Returning Officer & AROs supervise and sign orders, never on booth/standby/reserve)
+    if (isRo(cleanName, cleanPen) || isAro(cleanName, cleanPen)) {
       return true;
     }
 
@@ -436,7 +600,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     return false;
   };
 
-  // Helper: Check if a person is assigned to ANY active election duty (Observer, Discipline, Grievance, Polling, Counting)
+  // Helper: Check if a person is assigned to ANY active election duty (RO, ARO, Core, Observer, Discipline, Grievance, Polling, Counting)
   const isPersonOnDuty = (p) => {
     if (!p) return false;
     const pName = typeof p === 'string' ? p : (p.name || '');
@@ -444,6 +608,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const cleanName = String(pName).trim().toLowerCase();
     const cleanPen = String(pPen).trim().toLowerCase();
     if (!cleanName && !cleanPen) return false;
+
+    if (isRo(cleanName, cleanPen)) return true;
+    if (isAro(cleanName, cleanPen)) return true;
+    if (isCore(cleanName, cleanPen)) return true;
 
     const matches = (slotPerson) => {
       if (!slotPerson) return false;
@@ -461,6 +629,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     if (grievanceCell.some(matches)) return true;
 
     for (const team of pollingTeams) {
+      if (matches(team.coreInCharge)) return true;
       if (matches(team.presidingOfficer)) return true;
       if (matches(team.pollingOfficer1)) return true;
       if (matches(team.pollingOfficer2)) return true;
@@ -469,6 +638,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     }
 
     for (const team of countingTeams) {
+      if (matches(team.coreInCharge)) return true;
       if (matches(team.supervisor)) return true;
       if (matches(team.countingOfficer1)) return true;
       if (matches(team.countingOfficer2)) return true;
@@ -500,41 +670,41 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     return null;
   };
 
-  // Helper: Render all roster options (Teaching Faculty + Non-Teaching Staff) with optgroups for Observers, Discipline, and Grievance modals
+  // Helper: Render all roster options (Teaching Faculty + Non-Teaching Staff) with optgroups and rich status flags
   const renderAllRosterOptions = (currentSelectedName, draftList, currentIdx, placeholder = '-- Select Official from Roster --') => {
     let html = `<option value="">${placeholder}</option>`;
 
-    // Group 1: Teaching Faculty sorted by Dept -> Permanent Faculty (Seniority) -> Guest
+    // Group 1: Teaching Faculty sorted by Seniority (Seniors Top #1, #2... Juniors to Bottom)
     const sortedFac = [...faculty].sort(compareOfficials);
     html += `<optgroup label="Teaching Faculty (${sortedFac.length})">`;
     sortedFac.forEach(f => {
       const isCur = currentSelectedName === f.name;
-      const isChosenInOther = draftList.some((item, i) => i !== currentIdx && item.name === f.name);
-      let prefix = '';
-      if (f.isExcluded) prefix += '⛔ [Excluded] ';
-      if (isChosenInOther) prefix += '🚩 [Selected in another slot] ';
+      const isChosenInOther = draftList && Array.isArray(draftList) && draftList.some((item, i) => i !== currentIdx && item.name === f.name);
+      const flags = getOfficialStatusFlags(f.name, f.pen);
+      let flagStr = flags.length > 0 ? `[${flags.join(' | ')}] ` : '';
+      if (isChosenInOther) flagStr = '🚩 [Selected in another slot] ' + flagStr;
       const deptStr = (f.department || '').trim();
       html += `
         <option value="${esc(f.name)}" ${isCur ? 'selected' : ''} ${isChosenInOther ? 'disabled' : ''}>
-          ${prefix}#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${f.pen || '–'})
+          ${flagStr}#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${f.pen || '–'})
         </option>
       `;
     });
     html += `</optgroup>`;
 
-    // Group 2: Non-Teaching Staff sorted by Dept / Section
+    // Group 2: Non-Teaching Staff sorted by Seniority / Category
     const sortedNT = [...nonTeaching].sort(compareOfficials);
     html += `<optgroup label="Non-Teaching Staff (${sortedNT.length})">`;
     sortedNT.forEach((nt) => {
       const isCur = currentSelectedName === nt.name;
-      const isChosenInOther = draftList.some((item, i) => i !== currentIdx && item.name === nt.name);
-      let prefix = '';
-      if (nt.isExcluded) prefix += '⛔ [Excluded] ';
-      if (isChosenInOther) prefix += '🚩 [Selected in another slot] ';
+      const isChosenInOther = draftList && Array.isArray(draftList) && draftList.some((item, i) => i !== currentIdx && item.name === nt.name);
+      const flags = getOfficialStatusFlags(nt.name, nt.pen);
+      let flagStr = flags.length > 0 ? `[${flags.join(' | ')}] ` : '';
+      if (isChosenInOther) flagStr = '🚩 [Selected in another slot] ' + flagStr;
       const deptStr = (nt.department || nt.section || 'Office').trim();
       html += `
         <option value="${esc(nt.name)}" ${isCur ? 'selected' : ''} ${isChosenInOther ? 'disabled' : ''}>
-          ${prefix}${esc(nt.name)} (${esc(nt.designation || 'Staff')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${nt.pen || '–'})
+          ${flagStr}${esc(nt.name)} (${esc(nt.designation || 'Staff')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${nt.pen || '–'})
         </option>
       `;
     });
@@ -613,7 +783,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const isObs = isObserver(f.name);
     const isDisc = isDiscipline(f.name);
     const isGriev = isGrievance(f.name);
-    const isPosted = isObs || isDisc || isGriev || pDuty || cDuty;
+    const isCoreMan = isCore(f.name, f.pen);
+    const isRoMan = isRo(f.name, f.pen);
+    const isAroMan = isAro(f.name, f.pen);
+    const isPosted = isObs || isDisc || isGriev || isCoreMan || isRoMan || isAroMan || pDuty || cDuty;
 
     return `
       <tr class="${isExcluded ? 'bg-red-950/20 opacity-70' : 'hover:bg-white/5'} transition-colors">
@@ -634,6 +807,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         </td>
         <td>
           <div class="flex items-center gap-1.5 flex-wrap">
+            ${isRoMan ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[10px] font-bold">👑 Returning Officer</span>` : ''}
+            ${isAroMan ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[10px] font-bold">⚖️ ARO</span>` : ''}
+            ${isCoreMan ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">⭐ Core Committee</span>` : ''}
             ${isObs ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">⚖️ Observer</span>` : ''}
             ${isDisc ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold">🛡️ Discipline</span>` : ''}
             ${isGriev ? `<span class="badge bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-bold">🤝 Grievance</span>` : ''}
@@ -659,9 +835,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           `)}
         </td>
         <td class="text-right">
-          <button class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-exclude-fac ${isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-pen="${f.pen || f.name}">
-            ${isExcluded ? '✓ Make Available' : '⛔ Exclude'}
-          </button>
+          <div class="flex items-center justify-end gap-1.5 flex-wrap">
+            <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-core-fac ${isCoreMan ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30 font-bold' : 'text-slate-300 hover:text-amber-300 hover:border-amber-500/40'}" data-pen="${f.pen || f.name}" title="${isCoreMan ? 'Click to remove from Core Committee' : 'Assign to Core Committee to assist RO (All faculty eligible)'}">
+              ${isCoreMan ? '⭐ In Core' : '➕ Core'}
+            </button>
+            <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-exclude-fac ${isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-pen="${f.pen || f.name}">
+              ${isExcluded ? '✓ Make Available' : '⛔ Exclude'}
+            </button>
+          </div>
         </td>
       </tr>
     `;
@@ -1175,7 +1356,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       return;
     }
 
-    filtered.sort((a, b) => (Number(a.seniority) || 9999) - (Number(b.seniority) || 9999));
+    filtered.sort(compareOfficials);
     tbody.innerHTML = filtered.map(getFacultyRowHtml).join('');
   };
 
@@ -1260,6 +1441,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     localStorage.setItem('gcc_election_observers', JSON.stringify(observers));
     localStorage.setItem('gcc_election_discipline', JSON.stringify(disciplineCharge));
     localStorage.setItem('gcc_election_grievance', JSON.stringify(grievanceCell));
+    localStorage.setItem('gcc_election_ro', JSON.stringify(roOfficer));
+    localStorage.setItem('gcc_election_aros', JSON.stringify(aroOfficers));
+    localStorage.setItem('gcc_election_core_committee', JSON.stringify(coreCommittee));
 
     try {
       await api.adminSaveOfficials(pwd, {
@@ -1269,7 +1453,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         countingTeams,
         observers,
         disciplineCharge,
-        grievanceCell
+        grievanceCell,
+        roOfficer,
+        aroOfficers,
+        coreCommittee
       });
       if (!quiet) showToast('Officials and rosters saved successfully!', 'success');
     } catch (e) {
@@ -1294,6 +1481,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         team = {
           boothNumber: b.boothNumber,
           roomName: b.roomName || `Booth ${b.boothNumber}`,
+          coreInCharge: null,
           presidingOfficer: null,
           pollingOfficer1: null,
           pollingOfficer2: null,
@@ -1310,6 +1498,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const preservedPollingAssistantNames = new Set();
     observers.forEach(o => { if (o.name) preservedPollingFacultyNames.add(o.name); });
     disciplineCharge.forEach(d => { if (d.name) preservedPollingFacultyNames.add(d.name); });
+    grievanceCell.forEach(g => { if (g.name) preservedPollingFacultyNames.add(g.name); });
+    coreCommittee.forEach(c => { if (c.name) preservedPollingFacultyNames.add(c.name); });
+    aroOfficers.forEach(a => { if (a.name) preservedPollingFacultyNames.add(a.name); });
+    if (roOfficer?.name) preservedPollingFacultyNames.add(roOfficer.name);
+
     pollingTeams.forEach(t => {
       if (t.presidingOfficer?.name) preservedPollingFacultyNames.add(t.presidingOfficer.name);
       if (t.pollingOfficer1?.name) preservedPollingFacultyNames.add(t.pollingOfficer1.name);
@@ -1354,10 +1547,21 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const observerNames = new Set(observers.map(o => o.name));
     const disciplineNames = new Set(disciplineCharge.map(d => d.name));
     const grievanceNames = new Set(grievanceCell.map(g => g.name));
-    // Candidate active, non-excluded faculty not already allotted in Polling, Observers, Discipline Charge, or Grievance Cell
+    const coreNames = new Set(coreCommittee.map(c => c.name));
+    const aroNames = new Set(aroOfficers.map(a => a.name));
+    const roNameVal = roOfficer?.name;
+
+    // Candidate active, non-excluded faculty not already allotted in Polling, Observers, Discipline, Grievance, Core, RO, or ARO
     const candidateFaculty = faculty
-      .filter(f => !f.isExcluded && !preservedPollingFacultyNames.has(f.name) && !observerNames.has(f.name) && !disciplineNames.has(f.name) && !grievanceNames.has(f.name))
-      .sort((a, b) => a.seniority - b.seniority);
+      .filter(f => !f.isExcluded &&
+                   !preservedPollingFacultyNames.has(f.name) &&
+                   !observerNames.has(f.name) &&
+                   !disciplineNames.has(f.name) &&
+                   !grievanceNames.has(f.name) &&
+                   !coreNames.has(f.name) &&
+                   !aroNames.has(f.name) &&
+                   f.name !== roNameVal)
+      .sort(compareOfficials);
 
     let filledCount = 0;
     let doubleDutyCount = 0;
@@ -1531,10 +1735,21 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const observerNames = new Set(observers.map(o => o.name));
     const disciplineNames = new Set(disciplineCharge.map(d => d.name));
     const grievanceNames = new Set(grievanceCell.map(g => g.name));
-    // Candidate active, non-excluded faculty not already allotted in Counting, Observers, Discipline Charge, or Grievance Cell
+    const coreNames = new Set(coreCommittee.map(c => c.name));
+    const aroNames = new Set(aroOfficers.map(a => a.name));
+    const roNameVal = roOfficer?.name;
+
+    // Candidate active, non-excluded faculty not already allotted in Counting, Observers, Discipline, Grievance, Core, RO, or ARO
     const candidateFaculty = faculty
-      .filter(f => !f.isExcluded && !preservedCountingFacultyNames.has(f.name) && !observerNames.has(f.name) && !disciplineNames.has(f.name) && !grievanceNames.has(f.name))
-      .sort((a, b) => a.seniority - b.seniority);
+      .filter(f => !f.isExcluded &&
+                   !preservedCountingFacultyNames.has(f.name) &&
+                   !observerNames.has(f.name) &&
+                   !disciplineNames.has(f.name) &&
+                   !grievanceNames.has(f.name) &&
+                   !coreNames.has(f.name) &&
+                   !aroNames.has(f.name) &&
+                   f.name !== roNameVal)
+      .sort(compareOfficials);
 
     let filledCount = 0;
     let doubleDutyCount = 0;
@@ -1641,6 +1856,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const renderPollingFacultyOptions = (boothNumber, currentRole, currentSelectedName) => {
     return [...faculty].sort(compareOfficials).map(f => {
       const isSelected = currentSelectedName === f.name;
+      const isRoOfficial = isRo(f.name, f.pen);
+      const isAroOfficial = isAro(f.name, f.pen);
+      const isCoreOfficial = isCore(f.name, f.pen);
       const isObs = isObserver(f.name);
       const isDisc = isDiscipline(f.name);
       const isGriev = isGrievance(f.name);
@@ -1651,14 +1869,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       let prefix = '';
       if (f.isExcluded) prefix += '⛔ ';
-      if (isObs) {
-        prefix += '⚖️ [Allotted: Observer] ';
+      if (isRoOfficial) {
+        prefix += '👑 [RO] ';
+      } else if (isAroOfficial) {
+        prefix += '⚖️ [ARO] ';
+      } else if (isCoreOfficial) {
+        prefix += '⭐ [Core Committee] ';
+      } else if (isObs) {
+        prefix += '⚖️ [Observer] ';
       } else if (isDisc) {
-        prefix += '🛡️ [Allotted: Discipline Charge] ';
+        prefix += '🛡️ [Discipline] ';
       } else if (isGriev) {
-        prefix += '🤝 [Allotted: Grievance Cell] ';
+        prefix += '🤝 [Grievance] ';
       } else if (isAllottedInPolling) {
-        prefix += `🚩 [Allotted: Booth ${pDuty.boothNumber} - ${pDuty.role}] `;
+        prefix += `🚩 [Booth ${pDuty.boothNumber}: ${pDuty.role}] `;
       } else if (isSelected) {
         prefix += '✓ (Current) ';
       }
@@ -1667,8 +1891,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const doubleTag = cDuty ? `[⚠️ Double Duty: Table ${cDuty.tableNumber}]` : '';
       const deptStr = (f.department || '').trim();
 
+      const isDisabled = (isRoOfficial || isAroOfficial || isAllottedInPolling || isObs || isDisc || isGriev) && !isSelected;
+
       return `
-        <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${(isAllottedInPolling || isObs || isDisc || isGriev) && !isSelected ? 'disabled' : ''}>
+        <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}>
           ${prefix}#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${f.pen || '–'}) ${tag} ${doubleTag}
         </option>
       `;
@@ -1679,6 +1905,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const renderCountingFacultyOptions = (tableNumber, currentRole, currentSelectedName) => {
     return [...faculty].sort(compareOfficials).map(f => {
       const isSelected = currentSelectedName === f.name;
+      const isRoOfficial = isRo(f.name, f.pen);
+      const isAroOfficial = isAro(f.name, f.pen);
+      const isCoreOfficial = isCore(f.name, f.pen);
       const isObs = isObserver(f.name);
       const isDisc = isDiscipline(f.name);
       const isGriev = isGrievance(f.name);
@@ -1689,14 +1918,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       let prefix = '';
       if (f.isExcluded) prefix += '⛔ ';
-      if (isObs) {
-        prefix += '⚖️ [Allotted: Observer] ';
+      if (isRoOfficial) {
+        prefix += '👑 [RO] ';
+      } else if (isAroOfficial) {
+        prefix += '⚖️ [ARO] ';
+      } else if (isCoreOfficial) {
+        prefix += '⭐ [Core Committee] ';
+      } else if (isObs) {
+        prefix += '⚖️ [Observer] ';
       } else if (isDisc) {
-        prefix += '🛡️ [Allotted: Discipline Charge] ';
+        prefix += '🛡️ [Discipline] ';
       } else if (isGriev) {
-        prefix += '🤝 [Allotted: Grievance Cell] ';
+        prefix += '🤝 [Grievance] ';
       } else if (isAllottedInCounting) {
-        prefix += `🚩 [Allotted: Table ${cDuty.tableNumber} - ${cDuty.role}] `;
+        prefix += `🚩 [Table ${cDuty.tableNumber}: ${cDuty.role}] `;
       } else if (isSelected) {
         prefix += '✓ (Current) ';
       }
@@ -1705,8 +1940,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const doubleTag = pDuty ? `[⚠️ Double Duty: Booth ${pDuty.boothNumber}]` : '';
       const deptStr = (f.department || '').trim();
 
+      const isDisabled = (isRoOfficial || isAroOfficial || isAllottedInCounting || isObs || isDisc || isGriev) && !isSelected;
+
       return `
-        <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${(isAllottedInCounting || isObs || isDisc || isGriev) && !isSelected ? 'disabled' : ''}>
+        <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}>
           ${prefix}#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${f.pen || '–'}) ${tag} ${doubleTag}
         </option>
       `;
@@ -1717,6 +1954,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const renderPollingNonTeachingOptions = (boothNumber, currentSelectedName) => {
     return [...nonTeaching].sort(compareOfficials).map(nt => {
       const isSelected = currentSelectedName === nt.name;
+      const isRoOfficial = isRo(nt.name, nt.pen);
+      const isAroOfficial = isAro(nt.name, nt.pen);
       const isObs = isObserver(nt.name);
       const isDisc = isDiscipline(nt.name);
       const isGriev = isGrievance(nt.name);
@@ -1725,14 +1964,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       let prefix = '';
       if (nt.isExcluded) prefix += '⛔ ';
-      if (isObs) {
-        prefix += '⚖️ [Allotted: Observer] ';
+      if (isRoOfficial) {
+        prefix += '👑 [RO] ';
+      } else if (isAroOfficial) {
+        prefix += '⚖️ [ARO] ';
+      } else if (isObs) {
+        prefix += '⚖️ [Observer] ';
       } else if (isDisc) {
-        prefix += '🛡️ [Allotted: Discipline Charge] ';
+        prefix += '🛡️ [Discipline] ';
       } else if (isGriev) {
-        prefix += '🤝 [Allotted: Grievance Cell] ';
+        prefix += '🤝 [Grievance] ';
       } else if (isAllottedInPolling) {
-        prefix += `🚩 [Allotted: Booth ${ntAssigned.polling.boothNumber} - Polling Assistant] `;
+        prefix += `🚩 [Booth ${ntAssigned.polling.boothNumber}: Assistant] `;
       } else if (isSelected) {
         prefix += '✓ (Current) ';
       }
@@ -1740,8 +1983,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const doubleTag = ntAssigned.counting ? `[⚠️ Double Duty: Table ${ntAssigned.counting.tableNumber}]` : '';
       const deptStr = (nt.department || nt.section || 'Office').trim();
 
+      const isDisabled = (isRoOfficial || isAroOfficial || isAllottedInPolling || isObs || isDisc || isGriev) && !isSelected;
+
       return `
-        <option value="${esc(nt.name)}" ${isSelected ? 'selected' : ''} ${(isAllottedInPolling || isObs || isDisc || isGriev) && !isSelected ? 'disabled' : ''}>
+        <option value="${esc(nt.name)}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}>
           ${prefix}${esc(nt.name)} (${esc(nt.designation || 'Staff')}${deptStr ? ` · ${esc(deptStr)}` : ''}${nt.pen ? ` · PEN:${nt.pen}` : ''}) ${doubleTag}
         </option>
       `;
@@ -1752,6 +1997,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const renderCountingNonTeachingOptions = (tableNumber, currentSelectedName) => {
     return [...nonTeaching].sort(compareOfficials).map(nt => {
       const isSelected = currentSelectedName === nt.name;
+      const isRoOfficial = isRo(nt.name, nt.pen);
+      const isAroOfficial = isAro(nt.name, nt.pen);
       const isObs = isObserver(nt.name);
       const isDisc = isDiscipline(nt.name);
       const isGriev = isGrievance(nt.name);
@@ -1761,12 +2008,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       let prefix = '';
       if (nt.isExcluded) prefix += '⛔ ';
-      if (isObs) {
-        prefix += '⚖️ [Allotted: Observer] ';
+      if (isRoOfficial) {
+        prefix += '👑 [RO] ';
+      } else if (isAroOfficial) {
+        prefix += '⚖️ [ARO] ';
+      } else if (isObs) {
+        prefix += '⚖️ [Observer] ';
       } else if (isDisc) {
-        prefix += '🛡️ [Allotted: Discipline Charge] ';
+        prefix += '🛡️ [Discipline] ';
       } else if (isGriev) {
-        prefix += '🤝 [Allotted: Grievance Cell] ';
+        prefix += '🤝 [Grievance] ';
       } else if (isSelected) {
         prefix += '✓ (Current) ';
       } else if (isAlreadyOnOtherTables) {
@@ -1778,11 +2029,69 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const deptStr = (nt.department || nt.section || 'Office').trim();
 
       // Note: Do NOT disable for counting table overlap - staff shortage allows same assistant on multiple tables!
-      const isDisabled = (isObs || isDisc || isGriev) && !isSelected;
+      const isDisabled = (isRoOfficial || isAroOfficial || isObs || isDisc || isGriev) && !isSelected;
 
       return `
         <option value="${esc(nt.name)}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}>
           ${prefix}${esc(nt.name)} (${esc(nt.designation || 'Staff')}${deptStr ? ` · ${esc(deptStr)}` : ''}${nt.pen ? ` · PEN:${nt.pen}` : ''}) ${multiTag} ${doubleTag}
+        </option>
+      `;
+    }).join('');
+  };
+
+  // Helper to render Core Committee In-Charge options for Polling Booths
+  const renderPollingCoreInChargeOptions = (boothNumber, currentSelectedName) => {
+    const sortedCore = [...coreCommittee].sort(compareOfficials);
+    return sortedCore.map(c => {
+      const isSelected = currentSelectedName === c.name;
+      const bInCharge = pollingTeams.find(t => t.coreInCharge && t.coreInCharge.name === c.name && t.boothNumber !== boothNumber);
+      const tInCharge = countingTeams.find(t => t.coreInCharge && t.coreInCharge.name === c.name);
+
+      let inChargeTag = '';
+      if (bInCharge && tInCharge) {
+        inChargeTag = `[⚠️ In-Charge: Booth ${bInCharge.boothNumber} & Table ${tInCharge.tableNumber}]`;
+      } else if (bInCharge) {
+        inChargeTag = `[⚠️ In-Charge: Booth ${bInCharge.boothNumber}]`;
+      } else if (tInCharge) {
+        inChargeTag = `[In-Charge: Table ${tInCharge.tableNumber}]`;
+      }
+
+      const otherFlags = getOfficialStatusFlags(c.name, c.pen).filter(fl => !fl.startsWith('⭐ Core'));
+      const flagStr = otherFlags.length > 0 ? ` [${otherFlags.join(' | ')}]` : '';
+      const deptStr = (c.department || '').trim();
+
+      return `
+        <option value="${esc(c.name)}" ${isSelected ? 'selected' : ''}>
+          ${isSelected ? '✓ ' : ''}#${c.seniority || '–'} ${esc(c.name)} (${esc(c.designation || 'Faculty')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${c.pen || '–'}) ${inChargeTag} ${flagStr}
+        </option>
+      `;
+    }).join('');
+  };
+
+  // Helper to render Core Committee In-Charge options for Counting Tables
+  const renderCountingCoreInChargeOptions = (tableNumber, currentSelectedName) => {
+    const sortedCore = [...coreCommittee].sort(compareOfficials);
+    return sortedCore.map(c => {
+      const isSelected = currentSelectedName === c.name;
+      const tInCharge = countingTeams.find(t => t.coreInCharge && t.coreInCharge.name === c.name && t.tableNumber !== tableNumber);
+      const bInCharge = pollingTeams.find(t => t.coreInCharge && t.coreInCharge.name === c.name);
+
+      let inChargeTag = '';
+      if (bInCharge && tInCharge) {
+        inChargeTag = `[⚠️ In-Charge: Table ${tInCharge.tableNumber} & Booth ${bInCharge.boothNumber}]`;
+      } else if (tInCharge) {
+        inChargeTag = `[⚠️ In-Charge: Table ${tInCharge.tableNumber}]`;
+      } else if (bInCharge) {
+        inChargeTag = `[In-Charge: Booth ${bInCharge.boothNumber}]`;
+      }
+
+      const otherFlags = getOfficialStatusFlags(c.name, c.pen).filter(fl => !fl.startsWith('⭐ Core'));
+      const flagStr = otherFlags.length > 0 ? ` [${otherFlags.join(' | ')}]` : '';
+      const deptStr = (c.department || '').trim();
+
+      return `
+        <option value="${esc(c.name)}" ${isSelected ? 'selected' : ''}>
+          ${isSelected ? '✓ ' : ''}#${c.seniority || '–'} ${esc(c.name)} (${esc(c.designation || 'Faculty')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${c.pen || '–'}) ${inChargeTag} ${flagStr}
         </option>
       `;
     }).join('');
@@ -1861,6 +2170,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <button id="btnPrintMasterDutyListTop" class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 flex items-center gap-1.5 shadow" title="Print Consolidated Master Duty List for all Polling and Counting Personnel">
               🖨️ Master Duty List (Polling &amp; Counting)
             </button>
+            <button id="btnOpenRoAroModalTop" class="btn btn-secondary border-yellow-500/50 text-yellow-300 hover:text-white hover:bg-yellow-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Configure Returning Officer and Assistant Returning Officers">
+              👑 RO &amp; AROs (${1 + aroOfficers.length})
+            </button>
+            <button id="btnOpenCoreModalTop" class="btn btn-secondary border-cyan-500/50 text-cyan-300 hover:text-white hover:bg-cyan-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Manage Core Committee members to assist RO">
+              ⭐ Core Committee (${coreCommittee.length})
+            </button>
             <button id="btnSaveAll" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow">
               💾 Save All Changes
             </button>
@@ -1877,7 +2192,25 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         </div>
 
         <!-- Metric Ribbon -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 no-print">
+        <div class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2.5 no-print">
+          <div class="glass p-3 rounded-xl border border-yellow-500/40 flex flex-col justify-between bg-yellow-950/20 cursor-pointer hover:border-yellow-400 transition" id="cardMetricRoAro" title="Click to view and configure Returning Officer & Assistant Returning Officers">
+            <span class="text-[11px] uppercase tracking-wider text-yellow-300 font-semibold">RO &amp; AROs</span>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span class="text-2xl font-bold text-yellow-200 font-mono">${1 + aroOfficers.length}</span>
+              <span class="text-xs text-slate-400">Officers</span>
+            </div>
+            <span class="text-[10px] text-yellow-400 mt-1">1 RO · ${aroOfficers.length} ARO${aroOfficers.length !== 1 ? 's' : ''}</span>
+          </div>
+
+          <div class="glass p-3 rounded-xl border border-cyan-500/40 flex flex-col justify-between bg-cyan-950/20 cursor-pointer hover:border-cyan-400 transition" id="cardMetricCore" title="Click to manage Core Committee members assisting RO">
+            <span class="text-[11px] uppercase tracking-wider text-cyan-300 font-semibold">Core Comm.</span>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span class="text-2xl font-bold text-cyan-200 font-mono">${coreCommittee.length}</span>
+              <span class="text-xs text-slate-400">Assisting RO</span>
+            </div>
+            <span class="text-[10px] text-cyan-400 mt-1">Booth &amp; Table In-Charge</span>
+          </div>
+
           <div class="glass p-3 rounded-xl border border-amber-500/40 flex flex-col justify-between bg-amber-950/20">
             <span class="text-[11px] uppercase tracking-wider text-amber-300 font-semibold">Observers</span>
             <div class="flex items-baseline gap-2 mt-1">
@@ -1980,6 +2313,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <button id="btnAutoAllotPolling" class="btn btn-primary bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow" title="Auto-allot empty polling slots while preserving all manually chosen officials">
                 ⚡ Auto-Allot Polling Teams
               </button>
+              <button id="btnOpenRoAroModal" class="btn btn-secondary border-yellow-500/50 text-yellow-300 hover:text-white hover:bg-yellow-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Configure Returning Officer and Assistant Returning Officers">
+                👑 Allot RO &amp; AROs (${1 + aroOfficers.length})
+              </button>
+              <button id="btnOpenCoreCommitteeModal" class="btn btn-secondary border-cyan-500/50 text-cyan-300 hover:text-white hover:bg-cyan-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Appoint Core Committee members to assist RO">
+                ⭐ Allot Core Committee (${coreCommittee.length})
+              </button>
               <button id="btnOpenObserverModal" class="btn btn-secondary border-amber-500/50 text-amber-300 hover:text-white hover:bg-amber-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Appoint Election Observers">
                 ⚖️ Allot Observers (${observers.length})
               </button>
@@ -1999,6 +2338,93 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 🗑️ Clear All
               </button>
             </div>
+          </div>
+
+          <!-- Returning Officer & Assistant Returning Officers (AROs) -->
+          <div class="glass rounded-xl border border-yellow-500/30 bg-gradient-to-r from-yellow-950/30 via-slate-900/60 to-slate-900/40 p-4 shadow-lg no-print">
+            <div class="flex items-center justify-between flex-wrap gap-2 pb-2.5 border-b border-yellow-500/20">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-yellow-500/20 text-yellow-300 flex items-center justify-center text-lg shadow-inner">👑</div>
+                <div>
+                  <h5 class="font-bold text-white text-sm flex items-center gap-2">
+                    Returning Officer &amp; Assistant Returning Officers (AROs)
+                    <span class="text-[10px] font-mono font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 px-2 py-0.5 rounded-full">${1 + aroOfficers.length} Officers</span>
+                  </h5>
+                  <p class="text-[11px] text-slate-400">Statutory Election Authorities in charge of the election process. Listed in Section 1 of the Master Duty List.</p>
+                </div>
+              </div>
+              <button id="btnManageRoAroBanner" class="btn btn-secondary border-yellow-500/50 text-yellow-300 hover:bg-yellow-500/20 text-xs px-3 py-1.5 flex items-center gap-1 font-semibold">
+                ⚙️ Manage RO &amp; AROs
+              </button>
+            </div>
+            <div class="flex items-center gap-2.5 flex-wrap pt-3">
+              <div class="flex items-center gap-2 bg-slate-900/90 border border-yellow-500/50 rounded-lg px-3 py-1.5 shadow-sm">
+                <span class="text-yellow-400 text-xs font-mono font-bold">👑 RO</span>
+                <div>
+                  <div class="font-bold text-white text-xs">${esc(roOfficer?.name || 'Not Configured')}</div>
+                  <div class="text-[10px] text-slate-400">${esc(roOfficer?.department || roOfficer?.designation || 'Returning Officer')}${roOfficer?.pen ? ` · PEN: ${esc(roOfficer.pen)}` : ''}</div>
+                </div>
+              </div>
+              ${aroOfficers.map((aro, idx) => `
+                <div class="flex items-center gap-2 bg-slate-900/90 border border-amber-500/40 rounded-lg px-3 py-1.5 shadow-sm">
+                  <span class="text-amber-400 text-xs font-mono font-bold">⚖️ ARO #${idx + 1}</span>
+                  <div>
+                    <div class="font-bold text-white text-xs">${esc(aro.name)}</div>
+                    <div class="text-[10px] text-slate-400">${esc(aro.department || aro.designation || 'Assistant RO')}${aro.pen ? ` · PEN: ${esc(aro.pen)}` : ''}</div>
+                  </div>
+                  <button class="text-rose-400 hover:text-rose-200 text-xs ml-1.5 btn-quick-remove-aro" data-name="${esc(aro.name)}" title="Remove ARO">✖</button>
+                </div>
+              `).join('')}
+              ${aroOfficers.length === 0 ? `
+                <span class="text-xs text-slate-500 italic py-1">No additional AROs configured. Click "Manage RO &amp; AROs" to add 1 or more Assistant Returning Officers.</span>
+              ` : ''}
+            </div>
+          </div>
+
+          <!-- Core Committee to Assist RO -->
+          <div class="glass rounded-xl border border-cyan-500/30 bg-gradient-to-r from-cyan-950/30 via-slate-900/60 to-slate-900/40 p-4 shadow-lg no-print">
+            <div class="flex items-center justify-between flex-wrap gap-2 pb-2.5 border-b border-cyan-500/20">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-lg shadow-inner">⭐</div>
+                <div>
+                  <h5 class="font-bold text-white text-sm flex items-center gap-2">
+                    Core Committee to Assist RO
+                    <span class="text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 px-2 py-0.5 rounded-full">${coreCommittee.length} Members</span>
+                  </h5>
+                  <p class="text-[11px] text-slate-400">Faculty members assisting RO with operations and assigned as In-Charge for Polling Booths and Counting Tables.</p>
+                </div>
+              </div>
+              <button id="btnManageCoreBanner" class="btn btn-secondary border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/20 text-xs px-3 py-1.5 flex items-center gap-1 font-semibold">
+                ➕ Add / Manage Core Committee
+              </button>
+            </div>
+            ${coreCommittee.length === 0 ? `
+              <div class="py-3 text-center text-slate-400 text-xs">
+                No Core Committee members assigned yet. Click <button class="text-cyan-300 underline font-semibold btn-manage-core-inline">Allot Core Committee</button> to assign faculty members (all faculty including excluded are eligible).
+              </div>
+            ` : `
+              <div class="flex items-center gap-2 flex-wrap pt-3">
+                ${[...coreCommittee].sort(compareOfficials).map((c, idx) => {
+                  const bInCharge = pollingTeams.find(t => t.coreInCharge && t.coreInCharge.name === c.name);
+                  const tInCharge = countingTeams.find(t => t.coreInCharge && t.coreInCharge.name === c.name);
+                  let inChargeText = '';
+                  if (bInCharge && tInCharge) inChargeText = ` · 🎯 Booth ${bInCharge.boothNumber} & Table ${tInCharge.tableNumber}`;
+                  else if (bInCharge) inChargeText = ` · 🎯 Booth ${bInCharge.boothNumber}`;
+                  else if (tInCharge) inChargeText = ` · 🎯 Table ${tInCharge.tableNumber}`;
+
+                  return `
+                    <div class="flex items-center gap-2 bg-slate-900/90 border border-cyan-500/40 rounded-lg px-3 py-1.5 shadow-sm">
+                      <span class="text-cyan-400 text-xs font-mono font-bold">#${idx + 1}</span>
+                      <div>
+                        <div class="font-bold text-white text-xs">${esc(c.name)} <span class="text-[10px] text-cyan-300 font-normal">${inChargeText}</span></div>
+                        <div class="text-[10px] text-slate-400">${esc(c.department || c.designation || 'Faculty')}${c.pen ? ` · PEN: ${esc(c.pen)}` : ''}</div>
+                      </div>
+                      <button class="text-rose-400 hover:text-rose-200 text-xs ml-1.5 btn-quick-remove-core" data-name="${esc(c.name)}" title="Remove from Core Committee">✖</button>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `}
           </div>
 
           <!-- Election Observers -->
@@ -2172,6 +2598,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     ` : ''}
 
                     <div class="space-y-3 pt-3">
+                      <!-- Core Committee In-Charge (Assisting RO) -->
+                      <div class="p-2.5 rounded-lg bg-cyan-950/30 border border-cyan-500/30 space-y-1">
+                        <div class="flex items-center justify-between mb-0.5">
+                          <label class="text-[11px] font-bold text-cyan-300 flex items-center gap-1">
+                            <span>⭐</span> Core Committee In-Charge <span class="text-[10px] text-cyan-400/80 font-normal">(Assisting RO)</span>
+                          </label>
+                          ${team.coreInCharge ? `<span class="text-[10px] font-mono text-cyan-200 bg-cyan-500/20 px-1.5 py-0.2 rounded border border-cyan-500/30">Assigned</span>` : ''}
+                        </div>
+                        <select class="w-full bg-slate-900 border border-cyan-500/30 rounded-lg p-2 text-xs text-white focus:border-cyan-400 focus:outline-none select-polling-core-incharge" data-booth="${b.boothNumber}">
+                          <option value="">-- None / Not Assigned --</option>
+                          ${renderPollingCoreInChargeOptions(b.boothNumber, team.coreInCharge?.name)}
+                        </select>
+                      </div>
+
                       <!-- Presiding Officer -->
                       <div>
                         <div class="flex items-center justify-between mb-1">
@@ -2348,6 +2788,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     ` : ''}
 
                     <div class="space-y-3 pt-3">
+                      <!-- Core Committee In-Charge (Assisting RO) -->
+                      <div class="p-2.5 rounded-lg bg-cyan-950/30 border border-cyan-500/30 space-y-1">
+                        <div class="flex items-center justify-between mb-0.5">
+                          <label class="text-[11px] font-bold text-cyan-300 flex items-center gap-1">
+                            <span>⭐</span> Core Committee In-Charge <span class="text-[10px] text-cyan-400/80 font-normal">(Assisting RO)</span>
+                          </label>
+                          ${team.coreInCharge ? `<span class="text-[10px] font-mono text-cyan-200 bg-cyan-500/20 px-1.5 py-0.2 rounded border border-cyan-500/30">Assigned</span>` : ''}
+                        </div>
+                        <select class="w-full bg-slate-900 border border-cyan-500/30 rounded-lg p-2 text-xs text-white focus:border-cyan-400 focus:outline-none select-counting-core-incharge" data-table="${b.boothNumber}">
+                          <option value="">-- None / Not Assigned --</option>
+                          ${renderCountingCoreInChargeOptions(b.boothNumber, team.coreInCharge?.name)}
+                        </select>
+                      </div>
+
                       <!-- Counting Supervisor -->
                       <div>
                         <div class="flex items-center justify-between mb-1">
@@ -2459,6 +2913,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <p class="text-xs text-slate-400">Official seniority list for Presiding Officers and Polling Officers. Upload Excel/CSV to replace or update.</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
+              <button id="btnManageCoreToolbar" class="btn btn-secondary border-cyan-500/50 text-cyan-300 hover:text-white hover:bg-cyan-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Assign Faculty members to Core Committee to assist RO (All faculty including excluded are eligible)">
+                ⭐ Core Committee (${coreCommittee.length})
+              </button>
               <label class="btn btn-primary bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2 cursor-pointer flex items-center gap-1.5 shadow">
                 📥 Import Faculty (Excel / CSV)
                 <input type="file" id="fileFacultyImport" accept=".xlsx,.xls,.csv" class="hidden" />
@@ -2555,6 +3012,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     if (filtered.length === 0) {
                       return `<tr><td colspan="8" class="text-center py-8 text-slate-400">No teaching staff found matching "<strong>${esc(facultySearch)}</strong>".</td></tr>`;
                     }
+                    filtered.sort(compareOfficials);
                     return filtered.map(getFacultyRowHtml).join('');
                   })()}
                 </tbody>
@@ -2689,6 +3147,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     if (filtered.length === 0) {
                       return `<tr><td colspan="8" class="text-center py-8 text-slate-400">No non-teaching staff found matching "<strong>${esc(nonTeachingSearch)}</strong>".</td></tr>`;
                     }
+                    filtered.sort(compareOfficials);
                     return filtered.map(getNonTeachingRowHtml).join('');
                   })()}
                 </tbody>
@@ -3012,6 +3471,43 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // Delegated click handler on Faculty table body so dynamically filtered rows respond immediately
     main.querySelector('#facultyTableBody')?.addEventListener('click', async (e) => {
+      // 1. Toggle Core Committee button in faculty roster row
+      const coreBtn = e.target.closest('.btn-toggle-core-fac');
+      if (coreBtn) {
+        const pen = String(coreBtn.dataset.pen || '').trim().toLowerCase();
+        const target = faculty.find(f => {
+          const fp = String(f.pen || '').trim().toLowerCase();
+          const fn = String(f.name || '').trim().toLowerCase();
+          return (fp && fp === pen) || fn === pen;
+        });
+        if (!target) return;
+
+        if (isCore(target.name, target.pen)) {
+          coreCommittee = coreCommittee.filter(c => {
+            const cn = String(c.name || '').trim().toLowerCase();
+            const cp = String(c.pen || '').trim().toLowerCase();
+            return !((cn && cn === String(target.name || '').trim().toLowerCase()) || (cp && target.pen && cp === String(target.pen || '').trim().toLowerCase()));
+          });
+          pollingTeams.forEach(t => { if (t.coreInCharge?.name === target.name) t.coreInCharge = null; });
+          countingTeams.forEach(t => { if (t.coreInCharge?.name === target.name) t.coreInCharge = null; });
+          showToast(`Removed "${target.name}" from Core Committee.`, 'info');
+        } else {
+          coreCommittee.push({
+            name: target.name,
+            pen: target.pen || '',
+            designation: target.designation || 'Faculty',
+            department: target.department || '',
+            seniority: target.seniority || 999
+          });
+          coreCommittee.sort(compareOfficials);
+          showToast(`Assigned "${target.name}" to Core Committee to assist RO!`, 'success');
+        }
+        await saveAll(false);
+        renderUI();
+        return;
+      }
+
+      // 2. Toggle Exclude button in faculty roster row
       const btn = e.target.closest('.btn-toggle-exclude-fac');
       if (!btn) return;
       const pen = String(btn.dataset.pen || '').trim().toLowerCase();
@@ -3419,6 +3915,526 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         }
       });
     });
+
+    // Change Polling Core Committee In-Charge Dropdown
+    main.querySelectorAll('.select-polling-core-incharge').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const boothNum = parseInt(e.target.dataset.booth, 10);
+        const selectedName = e.target.value;
+        let team = pollingTeams.find(t => t.boothNumber === boothNum);
+        if (!team) {
+          team = { boothNumber: boothNum, roomName: `Booth ${boothNum}`, presidingOfficer: null, pollingOfficer1: null, pollingOfficer2: null, pollingOfficer3: null, pollingAssistant: null };
+          pollingTeams.push(team);
+        }
+        if (selectedName) {
+          const coreMem = coreCommittee.find(c => c.name === selectedName) || getPerson(selectedName);
+          team.coreInCharge = coreMem ? {
+            name: coreMem.name,
+            pen: coreMem.pen || '',
+            designation: coreMem.designation || 'Faculty',
+            department: coreMem.department || '',
+            seniority: coreMem.seniority || 999
+          } : null;
+        } else {
+          team.coreInCharge = null;
+        }
+        saveAll(true);
+        renderUI();
+      });
+    });
+
+    // Change Counting Core Committee In-Charge Dropdown
+    main.querySelectorAll('.select-counting-core-incharge').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const tableNum = parseInt(e.target.dataset.table, 10);
+        const selectedName = e.target.value;
+        let team = countingTeams.find(t => t.tableNumber === tableNum);
+        if (!team) {
+          team = { tableNumber: tableNum, roomName: `Table ${tableNum}`, supervisor: null, countingOfficer1: null, countingOfficer2: null, countingOfficer3: null, countingAssistant: null };
+          countingTeams.push(team);
+        }
+        if (selectedName) {
+          const coreMem = coreCommittee.find(c => c.name === selectedName) || getPerson(selectedName);
+          team.coreInCharge = coreMem ? {
+            name: coreMem.name,
+            pen: coreMem.pen || '',
+            designation: coreMem.designation || 'Faculty',
+            department: coreMem.department || '',
+            seniority: coreMem.seniority || 999
+          } : null;
+        } else {
+          team.coreInCharge = null;
+        }
+        saveAll(true);
+        renderUI();
+      });
+    });
+
+    // RO & ARO Modal Triggers
+    const triggerRoAro = () => openRoAroModal();
+    main.querySelector('#btnOpenRoAroModalTop')?.addEventListener('click', triggerRoAro);
+    main.querySelector('#btnOpenRoAroModal')?.addEventListener('click', triggerRoAro);
+    main.querySelector('#btnManageRoAroBanner')?.addEventListener('click', triggerRoAro);
+    main.querySelector('#cardMetricRoAro')?.addEventListener('click', triggerRoAro);
+
+    // Core Committee Modal Triggers
+    const triggerCore = () => openCoreCommitteeModal();
+    main.querySelector('#btnOpenCoreModalTop')?.addEventListener('click', triggerCore);
+    main.querySelector('#btnOpenCoreCommitteeModal')?.addEventListener('click', triggerCore);
+    main.querySelector('#btnManageCoreBanner')?.addEventListener('click', triggerCore);
+    main.querySelector('#btnManageCoreToolbar')?.addEventListener('click', triggerCore);
+    main.querySelector('#cardMetricCore')?.addEventListener('click', triggerCore);
+    main.querySelectorAll('.btn-manage-core-inline').forEach(btn => btn.addEventListener('click', triggerCore));
+
+    // Quick remove ARO from banner
+    main.querySelectorAll('.btn-quick-remove-aro').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const name = e.currentTarget.dataset.name;
+        if (confirm(`Remove "${name}" from Assistant Returning Officers (AROs)?`)) {
+          aroOfficers = aroOfficers.filter(a => a.name !== name);
+          await saveAll(false);
+          showToast(`Removed "${name}" from AROs.`, 'info');
+          renderUI();
+        }
+      });
+    });
+
+    // Quick remove Core Committee member from banner
+    main.querySelectorAll('.btn-quick-remove-core').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const name = e.currentTarget.dataset.name;
+        if (confirm(`Remove "${name}" from Core Committee assisting RO?`)) {
+          coreCommittee = coreCommittee.filter(c => c.name !== name);
+          pollingTeams.forEach(t => { if (t.coreInCharge?.name === name) t.coreInCharge = null; });
+          countingTeams.forEach(t => { if (t.coreInCharge?.name === name) t.coreInCharge = null; });
+          await saveAll(false);
+          showToast(`Removed "${name}" from Core Committee.`, 'info');
+          renderUI();
+        }
+      });
+    });
+  };
+
+  // ─── Returning Officer & AROs Modal ─────────────────────────────────────────
+
+  const openRoAroModal = () => {
+    const existing = document.getElementById('roAroModalContainer');
+    if (existing) existing.remove();
+
+    let draftRo = roOfficer ? { ...roOfficer } : {
+      name: settings?.returningOfficerName || 'Suresh P',
+      pen: settings?.returningOfficerPen || '616638',
+      designation: settings?.returningOfficerDesignation || 'Associate Professor',
+      department: settings?.returningOfficerDepartment || 'Botany'
+    };
+
+    let draftAros = aroOfficers.map(a => ({ ...a }));
+    if (draftAros.length === 0) {
+      draftAros.push({ name: '', pen: '', designation: '', department: '', seniority: 999 });
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'roAroModalContainer';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+
+    const renderModal = () => {
+      modal.innerHTML = `
+        <div class="glass border border-yellow-500/40 rounded-2xl w-full max-w-2xl bg-slate-900/95 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <!-- Modal Header -->
+          <div class="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-yellow-950/40 via-slate-900 to-slate-900">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-yellow-500/20 text-yellow-300 flex items-center justify-center text-xl shadow-inner border border-yellow-500/30">
+                👑
+              </div>
+              <div>
+                <h4 class="font-bold text-white text-base">Returning Officer (RO) &amp; Assistant Returning Officers (AROs)</h4>
+                <p class="text-xs text-slate-400">Designate 1 Returning Officer and 1 or more Assistant Returning Officers (AROs).</p>
+              </div>
+            </div>
+            <button id="btnCloseRoAroModal" class="text-slate-400 hover:text-white text-2xl font-bold px-2 py-1 leading-none">&times;</button>
+          </div>
+
+          <!-- Modal Body -->
+          <div class="p-5 overflow-y-auto space-y-5 flex-1">
+            <!-- 1. Returning Officer Section -->
+            <div class="p-4 rounded-xl border border-yellow-500/30 bg-yellow-950/15 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-yellow-300 flex items-center gap-1.5">
+                  <span>👑</span> 1. Returning Officer (RO)
+                </span>
+                <span class="text-[10px] text-yellow-400 font-mono">Chief Election Officer</span>
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-300 mb-1">Select from Faculty Roster (or enter details manually below):</label>
+                <select id="selectRoFaculty" class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-yellow-400 focus:outline-none mb-2">
+                  <option value="">-- Choose from Faculty Roster --</option>
+                  ${[...faculty].sort(compareOfficials).map(f => {
+                    const isSel = (draftRo.name && String(draftRo.name).toLowerCase() === String(f.name).toLowerCase()) || (draftRo.pen && String(draftRo.pen) === String(f.pen));
+                    return `<option value="${esc(f.name)}" ${isSel ? 'selected' : ''}>#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')} · ${esc(f.department || '–')} · PEN:${f.pen || '–'})</option>`;
+                  }).join('')}
+                </select>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <label class="block text-[10px] text-slate-400">Full Name</label>
+                    <input type="text" id="inputRoName" value="${esc(draftRo.name || '')}" class="w-full bg-black/50 border border-white/20 rounded-lg p-2 text-xs text-white font-semibold" placeholder="e.g. Dr. Suresh P" />
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-slate-400">Designation</label>
+                    <input type="text" id="inputRoDesig" value="${esc(draftRo.designation || '')}" class="w-full bg-black/50 border border-white/20 rounded-lg p-2 text-xs text-white" placeholder="e.g. Associate Professor & Head" />
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-slate-400">Department</label>
+                    <input type="text" id="inputRoDept" value="${esc(draftRo.department || '')}" class="w-full bg-black/50 border border-white/20 rounded-lg p-2 text-xs text-white" placeholder="e.g. Botany" />
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-slate-400">PEN / Employee ID</label>
+                    <input type="text" id="inputRoPen" value="${esc(draftRo.pen || '')}" class="w-full bg-black/50 border border-white/20 rounded-lg p-2 text-xs text-white font-mono" placeholder="e.g. 616638" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Assistant Returning Officers (AROs) Section -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                  <span>⚖️</span> 2. Assistant Returning Officers (AROs) (${draftAros.filter(a => a.name).length})
+                </span>
+                <button type="button" id="btnAddAroRow" class="btn btn-secondary border-amber-500/40 text-amber-300 hover:bg-amber-500/20 text-xs px-3 py-1.5 flex items-center gap-1 font-semibold">
+                  ➕ Add Another ARO
+                </button>
+              </div>
+
+              <div class="space-y-3" id="aroRowsContainer">
+                ${draftAros.map((aro, idx) => {
+                  return `
+                    <div class="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-2 relative" data-aro-idx="${idx}">
+                      <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-amber-300 font-mono flex items-center gap-1.5">
+                          <span>⚖️</span> Assistant Returning Officer (ARO) #${idx + 1}
+                        </span>
+                        <button type="button" class="text-xs text-rose-400 hover:text-rose-200 hover:underline btn-remove-aro-row flex items-center gap-1" data-idx="${idx}">
+                          <span>✖</span> Remove
+                        </button>
+                      </div>
+
+                      <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-amber-400 focus:outline-none aro-faculty-select" data-idx="${idx}">
+                        <option value="">-- Choose Faculty Member for ARO Duty --</option>
+                        ${[...faculty].sort(compareOfficials).map(f => {
+                          const isSel = (aro.name && String(aro.name).toLowerCase() === String(f.name).toLowerCase()) || (aro.pen && String(aro.pen) === String(f.pen));
+                          return `<option value="${esc(f.name)}" ${isSel ? 'selected' : ''}>#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')} · ${esc(f.department || '–')} · PEN:${f.pen || '–'})</option>`;
+                        }).join('')}
+                      </select>
+
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                        <div>
+                          <label class="block text-[10px] text-slate-400">ARO Name</label>
+                          <input type="text" class="w-full bg-black/40 border border-white/15 rounded-lg p-1.5 text-xs text-white aro-name-input" data-idx="${idx}" value="${esc(aro.name || '')}" placeholder="Full Name" />
+                        </div>
+                        <div>
+                          <label class="block text-[10px] text-slate-400">Designation</label>
+                          <input type="text" class="w-full bg-black/40 border border-white/15 rounded-lg p-1.5 text-xs text-white aro-desig-input" data-idx="${idx}" value="${esc(aro.designation || '')}" placeholder="Designation" />
+                        </div>
+                        <div>
+                          <label class="block text-[10px] text-slate-400">Department</label>
+                          <input type="text" class="w-full bg-black/40 border border-white/15 rounded-lg p-1.5 text-xs text-white aro-dept-input" data-idx="${idx}" value="${esc(aro.department || '')}" placeholder="Department" />
+                        </div>
+                        <div>
+                          <label class="block text-[10px] text-slate-400">PEN #</label>
+                          <input type="text" class="w-full bg-black/40 border border-white/15 rounded-lg p-1.5 text-xs text-white font-mono aro-pen-input" data-idx="${idx}" value="${esc(aro.pen || '')}" placeholder="PEN" />
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="p-4 border-t border-white/10 flex items-center justify-between bg-white/5">
+            <span class="text-[11px] text-slate-400">Listed in Section 1 of the Master Duty List.</span>
+            <div class="flex items-center gap-2">
+              <button type="button" id="btnCancelRoAroModal" class="btn btn-secondary text-xs px-4 py-2">Cancel</button>
+              <button type="button" id="btnSaveRoAroModal" class="btn btn-primary bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xs px-5 py-2 flex items-center gap-1.5 shadow">
+                💾 Save RO &amp; AROs
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      modal.querySelector('#btnCloseRoAroModal').onclick = () => modal.remove();
+      modal.querySelector('#btnCancelRoAroModal').onclick = () => modal.remove();
+
+      modal.querySelector('#selectRoFaculty').onchange = (e) => {
+        const facName = e.target.value;
+        const fac = faculty.find(f => f.name === facName);
+        if (fac) {
+          draftRo = {
+            name: fac.name,
+            pen: fac.pen || '',
+            designation: fac.designation || 'Faculty',
+            department: fac.department || '',
+            seniority: fac.seniority || 999
+          };
+          renderModal();
+        }
+      };
+
+      modal.querySelector('#inputRoName').oninput = (e) => { draftRo.name = e.target.value; };
+      modal.querySelector('#inputRoDesig').oninput = (e) => { draftRo.designation = e.target.value; };
+      modal.querySelector('#inputRoDept').oninput = (e) => { draftRo.department = e.target.value; };
+      modal.querySelector('#inputRoPen').oninput = (e) => { draftRo.pen = e.target.value; };
+
+      modal.querySelector('#btnAddAroRow').onclick = () => {
+        draftAros.push({ name: '', pen: '', designation: '', department: '', seniority: 999 });
+        renderModal();
+      };
+
+      modal.querySelectorAll('.btn-remove-aro-row').forEach(btn => {
+        btn.onclick = () => {
+          const idx = parseInt(btn.dataset.idx, 10);
+          draftAros.splice(idx, 1);
+          if (draftAros.length === 0) {
+            draftAros.push({ name: '', pen: '', designation: '', department: '', seniority: 999 });
+          }
+          renderModal();
+        };
+      });
+
+      modal.querySelectorAll('.aro-faculty-select').forEach(sel => {
+        sel.onchange = (e) => {
+          const idx = parseInt(sel.dataset.idx, 10);
+          const facName = e.target.value;
+          const fac = faculty.find(f => f.name === facName);
+          if (fac) {
+            draftAros[idx] = {
+              name: fac.name,
+              pen: fac.pen || '',
+              designation: fac.designation || 'Faculty',
+              department: fac.department || '',
+              seniority: fac.seniority || 999
+            };
+          } else {
+            draftAros[idx] = { name: '', pen: '', designation: '', department: '', seniority: 999 };
+          }
+          renderModal();
+        };
+      });
+
+      modal.querySelectorAll('.aro-name-input').forEach(inp => {
+        inp.oninput = (e) => {
+          const idx = parseInt(inp.dataset.idx, 10);
+          draftAros[idx].name = e.target.value;
+        };
+      });
+      modal.querySelectorAll('.aro-desig-input').forEach(inp => {
+        inp.oninput = (e) => {
+          const idx = parseInt(inp.dataset.idx, 10);
+          draftAros[idx].designation = e.target.value;
+        };
+      });
+      modal.querySelectorAll('.aro-dept-input').forEach(inp => {
+        inp.oninput = (e) => {
+          const idx = parseInt(inp.dataset.idx, 10);
+          draftAros[idx].department = e.target.value;
+        };
+      });
+      modal.querySelectorAll('.aro-pen-input').forEach(inp => {
+        inp.oninput = (e) => {
+          const idx = parseInt(inp.dataset.idx, 10);
+          draftAros[idx].pen = e.target.value;
+        };
+      });
+
+      modal.querySelector('#btnSaveRoAroModal').onclick = async () => {
+        if (!draftRo.name || !draftRo.name.trim()) {
+          showToast('Please provide the Returning Officer name.', 'error');
+          return;
+        }
+        roOfficer = {
+          name: draftRo.name.trim(),
+          pen: (draftRo.pen || '').trim(),
+          designation: (draftRo.designation || 'Returning Officer').trim(),
+          department: (draftRo.department || '').trim(),
+          seniority: draftRo.seniority || 1
+        };
+
+        const validAros = draftAros.filter(a => a.name && a.name.trim().length > 0).map(a => ({
+          name: a.name.trim(),
+          pen: (a.pen || '').trim(),
+          designation: (a.designation || 'Assistant Returning Officer').trim(),
+          department: (a.department || '').trim(),
+          seniority: a.seniority || 999
+        }));
+        validAros.sort(compareOfficials);
+        aroOfficers = validAros;
+
+        await saveAll(false);
+        modal.remove();
+        showToast(`Saved Returning Officer and ${aroOfficers.length} ARO(s) successfully!`, 'success');
+        renderUI();
+      };
+    };
+
+    renderModal();
+    document.body.appendChild(modal);
+  };
+
+  // ─── Core Committee Allotment Modal ─────────────────────────────────────────
+
+  const openCoreCommitteeModal = () => {
+    const existing = document.getElementById('coreCommitteeModalContainer');
+    if (existing) existing.remove();
+
+    let draftCore = coreCommittee.map(c => ({ ...c }));
+    if (draftCore.length === 0) {
+      draftCore.push({ name: '', pen: '', department: '', designation: '', seniority: 999 });
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'coreCommitteeModalContainer';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+
+    const renderModal = () => {
+      modal.innerHTML = `
+        <div class="glass border border-cyan-500/40 rounded-2xl w-full max-w-2xl bg-slate-900/95 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <!-- Modal Header -->
+          <div class="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-cyan-950/40 via-slate-900 to-slate-900">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-xl shadow-inner border border-cyan-500/30">
+                ⭐
+              </div>
+              <div>
+                <h4 class="font-bold text-white text-base">Core Committee to Assist RO</h4>
+                <p class="text-xs text-slate-400">All faculty members (including those marked as excluded) are eligible for Core Committee duty.</p>
+              </div>
+            </div>
+            <button id="btnCloseCoreModal" class="text-slate-400 hover:text-white text-2xl font-bold px-2 py-1 leading-none">&times;</button>
+          </div>
+
+          <!-- Modal Body -->
+          <div class="p-5 overflow-y-auto space-y-4 flex-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-cyan-300">Core Committee Appointments (${draftCore.filter(c => c.name).length})</span>
+              <button type="button" id="btnAddCoreRow" class="btn btn-secondary border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/20 text-xs px-3 py-1.5 flex items-center gap-1 font-semibold">
+                ➕ Add Another Member
+              </button>
+            </div>
+
+            <div class="space-y-3" id="coreRowsContainer">
+              ${draftCore.map((c, idx) => {
+                const fac = faculty.find(f => f.name === c.name);
+                return `
+                  <div class="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-2 relative" data-core-idx="${idx}">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-bold text-cyan-300 font-mono flex items-center gap-1.5">
+                        <span>⭐</span> Core Committee Member #${idx + 1}
+                      </span>
+                      <button type="button" class="text-xs text-rose-400 hover:text-rose-200 hover:underline btn-remove-core-row flex items-center gap-1" data-idx="${idx}">
+                        <span>✖</span> Remove
+                      </button>
+                    </div>
+
+                    <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-cyan-400 focus:outline-none core-faculty-select" data-idx="${idx}">
+                      <option value="">-- Select Teaching Faculty (All Faculty Eligible) --</option>
+                      ${[...faculty].sort(compareOfficials).map(f => {
+                        const isSel = c.name === f.name;
+                        const flags = getOfficialStatusFlags(f.name, f.pen).filter(fl => !fl.startsWith('⭐ Core'));
+                        const flagStr = flags.length > 0 ? ` [${flags.join(' | ')}]` : '';
+                        const exclTag = f.isExcluded ? ' ⛔ [Excluded Faculty]' : '';
+                        return `
+                          <option value="${esc(f.name)}" ${isSel ? 'selected' : ''}>
+                            #${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')} · ${esc(f.department || '–')} · PEN:${f.pen || '–'})${exclTag}${flagStr}
+                          </option>
+                        `;
+                      }).join('')}
+                    </select>
+
+                    ${fac ? `
+                      <div class="flex items-center gap-2 flex-wrap text-[11px] text-slate-300 bg-black/30 p-2 rounded-lg border border-white/5 font-mono">
+                        <span class="text-cyan-300 font-semibold">Rank #${fac.seniority || '–'}</span>
+                        <span>•</span>
+                        <span>Dept: <strong class="text-white">${esc(fac.department || '–')}</strong></span>
+                        <span>•</span>
+                        <span>PEN: <strong class="text-white">${esc(fac.pen || '–')}</strong></span>
+                        <span>•</span>
+                        <span>Desig: <strong class="text-white">${esc(fac.designation || 'Faculty')}</strong></span>
+                        ${fac.isExcluded ? `<span class="text-amber-400 font-semibold">• Excluded from Booth Duty</span>` : ''}
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="p-4 border-t border-white/10 flex items-center justify-between bg-white/5">
+            <span class="text-[11px] text-slate-400">Can be assigned as In-Charge for Polling Booths &amp; Counting Tables.</span>
+            <div class="flex items-center gap-2">
+              <button type="button" id="btnCancelCoreModal" class="btn btn-secondary text-xs px-4 py-2">Cancel</button>
+              <button type="button" id="btnSaveCoreModal" class="btn btn-primary bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow">
+                💾 Save Core Committee
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      modal.querySelector('#btnCloseCoreModal').onclick = () => modal.remove();
+      modal.querySelector('#btnCancelCoreModal').onclick = () => modal.remove();
+
+      modal.querySelector('#btnAddCoreRow').onclick = () => {
+        draftCore.push({ name: '', pen: '', department: '', designation: '', seniority: 999 });
+        renderModal();
+      };
+
+      modal.querySelectorAll('.btn-remove-core-row').forEach(btn => {
+        btn.onclick = () => {
+          const idx = parseInt(btn.dataset.idx, 10);
+          draftCore.splice(idx, 1);
+          if (draftCore.length === 0) {
+            draftCore.push({ name: '', pen: '', department: '', designation: '', seniority: 999 });
+          }
+          renderModal();
+        };
+      });
+
+      modal.querySelectorAll('.core-faculty-select').forEach(sel => {
+        sel.onchange = (e) => {
+          const idx = parseInt(sel.dataset.idx, 10);
+          const fName = e.target.value;
+          const f = faculty.find(fac => fac.name === fName);
+          if (f) {
+            draftCore[idx] = {
+              name: f.name,
+              pen: f.pen || '',
+              department: f.department || '',
+              designation: f.designation || 'Faculty',
+              seniority: f.seniority || 999
+            };
+          } else {
+            draftCore[idx] = { name: '', pen: '', department: '', designation: '', seniority: 999 };
+          }
+          renderModal();
+        };
+      });
+
+      modal.querySelector('#btnSaveCoreModal').onclick = async () => {
+        const validCore = draftCore.filter(c => c.name && c.name.trim().length > 0);
+        validCore.sort(compareOfficials);
+        coreCommittee = validCore;
+        await saveAll(false);
+        modal.remove();
+        showToast(`Appointed ${coreCommittee.length} Core Committee member(s) successfully!`, 'success');
+        renderUI();
+      };
+    };
+
+    renderModal();
+    document.body.appendChild(modal);
   };
 
   // ─── Observers Allotment Modal ──────────────────────────────────────────────
@@ -3554,6 +4570,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       modal.querySelector('#btnSaveObsModal').onclick = async () => {
         const validObs = draftObservers.filter(o => o.name && o.name.trim().length > 0);
+        validObs.sort(compareOfficials);
         observers = validObs;
         await saveAll(false);
         modal.remove();
@@ -3699,6 +4716,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       modal.querySelector('#btnSaveDiscModal').onclick = async () => {
         const validDisc = draftDiscipline.filter(d => d.name && d.name.trim().length > 0);
+        validDisc.sort(compareOfficials);
         disciplineCharge = validDisc;
         await saveAll(false);
         modal.remove();
@@ -3844,6 +4862,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       modal.querySelector('#btnSaveGrievModal').onclick = async () => {
         const validGriev = draftGrievance.filter(g => g.name && g.name.trim().length > 0);
+        validGriev.sort(compareOfficials);
         grievanceCell = validGriev;
         await saveAll(false);
         modal.remove();
@@ -4039,9 +5058,86 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   // ─── Master Duty List Standalone Print Engine (Both Polling & Counting) ─────
 
   const getMasterDutyData = () => {
-    // 1. Observers (Listed 1st) - strictly exclude any official marked as excluded
+    // 0. Returning Officer (RO)
+    const roData = roOfficer && roOfficer.name ? {
+      name: roOfficer.name,
+      designation: (roOfficer.designation || 'Returning Officer').trim(),
+      department: (roOfficer.department || '').trim() || '–',
+      pen: (roOfficer.pen || '–').trim(),
+      seniority: 0,
+      duty: 'Returning Officer (Overall Conduct of Election)',
+      station: 'Election Office / Central Control Room',
+      reportingTime: '07:00 AM',
+      type: 'Returning Officer'
+    } : null;
+
+    // 0B. Assistant Returning Officers (AROs)
+    const aroList = (aroOfficers || [])
+      .filter((a) => a && a.name && a.name.trim().length > 0)
+      .map((a) => {
+        const p = getPerson(a.name);
+        return {
+          name: a.name,
+          designation: (p?.designation || a.designation || 'Assistant Returning Officer').trim(),
+          department: (p?.department || a.department || '').trim() || '–',
+          pen: (p?.pen || a.pen || '–').trim(),
+          seniority: (p?.seniority !== undefined && p?.seniority !== null) ? p.seniority : (a.seniority || 999),
+          duty: 'Assistant Returning Officer (ARO)',
+          station: 'Central Control Room / Election Cell',
+          reportingTime: '07:15 AM',
+          type: p?.type || 'Teaching Faculty'
+        };
+      });
+    aroList.sort(compareOfficials);
+    aroList.forEach((aro, idx) => {
+      aro.slNo = `ARO-${idx + 1}`;
+    });
+
+    // 0C. Core Committee to Assist Returning Officer (RO)
+    const coreList = (coreCommittee || [])
+      .filter((c) => c && c.name && c.name.trim().length > 0)
+      .map((c) => {
+        const p = getPerson(c.name);
+        const cleanName = String(c.name || '').trim().toLowerCase();
+        const cleanPen = String(c.pen || '').trim().toLowerCase();
+        const bInCharge = pollingTeams.find(t => t.coreInCharge && (String(t.coreInCharge.name || '').trim().toLowerCase() === cleanName || (cleanPen && String(t.coreInCharge.pen || '').trim().toLowerCase() === cleanPen)));
+        const tInCharge = countingTeams.find(t => t.coreInCharge && (String(t.coreInCharge.name || '').trim().toLowerCase() === cleanName || (cleanPen && String(t.coreInCharge.pen || '').trim().toLowerCase() === cleanPen)));
+
+        let stationText = 'Central Control Room / Assisting RO';
+        let dutyText = 'Core Committee Member (Assisting RO)';
+        if (bInCharge && tInCharge) {
+          dutyText = `Core Committee In-Charge (Polling Booth ${bInCharge.boothNumber} & Counting Table ${tInCharge.tableNumber})`;
+          stationText = `Booth ${bInCharge.boothNumber} (${bInCharge.roomName || 'Polling'}) & Table ${tInCharge.tableNumber} (${tInCharge.roomName || 'Counting'})`;
+        } else if (bInCharge) {
+          dutyText = `Core Committee In-Charge (Polling Booth ${bInCharge.boothNumber})`;
+          stationText = `Booth ${bInCharge.boothNumber} (${bInCharge.roomName || 'Polling Venue'})`;
+        } else if (tInCharge) {
+          dutyText = `Core Committee In-Charge (Counting Table ${tInCharge.tableNumber})`;
+          stationText = `Table ${tInCharge.tableNumber} (${tInCharge.roomName || 'Counting Venue'})`;
+        }
+
+        return {
+          name: c.name,
+          designation: (p?.designation || c.designation || 'Faculty').trim(),
+          department: (p?.department || c.department || '').trim() || '–',
+          pen: (p?.pen || c.pen || '–').trim(),
+          seniority: (p?.seniority !== undefined && p?.seniority !== null) ? p.seniority : (c.seniority || 999),
+          duty: dutyText,
+          station: stationText,
+          inChargeBooth: bInCharge?.boothNumber || null,
+          inChargeTable: tInCharge?.tableNumber || null,
+          reportingTime: '07:30 AM',
+          type: p?.type || 'Teaching Faculty'
+        };
+      });
+    coreList.sort(compareOfficials);
+    coreList.forEach((core, idx) => {
+      core.slNo = `Core-${idx + 1}`;
+    });
+
+    // 1. Observers (Listed 1st among committees)
     const obsList = observers
-      .filter((obs) => !isPersonExcluded(obs))
+      .filter((obs) => obs && obs.name && obs.name.trim().length > 0)
       .map((obs) => {
         const p = getPerson(obs.name);
         return {
@@ -4049,7 +5145,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           designation: (p?.designation || obs.designation || 'Faculty').trim(),
           department: (p?.department || obs.department || '').trim() || '–',
           pen: (p?.pen || obs.pen || '–').trim(),
-          seniority: p?.seniority || obs.seniority || 999,
+          seniority: (p?.seniority !== undefined && p?.seniority !== null) ? p.seniority : (obs.seniority || 999),
           duty: 'Election Observer',
           station: 'Central Control Room / Campus',
           reportingTime: '07:30 AM',
@@ -4061,9 +5157,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       obs.slNo = `Obs-${idx + 1}`;
     });
 
-    // 2. Campus Discipline Committee (Listed 2nd) - strictly exclude excluded
+    // 2. Campus Discipline Committee (Fix: Displays ALL configured members)
     const discList = disciplineCharge
-      .filter((disc) => !isPersonExcluded(disc))
+      .filter((disc) => disc && disc.name && disc.name.trim().length > 0)
       .map((disc) => {
         const p = getPerson(disc.name);
         return {
@@ -4071,7 +5167,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           designation: (p?.designation || disc.designation || (p?.type === 'Teaching Faculty' ? 'Faculty' : 'Staff')).trim(),
           department: (p?.department || disc.department || (p?.type === 'Teaching Faculty' ? '' : 'Office')).trim() || '–',
           pen: (p?.pen || disc.pen || '–').trim(),
-          seniority: p?.seniority || disc.seniority || 999,
+          seniority: (p?.seniority !== undefined && p?.seniority !== null) ? p.seniority : (disc.seniority || 999),
           duty: 'Campus Discipline Duty',
           station: 'Campus & Corridors',
           reportingTime: '07:30 AM',
@@ -4083,9 +5179,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       disc.slNo = `Disc-${idx + 1}`;
     });
 
-    // 3. Grievance Redressal Committee (Listed 3rd) - strictly exclude excluded
+    // 3. Grievance Redressal Committee (Fix: Displays ALL configured members)
     const grievList = grievanceCell
-      .filter((g) => !isPersonExcluded(g))
+      .filter((g) => g && g.name && g.name.trim().length > 0)
       .map((g) => {
         const p = getPerson(g.name);
         return {
@@ -4093,7 +5189,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           designation: (p?.designation || g.designation || (p?.type === 'Teaching Faculty' ? 'Faculty' : 'Staff')).trim(),
           department: (p?.department || g.department || (p?.type === 'Teaching Faculty' ? '' : 'Office')).trim() || '–',
           pen: (p?.pen || g.pen || '–').trim(),
-          seniority: p?.seniority || g.seniority || 999,
+          seniority: (p?.seniority !== undefined && p?.seniority !== null) ? p.seniority : (g.seniority || 999),
           duty: 'Grievance Committee Member',
           station: 'Grievance Cell / Principal Office',
           reportingTime: '08:00 AM',
@@ -4110,6 +5206,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const reserveList = [];
     const seenStaff = new Set();
 
+    if (roOfficer?.name) seenStaff.add(String(roOfficer.name).trim().toLowerCase());
+    aroOfficers.forEach(a => { if (a?.name) seenStaff.add(String(a.name).trim().toLowerCase()); });
+    coreCommittee.forEach(c => { if (c?.name) seenStaff.add(String(c.name).trim().toLowerCase()); });
+    observers.forEach(o => { if (o?.name) seenStaff.add(String(o.name).trim().toLowerCase()); });
+    disciplineCharge.forEach(d => { if (d?.name) seenStaff.add(String(d.name).trim().toLowerCase()); });
+    grievanceCell.forEach(g => { if (g?.name) seenStaff.add(String(g.name).trim().toLowerCase()); });
+
     // Teaching Faculty
     faculty.forEach(f => {
       // Excluded ones are NOT reserve and must NOT be shown anywhere in reserve or personnel
@@ -4122,10 +5225,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const isObs = isObserver(f.name);
       const isDisc = isDiscipline(f.name);
       const isGriev = isGrievance(f.name);
+      const isRoMan = isRo(f.name, f.pen);
+      const isAroMan = isAro(f.name, f.pen);
+      const isCoreMan = isCore(f.name, f.pen);
 
-      if (isObs || isDisc || isGriev) {
+      if (isObs || isDisc || isGriev || isRoMan || isAroMan || isCoreMan) {
         seenStaff.add(fNameLower);
-        return; // Handled in dedicated sections 1, 2, 3 above
+        return; // Handled in dedicated administration/committee sections
       }
 
       const pDuty = getPollingAssignment(f.name);
@@ -4190,8 +5296,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const isObs = isObserver(nt.name);
       const isDisc = isDiscipline(nt.name);
       const isGriev = isGrievance(nt.name);
+      const isRoMan = isRo(nt.name, nt.pen);
+      const isAroMan = isAro(nt.name, nt.pen);
+      const isCoreMan = isCore(nt.name, nt.pen);
 
-      if (isObs || isDisc || isGriev) {
+      if (isObs || isDisc || isGriev || isRoMan || isAroMan || isCoreMan) {
         seenStaff.add(ntNameLower);
         return;
       }
@@ -4257,7 +5366,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     safePersonnel.sort(compareOfficials);
     safeReserveList.sort(compareOfficials);
 
-    return { obsList, discList, grievList, personnel: safePersonnel, reserveList: safeReserveList };
+    return { roData, aroList, coreList, obsList, discList, grievList, personnel: safePersonnel, reserveList: safeReserveList };
   };
 
   const openMasterDutyListWindow = () => {
@@ -4696,14 +5805,17 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   };
 
   const buildDeptWiseMasterRollHtml = (orderDate) => {
-    const { obsList, discList, grievList, personnel, reserveList } = getMasterDutyData();
-    const totalPersonnelCount = obsList.length + discList.length + grievList.length + personnel.length;
-    const activeDutyCount = obsList.length + discList.length + grievList.length + personnel.filter(p => !p.isReserve).length;
+    const { roData, aroList, coreList, obsList, discList, grievList, personnel, reserveList } = getMasterDutyData();
+    const roAroCount = (roData ? 1 : 0) + aroList.length;
+    const coreCount = coreList.length;
+    const totalPersonnelCount = roAroCount + coreCount + obsList.length + discList.length + grievList.length + personnel.length;
+    const activeDutyCount = roAroCount + coreCount + obsList.length + discList.length + grievList.length + personnel.filter(p => !p.isReserve).length;
     const doubleDutyCount = personnel.filter(p => p.hasDoubleDuty).length;
 
     const obsHasDept = obsList.some(o => o.department && o.department.trim() && o.department !== '–' && o.department !== 'N/A' && o.department !== '-');
     const discHasDept = discList.some(d => d.department && d.department.trim() && d.department !== '–' && d.department !== 'N/A' && d.department !== '-');
     const grievHasDept = grievList.some(g => g.department && g.department.trim() && g.department !== '–' && g.department !== 'N/A' && g.department !== '-');
+    const coreHasDept = coreList.some(c => c.department && c.department.trim() && c.department !== '–' && c.department !== 'N/A' && c.department !== '-');
     const personnelHasDept = personnel.some(p => p.department && p.department.trim() && p.department !== '–' && p.department !== 'N/A' && p.department !== '-');
 
     return `
@@ -4725,8 +5837,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <p class="preamble-text">
           For the smooth, fair, and orderly conduct of the <strong>College Union Election ${esc(electionYear)}</strong>, 
           the following Teaching Faculty and Non-Teaching Staff members are assigned election duties as 
-          <strong>Observers, Campus Discipline Committee, Grievance Committee, Polling &amp; Counting Personnel, and Reserve Pool</strong>. 
-          Officials are sorted department-wise for administrative convenience and are kindly requested to report at their respective stations as scheduled. 
+          <strong>Returning Officer, Assistant Returning Officers, Core Committee (Assisting RO), Observers, Campus Discipline Committee, Grievance Redressal Committee, Polling &amp; Counting Personnel, and Reserve Pool</strong>. 
+          Officials are sorted strictly by seniority across departments for administrative convenience and are kindly requested to report at their respective stations as scheduled. 
           Personnel in the Reserve Pool are requested to remain on standby at the Central Control Room for relief and support as needed. 
           Your kind cooperation and active support are earnestly requested for the successful conduct of the election.
         </p>
@@ -4734,6 +5846,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <!-- Summary Metrics -->
         <div class="summary-metrics-bar">
           <span><strong>Total Roster Personnel:</strong> ${totalPersonnelCount}</span>
+          <span>•</span>
+          <span><strong>RO &amp; AROs:</strong> ${roAroCount}</span>
+          <span>•</span>
+          <span><strong>Core Committee:</strong> ${coreCount}</span>
           <span>•</span>
           <span><strong>Observers:</strong> ${obsList.length}</span>
           <span>•</span>
@@ -4748,9 +5864,117 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <span><strong>Double Duty (Poll &amp; Count):</strong> ${doubleDutyCount}</span>
         </div>
 
-        <!-- SECTION 1: ELECTION OBSERVERS -->
+        <!-- SECTION 1: RETURNING OFFICER & ASSISTANT RETURNING OFFICERS -->
         <div class="section-title-box">
-          <span>⚖️ SECTION 1: ELECTION OBSERVERS</span>
+          <span>👑 SECTION 1: RETURNING OFFICER (RO) &amp; ASSISTANT RETURNING OFFICERS (AROs)</span>
+        </div>
+
+        <table class="master-table">
+          <colgroup>
+            <col style="width: 7%;">
+            <col style="width: 28%;">
+            <col style="width: 22%;">
+            <col style="width: 18%;">
+            <col style="width: 11%;">
+            <col style="width: 14%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="col-center">Sl #</th>
+              <th>Name of Official</th>
+              <th>Designated Office / Role</th>
+              <th>Department / Desig</th>
+              <th>PEN #</th>
+              <th class="col-center">Signature</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${roData ? `
+              <tr style="background: #fefce8 !important;">
+                <td class="col-center" style="font-weight: 800; font-family: monospace;">RO</td>
+                <td>
+                  <span class="staff-name" style="font-size: 11px;">${esc(roData.name)}</span>
+                </td>
+                <td><strong style="color: #854d0e;">👑 Returning Officer (RO)</strong></td>
+                <td>${esc(roData.designation)}${roData.department && roData.department !== '–' ? ` · <span class="dept-badge" style="color: #854d0e;">${esc(roData.department)}</span>` : ''}</td>
+                <td style="font-family: monospace; font-weight: 700;">${esc(roData.pen)}</td>
+                <td class="col-sign"><div class="sign-box"></div></td>
+              </tr>
+            ` : ''}
+            ${aroList.map(aro => `
+              <tr style="background: #fffbeb !important;">
+                <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(aro.slNo)}</td>
+                <td>
+                  <span class="staff-name">${esc(aro.name)}</span>
+                </td>
+                <td><strong style="color: #b45309;">⚖️ Assistant Returning Officer (ARO)</strong></td>
+                <td>${esc(aro.designation)}${aro.department && aro.department !== '–' ? ` · <span class="dept-badge">${esc(aro.department)}</span>` : ''}</td>
+                <td style="font-family: monospace; font-weight: 600;">${esc(aro.pen)}</td>
+                <td class="col-sign"><div class="sign-box"></div></td>
+              </tr>
+            `).join('')}
+            ${!roData && aroList.length === 0 ? `
+              <tr><td colspan="6" class="col-center" style="color: #64748b; font-style: italic; padding: 8px;">No Returning Officer or ARO configured.</td></tr>
+            ` : ''}
+          </tbody>
+        </table>
+
+        <!-- SECTION 2: CORE COMMITTEE TO ASSIST RETURNING OFFICER -->
+        <div class="section-title-box" style="margin-top: 14px;">
+          <span>⭐ SECTION 2: CORE COMMITTEE TO ASSIST RETURNING OFFICER (RO)</span>
+          <span style="font-size: 8.5px; font-weight: normal;">Election Management &amp; Booth / Table In-Charge Supervision</span>
+        </div>
+
+        ${coreList.length === 0 ? `
+          <div style="border: 1px dashed #cbd5e1; padding: 10px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
+            No Core Committee appointed.
+          </div>
+        ` : `
+          <table class="master-table">
+            <colgroup>
+              <col style="width: 7%;">
+              <col style="width: 25%;">
+              ${coreHasDept ? '<col style="width: 15%;">' : ''}
+              <col style="width: 15%;">
+              <col style="width: 10%;">
+              <col style="width: 18%;">
+              <col style="width: 10%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-center">Sl #</th>
+                <th>Name of Official</th>
+                ${coreHasDept ? '<th>Department</th>' : ''}
+                <th>Designation</th>
+                <th>PEN #</th>
+                <th>Assigned Responsibility &amp; Station</th>
+                <th class="col-center">Signature</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${coreList.map(c => `
+                <tr style="background: #f0fdfa !important;">
+                  <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(c.slNo)}</td>
+                  <td>
+                    <span class="staff-name">${esc(c.name)}</span>
+                  </td>
+                  ${coreHasDept ? `<td><span class="dept-badge" style="color: #0f766e;">${esc(c.department)}</span></td>` : ''}
+                  <td>${esc(c.designation)}</td>
+                  <td style="font-family: monospace; font-weight: 600;">${esc(c.pen)}</td>
+                  <td>
+                    <div style="font-weight: 600; color: #0f766e;">${esc(c.duty)}</div>
+                    <span class="staff-meta">Station: ${esc(c.station)}</span>
+                  </td>
+                  <td class="col-sign"><div class="sign-box"></div></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `}
+
+        <!-- SECTION 3: ELECTION OBSERVERS -->
+        <div class="section-title-box" style="margin-top: 14px;">
+          <span>⚖️ SECTION 3: ELECTION OBSERVERS</span>
         </div>
 
         ${obsList.length === 0 ? `
@@ -4804,9 +6028,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </table>
         `}
 
-        <!-- SECTION 2: CAMPUS DISCIPLINE -->
+        <!-- SECTION 4: CAMPUS DISCIPLINE -->
         <div class="section-title-box" style="margin-top: 14px;">
-          <span>🛡️ SECTION 2: CAMPUS DISCIPLINE</span>
+          <span>🛡️ SECTION 4: CAMPUS DISCIPLINE COMMITTEE</span>
         </div>
 
         ${discList.length === 0 ? `
@@ -4860,9 +6084,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </table>
         `}
 
-        <!-- SECTION 3: GRIEVANCE REDRESSAL COMMITTEE -->
+        <!-- SECTION 5: GRIEVANCE REDRESSAL COMMITTEE -->
         <div class="section-title-box" style="margin-top: 14px;">
-          <span>🤝 SECTION 3: GRIEVANCE REDRESSAL COMMITTEE</span>
+          <span>🤝 SECTION 5: GRIEVANCE REDRESSAL COMMITTEE</span>
         </div>
 
         ${grievList.length === 0 ? `
@@ -4916,10 +6140,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </table>
         `}
 
-        <!-- SECTION 4: DEPARTMENT-WISE DUTY ROSTER -->
+        <!-- SECTION 6: DEPARTMENT-WISE DUTY ROSTER -->
         <div class="section-title-box" style="margin-top: 14px;">
-          <span>📋 SECTION 4: DEPARTMENT-WISE DUTY ROSTER</span>
-          <span style="font-size: 8.5px; font-weight: normal;">Attendance &amp; Duty Register (Active Duty &amp; Reserve Pool)</span>
+          <span>📋 SECTION 6: DEPARTMENT-WISE DUTY ROSTER (POLLING, COUNTING &amp; RESERVE POOL)</span>
+          <span style="font-size: 8.5px; font-weight: normal;">Attendance &amp; Duty Register · Seniority Respected</span>
         </div>
 
         ${personnel.length === 0 ? `
@@ -5015,16 +6239,17 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   };
 
   const buildBoothWiseDeploymentHtml = (orderDate) => {
-    const { obsList, discList, grievList, reserveList } = getMasterDutyData();
+    const { roData, aroList, coreList, obsList, discList, grievList, reserveList } = getMasterDutyData();
 
     const obsHasDept = obsList.some(o => o.department && o.department.trim() && o.department !== '–' && o.department !== 'N/A' && o.department !== '-');
     const discHasDept = discList.some(d => d.department && d.department.trim() && d.department !== '–' && d.department !== 'N/A' && d.department !== '-');
     const grievHasDept = grievList.some(g => g.department && g.department.trim() && g.department !== '–' && g.department !== 'N/A' && g.department !== '-');
+    const coreHasDept = coreList.some(c => c.department && c.department.trim() && c.department !== '–' && c.department !== 'N/A' && c.department !== '-');
     const resHasDept = reserveList.some(r => r.department && r.department.trim() && r.department !== '–' && r.department !== 'N/A' && r.department !== '-');
 
     const pollHasDept = booths.some(b => {
       const team = pollingTeams.find(t => t.boothNumber === b.boothNumber) || {};
-      const slots = [team.presidingOfficer, team.pollingOfficer1, team.pollingOfficer2, team.pollingOfficer3, team.pollingAssistant];
+      const slots = [team.coreInCharge, team.presidingOfficer, team.pollingOfficer1, team.pollingOfficer2, team.pollingOfficer3, team.pollingAssistant];
       return slots.some(s => {
         if (!s || !s.name) return false;
         const personObj = getPerson(s.name);
@@ -5035,7 +6260,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     const countHasDept = booths.some(b => {
       const team = countingTeams.find(t => t.tableNumber === b.boothNumber) || {};
-      const slots = [team.supervisor, team.countingOfficer1, team.countingOfficer2, team.countingOfficer3, team.countingAssistant];
+      const slots = [team.coreInCharge, team.supervisor, team.countingOfficer1, team.countingOfficer2, team.countingOfficer3, team.countingAssistant];
       return slots.some(s => {
         if (!s || !s.name) return false;
         const personObj = getPerson(s.name);
@@ -5059,8 +6284,109 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <span>Date: ${esc(orderDate)}</span>
         </div>
 
-        <!-- SECTION 1: OBSERVERS (SHOWN FIRST) -->
+        <!-- SECTION 1: RETURNING OFFICER & ASSISTANT RETURNING OFFICERS -->
         <div class="section-title-box">
+          <span>👑 RETURNING OFFICER (RO) &amp; ASSISTANT RETURNING OFFICERS (AROs)</span>
+        </div>
+
+        <table class="master-table">
+          <colgroup>
+            <col style="width: 8%;">
+            <col style="width: 28%;">
+            <col style="width: 22%;">
+            <col style="width: 16%;">
+            <col style="width: 12%;">
+            <col style="width: 14%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="col-center">Slot #</th>
+              <th>Name of Official</th>
+              <th>Designated Office / Role</th>
+              <th>Department / Desig</th>
+              <th>PEN #</th>
+              <th class="col-center">Signature</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${roData ? `
+              <tr style="background: #fefce8 !important;">
+                <td class="col-center" style="font-weight: 800; font-family: monospace;">RO</td>
+                <td><span class="staff-name">${esc(roData.name)}</span></td>
+                <td><strong style="color: #854d0e;">👑 Returning Officer (RO)</strong></td>
+                <td>${esc(roData.designation)}${roData.department && roData.department !== '–' ? ` · <span class="dept-badge" style="color: #854d0e;">${esc(roData.department)}</span>` : ''}</td>
+                <td style="font-family: monospace; font-weight: 700;">${esc(roData.pen)}</td>
+                <td class="col-sign"><div class="sign-box"></div></td>
+              </tr>
+            ` : ''}
+            ${aroList.map(aro => `
+              <tr style="background: #fffbeb !important;">
+                <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(aro.slNo)}</td>
+                <td><span class="staff-name">${esc(aro.name)}</span></td>
+                <td><strong style="color: #b45309;">⚖️ Assistant Returning Officer (ARO)</strong></td>
+                <td>${esc(aro.designation)}${aro.department && aro.department !== '–' ? ` · <span class="dept-badge">${esc(aro.department)}</span>` : ''}</td>
+                <td style="font-family: monospace; font-weight: 600;">${esc(aro.pen)}</td>
+                <td class="col-sign"><div class="sign-box"></div></td>
+              </tr>
+            `).join('')}
+            ${!roData && aroList.length === 0 ? `
+              <tr><td colspan="6" class="col-center" style="color: #64748b; font-style: italic; padding: 8px;">No Returning Officer or ARO configured.</td></tr>
+            ` : ''}
+          </tbody>
+        </table>
+
+        <!-- SECTION 2: CORE COMMITTEE TO ASSIST RETURNING OFFICER -->
+        <div class="section-title-box" style="margin-top: 14px;">
+          <span>⭐ CORE COMMITTEE TO ASSIST RETURNING OFFICER (RO)</span>
+        </div>
+
+        ${coreList.length === 0 ? `
+          <div style="border: 1px dashed #cbd5e1; padding: 8px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
+            No Core Committee appointed.
+          </div>
+        ` : `
+          <table class="master-table">
+            <colgroup>
+              <col style="width: 8%;">
+              <col style="width: 25%;">
+              ${coreHasDept ? '<col style="width: 15%;">' : ''}
+              <col style="width: 15%;">
+              <col style="width: 12%;">
+              <col style="width: 15%;">
+              <col style="width: 10%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-center">Slot #</th>
+                <th>Name of Official</th>
+                ${coreHasDept ? '<th>Department</th>' : ''}
+                <th>Designation</th>
+                <th>PEN #</th>
+                <th>Assigned Responsibility</th>
+                <th class="col-center">Signature</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${coreList.map(c => `
+                <tr style="background: #f0fdfa !important;">
+                  <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(c.slNo)}</td>
+                  <td><span class="staff-name">${esc(c.name)}</span></td>
+                  ${coreHasDept ? `<td><span class="dept-badge" style="color: #0f766e;">${esc(c.department)}</span></td>` : ''}
+                  <td>${esc(c.designation)}</td>
+                  <td style="font-family: monospace; font-weight: 600;">${esc(c.pen)}</td>
+                  <td>
+                    <div style="font-weight: 600; color: #0f766e;">${esc(c.duty)}</div>
+                    <span class="staff-meta">Station: ${esc(c.station)}</span>
+                  </td>
+                  <td class="col-sign"><div class="sign-box"></div></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `}
+
+        <!-- SECTION 3: OBSERVERS -->
+        <div class="section-title-box" style="margin-top: 14px;">
           <span>⚖️ ELECTION OBSERVERS</span>
         </div>
 
@@ -5111,9 +6437,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </table>
         `}
 
-        <!-- SECTION 2: CAMPUS DISCIPLINE -->
+        <!-- SECTION 4: CAMPUS DISCIPLINE -->
         <div class="section-title-box" style="margin-top: 14px;">
-          <span>🛡️ CAMPUS DISCIPLINE</span>
+          <span>🛡️ CAMPUS DISCIPLINE COMMITTEE</span>
         </div>
 
         ${discList.length === 0 ? `
@@ -5165,7 +6491,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </table>
         `}
 
-        <!-- SECTION 3: GRIEVANCE REDRESSAL COMMITTEE -->
+        <!-- SECTION 5: GRIEVANCE REDRESSAL COMMITTEE -->
         <div class="section-title-box" style="margin-top: 14px;">
           <span>🤝 GRIEVANCE REDRESSAL COMMITTEE</span>
         </div>
@@ -5259,6 +6585,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             ${booths.map(b => {
               const team = pollingTeams.find(t => t.boothNumber === b.boothNumber) || {};
               const slots = [
+                ...(team.coreInCharge ? [{ role: 'Core Committee In-Charge (Assisting RO)', person: team.coreInCharge, isCore: true }] : []),
                 { role: 'Presiding Officer', person: team.presidingOfficer, isHead: true },
                 { role: 'Polling Officer', person: team.pollingOfficer1 },
                 { role: 'Polling Officer', person: team.pollingOfficer2 },
@@ -5282,15 +6609,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                       </td>
                     ` : ''}
                     <td>
-                      ${s.person && s.person.name && !personObj?.isExcluded ? `
+                      ${s.person && s.person.name && (!personObj?.isExcluded || s.isCore) ? `
                         <span class="staff-name">${esc(s.person.name)}</span>
-                      ` : (personObj?.isExcluded ? '<span style="color: #94a3b8; font-style: italic;">– Excluded Official –</span>' : '<span style="color: #94a3b8; font-style: italic;">– Unassigned –</span>')}
+                      ` : (personObj?.isExcluded && !s.isCore ? '<span style="color: #94a3b8; font-style: italic;">– Excluded Official –</span>' : '<span style="color: #94a3b8; font-style: italic;">– Unassigned –</span>')}
                     </td>
-                    <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: ${s.isHead ? '#b45309' : (s.isAssistant ? '#047857' : '#0f172a')};">
-                      ${esc(s.role)}
+                    <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: ${s.isCore ? '#0284c7' : (s.isHead ? '#b45309' : (s.isAssistant ? '#047857' : '#0f172a'))};">
+                      ${s.isCore ? '⭐ ' : ''}${esc(s.role)}
                     </td>
-                    ${pollHasDept ? `<td><span class="dept-badge">${esc(personObj?.isExcluded ? '–' : dept)}</span></td>` : ''}
-                    <td style="font-family: monospace;">${esc(personObj?.isExcluded ? '–' : pen)}</td>
+                    ${pollHasDept ? `<td><span class="dept-badge">${esc((personObj?.isExcluded && !s.isCore) ? '–' : dept)}</span></td>` : ''}
+                    <td style="font-family: monospace;">${esc((personObj?.isExcluded && !s.isCore) ? '–' : pen)}</td>
                     <td class="col-sign"><div class="sign-box"></div></td>
                   </tr>
                 `;
@@ -5339,10 +6666,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             ${booths.map(b => {
               const team = countingTeams.find(t => t.tableNumber === b.boothNumber) || {};
               const slots = [
+                ...(team.coreInCharge ? [{ role: 'Core Committee In-Charge (Assisting RO)', person: team.coreInCharge, isCore: true }] : []),
                 { role: 'Counting Supervisor', person: team.supervisor, isHead: true },
                 { role: 'Counting Officer', person: team.countingOfficer1 },
                 { role: 'Counting Officer', person: team.countingOfficer2 },
-                { role: 'Counting Officer', person: team.countingOfficer3, isAddl: true },
+                ...(team.countingOfficer3 ? [{ role: 'Counting Officer', person: team.countingOfficer3, isAddl: true }] : []),
                 { role: 'Counting Assistant', person: team.countingAssistant, isAssistant: true }
               ].filter(s => !s.isAddl || team.countingOfficer3);
 
@@ -5362,15 +6690,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                       </td>
                     ` : ''}
                     <td>
-                      ${s.person && s.person.name && !personObj?.isExcluded ? `
+                      ${s.person && s.person.name && (!personObj?.isExcluded || s.isCore) ? `
                         <span class="staff-name">${esc(s.person.name)}</span>
-                      ` : (personObj?.isExcluded ? '<span style="color: #94a3b8; font-style: italic;">– Excluded Official –</span>' : '<span style="color: #94a3b8; font-style: italic;">– Unassigned –</span>')}
+                      ` : (personObj?.isExcluded && !s.isCore ? '<span style="color: #94a3b8; font-style: italic;">– Excluded Official –</span>' : '<span style="color: #94a3b8; font-style: italic;">– Unassigned –</span>')}
                     </td>
-                    <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: ${s.isHead ? '#7e22ce' : (s.isAssistant ? '#047857' : '#0f172a')};">
-                      ${esc(s.role)}
+                    <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: ${s.isCore ? '#0284c7' : (s.isHead ? '#7e22ce' : (s.isAssistant ? '#047857' : '#0f172a'))};">
+                      ${s.isCore ? '⭐ ' : ''}${esc(s.role)}
                     </td>
-                    ${countHasDept ? `<td><span class="dept-badge">${esc(personObj?.isExcluded ? '–' : dept)}</span></td>` : ''}
-                    <td style="font-family: monospace;">${esc(personObj?.isExcluded ? '–' : pen)}</td>
+                    ${countHasDept ? `<td><span class="dept-badge">${esc((personObj?.isExcluded && !s.isCore) ? '–' : dept)}</span></td>` : ''}
+                    <td style="font-family: monospace;">${esc((personObj?.isExcluded && !s.isCore) ? '–' : pen)}</td>
                     <td class="col-sign"><div class="sign-box"></div></td>
                   </tr>
                 `;
@@ -6033,6 +7361,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   </td>
                   <td style="font-weight: 600;">
                     ${esc(t.roomName || (isPolling ? `Booth ${t.boothNumber}` : `Table ${t.tableNumber}`))}
+                    ${t.coreInCharge && t.coreInCharge.name ? `
+                      <div style="margin-top: 4px; padding: 2px 5px; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 4px; font-size: 8.5px; color: #0369a1; font-weight: 700;">
+                        ⭐ In-Charge: ${esc(t.coreInCharge.name)}
+                        <span style="font-size: 7.5px; font-weight: normal; display: block; color: #0284c7;">(Core Committee Assisting RO)</span>
+                      </div>
+                    ` : ''}
                   </td>
                   <td>
                     ${isHeadValid ? `
@@ -6118,6 +7452,17 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const num = isPolling ? b.boothNumber : b.boothNumber;
       const venue = t.roomName || b.roomName || (isPolling ? `Booth ${num}` : `Table ${num}`);
 
+      if (t.coreInCharge && t.coreInCharge.name) {
+        personnel.push({
+          name: t.coreInCharge.name,
+          designation: t.coreInCharge.designation || 'Faculty',
+          pen: t.coreInCharge.pen || '',
+          role: 'Core Committee In-Charge (Assisting RO)',
+          boothNumber: num,
+          venue: venue
+        });
+      }
+
       const head = isPolling ? t.presidingOfficer : t.supervisor;
       if (head && head.name && !getPerson(head.name)?.isExcluded) {
         personnel.push({
@@ -6179,19 +7524,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       }
     });
 
-    // In counting mode, consolidate assistants assigned to multiple tables into one slip
+    // In counting mode, consolidate assistants and in-charges assigned to multiple tables into one slip
     if (!isPolling) {
       const consolidated = [];
       const asstMap = new Map();
 
       personnel.forEach(p => {
-        if (p.role === 'Counting Assistant') {
-          if (!asstMap.has(p.name)) {
+        if (p.role === 'Counting Assistant' || p.role === 'Core Committee In-Charge (Assisting RO)') {
+          const key = `${p.name}_${p.role}`;
+          if (!asstMap.has(key)) {
             const entry = { ...p, tables: [p.boothNumber], venues: [p.venue] };
-            asstMap.set(p.name, entry);
+            asstMap.set(key, entry);
             consolidated.push(entry);
           } else {
-            const entry = asstMap.get(p.name);
+            const entry = asstMap.get(key);
             entry.tables.push(p.boothNumber);
             entry.venues.push(p.venue);
           }
