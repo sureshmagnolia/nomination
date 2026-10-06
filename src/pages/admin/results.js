@@ -645,11 +645,9 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           <button id="btnOpenPanelSetup" class="btn btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 ${panelStandings.hasAssignedColors ? 'border-purple-500/50 bg-purple-500/20 text-purple-200 hover:bg-purple-500/30 font-bold' : 'border-purple-500/40 bg-purple-950/40 text-purple-200 hover:bg-purple-900/60 font-bold'} shadow-md" title="Action: Assigns confidential color tags to candidates to track panel tally on Admin PC only.">
             <span class="text-sm">🎨</span> ${panelStandings.hasAssignedColors ? `Candidate Colors (${panelStandings.assignedCandidateCount})` : 'Set Candidate Colors'}
           </button>
-          ${panelStandings.hasAssignedColors ? `
-            <button id="btnToolbarTogglePanelDrawer" class="btn btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 border-purple-500/50 text-purple-200 bg-purple-500/20 hover:bg-purple-500/30 font-bold shadow-md" title="Action: View or toggle confidential Admin Panel Tracker standings.">
-              <span>📊</span> Panel Tracker (${panelStandings.totalWon}W / ${panelStandings.totalLeading}L)
-            </button>
-          ` : ''}
+          <button id="btnToolbarTogglePanelDrawer" class="btn btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 ${panelStandings.hasAssignedColors ? 'border-purple-500/50 text-purple-200 bg-purple-500/20 hover:bg-purple-500/30 font-bold' : 'border-purple-500/40 text-purple-300 bg-purple-950/40 hover:bg-purple-900/60 font-semibold'} shadow-md" title="Action: View or jump to confidential Admin Panel Tracker standings.">
+            <span>📊</span> Panel Tracker ${panelStandings.hasAssignedColors ? `(${panelStandings.totalWon}W / ${panelStandings.totalLeading}L)` : ''}
+          </button>
           <a href="#/trends" target="_blank" class="btn btn-secondary px-3.5 text-xs flex items-center gap-1.5 font-bold text-sky-300 border-sky-500/30 hover:bg-sky-500/10" title="Action: Opens projector-friendly trends and live declaration screen in a new window.">
             <span>🎯</span> Trends Screen
           </a>
@@ -660,40 +658,42 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       </div>
 
       <!-- ── CONFIDENTIAL ADMIN PANEL TRACKER ──────────────────────────────── -->
-      ${panelStandings.hasAssignedColors ? `
-        <div id="inlinePanelTracker" class="glass rounded-2xl border-2 border-purple-500/40 bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950/30 p-5 shadow-2xl space-y-4 page-enter">
-          <!-- Header Row -->
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl shadow-lg shrink-0">
-                🎨
-              </div>
-              <div>
-                <div class="flex items-center gap-2 flex-wrap">
-                  <h3 class="text-base font-extrabold text-white tracking-wide flex items-center gap-2">
-                    <span>Admin Panel Tracker</span>
-                    <span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/40 text-[10px] font-bold">CONFIDENTIAL</span>
-                    <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[9px] uppercase font-mono">ADMIN PC ONLY</span>
-                  </h3>
-                </div>
-                <p class="text-xs text-slate-300 mt-0.5">
-                  Internal real-time situational awareness by assigned candidate colors. Strictly confidential &mdash; never visible to students, on trends screen, or on official printouts.
-                </p>
-              </div>
+      <div id="inlinePanelTracker" class="glass rounded-2xl border-2 border-purple-500/40 bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950/30 p-5 shadow-2xl space-y-4 page-enter">
+        <!-- Header Row -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl shadow-lg shrink-0">
+              🎨
             </div>
-            <div class="flex items-center gap-2 flex-wrap shrink-0">
-              <button id="btnInlineEditColors" class="btn btn-secondary btn-sm text-xs flex items-center gap-1.5 border-purple-500/40 text-purple-200 bg-purple-500/15 hover:bg-purple-500/30 font-bold shadow-sm" title="Edit candidate color assignments">
-                <span>⚙️</span> Edit Colors (${panelStandings.assignedCandidateCount})
-              </button>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="text-base font-extrabold text-white tracking-wide flex items-center gap-2">
+                  <span>Admin Panel Tracker</span>
+                  <span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/40 text-[10px] font-bold">CONFIDENTIAL</span>
+                  <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[9px] uppercase font-mono">ADMIN PC ONLY</span>
+                </h3>
+              </div>
+              <p class="text-xs text-slate-300 mt-0.5">
+                Internal real-time situational awareness by assigned candidate colors. Strictly confidential &mdash; never visible to students, on trends screen, or on official printouts.
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap shrink-0">
+            <button id="btnInlineEditColors" class="btn btn-secondary btn-sm text-xs flex items-center gap-1.5 border-purple-500/40 text-purple-200 bg-purple-500/15 hover:bg-purple-500/30 font-bold shadow-sm" title="Edit candidate color assignments">
+              <span>⚙️</span> ${panelStandings.hasAssignedColors ? `Edit Colors (${panelStandings.assignedCandidateCount})` : 'Set Colors'}
+            </button>
+            ${panelStandings.hasAssignedColors ? `
               <button id="btnInlineOpenDrawer" class="btn btn-secondary btn-sm text-xs flex items-center gap-1.5 border-white/10 text-slate-200 bg-white/5 hover:bg-white/10" title="Open slide-out drawer with post-by-post breakdown">
                 <span>📊</span> Deep-Dive Drawer
               </button>
               <button id="btnToggleInlineCollapse" class="btn btn-secondary btn-sm text-xs text-slate-400 hover:text-white px-2.5 py-1" title="Minimize / Expand Panel Tracker">
                 ${isInlineTrackerCollapsed ? '🔽 Expand' : '🔼 Minimize'}
               </button>
-            </div>
+            ` : ''}
           </div>
+        </div>
 
+        ${panelStandings.hasAssignedColors ? `
           ${!isInlineTrackerCollapsed ? `
             <!-- Main Scoreboard Ribbon: Each Panel Gets A Card -->
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -733,7 +733,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
                     </div>
 
                     <!-- Mini list of seats won or leading -->
-                    ${(color.wonPosts.length > 0 || color.leadingPosts.length > 0) ? `
+                    ${(color.wonPosts.length + color.leadingPosts.length > 0) ? `
                       <div class="mt-2.5 pt-2 border-t ${color.lightBorder} space-y-1 text-[11px]">
                         ${color.wonPosts.slice(0, 3).map(p => `
                           <div class="flex items-center justify-between text-emerald-300 truncate">
@@ -798,8 +798,37 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
               <span class="text-[11px] text-slate-400 italic">Tracker minimized &bull; Click Expand to show full scoreboard</span>
             </div>
           `}
-        </div>
-      ` : ''}
+        ` : `
+          <!-- Empty State: Ready To Track -->
+          <div class="bg-slate-950/70 rounded-xl p-5 border border-purple-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="flex items-start gap-3.5">
+              <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-xl shrink-0">
+                ⚡
+              </div>
+              <div>
+                <h4 class="font-bold text-white text-sm">Tracker Ready: No Candidate Colors Tagged Yet</h4>
+                <p class="text-xs text-slate-300 mt-1 max-w-xl leading-relaxed">
+                  Assign confidential panel colors to candidates to track real-time front standings (Seats Won, Currently Leading, and Total Votes) during counting.
+                  Click <strong>"Set Candidate Colors"</strong> or click <strong>"🎨 Tag Panel"</strong> next to any candidate below in the results table.
+                </p>
+                <div class="flex items-center gap-2 mt-3 flex-wrap">
+                  <div class="text-[11px] text-slate-400 font-medium">Available Palette:</div>
+                  <div class="flex items-center gap-1.5">
+                    ${PANEL_PALETTE.map(p => `
+                      <span class="w-4 h-4 rounded-full ${p.dot} shadow-sm border border-slate-700" title="${p.name} Panel"></span>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="shrink-0 flex items-center gap-2 w-full md:w-auto justify-end">
+              <button id="btnPromptSetColors" class="btn btn-primary px-4 py-2 text-xs font-bold shadow-lg shadow-purple-500/20 flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 border-none text-white w-full md:w-auto justify-center">
+                <span>🎨</span> Set Candidate Colors Now
+              </button>
+            </div>
+          </div>
+        `}
+      </div>
 
       ${candidates.length === 0 ? `
         <div class="glass p-12 rounded-3xl border border-white/10 text-center max-w-xl mx-auto shadow-xl page-enter">
@@ -859,12 +888,22 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
                           return `
                             <tr class="${isLeading ? 'bg-white/[0.02]' : ''}">
                               <td class="py-4">
-                                <div class="flex items-center gap-2">
-                                  ${colorInfo ? `<span class="w-2.5 h-2.5 rounded-full shrink-0 ${colorInfo.dot} shadow-sm" title="${esc(colorInfo.displayName)} (Confidential Admin View)"></span>` : ''}
+                                <div class="flex items-center gap-2 flex-wrap">
+                                  ${colorInfo ? `
+                                    <button type="button" class="btn-quick-cand-color group inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full ${colorInfo.badge} border text-[10px] font-bold cursor-pointer hover:scale-105 transition-all shadow-xs" data-cand-id="${esc(c.id != null ? String(c.id) : '')}" data-cand-name="${esc(c.candidateName || '')}" data-cand-post="${esc(c.post || res.post || '')}" data-cand-serial="${esc(c.candidateSerial || '')}" data-cand-key="${esc(c.id != null && String(c.id).trim() !== '' ? String(c.id).trim() : `${c.candidateName}_${c.post}`)}" title="Confidential Admin View: Click to change or clear panel tag (${esc(colorInfo.displayName)})">
+                                      <span class="w-2.5 h-2.5 rounded-full shrink-0 ${colorInfo.dot}"></span>
+                                      <span>${esc(colorInfo.displayName)}</span>
+                                      <span class="text-[8px] opacity-60 group-hover:opacity-100">▼</span>
+                                    </button>
+                                  ` : `
+                                    <button type="button" class="btn-quick-cand-color inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-semibold cursor-pointer hover:border-purple-400 transition-all shadow-xs" data-cand-id="${esc(c.id != null ? String(c.id) : '')}" data-cand-name="${esc(c.candidateName || '')}" data-cand-post="${esc(c.post || res.post || '')}" data-cand-serial="${esc(c.candidateSerial || '')}" data-cand-key="${esc(c.id != null && String(c.id).trim() !== '' ? String(c.id).trim() : `${c.candidateName}_${c.post}`)}" title="Confidential: Tag this candidate with a panel color">
+                                      <span>🎨</span>
+                                      <span class="hidden sm:inline">Tag Panel</span>
+                                    </button>
+                                  `}
                                   <span class="font-bold text-white">${esc(c.candidateName)}</span>
                                   ${c.candidateSerial ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[9px]">Sl. #${esc(c.candidateSerial)}</span>` : ''}
                                   ${lead > 0 ? `<span class="bg-green-500/20 text-green-400 text-[9px] px-1.5 py-0.5 rounded font-black border border-green-500/30">LEAD: ${lead}</span>` : ''}
-                                  ${colorInfo ? `<span class="text-[9px] font-mono px-1.5 py-0.2 rounded ${colorInfo.badge} hidden sm:inline-block">${esc(colorInfo.displayName)}</span>` : ''}
                                 </div>
                               </td>
                               <td class="py-4 text-slate-400 text-center text-[11px]">${esc(c.candidateClass)}</td>
@@ -1712,13 +1751,20 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   };
 
   const closePanelModal = () => {
-    if (panelModal) panelModal.classList.add('hidden');
+    if (panelModal) {
+      panelModal.classList.add('hidden');
+      renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+    }
   };
 
   main.querySelector('#btnOpenPanelSetup')?.addEventListener('click', openPanelModal);
+  main.querySelector('#btnPromptSetColors')?.addEventListener('click', openPanelModal);
   main.querySelector('#btnDrawerEditColors')?.addEventListener('click', openPanelModal);
   main.querySelector('#btnClosePanelModal')?.addEventListener('click', closePanelModal);
   main.querySelector('#btnCancelPanelModal')?.addEventListener('click', closePanelModal);
+  panelModal?.addEventListener('click', (e) => {
+    if (e.target === panelModal) closePanelModal();
+  });
 
   // Toggle Custom Panel Names in modal
   const btnToggleLabels = main.querySelector('#btnToggleCustomLabels');
@@ -1750,7 +1796,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   // Working copy of candidate colors for the modal session
   let workingCandidateColors = { ...(panelData.candidates || {}) };
 
-  // Swatch selection in modal
+  // Swatch selection in modal with immediate auto-save
   if (panelModal) {
     panelModal.querySelectorAll('.swatch-btn').forEach(btn => {
       btn.onclick = () => {
@@ -1787,6 +1833,13 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           }
         }
 
+        // Auto-save immediately to localStorage on every swatch click
+        const curData = getConfidentialPanelData();
+        saveConfidentialPanelData({
+          candidates: workingCandidateColors,
+          labels: curData.labels || {}
+        });
+
         // Update UI for this candidate's swatches
         if (parentRow) {
           parentRow.querySelectorAll('.swatch-btn').forEach(s => {
@@ -1804,6 +1857,24 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           });
         }
       };
+    });
+  }
+
+  // Auto-save custom aliases on input
+  if (sectionLabels) {
+    sectionLabels.querySelectorAll('input[data-color-label-id]').forEach(inp => {
+      inp.addEventListener('input', () => {
+        const cid = inp.getAttribute('data-color-label-id');
+        const val = inp.value.trim();
+        const curData = getConfidentialPanelData();
+        const newLabels = { ...(curData.labels || {}) };
+        if (val) newLabels[cid] = val;
+        else delete newLabels[cid];
+        saveConfidentialPanelData({
+          candidates: workingCandidateColors,
+          labels: newLabels
+        });
+      });
     });
   }
 
@@ -1827,7 +1898,6 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
     isInlineTrackerCollapsed = false;
     localStorage.setItem('gcc_admin_panel_tracker_collapsed', 'false');
     showToast('🎨 Candidate panel colors saved! Admin Panel Tracker active on screen.', 'success');
-    renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
 
     setTimeout(() => {
       const trackerEl = main.querySelector('#inlinePanelTracker');
@@ -1835,6 +1905,135 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
         trackerEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }, 100);
+  });
+
+  // Handle in-row quick candidate color tagging popup
+  main.querySelectorAll('.btn-quick-cand-color').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.quick-panel-palette-dropdown').forEach(d => d.remove());
+
+      const candKey = btn.getAttribute('data-cand-key');
+      const candId = btn.getAttribute('data-cand-id');
+      const candName = btn.getAttribute('data-cand-name');
+      const candPost = btn.getAttribute('data-cand-post');
+      const candSerial = btn.getAttribute('data-cand-serial');
+
+      const panelData = getConfidentialPanelData();
+      const curColorId = (candKey && panelData.candidates?.[candKey]) ||
+                         (candId && panelData.candidates?.[candId]) ||
+                         (panelData.candidates?.[`${candName}_${candPost}`]) ||
+                         (panelData.candidates?.[candName]) || 'none';
+
+      const rect = btn.getBoundingClientRect();
+      const dropdown = document.createElement('div');
+      dropdown.className = 'quick-panel-palette-dropdown rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-3 space-y-2.5 w-64 page-enter';
+      dropdown.style.position = 'fixed';
+      dropdown.style.top = `${Math.min(rect.bottom + 6, window.innerHeight - 240)}px`;
+      dropdown.style.left = `${Math.max(12, Math.min(rect.left, window.innerWidth - 270))}px`;
+      dropdown.style.zIndex = '9999';
+
+      dropdown.innerHTML = `
+        <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
+          <div class="text-[11px] font-bold text-white truncate max-w-[180px]">
+            Tag: <span class="text-purple-300">${esc(candName)}</span>
+          </div>
+          <button type="button" class="btn-close-dropdown text-slate-400 hover:text-white text-xs px-1 cursor-pointer">✕</button>
+        </div>
+        <div class="grid grid-cols-4 gap-1.5">
+          ${PANEL_PALETTE.map(p => {
+            const customName = panelData.labels?.[p.id] || `${p.name} Panel`;
+            const isSelected = curColorId === p.id;
+            return `
+              <button type="button" class="quick-sel-swatch flex flex-col items-center justify-center p-1.5 rounded-lg border ${isSelected ? 'border-white bg-slate-800 ring-1 ring-white' : 'border-slate-800 bg-slate-950/60 hover:bg-slate-800/80 hover:border-slate-700'} transition-all cursor-pointer group" data-color="${p.id}" title="${esc(customName)}">
+                <span class="w-4 h-4 rounded-full ${p.dot} shadow-xs shrink-0 group-hover:scale-110 transition-transform"></span>
+                <span class="text-[9px] text-slate-300 font-medium truncate w-full text-center mt-1">${p.name}</span>
+              </button>
+            `;
+          }).join('')}
+        </div>
+        <div class="pt-1.5 border-t border-slate-800 flex items-center justify-between gap-2">
+          <button type="button" class="quick-sel-swatch text-[10px] text-rose-400 hover:text-rose-300 px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 font-medium cursor-pointer" data-color="none">
+            ✕ Clear Tag
+          </button>
+          <button type="button" class="btn-open-full-modal text-[10px] text-indigo-400 hover:text-indigo-300 underline font-medium cursor-pointer">
+            More Options...
+          </button>
+        </div>
+      `;
+
+      document.body.appendChild(dropdown);
+
+      dropdown.querySelector('.btn-close-dropdown')?.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        dropdown.remove();
+      });
+
+      dropdown.querySelector('.btn-open-full-modal')?.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        dropdown.remove();
+        openPanelModal();
+      });
+
+      dropdown.querySelectorAll('.quick-sel-swatch').forEach(sBtn => {
+        sBtn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const chosenColor = sBtn.getAttribute('data-color');
+          const curData = getConfidentialPanelData();
+          const newCandidates = { ...(curData.candidates || {}) };
+
+          if (chosenColor === 'none') {
+            if (candKey) delete newCandidates[candKey];
+            if (candId) delete newCandidates[candId];
+            if (candName && candPost) {
+              delete newCandidates[`${candName}_${candPost}`];
+              delete newCandidates[`${candName.toLowerCase()}_${candPost.toLowerCase()}`];
+            }
+            if (candName) {
+              delete newCandidates[candName];
+              delete newCandidates[candName.toLowerCase()];
+            }
+            if (candSerial) delete newCandidates[`serial_${candSerial}`];
+          } else {
+            if (candKey) newCandidates[candKey] = chosenColor;
+            if (candId) newCandidates[candId] = chosenColor;
+            if (candName && candPost) {
+              newCandidates[`${candName}_${candPost}`] = chosenColor;
+              newCandidates[`${candName.toLowerCase()}_${candPost.toLowerCase()}`] = chosenColor;
+            }
+            if (candName) {
+              newCandidates[candName] = chosenColor;
+              newCandidates[candName.toLowerCase()] = chosenColor;
+            }
+            if (candSerial) newCandidates[`serial_${candSerial}`] = chosenColor;
+          }
+
+          saveConfidentialPanelData({
+            candidates: newCandidates,
+            labels: curData.labels || {}
+          });
+
+          dropdown.remove();
+          const palObj = PANEL_PALETTE.find(p => p.id === chosenColor);
+          const colorName = palObj ? (curData.labels?.[chosenColor] || `${palObj.name} Panel`) : 'Unassigned';
+          showToast(`🎨 Tagged ${candName} as ${colorName}`, 'success');
+
+          // Immediately re-render results UI with updated colors and updated tracker
+          renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+        });
+      });
+
+      // Close on next window click
+      const cleanupDropdown = (ev) => {
+        if (!dropdown.contains(ev.target) && ev.target !== btn) {
+          dropdown.remove();
+          window.removeEventListener('click', cleanupDropdown);
+        }
+      };
+      setTimeout(() => {
+        window.addEventListener('click', cleanupDropdown);
+      }, 10);
+    });
   });
 
   // Clear All Colors
