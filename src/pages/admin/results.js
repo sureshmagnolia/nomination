@@ -22,6 +22,7 @@ let lastDataFingerprint = '';
 // ── Confidential Admin-Only Candidate Panel Colors ──────────────────────────
 const CONFIDENTIAL_PANEL_KEY = 'gcc_admin_confidential_panel_colors';
 let isPanelDrawerOpen = false; // Strictly collapsed by default!
+let isInlineTrackerCollapsed = localStorage.getItem('gcc_admin_panel_tracker_collapsed') === 'true';
 
 const PANEL_PALETTE = [
   { id: 'red', hex: '#ef4444', name: 'Red', bg: 'bg-red-500/15', text: 'text-red-400', border: 'border-red-500/40', ring: 'ring-red-500', dot: 'bg-red-500', lightBorder: 'border-red-500/20', badge: 'bg-red-500/20 text-red-300 border-red-500/30' },
@@ -58,19 +59,49 @@ function saveConfidentialPanelData(data) {
 
 function getCandidateColorInfo(candidate, panelData) {
   if (!candidate || !panelData || !panelData.candidates) return null;
-  const candName = String(candidate.candidateName || candidate.name || '').trim();
-  const candPost = String(candidate.post || '').trim();
-  const candIdStr = candidate.id != null ? String(candidate.id).trim() : '';
+  const candName = String(candidate.candidateName || candidate.name || candidate.CandidateName || '').trim();
+  const candPost = String(candidate.post || candidate.Post || '').trim();
+  const candIdStr = candidate.id != null ? String(candidate.id).trim() : (candidate.CandidateId != null ? String(candidate.CandidateId).trim() : '');
+  const candSerial = String(candidate.candidateSerial || candidate.candidate_serial || candidate.serial || '').trim();
 
   let colorId = null;
-  if (candIdStr && panelData.candidates[candIdStr]) {
-    colorId = panelData.candidates[candIdStr];
-  } else if (candidate.id && panelData.candidates[candidate.id]) {
-    colorId = panelData.candidates[candidate.id];
-  } else if (candName && candPost && panelData.candidates[`${candName}_${candPost}`]) {
-    colorId = panelData.candidates[`${candName}_${candPost}`];
-  } else if (candName && panelData.candidates[candName]) {
-    colorId = panelData.candidates[candName];
+  const entries = panelData.candidates;
+
+  // 1. Direct ID matches
+  if (candIdStr && entries[candIdStr]) colorId = entries[candIdStr];
+  else if (candidate.id && entries[candidate.id]) colorId = entries[candidate.id];
+  else if (candidate.CandidateId && entries[candidate.CandidateId]) colorId = entries[candidate.CandidateId];
+
+  // 2. Direct Name + Post matches
+  if (!colorId && candName && candPost) {
+    if (entries[`${candName}_${candPost}`]) colorId = entries[`${candName}_${candPost}`];
+    else if (entries[`${candName.toLowerCase()}_${candPost.toLowerCase()}`]) colorId = entries[`${candName.toLowerCase()}_${candPost.toLowerCase()}`];
+  }
+
+  // 3. Name matches
+  if (!colorId && candName) {
+    if (entries[candName]) colorId = entries[candName];
+    else if (entries[candName.toLowerCase()]) colorId = entries[candName.toLowerCase()];
+  }
+
+  // 4. Candidate Serial match
+  if (!colorId && candSerial && entries[`serial_${candSerial}`]) {
+    colorId = entries[`serial_${candSerial}`];
+  }
+
+  // 5. Case-insensitive / whitespace-tolerant search over all keys in panelData.candidates
+  if (!colorId) {
+    const normName = candName.toLowerCase().replace(/\s+/g, ' ');
+    const normPost = candPost.toLowerCase().replace(/\s+/g, ' ');
+    const normId = candIdStr.toLowerCase();
+
+    for (const [k, val] of Object.entries(entries)) {
+      if (!val || val === 'none') continue;
+      const kNorm = String(k).toLowerCase().trim().replace(/\s+/g, ' ');
+      if (normId && kNorm === normId) { colorId = val; break; }
+      if (normName && normPost && (kNorm === `${normName}_${normPost}` || kNorm === `${normPost}_${normName}`)) { colorId = val; break; }
+      if (normName && (kNorm === normName || kNorm.endsWith(`_${normName}`) || kNorm.startsWith(`${normName}_`))) { colorId = val; break; }
+    }
   }
 
   if (!colorId || colorId === 'none') return null;
@@ -104,6 +135,15 @@ function calculatePanelStandings(postResults, candidates, panelData, isLocked, i
     const colorInfo = getCandidateColorInfo(c, panelData);
     if (colorInfo && colorStats[colorInfo.id]) {
       colorStats[colorInfo.id].assignedCandidates++;
+    }
+  });
+
+  // Also verify against panelData.candidates directly to ensure no assigned color is omitted
+  Object.entries(panelData.candidates).forEach(([k, colId]) => {
+    if (colId && colId !== 'none' && colorStats[colId]) {
+      if (colorStats[colId].assignedCandidates === 0) {
+        colorStats[colId].assignedCandidates = 1;
+      }
     }
   });
 
@@ -199,13 +239,15 @@ function calculatePanelStandings(postResults, candidates, panelData, isLocked, i
     }
   });
 
-  const activeColors = Object.values(colorStats).filter(c => c.assignedCandidates > 0);
+  const activeColors = Object.values(colorStats).filter(c => 
+    c.assignedCandidates > 0 || Object.values(panelData.candidates).some(col => col === c.id)
+  );
   const totalWon = activeColors.reduce((sum, c) => sum + c.wonPosts.length, 0);
   const totalLeading = activeColors.reduce((sum, c) => sum + c.leadingPosts.length, 0);
 
   return {
-    hasAssignedColors: activeColorCount > 0 && activeColors.length > 0,
-    assignedCandidateCount: activeColorCount,
+    hasAssignedColors: activeColorCount > 0,
+    assignedCandidateCount: Math.max(activeColorCount, activeColors.reduce((sum, c) => sum + c.assignedCandidates, 0)),
     activeColors,
     totalWon,
     totalLeading,
@@ -408,16 +450,20 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   // 1. Aggregate results
   const agg = {};
   results.forEach(r => {
-    if (!agg[r.Post]) agg[r.Post] = {};
-    if (!agg[r.Post][r.CandidateId]) agg[r.Post][r.CandidateId] = 0;
-    agg[r.Post][r.CandidateId] += Number(r.Votes) || 0;
+    const postKey = String(r.Post || '').trim();
+    if (!agg[postKey]) agg[postKey] = {};
+    if (!agg[postKey][r.CandidateId]) agg[postKey][r.CandidateId] = 0;
+    agg[postKey][r.CandidateId] += Number(r.Votes) || 0;
   });
 
   // 2. Determine Winners
   const sortedPosts = sortPosts(posts);
   const postResults = sortedPosts.map(p => {
-    const postCandidates = candidates.filter(c => c.post === p.post);
-    const postAgg = agg[p.post] || {};
+    const pPostTrim = String(p.post || '').trim().toLowerCase();
+    const postCandidates = candidates.filter(c => 
+      String(c.post || '').trim().toLowerCase() === pPostTrim
+    );
+    const postAgg = agg[p.post] || agg[String(p.post || '').trim()] || {};
     
     // Check for Unanimous (Permissible ONLY if the Final List is officially set and published!)
     if (isFinalPublished && postCandidates.length === 1) {
@@ -600,8 +646,8 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
             <span class="text-sm">🎨</span> ${panelStandings.hasAssignedColors ? `Candidate Colors (${panelStandings.assignedCandidateCount})` : 'Set Candidate Colors'}
           </button>
           ${panelStandings.hasAssignedColors ? `
-            <button id="btnToolbarTogglePanelDrawer" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 border-purple-500/40 text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 font-bold" title="Action: Opens side drawer showing confidential panel standings and lead summary.">
-              <span>📊</span> Panel Tally (${panelStandings.totalWon}W / ${panelStandings.totalLeading}L)
+            <button id="btnToolbarTogglePanelDrawer" class="btn btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 border-purple-500/50 text-purple-200 bg-purple-500/20 hover:bg-purple-500/30 font-bold shadow-md" title="Action: View or toggle confidential Admin Panel Tracker standings.">
+              <span>📊</span> Panel Tracker (${panelStandings.totalWon}W / ${panelStandings.totalLeading}L)
             </button>
           ` : ''}
           <a href="#/trends" target="_blank" class="btn btn-secondary px-3.5 text-xs flex items-center gap-1.5 font-bold text-sky-300 border-sky-500/30 hover:bg-sky-500/10" title="Action: Opens projector-friendly trends and live declaration screen in a new window.">
@@ -612,6 +658,148 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           </button>
         </div>
       </div>
+
+      <!-- ── CONFIDENTIAL ADMIN PANEL TRACKER ──────────────────────────────── -->
+      ${panelStandings.hasAssignedColors ? `
+        <div id="inlinePanelTracker" class="glass rounded-2xl border-2 border-purple-500/40 bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950/30 p-5 shadow-2xl space-y-4 page-enter">
+          <!-- Header Row -->
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl shadow-lg shrink-0">
+                🎨
+              </div>
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="text-base font-extrabold text-white tracking-wide flex items-center gap-2">
+                    <span>Admin Panel Tracker</span>
+                    <span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/40 text-[10px] font-bold">CONFIDENTIAL</span>
+                    <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[9px] uppercase font-mono">ADMIN PC ONLY</span>
+                  </h3>
+                </div>
+                <p class="text-xs text-slate-300 mt-0.5">
+                  Internal real-time situational awareness by assigned candidate colors. Strictly confidential &mdash; never visible to students, on trends screen, or on official printouts.
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap shrink-0">
+              <button id="btnInlineEditColors" class="btn btn-secondary btn-sm text-xs flex items-center gap-1.5 border-purple-500/40 text-purple-200 bg-purple-500/15 hover:bg-purple-500/30 font-bold shadow-sm" title="Edit candidate color assignments">
+                <span>⚙️</span> Edit Colors (${panelStandings.assignedCandidateCount})
+              </button>
+              <button id="btnInlineOpenDrawer" class="btn btn-secondary btn-sm text-xs flex items-center gap-1.5 border-white/10 text-slate-200 bg-white/5 hover:bg-white/10" title="Open slide-out drawer with post-by-post breakdown">
+                <span>📊</span> Deep-Dive Drawer
+              </button>
+              <button id="btnToggleInlineCollapse" class="btn btn-secondary btn-sm text-xs text-slate-400 hover:text-white px-2.5 py-1" title="Minimize / Expand Panel Tracker">
+                ${isInlineTrackerCollapsed ? '🔽 Expand' : '🔼 Minimize'}
+              </button>
+            </div>
+          </div>
+
+          ${!isInlineTrackerCollapsed ? `
+            <!-- Main Scoreboard Ribbon: Each Panel Gets A Card -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              ${panelStandings.activeColors.map(color => {
+                const totalSeats = color.wonPosts.length + color.leadingPosts.length;
+                return `
+                  <div class="rounded-xl border ${color.border} ${color.bg} p-3.5 flex flex-col justify-between shadow-md transition-all hover:scale-[1.01]">
+                    <div>
+                      <div class="flex items-center justify-between gap-2 border-b ${color.lightBorder} pb-2 mb-2">
+                        <div class="flex items-center gap-2 min-w-0">
+                          <span class="w-3.5 h-3.5 rounded-full ${color.dot} shadow-sm ring-2 ring-white/30 shrink-0"></span>
+                          <h4 class="font-bold text-white text-sm truncate">${esc(color.displayName)}</h4>
+                        </div>
+                        <span class="text-[10px] font-mono text-slate-400 shrink-0">${color.assignedCandidates} candidates</span>
+                      </div>
+
+                      <div class="flex items-baseline justify-between mb-2">
+                        <span class="text-xs text-slate-300 font-semibold uppercase tracking-wider">Seats in Hand:</span>
+                        <span class="text-2xl font-black font-mono ${color.text}">${totalSeats}</span>
+                      </div>
+
+                      <div class="grid grid-cols-2 gap-2 text-xs font-mono mb-2">
+                        <div class="bg-slate-900/80 rounded-lg p-2 border border-emerald-500/30 text-center">
+                          <div class="text-[10px] text-emerald-400 font-bold uppercase">Won</div>
+                          <div class="text-base font-black text-emerald-300 mt-0.5">🏆 ${color.wonPosts.length}</div>
+                        </div>
+                        <div class="bg-slate-900/80 rounded-lg p-2 border border-amber-500/30 text-center">
+                          <div class="text-[10px] text-amber-400 font-bold uppercase">Leading</div>
+                          <div class="text-base font-black text-amber-300 mt-0.5">⚡ ${color.leadingPosts.length}</div>
+                        </div>
+                      </div>
+
+                      <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 bg-black/30 px-2.5 py-1 rounded-md">
+                        <span>Total Votes:</span>
+                        <span class="font-bold text-white">${color.totalVotes.toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+
+                    <!-- Mini list of seats won or leading -->
+                    ${(color.wonPosts.length > 0 || color.leadingPosts.length > 0) ? `
+                      <div class="mt-2.5 pt-2 border-t ${color.lightBorder} space-y-1 text-[11px]">
+                        ${color.wonPosts.slice(0, 3).map(p => `
+                          <div class="flex items-center justify-between text-emerald-300 truncate">
+                            <span class="truncate">🏆 ${esc(p.postName)}</span>
+                            <span class="font-mono font-bold shrink-0 ml-1">Elected</span>
+                          </div>
+                        `).join('')}
+                        ${color.leadingPosts.slice(0, 3).map(p => `
+                          <div class="flex items-center justify-between text-amber-300 truncate">
+                            <span class="truncate">⚡ ${esc(p.postName)}</span>
+                            <span class="font-mono font-bold shrink-0 ml-1">+${p.leadMargin}</span>
+                          </div>
+                        `).join('')}
+                        ${(color.wonPosts.length + color.leadingPosts.length > 6) ? `
+                          <div class="text-[10px] text-slate-400 text-right italic">+${(color.wonPosts.length + color.leadingPosts.length) - 6} more (see side drawer)</div>
+                        ` : ''}
+                      </div>
+                    ` : `
+                      <div class="mt-2.5 pt-2 border-t ${color.lightBorder} text-[10px] text-slate-500 italic text-center">
+                        Tally entries pending
+                      </div>
+                    `}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            <!-- Quick Tally Bar (Visual comparison of seats won + leading) -->
+            ${panelStandings.totalWon + panelStandings.totalLeading > 0 ? `
+              <div class="bg-slate-900/90 rounded-xl p-3 border border-white/10 space-y-2">
+                <div class="flex items-center justify-between text-xs font-bold text-slate-300">
+                  <span>Overall Seat Distribution (${panelStandings.totalWon + panelStandings.totalLeading} Seats Decided/Leading)</span>
+                  <span class="font-mono text-slate-400 text-[11px]">🏆 ${panelStandings.totalWon} Won • ⚡ ${panelStandings.totalLeading} Leading</span>
+                </div>
+                <div class="h-4 rounded-full overflow-hidden flex bg-slate-950 p-0.5 border border-white/10 gap-0.5">
+                  ${panelStandings.activeColors.map(color => {
+                    const seats = color.wonPosts.length + color.leadingPosts.length;
+                    const total = panelStandings.totalWon + panelStandings.totalLeading;
+                    if (seats === 0) return '';
+                    const pct = ((seats / total) * 100).toFixed(1);
+                    return `
+                      <div class="h-full rounded-sm ${color.dot} transition-all duration-300 flex items-center justify-center text-[9px] font-black text-white font-mono" style="width: ${pct}%; min-width: 18px;" title="${esc(color.displayName)}: ${seats} seats (${pct}%)">
+                        ${seats >= 1 ? seats : ''}
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            ` : ''}
+          ` : `
+            <!-- Collapsed Compact Bar -->
+            <div class="flex items-center justify-between bg-slate-900/60 p-2.5 rounded-xl border border-white/5 text-xs font-mono">
+              <div class="flex items-center gap-3 flex-wrap">
+                ${panelStandings.activeColors.map(c => `
+                  <span class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full ${c.dot}"></span>
+                    <span class="text-slate-300 font-bold">${esc(c.displayName)}:</span>
+                    <span class="${c.text} font-black">${c.wonPosts.length + c.leadingPosts.length}</span>
+                  </span>
+                `).join('<span class="text-slate-600">|</span>')}
+              </div>
+              <span class="text-[11px] text-slate-400 italic">Tracker minimized &bull; Click Expand to show full scoreboard</span>
+            </div>
+          `}
+        </div>
+      ` : ''}
 
       ${candidates.length === 0 ? `
         <div class="glass p-12 rounded-3xl border border-white/10 text-center max-w-xl mx-auto shadow-xl page-enter">
@@ -1451,8 +1639,29 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   });
 
   main.querySelector('#btnToolbarTogglePanelDrawer')?.addEventListener('click', () => {
-    if (isPanelDrawerOpen) closeDrawer(); else openDrawer();
+    const inlineTracker = main.querySelector('#inlinePanelTracker');
+    if (inlineTracker && isInlineTrackerCollapsed) {
+      isInlineTrackerCollapsed = false;
+      localStorage.setItem('gcc_admin_panel_tracker_collapsed', 'false');
+      renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+      setTimeout(() => {
+        main.querySelector('#inlinePanelTracker')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+    } else if (inlineTracker) {
+      inlineTracker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      if (isPanelDrawerOpen) closeDrawer(); else openDrawer();
+    }
   });
+
+  // Inline Panel Tracker controls
+  main.querySelector('#btnToggleInlineCollapse')?.addEventListener('click', () => {
+    isInlineTrackerCollapsed = !isInlineTrackerCollapsed;
+    localStorage.setItem('gcc_admin_panel_tracker_collapsed', isInlineTrackerCollapsed ? 'true' : 'false');
+    renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+  });
+  main.querySelector('#btnInlineEditColors')?.addEventListener('click', openPanelModal);
+  main.querySelector('#btnInlineOpenDrawer')?.addEventListener('click', openDrawer);
 
   main.querySelector('#btnClosePanelDrawer')?.addEventListener('click', closeDrawer);
   main.querySelector('#btnDrawerCloseBottom')?.addEventListener('click', closeDrawer);
@@ -1477,7 +1686,9 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           const curColor = (candKey && workingCandidateColors[candKey]) ||
                            (cId && workingCandidateColors[cId]) ||
                            (cNamePost && workingCandidateColors[cNamePost]) ||
-                           (cName && workingCandidateColors[cName]) || 'none';
+                           (cNamePost && workingCandidateColors[cNamePost.toLowerCase()]) ||
+                           (cName && workingCandidateColors[cName]) ||
+                           (cName && workingCandidateColors[cName.toLowerCase()]) || 'none';
           const isMatch = (curColor === 'none' && sColor === 'none') || (curColor === sColor);
           if (isMatch) {
             btn.classList.remove('opacity-65');
@@ -1555,12 +1766,25 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
         if (color === 'none') {
           delete workingCandidateColors[candKey];
           if (cId) delete workingCandidateColors[cId];
-          if (cNamePost) delete workingCandidateColors[cNamePost];
-          if (cName) delete workingCandidateColors[cName];
+          if (cNamePost) {
+            delete workingCandidateColors[cNamePost];
+            delete workingCandidateColors[cNamePost.toLowerCase()];
+          }
+          if (cName) {
+            delete workingCandidateColors[cName];
+            delete workingCandidateColors[cName.toLowerCase()];
+          }
         } else {
           workingCandidateColors[candKey] = color;
           if (cId) workingCandidateColors[cId] = color;
-          if (cNamePost) workingCandidateColors[cNamePost] = color;
+          if (cNamePost) {
+            workingCandidateColors[cNamePost] = color;
+            workingCandidateColors[cNamePost.toLowerCase()] = color;
+          }
+          if (cName) {
+            workingCandidateColors[cName] = color;
+            workingCandidateColors[cName.toLowerCase()] = color;
+          }
         }
 
         // Update UI for this candidate's swatches
@@ -1600,8 +1824,17 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
     });
 
     closePanelModal();
-    showToast('🎨 Candidate panel colors saved! Confidential tally updated.', 'success');
+    isInlineTrackerCollapsed = false;
+    localStorage.setItem('gcc_admin_panel_tracker_collapsed', 'false');
+    showToast('🎨 Candidate panel colors saved! Admin Panel Tracker active on screen.', 'success');
     renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+
+    setTimeout(() => {
+      const trackerEl = main.querySelector('#inlinePanelTracker');
+      if (trackerEl) {
+        trackerEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
   });
 
   // Clear All Colors
@@ -1611,6 +1844,8 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
     }
     localStorage.removeItem(CONFIDENTIAL_PANEL_KEY);
     isPanelDrawerOpen = false;
+    isInlineTrackerCollapsed = false;
+    localStorage.removeItem('gcc_admin_panel_tracker_collapsed');
     closePanelModal();
     showToast('Candidate panel colors cleared.', 'info');
     renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
