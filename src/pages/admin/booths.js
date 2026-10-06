@@ -2195,7 +2195,22 @@ export function triggerElectoralRollPrint(html) {
       <head>
         <title>Electoral Rolls - Booth Allotment</title>
         <style>
-          @page { size: A4 portrait; margin: 10mm 12mm; }
+          @page {
+            margin: 10mm 12mm 14mm 12mm;
+            @bottom-right {
+              content: "Page " counter(page) " of " counter(pages);
+              font-family: Arial, sans-serif;
+              font-size: 8.5pt;
+              font-weight: bold;
+              color: #374151;
+            }
+            @bottom-left {
+              content: "College Union Election — Electoral Roll";
+              font-family: Arial, sans-serif;
+              font-size: 8pt;
+              color: #6b7280;
+            }
+          }
           * { box-sizing: border-box; }
           body { font-family: Arial, sans-serif; color: #111; margin: 0; padding: 0; font-size: 11px; }
           .facing-sheet { padding: 0; page-break-before: always; break-before: page; page-break-after: always; break-after: page; display: flex; flex-direction: column; height: 250mm; }
@@ -2407,7 +2422,22 @@ export function triggerBallotAccountPrint(html) {
       <head>
         <title>Ballot Accounts - Booth Wise</title>
         <style>
-          @page { size: A4 portrait; margin: 10mm; }
+          @page {
+            margin: 10mm 12mm 14mm 12mm;
+            @bottom-right {
+              content: "Page " counter(page) " of " counter(pages);
+              font-family: sans-serif;
+              font-size: 8.5pt;
+              font-weight: bold;
+              color: #374151;
+            }
+            @bottom-left {
+              content: "College Union Election — Ballot Paper Account";
+              font-family: sans-serif;
+              font-size: 8pt;
+              color: #6b7280;
+            }
+          }
           body { font-family: sans-serif; color: #333; margin: 0; padding: 0; }
           .page-break { page-break-after: always; }
           .account-page { padding: 20px; display: flex; flex-direction: column; box-sizing: border-box; border: 1px solid #ccc; margin: 5px; min-height: 250mm; position: relative; }

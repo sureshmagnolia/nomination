@@ -562,7 +562,6 @@ export function executeRollPrint({
                 <div class="class-header">
                   <span class="badge-tag">CLASS: ${esc(cKey)}</span>
                   <span class="badge-tag">DEPARTMENT: ${esc(classDept)}</span>
-                  ${numPages > 1 ? `<span class="badge-tag">PAGE ${p + 1} OF ${numPages}</span>` : ''}
                 </div>
                 <div class="meta-bar">
                   <div>Students in Class: <strong>${classStudents.length}</strong></div>
@@ -712,7 +711,6 @@ export function executeRollPrint({
               <div class="election-title">College Union Election ${esc(yearStr)} — ${watermark}</div>
               <div class="class-header">
                 <span class="badge-tag">${esc(scopeSubtitle.toUpperCase())}</span>
-                ${numPages > 1 ? `<span class="badge-tag">PAGE ${p + 1} OF ${numPages}</span>` : ''}
               </div>
               <div class="meta-bar">
                 <div>Total Students: <strong>${data.length}</strong></div>
@@ -857,8 +855,20 @@ export function executeRollPrint({
         <title>${watermark} — ${scopeSubtitle}</title>
         <style>
           @page {
-            size: A4 portrait;
-            margin: 10mm 12mm;
+            margin: 10mm 12mm 14mm 12mm;
+            @bottom-right {
+              content: "Page " counter(page) " of " counter(pages);
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+              font-size: 8.5pt;
+              font-weight: 600;
+              color: #374151;
+            }
+            @bottom-left {
+              content: "${esc(collegeName)} — ${watermark}";
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+              font-size: 8pt;
+              color: #6b7280;
+            }
           }
           @media print {
             body {
@@ -873,6 +883,13 @@ export function executeRollPrint({
               color: rgba(0, 0, 0, 0.035) !important;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
+            }
+            thead {
+              display: table-header-group;
+            }
+            tr {
+              page-break-inside: avoid;
+              break-inside: avoid;
             }
           }
           * { box-sizing: border-box; }

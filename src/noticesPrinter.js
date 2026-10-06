@@ -481,8 +481,20 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
   <title>Polling Booth Door Posters - ${esc(shortName)} Election ${esc(year)}</title>
   <style>
     @page {
-      size: A4 portrait;
-      margin: 8mm;
+      margin: 8mm 10mm 12mm 10mm;
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: Arial, sans-serif;
+        font-size: 8.5pt;
+        font-weight: bold;
+        color: #374151;
+      }
+      @bottom-left {
+        content: "College Union Election — Polling Booth Poster";
+        font-family: Arial, sans-serif;
+        font-size: 8pt;
+        color: #6b7280;
+      }
     }
     .watermark-global {
       position: fixed;
@@ -788,8 +800,20 @@ export function printCampusMasterDirectory(boothsList, settings = {}, schedule =
   <title>Campus Master Polling Directory - ${esc(shortName)} Election ${esc(year)}</title>
   <style>
     @page {
-      size: A4 portrait;
-      margin: 10mm;
+      margin: 10mm 12mm 14mm 12mm;
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: Arial, sans-serif;
+        font-size: 8.5pt;
+        font-weight: bold;
+        color: #374151;
+      }
+      @bottom-left {
+        content: "College Union Election — Master Polling Directory";
+        font-family: Arial, sans-serif;
+        font-size: 8pt;
+        color: #6b7280;
+      }
     }
     .watermark-global {
       position: fixed;

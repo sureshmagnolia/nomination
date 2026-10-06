@@ -499,8 +499,36 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
       showToast('Popup blocked! Please allow popups to print.', 'error');
       return;
     }
-    w.document.write(`<!DOCTYPE html><html><head><title>${isFinal ? 'Final List' : 'Valid List'} - ${esc(shortName)} Election ${esc(year)}</title><style>
-      @page{size:A4;margin:15mm}
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${isFinal ? 'Final List' : 'Valid List'} - ${esc(shortName)} Election ${esc(year)}</title><style>
+      @page {
+        margin: 12mm 15mm 16mm 15mm;
+        @bottom-right {
+          content: "Page " counter(page) " of " counter(pages);
+          font-family: Arial, sans-serif;
+          font-size: 8.5pt;
+          font-weight: 600;
+          color: #374151;
+        }
+        @bottom-left {
+          content: "${esc(collegeName)} — ${isFinal ? 'Final List of Eligible Contesting Candidates' : 'List of Valid Nominations'}";
+          font-family: Arial, sans-serif;
+          font-size: 8pt;
+          color: #6b7280;
+        }
+      }
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        thead {
+          display: table-header-group;
+        }
+        tr {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+      }
       body{font-family:Arial,sans-serif;line-height:1.4;margin:0;padding:10px;}
     </style>
       <style>
@@ -612,11 +640,29 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
         .winner-row { background: #f0fdf4 !important; font-weight: bold; }
         .footer { margin-top: 50px; display: flex; justify-content: space-between; align-items: flex-end; }
         .sig-box { width: 220px; border-top: 1px solid #000; text-align: center; padding-top: 6px; font-size: 12px; font-weight: bold; }
+        @page {
+          margin: 12mm 15mm 16mm 15mm;
+          @bottom-right {
+            content: "Page " counter(page) " of " counter(pages);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 8.5pt;
+            font-weight: 600;
+            color: #374151;
+          }
+          @bottom-left {
+            content: "${esc(collegeName)} — Official Results Declaration ${esc(year)}";
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 8pt;
+            color: #6b7280;
+          }
+        }
         @media print {
-          body { padding: 0; }
+          body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .official-sheet { border: none; width: 100%; max-width: 100%; padding: 0; }
           .post-header { background-color: #eee !important; -webkit-print-color-adjust: exact; }
           .winner-row { background-color: #f0fdf4 !important; -webkit-print-color-adjust: exact; }
+          thead { display: table-header-group; }
+          tr { page-break-inside: avoid; break-inside: avoid; }
         }
       </style>
       <div class="official-sheet">

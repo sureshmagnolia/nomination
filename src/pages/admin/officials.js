@@ -4287,8 +4287,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   <title>${esc(title)}</title>
   <style id="dynamicMasterStyle">
     @page {
-      size: A4 landscape;
-      margin: 8mm 10mm 8mm 10mm;
+      margin: 8mm 10mm 12mm 10mm;
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        font-size: 8pt;
+        font-weight: bold;
+        color: #374151;
+      }
+      @bottom-left {
+        content: "College Union Election — Master Duty Deployment";
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        font-size: 7.5pt;
+        color: #6b7280;
+      }
     }
   </style>
   <style>
@@ -5468,8 +5480,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   <title>${esc(title)}</title>
   <style id="dynamicPageStyle">
     @page {
-      size: A4 landscape;
-      margin: 8mm 10mm 8mm 10mm;
+      margin: 8mm 10mm 12mm 10mm;
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        font-size: 8pt;
+        font-weight: bold;
+        color: #374151;
+      }
+      @bottom-left {
+        content: "College Union Election — Duty Orders";
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        font-size: 7.5pt;
+        color: #6b7280;
+      }
     }
   </style>
   <style>
@@ -5890,14 +5914,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         sheet.classList.add('portrait-mode');
         btnR.classList.remove('active');
         btnI.classList.add('active');
-        if (stylePage) stylePage.innerHTML = '@page { size: A4 portrait; margin: 10mm 12mm; }';
+        if (stylePage) stylePage.innerHTML = '@page { margin: 10mm 12mm 14mm 12mm; @bottom-right { content: "Page " counter(page) " of " counter(pages); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; font-size: 8pt; font-weight: bold; color: #374151; } @bottom-left { content: "College Union Election — Duty Order"; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; font-size: 7.5pt; color: #6b7280; } }';
       } else {
         roster.style.display = 'block';
         ind.style.display = 'none';
         sheet.classList.remove('portrait-mode');
         btnR.classList.add('active');
         btnI.classList.remove('active');
-        if (stylePage) stylePage.innerHTML = '@page { size: A4 landscape; margin: 8mm 10mm; }';
+        if (stylePage) stylePage.innerHTML = '@page { margin: 8mm 10mm 12mm 10mm; @bottom-right { content: "Page " counter(page) " of " counter(pages); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; font-size: 8pt; font-weight: bold; color: #374151; } @bottom-left { content: "College Union Election — Duty Roster"; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; font-size: 7.5pt; color: #6b7280; } }';
       }
     }
 

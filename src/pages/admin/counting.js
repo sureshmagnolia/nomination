@@ -791,8 +791,28 @@ function triggerCountingPrint(htmlContent, title = 'Counting Documents', college
     alert('Pop-up was blocked. Please allow pop-ups for this site to print counting forms.');
     return;
   }
-  w.document.write(`<!DOCTYPE html><html><head><title>${esc(title)}</title><style>
-    @page { size: A4 ${orientation}; margin: 8mm; }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>
+    @page {
+      margin: 8mm 10mm 12mm 10mm;
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        font-weight: bold;
+        color: #374151;
+      }
+      @bottom-left {
+        content: "College Union Election — Counting Record";
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 7.5pt;
+        color: #6b7280;
+      }
+    }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      thead { display: table-header-group; }
+      tr { page-break-inside: avoid; break-inside: avoid; }
+    }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #fff; color: #000; font-size: 12px; }
     .pg { page-break-after: always; padding: 6px 8px; position: relative; }
