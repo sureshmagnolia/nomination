@@ -2097,6 +2097,310 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     }).join('');
   };
 
+  // ─── Searchable Combobox Component for Personnel Dropdowns ──────────────────
+
+  const highlightOptionMatch = (text, query) => {
+    if (!query || !query.trim()) return esc(text);
+    const words = query.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return esc(text);
+    const escapedWords = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const regex = new RegExp(`(${escapedWords.join('|')})`, 'gi');
+    return esc(text).replace(regex, '<mark class="bg-amber-400/35 text-amber-200 px-0.5 rounded font-semibold">$1</mark>');
+  };
+
+  const closeAllSearchableComboboxes = () => {
+    document.querySelectorAll('.searchable-combobox-menu:not(.hidden)').forEach(menu => {
+      menu.classList.add('hidden');
+      const arrow = menu.parentElement?.querySelector('.searchable-combobox-arrow');
+      if (arrow) arrow.style.transform = 'rotate(0deg)';
+      menu.parentElement?.classList.remove('z-[90]');
+      const parentCard = menu.closest('.glass');
+      if (parentCard) parentCard.classList.remove('z-[80]');
+    });
+  };
+
+  if (!window.__gccOfficialsSearchableListener) {
+    window.__gccOfficialsSearchableListener = true;
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.searchable-combobox-wrapper')) {
+        closeAllSearchableComboboxes();
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeAllSearchableComboboxes();
+      }
+    });
+  }
+
+  const makeSearchableSelect = (selectEl) => {
+    if (!selectEl || selectEl.dataset.searchableInit === 'true') return;
+    selectEl.dataset.searchableInit = 'true';
+    selectEl.style.display = 'none';
+
+    const parseOptions = () => {
+      const items = [];
+      Array.from(selectEl.children).forEach(child => {
+        if (child.tagName === 'OPTGROUP') {
+          const groupLabel = child.label || '';
+          Array.from(child.children).forEach(opt => {
+            items.push({
+              value: opt.value,
+              text: opt.textContent.trim(),
+              selected: opt.selected,
+              disabled: opt.disabled,
+              group: groupLabel
+            });
+          });
+        } else if (child.tagName === 'OPTION') {
+          items.push({
+            value: child.value,
+            text: child.textContent.trim(),
+            selected: child.selected,
+            disabled: child.disabled,
+            group: null
+          });
+        }
+      });
+      return items;
+    };
+
+    let allItems = parseOptions();
+    let selectedItem = allItems.find(o => o.selected) || allItems[0] || { value: '', text: '-- Select --' };
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'searchable-combobox-wrapper relative w-full text-xs select-none';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    const selectClasses = Array.from(selectEl.classList)
+      .filter(c => c && c !== 'hidden' && !c.startsWith('w-'))
+      .join(' ');
+    btn.className = `searchable-combobox-btn w-full flex items-center justify-between text-left cursor-pointer transition select-none shadow-sm gap-2 hover:border-white/50 ${selectClasses || 'bg-slate-900 border border-white/20 rounded-lg p-2 text-white'}`;
+
+    const labelSpan = document.createElement('span');
+    labelSpan.className = `searchable-combobox-label truncate ${selectedItem && selectedItem.value ? 'text-white font-medium' : 'text-slate-400 font-normal'}`;
+    labelSpan.textContent = selectedItem ? selectedItem.text : '-- Select --';
+
+    const arrowSpan = document.createElement('span');
+    arrowSpan.className = 'searchable-combobox-arrow text-slate-400 text-[10px] ml-1.5 shrink-0 transition-transform duration-200';
+    arrowSpan.textContent = '▼';
+
+    btn.appendChild(labelSpan);
+    btn.appendChild(arrowSpan);
+    wrapper.appendChild(btn);
+
+    const menu = document.createElement('div');
+    menu.className = 'searchable-combobox-menu hidden absolute left-0 right-0 top-full mt-1.5 z-[100] rounded-xl bg-slate-900/98 border border-white/20 shadow-2xl backdrop-blur-xl overflow-hidden min-w-[280px] max-w-full';
+
+    const searchHeader = document.createElement('div');
+    searchHeader.className = 'p-2 border-b border-white/10 bg-black/60 sticky top-0 z-10';
+    searchHeader.innerHTML = `
+      <div class="relative">
+        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+        <input type="text" class="searchable-combobox-input w-full bg-slate-800/90 border border-white/20 rounded-lg pl-7 pr-7 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition" placeholder="Search name, PEN, dept..." autocomplete="off" spellcheck="false" />
+        <button type="button" class="searchable-combobox-clear hidden absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs p-1">✕</button>
+      </div>
+    `;
+
+    const searchInput = searchHeader.querySelector('.searchable-combobox-input');
+    const clearBtn = searchHeader.querySelector('.searchable-combobox-clear');
+    menu.appendChild(searchHeader);
+
+    const listContainer = document.createElement('div');
+    listContainer.className = 'searchable-combobox-list max-h-64 overflow-y-auto divide-y divide-white/5 p-1 text-xs custom-scrollbar';
+    menu.appendChild(listContainer);
+
+    wrapper.appendChild(menu);
+    selectEl.parentNode.insertBefore(wrapper, selectEl.nextSibling);
+
+    let highlightedIdx = -1;
+
+    const renderList = (filterQuery = '') => {
+      listContainer.innerHTML = '';
+      const q = (filterQuery || '').toLowerCase().trim();
+      const words = q.split(/\s+/).filter(Boolean);
+      const curVal = selectEl.value;
+
+      const matchingItems = allItems.filter(item => {
+        if (words.length === 0) return true;
+        const itemText = item.text.toLowerCase();
+        return words.every(w => itemText.includes(w));
+      });
+
+      highlightedIdx = -1;
+
+      if (matchingItems.length === 0) {
+        listContainer.innerHTML = `<div class="p-4 text-center text-xs text-slate-400 italic">No officials matching "${esc(filterQuery)}"</div>`;
+        return;
+      }
+
+      let currentGroup = null;
+      matchingItems.forEach((item) => {
+        if (item.group && item.group !== currentGroup) {
+          currentGroup = item.group;
+          const groupHeader = document.createElement('div');
+          groupHeader.className = 'px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-white/5 sticky top-0';
+          groupHeader.textContent = currentGroup;
+          listContainer.appendChild(groupHeader);
+        }
+
+        const isCurrentSelected = item.value === curVal;
+        const row = document.createElement('div');
+        row.className = `searchable-item px-3 py-2 rounded-lg flex items-center justify-between transition cursor-pointer text-xs ${
+          item.disabled 
+            ? 'opacity-40 cursor-not-allowed bg-rose-950/10' 
+            : (isCurrentSelected ? 'bg-indigo-600/30 text-white font-bold border border-indigo-500/40 is-selected' : 'text-slate-200 hover:bg-white/10 hover:text-white')
+        }`;
+        row.dataset.value = item.value;
+
+        row.innerHTML = `
+          <div class="flex-1 break-words whitespace-normal leading-snug pr-2">
+            ${highlightOptionMatch(item.text, filterQuery)}
+          </div>
+          ${isCurrentSelected ? '<span class="text-indigo-400 font-bold ml-1 shrink-0">✓</span>' : ''}
+        `;
+
+        if (!item.disabled) {
+          row.onclick = (e) => {
+            e.stopPropagation();
+            selectValue(item.value, item.text);
+          };
+        }
+
+        listContainer.appendChild(row);
+      });
+    };
+
+    const selectValue = (val, text) => {
+      selectEl.value = val;
+      labelSpan.textContent = text;
+      labelSpan.className = `searchable-combobox-label truncate ${val ? 'text-white font-medium' : 'text-slate-400 font-normal'}`;
+      closeMenu();
+      selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    const openMenu = () => {
+      closeAllSearchableComboboxes();
+
+      const rect = btn.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (spaceBelow < 280 && rect.top > 280) {
+        menu.classList.add('bottom-full', 'mb-1.5');
+        menu.classList.remove('top-full', 'mt-1.5');
+      } else {
+        menu.classList.add('top-full', 'mt-1.5');
+        menu.classList.remove('bottom-full', 'mb-1.5');
+      }
+
+      wrapper.classList.add('z-[90]');
+      const parentCard = wrapper.closest('.glass');
+      if (parentCard) parentCard.classList.add('z-[80]');
+
+      menu.classList.remove('hidden');
+      arrowSpan.style.transform = 'rotate(180deg)';
+
+      allItems = parseOptions();
+      searchInput.value = '';
+      clearBtn.classList.add('hidden');
+      renderList('');
+
+      setTimeout(() => {
+        searchInput.focus();
+        const selectedEl = listContainer.querySelector('.is-selected');
+        if (selectedEl) {
+          selectedEl.scrollIntoView({ block: 'nearest' });
+        }
+      }, 30);
+    };
+
+    const closeMenu = () => {
+      menu.classList.add('hidden');
+      arrowSpan.style.transform = 'rotate(0deg)';
+      wrapper.classList.remove('z-[90]');
+      const parentCard = wrapper.closest('.glass');
+      if (parentCard) parentCard.classList.remove('z-[80]');
+    };
+
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      if (menu.classList.contains('hidden')) {
+        openMenu();
+      } else {
+        closeMenu();
+      }
+    };
+
+    searchInput.oninput = () => {
+      const val = searchInput.value;
+      if (val) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+      renderList(val);
+    };
+
+    clearBtn.onclick = (e) => {
+      e.stopPropagation();
+      searchInput.value = '';
+      clearBtn.classList.add('hidden');
+      renderList('');
+      searchInput.focus();
+    };
+
+    searchInput.onkeydown = (e) => {
+      const items = Array.from(listContainer.querySelectorAll('.searchable-item:not(.opacity-40)'));
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        highlightedIdx = Math.min(highlightedIdx + 1, items.length - 1);
+        updateHighlight(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        highlightedIdx = Math.max(highlightedIdx - 1, 0);
+        updateHighlight(items);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (highlightedIdx >= 0 && items[highlightedIdx]) {
+          items[highlightedIdx].click();
+        } else if (items.length > 0) {
+          items[0].click();
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeMenu();
+        btn.focus();
+      }
+    };
+
+    const updateHighlight = (items) => {
+      items.forEach((it, idx) => {
+        if (idx === highlightedIdx) {
+          it.classList.add('ring-1', 'ring-indigo-400', 'bg-white/15');
+          it.scrollIntoView({ block: 'nearest' });
+        } else {
+          it.classList.remove('ring-1', 'ring-indigo-400', 'bg-white/15');
+        }
+      });
+    };
+
+    selectEl.addEventListener('change', () => {
+      const curOpt = Array.from(selectEl.options).find(o => o.value === selectEl.value);
+      if (curOpt) {
+        labelSpan.textContent = curOpt.textContent.trim();
+        labelSpan.className = `searchable-combobox-label truncate ${curOpt.value ? 'text-white font-medium' : 'text-slate-400 font-normal'}`;
+      }
+    });
+  };
+
+  const initAllSearchableSelects = (root = document) => {
+    if (!root) return;
+    const selects = root.querySelectorAll('select');
+    selects.forEach(sel => {
+      makeSearchableSelect(sel);
+    });
+  };
+
   // ─── Render Main UI ─────────────────────────────────────────────────────────
 
   const renderUI = () => {
@@ -4013,6 +4317,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         }
       });
     });
+
+    // Initialize searchable comboboxes for all personnel dropdown menus
+    initAllSearchableSelects(main);
   };
 
   // ─── Returning Officer & AROs Modal ─────────────────────────────────────────
@@ -4276,6 +4583,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         showToast(`Saved Returning Officer and ${aroOfficers.length} ARO(s) successfully!`, 'success');
         renderUI();
       };
+
+      initAllSearchableSelects(modal);
     };
 
     renderModal();
@@ -4431,6 +4740,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         showToast(`Appointed ${coreCommittee.length} Core Committee member(s) successfully!`, 'success');
         renderUI();
       };
+
+      initAllSearchableSelects(modal);
     };
 
     renderModal();
@@ -4577,6 +4888,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         showToast(`Appointed ${observers.length} Election Observer(s) successfully!`, 'success');
         renderUI();
       };
+
+      initAllSearchableSelects(modal);
     };
 
     renderModal();
@@ -4723,6 +5036,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         showToast(`Appointed ${disciplineCharge.length} Discipline In-Charge Official(s) successfully!`, 'success');
         renderUI();
       };
+
+      initAllSearchableSelects(modal);
     };
 
     renderModal();
@@ -4869,6 +5184,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         showToast(`Appointed ${grievanceCell.length} Grievance Official(s) successfully!`, 'success');
         renderUI();
       };
+
+      initAllSearchableSelects(modal);
     };
 
     renderModal();
@@ -5049,6 +5366,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         showToast(`Assigned ${staffObj.name} to ${checkedTables.length} table(s): ${checkedTables.length > 0 ? `Tables ${checkedTables.sort((a,b)=>a-b).join(', ')}` : 'None'}!`, 'success');
         renderUI();
       };
+
+      initAllSearchableSelects(modal);
     };
 
     renderModal();
