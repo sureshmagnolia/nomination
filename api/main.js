@@ -1401,8 +1401,9 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       let repSl = 1, assocSl = 1;
       let rbCount = 0, abCount = 0;
 
-      const standard = 50;
-      const threshold = 15;
+      const standard = Number(body.bookSize) > 0 ? Number(body.bookSize) : 50;
+      const enableMerge = body.mergeRemainders !== false && body.mergeRemainders !== 'false';
+      const threshold = enableMerge ? Math.max(5, Math.round(standard * 0.3)) : 0;
 
       const calcBooks = (count, start, prefix, currentGlobalBookCount, customBookPrefix = null) => {
         if (!count || count <= 0) return { books: [], ids: '-', count: 0, nextCounter: currentGlobalBookCount };

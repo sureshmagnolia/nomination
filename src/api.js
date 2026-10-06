@@ -707,9 +707,10 @@ export const api = {
     return res;
   },
 
-  adminGenerateBallotPlan: async (password) => {
-    // This generates heavily on the backend, so we must wait
-    const res = await bgPost({ action: 'adminGenerateBallotPlan', password });
+  adminGenerateBallotPlan: async (password, options = {}) => {
+    const bookSize = typeof options === 'object' && options ? options.bookSize : (typeof options === 'number' ? options : null);
+    const mergeRemainders = typeof options === 'object' && options && 'mergeRemainders' in options ? options.mergeRemainders : undefined;
+    const res = await bgPost({ action: 'adminGenerateBallotPlan', password, bookSize, mergeRemainders });
     updateCache({ action: 'adminGetBallotPlan', password }, res.plan);
     return res;
   },
