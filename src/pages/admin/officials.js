@@ -670,6 +670,31 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     return null;
   };
 
+  // Helper: Get all roster personnel (Faculty + Non-Teaching Staff) sorted by seniority and category
+  const getAllRosterPersonnel = () => {
+    const fac = faculty.map(f => ({ ...f, type: 'Teaching Faculty', isExcluded: isPersonExcluded(f) }));
+    const nt = nonTeaching.map(n => ({ ...n, type: 'Non-Teaching Staff', isExcluded: isPersonExcluded(n) }));
+    return [...fac, ...nt].sort(compareOfficials);
+  };
+
+  // Helper: Get all teaching faculty sorted by seniority
+  const getTeachingFacultyPersonnel = () => {
+    return [...faculty].sort(compareOfficials).map(f => ({
+      ...f,
+      type: 'Teaching Faculty',
+      isExcluded: isPersonExcluded(f)
+    }));
+  };
+
+  // Helper: Get all non-teaching staff sorted by seniority/category
+  const getNonTeachingStaffPersonnel = () => {
+    return [...nonTeaching].sort(compareOfficials).map(n => ({
+      ...n,
+      type: 'Non-Teaching Staff',
+      isExcluded: isPersonExcluded(n)
+    }));
+  };
+
   // Helper: Render all roster options (Teaching Faculty + Non-Teaching Staff) with optgroups and rich status flags
   const renderAllRosterOptions = (currentSelectedName, draftList, currentIdx, placeholder = '-- Select Official from Roster --') => {
     let html = `<option value="">${placeholder}</option>`;
@@ -2113,16 +2138,21 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       menu.classList.add('hidden');
       const arrow = menu.parentElement?.querySelector('.searchable-combobox-arrow');
       if (arrow) arrow.style.transform = 'rotate(0deg)';
-      menu.parentElement?.classList.remove('z-[90]');
-      const parentCard = menu.closest('.glass');
-      if (parentCard) parentCard.classList.remove('z-[80]');
+      if (menu.parentElement) {
+        menu.parentElement.style.zIndex = '';
+        const parentCard = menu.parentElement.closest('.glass');
+        if (parentCard) parentCard.style.zIndex = '';
+      }
+    });
+    document.querySelectorAll('.picker-results-list:not(.hidden)').forEach(list => {
+      list.classList.add('hidden');
     });
   };
 
   if (!window.__gccOfficialsSearchableListener) {
     window.__gccOfficialsSearchableListener = true;
     document.addEventListener('click', (e) => {
-      if (!e.target.closest('.searchable-combobox-wrapper')) {
+      if (!e.target.closest('.searchable-combobox-wrapper') && !e.target.closest('.searchable-picker-container')) {
         closeAllSearchableComboboxes();
       }
     });
@@ -2136,7 +2166,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const makeSearchableSelect = (selectEl) => {
     if (!selectEl || selectEl.dataset.searchableInit === 'true') return;
     selectEl.dataset.searchableInit = 'true';
-    selectEl.style.display = 'none';
+    selectEl.style.setProperty('display', 'none', 'important');
+    selectEl.classList.add('hidden');
+    selectEl.setAttribute('aria-hidden', 'true');
 
     const parseOptions = () => {
       const items = [];
@@ -2177,21 +2209,27 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       .filter(c => c && c !== 'hidden' && !c.startsWith('w-'))
       .join(' ');
     btn.className = `searchable-combobox-btn w-full flex items-center justify-between text-left cursor-pointer transition select-none shadow-sm gap-2 hover:border-white/50 ${selectClasses || 'bg-slate-900 border border-white/20 rounded-lg p-2 text-white'}`;
+    btn.title = 'Click to search and select official by name, PEN, or department';
+
+    const searchIcon = document.createElement('span');
+    searchIcon.className = 'text-indigo-400 text-[11px] shrink-0';
+    searchIcon.textContent = '🔍';
+    btn.appendChild(searchIcon);
 
     const labelSpan = document.createElement('span');
-    labelSpan.className = `searchable-combobox-label truncate ${selectedItem && selectedItem.value ? 'text-white font-medium' : 'text-slate-400 font-normal'}`;
+    labelSpan.className = `searchable-combobox-label truncate flex-1 ${selectedItem && selectedItem.value ? 'text-white font-medium' : 'text-slate-400 font-normal'}`;
     labelSpan.textContent = selectedItem ? selectedItem.text : '-- Select --';
+    btn.appendChild(labelSpan);
 
     const arrowSpan = document.createElement('span');
     arrowSpan.className = 'searchable-combobox-arrow text-slate-400 text-[10px] ml-1.5 shrink-0 transition-transform duration-200';
     arrowSpan.textContent = '▼';
-
-    btn.appendChild(labelSpan);
     btn.appendChild(arrowSpan);
+
     wrapper.appendChild(btn);
 
     const menu = document.createElement('div');
-    menu.className = 'searchable-combobox-menu hidden absolute left-0 right-0 top-full mt-1.5 z-[100] rounded-xl bg-slate-900/98 border border-white/20 shadow-2xl backdrop-blur-xl overflow-hidden min-w-[280px] max-w-full';
+    menu.className = 'searchable-combobox-menu hidden absolute left-0 right-0 top-full mt-1.5 rounded-xl bg-slate-900/98 border border-white/20 shadow-2xl backdrop-blur-xl overflow-hidden min-w-[280px] max-w-full';
 
     const searchHeader = document.createElement('div');
     searchHeader.className = 'p-2 border-b border-white/10 bg-black/60 sticky top-0 z-10';
@@ -2224,7 +2262,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       const matchingItems = allItems.filter(item => {
         if (words.length === 0) return true;
-        const itemText = item.text.toLowerCase();
+        const itemText = `${item.text || ''} ${item.group || ''} ${item.value || ''}`.toLowerCase();
         return words.every(w => itemText.includes(w));
       });
 
@@ -2275,7 +2313,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const selectValue = (val, text) => {
       selectEl.value = val;
       labelSpan.textContent = text;
-      labelSpan.className = `searchable-combobox-label truncate ${val ? 'text-white font-medium' : 'text-slate-400 font-normal'}`;
+      labelSpan.className = `searchable-combobox-label truncate flex-1 ${val ? 'text-white font-medium' : 'text-slate-400 font-normal'}`;
       closeMenu();
       selectEl.dispatchEvent(new Event('change', { bubbles: true }));
     };
@@ -2293,9 +2331,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         menu.classList.remove('bottom-full', 'mb-1.5');
       }
 
-      wrapper.classList.add('z-[90]');
+      wrapper.style.zIndex = '999';
+      wrapper.style.position = 'relative';
       const parentCard = wrapper.closest('.glass');
-      if (parentCard) parentCard.classList.add('z-[80]');
+      if (parentCard) {
+        parentCard.style.zIndex = '990';
+        parentCard.style.position = 'relative';
+      }
+      menu.style.zIndex = '1000';
 
       menu.classList.remove('hidden');
       arrowSpan.style.transform = 'rotate(180deg)';
@@ -2317,9 +2360,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const closeMenu = () => {
       menu.classList.add('hidden');
       arrowSpan.style.transform = 'rotate(0deg)';
-      wrapper.classList.remove('z-[90]');
+      wrapper.style.zIndex = '';
       const parentCard = wrapper.closest('.glass');
-      if (parentCard) parentCard.classList.remove('z-[80]');
+      if (parentCard) {
+        parentCard.style.zIndex = '';
+      }
     };
 
     btn.onclick = (e) => {
@@ -2388,9 +2433,163 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const curOpt = Array.from(selectEl.options).find(o => o.value === selectEl.value);
       if (curOpt) {
         labelSpan.textContent = curOpt.textContent.trim();
-        labelSpan.className = `searchable-combobox-label truncate ${curOpt.value ? 'text-white font-medium' : 'text-slate-400 font-normal'}`;
+        labelSpan.className = `searchable-combobox-label truncate flex-1 ${curOpt.value ? 'text-white font-medium' : 'text-slate-400 font-normal'}`;
       }
     });
+  };
+
+  const setupSearchablePicker = (pickerEl, {
+    optionsList,
+    onSelect,
+    placeholder = 'Search by name, department, or PEN...',
+    accentColor = 'cyan'
+  }) => {
+    if (!pickerEl) return;
+    const input = pickerEl.querySelector('.picker-search-input');
+    const toggleBtn = pickerEl.querySelector('.picker-toggle-btn');
+    const resultsContainer = pickerEl.querySelector('.picker-results-list');
+    if (!input || !resultsContainer) return;
+
+    if (placeholder && !input.getAttribute('placeholder')) {
+      input.setAttribute('placeholder', placeholder);
+    }
+
+    let highlightedIdx = -1;
+
+    const colorConfig = {
+      cyan: { text: 'text-cyan-400', ring: 'ring-cyan-400', bg: 'bg-cyan-600/30' },
+      yellow: { text: 'text-yellow-400', ring: 'ring-yellow-400', bg: 'bg-yellow-600/30' },
+      amber: { text: 'text-amber-400', ring: 'ring-amber-400', bg: 'bg-amber-600/30' },
+      rose: { text: 'text-rose-400', ring: 'ring-rose-400', bg: 'bg-rose-600/30' },
+      blue: { text: 'text-blue-400', ring: 'ring-blue-400', bg: 'bg-blue-600/30' },
+      emerald: { text: 'text-emerald-400', ring: 'ring-emerald-400', bg: 'bg-emerald-600/30' },
+      indigo: { text: 'text-indigo-400', ring: 'ring-indigo-400', bg: 'bg-indigo-600/30' }
+    };
+    const colors = colorConfig[accentColor] || colorConfig.cyan;
+
+    const renderResults = (query = '') => {
+      resultsContainer.innerHTML = '';
+      const q = (query || '').toLowerCase().trim();
+      const words = q.split(/\s+/).filter(Boolean);
+
+      const matches = optionsList.filter(item => {
+        if (words.length === 0) return true;
+        const text = `${item.seniority || ''} ${item.name || ''} ${item.department || ''} ${item.designation || ''} ${item.pen || ''} ${item.type || ''}`.toLowerCase();
+        return words.every(w => text.includes(w));
+      });
+
+      highlightedIdx = -1;
+
+      if (matches.length === 0) {
+        resultsContainer.innerHTML = `<div class="p-3 text-center text-xs text-slate-400 italic">No officials matching "${esc(query)}"</div>`;
+        return;
+      }
+
+      matches.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = `p-2.5 rounded-lg cursor-pointer transition flex items-center justify-between text-xs border border-transparent ${item.disabled ? 'opacity-40 cursor-not-allowed bg-rose-950/20' : 'hover:bg-white/10 hover:border-white/10 text-slate-200 hover:text-white'}`;
+        row.dataset.idx = index;
+
+        const flags = getOfficialStatusFlags(item.name, item.pen).filter(fl => !fl.startsWith('⭐ Core'));
+        const flagStr = flags.length > 0 ? ` [${flags.join(' | ')}]` : '';
+        const exclTag = item.isExcluded ? ' ⛔ [Excluded]' : '';
+        const deptStr = item.department ? ` · ${esc(item.department)}` : '';
+        const penStr = item.pen ? ` · PEN:${esc(item.pen)}` : '';
+        const typeBadge = item.type ? `<span class="text-[10px] font-normal px-1.5 py-0.2 rounded font-mono ${item.type === 'Teaching Faculty' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}">${esc(item.type)}</span>` : '';
+        const rankBadge = item.seniority && item.seniority !== 999 ? `<span class="${colors.text} font-mono text-[11px] font-bold">#${item.seniority}</span>` : '';
+
+        row.innerHTML = `
+          <div class="min-w-0 pr-2">
+            <div class="font-semibold flex items-center gap-1.5 flex-wrap">
+              ${rankBadge}
+              <span class="text-white">${highlightOptionMatch(item.name, query)}</span>
+              ${typeBadge}
+              ${item.disabled ? '<span class="text-[10px] text-amber-400 font-mono font-normal">🚩 [Selected in another slot]</span>' : ''}
+            </div>
+            <div class="text-[10px] text-slate-400 truncate mt-0.5">
+              ${esc(item.designation || (item.type === 'Non-Teaching Staff' ? 'Staff' : 'Faculty'))}${deptStr}${penStr}${exclTag}${flagStr}
+            </div>
+          </div>
+          <span class="${colors.text} text-[10px] shrink-0 font-mono font-semibold">Select ↵</span>
+        `;
+
+        if (!item.disabled) {
+          row.onclick = (e) => {
+            e.stopPropagation();
+            resultsContainer.classList.add('hidden');
+            onSelect(item);
+          };
+        }
+
+        resultsContainer.appendChild(row);
+      });
+    };
+
+    const openMenu = () => {
+      document.querySelectorAll('.picker-results-list:not(.hidden)').forEach(el => {
+        if (el !== resultsContainer) el.classList.add('hidden');
+      });
+      resultsContainer.classList.remove('hidden');
+      renderResults(input.value);
+    };
+
+    const closeMenu = () => {
+      resultsContainer.classList.add('hidden');
+    };
+
+    input.onfocus = () => openMenu();
+    input.onclick = (e) => { e.stopPropagation(); openMenu(); };
+    input.oninput = () => {
+      if (resultsContainer.classList.contains('hidden')) resultsContainer.classList.remove('hidden');
+      renderResults(input.value);
+    };
+
+    if (toggleBtn) {
+      toggleBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (resultsContainer.classList.contains('hidden')) {
+          openMenu();
+          input.focus();
+        } else {
+          closeMenu();
+        }
+      };
+    }
+
+    input.onkeydown = (e) => {
+      const items = Array.from(resultsContainer.querySelectorAll('div[data-idx]:not(.opacity-40)'));
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (resultsContainer.classList.contains('hidden')) { openMenu(); return; }
+        highlightedIdx = Math.min(highlightedIdx + 1, items.length - 1);
+        updateHighlight(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        highlightedIdx = Math.max(highlightedIdx - 1, 0);
+        updateHighlight(items);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (highlightedIdx >= 0 && items[highlightedIdx]) {
+          items[highlightedIdx].click();
+        } else if (items.length > 0) {
+          items[0].click();
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeMenu();
+      }
+    };
+
+    const updateHighlight = (items) => {
+      items.forEach((it, idx) => {
+        if (idx === highlightedIdx) {
+          it.classList.add(colors.bg, 'ring-1', colors.ring);
+          it.scrollIntoView({ block: 'nearest' });
+        } else {
+          it.classList.remove(colors.bg, 'ring-1', colors.ring);
+        }
+      });
+    };
   };
 
   const initAllSearchableSelects = (root = document) => {
@@ -4332,7 +4531,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       name: settings?.returningOfficerName || 'Suresh P',
       pen: settings?.returningOfficerPen || '616638',
       designation: settings?.returningOfficerDesignation || 'Associate Professor',
-      department: settings?.returningOfficerDepartment || 'Botany'
+      department: settings?.returningOfficerDepartment || 'Botany',
+      seniority: 1
     };
 
     let draftAros = aroOfficers.map(a => ({ ...a }));
@@ -4340,11 +4540,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       draftAros.push({ name: '', pen: '', designation: '', department: '', seniority: 999 });
     }
 
+    let isChangingRo = !draftRo.name;
+    const aroChangingIndices = new Set();
+    draftAros.forEach((a, i) => {
+      if (!a.name) aroChangingIndices.add(i);
+    });
+
     const modal = document.createElement('div');
     modal.id = 'roAroModalContainer';
     modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+    document.body.appendChild(modal);
 
     const renderModal = () => {
+      const roFac = draftRo.name ? faculty.find(f => f.name === draftRo.name) : null;
+
       modal.innerHTML = `
         <div class="glass border border-yellow-500/40 rounded-2xl w-full max-w-2xl bg-slate-900/95 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
           <!-- Modal Header -->
@@ -4362,7 +4571,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </div>
 
           <!-- Modal Body -->
-          <div class="p-5 overflow-y-auto space-y-5 flex-1">
+          <div class="p-5 overflow-y-auto space-y-5 flex-1 custom-scrollbar">
             <!-- 1. Returning Officer Section -->
             <div class="p-4 rounded-xl border border-yellow-500/30 bg-yellow-950/15 space-y-3">
               <div class="flex items-center justify-between">
@@ -4372,15 +4581,34 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <span class="text-[10px] text-yellow-400 font-mono">Chief Election Officer</span>
               </div>
               <div>
-                <label class="block text-[11px] text-slate-300 mb-1">Select from Faculty Roster (or enter details manually below):</label>
-                <select id="selectRoFaculty" class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-yellow-400 focus:outline-none mb-2">
-                  <option value="">-- Choose from Faculty Roster --</option>
-                  ${[...faculty].sort(compareOfficials).map(f => {
-                    const isSel = (draftRo.name && String(draftRo.name).toLowerCase() === String(f.name).toLowerCase()) || (draftRo.pen && String(draftRo.pen) === String(f.pen));
-                    return `<option value="${esc(f.name)}" ${isSel ? 'selected' : ''}>#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')} · ${esc(f.department || '–')} · PEN:${f.pen || '–'})</option>`;
-                  }).join('')}
-                </select>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <label class="block text-[11px] text-slate-300 mb-1.5 font-medium">Select from Faculty Roster (with live search):</label>
+                ${!isChangingRo && draftRo.name ? `
+                  <div class="p-3 rounded-xl bg-yellow-950/30 border border-yellow-500/40 flex items-center justify-between gap-3 mb-2.5">
+                    <div class="space-y-1 min-w-0">
+                      <div class="flex items-center gap-2 flex-wrap text-xs">
+                        <span class="text-yellow-400 font-bold font-mono">Rank #${draftRo.seniority || roFac?.seniority || '–'}</span>
+                        <strong class="text-white">${esc(draftRo.name)}</strong>
+                        <span class="text-slate-300 text-[11px]">(${esc(draftRo.designation || 'Faculty')} · ${esc(draftRo.department || '–')} · PEN:${esc(draftRo.pen || '–')})</span>
+                      </div>
+                      <div class="text-[11px] text-yellow-400/90 font-mono">👑 Chief Election Officer (Issues official election orders &amp; notifications)</div>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                      <button type="button" class="btn btn-secondary border-yellow-500/40 text-yellow-300 hover:text-white text-xs px-2.5 py-1" id="btnChangeRo">Change ↻</button>
+                    </div>
+                  </div>
+                ` : `
+                  <div class="searchable-picker-container relative w-full space-y-1 mb-2.5" id="roPickerContainer">
+                    <div class="relative">
+                      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-yellow-400 text-xs">🔍</span>
+                      <input type="text" class="w-full bg-slate-900 border border-yellow-500/50 rounded-lg pl-8 pr-8 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 picker-search-input" placeholder="Search faculty for Returning Officer by name, department, or PEN..." autocomplete="off" spellcheck="false" />
+                      <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs p-1 picker-toggle-btn">▼</button>
+                    </div>
+                    <div class="picker-results-list hidden bg-slate-950/98 border border-yellow-500/50 rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-white/5 p-1 text-xs custom-scrollbar">
+                    </div>
+                  </div>
+                `}
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
                   <div>
                     <label class="block text-[10px] text-slate-400">Full Name</label>
                     <input type="text" id="inputRoName" value="${esc(draftRo.name || '')}" class="w-full bg-black/50 border border-white/20 rounded-lg p-2 text-xs text-white font-semibold" placeholder="e.g. Dr. Suresh P" />
@@ -4414,6 +4642,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
               <div class="space-y-3" id="aroRowsContainer">
                 ${draftAros.map((aro, idx) => {
+                  const isChangingAro = !aro.name || aroChangingIndices.has(idx);
                   return `
                     <div class="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-2 relative" data-aro-idx="${idx}">
                       <div class="flex items-center justify-between">
@@ -4425,13 +4654,31 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         </button>
                       </div>
 
-                      <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-amber-400 focus:outline-none aro-faculty-select" data-idx="${idx}">
-                        <option value="">-- Choose Faculty Member for ARO Duty --</option>
-                        ${[...faculty].sort(compareOfficials).map(f => {
-                          const isSel = (aro.name && String(aro.name).toLowerCase() === String(f.name).toLowerCase()) || (aro.pen && String(aro.pen) === String(f.pen));
-                          return `<option value="${esc(f.name)}" ${isSel ? 'selected' : ''}>#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')} · ${esc(f.department || '–')} · PEN:${f.pen || '–'})</option>`;
-                        }).join('')}
-                      </select>
+                      ${!isChangingAro && aro.name ? `
+                        <div class="p-3 rounded-xl bg-amber-950/30 border border-amber-500/40 flex items-center justify-between gap-3">
+                          <div class="space-y-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap text-xs">
+                              <span class="text-amber-400 font-bold font-mono">Rank #${aro.seniority || '–'}</span>
+                              <strong class="text-white">${esc(aro.name)}</strong>
+                              <span class="text-slate-300 text-[11px]">(${esc(aro.designation || 'Faculty')} · ${esc(aro.department || '–')} · PEN:${esc(aro.pen || '–')})</span>
+                            </div>
+                            <div class="text-[11px] text-amber-400/90 font-mono">⚖️ Assistant Returning Officer</div>
+                          </div>
+                          <div class="flex items-center gap-1.5 shrink-0">
+                            <button type="button" class="btn btn-secondary border-amber-500/40 text-amber-300 hover:text-white text-xs px-2.5 py-1 btn-change-aro" data-idx="${idx}">Change ↻</button>
+                          </div>
+                        </div>
+                      ` : `
+                        <div class="searchable-picker-container relative w-full space-y-1" data-aro-idx="${idx}">
+                          <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400 text-xs">🔍</span>
+                            <input type="text" class="w-full bg-slate-900 border border-amber-500/50 rounded-lg pl-8 pr-8 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 picker-search-input" data-idx="${idx}" placeholder="Search faculty for ARO by name, department, or PEN..." autocomplete="off" spellcheck="false" />
+                            <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs p-1 picker-toggle-btn" data-idx="${idx}">▼</button>
+                          </div>
+                          <div class="picker-results-list hidden bg-slate-950/98 border border-amber-500/50 rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-white/5 p-1 text-xs custom-scrollbar">
+                          </div>
+                        </div>
+                      `}
 
                       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
                         <div>
@@ -4474,20 +4721,42 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       modal.querySelector('#btnCloseRoAroModal').onclick = () => modal.remove();
       modal.querySelector('#btnCancelRoAroModal').onclick = () => modal.remove();
 
-      modal.querySelector('#selectRoFaculty').onchange = (e) => {
-        const facName = e.target.value;
-        const fac = faculty.find(f => f.name === facName);
-        if (fac) {
-          draftRo = {
-            name: fac.name,
-            pen: fac.pen || '',
-            designation: fac.designation || 'Faculty',
-            department: fac.department || '',
-            seniority: fac.seniority || 999
-          };
+      const btnChangeRo = modal.querySelector('#btnChangeRo');
+      if (btnChangeRo) {
+        btnChangeRo.onclick = () => {
+          isChangingRo = true;
           renderModal();
-        }
-      };
+          setTimeout(() => {
+            const input = modal.querySelector('#roPickerContainer .picker-search-input');
+            if (input) input.focus();
+          }, 30);
+        };
+      }
+
+      const roPicker = modal.querySelector('#roPickerContainer');
+      if (roPicker) {
+        const sortedFac = [...faculty].sort(compareOfficials).map(f => ({
+          ...f,
+          type: 'Teaching Faculty',
+          isExcluded: isPersonExcluded(f)
+        }));
+        setupSearchablePicker(roPicker, {
+          optionsList: sortedFac,
+          accentColor: 'yellow',
+          placeholder: 'Search faculty for Returning Officer by name, dept, or PEN...',
+          onSelect: (fac) => {
+            draftRo = {
+              name: fac.name,
+              pen: fac.pen || '',
+              designation: fac.designation || 'Faculty',
+              department: fac.department || '',
+              seniority: fac.seniority || 1
+            };
+            isChangingRo = false;
+            renderModal();
+          }
+        });
+      }
 
       modal.querySelector('#inputRoName').oninput = (e) => { draftRo.name = e.target.value; };
       modal.querySelector('#inputRoDesig').oninput = (e) => { draftRo.designation = e.target.value; };
@@ -4496,6 +4765,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       modal.querySelector('#btnAddAroRow').onclick = () => {
         draftAros.push({ name: '', pen: '', designation: '', department: '', seniority: 999 });
+        aroChangingIndices.add(draftAros.length - 1);
         renderModal();
       };
 
@@ -4503,31 +4773,52 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         btn.onclick = () => {
           const idx = parseInt(btn.dataset.idx, 10);
           draftAros.splice(idx, 1);
+          aroChangingIndices.delete(idx);
           if (draftAros.length === 0) {
             draftAros.push({ name: '', pen: '', designation: '', department: '', seniority: 999 });
+            aroChangingIndices.add(0);
           }
           renderModal();
         };
       });
 
-      modal.querySelectorAll('.aro-faculty-select').forEach(sel => {
-        sel.onchange = (e) => {
-          const idx = parseInt(sel.dataset.idx, 10);
-          const facName = e.target.value;
-          const fac = faculty.find(f => f.name === facName);
-          if (fac) {
-            draftAros[idx] = {
+      modal.querySelectorAll('.btn-change-aro').forEach(btn => {
+        btn.onclick = () => {
+          const idx = parseInt(btn.dataset.idx, 10);
+          aroChangingIndices.add(idx);
+          renderModal();
+          setTimeout(() => {
+            const input = modal.querySelector(`.searchable-picker-container[data-aro-idx="${idx}"] .picker-search-input`);
+            if (input) input.focus();
+          }, 30);
+        };
+      });
+
+      modal.querySelectorAll('.searchable-picker-container[data-aro-idx]').forEach(pickerEl => {
+        const rowIdx = parseInt(pickerEl.dataset.aroIdx, 10);
+        const sortedFac = [...faculty].sort(compareOfficials).map(f => ({
+          ...f,
+          type: 'Teaching Faculty',
+          isExcluded: isPersonExcluded(f),
+          disabled: draftAros.some((a, i) => i !== rowIdx && a.name === f.name) || (draftRo.name === f.name)
+        }));
+
+        setupSearchablePicker(pickerEl, {
+          optionsList: sortedFac,
+          accentColor: 'amber',
+          placeholder: 'Search faculty for ARO by name, dept, or PEN...',
+          onSelect: (fac) => {
+            draftAros[rowIdx] = {
               name: fac.name,
               pen: fac.pen || '',
               designation: fac.designation || 'Faculty',
               department: fac.department || '',
               seniority: fac.seniority || 999
             };
-          } else {
-            draftAros[idx] = { name: '', pen: '', designation: '', department: '', seniority: 999 };
+            aroChangingIndices.delete(rowIdx);
+            renderModal();
           }
-          renderModal();
-        };
+        });
       });
 
       modal.querySelectorAll('.aro-name-input').forEach(inp => {
@@ -4583,12 +4874,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         showToast(`Saved Returning Officer and ${aroOfficers.length} ARO(s) successfully!`, 'success');
         renderUI();
       };
-
-      initAllSearchableSelects(modal);
     };
 
     renderModal();
-    document.body.appendChild(modal);
   };
 
   // ─── Core Committee Allotment Modal ─────────────────────────────────────────
@@ -4602,9 +4890,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       draftCore.push({ name: '', pen: '', department: '', designation: '', seniority: 999 });
     }
 
+    const changingIndices = new Set();
+    draftCore.forEach((c, i) => {
+      if (!c.name) changingIndices.add(i);
+    });
+
     const modal = document.createElement('div');
     modal.id = 'coreCommitteeModalContainer';
     modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+    document.body.appendChild(modal);
 
     const renderModal = () => {
       modal.innerHTML = `
@@ -4635,6 +4929,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <div class="space-y-3" id="coreRowsContainer">
               ${draftCore.map((c, idx) => {
                 const fac = faculty.find(f => f.name === c.name);
+                const isChanging = !c.name || changingIndices.has(idx);
+                const flags = c.name ? getOfficialStatusFlags(c.name, c.pen).filter(fl => !fl.startsWith('⭐ Core')) : [];
+                const flagStr = flags.length > 0 ? ` [${flags.join(' | ')}]` : '';
+
                 return `
                   <div class="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-2 relative" data-core-idx="${idx}">
                     <div class="flex items-center justify-between">
@@ -4646,33 +4944,34 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                       </button>
                     </div>
 
-                    <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-cyan-400 focus:outline-none core-faculty-select" data-idx="${idx}">
-                      <option value="">-- Select Teaching Faculty (All Faculty Eligible) --</option>
-                      ${[...faculty].sort(compareOfficials).map(f => {
-                        const isSel = c.name === f.name;
-                        const flags = getOfficialStatusFlags(f.name, f.pen).filter(fl => !fl.startsWith('⭐ Core'));
-                        const flagStr = flags.length > 0 ? ` [${flags.join(' | ')}]` : '';
-                        const exclTag = f.isExcluded ? ' ⛔ [Excluded Faculty]' : '';
-                        return `
-                          <option value="${esc(f.name)}" ${isSel ? 'selected' : ''}>
-                            #${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')} · ${esc(f.department || '–')} · PEN:${f.pen || '–'})${exclTag}${flagStr}
-                          </option>
-                        `;
-                      }).join('')}
-                    </select>
-
-                    ${fac ? `
-                      <div class="flex items-center gap-2 flex-wrap text-[11px] text-slate-300 bg-black/30 p-2 rounded-lg border border-white/5 font-mono">
-                        <span class="text-cyan-300 font-semibold">Rank #${fac.seniority || '–'}</span>
-                        <span>•</span>
-                        <span>Dept: <strong class="text-white">${esc(fac.department || '–')}</strong></span>
-                        <span>•</span>
-                        <span>PEN: <strong class="text-white">${esc(fac.pen || '–')}</strong></span>
-                        <span>•</span>
-                        <span>Desig: <strong class="text-white">${esc(fac.designation || 'Faculty')}</strong></span>
-                        ${fac.isExcluded ? `<span class="text-amber-400 font-semibold">• Excluded from Booth Duty</span>` : ''}
+                    ${!isChanging && fac ? `
+                      <div class="p-3 rounded-xl bg-cyan-950/30 border border-cyan-500/40 flex items-center justify-between gap-3">
+                        <div class="space-y-1 min-w-0">
+                          <div class="flex items-center gap-2 flex-wrap text-xs">
+                            <span class="text-cyan-300 font-bold font-mono">Rank #${fac.seniority || '–'}</span>
+                            <strong class="text-white">${esc(fac.name)}</strong>
+                            <span class="text-slate-300 text-[11px]">(${esc(fac.designation || 'Faculty')} · ${esc(fac.department || '–')} · PEN:${esc(fac.pen || '–')})</span>
+                          </div>
+                          <div class="flex items-center gap-2 flex-wrap text-[11px]">
+                            ${flagStr ? `<span class="text-cyan-400 font-mono">${flagStr}</span>` : ''}
+                            ${fac.isExcluded ? `<span class="text-amber-400 font-semibold">• Excluded from Booth Duty (Eligible for Core Committee)</span>` : ''}
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                          <button type="button" class="btn btn-secondary border-cyan-500/40 text-cyan-300 hover:text-white text-xs px-2.5 py-1 btn-change-core" data-idx="${idx}">Change ↻</button>
+                        </div>
                       </div>
-                    ` : ''}
+                    ` : `
+                      <div class="searchable-picker-container relative w-full space-y-1" data-idx="${idx}">
+                        <div class="relative">
+                          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-400 text-xs">🔍</span>
+                          <input type="text" class="w-full bg-slate-900 border border-cyan-500/50 rounded-lg pl-8 pr-8 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 picker-search-input" data-idx="${idx}" placeholder="Search faculty by name, department, or PEN..." autocomplete="off" spellcheck="false" />
+                          <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs p-1 picker-toggle-btn" data-idx="${idx}">▼</button>
+                        </div>
+                        <div class="picker-results-list hidden bg-slate-950/98 border border-cyan-500/50 rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-white/5 p-1 text-xs custom-scrollbar">
+                        </div>
+                      </div>
+                    `}
                   </div>
                 `;
               }).join('')}
@@ -4697,6 +4996,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       modal.querySelector('#btnAddCoreRow').onclick = () => {
         draftCore.push({ name: '', pen: '', department: '', designation: '', seniority: 999 });
+        changingIndices.add(draftCore.length - 1);
         renderModal();
       };
 
@@ -4704,31 +5004,49 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         btn.onclick = () => {
           const idx = parseInt(btn.dataset.idx, 10);
           draftCore.splice(idx, 1);
+          changingIndices.delete(idx);
           if (draftCore.length === 0) {
             draftCore.push({ name: '', pen: '', department: '', designation: '', seniority: 999 });
+            changingIndices.add(0);
           }
           renderModal();
         };
       });
 
-      modal.querySelectorAll('.core-faculty-select').forEach(sel => {
-        sel.onchange = (e) => {
-          const idx = parseInt(sel.dataset.idx, 10);
-          const fName = e.target.value;
-          const f = faculty.find(fac => fac.name === fName);
-          if (f) {
-            draftCore[idx] = {
-              name: f.name,
-              pen: f.pen || '',
-              department: f.department || '',
-              designation: f.designation || 'Faculty',
-              seniority: f.seniority || 999
-            };
-          } else {
-            draftCore[idx] = { name: '', pen: '', department: '', designation: '', seniority: 999 };
-          }
+      modal.querySelectorAll('.btn-change-core').forEach(btn => {
+        btn.onclick = () => {
+          const idx = parseInt(btn.dataset.idx, 10);
+          changingIndices.add(idx);
           renderModal();
+          setTimeout(() => {
+            const input = modal.querySelector(`.searchable-picker-container[data-idx="${idx}"] .picker-search-input`);
+            if (input) input.focus();
+          }, 30);
         };
+      });
+
+      // Bind searchable picker for each active search row
+      modal.querySelectorAll('.searchable-picker-container').forEach(pickerEl => {
+        const rowIdx = parseInt(pickerEl.dataset.idx, 10);
+        const sortedFac = [...faculty].sort(compareOfficials).map(f => ({
+          ...f,
+          disabled: draftCore.some((c, i) => i !== rowIdx && c.name === f.name)
+        }));
+
+        setupSearchablePicker(pickerEl, {
+          optionsList: sortedFac,
+          onSelect: (selectedFac) => {
+            draftCore[rowIdx] = {
+              name: selectedFac.name,
+              pen: selectedFac.pen || '',
+              department: selectedFac.department || '',
+              designation: selectedFac.designation || 'Faculty',
+              seniority: selectedFac.seniority || 999
+            };
+            changingIndices.delete(rowIdx);
+            renderModal();
+          }
+        });
       });
 
       modal.querySelector('#btnSaveCoreModal').onclick = async () => {
@@ -4740,12 +5058,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         showToast(`Appointed ${coreCommittee.length} Core Committee member(s) successfully!`, 'success');
         renderUI();
       };
-
-      initAllSearchableSelects(modal);
     };
 
     renderModal();
-    document.body.appendChild(modal);
   };
 
   // ─── Observers Allotment Modal ──────────────────────────────────────────────
@@ -4759,9 +5074,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       draftObservers.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
     }
 
+    const obsChangingIndices = new Set();
+    draftObservers.forEach((obs, i) => {
+      if (!obs.name) obsChangingIndices.add(i);
+    });
+
     const modal = document.createElement('div');
     modal.id = 'observerModalContainer';
     modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+    document.body.appendChild(modal);
 
     const renderModal = () => {
       modal.innerHTML = `
@@ -4781,9 +5102,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </div>
 
           <!-- Modal Body: Observers List -->
-          <div class="p-5 overflow-y-auto space-y-4 flex-1">
+          <div class="p-5 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-amber-300">Observer Appointments (${draftObservers.length})</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-300">Observer Appointments (${draftObservers.filter(o => o.name).length})</span>
               <button type="button" id="btnAddObserverRow" class="btn btn-secondary border-amber-500/40 text-amber-300 hover:bg-amber-500/20 text-xs px-3 py-1.5 flex items-center gap-1 font-semibold">
                 ➕ Add Another Observer
               </button>
@@ -4792,6 +5113,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <div class="space-y-3" id="observerRowsContainer">
               ${draftObservers.map((obs, idx) => {
                 const personSelected = getPerson(obs.name);
+                const isChanging = !obs.name || obsChangingIndices.has(idx);
+                const flags = obs.name ? getOfficialStatusFlags(obs.name, obs.pen).filter(fl => !fl.includes('Observer')) : [];
+                const flagStr = flags.length > 0 ? ` [${flags.join(' | ')}]` : '';
+
                 return `
                   <div class="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-2 relative" data-obs-idx="${idx}">
                     <div class="flex items-center justify-between">
@@ -4803,23 +5128,35 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                       </button>
                     </div>
 
-                    <div class="grid grid-cols-1 gap-2">
-                      <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-amber-400 focus:outline-none obs-faculty-select" data-idx="${idx}">
-                        ${renderAllRosterOptions(obs.name, draftObservers, idx, '-- Select Official (Teaching Faculty or Non-Teaching Staff) for Observer Duty --')}
-                      </select>
-                    </div>
-
-                    ${personSelected ? `
-                      <div class="flex items-center gap-2 flex-wrap text-[11px] text-slate-300 bg-black/30 p-2 rounded-lg border border-white/5 font-mono">
-                        <span class="text-amber-300 font-semibold">${personSelected.type}</span>
-                        <span>•</span>
-                        <span>Dept: <strong class="text-white">${esc(personSelected.department || '–')}</strong></span>
-                        <span>•</span>
-                        <span>PEN: <strong class="text-white">${esc(personSelected.pen || '–')}</strong></span>
-                        <span>•</span>
-                        <span>Desig: <strong class="text-white">${esc(personSelected.designation || 'Official')}</strong></span>
+                    ${!isChanging && personSelected ? `
+                      <div class="p-3 rounded-xl bg-amber-950/30 border border-amber-500/40 flex items-center justify-between gap-3">
+                        <div class="space-y-1 min-w-0">
+                          <div class="flex items-center gap-2 flex-wrap text-xs">
+                            ${personSelected.seniority && personSelected.seniority !== 999 ? `<span class="text-amber-400 font-bold font-mono">Rank #${personSelected.seniority}</span>` : ''}
+                            <strong class="text-white">${esc(personSelected.name)}</strong>
+                            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded ${personSelected.type === 'Teaching Faculty' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}">${esc(personSelected.type)}</span>
+                            <span class="text-slate-300 text-[11px]">(${esc(personSelected.designation || 'Official')} · ${esc(personSelected.department || '–')} · PEN:${esc(personSelected.pen || '–')})</span>
+                          </div>
+                          <div class="flex items-center gap-2 flex-wrap text-[11px]">
+                            ${flagStr ? `<span class="text-amber-400 font-mono">${flagStr}</span>` : ''}
+                            ${personSelected.isExcluded ? `<span class="text-rose-400 font-semibold">• Excluded from Booth Duty</span>` : ''}
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                          <button type="button" class="btn btn-secondary border-amber-500/40 text-amber-300 hover:text-white text-xs px-2.5 py-1 btn-change-obs" data-idx="${idx}">Change ↻</button>
+                        </div>
                       </div>
-                    ` : ''}
+                    ` : `
+                      <div class="searchable-picker-container relative w-full space-y-1" data-obs-idx="${idx}">
+                        <div class="relative">
+                          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400 text-xs">🔍</span>
+                          <input type="text" class="w-full bg-slate-900 border border-amber-500/50 rounded-lg pl-8 pr-8 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 picker-search-input" data-idx="${idx}" placeholder="Search faculty or staff by name, department, or PEN..." autocomplete="off" spellcheck="false" />
+                          <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs p-1 picker-toggle-btn" data-idx="${idx}">▼</button>
+                        </div>
+                        <div class="picker-results-list hidden bg-slate-950/98 border border-amber-500/50 rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-white/5 p-1 text-xs custom-scrollbar">
+                        </div>
+                      </div>
+                    `}
                   </div>
                 `;
               }).join('')}
@@ -4844,6 +5181,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       modal.querySelector('#btnAddObserverRow').onclick = () => {
         draftObservers.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+        obsChangingIndices.add(draftObservers.length - 1);
         renderModal();
       };
 
@@ -4851,20 +5189,41 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         btn.onclick = () => {
           const idx = parseInt(btn.dataset.idx, 10);
           draftObservers.splice(idx, 1);
+          obsChangingIndices.delete(idx);
           if (draftObservers.length === 0) {
             draftObservers.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+            obsChangingIndices.add(0);
           }
           renderModal();
         };
       });
 
-      modal.querySelectorAll('.obs-faculty-select').forEach(sel => {
-        sel.onchange = (e) => {
-          const idx = parseInt(sel.dataset.idx, 10);
-          const pName = e.target.value;
-          const p = getPerson(pName);
-          if (p) {
-            draftObservers[idx] = {
+      modal.querySelectorAll('.btn-change-obs').forEach(btn => {
+        btn.onclick = () => {
+          const idx = parseInt(btn.dataset.idx, 10);
+          obsChangingIndices.add(idx);
+          renderModal();
+          setTimeout(() => {
+            const input = modal.querySelector(`.searchable-picker-container[data-obs-idx="${idx}"] .picker-search-input`);
+            if (input) input.focus();
+          }, 30);
+        };
+      });
+
+      // Bind searchable picker for each active search row
+      modal.querySelectorAll('.searchable-picker-container[data-obs-idx]').forEach(pickerEl => {
+        const rowIdx = parseInt(pickerEl.dataset.obsIdx, 10);
+        const allRoster = getAllRosterPersonnel().map(p => ({
+          ...p,
+          disabled: draftObservers.some((o, i) => i !== rowIdx && o.name === p.name)
+        }));
+
+        setupSearchablePicker(pickerEl, {
+          optionsList: allRoster,
+          accentColor: 'amber',
+          placeholder: 'Search faculty or staff for Observer duty...',
+          onSelect: (p) => {
+            draftObservers[rowIdx] = {
               name: p.name,
               pen: p.pen || '',
               department: p.department || '',
@@ -4872,11 +5231,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               seniority: p.seniority || 999,
               type: p.type
             };
-          } else {
-            draftObservers[idx] = { name: '', pen: '', department: '', designation: '', seniority: 999, type: '' };
+            obsChangingIndices.delete(rowIdx);
+            renderModal();
           }
-          renderModal();
-        };
+        });
       });
 
       modal.querySelector('#btnSaveObsModal').onclick = async () => {
@@ -4888,12 +5246,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         showToast(`Appointed ${observers.length} Election Observer(s) successfully!`, 'success');
         renderUI();
       };
-
-      initAllSearchableSelects(modal);
     };
 
     renderModal();
-    document.body.appendChild(modal);
   };
 
   // ─── Discipline Charge Allotment Modal ────────────────────────────────────────
@@ -4907,9 +5262,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       draftDiscipline.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
     }
 
+    const discChangingIndices = new Set();
+    draftDiscipline.forEach((d, i) => {
+      if (!d.name) discChangingIndices.add(i);
+    });
+
     const modal = document.createElement('div');
     modal.id = 'disciplineModalContainer';
     modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+    document.body.appendChild(modal);
 
     const renderModal = () => {
       modal.innerHTML = `
@@ -4929,9 +5290,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </div>
 
           <!-- Modal Body: Discipline List -->
-          <div class="p-5 overflow-y-auto space-y-4 flex-1">
+          <div class="p-5 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-rose-300">Discipline Appointments (${draftDiscipline.length})</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-rose-300">Discipline Appointments (${draftDiscipline.filter(d => d.name).length})</span>
               <button type="button" id="btnAddDisciplineRow" class="btn btn-secondary border-rose-500/40 text-rose-300 hover:bg-rose-500/20 text-xs px-3 py-1.5 flex items-center gap-1 font-semibold">
                 ➕ Add Another Official
               </button>
@@ -4940,6 +5301,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <div class="space-y-3" id="disciplineRowsContainer">
               ${draftDiscipline.map((disc, idx) => {
                 const person = getPerson(disc.name);
+                const isChanging = !disc.name || discChangingIndices.has(idx);
+                const flags = disc.name ? getOfficialStatusFlags(disc.name, disc.pen).filter(fl => !fl.includes('Discipline')) : [];
+                const flagStr = flags.length > 0 ? ` [${flags.join(' | ')}]` : '';
+
                 return `
                   <div class="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-2 relative" data-disc-idx="${idx}">
                     <div class="flex items-center justify-between">
@@ -4951,23 +5316,35 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                       </button>
                     </div>
 
-                    <div class="grid grid-cols-1 gap-2">
-                      <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-rose-400 focus:outline-none disc-person-select" data-idx="${idx}">
-                        ${renderAllRosterOptions(disc.name, draftDiscipline, idx, '-- Select Official (Teaching Faculty or Non-Teaching Staff) for Discipline Charge --')}
-                      </select>
-                    </div>
-
-                    ${person ? `
-                      <div class="flex items-center gap-2 flex-wrap text-[11px] text-slate-300 bg-black/30 p-2 rounded-lg border border-white/5 font-mono">
-                        <span class="text-rose-300 font-semibold">${person.type}</span>
-                        <span>•</span>
-                        <span>Dept: <strong class="text-white">${esc(person.department || '–')}</strong></span>
-                        <span>•</span>
-                        <span>PEN: <strong class="text-white">${esc(person.pen || '–')}</strong></span>
-                        <span>•</span>
-                        <span>Desig: <strong class="text-white">${esc(person.designation || '–')}</strong></span>
+                    ${!isChanging && person ? `
+                      <div class="p-3 rounded-xl bg-rose-950/30 border border-rose-500/40 flex items-center justify-between gap-3">
+                        <div class="space-y-1 min-w-0">
+                          <div class="flex items-center gap-2 flex-wrap text-xs">
+                            ${person.seniority && person.seniority !== 999 ? `<span class="text-rose-400 font-bold font-mono">Rank #${person.seniority}</span>` : ''}
+                            <strong class="text-white">${esc(person.name)}</strong>
+                            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded ${person.type === 'Teaching Faculty' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}">${esc(person.type)}</span>
+                            <span class="text-slate-300 text-[11px]">(${esc(person.designation || '–')} · ${esc(person.department || '–')} · PEN:${esc(person.pen || '–')})</span>
+                          </div>
+                          <div class="flex items-center gap-2 flex-wrap text-[11px]">
+                            ${flagStr ? `<span class="text-rose-400 font-mono">${flagStr}</span>` : ''}
+                            ${person.isExcluded ? `<span class="text-amber-400 font-semibold">• Excluded from Booth Duty</span>` : ''}
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                          <button type="button" class="btn btn-secondary border-rose-500/40 text-rose-300 hover:text-white text-xs px-2.5 py-1 btn-change-disc" data-idx="${idx}">Change ↻</button>
+                        </div>
                       </div>
-                    ` : ''}
+                    ` : `
+                      <div class="searchable-picker-container relative w-full space-y-1" data-disc-idx="${idx}">
+                        <div class="relative">
+                          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-rose-400 text-xs">🔍</span>
+                          <input type="text" class="w-full bg-slate-900 border border-rose-500/50 rounded-lg pl-8 pr-8 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-400 picker-search-input" data-idx="${idx}" placeholder="Search faculty or staff by name, department, or PEN..." autocomplete="off" spellcheck="false" />
+                          <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs p-1 picker-toggle-btn" data-idx="${idx}">▼</button>
+                        </div>
+                        <div class="picker-results-list hidden bg-slate-950/98 border border-rose-500/50 rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-white/5 p-1 text-xs custom-scrollbar">
+                        </div>
+                      </div>
+                    `}
                   </div>
                 `;
               }).join('')}
@@ -4992,6 +5369,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       modal.querySelector('#btnAddDisciplineRow').onclick = () => {
         draftDiscipline.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+        discChangingIndices.add(draftDiscipline.length - 1);
         renderModal();
       };
 
@@ -4999,20 +5377,41 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         btn.onclick = () => {
           const idx = parseInt(btn.dataset.idx, 10);
           draftDiscipline.splice(idx, 1);
+          discChangingIndices.delete(idx);
           if (draftDiscipline.length === 0) {
             draftDiscipline.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+            discChangingIndices.add(0);
           }
           renderModal();
         };
       });
 
-      modal.querySelectorAll('.disc-person-select').forEach(sel => {
-        sel.onchange = (e) => {
-          const idx = parseInt(sel.dataset.idx, 10);
-          const pName = e.target.value;
-          const p = getPerson(pName);
-          if (p) {
-            draftDiscipline[idx] = {
+      modal.querySelectorAll('.btn-change-disc').forEach(btn => {
+        btn.onclick = () => {
+          const idx = parseInt(btn.dataset.idx, 10);
+          discChangingIndices.add(idx);
+          renderModal();
+          setTimeout(() => {
+            const input = modal.querySelector(`.searchable-picker-container[data-disc-idx="${idx}"] .picker-search-input`);
+            if (input) input.focus();
+          }, 30);
+        };
+      });
+
+      // Bind searchable picker for each active search row
+      modal.querySelectorAll('.searchable-picker-container[data-disc-idx]').forEach(pickerEl => {
+        const rowIdx = parseInt(pickerEl.dataset.discIdx, 10);
+        const allRoster = getAllRosterPersonnel().map(p => ({
+          ...p,
+          disabled: draftDiscipline.some((d, i) => i !== rowIdx && d.name === p.name)
+        }));
+
+        setupSearchablePicker(pickerEl, {
+          optionsList: allRoster,
+          accentColor: 'rose',
+          placeholder: 'Search faculty or staff for Discipline duty...',
+          onSelect: (p) => {
+            draftDiscipline[rowIdx] = {
               name: p.name,
               pen: p.pen || '',
               department: p.department || '',
@@ -5020,11 +5419,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               seniority: p.seniority || 999,
               type: p.type
             };
-          } else {
-            draftDiscipline[idx] = { name: '', pen: '', department: '', designation: '', seniority: 999, type: '' };
+            discChangingIndices.delete(rowIdx);
+            renderModal();
           }
-          renderModal();
-        };
+        });
       });
 
       modal.querySelector('#btnSaveDiscModal').onclick = async () => {
@@ -5036,12 +5434,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         showToast(`Appointed ${disciplineCharge.length} Discipline In-Charge Official(s) successfully!`, 'success');
         renderUI();
       };
-
-      initAllSearchableSelects(modal);
     };
 
     renderModal();
-    document.body.appendChild(modal);
   };
 
   // ─── Students Grievance Redressal Committee Modal ────────────────────────────
@@ -5055,9 +5450,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       draftGrievance.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
     }
 
+    const grievChangingIndices = new Set();
+    draftGrievance.forEach((g, i) => {
+      if (!g.name) grievChangingIndices.add(i);
+    });
+
     const modal = document.createElement('div');
     modal.id = 'grievanceModalContainer';
     modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+    document.body.appendChild(modal);
 
     const renderModal = () => {
       modal.innerHTML = `
@@ -5077,9 +5478,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </div>
 
           <!-- Modal Body: Grievance List -->
-          <div class="p-5 overflow-y-auto space-y-4 flex-1">
+          <div class="p-5 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-blue-300">Grievance Cell Appointments (${draftGrievance.length})</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-blue-300">Grievance Cell Appointments (${draftGrievance.filter(g => g.name).length})</span>
               <button type="button" id="btnAddGrievanceRow" class="btn btn-secondary border-blue-500/40 text-blue-300 hover:bg-blue-500/20 text-xs px-3 py-1.5 flex items-center gap-1 font-semibold">
                 ➕ Add Another Official
               </button>
@@ -5088,6 +5489,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <div class="space-y-3" id="grievanceRowsContainer">
               ${draftGrievance.map((g, idx) => {
                 const person = getPerson(g.name);
+                const isChanging = !g.name || grievChangingIndices.has(idx);
+                const flags = g.name ? getOfficialStatusFlags(g.name, g.pen).filter(fl => !fl.includes('Grievance')) : [];
+                const flagStr = flags.length > 0 ? ` [${flags.join(' | ')}]` : '';
+
                 return `
                   <div class="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-2 relative" data-griev-idx="${idx}">
                     <div class="flex items-center justify-between">
@@ -5099,23 +5504,35 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                       </button>
                     </div>
 
-                    <div class="grid grid-cols-1 gap-2">
-                      <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-blue-400 focus:outline-none griev-person-select" data-idx="${idx}">
-                        ${renderAllRosterOptions(g.name, draftGrievance, idx, '-- Select Official (All Roster Personnel Selectable) --')}
-                      </select>
-                    </div>
-
-                    ${person ? `
-                      <div class="flex items-center gap-2 flex-wrap text-[11px] text-slate-300 bg-black/30 p-2 rounded-lg border border-white/5 font-mono">
-                        <span class="text-blue-300 font-semibold">${person.type}</span>
-                        <span>•</span>
-                        <span>Dept: <strong class="text-white">${esc(person.department || '–')}</strong></span>
-                        <span>•</span>
-                        <span>PEN: <strong class="text-white">${esc(person.pen || '–')}</strong></span>
-                        <span>•</span>
-                        <span>Desig: <strong class="text-white">${esc(person.designation || '–')}</strong></span>
+                    ${!isChanging && person ? `
+                      <div class="p-3 rounded-xl bg-blue-950/30 border border-blue-500/40 flex items-center justify-between gap-3">
+                        <div class="space-y-1 min-w-0">
+                          <div class="flex items-center gap-2 flex-wrap text-xs">
+                            ${person.seniority && person.seniority !== 999 ? `<span class="text-blue-400 font-bold font-mono">Rank #${person.seniority}</span>` : ''}
+                            <strong class="text-white">${esc(person.name)}</strong>
+                            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded ${person.type === 'Teaching Faculty' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}">${esc(person.type)}</span>
+                            <span class="text-slate-300 text-[11px]">(${esc(person.designation || '–')} · ${esc(person.department || '–')} · PEN:${esc(person.pen || '–')})</span>
+                          </div>
+                          <div class="flex items-center gap-2 flex-wrap text-[11px]">
+                            ${flagStr ? `<span class="text-blue-400 font-mono">${flagStr}</span>` : ''}
+                            ${person.isExcluded ? `<span class="text-amber-400 font-semibold">• Excluded from Booth Duty</span>` : ''}
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                          <button type="button" class="btn btn-secondary border-blue-500/40 text-blue-300 hover:text-white text-xs px-2.5 py-1 btn-change-griev" data-idx="${idx}">Change ↻</button>
+                        </div>
                       </div>
-                    ` : ''}
+                    ` : `
+                      <div class="searchable-picker-container relative w-full space-y-1" data-griev-idx="${idx}">
+                        <div class="relative">
+                          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400 text-xs">🔍</span>
+                          <input type="text" class="w-full bg-slate-900 border border-blue-500/50 rounded-lg pl-8 pr-8 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 picker-search-input" data-idx="${idx}" placeholder="Search faculty or staff by name, department, or PEN..." autocomplete="off" spellcheck="false" />
+                          <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs p-1 picker-toggle-btn" data-idx="${idx}">▼</button>
+                        </div>
+                        <div class="picker-results-list hidden bg-slate-950/98 border border-blue-500/50 rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-white/5 p-1 text-xs custom-scrollbar">
+                        </div>
+                      </div>
+                    `}
                   </div>
                 `;
               }).join('')}
@@ -5140,6 +5557,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       modal.querySelector('#btnAddGrievanceRow').onclick = () => {
         draftGrievance.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+        grievChangingIndices.add(draftGrievance.length - 1);
         renderModal();
       };
 
@@ -5147,20 +5565,41 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         btn.onclick = () => {
           const idx = parseInt(btn.dataset.idx, 10);
           draftGrievance.splice(idx, 1);
+          grievChangingIndices.delete(idx);
           if (draftGrievance.length === 0) {
             draftGrievance.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+            grievChangingIndices.add(0);
           }
           renderModal();
         };
       });
 
-      modal.querySelectorAll('.griev-person-select').forEach(sel => {
-        sel.onchange = (e) => {
-          const idx = parseInt(sel.dataset.idx, 10);
-          const pName = e.target.value;
-          const p = getPerson(pName);
-          if (p) {
-            draftGrievance[idx] = {
+      modal.querySelectorAll('.btn-change-griev').forEach(btn => {
+        btn.onclick = () => {
+          const idx = parseInt(btn.dataset.idx, 10);
+          grievChangingIndices.add(idx);
+          renderModal();
+          setTimeout(() => {
+            const input = modal.querySelector(`.searchable-picker-container[data-griev-idx="${idx}"] .picker-search-input`);
+            if (input) input.focus();
+          }, 30);
+        };
+      });
+
+      // Bind searchable picker for each active search row
+      modal.querySelectorAll('.searchable-picker-container[data-griev-idx]').forEach(pickerEl => {
+        const rowIdx = parseInt(pickerEl.dataset.grievIdx, 10);
+        const allRoster = getAllRosterPersonnel().map(p => ({
+          ...p,
+          disabled: draftGrievance.some((g, i) => i !== rowIdx && g.name === p.name)
+        }));
+
+        setupSearchablePicker(pickerEl, {
+          optionsList: allRoster,
+          accentColor: 'blue',
+          placeholder: 'Search faculty or staff for Grievance Redressal duty...',
+          onSelect: (p) => {
+            draftGrievance[rowIdx] = {
               name: p.name,
               pen: p.pen || '',
               department: p.department || '',
@@ -5168,11 +5607,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               seniority: p.seniority || 999,
               type: p.type
             };
-          } else {
-            draftGrievance[idx] = { name: '', pen: '', department: '', designation: '', seniority: 999, type: '' };
+            grievChangingIndices.delete(rowIdx);
+            renderModal();
           }
-          renderModal();
-        };
+        });
       });
 
       modal.querySelector('#btnSaveGrievModal').onclick = async () => {
@@ -5184,12 +5622,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         showToast(`Appointed ${grievanceCell.length} Grievance Official(s) successfully!`, 'success');
         renderUI();
       };
-
-      initAllSearchableSelects(modal);
     };
 
     renderModal();
-    document.body.appendChild(modal);
   };
 
   // ─── Multi-Table Counting Assistant Allotment Modal ─────────────────────────
@@ -5205,15 +5640,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     }
 
     let selectedStaffName = sortedNT[0].name;
+    let isChangingStaff = false;
 
     const modal = document.createElement('div');
     modal.id = 'multiAssistantModalContainer';
     modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+    document.body.appendChild(modal);
 
     const renderModal = () => {
       const selectedStaff = nonTeaching.find(n => n.name === selectedStaffName) || sortedNT[0];
       const ntAssignment = getNonTeachingAssignment(selectedStaff.name);
       const currentlyAssignedTables = new Set(ntAssignment.countingTables || []);
+      const tableInfoStr = ntAssignment.countingTables.length > 0 
+        ? `📊 Assigned to Counting Tables: ${ntAssignment.countingTables.join(', ')}` 
+        : `⚪ Not yet assigned to counting tables`;
 
       modal.innerHTML = `
         <div class="glass border border-emerald-500/40 rounded-2xl w-full max-w-2xl bg-slate-900/95 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -5232,30 +5672,38 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </div>
 
           <!-- Modal Body -->
-          <div class="p-5 overflow-y-auto space-y-4 flex-1">
+          <div class="p-5 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
             <!-- Step 1: Choose Assistant -->
             <div class="p-4 rounded-xl border border-white/10 bg-white/5 space-y-2">
               <label class="block text-xs font-bold uppercase tracking-wider text-emerald-300">
-                1. Select Non-Teaching Staff Member
+                1. Select Non-Teaching Staff Member (Searchable)
               </label>
-              <select id="selectModalStaff" class="w-full bg-slate-950 border border-white/20 rounded-lg p-2.5 text-xs text-white focus:border-emerald-400 focus:outline-none">
-                ${sortedNT.map(nt => {
-                  const asst = getNonTeachingAssignment(nt.name);
-                  const isCur = nt.name === selectedStaff.name;
-                  const tableInfo = asst.countingTables.length > 0 ? ` [Currently on Tables: ${asst.countingTables.join(', ')}]` : ' [Not assigned to counting]';
-                  const excl = nt.isExcluded ? ' ⛔ [Excluded]' : '';
-                  return `
-                    <option value="${esc(nt.name)}" ${isCur ? 'selected' : ''}>
-                      ${esc(nt.name)} (${esc(nt.designation || 'Staff')}${nt.department ? ` · ${esc(nt.department)}` : ''})${tableInfo}${excl}
-                    </option>
-                  `;
-                }).join('')}
-              </select>
-              <div class="text-[11px] text-slate-300 flex items-center justify-between pt-1">
-                <span>Designation: <strong>${esc(selectedStaff.designation || 'Staff')}</strong></span>
-                <span>Department: <strong>${esc(selectedStaff.department || selectedStaff.section || 'Office')}</strong></span>
-                <span>PEN: <strong class="font-mono">${esc(selectedStaff.pen || '–')}</strong></span>
-              </div>
+
+              ${!isChangingStaff && selectedStaff ? `
+                <div class="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/40 flex items-center justify-between gap-3">
+                  <div class="space-y-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap text-xs">
+                      <strong class="text-white font-bold text-sm">${esc(selectedStaff.name)}</strong>
+                      <span class="text-emerald-300 font-mono text-[11px]">(${esc(selectedStaff.designation || 'Staff')}${selectedStaff.department ? ` · ${esc(selectedStaff.department)}` : ''} · PEN:${esc(selectedStaff.pen || '–')})</span>
+                    </div>
+                    <div class="text-[11px] text-slate-300 flex items-center gap-2 flex-wrap">
+                      <span>${tableInfoStr}</span>
+                      ${selectedStaff.isExcluded ? '<span class="text-rose-400 font-semibold">• Excluded from Booth Duty</span>' : ''}
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-secondary border-emerald-500/40 text-emerald-300 hover:text-white text-xs px-2.5 py-1 shrink-0" id="btnChangeModalStaff">Change ↻</button>
+                </div>
+              ` : `
+                <div class="searchable-picker-container relative w-full space-y-1" id="multiStaffPickerContainer">
+                  <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400 text-xs">🔍</span>
+                    <input type="text" class="w-full bg-slate-900 border border-emerald-500/50 rounded-lg pl-8 pr-8 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 picker-search-input" placeholder="Search non-teaching staff by name, dept, or PEN..." autocomplete="off" spellcheck="false" />
+                    <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs p-1 picker-toggle-btn">▼</button>
+                  </div>
+                  <div class="picker-results-list hidden bg-slate-950/98 border border-emerald-500/50 rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-white/5 p-1 text-xs custom-scrollbar">
+                  </div>
+                </div>
+              `}
             </div>
 
             <!-- Step 2: Choose Tables -->
@@ -5272,7 +5720,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 </div>
               </div>
 
-              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto p-1" id="tableCheckboxesContainer">
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto p-1 custom-scrollbar" id="tableCheckboxesContainer">
                 ${booths.map(b => {
                   const currentTeam = countingTeams.find(t => t.tableNumber === b.boothNumber);
                   const isAssignedToThis = currentTeam?.countingAssistant?.name === selectedStaff.name;
@@ -5311,10 +5759,37 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       modal.querySelector('#btnCloseMultiAsstModal').onclick = () => modal.remove();
       modal.querySelector('#btnCancelMultiAsstModal').onclick = () => modal.remove();
 
-      modal.querySelector('#selectModalStaff').onchange = (e) => {
-        selectedStaffName = e.target.value;
-        renderModal();
-      };
+      const btnChangeStaff = modal.querySelector('#btnChangeModalStaff');
+      if (btnChangeStaff) {
+        btnChangeStaff.onclick = () => {
+          isChangingStaff = true;
+          renderModal();
+          setTimeout(() => {
+            const input = modal.querySelector('#multiStaffPickerContainer .picker-search-input');
+            if (input) input.focus();
+          }, 30);
+        };
+      }
+
+      const staffPicker = modal.querySelector('#multiStaffPickerContainer');
+      if (staffPicker) {
+        const sortedNTStaff = [...nonTeaching].sort(compareOfficials).map(n => ({
+          ...n,
+          type: 'Non-Teaching Staff',
+          isExcluded: isPersonExcluded(n)
+        }));
+
+        setupSearchablePicker(staffPicker, {
+          optionsList: sortedNTStaff,
+          accentColor: 'emerald',
+          placeholder: 'Search non-teaching staff by name, dept, or PEN...',
+          onSelect: (nt) => {
+            selectedStaffName = nt.name;
+            isChangingStaff = false;
+            renderModal();
+          }
+        });
+      }
 
       modal.querySelector('#btnSelectAllTables').onclick = () => {
         modal.querySelectorAll('.chk-modal-table').forEach(chk => { chk.checked = true; });
@@ -5366,12 +5841,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         showToast(`Assigned ${staffObj.name} to ${checkedTables.length} table(s): ${checkedTables.length > 0 ? `Tables ${checkedTables.sort((a,b)=>a-b).join(', ')}` : 'None'}!`, 'success');
         renderUI();
       };
-
-      initAllSearchableSelects(modal);
     };
 
     renderModal();
-    document.body.appendChild(modal);
   };
 
   // ─── Master Duty List Standalone Print Engine (Both Polling & Counting) ─────
