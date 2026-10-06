@@ -1646,8 +1646,9 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   const panelDrawer = main.querySelector('#panelTallyDrawer');
   const panelBackdrop = main.querySelector('#panelDrawerBackdrop');
   const panelTrigger = main.querySelector('#panelDrawerTrigger');
+  let workingCandidateColors = { ...(panelData.candidates || {}) };
 
-  const openDrawer = () => {
+  function openDrawer() {
     if (!panelDrawer || !panelBackdrop) return;
     isPanelDrawerOpen = true;
     panelDrawer.classList.remove('translate-x-full');
@@ -1658,9 +1659,9 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       panelTrigger.classList.add('translate-x-full');
       panelTrigger.classList.remove('translate-x-0');
     }
-  };
+  }
 
-  const closeDrawer = () => {
+  function closeDrawer() {
     if (!panelDrawer || !panelBackdrop) return;
     isPanelDrawerOpen = false;
     panelDrawer.classList.remove('translate-x-0');
@@ -1671,43 +1672,9 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       panelTrigger.classList.remove('translate-x-full');
       panelTrigger.classList.add('translate-x-0');
     }
-  };
+  }
 
-  main.querySelector('#btnTogglePanelDrawer')?.addEventListener('click', () => {
-    if (isPanelDrawerOpen) closeDrawer(); else openDrawer();
-  });
-
-  main.querySelector('#btnToolbarTogglePanelDrawer')?.addEventListener('click', () => {
-    const inlineTracker = main.querySelector('#inlinePanelTracker');
-    if (inlineTracker && isInlineTrackerCollapsed) {
-      isInlineTrackerCollapsed = false;
-      localStorage.setItem('gcc_admin_panel_tracker_collapsed', 'false');
-      renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
-      setTimeout(() => {
-        main.querySelector('#inlinePanelTracker')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 50);
-    } else if (inlineTracker) {
-      inlineTracker.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } else {
-      if (isPanelDrawerOpen) closeDrawer(); else openDrawer();
-    }
-  });
-
-  // Inline Panel Tracker controls
-  main.querySelector('#btnToggleInlineCollapse')?.addEventListener('click', () => {
-    isInlineTrackerCollapsed = !isInlineTrackerCollapsed;
-    localStorage.setItem('gcc_admin_panel_tracker_collapsed', isInlineTrackerCollapsed ? 'true' : 'false');
-    renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
-  });
-  main.querySelector('#btnInlineEditColors')?.addEventListener('click', openPanelModal);
-  main.querySelector('#btnInlineOpenDrawer')?.addEventListener('click', openDrawer);
-
-  main.querySelector('#btnClosePanelDrawer')?.addEventListener('click', closeDrawer);
-  main.querySelector('#btnDrawerCloseBottom')?.addEventListener('click', closeDrawer);
-  panelBackdrop?.addEventListener('click', closeDrawer);
-
-  // Modal open & close
-  const openPanelModal = () => {
+  function openPanelModal() {
     if (panelModal) {
       panelModal.classList.remove('hidden');
       const latestData = getConfidentialPanelData();
@@ -1748,14 +1715,47 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       }
       panelModal.querySelectorAll('.panel-post-group, .panel-cand-item').forEach(el => el.classList.remove('hidden'));
     }
-  };
+  }
 
-  const closePanelModal = () => {
+  function closePanelModal() {
     if (panelModal) {
       panelModal.classList.add('hidden');
       renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
     }
-  };
+  }
+
+  main.querySelector('#btnTogglePanelDrawer')?.addEventListener('click', () => {
+    if (isPanelDrawerOpen) closeDrawer(); else openDrawer();
+  });
+
+  main.querySelector('#btnToolbarTogglePanelDrawer')?.addEventListener('click', () => {
+    const inlineTracker = main.querySelector('#inlinePanelTracker');
+    if (inlineTracker && isInlineTrackerCollapsed) {
+      isInlineTrackerCollapsed = false;
+      localStorage.setItem('gcc_admin_panel_tracker_collapsed', 'false');
+      renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+      setTimeout(() => {
+        main.querySelector('#inlinePanelTracker')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+    } else if (inlineTracker) {
+      inlineTracker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      if (isPanelDrawerOpen) closeDrawer(); else openDrawer();
+    }
+  });
+
+  // Inline Panel Tracker controls
+  main.querySelector('#btnToggleInlineCollapse')?.addEventListener('click', () => {
+    isInlineTrackerCollapsed = !isInlineTrackerCollapsed;
+    localStorage.setItem('gcc_admin_panel_tracker_collapsed', isInlineTrackerCollapsed ? 'true' : 'false');
+    renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+  });
+  main.querySelector('#btnInlineEditColors')?.addEventListener('click', openPanelModal);
+  main.querySelector('#btnInlineOpenDrawer')?.addEventListener('click', openDrawer);
+
+  main.querySelector('#btnClosePanelDrawer')?.addEventListener('click', closeDrawer);
+  main.querySelector('#btnDrawerCloseBottom')?.addEventListener('click', closeDrawer);
+  panelBackdrop?.addEventListener('click', closeDrawer);
 
   main.querySelector('#btnOpenPanelSetup')?.addEventListener('click', openPanelModal);
   main.querySelector('#btnPromptSetColors')?.addEventListener('click', openPanelModal);
@@ -1792,9 +1792,6 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       });
     });
   }
-
-  // Working copy of candidate colors for the modal session
-  let workingCandidateColors = { ...(panelData.candidates || {}) };
 
   // Swatch selection in modal with immediate auto-save
   if (panelModal) {
@@ -2037,7 +2034,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
   });
 
   // Clear All Colors
-  const executeClearAllColors = () => {
+  function executeClearAllColors() {
     if (!confirm('⚠️ Are you sure you want to clear all candidate panel colors from this browser?\n\nThis will remove confidential panel tags and hide the side tally view.')) {
       return;
     }
