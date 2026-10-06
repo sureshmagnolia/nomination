@@ -172,6 +172,52 @@ export async function saveFormResultsLocally(tableNum, postName, roundNum, formS
 }
 
 /**
+ * Completely deletes a form's vote counts locally from IndexedDB and cancels matching items in sync_queue.
+ */
+export async function deleteFormResultsLocally(tableNum, postName, formSerial) {
+  try {
+    const db = await getDB();
+    const tx = db.transaction(['results_ledger', 'sync_queue'], 'readwrite');
+    const ledgerStore = tx.objectStore('results_ledger');
+    const queueStore = tx.objectStore('sync_queue');
+
+    // 1. Delete matching entries from results_ledger
+    const ledgerReq = ledgerStore.getAll();
+    ledgerReq.onsuccess = () => {
+      const items = ledgerReq.result || [];
+      items.forEach(item => {
+        const matchSerial = formSerial && formSerial !== 'N/A' && String(item.FormSerial) === String(formSerial);
+        const matchTablePost = tableNum !== undefined && postName && String(item.TableNumber) === String(tableNum) && String(item.Post) === String(postName);
+        if (matchSerial || matchTablePost) {
+          ledgerStore.delete(item.key);
+        }
+      });
+    };
+
+    // 2. Delete matching entries from sync_queue
+    const queueReq = queueStore.getAll();
+    queueReq.onsuccess = () => {
+      const qItems = queueReq.result || [];
+      qItems.forEach(q => {
+        const matchSerial = formSerial && formSerial !== 'N/A' && String(q.formSerial) === String(formSerial);
+        const matchTablePost = tableNum !== undefined && postName && String(q.tableNum) === String(tableNum) && String(q.postName) === String(postName);
+        if (matchSerial || matchTablePost) {
+          queueStore.delete(q.id);
+        }
+      });
+    };
+
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve({ ok: true });
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (err) {
+    console.warn('deleteFormResultsLocally error:', err);
+    return { ok: false, error: err.message };
+  }
+}
+
+/**
  * Retrieves all vote results stored in the local IndexedDB ledger.
  */
 export async function getAllResultsLocally() {

@@ -149,7 +149,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
 Notice is hereby given to all students and electors of **${collegeName}** regarding the designated **Polling Stations and Booth Allotments** for the College Union Elections ${year}.
 
 Voting shall take place strictly at the designated polling booths between the official polling hours:
-**${formatDate(schedule.pollingStart, '9:30 AM')} to ${formatDate(schedule.pollingEnd, '1:30 PM')}**.
+**${formatDate(schedule.pollingStart, '09:30 AM')} to ${formatDate(schedule.pollingEnd, '12:30 PM')}**.
 
 ---
 
@@ -160,9 +160,9 @@ ${boothSummaryText}
 ---
 
 #### 🗳️ Ballots Issued at Polling Booths:
-Every eligible elector registered on the Final Nominal Roll will receive the following official ballot papers from the Presiding Officer:
+Every eligible elector registered on the Final Nominal Roll will receive the official ballot papers from the Presiding Officer as applicable:
 1. **White / Main General Ballot Paper**: For General Union Executive Posts (Chairperson, Vice Chairperson, Secretary, Joint Secretary, UUC, Chief Student Editor, General Captain, Fine Arts Secretary).
-2. **Colored Departmental Ballot Paper**: For your respective Department Association Secretary.
+2. **Colored Departmental Ballot Paper**: For your respective Department Association Secretary *(issued only in booths/departments where the post is contested)*.
 3. **Year Representative Ballot Paper**: For your respective Year Representative (I UG / II UG / III UG / PG Representative).
 
 *Electors are requested to verify their names on the Nominal Roll facing sheet outside their respective booth before joining the queue.*`

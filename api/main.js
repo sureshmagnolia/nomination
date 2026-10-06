@@ -1178,7 +1178,7 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminGetNotices') {
-      const [noticesRaw, boothsRaw, locationsRaw, status, colName, colShort, colLogo, electionYearSetting, postsList] = await Promise.all([
+      const [noticesRaw, boothsRaw, locationsRaw, status, colName, colShort, colLogo, electionYearSetting, postsList, ballotPlanRaw] = await Promise.all([
         getSetting('official_notices'),
         getSetting('booths_data'),
         getSetting('availableLocations'),
@@ -1187,7 +1187,8 @@ export default async function handler(req, res) {
         getSetting('collegeShortName'),
         getSetting('collegeLogo'),
         getSetting('electionYear'),
-        fetchPostsFromDb()
+        fetchPostsFromDb(),
+        getSetting('ballotPlan')
       ]);
 
       let parsedNotices = safeJsonParse(noticesRaw, []);
@@ -1268,6 +1269,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
         booths: safeJsonParse(boothsRaw, []),
         locations: safeJsonParse(locationsRaw, []),
         posts: postsList || [],
+        plan: safeJsonParse(ballotPlanRaw, null),
         schedule: status,
         settings: {
           collegeName: colName || '',
@@ -2419,6 +2421,25 @@ All students are directed to strictly adhere to the University Code of Conduct, 
         } else {
           allResults.push(resItem);
         }
+      });
+
+      await setSetting('results_data', JSON.stringify(allResults));
+      return jsonOut(res, { ok: true, count: allResults.length });
+    }
+
+    if (action === 'adminClearFormResults') {
+      const isLocked = await getSetting('resultsLocked');
+      if (isLocked === 'true') {
+        return errOut(res, 'Results are locked and frozen. No further vote entries or modifications are allowed.');
+      }
+      const existingRaw = await getSetting('results_data');
+      let allResults = safeJsonParse(existingRaw, []);
+      const { tableNumber, post, formSerial } = body;
+
+      allResults = allResults.filter(r => {
+        if (formSerial && formSerial !== 'N/A' && String(r.FormSerial) === String(formSerial)) return false;
+        if (tableNumber !== undefined && tableNumber !== null && post && String(r.TableNumber) === String(tableNumber) && String(r.Post) === String(post)) return false;
+        return true;
       });
 
       await setSetting('results_data', JSON.stringify(allResults));

@@ -11,6 +11,7 @@ import {
   saveCountingMeta,
   getCountingMeta,
   saveFormResultsLocally,
+  deleteFormResultsLocally,
   getAllResultsLocally,
   syncLedgerWithServer,
   getSyncQueue,
@@ -583,9 +584,14 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
           </div>
         </div>
         <div class="bg-slate-900/60 p-4 border-t border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <p class="text-xs text-slate-400 italic">
-            <span>💾 Saves instantly to IndexedDB with 0ms delay. Synced to cloud in background.</span>
-          </p>
+          <div class="flex items-center gap-3">
+            <button id="btnClearForm" type="button" class="btn btn-secondary text-rose-300 hover:text-white hover:bg-rose-600/80 border-rose-500/40 px-4 text-xs font-bold transition flex items-center gap-1.5 shadow" ${isLocked ? 'disabled' : ''} title="Clear all saved votes for this form and reset ledger status to Not Entered">
+              <span>🗑️</span> <span>Clear Form (Clean Start)</span>
+            </button>
+            <p class="text-xs text-slate-400 italic hidden sm:block">
+              <span>💾 0ms IndexedDB local save · Automatic cloud sync</span>
+            </p>
+          </div>
           <button id="btnSaveVotes" class="btn ${isLocked ? 'opacity-50 cursor-not-allowed bg-slate-700 text-slate-400' : 'btn-success'} px-10 font-bold shadow-lg" ${isLocked ? 'disabled' : ''}>
             ${isLocked ? '🔒 Results Locked (Save Blocked)' : '💾 Save Form Results'}
           </button>
@@ -605,6 +611,71 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       inp.addEventListener('input', updateGrandTotal);
     });
     updateGrandTotal();
+
+    // ─── Clear Form (Clean Start) Handler ──────────────────────────────────────
+    area.querySelector('#btnClearForm')?.addEventListener('click', async () => {
+      if (isLocked) {
+        showToast('Results are locked and frozen. No modifications allowed.', 'error');
+        return;
+      }
+
+      const hasExistingSaved = allResults.some(r =>
+        (serial && serial !== 'N/A' && String(r.FormSerial) === String(serial)) ||
+        (String(r.TableNumber) === String(tableNum) && String(r.Post) === String(postName))
+      );
+
+      const confirmMsg = hasExistingSaved
+        ? `Are you sure you want to completely clear Form #${serial || 'Manual'} (Table ${tableNum} • ${postName})?\n\nThis will permanently delete all entered vote counts for this form from both local storage and the cloud database, returning this form to 'Not Entered' (grey in ledger) for a clean start.`
+        : `Clear all entered vote counts in this form?`;
+
+      if (!confirm(confirmMsg)) return;
+
+      const btnClear = area.querySelector('#btnClearForm');
+      setLoading(btnClear, true, 'Clearing...');
+
+      try {
+        // 1. Delete matching entries from IndexedDB results_ledger and sync_queue
+        await deleteFormResultsLocally(tableNum, postName, serial);
+
+        // 2. Remove matching records from memory allResults array
+        for (let i = allResults.length - 1; i >= 0; i--) {
+          const r = allResults[i];
+          const matchSerial = serial && serial !== 'N/A' && String(r.FormSerial) === String(serial);
+          const matchTablePost = String(r.TableNumber) === String(tableNum) && String(r.Post) === String(postName);
+          if (matchSerial || matchTablePost) {
+            allResults.splice(i, 1);
+          }
+        }
+        cachedAllResults = allResults;
+
+        // 3. Clear on cloud database if online
+        if (navigator.onLine) {
+          try {
+            await api.adminClearFormResults(pwd, { tableNumber: tableNum, post: postName, formSerial: serial });
+          } catch (cloudErr) {
+            console.warn('Cloud clear warning (will sync later):', cloudErr);
+          }
+        }
+
+        // 4. Reset form inputs
+        area.querySelectorAll('.vote-input').forEach(inp => {
+          inp.value = '';
+        });
+        const disp = area.querySelector('#totalVotesDisplay');
+        if (disp) disp.textContent = '0';
+
+        showToast(`Form #${serial || 'Manual'} has been completely cleared! Ledger reset to Not Entered.`, 'success');
+
+        // 5. Update ledger immediately so the cell changes from green back to grey
+        renderLedger(main, allResults, allFormSerialsMeta);
+        updateConnectivityUI();
+      } catch (err) {
+        console.error('Failed to clear form:', err);
+        showToast(`Failed to clear form: ${err.message}`, 'error');
+      } finally {
+        setLoading(btnClear, false, '🗑️ Clear Form (Clean Start)');
+      }
+    });
 
     area.querySelector('#btnSaveVotes').addEventListener('click', async () => {
       if (isLocked) {

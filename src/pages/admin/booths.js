@@ -2174,10 +2174,6 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
             `).join('')}
           </tbody>
         </table>
-        <div style="display:flex; justify-content:space-between; margin-top:14px; padding:6px 12px; font-size:10px; font-weight:bold; border-top:1.5px solid #000;">
-          <div>Verified by Polling Officer: ___________________</div>
-          <div>Signature of Presiding Officer: ___________________</div>
-        </div>
       </div>`;
     });
   });

@@ -43,6 +43,7 @@ async function loadAdminNoticesData(main, pwd) {
     const booths = Array.isArray(noticesData.booths) ? noticesData.booths : [];
     const locations = Array.isArray(noticesData.locations) ? noticesData.locations : [];
     const posts = Array.isArray(noticesData.posts) && noticesData.posts.length > 0 ? noticesData.posts : (CONFIG.DEFAULT_POSTS || []);
+    const plan = noticesData.plan || null;
     let notices = Array.isArray(noticesData.notices) ? noticesData.notices : [];
 
     if (notices.length === 0) {
@@ -88,14 +89,14 @@ async function loadAdminNoticesData(main, pwd) {
       });
     });
 
-    renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts, nominalRoll);
+    renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts, nominalRoll, plan);
   } catch (err) {
     console.error('Error loading admin notices:', err);
     main.innerHTML = `<div class="alert alert-error">❌ ${esc(err.message || 'Failed to load notices')}</div>`;
   }
 }
 
-function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts = [], nominalRoll = []) {
+function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts = [], nominalRoll = [], plan = null) {
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
   const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
   const year = settings.electionYear || new Date().getFullYear();
@@ -919,7 +920,7 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
       showToast('No polling booths configured to print.', 'error');
       return;
     }
-    printBatchBoothDoorPosters(booths, settings, schedule);
+    printBatchBoothDoorPosters(booths, settings, schedule, { plan, posts });
   });
   main.querySelector('#btnHubPrintCampusDirectory')?.addEventListener('click', () => {
     if (!booths.length) {
@@ -981,7 +982,7 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
       alert('No polling booths configured to print.');
       return;
     }
-    printBatchBoothDoorPosters(booths, settings, schedule);
+    printBatchBoothDoorPosters(booths, settings, schedule, { plan, posts });
   });
 
   // Print Master Campus Directory
@@ -999,7 +1000,7 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
       const num = Number(btn.dataset.num);
       const b = booths.find(item => Number(item.boothNumber) === num);
       if (b) {
-        printBoothDoorPoster(b, settings, schedule);
+        printBoothDoorPoster(b, settings, schedule, { plan, posts });
       }
     });
   });

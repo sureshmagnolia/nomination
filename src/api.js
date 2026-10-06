@@ -679,6 +679,18 @@ export const api = {
     });
   },
 
+  adminClearFormResults: (password, data) => {
+    localStorage.removeItem('election_results_cache');
+    localStorage.removeItem('election_results_last_fetch');
+    invalidateCache('getResults');
+    invalidateCache('adminGetResults');
+    return post({ action: 'adminClearFormResults', password, ...data }).then((res) => {
+      invalidateCache('getResults');
+      invalidateCache('adminGetResults');
+      return res;
+    });
+  },
+
   adminInjectTestData: (password) => {
     _cache = {}; // Clear everything so fresh nominations and results show immediately
     return post({ action: 'adminInjectTestData', password });

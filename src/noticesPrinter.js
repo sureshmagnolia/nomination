@@ -357,18 +357,19 @@ export function printOfficialNotice(notice, settings = {}) {
 /**
  * Print individual Polling Booth Door Poster (A4 / A3 door notice)
  */
-export function printBoothDoorPoster(booth, settings = {}, schedule = {}) {
-  printBatchBoothDoorPosters([booth], settings, schedule);
+export function printBoothDoorPoster(booth, settings = {}, schedule = {}, options = {}) {
+  printBatchBoothDoorPosters([booth], settings, schedule, options);
 }
 
 /**
  * Batch print door posters for ALL booths, separated cleanly by page breaks
  */
-export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule = {}) {
+export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule = {}, options = {}) {
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
   const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
   const year = settings.electionYear || new Date().getFullYear();
   const collegeLogo = settings.collegeLogo || '';
+  const plan = options?.plan || settings?.ballotPlan || null;
 
   const w = window.open('', '_blank');
   if (!w) {
@@ -379,15 +380,95 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
   const formatTime = (iso) => {
     if (!iso) return '';
     const d = new Date(iso);
-    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
-  const pollStart = formatTime(schedule.pollingStart) || '9:30 AM';
-  const pollEnd = formatTime(schedule.pollingEnd) || '1:30 PM';
+  const pollStart = formatTime(schedule.pollingStart) || '09:30 AM';
+  const pollEnd = formatTime(schedule.pollingEnd) || '12:30 PM';
 
   const postersHtml = boothsList.map((booth, idx) => {
     const classes = Array.isArray(booth.classes) ? booth.classes : [];
     const totalVoters = booth.totalStudents || 0;
+    const bNum = Number(booth.boothNumber);
+    const bAssign = plan?.boothAssignments?.[bNum] || null;
+
+    // Determine actual ballots issued for this specific booth
+    const ballotsIssued = [];
+
+    // 1. General Union Ballot
+    if (bAssign?.generalParts && bAssign.generalParts.length > 1) {
+      bAssign.generalParts.forEach((gp, gIdx) => {
+        ballotsIssued.push({
+          num: ballotsIssued.length + 1,
+          title: gp.title || `General Union Posts - Part ${gIdx + 1}`,
+          code: gp.prefix || `G${gIdx + 1}`,
+          desc: 'Executive & University Councillors'
+        });
+      });
+    } else {
+      ballotsIssued.push({
+        num: ballotsIssued.length + 1,
+        title: 'General Union Posts',
+        code: 'G-Series',
+        desc: 'Executive & University Councillors'
+      });
+    }
+
+    // 2. Department Association Secretary Ballot: ONLY if contested in this booth!
+    let hasAssocContest = false;
+    let assocDepts = [];
+    if (bAssign?.assocs && Array.isArray(bAssign.assocs) && bAssign.assocs.length > 0) {
+      hasAssocContest = true;
+      assocDepts = bAssign.assocs.map(a => String(a.post || '').replace(/^Association Secretary\s*/i, '').trim()).filter(Boolean);
+    } else if (Array.isArray(booth.assocDepts) && booth.assocDepts.length > 0) {
+      hasAssocContest = true;
+      assocDepts = booth.assocDepts;
+    } else if (Number(booth.assocBooksCount) > 0) {
+      hasAssocContest = true;
+      assocDepts = booth.assocDepts || [];
+    }
+
+    if (hasAssocContest) {
+      const assocNameStr = assocDepts.length > 0 ? ` (${assocDepts.join(', ')})` : '';
+      ballotsIssued.push({
+        num: ballotsIssued.length + 1,
+        title: `Dept Association Secretary${assocNameStr}`,
+        code: 'A-Series',
+        desc: 'Department Student Association'
+      });
+    }
+
+    // 3. Year Representative Ballot: ONLY if contested in this booth!
+    let hasRepContest = false;
+    let repPosts = [];
+    if (bAssign?.reps && Array.isArray(bAssign.reps) && bAssign.reps.length > 0) {
+      hasRepContest = true;
+      repPosts = bAssign.reps.map(r => String(r.post || '').replace(/Representative/i, 'Rep').trim()).filter(Boolean);
+    } else if (Array.isArray(booth.repPosts) && booth.repPosts.length > 0) {
+      hasRepContest = true;
+      repPosts = booth.repPosts.map(p => String(p).replace(/Representative/i, 'Rep').trim());
+    } else if (Number(booth.repBooksCount) > 0) {
+      hasRepContest = true;
+      repPosts = booth.repPosts || [];
+    } else {
+      const hasUGPG = classes.some(c => {
+        const u = String(c).toUpperCase();
+        return !u.includes('PH.D') && !u.includes('PH D') && !u.includes('RESEARCH') && !u.includes('SCHOLAR');
+      });
+      if (hasUGPG && (booth.repBooksCount === undefined || booth.repBooksCount > 0)) {
+        hasRepContest = true;
+      }
+    }
+
+    if (hasRepContest) {
+      const repNameStr = repPosts.length > 0 ? ` (${repPosts.join(', ')})` : '';
+      ballotsIssued.push({
+        num: ballotsIssued.length + 1,
+        title: `Year Representative${repNameStr}`,
+        code: 'R-Series',
+        desc: 'Class / Cohort Representative'
+      });
+    }
 
     return `
       <div class="poster-page ${idx < boothsList.length - 1 ? 'page-break' : ''}">
@@ -405,7 +486,7 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
 
           <!-- Giant Booth Number Banner -->
           <div class="booth-giant-banner">
-            <div class="booth-sub-label">DESIGNATED POLLING BOOTH</div>
+            <div class="booth-sub-label">OFFICIAL DESIGNATED POLLING BOOTH</div>
             <div class="booth-main-number">BOOTH NO. ${esc(booth.boothNumber)}</div>
           </div>
 
@@ -423,7 +504,7 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
               <span class="voter-badge">${totalVoters ? `${totalVoters} Registered Electors` : 'Electors as Per Roll'}</span>
             </div>
 
-            <div class="classes-grid">
+            <div class="classes-grid ${classes.length <= 4 ? 'classes-grid-spacious' : ''}">
               ${classes.length ? classes.map(c => `
                 <div class="class-card">
                   <span class="check-icon">✔</span>
@@ -437,26 +518,50 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
             </div>
           </div>
 
-          <!-- Ballots Issued Bar -->
-          <div class="ballots-bar">
-            <div class="ballot-chip"><strong>Ballot 1:</strong> General Union Posts</div>
-            <div class="ballot-chip"><strong>Ballot 2:</strong> Dept Association Secretary</div>
-            <div class="ballot-chip"><strong>Ballot 3:</strong> Year Representative</div>
+          <!-- Ballots Issued Section -->
+          <div class="ballots-section">
+            <div class="ballots-heading">
+              <span>🗳️ OFFICIAL BALLOT PAPERS TO BE ISSUED:</span>
+              <span class="ballot-count-badge">${ballotsIssued.length} Ballot${ballotsIssued.length > 1 ? 's' : ''} per Elector</span>
+            </div>
+
+            <div class="ballots-grid">
+              ${ballotsIssued.map(b => `
+                <div class="ballot-card">
+                  <div class="ballot-card-top">
+                    <span class="ballot-pill">Ballot ${b.num}</span>
+                    <span class="ballot-code">${esc(b.code)}</span>
+                  </div>
+                  <div class="ballot-title">${esc(b.title)}</div>
+                  <div class="ballot-desc">${esc(b.desc)}</div>
+                </div>
+              `).join('')}
+            </div>
+
+            ${!hasAssocContest ? `
+              <div class="uncontested-notice">
+                ℹ️ <strong>Department Association:</strong> Uncontested / Elected Unopposed — <em>No Association Ballot issued at this booth</em>.
+              </div>
+            ` : ''}
           </div>
 
           <!-- Voter Directives Warning Box -->
           <div class="rules-box">
-            <div class="rule-item">
+            <div class="rule-row">
               <span class="rule-icon">🪪</span>
-              <span><strong>MANDATORY:</strong> Must produce College ID Card to Polling Officer</span>
+              <span><strong>MANDATORY IDENTIFICATION:</strong> Must produce College ID Card or Identity Certificate to Polling Officer.</span>
             </div>
-            <div class="rule-item">
+            <div class="rule-row">
               <span class="rule-icon">⏰</span>
-              <span><strong>POLLING HOURS:</strong> ${esc(pollStart)} to ${esc(pollEnd)} strictly</span>
+              <span><strong>POLLING HOURS:</strong> <strong>${esc(pollStart)} to ${esc(pollEnd)} strictly</strong>. (Late arrivals strictly barred from entry).</span>
             </div>
-            <div class="rule-item">
+            <div class="rule-row">
               <span class="rule-icon">🚫</span>
-              <span><strong>PROHIBITED:</strong> Mobile phones / Cameras strictly barred inside booth</span>
+              <span><strong>PROHIBITED INSIDE BOOTH:</strong> Mobile phones, cameras, or electronic recording devices strictly barred.</span>
+            </div>
+            <div class="rule-row">
+              <span class="rule-icon">✍️</span>
+              <span><strong>MARKING PROCEDURE:</strong> Place mark (X or ✔) only in designated candidate column using official booth pen.</span>
             </div>
           </div>
 
@@ -484,16 +589,17 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
   <title>Polling Booth Door Posters - ${esc(shortName)} Election ${esc(year)}</title>
   <style>
     @page {
-      margin: 8mm 10mm 12mm 10mm;
+      size: A4 portrait;
+      margin: 8mm 8mm 8mm 8mm;
       @bottom-right {
         content: "Page " counter(page) " of " counter(pages);
         font-family: Arial, sans-serif;
-        font-size: 8.5pt;
+        font-size: 8pt;
         font-weight: bold;
         color: #000000;
       }
       @bottom-left {
-        content: "College Union Election — Polling Booth Poster";
+        content: "College Union Election — Official Polling Booth Poster";
         font-family: Arial, sans-serif;
         font-size: 8pt;
         color: #000000;
@@ -523,201 +629,298 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
       font-family: Arial, Helvetica, sans-serif;
       background: #fff;
       color: #000;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     .poster-page {
       width: 100%;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      padding: 4px;
+      box-sizing: border-box;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
-    .page-break {
-      page-break-after: always;
-      break-after: page;
+    @media screen {
+      .poster-page {
+        min-height: 270mm;
+        max-width: 210mm;
+        margin: 0 auto 20px auto;
+        padding: 4px;
+      }
+    }
+    @media print {
+      html, body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      .poster-page {
+        height: 275mm;
+        max-height: 275mm;
+        overflow: hidden;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      .page-break {
+        page-break-after: always;
+        break-after: page;
+      }
     }
     .poster-border {
-      border: 4px solid #000;
-      border-radius: 8px;
-      padding: 14px;
+      border: 3.5px solid #000;
+      border-radius: 6px;
+      padding: 10px 12px;
       height: 100%;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      box-sizing: border-box;
     }
     .poster-header {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 12px;
+      gap: 10px;
       text-align: center;
       border-bottom: 2px solid #000;
-      padding-bottom: 8px;
+      padding-bottom: 6px;
     }
     .poster-logo {
-      max-height: 50px;
-      max-width: 50px;
+      max-height: 44px;
+      max-width: 44px;
       object-fit: contain;
     }
     .college-title {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     .election-title {
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 600;
       color: #333;
-      margin-top: 2px;
+      margin-top: 1px;
     }
     .booth-giant-banner {
       background: #000;
       color: #fff;
       text-align: center;
-      padding: 14px 10px;
-      margin: 10px 0;
-      border-radius: 6px;
+      padding: 10px 8px;
+      margin: 6px 0;
+      border-radius: 5px;
     }
     .booth-sub-label {
-      font-size: 13px;
+      font-size: 11px;
       font-weight: bold;
-      letter-spacing: 2px;
+      letter-spacing: 1.5px;
       opacity: 0.9;
     }
     .booth-main-number {
-      font-size: 38px;
+      font-size: 34px;
       font-weight: 900;
       letter-spacing: 1px;
-      margin-top: 2px;
+      margin-top: 1px;
     }
     .location-banner {
       border: 2px solid #000;
       background: #f3f4f6;
-      border-radius: 6px;
-      padding: 10px 14px;
+      border-radius: 5px;
+      padding: 7px 10px;
       text-align: center;
-      font-size: 16px;
+      font-size: 15px;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 6px;
+      margin-bottom: 4px;
     }
     .location-icon {
-      font-size: 20px;
+      font-size: 18px;
     }
     .location-label {
       font-weight: bold;
       color: #4b5563;
-      font-size: 12px;
+      font-size: 11.5px;
     }
     .location-name {
-      font-size: 19px;
+      font-size: 17px;
       font-weight: 900;
       color: #111;
       text-transform: uppercase;
     }
     .classes-container {
-      flex: 1;
-      margin: 10px 0;
+      margin: 5px 0;
       border: 2px solid #000;
-      border-radius: 6px;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
+      border-radius: 5px;
+      padding: 7px 9px;
+      background: #fafafa;
     }
     .classes-heading {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 13px;
+      font-size: 11.5px;
       font-weight: 800;
-      border-bottom: 2px solid #000;
-      padding-bottom: 6px;
-      margin-bottom: 8px;
+      border-bottom: 1.5px solid #000;
+      padding-bottom: 4px;
+      margin-bottom: 6px;
     }
     .voter-badge {
       background: #e5e7eb;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-size: 10.5px;
       font-weight: bold;
     }
     .classes-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 6px;
-      overflow: hidden;
+      gap: 5px;
+    }
+    .classes-grid-spacious .class-card {
+      padding: 7px 10px;
     }
     .class-card {
       border: 1.5px solid #374151;
       border-radius: 4px;
-      padding: 6px 8px;
+      padding: 4px 7px;
       display: flex;
       align-items: center;
       gap: 6px;
-      background: #fafafa;
+      background: #fff;
     }
     .check-icon {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: bold;
-      color: #000000;
+      color: #000;
     }
     .class-text {
-      font-size: 13px;
+      font-size: 11.5px;
       font-weight: 700;
       color: #111;
       line-height: 1.2;
     }
-    .ballots-bar {
-      display: flex;
-      justify-content: space-around;
-      gap: 6px;
-      margin-bottom: 8px;
+    .ballots-section {
+      margin: 5px 0;
+      border: 2px solid #000;
+      border-radius: 5px;
+      padding: 7px 9px;
+      background: #fff;
     }
-    .ballot-chip {
+    .ballots-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11.5px;
+      font-weight: 800;
+      border-bottom: 1.5px solid #000;
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+    }
+    .ballot-count-badge {
+      background: #000;
+      color: #fff;
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-size: 10.5px;
+      font-weight: bold;
+    }
+    .ballots-grid {
+      display: flex;
+      gap: 6px;
+      justify-content: space-between;
+    }
+    .ballot-card {
       flex: 1;
       border: 1.5px solid #000;
       border-radius: 4px;
-      padding: 5px 6px;
-      font-size: 11px;
-      text-align: center;
-      background: #fff;
+      padding: 6px 7px;
+      background: #fdfdfd;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
-    .rules-box {
-      border: 1.5px solid #000000;
-      background: #f9f9f9;
-      border-radius: 6px;
-      padding: 8px 10px;
+    .ballot-card-top {
       display: flex;
       justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 10px;
-      font-size: 11px;
-      color: #000000;
+      align-items: center;
+      margin-bottom: 2px;
     }
-    .rule-item {
+    .ballot-pill {
+      font-size: 9.5px;
+      font-weight: 900;
+      text-transform: uppercase;
+      background: #e5e7eb;
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid #d1d5db;
+    }
+    .ballot-code {
+      font-size: 9.5px;
+      font-weight: bold;
+      color: #4b5563;
+      font-family: monospace;
+    }
+    .ballot-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: #000;
+      line-height: 1.2;
+    }
+    .ballot-desc {
+      font-size: 9px;
+      color: #555;
+      line-height: 1.2;
+    }
+    .uncontested-notice {
+      margin-top: 5px;
+      padding: 4px 7px;
+      background: #fffbeb;
+      border: 1px dashed #d97706;
+      border-radius: 3px;
+      font-size: 10px;
+      color: #92400e;
+      line-height: 1.3;
+    }
+    .rules-box {
+      border: 1.5px solid #000;
+      background: #f9fafb;
+      border-radius: 5px;
+      padding: 6px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 3.5px;
+      margin: 5px 0;
+      font-size: 10px;
+      color: #000;
+    }
+    .rule-row {
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
     }
     .rule-icon {
-      font-size: 14px;
+      font-size: 12px;
+      width: 16px;
+      text-align: center;
+      flex-shrink: 0;
     }
     .poster-footer {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
       border-top: 2px solid #000;
-      padding-top: 8px;
+      padding-top: 5px;
+      margin-top: 2px;
     }
     .footer-seal {
-      width: 140px;
-      height: 48px;
+      width: 130px;
+      height: 42px;
       border: 1px dashed #666;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 9px;
+      font-size: 8.5px;
       color: #666;
       font-weight: bold;
       text-align: center;
@@ -726,17 +929,17 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
       text-align: right;
     }
     .sign-line {
-      width: 180px;
+      width: 170px;
       border-bottom: 1px solid #000;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
       margin-left: auto;
     }
     .sign-text {
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: bold;
     }
     .sign-sub {
-      font-size: 10px;
+      font-size: 9.5px;
       color: #444;
     }
   </style>
@@ -781,8 +984,8 @@ export function printCampusMasterDirectory(boothsList, settings = {}, schedule =
     ? new Date(schedule.pollingStart).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     : 'Election Day';
 
-  const pollStart = formatTime(schedule.pollingStart) || '9:30 AM';
-  const pollEnd = formatTime(schedule.pollingEnd) || '1:30 PM';
+  const pollStart = formatTime(schedule.pollingStart) || '09:30 AM';
+  const pollEnd = formatTime(schedule.pollingEnd) || '12:30 PM';
 
   const totalCampusVoters = boothsList.reduce((acc, b) => acc + (b.totalStudents || 0), 0);
 
