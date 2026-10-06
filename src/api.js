@@ -393,9 +393,13 @@ export const api = {
   },
 
   adminApproveWithdrawal: (password, id) => {
+    const nowIso = new Date().toISOString();
     updateCache({ action: 'adminGetNominations', password }, (noms) => {
       const n = noms.find(x => x.id === id);
-      if (n) n.withdrawalStatus = 'Approved';
+      if (n) {
+        n.withdrawalStatus = 'Approved';
+        if (!n.withdrawnAt) n.withdrawnAt = nowIso;
+      }
       return noms;
     });
     bgPost({ action: 'adminApproveWithdrawal', password, id });
@@ -403,9 +407,13 @@ export const api = {
   },
 
   adminDirectWithdrawal: (password, id) => {
+    const nowIso = new Date().toISOString();
     updateCache({ action: 'adminGetNominations', password }, (noms) => {
       const n = noms.find(x => x.id === id);
-      if (n) n.withdrawalStatus = 'Approved';
+      if (n) {
+        n.withdrawalStatus = 'Approved';
+        if (!n.withdrawnAt) n.withdrawnAt = nowIso;
+      }
       return noms;
     });
     bgPost({ action: 'adminDirectWithdrawal', password, id });
@@ -415,7 +423,10 @@ export const api = {
   adminRestoreWithdrawal: (password, id, targetStatus = 'None') => {
     updateCache({ action: 'adminGetNominations', password }, (noms) => {
       const n = noms.find(x => x.id === id);
-      if (n) n.withdrawalStatus = targetStatus;
+      if (n) {
+        n.withdrawalStatus = targetStatus;
+        delete n.withdrawnAt;
+      }
       return noms;
     });
     bgPost({ action: 'adminRestoreWithdrawal', password, id, targetStatus });

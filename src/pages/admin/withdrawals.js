@@ -37,6 +37,85 @@ function renderWithdrawalUI(main, allNoms, pwd) {
   let directList   = allNomsList.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved');
   let withdrawnList = allNomsList.filter(n => n.withdrawalStatus === 'Approved');
 
+  // ── Local Withdrawal Registry & Chronological Order ─────────────────────────
+  const WITHDRAWAL_REG_KEY = 'gcc_withdrawal_registry_v1';
+  let localWithdrawalRegistry = {};
+  try {
+    localWithdrawalRegistry = JSON.parse(localStorage.getItem(WITHDRAWAL_REG_KEY) || '{}');
+  } catch (_) {
+    localWithdrawalRegistry = {};
+  }
+  const saveLocalWithdrawalRegistry = () => {
+    try {
+      localStorage.setItem(WITHDRAWAL_REG_KEY, JSON.stringify(localWithdrawalRegistry));
+    } catch (_) {}
+  };
+
+  const getWithdrawalTime = (n) => {
+    const reg = localWithdrawalRegistry[n.id];
+    if (reg?.timestamp) {
+      const t = new Date(reg.timestamp).getTime();
+      if (!isNaN(t) && t > 0) return t;
+    }
+    if (n.withdrawnAt) {
+      const t = new Date(n.withdrawnAt).getTime();
+      if (!isNaN(t) && t > 0) return t;
+    }
+    if (n.withdrawalRequestedAt) {
+      const t = new Date(n.withdrawalRequestedAt).getTime();
+      if (!isNaN(t) && t > 0) return t;
+    }
+    if (n.timestamp) {
+      const t = new Date(n.timestamp).getTime();
+      if (!isNaN(t) && t > 0) return t;
+    }
+    if (n.created_at || n.createdAt) {
+      const t = new Date(n.created_at || n.createdAt).getTime();
+      if (!isNaN(t) && t > 0) return t;
+    }
+    const num = parseInt(String(n.id || '').replace(/\D/g, ''), 10);
+    return !isNaN(num) ? num : 0;
+  };
+
+  const sortWithdrawnList = () => {
+    withdrawnList.sort((a, b) => {
+      const tA = getWithdrawalTime(a);
+      const tB = getWithdrawalTime(b);
+      if (tA !== tB) return tA - tB;
+      const numA = parseInt(String(a.id || '').replace(/\D/g, ''), 10);
+      const numB = parseInt(String(b.id || '').replace(/\D/g, ''), 10);
+      if (!isNaN(numA) && !isNaN(numB) && numA !== numB) return numA - numB;
+      return String(a.id || '').localeCompare(String(b.id || ''));
+    });
+
+    withdrawnList.forEach((n, idx) => {
+      n.withdrawalSlNo = idx + 1;
+      const rawTs = localWithdrawalRegistry[n.id]?.timestamp || n.withdrawnAt || n.withdrawalRequestedAt || n.timestamp;
+      if (rawTs) {
+        try {
+          const d = new Date(rawTs);
+          if (!isNaN(d.getTime())) {
+            const datePart = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+            const timePart = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+            n.withdrawnDateFormatted = `${datePart}, ${timePart}`;
+          }
+        } catch (_) {}
+      }
+    });
+  };
+
+  // Ensure all existing withdrawn candidates are registered with their timestamp
+  withdrawnList.forEach(n => {
+    if (!localWithdrawalRegistry[n.id]) {
+      const ts = n.withdrawnAt || n.withdrawalRequestedAt || n.timestamp || null;
+      if (ts) {
+        localWithdrawalRegistry[n.id] = { type: 'existing', timestamp: ts };
+      }
+    }
+  });
+  saveLocalWithdrawalRegistry();
+  sortWithdrawnList();
+
   main.innerHTML = `
     <div class="page-enter space-y-4">
       <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-2">
@@ -163,6 +242,7 @@ function renderWithdrawalUI(main, allNoms, pwd) {
             <div class="hidden md:block overflow-x-auto">
               <table class="data-table">
                 <thead><tr>
+                  <th class="w-14 text-center font-bold" title="Serial Number (Chronological order in which withdrawal was filed or approved)">Sl #</th>
                   <th>Nom. ID</th>
                   <th>Post</th>
                   <th>Candidate</th>
@@ -377,9 +457,14 @@ function renderWithdrawalUI(main, allNoms, pwd) {
         // Synchronize with direct & withdrawn lists
         const targetNom = allNomsList.find(n => n.id === id) || req;
         if (targetNom) {
+          const nowIso = new Date().toISOString();
           targetNom.withdrawalStatus = 'Approved';
+          targetNom.withdrawnAt = targetNom.withdrawnAt || nowIso;
+          localWithdrawalRegistry[id] = { type: 'student_approved', timestamp: targetNom.withdrawnAt };
+          saveLocalWithdrawalRegistry();
           directList = directList.filter(n => n.id !== id);
-          if (!withdrawnList.some(n => n.id === id)) withdrawnList.unshift(targetNom);
+          if (!withdrawnList.some(n => n.id === id)) withdrawnList.push(targetNom);
+          sortWithdrawnList();
         }
         updateBadges();
         refreshAllDropdowns();
@@ -410,7 +495,10 @@ function renderWithdrawalUI(main, allNoms, pwd) {
         const targetNom = allNomsList.find(n => n.id === id) || req;
         if (targetNom) {
           targetNom.withdrawalStatus = 'Rejected';
+          delete localWithdrawalRegistry[id];
+          saveLocalWithdrawalRegistry();
           withdrawnList = withdrawnList.filter(n => n.id !== id);
+          sortWithdrawnList();
           if (!directList.some(n => n.id === id)) directList.unshift(targetNom);
         }
         updateBadges();
@@ -442,7 +530,10 @@ function renderWithdrawalUI(main, allNoms, pwd) {
         const targetNom = allNomsList.find(n => n.id === id) || req;
         if (targetNom) {
           targetNom.withdrawalStatus = 'Pending';
+          delete localWithdrawalRegistry[id];
+          saveLocalWithdrawalRegistry();
           withdrawnList = withdrawnList.filter(n => n.id !== id);
+          sortWithdrawnList();
           if (!directList.some(n => n.id === id)) directList.unshift(targetNom);
         }
         updateBadges();
@@ -526,19 +617,27 @@ function renderWithdrawalUI(main, allNoms, pwd) {
       const isStudent = withRequests.some(r => r.id === n.id);
       return `
       <tr id="rrow-${esc(n.id)}" class="bg-amber-950/10">
+        <td class="font-mono text-center font-bold text-amber-300 text-xs">
+          <span class="inline-flex items-center justify-center min-w-[1.75rem] px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30">
+            ${n.withdrawalSlNo !== undefined ? n.withdrawalSlNo : '–'}
+          </span>
+        </td>
         <td class="font-mono text-indigo-300 text-xs">${esc(n.id)}</td>
         <td class="text-xs font-medium text-slate-300">${esc(n.post)}</td>
         <td class="font-bold text-white">
           <div class="flex items-center gap-1.5 flex-wrap">
             <span>${esc(n.candidateName || 'N/A')}</span>
-            ${(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number']) ? `<span class="badge bg-amber-500/20 text-amber-300 font-mono text-[10px]">Sl. #${esc(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'])}</span>` : ''}
+            ${(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number']) ? `<span class="badge bg-amber-500/20 text-amber-300 font-mono text-[10px]" title="Electoral Nominal Roll Serial Number">Roll #${esc(n.candidateSerial || n.candidate?.['Nominal Roll Serial Number'])}</span>` : ''}
           </div>
         </td>
         <td class="text-xs text-slate-400">${esc(n.candidateClass || '')} / ${esc(n.candidateDept || '')}</td>
         <td>
-          <span class="badge ${isStudent ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'} text-xs">
-            ${isStudent ? 'Student Request' : 'Admin Direct'}
-          </span>
+          <div class="flex flex-col gap-0.5 items-start">
+            <span class="badge ${isStudent ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'} text-xs font-medium">
+              ${isStudent ? 'Student Request' : 'Admin Direct'}
+            </span>
+            ${n.withdrawnDateFormatted ? `<span class="text-[10px] text-slate-400 font-mono" title="Date &amp; time filed / approved">⏱️ ${esc(n.withdrawnDateFormatted)}</span>` : ''}
+          </div>
         </td>
         <td>
           <button class="btn btn-sm restore-withdraw-btn flex items-center gap-1.5" data-id="${esc(n.id)}"
@@ -550,7 +649,7 @@ function renderWithdrawalUI(main, allNoms, pwd) {
           </button>
         </td>
       </tr>`;
-    }).join('') : `<tr><td colspan="6" class="text-center text-slate-500 py-8">No withdrawn nominations found.</td></tr>`;
+    }).join('') : `<tr><td colspan="7" class="text-center text-slate-500 py-8">No withdrawn nominations found.</td></tr>`;
 
     const cardsDiv = main.querySelector('#restoreCardsContainer');
     if (cardsDiv) {
@@ -559,7 +658,10 @@ function renderWithdrawalUI(main, allNoms, pwd) {
         return `
           <div class="glass p-3.5 rounded-xl border border-amber-500/30 space-y-2 bg-slate-900/80">
             <div class="flex items-center justify-between gap-2">
-              <span class="font-mono text-xs text-indigo-300 font-bold bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30">#${esc(n.id)}</span>
+              <div class="flex items-center gap-1.5">
+                <span class="badge bg-amber-500/20 text-amber-300 font-mono text-xs font-bold border border-amber-500/30">Sl #${n.withdrawalSlNo}</span>
+                <span class="font-mono text-xs text-indigo-300 font-semibold bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30">#${esc(n.id)}</span>
+              </div>
               <span class="badge ${isStudent ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'} text-xs">
                 ${isStudent ? 'Student Request' : 'Admin Direct'}
               </span>
@@ -568,6 +670,7 @@ function renderWithdrawalUI(main, allNoms, pwd) {
               <div class="font-bold text-white text-base">${esc(n.candidateName || 'N/A')}</div>
               <div class="text-xs text-amber-300 font-semibold">${esc(n.post)}</div>
               <div class="text-xs text-slate-400 mt-0.5">${esc(n.candidateClass || '')} / ${esc(n.candidateDept || '')}</div>
+              ${n.withdrawnDateFormatted ? `<div class="text-[11px] text-slate-400 font-mono mt-1">⏱️ ${esc(n.withdrawnDateFormatted)}</div>` : ''}
             </div>
             <div class="pt-2 border-t border-white/10">
               <button class="btn btn-sm w-full restore-withdraw-btn flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold" data-id="${esc(n.id)}"
@@ -654,11 +757,16 @@ function renderWithdrawalUI(main, allNoms, pwd) {
         
         // Move from directList to withdrawnList
         if (nom) {
+          const nowIso = new Date().toISOString();
           nom.withdrawalStatus = 'Approved';
+          nom.withdrawnAt = nowIso;
+          localWithdrawalRegistry[id] = { type: 'admin_direct', timestamp: nowIso };
+          saveLocalWithdrawalRegistry();
           directList = directList.filter(n => n.id !== id);
           if (!withdrawnList.some(n => n.id === id)) {
-            withdrawnList.unshift(nom);
+            withdrawnList.push(nom);
           }
+          sortWithdrawnList();
         }
         updateBadges();
         refreshAllDropdowns();
@@ -692,7 +800,10 @@ function renderWithdrawalUI(main, allNoms, pwd) {
         // Move from withdrawnList back to directList
         if (nom) {
           nom.withdrawalStatus = targetStatus;
+          delete localWithdrawalRegistry[id];
+          saveLocalWithdrawalRegistry();
           withdrawnList = withdrawnList.filter(n => n.id !== id);
+          sortWithdrawnList();
           if (!directList.some(n => n.id === id)) {
             directList.unshift(nom);
           }

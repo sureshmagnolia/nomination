@@ -359,6 +359,7 @@ async function ensureSchema() {
     try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS rejection_reason TEXT;`; } catch (_) {}
     try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS physical_received BOOLEAN DEFAULT false;`; } catch (_) {}
     try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS physical_received_at TIMESTAMP;`; } catch (_) {}
+    try { await sql`ALTER TABLE nominations ADD COLUMN IF NOT EXISTS withdrawn_at TIMESTAMP;`; } catch (_) {}
     try { await sql`ALTER TABLE backup_snapshots ADD COLUMN IF NOT EXISTS created_at VARCHAR(100);`; } catch (_) {}
     // Allow candidates to generate nominations without unique constraint lockouts
     // (Physical submission to the Returning Officer determines official receipt)
@@ -979,6 +980,7 @@ export default async function handler(req, res) {
         status: n.status, withdrawalStatus: n.withdrawal_status, rejectionReason: n.rejection_reason,
         physicalReceived: n.physical_received === true || n.physical_received === 'true',
         physicalReceivedAt: n.physical_received_at || null,
+        withdrawnAt: n.withdrawn_at || null,
         candidate: { 'Nominal Roll Serial Number': n.candidate_serial, 'NAME': n.candidate_name, 'CLASS': n.candidate_class, 'ADMISION NO': n.candidate_admission, 'Dept': n.candidate_dept },
         proposer: { 'Nominal Roll Serial Number': n.proposer_serial, 'NAME': n.proposer_name, 'CLASS': n.proposer_class, 'ADMISION NO': n.proposer_admission, 'Dept': n.proposer_dept },
         seconder: { 'Nominal Roll Serial Number': n.seconder_serial, 'NAME': n.seconder_name, 'CLASS': n.seconder_class, 'ADMISION NO': n.seconder_admission, 'Dept': n.seconder_dept },
@@ -2087,13 +2089,14 @@ All students are directed to strictly adhere to the University Code of Conduct, 
     }
 
     if (action === 'adminApproveWithdrawal' || action === 'adminDirectWithdrawal') {
-      await sql`UPDATE nominations SET withdrawal_status = 'Approved' WHERE id = ${body.id}`;
+      const nowIso = new Date().toISOString();
+      await sql`UPDATE nominations SET withdrawal_status = 'Approved', withdrawn_at = COALESCE(withdrawn_at, ${nowIso}) WHERE id = ${body.id}`;
       return jsonOut(res, { ok: true });
     }
 
     if (action === 'adminRestoreWithdrawal') {
       const targetStatus = body.targetStatus || 'None';
-      await sql`UPDATE nominations SET withdrawal_status = ${targetStatus} WHERE id = ${body.id}`;
+      await sql`UPDATE nominations SET withdrawal_status = ${targetStatus}, withdrawn_at = NULL WHERE id = ${body.id}`;
       return jsonOut(res, { ok: true });
     }
 
