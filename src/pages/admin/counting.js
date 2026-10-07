@@ -97,11 +97,12 @@ export async function renderAdminCounting(container) {
     const resultsList = Array.isArray(resultsRaw) ? resultsRaw : (Array.isArray(resultsRaw?.results) ? resultsRaw.results : []);
 
     let countingTeams = [];
-    if (officialsRaw && Array.isArray(officialsRaw.countingTeams)) {
+    if (officialsRaw && Array.isArray(officialsRaw.countingTeams) && officialsRaw.countingTeams.length > 0) {
       countingTeams = officialsRaw.countingTeams;
     } else {
       try {
-        countingTeams = JSON.parse(localStorage.getItem('gcc_counting_teams') || '[]');
+        const local = JSON.parse(localStorage.getItem('gcc_counting_teams') || '[]');
+        if (Array.isArray(local) && local.length > 0) countingTeams = local;
       } catch (_) {}
     }
 
@@ -135,10 +136,13 @@ export async function renderAdminCounting(container) {
 
 function getSupervisorNameForTable(tableNum, countingTeams) {
   if (!Array.isArray(countingTeams)) return '';
-  const team = countingTeams.find(t => String(t.tableNumber) === String(tableNum));
-  if (!team || !team.supervisor) return '';
+  const team = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(tableNum));
+  if (!team) return '';
+  if (team.supervisorName) return team.supervisorName;
   if (typeof team.supervisor === 'string') return team.supervisor;
-  return team.supervisor.name || team.supervisor.fullName || '';
+  if (team.supervisor && (team.supervisor.name || team.supervisor.fullName)) return team.supervisor.name || team.supervisor.fullName;
+  if (team.coreInCharge && team.coreInCharge.name) return team.coreInCharge.name;
+  return '';
 }
 
 function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nominalRoll, settings = {}, isOffline = false, countingTeams = [], allResults = []) {

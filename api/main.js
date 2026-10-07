@@ -3358,8 +3358,8 @@ All students are directed to strictly adhere to the University Code of Conduct, 
         getSetting('results_data'),
         getSetting('booths'),
         fetchPostsFromDb(),
-        getSetting('countingTeams'),
-        getSetting('pollingTeams')
+        getSetting('counting_teams_officials'),
+        getSetting('polling_teams_officials')
       ]);
 
       const plan = safeJsonParse(planRaw, null);
@@ -3656,12 +3656,17 @@ All students are directed to strictly adhere to the University Code of Conduct, 
         const assignedSupervisors = new Set();
         if (Array.isArray(countingTeams)) {
           countingTeams.forEach(tm => {
-            if (tm.supervisorName && tm.tableNumber) assignedSupervisors.add(Number(tm.tableNumber));
+            const supName = tm.supervisorName || (typeof tm.supervisor === 'string' ? tm.supervisor : tm.supervisor?.name) || tm.coreInCharge?.name;
+            const tblNum = Number(tm.tableNumber || tm.boothNumber);
+            if (supName && tblNum) assignedSupervisors.add(tblNum);
           });
         }
-        const unstaffedTables = booths.filter((_, idx) => !assignedSupervisors.has(idx + 1));
+        const unstaffedTables = booths.filter((b, idx) => {
+          const bNum = Number(b.boothNumber || idx + 1);
+          return !assignedSupervisors.has(bNum);
+        });
         if (unstaffedTables.length > 0) {
-          officialsCheck.details.push(`${unstaffedTables.length} counting table(s) do not have a Counting Supervisor appointed: Tables ${unstaffedTables.map((_, i) => i + 1).slice(0, 8).join(', ')}.`);
+          officialsCheck.details.push(`${unstaffedTables.length} counting table(s) do not have a Counting Supervisor appointed: Tables ${unstaffedTables.map((b, i) => b.boothNumber || i + 1).slice(0, 8).join(', ')}.`);
         }
       }
 

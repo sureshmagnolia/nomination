@@ -710,18 +710,32 @@ function performFullSystemAudit({
     stats: {}
   };
 
-  const countingTeams = Array.isArray(officials?.countingTeams) ? officials.countingTeams : [];
+  let countingTeams = Array.isArray(officials?.countingTeams) && officials.countingTeams.length > 0
+    ? officials.countingTeams
+    : [];
+  if (countingTeams.length === 0) {
+    try {
+      const localTeams = JSON.parse(localStorage.getItem('gcc_counting_teams') || '[]');
+      if (Array.isArray(localTeams) && localTeams.length > 0) countingTeams = localTeams;
+    } catch (_) {}
+  }
+
   const assignedSupervisors = new Set();
   countingTeams.forEach(tm => {
-    if (tm.supervisorName && tm.tableNumber) assignedSupervisors.add(Number(tm.tableNumber));
+    const supName = tm.supervisorName || (typeof tm.supervisor === 'string' ? tm.supervisor : tm.supervisor?.name) || tm.coreInCharge?.name;
+    const tblNum = Number(tm.tableNumber || tm.boothNumber);
+    if (supName && tblNum) assignedSupervisors.add(tblNum);
   });
 
-  const unstaffedTables = booths.filter((_, idx) => !assignedSupervisors.has(idx + 1));
+  const unstaffedTables = booths.filter((b, idx) => {
+    const bNum = Number(b.boothNumber || idx + 1);
+    return !assignedSupervisors.has(bNum);
+  });
   if (unstaffedTables.length > 0) {
     officialsCheck.hasWarnings = true;
     officialsCheck.items.push({
       type: 'warning',
-      text: `${unstaffedTables.length} Counting Table(s) do not have a Counting Supervisor appointed: Tables ${unstaffedTables.map((_, i) => i + 1).slice(0, 8).join(', ')}.`
+      text: `${unstaffedTables.length} Counting Table(s) do not have a Counting Supervisor appointed: Tables ${unstaffedTables.map((b, i) => b.boothNumber || i + 1).slice(0, 8).join(', ')}.`
     });
   } else if (booths.length > 0) {
     officialsCheck.items.push({ type: 'success', text: `100% Supervisory Coverage: All ${booths.length} counting tables have appointed Counting Supervisors.` });

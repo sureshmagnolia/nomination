@@ -10,6 +10,7 @@ import { esc, showToast, setLoading } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 import { DEFAULT_FACULTY_ROSTER } from '../../data/facultySeed.js';
 import { DEFAULT_NON_TEACHING_ROSTER } from '../../data/nonTeachingSeed.js';
+import { OFFICIAL_COUNTING_ROSTER_BACKUP } from '../../data/officialCountingRoster.js';
 import * as XLSX from 'xlsx';
 
 /**
@@ -279,8 +280,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const cachedCount = localStorage.getItem('gcc_counting_teams');
   if (cachedCount !== null) {
     try { countingTeams = JSON.parse(cachedCount); } catch (_) { countingTeams = []; }
-  } else if (Array.isArray(initialOfficialsData?.countingTeams)) {
+  }
+  if ((!Array.isArray(countingTeams) || countingTeams.length === 0) && Array.isArray(initialOfficialsData?.countingTeams) && initialOfficialsData.countingTeams.length > 0) {
     countingTeams = initialOfficialsData.countingTeams;
+    localStorage.setItem('gcc_counting_teams', JSON.stringify(countingTeams));
+  }
+  // Auto-recover from statutory duty roster backup if counting teams are unassigned or missing supervisors
+  if (!Array.isArray(countingTeams) || countingTeams.length === 0 || !countingTeams.some(t => t.supervisor)) {
+    countingTeams = OFFICIAL_COUNTING_ROSTER_BACKUP.map(t => ({ ...t }));
     localStorage.setItem('gcc_counting_teams', JSON.stringify(countingTeams));
   }
 
@@ -1731,7 +1738,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // Ensure every table has a team entry in countingTeams
     booths.forEach(b => {
-      let team = countingTeams.find(t => t.tableNumber === b.boothNumber);
+      let team = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(b.boothNumber));
       if (!team) {
         team = {
           tableNumber: b.boothNumber,
@@ -1777,7 +1784,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const emptyAssistantTables = [];
 
     booths.forEach(b => {
-      const team = countingTeams.find(t => t.tableNumber === b.boothNumber);
+      const team = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(b.boothNumber));
       if (!team) return;
       if (!team.supervisor) emptySupervisorTables.push(team);
       if (!team.countingOfficer1) emptyCO1Tables.push(team);
@@ -3260,6 +3267,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <button id="btnAutoAllotCountingFresh" class="btn btn-primary bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow" title="Auto-allot empty counting slots while preserving all manually chosen officials">
                 ⚡ Auto-Allot (Fresh Faculty First)
               </button>
+              <button id="btnRestoreOfficialDutyRoster" class="btn btn-secondary border-purple-500/50 bg-purple-900/40 text-purple-200 hover:bg-purple-600 hover:text-white text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Restores all 12 tables to the verified statutory roster from Order No: GCC/ELEC/2026/MASTER-DUTY-01">
+                📋 Restore Official Order
+              </button>
               <button id="btnPrintMasterDutyListCounting" class="btn btn-primary bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs px-3.5 py-2 flex items-center gap-1.5 shadow" title="Print Master Duty List with Observers 1st and Department-wise Officials">
                 🖨️ Master Duty List
               </button>
@@ -3274,7 +3284,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="countingTeamsGrid">
             ${booths.map((b, idx) => {
-              const team = countingTeams.find(t => t.tableNumber === b.boothNumber) || {
+              const team = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(b.boothNumber)) || {
                 tableNumber: b.boothNumber,
                 roomName: b.roomName || `Table ${b.boothNumber}`,
                 supervisor: null,
@@ -3776,6 +3786,32 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       }
     });
 
+    // Restore Counting Teams from Official Order
+    main.querySelector('#btnRestoreOfficialDutyRoster')?.addEventListener('click', async () => {
+      if (confirm('📋 Restore Counting Teams from Official Duty Order (Order No: GCC/ELEC/2026/MASTER-DUTY-01)?\n\nThis will re-assign all 12 Counting Supervisors, Counting Officers, and Assistants exactly as officially ordered.')) {
+        countingTeams = OFFICIAL_COUNTING_ROSTER_BACKUP.map(bTeam => {
+          const supFac = getFaculty(bTeam.supervisor.name) || getFaculty(bTeam.supervisor.pen) || bTeam.supervisor;
+          const co1Fac = getFaculty(bTeam.countingOfficer1.name) || getFaculty(bTeam.countingOfficer1.pen) || bTeam.countingOfficer1;
+          const co2Fac = getFaculty(bTeam.countingOfficer2.name) || getFaculty(bTeam.countingOfficer2.pen) || bTeam.countingOfficer2;
+          const asstNt = (nonTeaching || []).find(nt => String(nt.name || '').trim().toLowerCase() === String(bTeam.countingAssistant?.name || '').trim().toLowerCase() || (bTeam.countingAssistant?.pen && String(nt.pen || '').trim() === String(bTeam.countingAssistant.pen).trim())) || bTeam.countingAssistant;
+          const matchingBooth = booths.find(b => Number(b.boothNumber) === Number(bTeam.tableNumber));
+          return {
+            tableNumber: Number(bTeam.tableNumber),
+            roomName: matchingBooth?.roomName || `Table ${bTeam.tableNumber}`,
+            supervisor: supFac,
+            countingOfficer1: co1Fac,
+            countingOfficer2: co2Fac,
+            countingOfficer3: null,
+            showCountingOfficer3: false,
+            countingAssistant: asstNt
+          };
+        });
+        await saveAll(false);
+        renderUI();
+        showToast('✅ All 12 Counting Tables restored from Official Duty Order!', 'success');
+      }
+    });
+
     // Clear Counting Teams
     main.querySelector('#btnClearCountingTeams')?.addEventListener('click', () => {
       if (confirm('Are you sure you want to clear all Counting Table official assignments?')) {
@@ -3910,7 +3946,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           });
         }
 
-        let team = countingTeams.find(t => t.tableNumber === tableNum);
+        let team = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(tableNum));
         if (!team) {
           team = { tableNumber: tableNum, roomName: `Table ${tableNum}`, supervisor: null, countingOfficer1: null, countingOfficer2: null, countingOfficer3: null, countingAssistant: null };
           countingTeams.push(team);
@@ -3927,7 +3963,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     main.querySelectorAll('.btn-add-counting-officer3').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const tableNum = parseInt(e.currentTarget.dataset.table, 10);
-        let team = countingTeams.find(t => t.tableNumber === tableNum);
+        let team = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(tableNum));
         if (!team) {
           team = { tableNumber: tableNum, roomName: `Table ${tableNum}`, supervisor: null, countingOfficer1: null, countingOfficer2: null, countingOfficer3: null, countingAssistant: null };
           countingTeams.push(team);
@@ -3941,7 +3977,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     main.querySelectorAll('.btn-remove-counting-officer3').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const tableNum = parseInt(e.currentTarget.dataset.table, 10);
-        const team = countingTeams.find(t => t.tableNumber === tableNum);
+        const team = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(tableNum));
         if (team) {
           team.countingOfficer3 = null;
           team.showCountingOfficer3 = false;
@@ -3959,7 +3995,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
         // Note: Same counting assistant CAN be assigned to multiple tables due to staff shortage.
         // Do NOT release them from other counting tables.
-        let team = countingTeams.find(t => t.tableNumber === tableNum);
+        let team = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(tableNum));
         if (!team) {
           team = { tableNumber: tableNum, roomName: `Table ${tableNum}`, supervisor: null, countingOfficer1: null, countingOfficer2: null, countingOfficer3: null, countingAssistant: null };
           countingTeams.push(team);
@@ -3975,7 +4011,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     main.querySelectorAll('.btn-fix-hierarchy-counting').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const tableNum = parseInt(e.currentTarget.dataset.table, 10);
-        const team = countingTeams.find(t => t.tableNumber === tableNum);
+        const team = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(tableNum));
         if (!team) return;
 
         const teamFaculty = [team.supervisor, team.countingOfficer1, team.countingOfficer2, team.countingOfficer3].filter(Boolean);
@@ -4591,7 +4627,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       sel.addEventListener('change', (e) => {
         const tableNum = parseInt(e.target.dataset.table, 10);
         const selectedName = e.target.value;
-        let team = countingTeams.find(t => t.tableNumber === tableNum);
+        let team = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(tableNum));
         if (!team) {
           team = { tableNumber: tableNum, roomName: `Table ${tableNum}`, supervisor: null, countingOfficer1: null, countingOfficer2: null, countingOfficer3: null, countingAssistant: null };
           countingTeams.push(team);
@@ -5862,7 +5898,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
               <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto p-1 custom-scrollbar" id="tableCheckboxesContainer">
                 ${booths.map(b => {
-                  const currentTeam = countingTeams.find(t => t.tableNumber === b.boothNumber);
+                  const currentTeam = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(b.boothNumber));
                   const isAssignedToThis = currentTeam?.countingAssistant?.name === selectedStaff.name;
                   const otherAssistant = currentTeam?.countingAssistant && !isAssignedToThis ? currentTeam.countingAssistant.name : null;
 
@@ -5960,7 +5996,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         const checkedTables = [];
         modal.querySelectorAll('.chk-modal-table').forEach(chk => {
           const tableNum = parseInt(chk.dataset.table, 10);
-          let team = countingTeams.find(t => t.tableNumber === tableNum);
+          let team = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(tableNum));
           if (!team) {
             team = { tableNumber: tableNum, roomName: `Table ${tableNum}`, supervisor: null, countingOfficer1: null, countingOfficer2: null, countingOfficer3: null, countingAssistant: null };
             countingTeams.push(team);
