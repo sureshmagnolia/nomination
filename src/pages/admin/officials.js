@@ -8316,9 +8316,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>${esc(c.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(c.pen)}</td>
                   <td>
-                    ${hideStation ? `
-                      <div style="font-weight: 700; color: #000000;">[ Station &amp; Duty Disclosed at Briefing ]</div>
-                    ` : `
+                    ${hideStation ? '' : `
                       <div style="font-weight: 700; color: #000000;">${esc(c.duty)}</div>
                       <span class="staff-meta">Station: ${esc(c.station)}</span>
                     `}
@@ -8390,9 +8388,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   </td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(p.pen)}</td>
                   <td>
-                    ${hideStation ? `
-                      <div style="font-weight: 700; color: #000000;">[ Station Disclosed at Briefing ]</div>
-                    ` : (p.isReserve ? `
+                    ${hideStation ? '' : (p.isReserve ? `
                       <strong style="color: #000000;">${esc(p.duty)}</strong><br>
                       <span class="staff-meta">Station: ${esc(p.station)}</span>
                     ` : `
