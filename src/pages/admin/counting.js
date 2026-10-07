@@ -1,6 +1,6 @@
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast, setLoading, isYearEligible, sortPosts } from '../../utils.js';
+import { esc, showToast, setLoading, isYearEligible, sortPosts, isAssocPost, isYearRepPost, comparePosts } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 import { saveCountingMeta, getCountingMeta, getAllResultsLocally } from '../../offlineStorage.js';
 import { router } from '../../router.js';
@@ -44,6 +44,28 @@ export function deduceBallotsFromResults(results, tableNum) {
   // Fallback to highest ballot sum among single-vote posts
   validEntries.sort((a, b) => b[1] - a[1]);
   return { ballots: validEntries[0][1], postName: validEntries[0][0] };
+}
+
+/**
+ * Sorts election posts specifically for statutory counting order:
+ * 1. Department Association Secretaries (FIRST, Alphabetical)
+ * 2. Year / Class Representatives (SECOND, Year order)
+ * 3. General Union Executive Seats (THIRD, Seniority order)
+ * 4. University Union Councillor (UUC - LAST ALWAYS)
+ */
+export function sortPostsForCounting(posts) {
+  if (!Array.isArray(posts)) return [];
+  const uuc = posts.filter(p => isUuc(p?.post || p?.name || p));
+  const assoc = posts.filter(p => !uuc.includes(p) && (isAssocPost(p) || Boolean(p?.deptRestriction) || Boolean(p?.restrictedDept)));
+  const reps = posts.filter(p => !uuc.includes(p) && !assoc.includes(p) && isYearRepPost(p));
+  const general = posts.filter(p => !uuc.includes(p) && !assoc.includes(p) && !reps.includes(p));
+
+  assoc.sort(comparePosts);
+  reps.sort(comparePosts);
+  general.sort(comparePosts);
+  uuc.sort(comparePosts);
+
+  return [...assoc, ...reps, ...general, ...uuc];
 }
 
 export async function renderAdminCounting(container) {
@@ -148,6 +170,16 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
 
   const pName = p => String(p?.post || p?.name || '');
 
+  const getPostDept = (p) => {
+    if (p?.restrictedDept) return String(p.restrictedDept).toUpperCase().trim();
+    const name = pName(p);
+    const prefixRegex = /^ASSOCIATION\s+SECRETARY\s*(FOR\s*|\s*-\s*|\s*:\s*|\s+OF\s*)?/i;
+    if (prefixRegex.test(name)) {
+      return name.replace(prefixRegex, '').toUpperCase().trim();
+    }
+    return null;
+  };
+
   const getBoothClasses = (b) => {
     if (Array.isArray(b?.classes)) return b.classes;
     if (typeof b?.classes === 'string') return b.classes.split(',').map(s => s.trim()).filter(Boolean);
@@ -248,8 +280,8 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     const T = boothsList.length;
     const isMismatch = matrix.length !== T;
 
-    // Build list of active contesting posts sorted statutorily
-    const sortedPostObjects = sortPosts(postsList);
+    // Build list of active contesting posts sorted statutorily (Assoc 1st, Reps, General, UUC Last)
+    const sortedPostObjects = sortPostsForCounting(postsList);
 
     // Map each post to its counting tables/rounds
     const postTableMap = {};
@@ -323,6 +355,31 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       return eff.isActual;
     }).length;
 
+    // Detect if current matrix adheres to statutory counting order
+    // (Associations 1st, General Union Posts rotated across tables, UUC Last Always)
+    const isOrderStatutory = (() => {
+      if (!Array.isArray(matrix) || !matrix.length || matrix.length !== T) return true;
+      for (let t = 0; t < T; t++) {
+        const row = matrix[t];
+        if (!Array.isArray(row)) continue;
+        const nonNull = row.filter(Boolean);
+        if (!nonNull.length) continue;
+        const lastP = nonNull[nonNull.length - 1];
+        const hasUuc = nonNull.some(p => isUuc(pName(p)));
+        if (hasUuc && !isUuc(pName(lastP))) return false;
+        const firstP = nonNull[0];
+        const hasAssoc = nonNull.some(p => isAssocPost(p) || Boolean(getPostDept(p)));
+        if (hasAssoc && !isAssocPost(firstP) && !getPostDept(firstP)) return false;
+      }
+      if (T > 1) {
+        const findFirstGen = (row) => row.find(p => p && !isUuc(pName(p)) && !isAssocPost(p) && !isYearRepPost(p));
+        const g0 = findFirstGen(matrix[0] || []);
+        const g1 = findFirstGen(matrix[1] || []);
+        if (g0 && g1 && pName(g0) === pName(g1)) return false;
+      }
+      return true;
+    })();
+
     main.innerHTML = `
       <div id="adminCountingRoot" class="page-enter space-y-6">
         ${isMismatch ? `
@@ -336,6 +393,21 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             </div>
             <button id="btnNoticeRegenerate" class="btn btn-sm bg-amber-500 hover:bg-amber-600 text-black font-bold shrink-0" title="Action: Regenerates the table × round counting matrix to adapt to the updated number of polling booths.&#10;Prerequisite: Confirm that current booth configurations are finalized.">
               🔄 Regenerate Matrix Now
+            </button>
+          </div>
+        ` : ''}
+
+        ${!isMismatch && !isOrderStatutory ? `
+          <div class="p-4 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-lg">
+            <div class="flex items-center gap-2.5">
+              <span class="text-2xl">🔄</span>
+              <div>
+                <strong>Statutory Allocation Order Notice:</strong>
+                <span>Current matrix does not follow statutory counting order (<strong>Department Associations 1st</strong>, <strong>General Union Posts rotated across tables each round</strong>, and <strong>UUC Last Always</strong>).</span>
+              </div>
+            </div>
+            <button id="btnOrderRegenerate" class="btn btn-sm bg-indigo-600 hover:bg-indigo-500 text-white font-bold shrink-0 shadow" title="Action: Re-runs statutory counting allocation algorithm: Associations 1st, General Union Posts rotated across tables, UUC Last Always.">
+              🔄 Re-align Matrix Now
             </button>
           </div>
         ` : ''}
@@ -356,7 +428,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             <a href="#/admin/officials" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold flex items-center gap-1.5" title="Action: Opens the Election Officials Team Builder to allot Counting Supervisors and Counting Assistants to tables.&#10;Prerequisite: Configure booths/tables and upload staff rosters first.">
               <span>👥</span> Allot Counting Teams
             </a>
-            <button id="btnRegenerate" class="btn btn-secondary bg-white/5 border-white/10 hover:bg-white/10 text-xs font-semibold flex items-center gap-1.5" title="Action: Re-runs the statutory counting allocation algorithm to rebalance rounds and table assignments across booths.&#10;Prerequisite: Recommended if candidate lists or booth configurations have changed.">
+            <button id="btnRegenerate" class="btn btn-secondary bg-white/5 border-white/10 hover:bg-white/10 text-xs font-semibold flex items-center gap-1.5" title="Action: Re-runs statutory counting allocation: Department Associations 1st, General Union Posts rotated across tables each round, and UUC Last Always.&#10;Prerequisite: Recommended if candidate lists or booth configurations have changed.">
               <span>🔄</span> Regenerate Matrix
             </button>
           </div>
@@ -1558,13 +1630,19 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
 
     // Matrix Regenerate listeners
     main.querySelector('#btnRegenerate')?.addEventListener('click', () => {
-      if (confirm('Are you sure? This will discard the current matrix and generate a new one based on current Booths and Posts. Results entry serial numbers may change!')) {
+      if (confirm(`Are you sure? This will regenerate the counting matrix following statutory allocation:\n\n• Department Associations: Round 1 (FIRST)\n• Year Representatives: Round 2\n• General Union Posts: Rotated per table across rounds\n• University Union Councillor (UUC): Final Round (LAST ALWAYS)\n\nResults entry serial numbers may change!`)) {
         generateAndSave();
       }
     });
 
     main.querySelector('#btnNoticeRegenerate')?.addEventListener('click', () => {
-      if (confirm('Regenerate counting matrix to align with all ' + T + ' polling booths?')) {
+      if (confirm(`Regenerate counting matrix to align with all ${T} polling booths (Associations 1st, rotated General posts, UUC Last)?`)) {
+        generateAndSave();
+      }
+    });
+
+    main.querySelector('#btnOrderRegenerate')?.addEventListener('click', () => {
+      if (confirm(`Re-align counting matrix to statutory order (Associations 1st, rotated General posts, UUC Last Always) across all ${T} polling booths?`)) {
         generateAndSave();
       }
     });
@@ -1573,16 +1651,6 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
   // ── Function to generate matrix from scratch and save to backend ──────────────
   const generateAndSave = async () => {
     const T = boothsList.length;
-    
-    const getPostDept = (p) => {
-      if (p?.restrictedDept) return String(p.restrictedDept).toUpperCase().trim();
-      const name = pName(p);
-      const prefix = 'Association Secretary ';
-      if (name.toUpperCase().startsWith(prefix.toUpperCase())) {
-        return name.substring(prefix.length).toUpperCase().trim();
-      }
-      return null;
-    };
 
     const classToDept = {};
     nominalRollList.forEach(s => {
@@ -1614,28 +1682,106 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       return yrs;
     });
 
-    const isMatch = (post, bIdx) => {
-      const pDept = getPostDept(post);
-      if (pDept && !boothDepts[bIdx].has(pDept)) return false;
-      const yrRule = post.yearRule;
-      if (!yrRule || yrRule === 'ALL') return true;
+    const isDeptMatch = (pDept, bIdx) => {
+      if (!pDept) return false;
+      const bD = boothDepts[bIdx];
+      if (bD.has(pDept)) return true;
+      const norm = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const pNorm = norm(pDept);
+      for (const d of bD) {
+        const dNorm = norm(d);
+        if (dNorm === pNorm || dNorm.includes(pNorm) || pNorm.includes(dNorm)) return true;
+      }
+      return false;
+    };
+
+    const isYearMatch = (post, bIdx) => {
       const bYrs = boothYears[bIdx];
-      if (yrRule === 'PG')  return bYrs.has('PG');
-      if (yrRule === 'UG1') return bYrs.has('1');
-      if (yrRule === 'UG2') return bYrs.has('2');
-      if (yrRule === 'UG3') return bYrs.has('3');
+      const yrRule = post.yearRule;
+      if (yrRule && yrRule !== 'ALL') {
+        if (yrRule === 'PG')  return bYrs.has('PG');
+        if (yrRule === 'UG1' || yrRule === '1') return bYrs.has('1');
+        if (yrRule === 'UG2' || yrRule === '2') return bYrs.has('2');
+        if (yrRule === 'UG3' || yrRule === '3') return bYrs.has('3');
+      }
+      const yrRes = String(post.yearRestriction || '').toUpperCase().trim();
+      if (yrRes) {
+        if (yrRes.includes('PG')) return bYrs.has('PG');
+        if (yrRes === '1') return bYrs.has('1');
+        if (yrRes === '2') return bYrs.has('2');
+        if (yrRes === '3') return bYrs.has('3');
+      }
+      const nameUpper = pName(post).toUpperCase();
+      if (nameUpper.includes('PG')) return bYrs.has('PG');
+      if (nameUpper.includes('I UG') || nameUpper.includes('1ST UG') || nameUpper.includes('1_UG') || nameUpper.includes('1ST YEAR UG')) return bYrs.has('1');
+      if (nameUpper.includes('II UG') || nameUpper.includes('2ND UG') || nameUpper.includes('2_UG') || nameUpper.includes('2ND YEAR UG')) return bYrs.has('2');
+      if (nameUpper.includes('III UG') || nameUpper.includes('3RD UG') || nameUpper.includes('3_UG') || nameUpper.includes('3RD YEAR UG')) return bYrs.has('3');
       return true;
     };
 
-    const maxPostsAtTable = Math.max(...boothsList.map((_, i) => postsList.filter(p => isMatch(p, i)).length), 1);
-    const R = Math.max(maxPostsAtTable, 1);
-    const matrix = Array.from({ length: T }, () => Array.from({ length: R }, () => null));
+    const isMatch = (post, bIdx) => {
+      if (isUuc(pName(post))) return true;
+      if (isAssocPost(post) || Boolean(getPostDept(post))) {
+        const pDept = getPostDept(post);
+        return isDeptMatch(pDept, bIdx);
+      }
+      if (isYearRepPost(post)) {
+        return isYearMatch(post, bIdx);
+      }
+      return true;
+    };
 
-    boothsList.forEach((_, t) => {
-      const matchingPosts = postsList.filter(p => isMatch(p, t));
-      matchingPosts.forEach((p, r) => {
-        if (r < R) matrix[t][r] = p;
+    // 1. Four-Tier Statutory Segregation
+    const uucPosts = postsList.filter(p => isUuc(pName(p)));
+    const assocPosts = postsList.filter(p => !uucPosts.includes(p) && (isAssocPost(p) || Boolean(getPostDept(p))));
+    const yearRepPosts = postsList.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && isYearRepPost(p));
+    const generalPosts = postsList.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && !yearRepPosts.includes(p));
+
+    // Sort within tiers
+    assocPosts.sort(comparePosts);
+    yearRepPosts.sort(comparePosts);
+    generalPosts.sort(comparePosts);
+    uucPosts.sort(comparePosts);
+
+    const G = generalPosts.length;
+
+    // 2. Build table rounds:
+    //    Tier 1: Association Posts (FIRST)
+    //    Tier 2: Year Representatives (SECOND)
+    //    Tier 3: General Union Posts (THIRD, ROTATED PER TABLE EACH ROUND: generalPosts[(t + i) % G])
+    //    Tier 4: University Union Councillor (UUC - LAST ALWAYS)
+    const tablePrefix = [];
+    const tableUuc = [];
+
+    for (let t = 0; t < T; t++) {
+      const myAssoc = assocPosts.filter(ap => isMatch(ap, t));
+      const myYearReps = yearRepPosts.filter(yp => isMatch(yp, t));
+      const myGeneral = [];
+      if (G > 0) {
+        for (let i = 0; i < G; i++) {
+          myGeneral.push(generalPosts[(t + i) % G]);
+        }
+      }
+      tablePrefix.push([...myAssoc, ...myYearReps, ...myGeneral]);
+      tableUuc.push(uucPosts.filter(up => isMatch(up, t)));
+    }
+
+    const maxPrefix = Math.max(...tablePrefix.map(p => p.length), 0);
+    const maxUuc = Math.max(...tableUuc.map(u => u.length), 0);
+    const R = Math.max(maxPrefix + maxUuc, 1);
+
+    // Construct matrix: non-UUC fill early rounds, UUC is anchored to the final rounds across all tables
+    const matrix = Array.from({ length: T }, (_, t) => {
+      const row = Array.from({ length: R }, () => null);
+      const prefix = tablePrefix[t];
+      prefix.forEach((p, idx) => {
+        row[idx] = p;
       });
+      const uuc = tableUuc[t];
+      uuc.forEach((p, idx) => {
+        row[R - maxUuc + idx] = p;
+      });
+      return row;
     });
 
     let currentSerial = 1;
@@ -1648,18 +1794,28 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       }
     }
 
+    const roundLabels = Array.from({ length: R }, (_, i) => {
+      if (maxUuc > 0 && i >= R - maxUuc) {
+        return maxUuc === 1 ? `Round ${i + 1} (UUC)` : `Round ${i + 1} (UUC ${i - (R - maxUuc) + 1})`;
+      }
+      if (i === 0 && assocPosts.length > 0) {
+        return `Round 1 (Assoc)`;
+      }
+      return `Round ${i + 1}`;
+    });
+
     const payload = {
       matrix,
       formSerials,
       totalRounds: R,
-      roundLabels: Array.from({ length: R }, (_, i) => `Round ${i + 1}`),
+      roundLabels,
       tablePolledBallots: tablePolledBallots || {}
     };
 
     try {
       await api.adminSaveCountingMatrix(pwd, payload);
       await saveCountingMeta({ savedMatrix: payload, posts: postsList, finalList: candidatesList, booths: boothsList, settings, countingTeams, nominalRoll: nominalRollList, results: allResults });
-      showToast('Counting matrix generated and saved successfully.', 'success');
+      showToast('Counting matrix regenerated statutorily (Assoc 1st, Rotated General, UUC Last).', 'success');
       renderDisplay(payload);
     } catch (e) {
       console.warn('Online save matrix failed, saving locally to IndexedDB:', e);
