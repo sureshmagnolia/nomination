@@ -48,6 +48,9 @@ export function deduceBallotsFromResults(results, tableNum) {
 
 export async function renderAdminCounting(container) {
   const pwd = getAdminPassword(); if (!pwd) return;
+  router.registerCleanup(() => {
+    document.querySelectorAll('#modalBpa, #modalSpecificForms').forEach(el => el.remove());
+  });
   renderAdminLayout(container, 'counting', `
     <div class="text-center py-16"><span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span><p class="text-slate-400 mt-4 text-sm">Loading Counting Setup & Officials...</p></div>
   `);
@@ -640,8 +643,8 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         </div>
 
         <!-- ── Modal: Pick Specific Counting Forms ──────────────────────────────── -->
-        <div id="modalSpecificForms" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md hidden page-enter">
-          <div class="bg-slate-900 border border-indigo-500/40 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+        <div id="modalSpecificForms" class="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999;">
+          <div class="relative z-[10000] bg-slate-900 border border-indigo-500/40 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-auto" style="position: relative; z-index: 10000; max-height: 90vh;">
             <!-- Header -->
             <div class="flex items-center justify-between p-4 border-b border-white/10 bg-slate-950/60">
               <div class="flex items-center gap-2.5">
@@ -729,8 +732,8 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         </div>
 
         <!-- ── Modal: Ballot Paper Account & Actual Turnout Management ──────────────── -->
-        <div id="modalBpa" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md hidden page-enter">
-          <div class="bg-slate-900 border border-emerald-500/40 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+        <div id="modalBpa" class="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999;">
+          <div class="relative z-[10000] bg-slate-900 border border-emerald-500/40 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto" style="position: relative; z-index: 10000; max-height: 92vh;">
             <!-- Header -->
             <div class="flex items-center justify-between p-4 border-b border-white/10 bg-slate-950/60">
               <div class="flex items-center gap-2.5">
@@ -796,6 +799,22 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         </div>
 
       </div>`;
+
+    // Clean up any existing portaled modal instances in document.body
+    document.querySelectorAll('#modalBpa, #modalSpecificForms').forEach(el => {
+      if (el.parentElement === document.body) el.remove();
+    });
+
+    // Portal modals directly to document.body so they attach to the top-level viewport window
+    // (immune to #adminCountingRoot page-enter transform and #adminMain scroll containment)
+    const modalSpecific = main.querySelector('#modalSpecificForms');
+    if (modalSpecific) {
+      document.body.appendChild(modalSpecific);
+    }
+    const modalBpa = main.querySelector('#modalBpa');
+    if (modalBpa) {
+      document.body.appendChild(modalBpa);
+    }
 
     // ─── Attach Events ────────────────────────────────────────────────────────
     const selPostPrint = main.querySelector('#selPostPrint');
@@ -1230,9 +1249,8 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     });
 
     // ── Specific Forms Picker Modal Logic ────────────────────────────────────
-    const modalSpecific = main.querySelector('#modalSpecificForms');
-    const inputModalSearch = main.querySelector('#inputSearchModalForms');
-    const modalCountEl = main.querySelector('#modalCountSelected');
+    const inputModalSearch = modalSpecific?.querySelector('#inputSearchModalForms');
+    const modalCountEl = modalSpecific?.querySelector('#modalCountSelected');
 
     const updateModalSelectionCount = () => {
       if (!modalSpecific || !modalCountEl) return;
@@ -1276,8 +1294,11 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     };
 
     main.querySelector('#btnOpenFormPicker')?.addEventListener('click', openSpecificModal);
-    main.querySelector('#btnCloseSpecificModal')?.addEventListener('click', closeSpecificModal);
-    main.querySelector('#btnCancelSpecificModal')?.addEventListener('click', closeSpecificModal);
+    modalSpecific?.querySelector('#btnCloseSpecificModal')?.addEventListener('click', closeSpecificModal);
+    modalSpecific?.querySelector('#btnCancelSpecificModal')?.addEventListener('click', closeSpecificModal);
+    modalSpecific?.addEventListener('click', (e) => {
+      if (e.target === modalSpecific) closeSpecificModal();
+    });
 
     // Search filter inside modal
     inputModalSearch?.addEventListener('input', (e) => {
@@ -1289,14 +1310,14 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     });
 
     // Modal Select All / Clear All
-    main.querySelector('#btnModalSelectAll')?.addEventListener('click', () => {
+    modalSpecific?.querySelector('#btnModalSelectAll')?.addEventListener('click', () => {
       modalSpecific?.querySelectorAll('.modal-form-item:not(.hidden) .chk-modal-form').forEach(chk => {
         chk.checked = true;
       });
       updateModalSelectionCount();
     });
 
-    main.querySelector('#btnModalClearAll')?.addEventListener('click', () => {
+    modalSpecific?.querySelector('#btnModalClearAll')?.addEventListener('click', () => {
       modalSpecific?.querySelectorAll('.chk-modal-form').forEach(chk => {
         chk.checked = false;
       });
@@ -1304,7 +1325,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     });
 
     // Modal Toggle by Round pills
-    main.querySelectorAll('.btn-modal-toggle-round').forEach(btn => {
+    modalSpecific?.querySelectorAll('.btn-modal-toggle-round').forEach(btn => {
       btn.addEventListener('click', () => {
         const rNum = btn.dataset.round;
         const matchingChks = modalSpecific?.querySelectorAll(`.modal-form-item[data-round="${rNum}"] .chk-modal-form`) || [];
@@ -1315,7 +1336,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     });
 
     // Modal Toggle by Table pills
-    main.querySelectorAll('.btn-modal-toggle-table').forEach(btn => {
+    modalSpecific?.querySelectorAll('.btn-modal-toggle-table').forEach(btn => {
       btn.addEventListener('click', () => {
         const tNum = btn.dataset.table;
         const matchingChks = modalSpecific?.querySelectorAll(`.modal-form-item[data-table="${tNum}"] .chk-modal-form`) || [];
@@ -1331,7 +1352,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     });
 
     // Confirm Print Selected Forms from Modal
-    main.querySelector('#btnConfirmPrintSpecific')?.addEventListener('click', () => {
+    modalSpecific?.querySelector('#btnConfirmPrintSpecific')?.addEventListener('click', () => {
       const selectedKeys = new Set();
       modalSpecific?.querySelectorAll('.chk-modal-form:checked').forEach(chk => {
         const key = chk.dataset.key;
@@ -1348,11 +1369,10 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     });
 
     // ── Ballot Paper Account (BPA) Modal Logic ─────────────────────────────
-    const modalBpa = main.querySelector('#modalBpa');
-    const bpaTableBody = main.querySelector('#bpaTableBody');
-    const bpaTotalAllottedEl = main.querySelector('#bpaTotalAllotted');
-    const bpaTotalPolledEl = main.querySelector('#bpaTotalPolled');
-    const bpaOverallTurnoutEl = main.querySelector('#bpaOverallTurnout');
+    const bpaTableBody = modalBpa?.querySelector('#bpaTableBody');
+    const bpaTotalAllottedEl = modalBpa?.querySelector('#bpaTotalAllotted');
+    const bpaTotalPolledEl = modalBpa?.querySelector('#bpaTotalPolled');
+    const bpaOverallTurnoutEl = modalBpa?.querySelector('#bpaOverallTurnout');
 
     const recalculateBpaStats = () => {
       if (!modalBpa) return;
@@ -1476,10 +1496,13 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     };
 
     main.querySelector('#btnOpenBpaModal')?.addEventListener('click', openBpaModal);
-    main.querySelector('#btnCloseBpaModal')?.addEventListener('click', closeBpaModal);
-    main.querySelector('#btnCancelBpaModal')?.addEventListener('click', closeBpaModal);
+    modalBpa?.querySelector('#btnCloseBpaModal')?.addEventListener('click', closeBpaModal);
+    modalBpa?.querySelector('#btnCancelBpaModal')?.addEventListener('click', closeBpaModal);
+    modalBpa?.addEventListener('click', (e) => {
+      if (e.target === modalBpa) closeBpaModal();
+    });
 
-    main.querySelector('#btnBpaAutoDetect')?.addEventListener('click', () => {
+    modalBpa?.querySelector('#btnBpaAutoDetect')?.addEventListener('click', () => {
       let detectedCount = 0;
       modalBpa?.querySelectorAll('.bpa-row').forEach(row => {
         const bNum = row.dataset.table;
@@ -1500,7 +1523,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       }
     });
 
-    main.querySelector('#btnBpaResetAllotted')?.addEventListener('click', () => {
+    modalBpa?.querySelector('#btnBpaResetAllotted')?.addEventListener('click', () => {
       modalBpa?.querySelectorAll('.bpa-input-table').forEach(input => {
         input.value = '';
       });
@@ -1508,7 +1531,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       showToast('Reset all tables to allotted nominal roll electors.', 'info');
     });
 
-    main.querySelector('#btnSaveBpaModal')?.addEventListener('click', async () => {
+    modalBpa?.querySelector('#btnSaveBpaModal')?.addEventListener('click', async () => {
       const newBpa = {};
       modalBpa?.querySelectorAll('.bpa-input-table').forEach(inp => {
         const tNum = inp.dataset.table;
@@ -1520,6 +1543,15 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       closeBpaModal();
       await saveTablePolledBallots(newBpa);
     });
+
+    // Close on Escape key
+    const onModalEscKey = (e) => {
+      if (e.key === 'Escape') {
+        if (modalBpa && !modalBpa.classList.contains('hidden')) closeBpaModal();
+        if (modalSpecific && !modalSpecific.classList.contains('hidden')) closeSpecificModal();
+      }
+    };
+    window.addEventListener('keydown', onModalEscKey);
 
     // Initial calculation of print labels & hints
     updatePrintScopeUI();
