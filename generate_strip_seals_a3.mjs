@@ -126,7 +126,7 @@ function buildStripSealHtml(slNum) {
             <!-- Presiding Officer -->
             <div class="sign-box-po">
               <div class="sign-dotted-line"></div>
-              <div class="sign-label">Signature of Presiding Officer (with Station Seal)</div>
+              <div class="sign-label">Signature of Presiding Officer</div>
             </div>
 
             <!-- Polling Agents -->
