@@ -45,11 +45,7 @@ function buildStripSealHtml(slNum) {
             <div class="field-list">
               <div class="field-row">
                 <span class="f-lbl">Booth No.:</span>
-                <span class="f-line short"></span>
-                <span class="f-lbl ml">Box No.:</span>
-                <span class="f-line tiny"></span>
-                <span class="f-sub">of</span>
-                <span class="f-line tiny"></span>
+                <span class="f-line long"></span>
               </div>
               <div class="field-row">
                 <span class="f-lbl">Venue / Room:</span>
