@@ -300,6 +300,7 @@ const formatBooksText = (books) => {
 
 /**
  * Export Official Ballots (Candidate Rosters, Serial Ranges & Packaging Plan) to Excel (.xlsx)
+ * Formatted to be structurally and visually identical to the official HTML printed ballot papers.
  * @param {Object} options
  * @param {Array} options.postsData - List of posts from API
  * @param {Object|Array} options.candidatesResponse - Contesting candidates
@@ -343,148 +344,340 @@ export function exportBallotsToExcel({
 
   const wb = XLSX.utils.book_new();
 
-  // Helper to get candidates for a post sorted alphabetically
-  const getSortedCandidates = (postName) => {
-    return candidates
-      .filter(c => c.post === postName)
-      .sort((a, b) => String(a.candidateName || a.candidate?.NAME || '').localeCompare(String(b.candidateName || b.candidate?.NAME || '')));
+  // Helper to sanitize Excel worksheet name (max 31 chars, no invalid characters)
+  const sanitizeSheetName = (name) => {
+    return String(name || 'Sheet')
+      .replace(/[\\/?*[\]:]/g, ' ')
+      .trim()
+      .substring(0, 31);
   };
 
-  // Helper to extract candidate metadata
-  const getCandidateMeta = (c) => {
-    const name = c.candidateName || c.candidate?.NAME || '–';
-    const cls = c.candidateClass || c.candidate?.CLASS || '–';
-    const adm = c.candidateAdmission || c.candidate?.['ADMISION NO'] || c.candidate?.['ADMISSION NO'] || c.admissionNo || '–';
-    const sl = c.candidateSerial || c.candidate?.['Nominal Roll Serial Number'] || c.candidate?.serial_number || '–';
-    return { name, cls, adm, sl };
-  };
+  // Helper to build 2-Column A3 Ballot Worksheet (Matches General Ballot HTML)
+  const buildGeneralBallotWorksheet = (partConfig, partPosts) => {
+    const prefix = partConfig.shortCode === 'G' ? 'G' : (partConfig.shortCode || 'G1') + '-';
+    const partTitle = partConfig.title || 'OFFICIAL BALLOT PAPER (GENERAL)';
+    const sorted = [...partPosts].sort((a, b) => comparePosts(a, b));
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // SHEET 1: ALL CONTESTED BALLOTS (MASTER CANDIDATE ROSTER)
-  // ─────────────────────────────────────────────────────────────────────────────
-  if (filterType === 'all') {
-    const allRows = [
-      [collegeName.toUpperCase()],
-      [`COLLEGE UNION ELECTION ${year} — OFFICIAL BALLOT PAPERS`],
-      [`MASTER CANDIDATE ROSTER FOR ALL CONTESTED POSTS`],
-      [`Generated: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })} at ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`],
-      [`Total Contested Posts: ${contestablePosts.length} | Notice: Mark voter's choice with the official stamping seal in the designated box.`],
-      []
-    ];
+    const rows = [];
+    const merges = [];
 
-    if (contestablePosts.length === 0) {
-      allRows.push(['NO CONTESTED POSTS REQUIRING PRINTED BALLOT PAPERS']);
-      allRows.push(['All nominations were either uncontested (single candidate elected unopposed) or received no nominations.']);
+    const ensureRow = (rIndex) => {
+      while (rows.length <= rIndex) {
+        rows.push(['', '', '', '', '', '', '']);
+      }
+      return rows[rIndex];
+    };
+
+    // 1. Counterfoil Section
+    let r = 0;
+    ensureRow(r)[0] = collegeName.toUpperCase();
+    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+
+    r++;
+    ensureRow(r)[0] = `COLLEGE UNION ELECTION ${year}`;
+    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+
+    r++;
+    ensureRow(r)[0] = `${partTitle.toUpperCase()} - COUNTERFOIL`;
+    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+
+    r++;
+    ensureRow(r)[0] = `SL.NO. ${prefix}____________`;
+    ensureRow(r)[4] = `(To be detached before voting)`;
+    merges.push({ s: { r, c: 0 }, e: { r, c: 3 } });
+    merges.push({ s: { r, c: 4 }, e: { r, c: 6 } });
+
+    r++;
+    ensureRow(r)[0] = `Sl. No of Voter in Marked Copy: ____________`;
+    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+
+    r++;
+    ensureRow(r)[0] = `✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -`;
+    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+
+    // 2. Ballot Paper Header Section
+    r++;
+    ensureRow(r)[0] = collegeName.toUpperCase();
+    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+
+    r++;
+    ensureRow(r)[0] = `COLLEGE UNION ELECTION ${year}`;
+    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+
+    r++;
+    ensureRow(r)[0] = partTitle.toUpperCase();
+    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+
+    r++;
+    ensureRow(r)[0] = `SL.NO. ${prefix}____________`;
+    ensureRow(r)[4] = `Signature of PRO`;
+    merges.push({ s: { r, c: 0 }, e: { r, c: 3 } });
+    merges.push({ s: { r, c: 4 }, e: { r, c: 6 } });
+
+    r++;
+    ensureRow(r)[0] = `MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED`;
+    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+
+    r++;
+    ensureRow(r); // Blank row divider
+
+    // 3. Ballot 2-Column Grid of Contested Posts
+    if (sorted.length === 0) {
+      r++;
+      ensureRow(r)[0] = 'NO CONTESTED GENERAL UNION POSTS (All candidates elected unopposed or no nominations)';
+      merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
     } else {
-      contestablePosts.forEach((p, pIdx) => {
-        const pCands = getSortedCandidates(p.post);
-        let category = 'General Union';
-        let paperFormat = 'A3 (2-Column)';
-        let seriesCode = isSplit ? (part2PostsSet.has(p.post) ? 'G2' : 'G1') : 'G';
+      const leftPosts = sorted.filter((_, idx) => idx % 2 === 0);
+      const rightPosts = sorted.filter((_, idx) => idx % 2 === 1);
+      const maxPairs = Math.max(leftPosts.length, rightPosts.length);
 
-        if (isAssocPost(p)) {
-          category = 'Subject Association';
-          paperFormat = 'A5 Portrait';
-          seriesCode = 'A';
-        } else if (isYearPost(p)) {
-          category = getCohortInfo(p.post).title;
-          paperFormat = 'A5 Portrait';
-          seriesCode = 'R';
+      for (let pIdx = 0; pIdx < maxPairs; pIdx++) {
+        r++;
+        const startRow = r;
+        const lp = leftPosts[pIdx];
+        const rp = rightPosts[pIdx];
+
+        let leftRowsCount = 0;
+        if (lp) {
+          const pCands = candidates
+            .filter(c => c.post === lp.post)
+            .sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
+
+          // Post Title Banner
+          ensureRow(startRow)[0] = lp.post.toUpperCase();
+          merges.push({ s: { r: startRow, c: 0 }, e: { r: startRow, c: 2 } });
+
+          // Candidates
+          pCands.forEach((c, cIdx) => {
+            const curR = startRow + 1 + cIdx;
+            const row = ensureRow(curR);
+            row[0] = cIdx + 1;
+            row[1] = `${(c.candidateName || '').toUpperCase()}${c.candidateClass ? '\n(' + c.candidateClass + ')' : ''}`;
+            row[2] = '[       ]';
+          });
+
+          // NOTA
+          const notaR = startRow + 1 + pCands.length;
+          const rowNota = ensureRow(notaR);
+          rowNota[0] = pCands.length + 1;
+          rowNota[1] = 'NOTA';
+          rowNota[2] = '[       ]';
+
+          leftRowsCount = 1 + pCands.length + 1;
         }
 
-        // Post Banner
-        allRows.push([`POST #${pIdx + 1}: ${p.post.toUpperCase()}`]);
-        allRows.push([
-          `Category: ${category}`,
-          `Series: ${seriesCode}`,
-          `Paper: ${paperFormat}`,
-          `Contesting: ${pCands.length} Candidates + NOTA`
-        ]);
-        allRows.push(['Ballot Sl. No.', 'Candidate Name', 'Class / Department', 'Admission No.', 'Roll Sl. No.', 'Post Name', 'Voter Mark / Stamp Box']);
+        let rightRowsCount = 0;
+        if (rp) {
+          const pCands = candidates
+            .filter(c => c.post === rp.post)
+            .sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
 
-        // Candidates
-        pCands.forEach((c, idx) => {
-          const meta = getCandidateMeta(c);
-          allRows.push([idx + 1, meta.name, meta.cls, meta.adm, meta.sl, p.post, '[   ]']);
-        });
+          // Post Title Banner
+          ensureRow(startRow)[4] = rp.post.toUpperCase();
+          merges.push({ s: { r: startRow, c: 4 }, e: { r: startRow, c: 6 } });
 
-        // NOTA
-        allRows.push([pCands.length + 1, 'NOTA (None of the Above)', 'Official Statutory Option', '–', '–', p.post, '[   ]']);
-        allRows.push([]); // blank separator
-      });
-    }
+          // Candidates
+          pCands.forEach((c, cIdx) => {
+            const curR = startRow + 1 + cIdx;
+            const row = ensureRow(curR);
+            row[4] = cIdx + 1;
+            row[5] = `${(c.candidateName || '').toUpperCase()}${c.candidateClass ? '\n(' + c.candidateClass + ')' : ''}`;
+            row[6] = '[       ]';
+          });
 
-    const wsAll = XLSX.utils.aoa_to_sheet(allRows);
-    wsAll['!cols'] = [
-      { wch: 15 }, // Ballot Sl. No.
-      { wch: 32 }, // Candidate Name
-      { wch: 24 }, // Class / Dept
-      { wch: 16 }, // Admission No.
-      { wch: 14 }, // Roll Sl. No.
-      { wch: 34 }, // Post Name
-      { wch: 24 }  // Stamp Box
-    ];
-    XLSX.utils.book_append_sheet(wb, wsAll, 'All Contested Ballots');
-  }
+          // NOTA
+          const notaR = startRow + 1 + pCands.length;
+          const rowNota = ensureRow(notaR);
+          rowNota[4] = pCands.length + 1;
+          rowNota[5] = 'NOTA';
+          rowNota[6] = '[       ]';
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // SHEET 2: GENERAL UNION BALLOTS
-  // ─────────────────────────────────────────────────────────────────────────────
-  if (filterType === 'all' || filterType === 'general' || filterType.startsWith('general_part:')) {
-    let genPosts = contestablePosts.filter(isGeneralPost);
+          rightRowsCount = 1 + pCands.length + 1;
+        }
 
-    if (filterType.startsWith('general_part:')) {
-      const partId = filterType.replace('general_part:', '');
-      const partCfg = (currentConfig?.ballots || []).find(b => b.id === partId);
-      if (partCfg && Array.isArray(partCfg.posts)) {
-        genPosts = genPosts.filter(p => partCfg.posts.includes(p.post));
+        const pairHeight = Math.max(leftRowsCount, rightRowsCount);
+        r = startRow + pairHeight;
       }
     }
 
-    const genRows = [
-      [collegeName.toUpperCase()],
-      [`COLLEGE UNION ELECTION ${year} — GENERAL UNION BALLOT PAPERS`],
-      [isSplit ? 'BALLOT CONFIGURATION: SPLIT (PART 1 & PART 2)' : 'BALLOT CONFIGURATION: SINGLE UNIFIED MASTER SHEET'],
-      [`Total General Contested Posts: ${genPosts.length}`],
-      []
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [
+      { wch: 8 },  // A: Sl. No.
+      { wch: 38 }, // B: Candidate Name & Class
+      { wch: 14 }, // C: Stamp Box
+      { wch: 4 },  // D: Column Divider
+      { wch: 8 },  // E: Sl. No.
+      { wch: 38 }, // F: Candidate Name & Class
+      { wch: 14 }  // G: Stamp Box
     ];
+    ws['!merges'] = merges;
+    return ws;
+  };
 
-    if (genPosts.length === 0) {
-      genRows.push(['NO CONTESTED GENERAL UNION POSTS']);
+  // Helper to build Single-Post Ballot Worksheet (Matches Year Rep & Association HTML Ballots)
+  const buildSinglePostBallotWorksheet = (postList, prefix, sectionTitle) => {
+    const sorted = [...postList].sort((a, b) => comparePosts(a, b));
+    const rows = [];
+    const merges = [];
+
+    const ensureRow = (rIndex) => {
+      while (rows.length <= rIndex) {
+        rows.push(['', '', '']);
+      }
+      return rows[rIndex];
+    };
+
+    let r = -1;
+
+    if (sorted.length === 0) {
+      r++;
+      ensureRow(r)[0] = collegeName.toUpperCase();
+      merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+      r++;
+      ensureRow(r)[0] = `COLLEGE UNION ELECTION ${year}`;
+      merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+      r++;
+      ensureRow(r)[0] = `${sectionTitle.toUpperCase()} BALLOTS (${prefix})`;
+      merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+      r++;
+      ensureRow(r)[0] = 'NO CONTESTED POSTS (All candidates elected unopposed or no valid nominations)';
+      merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
     } else {
-      genPosts.forEach((p, pIdx) => {
-        const pCands = getSortedCandidates(p.post);
-        const partLabel = isSplit 
-          ? (part2PostsSet.has(p.post) ? 'Part 2 (G2 - Additional Ballot)' : 'Part 1 (G1 - Main Ballot)')
-          : 'General Ballot (G)';
+      sorted.forEach((p, pIdx) => {
+        const pCands = candidates
+          .filter(c => c.post === p.post)
+          .sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
 
-        genRows.push([`POST #${pIdx + 1}: ${p.post.toUpperCase()}`, `[${partLabel}]`]);
-        genRows.push(['Ballot Sl. No.', 'Candidate Name', 'Class / Department', 'Admission No.', 'Roll Sl. No.', 'Ballot Part / Series', 'Voter Mark']);
+        // 1. Counterfoil Section
+        r++;
+        ensureRow(r)[0] = collegeName.toUpperCase();
+        merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
 
-        pCands.forEach((c, idx) => {
-          const meta = getCandidateMeta(c);
-          genRows.push([idx + 1, meta.name, meta.cls, meta.adm, meta.sl, partLabel, '[   ]']);
+        r++;
+        ensureRow(r)[0] = `COLLEGE UNION ELECTION ${year}`;
+        merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+
+        r++;
+        ensureRow(r)[0] = `OFFICIAL BALLOT (${prefix}) - COUNTERFOIL`;
+        merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+
+        r++;
+        ensureRow(r)[0] = `SL.NO. ${prefix}____________`;
+        ensureRow(r)[2] = `(To be detached)`;
+        merges.push({ s: { r, c: 0 }, e: { r, c: 1 } });
+
+        r++;
+        ensureRow(r)[0] = `Sl. No of Voter in Marked Copy: ____________`;
+        merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+
+        r++;
+        ensureRow(r)[0] = `✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -`;
+        merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+
+        // 2. Ballot Paper Header Section
+        r++;
+        ensureRow(r)[0] = collegeName.toUpperCase();
+        merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+
+        r++;
+        ensureRow(r)[0] = `COLLEGE UNION ELECTION ${year}`;
+        merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+
+        r++;
+        ensureRow(r)[0] = `BALLOT PAPER (${prefix})`;
+        merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+
+        r++;
+        ensureRow(r)[0] = `SL.NO. ${prefix}____________`;
+        ensureRow(r)[2] = `PRO Sign`;
+        merges.push({ s: { r, c: 0 }, e: { r, c: 1 } });
+
+        r++;
+        ensureRow(r)[0] = `MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED`;
+        merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+
+        // 3. Post Box
+        r++;
+        ensureRow(r)[0] = p.post.toUpperCase();
+        merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+
+        // Candidates
+        pCands.forEach((c, cIdx) => {
+          r++;
+          const row = ensureRow(r);
+          row[0] = cIdx + 1;
+          row[1] = `${(c.candidateName || '').toUpperCase()}${c.candidateClass ? '\n(' + c.candidateClass + ')' : ''}`;
+          row[2] = '[       ]';
         });
-        genRows.push([pCands.length + 1, 'NOTA (None of the Above)', 'Official Statutory Option', '–', '–', partLabel, '[   ]']);
-        genRows.push([]);
+
+        // NOTA
+        r++;
+        const rowNota = ensureRow(r);
+        rowNota[0] = pCands.length + 1;
+        rowNota[1] = 'NOTA';
+        rowNota[2] = '[       ]';
+
+        // Page break divider between consecutive ballots on the same sheet
+        if (pIdx < sorted.length - 1) {
+          r++;
+          ensureRow(r); // Blank row
+          r++;
+          ensureRow(r)[0] = '═══════════════════════════════════════════════════════════════════════════════';
+          merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+          r++;
+          ensureRow(r)[0] = 'PAGE BREAK: NEXT BALLOT PAPER';
+          merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+          r++;
+          ensureRow(r)[0] = '═══════════════════════════════════════════════════════════════════════════════';
+          merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+          r++;
+          ensureRow(r); // Blank row
+        }
       });
     }
 
-    const wsGen = XLSX.utils.aoa_to_sheet(genRows);
-    wsGen['!cols'] = [
-      { wch: 15 }, // Sl No
-      { wch: 32 }, // Candidate Name
-      { wch: 24 }, // Class
-      { wch: 16 }, // Adm No
-      { wch: 14 }, // Roll Sl
-      { wch: 30 }, // Part / Series
-      { wch: 20 }  // Voter Mark
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [
+      { wch: 8 },  // A: Sl. No.
+      { wch: 48 }, // B: Candidate Name & Class
+      { wch: 16 }  // C: Stamp Box
     ];
-    XLSX.utils.book_append_sheet(wb, wsGen, 'General Ballots');
+    ws['!merges'] = merges;
+    return ws;
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 1. GENERAL UNION BALLOTS (A3 2-Column Format)
+  // ─────────────────────────────────────────────────────────────────────────────
+  if (filterType === 'all' || filterType === 'general' || filterType.startsWith('general_part:')) {
+    const gPosts = contestablePosts.filter(isGeneralPost);
+
+    if (isSplit) {
+      let partsToGenerate = currentConfig.ballots || [];
+      if (filterType.startsWith('general_part:')) {
+        const targetId = filterType.replace('general_part:', '');
+        partsToGenerate = (currentConfig.ballots || []).filter(b => b.id === targetId);
+      }
+
+      partsToGenerate.forEach((partConfig, pIdx) => {
+        const partPosts = gPosts.filter(p => (partConfig.posts || []).includes(p.post));
+        const wsGen = buildGeneralBallotWorksheet(partConfig, partPosts);
+        const sheetTitle = sanitizeSheetName(partConfig.title ? `${partConfig.title} Ballot` : `General Part ${pIdx + 1}`);
+        XLSX.utils.book_append_sheet(wb, wsGen, sheetTitle);
+      });
+    } else {
+      const singleConfig = {
+        title: 'OFFICIAL BALLOT PAPER (GENERAL)',
+        shortCode: 'G',
+        paperSize: 'A3'
+      };
+      const wsGen = buildGeneralBallotWorksheet(singleConfig, gPosts);
+      XLSX.utils.book_append_sheet(wb, wsGen, 'General Ballot');
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // SHEET 3: YEAR REPRESENTATIVE BALLOTS
+  // 2. YEAR REPRESENTATIVE BALLOTS (A5 Single-Column Format)
   // ─────────────────────────────────────────────────────────────────────────────
   if (filterType === 'all' || filterType === 'year') {
     const yrPosts = contestablePosts.filter(isYearPost).sort((a, b) => {
@@ -494,48 +687,12 @@ export function exportBallotsToExcel({
       return comparePosts(a, b);
     });
 
-    const yrRows = [
-      [collegeName.toUpperCase()],
-      [`COLLEGE UNION ELECTION ${year} — YEAR REPRESENTATIVE BALLOT PAPERS`],
-      [`Format: A5 Portrait | Series Code: R (R1, R2, R3...)`],
-      [`Total Contested Year Rep Posts: ${yrPosts.length}`],
-      []
-    ];
-
-    if (yrPosts.length === 0) {
-      yrRows.push(['NO CONTESTED YEAR REPRESENTATIVE POSTS']);
-    } else {
-      yrPosts.forEach((p, pIdx) => {
-        const pCands = getSortedCandidates(p.post);
-        const cohort = getCohortInfo(p.post);
-
-        yrRows.push([`POST #${pIdx + 1}: ${p.post.toUpperCase()}`, `[Cohort: ${cohort.title}]`]);
-        yrRows.push(['Ballot Sl. No.', 'Candidate Name', 'Class / Batch', 'Admission No.', 'Roll Sl. No.', 'Cohort Group', 'Voter Mark']);
-
-        pCands.forEach((c, idx) => {
-          const meta = getCandidateMeta(c);
-          yrRows.push([idx + 1, meta.name, meta.cls, meta.adm, meta.sl, cohort.short, '[   ]']);
-        });
-        yrRows.push([pCands.length + 1, 'NOTA (None of the Above)', 'Official Statutory Option', '–', '–', cohort.short, '[   ]']);
-        yrRows.push([]);
-      });
-    }
-
-    const wsYr = XLSX.utils.aoa_to_sheet(yrRows);
-    wsYr['!cols'] = [
-      { wch: 15 },
-      { wch: 32 },
-      { wch: 24 },
-      { wch: 16 },
-      { wch: 14 },
-      { wch: 24 },
-      { wch: 20 }
-    ];
+    const wsYr = buildSinglePostBallotWorksheet(yrPosts, 'R', 'Year Representative');
     XLSX.utils.book_append_sheet(wb, wsYr, 'Year Rep Ballots');
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // SHEET 4: SUBJECT ASSOCIATION BALLOTS
+  // 3. SUBJECT ASSOCIATION BALLOTS (A5 Single-Column Format)
   // ─────────────────────────────────────────────────────────────────────────────
   if (filterType === 'all' || filterType === 'assoc') {
     const assocPosts = contestablePosts.filter(isAssocPost).sort((a, b) => {
@@ -544,46 +701,12 @@ export function exportBallotsToExcel({
       return nameA.localeCompare(nameB);
     });
 
-    const assocRows = [
-      [collegeName.toUpperCase()],
-      [`COLLEGE UNION ELECTION ${year} — DEPARTMENTAL ASSOCIATION SECRETARY BALLOTS`],
-      [`Format: A5 Portrait | Series Code: A (A1, A2, A3...)`],
-      [`Total Contested Association Posts: ${assocPosts.length}`],
-      []
-    ];
-
-    if (assocPosts.length === 0) {
-      assocRows.push(['NO CONTESTED SUBJECT ASSOCIATION POSTS']);
-    } else {
-      assocPosts.forEach((p, pIdx) => {
-        const pCands = getSortedCandidates(p.post);
-        assocRows.push([`POST #${pIdx + 1}: ${p.post.toUpperCase()}`]);
-        assocRows.push(['Ballot Sl. No.', 'Candidate Name', 'Class / Department', 'Admission No.', 'Roll Sl. No.', 'Association Post', 'Voter Mark']);
-
-        pCands.forEach((c, idx) => {
-          const meta = getCandidateMeta(c);
-          assocRows.push([idx + 1, meta.name, meta.cls, meta.adm, meta.sl, p.post, '[   ]']);
-        });
-        assocRows.push([pCands.length + 1, 'NOTA (None of the Above)', 'Official Statutory Option', '–', '–', p.post, '[   ]']);
-        assocRows.push([]);
-      });
-    }
-
-    const wsAssoc = XLSX.utils.aoa_to_sheet(assocRows);
-    wsAssoc['!cols'] = [
-      { wch: 15 },
-      { wch: 32 },
-      { wch: 24 },
-      { wch: 16 },
-      { wch: 14 },
-      { wch: 34 },
-      { wch: 20 }
-    ];
+    const wsAssoc = buildSinglePostBallotWorksheet(assocPosts, 'A', 'Subject Association');
     XLSX.utils.book_append_sheet(wb, wsAssoc, 'Association Ballots');
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // SHEET 5: PRINTING PRESS SERIAL & BOOKLET PACKAGING PLAN
+  // 4. PRINTING PRESS SERIAL & BOOKLET PACKAGING PLAN
   // ─────────────────────────────────────────────────────────────────────────────
   if (masterPlan && (filterType === 'all' || filterType === 'summary')) {
     const planRows = [
@@ -608,7 +731,7 @@ export function exportBallotsToExcel({
 
     let grandTotalVoters = 0;
 
-    // 1. General Union Parts
+    // General Union Parts
     if (masterPlan.isSplit && Array.isArray(masterPlan.generalParts)) {
       masterPlan.generalParts.forEach((part, pIdx) => {
         (part.results || []).forEach(s => {
@@ -663,7 +786,7 @@ export function exportBallotsToExcel({
       planRows.push([]);
     }
 
-    // 2. Year Representatives
+    // Year Representatives
     if (masterPlan.reps && Array.isArray(masterPlan.reps.results)) {
       masterPlan.reps.results.forEach(s => {
         grandTotalVoters += (s.count || 0);
@@ -691,7 +814,7 @@ export function exportBallotsToExcel({
       planRows.push([]);
     }
 
-    // 3. Departmental Associations
+    // Departmental Associations
     if (masterPlan.assocs && Array.isArray(masterPlan.assocs.results)) {
       const sortedAssocs = [...masterPlan.assocs.results].sort((a, b) => String(a.post || '').localeCompare(String(b.post || '')));
       sortedAssocs.forEach(s => {
@@ -747,61 +870,63 @@ export function exportBallotsToExcel({
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // SHEET 6: POST-WISE ELECTION SUMMARY
+  // 5. POST-WISE ELECTION SUMMARY
   // ─────────────────────────────────────────────────────────────────────────────
-  const summaryRows = [
-    [collegeName.toUpperCase()],
-    [`COLLEGE UNION ELECTION ${year} — POST-WISE BALLOT SUMMARY`],
-    [`Total Election Posts: ${allPosts.length} | Contested Posts: ${contestablePosts.length}`],
-    [],
-    ['#', 'Post Name', 'Category', 'Contesting Candidates', 'Ballot Status', 'Paper Size', 'Series Code']
-  ];
+  if (filterType === 'all' || filterType === 'summary') {
+    const summaryRows = [
+      [collegeName.toUpperCase()],
+      [`COLLEGE UNION ELECTION ${year} — POST-WISE BALLOT SUMMARY`],
+      [`Total Election Posts: ${allPosts.length} | Contested Posts: ${contestablePosts.length}`],
+      [],
+      ['#', 'Post Name', 'Category', 'Contesting Candidates', 'Ballot Status', 'Paper Size', 'Series Code']
+    ];
 
-  allPosts.forEach((p, idx) => {
-    const pCands = getSortedCandidates(p.post);
-    let category = 'General Union';
-    let paperSize = 'A3 (2-Column)';
-    let seriesCode = isSplit ? (part2PostsSet.has(p.post) ? 'G2' : 'G1') : 'G';
+    allPosts.forEach((p, idx) => {
+      const pCands = candidates.filter(c => c.post === p.post);
+      let category = 'General Union';
+      let paperSize = 'A3 (2-Column)';
+      let seriesCode = isSplit ? (part2PostsSet.has(p.post) ? 'G2' : 'G1') : 'G';
 
-    if (isAssocPost(p)) {
-      category = 'Subject Association';
-      paperSize = 'A5 Portrait';
-      seriesCode = 'A';
-    } else if (isYearPost(p)) {
-      category = getCohortInfo(p.post).title;
-      paperSize = 'A5 Portrait';
-      seriesCode = 'R';
-    }
+      if (isAssocPost(p)) {
+        category = 'Subject Association';
+        paperSize = 'A5 Portrait';
+        seriesCode = 'A';
+      } else if (isYearPost(p)) {
+        category = getCohortInfo(p.post).title;
+        paperSize = 'A5 Portrait';
+        seriesCode = 'R';
+      }
 
-    let status = 'CONTESTED (Ballot Paper Required)';
-    if (pCands.length === 1) {
-      status = 'ELECTED UNOPPOSED (Uncontested - No Ballot)';
-    } else if (pCands.length === 0) {
-      status = 'NO VALID NOMINATIONS';
-    }
+      let status = 'CONTESTED (Ballot Paper Required)';
+      if (pCands.length === 1) {
+        status = 'ELECTED UNOPPOSED (Uncontested - No Ballot)';
+      } else if (pCands.length === 0) {
+        status = 'NO VALID NOMINATIONS';
+      }
 
-    summaryRows.push([
-      idx + 1,
-      p.post,
-      category,
-      pCands.length,
-      status,
-      paperSize,
-      seriesCode
-    ]);
-  });
+      summaryRows.push([
+        idx + 1,
+        p.post,
+        category,
+        pCands.length,
+        status,
+        paperSize,
+        seriesCode
+      ]);
+    });
 
-  const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
-  wsSummary['!cols'] = [
-    { wch: 6 },
-    { wch: 38 },
-    { wch: 24 },
-    { wch: 22 },
-    { wch: 42 },
-    { wch: 16 },
-    { wch: 14 }
-  ];
-  XLSX.utils.book_append_sheet(wb, wsSummary, 'Post Election Summary');
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+    wsSummary['!cols'] = [
+      { wch: 6 },
+      { wch: 38 },
+      { wch: 24 },
+      { wch: 22 },
+      { wch: 42 },
+      { wch: 16 },
+      { wch: 14 }
+    ];
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Post Election Summary');
+  }
 
   // Determine appropriate filename
   let fileCategory = 'Official_Ballot_Papers';
@@ -815,5 +940,5 @@ export function exportBallotsToExcel({
 
   const fileName = `${cleanShortName}_Election_${year}_${fileCategory}.xlsx`;
   XLSX.writeFile(wb, fileName);
-  return fileName;
 }
+

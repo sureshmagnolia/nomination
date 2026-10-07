@@ -764,7 +764,7 @@ export function openBallotExcelDownloadModal(pwd, currentConfig = null) {
           <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200 font-mono font-bold">Multi-Tab XLSX</span>
         </div>
         <p class="text-xs text-slate-300 leading-relaxed">
-          Includes all sheets in a single file: <strong>All Contested Ballots</strong>, <strong>General Union</strong>, <strong>Year Reps</strong>, <strong>Associations</strong>, <strong>Serial Ranges &amp; Packaging Plan</strong>, and <strong>Post Election Summary</strong>.
+          Formatted identically to official HTML printed ballot papers: <strong>General Union (A3 2-Column Grid)</strong>, <strong>Year Reps (A5)</strong>, <strong>Associations (A5)</strong>, plus <strong>Serial Ranges &amp; Packaging Plan</strong> and <strong>Post Election Summary</strong>.
         </p>
         <button id="btnDownloadMasterExcel" class="btn btn-primary w-full py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2">
           <span>📥</span> Download Master Ballot Workbook
