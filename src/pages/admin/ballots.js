@@ -704,7 +704,7 @@ export async function renderAdminBallots(container) {
     // Excel button on summary card
     const btnExcelSummaryTop = main.querySelector('#btnExcelSummaryTop');
     if (btnExcelSummaryTop) {
-      btnExcelSummaryTop.onclick = () => downloadBallotsExcel(pwd, 'summary', currentConfig);
+      btnExcelSummaryTop.onclick = () => openBallotSummaryConfigModal(pwd);
     }
 
     // Excel buttons on action cards
@@ -1073,6 +1073,8 @@ export function openBallotSummaryConfigModal(pwd) {
     localStorage.setItem('gcc_ballot_book_size', String(cfg.finalSize));
     localStorage.setItem('gcc_ballot_merge_remainders', cfg.finalMerge ? 'true' : 'false');
     closeModal();
+    showToast(`Saving Packaging Plan (${cfg.finalSize} ballots/book) to server...`, 'info');
+    await api.adminGenerateBallotPlan(pwd, { bookSize: cfg.finalSize, mergeRemainders: cfg.finalMerge }).catch(() => null);
     await downloadBallotsExcel(pwd, 'summary');
   };
 
@@ -1837,53 +1839,44 @@ export function buildBallotPressSummaryHtml(masterPlan, settings = {}, schedule 
   const activePlan = recalculateBallotPlanBooks(masterPlan, activeBookSize, defaultMerge);
   const initialContent = buildSummaryContentHtml(activePlan, settings, schedule, activeBookSize, defaultMerge);
 
-  const safePlanJson = JSON.stringify(masterPlan).replace(/<\/script/gi, '<\\/script');
-  const safeSettingsJson = JSON.stringify(settings).replace(/<\/script/gi, '<\\/script');
-  const safeScheduleJson = JSON.stringify(schedule).replace(/<\/script/gi, '<\\/script');
-
   return `
     <div style="min-height: 100vh; background: #f8fafc;">
-      <!-- Interactive Printing Press Control Bar (Hidden on Print) -->
+      <!-- Official Printing Press Status & Action Bar (Hidden on Print) -->
       <div class="no-print" style="position: sticky; top: 0; z-index: 9999; background: #0f172a; color: #f8fafc; padding: 12px 24px; box-shadow: 0 4px 18px rgba(0,0,0,0.4); border-bottom: 2px solid #6366f1; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
         <div style="max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px;">
           
           <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 34px; height: 34px; border-radius: 8px; background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+            <div style="width: 38px; height: 38px; border-radius: 8px; background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); display: flex; align-items: center; justify-content: center; font-size: 20px;">
               📑
             </div>
             <div>
-              <div style="font-weight: 700; font-size: 13px; color: #ffffff; letter-spacing: 0.3px;">Printing Press Summary Configurator</div>
-              <div style="font-size: 11px; color: #94a3b8;">Dynamic booklet size breakdown &amp; continuous serial ranges</div>
+              <div style="font-weight: 800; font-size: 13.5px; color: #ffffff; letter-spacing: 0.3px;">Official Printing Press Summary &amp; Serial Ledger</div>
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; margin-top: 3px;">
+                <span style="background: rgba(99,102,241,0.25); color: #c7d2fe; padding: 2px 9px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(99,102,241,0.4);">
+                  📦 Stitched Booklets: ${activeBookSize} Ballots / Book
+                </span>
+                <span style="background: rgba(16,185,129,0.2); color: #a7f3d0; padding: 2px 9px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(16,185,129,0.3);">
+                  ${defaultMerge ? '✔ Smart Remainder Merge (≤30%) Active' : 'Strict Size Partition'}
+                </span>
+                <span style="color: #94a3b8; font-size: 10.5px;">(Saved in Master Ballot Plan)</span>
+              </div>
             </div>
           </div>
 
-          <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 14px;">
-            <!-- Size Selector -->
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <label for="selectToolbarBookSize" style="font-size: 12px; font-weight: 600; color: #cbd5e1;">Ballots / Book:</label>
-              <select id="selectToolbarBookSize" style="background: #1e293b; color: #ffffff; border: 1px solid #475569; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; outline: none;">
-                <option value="25" ${activeBookSize === 25 ? 'selected' : ''}>25 Ballots / Book (Compact)</option>
-                <option value="50" ${activeBookSize === 50 ? 'selected' : ''}>50 Ballots / Book (Official Standard)</option>
-                <option value="100" ${activeBookSize === 100 ? 'selected' : ''}>100 Ballots / Book (Jumbo)</option>
-                <option value="custom" ${![25, 50, 100].includes(activeBookSize) ? 'selected' : ''}>Custom Size...</option>
-              </select>
-              <input type="number" id="inputToolbarCustomSize" min="5" max="500" value="${![25, 50, 100].includes(activeBookSize) ? activeBookSize : ''}" placeholder="e.g. 40" style="display: ${![25, 50, 100].includes(activeBookSize) ? 'inline-block' : 'none'}; width: 75px; background: #1e293b; color: #ffffff; border: 1px solid #6366f1; padding: 5px 8px; border-radius: 6px; font-size: 12px;" />
-            </div>
-
-            <!-- Merge Checkbox -->
-            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #e2e8f0; cursor: pointer; user-select: none;">
-              <input type="checkbox" id="chkToolbarMerge" style="cursor: pointer; accent-color: #6366f1; width: 15px; height: 15px;" ${defaultMerge ? 'checked' : ''} />
-              <span>Smart Merge Remainders (≤30%)</span>
-            </label>
-
+          <div style="display: flex; align-items: center; gap: 10px;">
             <!-- Print Button -->
-            <button id="btnToolbarPrint" style="background: #4f46e5; color: #ffffff; border: none; padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);">
+            <button id="btnToolbarPrint" onclick="window.print()" style="background: #4f46e5; color: #ffffff; border: none; padding: 8px 18px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);">
               <span>🖨️</span> Print / Save PDF
             </button>
 
             <!-- Excel Export Button -->
-            <button id="btnToolbarExcel" style="background: #059669; color: #ffffff; border: none; padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.4);">
+            <button id="btnToolbarExcel" onclick="if (window.opener && window.opener.gccDownloadBallotsExcel) { window.opener.gccDownloadBallotsExcel('summary'); } else { alert('Please use the Download Excel option in the main Ballot Printing dashboard.'); }" style="background: #059669; color: #ffffff; border: none; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.4);">
               <span>📊</span> Download Excel
+            </button>
+
+            <!-- Close Window Button -->
+            <button onclick="window.close()" style="background: #334155; color: #cbd5e1; border: 1px solid #475569; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
+              ✕ Close
             </button>
           </div>
         </div>
@@ -1897,388 +1890,9 @@ export function buildBallotPressSummaryHtml(masterPlan, settings = {}, schedule 
 
     <script>
       (function() {
-        var rawPlan = ${safePlanJson};
-        var settings = ${safeSettingsJson};
-        var schedule = ${safeScheduleJson};
-
-        function escHtml(str) {
-          if (str === null || str === undefined) return '';
-          return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-        }
-
-        function calcBooks(count, start, prefix, currentGlobalBookCount, customBookPrefix, standard, enableMerge) {
-          if (!count || count <= 0) return { books: [], ids: '-', count: 0, nextCounter: currentGlobalBookCount };
-          var current = start;
-          var books = [];
-          var idPrefix = customBookPrefix || (prefix === 'G' ? 'GB' : (prefix === 'R' ? 'RB' : 'AB'));
-          var counter = currentGlobalBookCount;
-          var ids = [];
-
-          var formatSlip = function(num) {
-            if (prefix === 'G' || prefix === 'R' || prefix === 'A') {
-              return prefix + num;
-            }
-            return prefix + '-' + num;
-          };
-
-          var createRange = function(size) {
-            counter++;
-            var id = (idPrefix.endsWith('-') ? idPrefix : idPrefix) + counter;
-            ids.push(id);
-            var range = formatSlip(current) + ' - ' + formatSlip(current + size - 1);
-            current += size;
-            return { id: id, range: range };
-          };
-
-          var threshold = enableMerge ? Math.max(5, Math.round(standard * 0.3)) : 0;
-
-          if (count <= (standard + threshold)) {
-            books.push({ qty: 1, size: count, items: [createRange(count)] });
-          } else {
-            var fullBooks = Math.floor(count / standard);
-            var remainder = count % standard;
-            if (remainder === 0) {
-              var items = [];
-              for (var i = 0; i < fullBooks; i++) items.push(createRange(standard));
-              books.push({ qty: fullBooks, size: standard, items: items });
-            } else if (remainder <= threshold) {
-              var items = [];
-              for (var i = 0; i < fullBooks - 1; i++) items.push(createRange(standard));
-              if (items.length > 0) books.push({ qty: fullBooks - 1, size: standard, items: items });
-              var lastSize = standard + remainder;
-              books.push({ qty: 1, size: lastSize, items: [createRange(lastSize)] });
-            } else {
-              var items = [];
-              for (var i = 0; i < fullBooks; i++) items.push(createRange(standard));
-              books.push({ qty: fullBooks, size: standard, items: items });
-              books.push({ qty: 1, size: remainder, items: [createRange(remainder)] });
-            }
-          }
-
-          return {
-            books: books,
-            ids: ids.length === 1 ? ids[0] : (ids[0] + ' to ' + ids[ids.length - 1]),
-            nextCounter: counter
-          };
-        }
-
-        function getCohort(postName) {
-          var p = String(postName || '').toUpperCase();
-          if (p.includes('III UG') || p.includes('3RD YEAR') || p.includes('3 UG') || p.includes('THIRD YEAR')) {
-            return { key: 'III_UG', title: 'III UG Representative', short: 'III UG', rank: 3 };
-          }
-          if (p.includes('II UG') || p.includes('2ND YEAR') || p.includes('2 UG') || p.includes('SECOND YEAR')) {
-            return { key: 'II_UG', title: 'II UG Representative', short: 'II UG', rank: 2 };
-          }
-          if (p.includes('I UG') || p.includes('1ST YEAR') || p.includes('1 UG') || p.includes('FIRST YEAR')) {
-            return { key: 'I_UG', title: 'I UG Representative', short: 'I UG', rank: 1 };
-          }
-          if (p.includes('PG') || p.includes('POST GRADUATE') || p.includes('POSTGRADUATE')) {
-            return { key: 'PG', title: 'PG Representative', short: 'PG', rank: 4 };
-          }
-          return { key: p, title: postName, short: postName, rank: 5 };
-        }
-
-        function recalculate(planRaw, bookSize, enableMerge) {
-          var plan = JSON.parse(JSON.stringify(planRaw || {}));
-          var standard = Number(bookSize) > 0 ? Number(bookSize) : 50;
-
-          // 1. General
-          if (plan.isSplit && Array.isArray(plan.generalParts)) {
-            plan.generalParts.forEach(function(gp) {
-              var partSl = 1, partBookCount = 0;
-              (gp.results || []).forEach(function(s) {
-                var count = s.count || 0;
-                var start = partSl;
-                var end = start + count - 1;
-                var bookData = calcBooks(count, start, gp.shortCode, partBookCount, gp.bookPrefix, standard, enableMerge);
-                partBookCount = bookData.nextCounter;
-                s.start = start;
-                s.end = end;
-                s.books = bookData.books;
-                s.bookIds = bookData.ids;
-                partSl += count;
-              });
-              gp.total = partSl - 1;
-            });
-          } else if (plan.general) {
-            var genSl = 1, gbCount = 0;
-            (plan.general.results || []).forEach(function(s) {
-              var count = s.count || 0;
-              var start = genSl;
-              var end = start + count - 1;
-              var bookData = calcBooks(count, start, 'G', gbCount, 'GB', standard, enableMerge);
-              gbCount = bookData.nextCounter;
-              s.start = start;
-              s.end = end;
-              s.books = bookData.books;
-              s.bookIds = bookData.ids;
-              genSl += count;
-            });
-            plan.general.total = genSl - 1;
-          }
-
-          // 2. Reps
-          if (plan.reps && Array.isArray(plan.reps.results)) {
-            plan.reps.results.sort(function(a, b) {
-              var rA = getCohort(a.post).rank;
-              var rB = getCohort(b.post).rank;
-              if (rA !== rB) return rA - rB;
-              return Number(a.booth) - Number(b.booth);
-            });
-
-            var repSl = 1, rbCount = 0;
-            plan.reps.results.forEach(function(s) {
-              var count = s.count || 0;
-              var start = repSl;
-              var end = start + count - 1;
-              var bookData = calcBooks(count, start, 'R', rbCount, 'RB', standard, enableMerge);
-              rbCount = bookData.nextCounter;
-              s.start = start;
-              s.end = end;
-              s.books = bookData.books;
-              s.bookIds = bookData.ids;
-              repSl += count;
-            });
-            plan.reps.total = repSl - 1;
-          }
-
-          // 3. Assocs
-          if (plan.assocs && Array.isArray(plan.assocs.results)) {
-            var assocSl = 1, abCount = 0;
-            plan.assocs.results.forEach(function(s) {
-              var count = s.count || 0;
-              var start = assocSl;
-              var end = start + count - 1;
-              var bookData = calcBooks(count, start, 'A', abCount, 'AB', standard, enableMerge);
-              abCount = bookData.nextCounter;
-              s.start = start;
-              s.end = end;
-              s.books = bookData.books;
-              s.bookIds = bookData.ids;
-              assocSl += count;
-            });
-            plan.assocs.total = assocSl - 1;
-          }
-
-          return plan;
-        }
-
-        function renderBooks(books) {
-          if (!books || !books.length) return '-';
-          return '<table style="width:100%; border-collapse:collapse; font-size:10px; background:rgba(0,0,0,0.02);">' +
-            books.map(function(b) {
-              return '<tr><td style="padding:4px; border:1px solid #eee; font-weight:bold; width:45px;">' + b.qty + ' x ' + b.size + '</td>' +
-                '<td style="padding:4px; border:1px solid #eee; line-height:1.4;">' +
-                b.items.map(function(it) {
-                  return '<span style="display:inline-block; margin-right:8px;"><strong style="color:#4f46e5;">' + it.id + ':</strong> ' + it.range + '</span>';
-                }).join(' ') +
-                '</td></tr>';
-            }).join('') +
-            '</table>';
-        }
-
-        function renderHtml(plan, size, merge) {
-          var year = settings.electionYear || schedule.electionYear || new Date().getFullYear().toString();
-          var collegeName = settings.collegeName || 'College Union Election';
-          var collegeLogo = settings.collegeLogo || '';
-          var isSplit = !!(plan.isSplit && Array.isArray(plan.generalParts) && plan.generalParts.length > 1);
-
-          var cohortMap = {};
-          (plan.reps && plan.reps.results ? plan.reps.results : []).forEach(function(it) {
-            var c = getCohort(it.post);
-            if (!cohortMap[c.key]) cohortMap[c.key] = { cohort: c, items: [] };
-            cohortMap[c.key].items.push(it);
-          });
-          var cohorts = Object.keys(cohortMap).map(function(k) { return cohortMap[k]; }).sort(function(a, b) { return a.cohort.rank - b.cohort.rank; });
-
-          var totalRepBooksCount = 0;
-          var firstRepBookId = null, lastRepBookId = null;
-          (plan.reps && plan.reps.results ? plan.reps.results : []).forEach(function(it) {
-            (it.books || []).forEach(function(b) {
-              totalRepBooksCount += (b.items || []).length;
-              (b.items || []).forEach(function(bi) {
-                if (!firstRepBookId) firstRepBookId = bi.id;
-                lastRepBookId = bi.id;
-              });
-            });
-          });
-
-          var html = '<div style="padding: 30px; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; color: #1e293b; max-width: 1200px; margin: 0 auto; background: white;">';
-          html += '<div style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 16px; margin-bottom: 24px;">';
-          if (collegeLogo) html += '<img src="' + collegeLogo + '" style="max-height:55px;max-width:130px;margin:0 auto 6px auto;display:block;object-fit:contain" alt="Logo">';
-          html += '<h2 style="margin: 0; font-size: 18px; color: #1e293b; font-weight: 800; text-transform: uppercase;">' + escHtml(collegeName) + '</h2>';
-          html += '<h1 style="margin: 6px 0 0 0; font-size: 21px; color: #0f172a; font-weight: 800;">College Union Election ' + year + ' — Ballot Printing Summary</h1>';
-          html += '<div style="margin-top: 6px; font-size: 12px; color: #64748b; font-weight: 500;">Specification: <strong>' + size + ' Ballots per Book</strong> ' + (merge ? '(Smart Remainder Merging ≤30% Active)' : '(Exact Split)') + '</div>';
-          html += '</div>';
-
-          html += '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 25px; font-size: 12.5px; color: #334155;">';
-          html += 'This document provides the sequential serial number ranges and booklet packaging breakdown for printing press execution.';
-          if (isSplit) html += '<br><strong>Note:</strong> General Union posts are split into <strong>' + plan.generalParts.length + ' separate ballot papers</strong> with distinct series numbering and booklet prefixes.';
-          html += '</div>';
-
-          // General Ballots
-          if (isSplit) {
-            plan.generalParts.forEach(function(part, pIdx) {
-              html += '<div style="margin-bottom: 30px;">';
-              html += '<div style="display:flex; justify-content:space-between; background:#f1f5f9; padding:8px 14px; border-left:5px solid #4f46e5; margin-bottom:8px;">';
-              html += '<h3 style="margin:0; font-size:14px; font-weight:700;">1.' + (pIdx + 1) + ' ' + escHtml(part.title) + ' (Series: ' + part.shortCode + '-1... / Books: ' + part.bookPrefix + '1...)</h3>';
-              html += '<span style="font-size:11px; color:#4f46e5; font-weight:600;">Paper: ' + escHtml(part.paperSize || 'A3') + '</span>';
-              html += '</div>';
-              html += '<div style="font-size:11px; margin-bottom:8px; color:#64748b;"><strong>Included Posts:</strong> ' + (part.posts || []).map(escHtml).join(', ') + '</div>';
-              html += '<table style="width:100%; border-collapse:collapse; border:1.5px solid #0f172a; font-size:11.5px;">';
-              html += '<thead><tr style="background:#f8fafc; border-bottom:1.5px solid #0f172a;"><th style="border:1px solid #cbd5e1; padding:8px; text-align:left; width:14%;">Booth No</th><th style="border:1px solid #cbd5e1; padding:8px; text-align:center; width:10%;">Voters</th><th style="border:1px solid #cbd5e1; padding:8px; text-align:center; width:14%;">Sl No From</th><th style="border:1px solid #cbd5e1; padding:8px; text-align:center; width:14%;">Sl No To</th><th style="border:1px solid #cbd5e1; padding:8px; text-align:left; width:48%;">Book Breakdowns</th></tr></thead><tbody>';
-              part.results.forEach(function(s) {
-                html += '<tr><td style="border:1px solid #e2e8f0; padding:7px 8px; font-weight:600;">Booth ' + s.booth + '</td><td style="border:1px solid #e2e8f0; padding:7px 8px; text-align:center;">' + s.count + '</td><td style="border:1px solid #e2e8f0; padding:7px 8px; text-align:center; font-weight:bold;">' + part.shortCode + '-' + s.start + '</td><td style="border:1px solid #e2e8f0; padding:7px 8px; text-align:center; font-weight:bold;">' + part.shortCode + '-' + s.end + '</td><td style="border:1px solid #e2e8f0; padding:3px 6px;">' + renderBooks(s.books) + '</td></tr>';
-              });
-              html += '<tr style="background:#f1f5f9; font-weight:bold; border-top:1.5px solid #0f172a;"><td style="border:1px solid #cbd5e1; padding:8px;">TOTAL PART ' + (pIdx + 1) + '</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">' + part.total + '</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">' + part.shortCode + '-1</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">' + part.shortCode + '-' + part.total + '</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center; color:#64748b;">—</td></tr>';
-              html += '</tbody></table></div>';
-            });
-          } else {
-            html += '<div style="margin-bottom: 30px;">';
-            html += '<h3 style="background:#f1f5f9; padding:8px 14px; border-left:5px solid #4f46e5; margin:0 0 10px 0; font-size:14px; font-weight:700;">1. General Union Ballots (Series: G1, G2, G3... / Books: GB1, GB2...)</h3>';
-            html += '<table style="width:100%; border-collapse:collapse; border:1.5px solid #0f172a; font-size:11.5px;">';
-            html += '<thead><tr style="background:#f8fafc; border-bottom:1.5px solid #0f172a;"><th style="border:1px solid #cbd5e1; padding:8px; text-align:left; width:14%;">Booth No</th><th style="border:1px solid #cbd5e1; padding:8px; text-align:center; width:10%;">Voters</th><th style="border:1px solid #cbd5e1; padding:8px; text-align:center; width:14%;">Sl No From</th><th style="border:1px solid #cbd5e1; padding:8px; text-align:center; width:14%;">Sl No To</th><th style="border:1px solid #cbd5e1; padding:8px; text-align:left; width:48%;">Book Breakdowns</th></tr></thead><tbody>';
-            (plan.general && plan.general.results ? plan.general.results : []).forEach(function(s) {
-              html += '<tr><td style="border:1px solid #e2e8f0; padding:7px 8px; font-weight:600;">Booth ' + s.booth + '</td><td style="border:1px solid #e2e8f0; padding:7px 8px; text-align:center;">' + s.count + '</td><td style="border:1px solid #e2e8f0; padding:7px 8px; text-align:center; font-weight:bold;">G' + s.start + '</td><td style="border:1px solid #e2e8f0; padding:7px 8px; text-align:center; font-weight:bold;">G' + s.end + '</td><td style="border:1px solid #e2e8f0; padding:3px 6px;">' + renderBooks(s.books) + '</td></tr>';
-            });
-            html += '<tr style="background:#f1f5f9; font-weight:bold; border-top:1.5px solid #0f172a;"><td style="border:1px solid #cbd5e1; padding:8px;">TOTAL GENERAL</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">' + (plan.general ? plan.general.total : 0) + '</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">G1</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">G' + (plan.general ? plan.general.total : 0) + '</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center; color:#64748b;">—</td></tr>';
-            html += '</tbody></table></div>';
-          }
-
-          // Year Reps
-          html += '<div style="margin-top: 35px; margin-bottom: 30px;">';
-          html += '<div style="background:#f1f5f9; padding:8px 14px; border-left:5px solid #10b981; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">';
-          html += '<h3 style="margin:0; font-size:14px; font-weight:700;">2. Year Representative Ballots (Series: R1, R2, R3... / Books: RB1, RB2...)</h3>';
-          html += '<span style="font-size:11px; color:#047857; font-weight:600; background:#ecfdf5; padding:3px 8px; border-radius:4px; border:1px solid #a7f3d0;">Separate Cohort Tables: I UG, II UG, III UG &amp; PG</span>';
-          html += '</div>';
-
-          if (!cohorts.length) {
-            html += '<div style="padding:12px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:6px; font-style:italic; color:#64748b; font-size:12px;">No contested Year Representative posts requiring printed ballot papers.</div>';
-          } else {
-            cohorts.forEach(function(cGroup, cIdx) {
-              var cVoters = cGroup.items.reduce(function(sum, it) { return sum + (it.count || 0); }, 0);
-              var cMin = cGroup.items.length ? cGroup.items[0].start : '-';
-              var cMax = cGroup.items.length ? cGroup.items[cGroup.items.length - 1].end : '-';
-              var cBIds = [];
-              cGroup.items.forEach(function(it) {
-                (it.books || []).forEach(function(b) {
-                  (b.items || []).forEach(function(bi) { cBIds.push(bi.id); });
-                });
-              });
-              var cBSummary = cBIds.length > 0 ? (cBIds.length + ' Books (' + cBIds[0] + (cBIds.length > 1 ? ' to ' + cBIds[cBIds.length - 1] : '') + ')') : '—';
-
-              html += '<div style="margin-bottom: 25px; break-inside: avoid;">';
-              html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">';
-              html += '<h4 style="margin:0; font-size:13px; font-weight:700;">2.' + (cIdx + 1) + ' ' + escHtml(cGroup.cohort.title) + ' Ballots</h4>';
-              html += '<span style="font-size:11px; color:#047857; font-weight:600;">Serial: R' + cMin + ' to R' + cMax + ' | ' + cBSummary + '</span>';
-              html += '</div>';
-              html += '<table style="width:100%; border-collapse:collapse; border:1.5px solid #0f172a; font-size:11.5px;">';
-              html += '<thead><tr style="background:#f8fafc; border-bottom:1.5px solid #0f172a;"><th style="border:1px solid #cbd5e1; padding:7px 8px; text-align:left; width:14%;">Booth No</th><th style="border:1px solid #cbd5e1; padding:7px 8px; text-align:center; width:10%;">Voters</th><th style="border:1px solid #cbd5e1; padding:7px 8px; text-align:center; width:14%;">Sl No From</th><th style="border:1px solid #cbd5e1; padding:7px 8px; text-align:center; width:14%;">Sl No To</th><th style="border:1px solid #cbd5e1; padding:7px 8px; text-align:left; width:48%;">Book Breakdowns</th></tr></thead><tbody>';
-              cGroup.items.forEach(function(s) {
-                html += '<tr><td style="border:1px solid #e2e8f0; padding:6px 8px; font-weight:600;">Booth ' + s.booth + '</td><td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:center;">' + s.count + '</td><td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:center; font-weight:bold;">R' + s.start + '</td><td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:center; font-weight:bold;">R' + s.end + '</td><td style="border:1px solid #e2e8f0; padding:3px 6px;">' + renderBooks(s.books) + '</td></tr>';
-              });
-              html += '<tr style="background:#f1f5f9; font-weight:bold; border-top:1.5px solid #0f172a;"><td style="border:1px solid #cbd5e1; padding:7px 8px;">SUBTOTAL ' + escHtml(cGroup.cohort.short.toUpperCase()) + '</td><td style="border:1px solid #cbd5e1; padding:7px 8px; text-align:center;">' + cVoters + '</td><td style="border:1px solid #cbd5e1; padding:7px 8px; text-align:center;">R' + cMin + '</td><td style="border:1px solid #cbd5e1; padding:7px 8px; text-align:center;">R' + cMax + '</td><td style="border:1px solid #cbd5e1; padding:7px 8px; font-weight:600; color:#047857;">' + cBSummary + '</td></tr>';
-              html += '</tbody></table></div>';
-            });
-
-            html += '<div style="background:#ecfdf5; border:1.5px solid #10b981; border-radius:6px; padding:10px 16px; margin-bottom:30px; display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:bold; color:#065f46;">';
-            html += '<span>TOTAL ALL YEAR REPRESENTATIVES (I UG + II UG + III UG + PG)</span>';
-            html += '<span>Voters: ' + (plan.reps ? plan.reps.total : 0) + ' (R1 to R' + (plan.reps ? plan.reps.total : 0) + ')</span>';
-            html += '<span>Total Packaging: ' + totalRepBooksCount + ' Books (' + (firstRepBookId || '-') + ' to ' + (lastRepBookId || '-') + ')</span>';
-            html += '</div>';
-          }
-          html += '</div>';
-
-          // Assocs
-          html += '<div style="margin-top: 35px; margin-bottom: 30px;">';
-          html += '<h3 style="background:#f1f5f9; padding:8px 14px; border-left:5px solid #f59e0b; margin:0 0 10px 0; font-size:14px; font-weight:700;">3. Departmental Association Secretary Ballots (Series: A1, A2, A3... / Books: AB1, AB2...)</h3>';
-          html += '<table style="width:100%; border-collapse:collapse; border:1.5px solid #0f172a; font-size:11.5px;">';
-          html += '<thead><tr style="background:#f8fafc; border-bottom:1.5px solid #0f172a;"><th style="border:1px solid #cbd5e1; padding:8px; text-align:left; width:25%;">Association Post</th><th style="border:1px solid #cbd5e1; padding:8px; text-align:center; width:9%;">Booth</th><th style="border:1px solid #cbd5e1; padding:8px; text-align:center; width:9%;">Voters</th><th style="border:1px solid #cbd5e1; padding:8px; text-align:center; width:13%;">From</th><th style="border:1px solid #cbd5e1; padding:8px; text-align:center; width:13%;">To</th><th style="border:1px solid #cbd5e1; padding:8px; text-align:left; width:31%;">Book Breakdowns</th></tr></thead><tbody>';
-          (plan.assocs && plan.assocs.results ? plan.assocs.results : []).slice().sort(function(a, b) { return String(a.post || '').localeCompare(String(b.post || '')); }).forEach(function(s) {
-            html += '<tr><td style="border:1px solid #e2e8f0; padding:6px 8px; font-weight:600;">' + escHtml(s.post) + '</td><td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:center;">Booth ' + s.booth + '</td><td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:center;">' + s.count + '</td><td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:center; font-weight:bold;">A' + s.start + '</td><td style="border:1px solid #e2e8f0; padding:6px 8px; text-align:center; font-weight:bold;">A' + s.end + '</td><td style="border:1px solid #e2e8f0; padding:3px 6px;">' + renderBooks(s.books) + '</td></tr>';
-          });
-          html += '<tr style="background:#f1f5f9; font-weight:bold; border-top:1.5px solid #0f172a;"><td colspan="2" style="border:1px solid #cbd5e1; padding:8px;">TOTAL ASSOCIATION</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">' + (plan.assocs ? plan.assocs.total : 0) + '</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">A1</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">A' + (plan.assocs ? plan.assocs.total : 0) + '</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center; color:#64748b;">—</td></tr>';
-          html += '</tbody></table></div>';
-
-          // Signatures
-          html += '<div style="margin-top: 60px; display: flex; justify-content: space-between; padding: 0 30px; font-size: 12px; color: #0f172a;">';
-          html += '<div style="text-align: center;"><div style="width: 180px; border-top: 1.5px solid #0f172a; margin-bottom: 5px;"></div><strong>Returning Officer</strong><br><span style="font-size: 11px; color: #64748b;">College Union Election</span></div>';
-          html += '<div style="text-align: center;"><div style="width: 180px; border-top: 1.5px solid #0f172a; margin-bottom: 5px;"></div><strong>Principal / Patron</strong><br><span style="font-size: 11px; color: #64748b;">' + escHtml(collegeName) + '</span></div>';
-          html += '<div style="text-align: center;"><div style="width: 180px; border-top: 1.5px solid #0f172a; margin-bottom: 5px;"></div><strong>Printing Press Acknowledgement</strong><br><span style="font-size: 11px; color: #64748b;">Signature &amp; Seal</span></div>';
-          html += '</div>';
-
-          html += '<div style="margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 11px; color: #94a3b8; text-align: center;">';
-          html += 'Generated on ' + new Date().toLocaleString() + ' | Official ' + escHtml(collegeName) + ' Election Portal';
-          html += '</div></div>';
-
-          return html;
-        }
-
-        var selSize = document.getElementById('selectToolbarBookSize');
-        var customInput = document.getElementById('inputToolbarCustomSize');
-        var chkMerge = document.getElementById('chkToolbarMerge');
-        var btnPrint = document.getElementById('btnToolbarPrint');
-        var container = document.getElementById('reportTablesContainer');
-
+        var btnPrint = document.getElementById("btnToolbarPrint");
         if (btnPrint) {
           btnPrint.onclick = function() { window.print(); };
-        }
-
-        var btnExcel = document.getElementById('btnToolbarExcel');
-        if (btnExcel) {
-          btnExcel.onclick = function() {
-            if (window.opener && window.opener.gccDownloadBallotsExcel) {
-              window.opener.gccDownloadBallotsExcel('summary');
-            } else {
-              alert('Please use the Download Excel option in the main Ballot Printing dashboard.');
-            }
-          };
-        }
-
-        function getActiveSize() {
-          if (selSize.value === 'custom') {
-            var val = parseInt(customInput.value, 10);
-            return (!isNaN(val) && val >= 5) ? val : 50;
-          }
-          return parseInt(selSize.value, 10) || 50;
-        }
-
-        function triggerUpdate() {
-          var size = getActiveSize();
-          var merge = chkMerge.checked;
-          var plan = recalculate(rawPlan, size, merge);
-          container.innerHTML = renderHtml(plan, size, merge);
-        }
-
-        if (selSize) {
-          selSize.onchange = function() {
-            if (selSize.value === 'custom') {
-              customInput.style.display = 'inline-block';
-              customInput.focus();
-            } else {
-              customInput.style.display = 'none';
-              triggerUpdate();
-            }
-          };
-        }
-
-        if (customInput) {
-          customInput.oninput = function() {
-            var val = parseInt(customInput.value, 10);
-            if (!isNaN(val) && val >= 5) {
-              triggerUpdate();
-            }
-          };
-        }
-
-        if (chkMerge) {
-          chkMerge.onchange = triggerUpdate;
         }
       })();
     </script>

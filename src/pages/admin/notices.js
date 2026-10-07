@@ -10,7 +10,7 @@ import { esc, showToast, setLoading } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 import { printOfficialNotice, printBoothDoorPoster, printBatchBoothDoorPosters, printCampusMasterDirectory, printBallotBoxStripSeals, openBallotBoxStripSealsPdf, printDepartmentClassDirectoryPoster, openDepartmentClassPosterPdf } from '../../noticesPrinter.js';
 import { getDefaultStatutoryNotices } from '../../noticesTemplates.js';
-import { generateAndPrintBallots, generateAndPrintBallotPressSummary, downloadBallotsExcel } from './ballots.js';
+import { generateAndPrintBallots, generateAndPrintBallotPressSummary, downloadBallotsExcel, openBallotSummaryConfigModal } from './ballots.js';
 import { generateAndPrintElectoralRolls, generateAndPrintBallotAccounts } from './booths.js';
 import { openPrintRollModal } from '../../rollPrinter.js';
 
@@ -962,12 +962,12 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
   
   // Press Summary
   const handlePrintPressSummary = () => {
-    generateAndPrintBallotPressSummary(pwd);
+    openBallotSummaryConfigModal(pwd);
   };
   main.querySelector('#btnHubPressSummary')?.addEventListener('click', handlePrintPressSummary);
   main.querySelector('#btnHubQuickPressSummary')?.addEventListener('click', handlePrintPressSummary);
   main.querySelector('#btnHubExcelPressSummary')?.addEventListener('click', () => {
-    downloadBallotsExcel(pwd, 'summary');
+    openBallotSummaryConfigModal(pwd);
   });
 
   // Ballots

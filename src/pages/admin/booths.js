@@ -2523,7 +2523,7 @@ export function triggerElectoralRollPrint(html) {
 export async function generateAndPrintElectoralRolls(pwd) {
   showToast('Preparing Electoral Rolls...', 'info');
   try {
-    const [nominalRoll, booths, posts, nominations, plan, settings] = await Promise.all([
+    let [nominalRoll, booths, posts, nominations, plan, settings] = await Promise.all([
       api.getNominalRoll(),
       api.adminGetBooths(pwd, true).catch(() => []),
       api.adminGetPosts(pwd).catch(() => []),
@@ -2531,6 +2531,11 @@ export async function generateAndPrintElectoralRolls(pwd) {
       api.adminGetBallotPlan(pwd).catch(() => null),
       api.adminGetSettings(pwd).catch(() => ({}))
     ]);
+
+    if (!plan) {
+      const genRes = await api.adminGenerateBallotPlan(pwd).catch(() => null);
+      plan = genRes?.plan || null;
+    }
 
     if (!plan) {
       showToast('❌ Master Ballot Plan not generated yet. Please finalize the Master Plan first.', 'error');
@@ -2798,7 +2803,7 @@ export function triggerBallotAccountPrint(html) {
 export async function generateAndPrintBallotAccounts(pwd) {
   showToast('Preparing Ballot Accounts...', 'info');
   try {
-    const [nominalRoll, booths, posts, nominations, plan, settings] = await Promise.all([
+    let [nominalRoll, booths, posts, nominations, plan, settings] = await Promise.all([
       api.getNominalRoll(),
       api.adminGetBooths(pwd, true).catch(() => []),
       api.adminGetPosts(pwd).catch(() => []),
@@ -2806,6 +2811,11 @@ export async function generateAndPrintBallotAccounts(pwd) {
       api.adminGetBallotPlan(pwd).catch(() => null),
       api.adminGetSettings(pwd).catch(() => ({}))
     ]);
+
+    if (!plan) {
+      const genRes = await api.adminGenerateBallotPlan(pwd).catch(() => null);
+      plan = genRes?.plan || null;
+    }
 
     if (!plan) {
       showToast('❌ Master Ballot Plan not generated yet. Please finalize the Master Plan first.', 'error');

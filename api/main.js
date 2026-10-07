@@ -1413,9 +1413,21 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       let repSl = 1, assocSl = 1;
       let rbCount = 0, abCount = 0;
 
-      const standard = Number(body.bookSize) > 0 ? Number(body.bookSize) : 50;
-      const enableMerge = body.mergeRemainders !== false && body.mergeRemainders !== 'false';
+      const savedBookSizeSetting = await getSetting('ballot_book_size');
+      const savedMergeSetting = await getSetting('ballot_merge_remainders');
+
+      const standard = Number(body.bookSize) > 0
+        ? Number(body.bookSize)
+        : (Number(savedBookSizeSetting) > 0 ? Number(savedBookSizeSetting) : 50);
+
+      const enableMerge = body.mergeRemainders !== undefined
+        ? (body.mergeRemainders !== false && body.mergeRemainders !== 'false')
+        : (savedMergeSetting !== 'false' && savedMergeSetting !== false);
+
       const threshold = enableMerge ? Math.max(5, Math.round(standard * 0.3)) : 0;
+
+      await setSetting('ballot_book_size', String(standard));
+      await setSetting('ballot_merge_remainders', enableMerge ? 'true' : 'false');
 
       const calcBooks = (count, start, prefix, currentGlobalBookCount, customBookPrefix = null) => {
         if (!count || count <= 0) return { books: [], ids: '-', count: 0, nextCounter: currentGlobalBookCount };
@@ -1619,6 +1631,8 @@ All students are directed to strictly adhere to the University Code of Conduct, 
 
       const plan = {
         isSplit,
+        bookSize: standard,
+        mergeRemainders: enableMerge,
         general: genPartsResults[0] || { results: [], total: 0 },
         generalParts: genPartsResults,
         reps: { results: repResults, total: repSl - 1 },
