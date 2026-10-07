@@ -3344,161 +3344,384 @@ All students are directed to strictly adhere to the University Code of Conduct, 
 
       const rollCheck = { pass: true, details: [] };
       const serialCheck = { pass: true, details: [] };
-      const resultsCheck = { pass: true, details: [] };
+      const boothBallotCheck = { pass: true, details: [] };
+      const countingRoutingCheck = { pass: true, details: [] };
       const formsCheck = { pass: true, details: [] };
+      const officialsCheck = { pass: true, details: [] };
+      const resultsCheck = { pass: true, details: [] };
 
-      const [students, noms, planRaw, matrixRaw, resultsRaw] = await Promise.all([
+      const [students, noms, planRaw, matrixRaw, resultsRaw, boothsRaw, postsDb, countingTeamsRaw, pollingTeamsRaw] = await Promise.all([
         sql`SELECT serial_number as "SL_NO", name as "NAME", class as "CLASS", admission_no as "ADMISION NO", dept as "Dept" FROM nominal_roll`,
-        sql`SELECT id, post, candidate_serial as "candidateSerial", candidate_name as "candidateName", proposer_serial as "proposerSerial", seconder_serial as "seconderSerial" FROM nominations WHERE status != 'Rejected'`,
+        sql`SELECT id, post, candidate_serial as "candidateSerial", candidate_name as "candidateName", proposer_serial as "proposerSerial", seconder_serial as "seconderSerial", status, withdrawal_status as "withdrawalStatus" FROM nominations WHERE status != 'Rejected'`,
         getSetting('ballotPlan'),
         getSetting('countingMatrix'),
-        getSetting('results_data')
+        getSetting('results_data'),
+        getSetting('booths'),
+        fetchPostsFromDb(),
+        getSetting('countingTeams'),
+        getSetting('pollingTeams')
       ]);
 
       const plan = safeJsonParse(planRaw, null);
-      const matrix = safeJsonParse(matrixRaw, null);
+      const matrixData = safeJsonParse(matrixRaw, null);
       const resultsData = safeJsonParse(resultsRaw, []);
+      const booths = safeJsonParse(boothsRaw, []);
+      const posts = Array.isArray(postsDb) ? postsDb : [];
+      const countingTeams = safeJsonParse(countingTeamsRaw, []);
+      const pollingTeams = safeJsonParse(pollingTeamsRaw, []);
 
-      // Check 1: Nominal Roll vs Ballot Plan
-      if (plan) {
-        const expectedGeneral = students.length;
-        if (plan.isSplit && Array.isArray(plan.generalParts) && plan.generalParts.length > 1) {
-          plan.generalParts.forEach(gp => {
-            if (gp.total !== expectedGeneral) {
-              rollCheck.pass = false;
-              rollCheck.details.push(`${gp.title || 'General Part'}: Expected ${expectedGeneral} voters, Planned ${gp.total}`);
-            }
+      const pName = p => String(p?.post || p?.name || (typeof p === 'string' ? p : '')).trim();
+      const isUuc = name => {
+        const u = String(name || '').toUpperCase();
+        return u.includes('UUC') || u.includes('UNIVERSITY UNION COUNCILLOR') || u.includes('COUNCILLOR');
+      };
+      const getPostDept = p => {
+        if (p?.restrictedDept) return String(p.restrictedDept).toUpperCase().trim();
+        const name = pName(p);
+        const prefixRegex = /^ASSOCIATION\s+SECRETARY\s*(FOR\s*|\s*-\s*|\s*:\s*|\s+OF\s*)?/i;
+        if (prefixRegex.test(name)) return name.replace(prefixRegex, '').toUpperCase().trim();
+        if (p?.deptRestriction && typeof p.deptRestriction === 'string') return String(p.deptRestriction).toUpperCase().trim();
+        return null;
+      };
+
+      // 1. Electors & Booth Allotment Check
+      const totalStudents = students.length;
+      if (totalStudents === 0) {
+        rollCheck.pass = false;
+        rollCheck.details.push('Nominal Roll is empty. Please upload the student nominal roll.');
+      }
+
+      const classStudentCounts = {};
+      const classToDept = {};
+      students.forEach(s => {
+        const c = String(s.CLASS || 'Unknown').trim();
+        const d = String(s.Dept || '').trim().toUpperCase();
+        classStudentCounts[c] = (classStudentCounts[c] || 0) + 1;
+        if (c && d) classToDept[c] = d;
+      });
+
+      const assignedClassToBooths = {};
+      const boothVoterCounts = {};
+      if (Array.isArray(booths) && booths.length > 0) {
+        booths.forEach((b, idx) => {
+          const bNum = b.boothNumber || (idx + 1);
+          let bClasses = [];
+          if (Array.isArray(b.classes)) bClasses = b.classes;
+          else if (typeof b.classes === 'string') bClasses = b.classes.split(',').map(s => s.trim()).filter(Boolean);
+
+          let vCount = 0;
+          bClasses.forEach(cls => {
+            if (!assignedClassToBooths[cls]) assignedClassToBooths[cls] = [];
+            assignedClassToBooths[cls].push(bNum);
+            vCount += (classStudentCounts[cls] || 0);
           });
-        } else if (plan.general && plan.general.total !== expectedGeneral) {
+          boothVoterCounts[bNum] = vCount;
+          if (vCount === 0) {
+            rollCheck.details.push(`Booth ${bNum} (${b.roomName || 'Unnamed'}) has 0 electors assigned.`);
+          }
+        });
+
+        // Detect unassigned classes and students
+        let unassignedElectorsCount = 0;
+        const unassignedClassNames = [];
+        Object.keys(classStudentCounts).forEach(cls => {
+          if (!assignedClassToBooths[cls] || assignedClassToBooths[cls].length === 0) {
+            const count = classStudentCounts[cls];
+            unassignedElectorsCount += count;
+            unassignedClassNames.push(`${cls} (${count} electors)`);
+          }
+        });
+
+        if (unassignedElectorsCount > 0) {
           rollCheck.pass = false;
-          rollCheck.details.push(`General Ballots mismatch: Expected ${expectedGeneral}, Planned ${plan.general.total}`);
+          rollCheck.details.push(`${unassignedElectorsCount} registered electors across ${unassignedClassNames.length} classes are NOT assigned to any booth: ${unassignedClassNames.slice(0, 8).join(', ')}${unassignedClassNames.length > 8 ? ` + ${unassignedClassNames.length - 8} more` : ''}.`);
+        }
+
+        // Detect multi-assigned classes without split
+        const multiAssignedClasses = Object.entries(assignedClassToBooths).filter(([_, bList]) => bList.length > 1);
+        if (multiAssignedClasses.length > 0) {
+          rollCheck.details.push(`Note: ${multiAssignedClasses.length} class(es) allotted across multiple booths (${multiAssignedClasses.slice(0, 5).map(([c, bl]) => `${c} -> Booths ${bl.join(', ')}`).join('; ')}).`);
         }
       } else {
         rollCheck.pass = false;
-        rollCheck.details.push('Ballot Plan not generated yet.');
+        rollCheck.details.push('No polling booths configured yet. All electors are currently unassigned.');
       }
 
-      // Check 2: Serial Number Integrity
+      // 2. Nominations & Candidate Scrutiny Check
+      const activeNominations = noms.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved');
       const getStudent = (sl) => students.find(s => String(s.SL_NO).trim() === String(sl).trim());
-      noms.forEach(n => {
-        if (!n.candidateSerial) return;
-        const c = getStudent(n.candidateSerial);
-        if (!c) {
-          serialCheck.pass = false;
-          serialCheck.details.push(`Nom ID ${n.id}: Candidate Serial ${n.candidateSerial} not found in Nominal Roll.`);
-        } else {
-          if (String(c.NAME).trim().toUpperCase() !== String(n.candidateName || '').trim().toUpperCase()) {
+      const postCandidateCounts = {};
+      const proposerMap = {};
+      const seconderMap = {};
+
+      activeNominations.forEach(n => {
+        const post = String(n.post || '').trim();
+        postCandidateCounts[post] = (postCandidateCounts[post] || 0) + 1;
+
+        if (n.candidateSerial) {
+          const c = getStudent(n.candidateSerial);
+          if (!c) {
             serialCheck.pass = false;
-            serialCheck.details.push(`Nom ID ${n.id}: Candidate Name mismatch (Roll: ${c.NAME}, Nom: ${n.candidateName})`);
+            serialCheck.details.push(`Candidate '${n.candidateName}' (Sl #${n.candidateSerial}) for '${n.post}' was not found in Nominal Roll.`);
+          } else {
+            const normC = String(c.NAME || '').trim().toUpperCase();
+            const normN = String(n.candidateName || '').trim().toUpperCase();
+            if (normC !== normN && !normC.includes(normN) && !normN.includes(normC)) {
+              serialCheck.pass = false;
+              serialCheck.details.push(`Candidate Name discrepancy: Nomination says '${n.candidateName}' but Nominal Roll says '${c.NAME}' (Sl #${n.candidateSerial}).`);
+            }
           }
         }
 
+        // Proposer endorsement check
         if (n.proposerSerial) {
-          const p = getStudent(n.proposerSerial);
-          if (!p) {
+          const propKey = `${post}-${n.proposerSerial}`;
+          if (proposerMap[propKey]) {
             serialCheck.pass = false;
-            serialCheck.details.push(`Nom ID ${n.id}: Proposer Serial ${n.proposerSerial} not found in Nominal Roll.`);
+            serialCheck.details.push(`Statutory Conflict: Elector Sl #${n.proposerSerial} has proposed multiple candidates for post '${post}'.`);
+          }
+          proposerMap[propKey] = true;
+          if (!getStudent(n.proposerSerial)) {
+            serialCheck.pass = false;
+            serialCheck.details.push(`Proposer Sl #${n.proposerSerial} for candidate '${n.candidateName}' not found in Nominal Roll.`);
           }
         }
 
+        // Seconder endorsement check
         if (n.seconderSerial) {
-          const s = getStudent(n.seconderSerial);
-          if (!s) {
+          const secKey = `${post}-${n.seconderSerial}`;
+          if (seconderMap[secKey]) {
             serialCheck.pass = false;
-            serialCheck.details.push(`Nom ID ${n.id}: Seconder Serial ${n.seconderSerial} not found in Nominal Roll.`);
+            serialCheck.details.push(`Statutory Conflict: Elector Sl #${n.seconderSerial} has seconded multiple candidates for post '${post}'.`);
+          }
+          seconderMap[secKey] = true;
+          if (!getStudent(n.seconderSerial)) {
+            serialCheck.pass = false;
+            serialCheck.details.push(`Seconder Sl #${n.seconderSerial} for candidate '${n.candidateName}' not found in Nominal Roll.`);
           }
         }
       });
 
-      // Check 3: Results Math Match & Check 4: Forms Accounting
-      if (matrix && Array.isArray(resultsData) && resultsData.length > 0) {
-        const matrixTotals = {};
-        if (typeof matrix === 'object') {
-          Object.keys(matrix).forEach(post => {
-            const postData = matrix[post];
-            if (!postData || typeof postData !== 'object') return;
-            matrixTotals[post] = {};
-            Object.keys(postData).forEach(candId => {
-              const rounds = postData[candId];
-              if (!rounds || typeof rounds !== 'object') return;
-              let candSum = 0;
-              Object.keys(rounds).forEach(roundKey => {
-                if (roundKey === 'FormSerial') return;
-                candSum += parseInt(rounds[roundKey]) || 0;
-              });
-              matrixTotals[post][candId] = candSum;
-            });
-          });
-        }
+      // Classify contested posts vs uncontested posts
+      const contestedPosts = [];
+      const uncontestedPosts = [];
+      posts.forEach(p => {
+        const pn = pName(p);
+        const count = postCandidateCounts[pn] || 0;
+        if (count >= 2) contestedPosts.push(pn);
+        else if (count === 1) uncontestedPosts.push(pn);
+      });
 
-        const finalResults = {};
-        resultsData.forEach(r => {
-          const post = String(r.Post || '');
-          const cId = String(r.CandidateId || '');
-          const votes = parseInt(r.Votes) || 0;
-          if (!finalResults[post]) finalResults[post] = {};
-          finalResults[post][cId] = (finalResults[post][cId] || 0) + votes;
-        });
+      // 3. Polling Booth Ballot Paper Availability Check
+      if (Array.isArray(booths) && booths.length > 0) {
+        if (!plan) {
+          boothBallotCheck.pass = false;
+          boothBallotCheck.details.push('Ballot Plan has not been generated yet. Polling booths do not have ballot allocations.');
+        } else {
+          booths.forEach((b, idx) => {
+            const bNum = b.boothNumber || (idx + 1);
+            let bClasses = [];
+            if (Array.isArray(b.classes)) bClasses = b.classes;
+            else if (typeof b.classes === 'string') bClasses = b.classes.split(',').map(s => s.trim()).filter(Boolean);
 
-        if (Object.keys(matrixTotals).length > 0) {
-          Object.keys(finalResults).forEach(post => {
-            Object.keys(finalResults[post]).forEach(cId => {
-              const finalVotes = finalResults[post][cId];
-              const matrixVotes = (matrixTotals[post] && matrixTotals[post][cId]) ? matrixTotals[post][cId] : 0;
-              if (finalVotes !== matrixVotes) {
-                resultsCheck.pass = false;
-                resultsCheck.details.push(`Math mismatch for ${post} (Cand/Type: ${cId}): Final says ${finalVotes}, Matrix sum is ${matrixVotes}.`);
+            const bDepts = new Set(bClasses.map(c => classToDept[c]).filter(Boolean));
+            const bYears = new Set();
+            bClasses.forEach(c => {
+              const u = c.toUpperCase();
+              if (['MA','MSC','MCOM','M.SC','M.COM','M.A'].some(pg => u.includes(pg))) bYears.add('PG');
+              else {
+                if (u.includes('1ST YEAR') || /^\s*(1|1ST|I)\b/.test(u) || /\b1ST\b/.test(u)) bYears.add('1');
+                if (u.includes('2ND YEAR') || /^\s*(2|2ND|II)\b/.test(u) || /\b2ND\b/.test(u)) bYears.add('2');
+                if (u.includes('3RD YEAR') || /^\s*(3|3RD|III)\b/.test(u) || /\b3RD\b/.test(u)) bYears.add('3');
               }
             });
+
+            // Verify Department Association Ballots
+            bDepts.forEach(dept => {
+              const matchingPost = posts.find(p => {
+                const pd = getPostDept(p);
+                return pd && pd.toUpperCase() === dept.toUpperCase();
+              });
+              if (matchingPost) {
+                const pn = pName(matchingPost);
+                if (contestedPosts.includes(pn)) {
+                  const hasAssocPlan = plan.assocs && Array.isArray(plan.assocs.results) && plan.assocs.results.some(r => r.post === pn && r.count > 0);
+                  if (!hasAssocPlan) {
+                    boothBallotCheck.pass = false;
+                    boothBallotCheck.details.push(`Booth ${bNum}: Has electors from department '${dept}', but Association Ballot for contested post '${pn}' is missing from the ballot plan.`);
+                  }
+                }
+              }
+            });
+
+            // Verify General Ballot
+            const generalContested = contestedPosts.filter(pn => !pn.toUpperCase().includes('ASSOCIATION') && !pn.toUpperCase().includes('REPRESENTATIVE'));
+            if (generalContested.length > 0 && !plan.general && (!plan.generalParts || plan.generalParts.length === 0)) {
+              boothBallotCheck.pass = false;
+              boothBallotCheck.details.push(`Booth ${bNum}: General Union Ballots missing from ballot plan while ${generalContested.length} general posts are contested.`);
+            }
           });
         }
+      } else {
+        boothBallotCheck.pass = false;
+        boothBallotCheck.details.push('Cannot verify booth ballot allocations because no booths exist.');
+      }
+
+      // 4. Counting Matrix & Table-to-Booth Routing Check
+      const matrix = Array.isArray(matrixData?.matrix) ? matrixData.matrix : (Array.isArray(matrixData) ? matrixData : null);
+      if (!matrix || matrix.length === 0) {
+        countingRoutingCheck.pass = false;
+        countingRoutingCheck.details.push('Counting Matrix has not been generated yet. Post-to-table counting schedule is missing.');
+      } else {
+        const T = booths.length;
+        if (matrix.length !== T) {
+          countingRoutingCheck.pass = false;
+          countingRoutingCheck.details.push(`Table Count Mismatch: Saved counting matrix has ${matrix.length} tables, but there are ${T} polling booths.`);
+        }
+
+        const scheduledPosts = new Set();
+        matrix.forEach((row, t) => {
+          const b = booths[t] || {};
+          const bNum = b.boothNumber || (t + 1);
+          let bClasses = [];
+          if (Array.isArray(b.classes)) bClasses = b.classes;
+          else if (typeof b.classes === 'string') bClasses = b.classes.split(',').map(s => s.trim()).filter(Boolean);
+          const bDepts = new Set(bClasses.map(c => classToDept[c]).filter(Boolean));
+
+          if (Array.isArray(row)) {
+            row.forEach(p => {
+              if (p) scheduledPosts.add(pName(p));
+            });
+
+            // Verify Association routing for Table t
+            row.forEach((p, r) => {
+              if (!p) return;
+              const pDept = getPostDept(p);
+              if (pDept && bDepts.size > 0 && !bDepts.has(pDept)) {
+                countingRoutingCheck.pass = false;
+                countingRoutingCheck.details.push(`Routing Mismatch: Table ${bNum} (Round ${r + 1}) is scheduled to count '${pName(p)}', but Booth ${bNum} has NO electors from department '${pDept}'.`);
+              }
+            });
+
+            // Verify UUC is scheduled in the final round
+            const nonNull = row.filter(Boolean);
+            if (nonNull.length > 0) {
+              const lastPost = nonNull[nonNull.length - 1];
+              const hasUucInRow = nonNull.some(p => isUuc(pName(p)));
+              if (hasUucInRow && !isUuc(pName(lastPost))) {
+                countingRoutingCheck.pass = false;
+                countingRoutingCheck.details.push(`Statutory Order Alert: Table ${bNum} does not have UUC in the final round (UUC must be counted last).`);
+              }
+            }
+          }
+        });
+
+        // Verify zero orphaned contested posts
+        contestedPosts.forEach(cp => {
+          if (!scheduledPosts.has(cp)) {
+            countingRoutingCheck.pass = false;
+            countingRoutingCheck.details.push(`Orphaned Post: Contested post '${cp}' has candidates competing, but is NOT scheduled at any table in the counting matrix!`);
+          }
+        });
+      }
+
+      // 5. Counting Forms & Results Entry Slot Check
+      if (matrix && matrix.length > 0) {
+        const formSerials = matrixData?.formSerials && typeof matrixData.formSerials === 'object' ? matrixData.formSerials : {};
+        let totalScheduledForms = 0;
+        let missingSerialCount = 0;
+        matrix.forEach((row, t) => {
+          if (Array.isArray(row)) {
+            row.forEach((p, r) => {
+              if (p) {
+                totalScheduledForms++;
+                const serial = formSerials[`${t}-${r}`];
+                if (!serial) missingSerialCount++;
+              }
+            });
+          }
+        });
+
+        if (missingSerialCount > 0) {
+          formsCheck.pass = false;
+          formsCheck.details.push(`${missingSerialCount} scheduled table rounds are missing Form # serial numbers in the matrix.`);
+        }
+      } else {
+        formsCheck.pass = false;
+        formsCheck.details.push('Cannot verify counting forms accounting because Counting Matrix is missing.');
+      }
+
+      // 6. Election Officials & Staffing Roster Check
+      if (Array.isArray(booths) && booths.length > 0) {
+        const assignedSupervisors = new Set();
+        if (Array.isArray(countingTeams)) {
+          countingTeams.forEach(tm => {
+            if (tm.supervisorName && tm.tableNumber) assignedSupervisors.add(Number(tm.tableNumber));
+          });
+        }
+        const unstaffedTables = booths.filter((_, idx) => !assignedSupervisors.has(idx + 1));
+        if (unstaffedTables.length > 0) {
+          officialsCheck.details.push(`${unstaffedTables.length} counting table(s) do not have a Counting Supervisor appointed: Tables ${unstaffedTables.map((_, i) => i + 1).slice(0, 8).join(', ')}.`);
+        }
+      }
+
+      // 7. Tabulation Math & Results Check
+      if (Array.isArray(resultsData) && resultsData.length > 0) {
+        const postVotesMap = {};
+        resultsData.forEach(r => {
+          const post = String(r.Post || '');
+          postVotesMap[post] = (postVotesMap[post] || 0) + (parseInt(r.Votes, 10) || 0);
+        });
 
         if (plan) {
-          const postVotesMap = {};
-          resultsData.forEach(r => {
-            const post = String(r.Post || '');
-            postVotesMap[post] = (postVotesMap[post] || 0) + (parseInt(r.Votes) || 0);
-          });
-
           Object.keys(postVotesMap).forEach(post => {
-            const postVotesCast = postVotesMap[post];
-            let generated = 0;
+            const votesCast = postVotesMap[post];
+            let plannedBallots = 0;
             const isYear = post.toLowerCase().includes('representative') || post.toLowerCase().includes('year');
             const isAssoc = post.toLowerCase().includes('association') || post.toLowerCase().includes('assoc');
 
             if (isYear && plan.reps) {
               const repPlan = (plan.reps.results || []).filter(r => r.post === post);
-              generated = repPlan.reduce((sum, r) => sum + r.count, 0);
+              plannedBallots = repPlan.reduce((sum, r) => sum + r.count, 0);
             } else if (isAssoc && plan.assocs) {
               const assocPlan = (plan.assocs.results || []).filter(r => r.post === post);
-              generated = assocPlan.reduce((sum, r) => sum + r.count, 0);
+              plannedBallots = assocPlan.reduce((sum, r) => sum + r.count, 0);
             } else if (plan.general) {
-              generated = plan.general.total || 0;
+              plannedBallots = plan.general.total || 0;
             }
 
-            if (generated > 0 && postVotesCast > generated) {
-              formsCheck.pass = false;
-              formsCheck.details.push(`Post '${post}': Votes cast (${postVotesCast}) exceeds ballots generated (${generated}).`);
+            if (plannedBallots > 0 && votesCast > plannedBallots) {
+              resultsCheck.pass = false;
+              resultsCheck.details.push(`Post '${post}': Votes cast (${votesCast}) exceeds maximum planned ballots (${plannedBallots}).`);
             }
           });
-        } else {
-          formsCheck.pass = false;
-          formsCheck.details.push('Cannot verify forms accounting because Ballot Plan is missing.');
         }
       } else {
-        if (!matrix) {
-          resultsCheck.pass = false;
-          resultsCheck.details.push('Counting Matrix has not been generated and saved yet.');
-        }
-        if (!Array.isArray(resultsData) || resultsData.length === 0) {
-          resultsCheck.pass = false;
-          resultsCheck.details.push('No vote results entered yet.');
-        }
-        formsCheck.pass = false;
-        formsCheck.details.push('Counting Matrix or Results not found/empty.');
+        // Pre-polling stage: normal and expected
+        resultsCheck.pass = true;
+        resultsCheck.details.push('Pre-polling stage: No physical vote tallies recorded yet. Tabulation system is clean and standby.');
       }
 
-      return jsonOut(res, { ok: true, report: { rollCheck, serialCheck, resultsCheck, formsCheck } });
+      return jsonOut(res, {
+        ok: true,
+        report: {
+          rollCheck,
+          serialCheck,
+          boothBallotCheck,
+          countingRoutingCheck,
+          formsCheck,
+          officialsCheck,
+          resultsCheck
+        },
+        stats: {
+          totalElectors: totalStudents,
+          boothsCount: booths.length,
+          contestedPostsCount: contestedPosts.length,
+          uncontestedPostsCount: uncontestedPosts.length,
+          contestedCandidatesCount: activeNominations.length,
+          tablesCount: matrix ? matrix.length : 0
+        }
+      });
     }
 
     if (action === 'adminInjectTestData') {
