@@ -462,15 +462,14 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             <!-- 2. Booth / Table Selector -->
             <div>
               <label for="selBoothPrint" class="text-[11px] font-bold text-sky-300 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
-                <span>🪑</span> Polling Booth / Table:
+                <span>🪑</span> Counting Table:
               </label>
               <select id="selBoothPrint" class="field text-xs py-2 px-3 bg-black/40 border border-white/20 hover:border-sky-400/50 rounded-xl text-white font-medium w-full focus:outline-none focus:border-sky-400 shadow-inner transition-colors" title="Filter counting forms for a specific table or all tables">
-                <option value="all">🏢 All Booths / Tables (1 to ${T})</option>
+                <option value="all">🏢 All Tables (1 to ${T})</option>
                 ${boothsList.map((b, t) => {
                   const bNum = b.boothNumber || (t + 1);
                   const supName = getSupervisorNameForTable(bNum, countingTeams);
-                  const room = b.roomName ? ` (${b.roomName})` : '';
-                  return `<option value="${bNum}">Table ${bNum}${esc(room)}${supName ? ` · ${esc(supName)}` : ''}</option>`;
+                  return `<option value="${bNum}">Table ${bNum}${supName ? ` · ${esc(supName)}` : ''}</option>`;
                 }).join('')}
               </select>
             </div>
@@ -617,10 +616,6 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                           ? `<span class="badge bg-emerald-500/20 text-emerald-300 font-mono text-[9px] px-1.5 py-0.5 border border-emerald-500/40" title="Ballot Paper Account: ${eff.count} ballots in box (${eff.source === 'deduced' ? 'Auto-deduced from ' + eff.deducedPost : 'Manual Entry'}). Allotted: ${eff.allotted}">🗳️ ${eff.count} Polled</span>` 
                           : (eff.allotted > 0 ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[9px] px-1.5 py-0.5 border border-indigo-500/30" title="${eff.allotted} registered electors allotted (Turnout unknown)">${eff.allotted} Allotted</span>` : '')
                         }
-                      </div>
-                      <div class="text-[11px] text-slate-400 font-normal truncate max-w-[140px]" title="${esc(b.roomName || '')}">
-                        ${esc(b.roomName || `Room ${bNum}`)}
-                      </div>
                       <div class="text-[10px] text-slate-500 font-normal italic mt-0.5 truncate max-w-[140px]" title="Supervisor: ${esc(supName || 'Unassigned')}">
                         ${supName ? `👤 ${esc(supName)}` : '<span class="text-amber-400/80">⚠️ No supervisor</span>'}
                       </div>
@@ -1956,7 +1951,7 @@ function buildFormHtml(tableNum, roundNum, postName, candidates, serial, college
 
     <!-- Table No and Round No Bar — Pure Black & White -->
     <div style="display:flex;justify-content:space-between;align-items:center;background:#fff;padding:5px 12px;border:1.5px solid #000;margin-bottom:6px;font-size:13px;font-weight:bold;color:#000;">
-      <span>TABLE NO: <u style="font-size:14px;font-weight:800;">${tableNum}</u> ${roomName ? `<span style="font-size:11px;font-weight:normal;color:#000">(${esc(roomName)})</span>` : ''}</span>
+      <span>TABLE NO: <u style="font-size:14px;font-weight:800;">${tableNum}</u></span>
       <span>ROUND NO: <u style="font-size:14px;font-weight:800;">${roundNum}</u></span>
     </div>
 
@@ -2049,7 +2044,6 @@ function buildConsolidationHtml(postName, tableEntries, candidates, collegeName 
       <td style="text-align:center;font-weight:bold;padding:4px 3px;">${idx + 1}</td>
       <td style="font-size:11px;padding:4px 5px;color:#000;">
         <strong>Table ${entry.tableNum}</strong>
-        ${entry.roomName ? `<span style="font-size:9.5px;color:#000"> (${esc(entry.roomName)})</span>` : ''}
       </td>
       <td style="text-align:center;font-size:11px;padding:4px 3px;color:#000;">R-${entry.roundNum}</td>
       <td style="text-align:center;font-family:monospace;font-weight:bold;font-size:11.5px;padding:4px 3px;color:#000;">#${esc(entry.serial)}</td>
@@ -2088,7 +2082,7 @@ function buildConsolidationHtml(postName, tableEntries, candidates, collegeName 
       <thead>
         <tr>
           <th style="width:4%;text-align:center;padding:4px 2px;color:#000;border:1px solid #000;">#</th>
-          <th style="width:14%;text-align:left;padding:4px 5px;color:#000;border:1px solid #000;">Table / Booth</th>
+          <th style="width:14%;text-align:left;padding:4px 5px;color:#000;border:1px solid #000;">Table</th>
           <th style="width:6%;text-align:center;padding:4px 2px;color:#000;border:1px solid #000;">Round</th>
           <th style="width:10%;text-align:center;padding:4px 2px;color:#000;border:1px solid #000;">Ref Form #</th>
           ${candsList.map(c => `
@@ -2308,7 +2302,7 @@ export function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, c
 
     <!-- Stripped 1-line metadata bar -->
     <div style="display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #000;padding:2px 6px;font-size:9px;font-weight:bold;margin-bottom:3px;gap:6px;flex-wrap:nowrap;color:#000;">
-      <span>TABLE: <u>${tableNum}</u> ${roomName ? `<span style="font-weight:normal;color:#000">(${esc(roomName)})</span>` : ''}</span>
+      <span>TABLE: <u>${tableNum}</u></span>
       <span>ROUND: <u>${roundNum}</u></span>
       ${isActualBallotsKnown 
         ? `<span>BALLOTS IN BOX: <u style="background:#fff;padding:1px 5px;border:1px solid #000;font-size:10px;">[ ${numVoters} ]</u> <span style="font-weight:normal;color:#000">(${esc(batchesSummary)}${allottedElectors ? ` · Turnout ${Math.round((numVoters / allottedElectors) * 100)}%` : ''})</span></span>
