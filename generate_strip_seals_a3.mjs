@@ -1,4 +1,4 @@
-import { writeFileSync } from 'fs';
+import { writeFileSync, copyFileSync } from 'fs';
 import { resolve } from 'path';
 import { execSync } from 'child_process';
 
@@ -57,9 +57,9 @@ function buildStripSealHtml(slNum) {
               </div>
               <div class="field-row">
                 <span class="f-lbl">Date of Poll:</span>
-                <span class="f-line mid"></span>
-                <span class="f-lbl ml">Time:</span>
-                <span class="f-line mid"></span>
+                <span class="f-line" style="flex: 1; min-width: 16mm;"></span>
+                <span class="f-lbl ml">Time of Sealing:</span>
+                <span class="f-line" style="flex: 1; min-width: 16mm;"></span>
               </div>
               <div class="field-row note-row">
                 <span class="sec-note-text">Affix firmly across the ballot drop aperture immediately at close of poll.</span>
@@ -866,16 +866,34 @@ function generateFullHtml() {
 console.log('Generating 30 Ballot Box Strip Seals for Government College Chittur (A3 Landscape)...');
 const fullHtml = generateFullHtml();
 const htmlPath = resolve('Ballot_Box_Strip_Seals_A3_30_Seals.html');
+const publicHtmlPath = resolve('public/Ballot_Box_Strip_Seals_A3_30_Seals.html');
 writeFileSync(htmlPath, fullHtml);
-console.log('Saved HTML to:', htmlPath);
+try { copyFileSync(htmlPath, publicHtmlPath); } catch (e) {}
+console.log('Saved HTML to:', htmlPath, 'and', publicHtmlPath);
 
 const chromePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const pdfPath = resolve('Ballot_Box_Strip_Seals_A3_30_Seals.pdf');
+const tempPdfPath = resolve('scratch/Ballot_Box_Strip_Seals_A3_30_Seals_rendered.pdf');
+const publicPdfPath = resolve('public/Ballot_Box_Strip_Seals_A3_30_Seals.pdf');
 
 console.log('Rendering A3 Landscape PDF via Chrome headless...');
 try {
-  execSync(`"${chromePath}" --headless=new --disable-gpu --run-all-compositor-stages-before-draw --print-to-pdf="${pdfPath}" --no-pdf-header-footer "file:///${htmlPath.replace(/\\\\/g, '/')}"`);
-  console.log('Successfully created PDF:', pdfPath);
+  execSync(`"${chromePath}" --headless=new --disable-gpu --run-all-compositor-stages-before-draw --print-to-pdf="${tempPdfPath}" --no-pdf-header-footer "file:///${htmlPath.replace(/\\\\/g, '/')}"`);
+  console.log('Headless Chrome successfully printed to temp PDF:', tempPdfPath);
+  
+  try {
+    copyFileSync(tempPdfPath, pdfPath);
+    console.log('Successfully updated primary PDF:', pdfPath);
+  } catch (err) {
+    console.warn('Primary PDF locked by external viewer. You can close viewer or use rendered file.');
+  }
+
+  try {
+    copyFileSync(tempPdfPath, publicPdfPath);
+    console.log('Successfully updated public PDF:', publicPdfPath);
+  } catch (err) {
+    console.warn('Public PDF locked by external viewer.');
+  }
 } catch (err) {
   console.error('Chrome PDF rendering error:', err);
 }
