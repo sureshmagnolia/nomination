@@ -1,4 +1,4 @@
-import { writeFileSync, readFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { execSync } from 'child_process';
 
@@ -18,7 +18,7 @@ function buildStripSealHtml(slNum) {
         
         <!-- Top Micro-Security Border -->
         <div class="micro-border-top">
-          GOVERNMENT COLLEGE CHITTUR &bull; COLLEGE UNION ELECTION 2026 &bull; OFFICIAL STRIP SEAL &bull; BALLOT BOX APERTURE SECURITY &bull; GOVERNMENT COLLEGE CHITTUR &bull; COLLEGE UNION ELECTION 2026 &bull; OFFICIAL STRIP SEAL &bull; BALLOT BOX APERTURE SECURITY &bull; GOVERNMENT COLLEGE CHITTUR &bull; COLLEGE UNION ELECTION 2026
+          GOVERNMENT COLLEGE CHITTUR &bull; COLLEGE UNION ELECTION 2026 &bull; BALLOT BOX APERTURE STRIP SEAL &bull; SECURITY BAND &bull; GOVERNMENT COLLEGE CHITTUR &bull; COLLEGE UNION ELECTION 2026 &bull; BALLOT BOX APERTURE STRIP SEAL &bull; SECURITY BAND &bull; GOVERNMENT COLLEGE CHITTUR &bull; COLLEGE UNION ELECTION 2026
         </div>
 
         <div class="strip-body">
@@ -33,12 +33,12 @@ function buildStripSealHtml(slNum) {
               <span class="flank-serial-num">${padSl}</span>
             </div>
             <div class="flank-sub">${fullCode}</div>
-            <div class="flank-tag">LEFT WING TAB</div>
+            <div class="flank-tag left-tag">LEFT WING TAB</div>
           </div>
 
           <!-- SECTION 2: LEFT DETAILS / STATION RECORD (96mm) -->
           <div class="details-col">
-            <div class="col-title-bar">
+            <div class="col-title-bar green-bar">
               <span class="col-icon">🗳️</span>
               <span class="col-title-txt">POLLING STATION RECORD</span>
             </div>
@@ -67,43 +67,60 @@ function buildStripSealHtml(slNum) {
             </div>
           </div>
 
-          <!-- SECTION 3: CENTER APERTURE TARGET & ELECTION HEADER (124mm) -->
+          <!-- SECTION 3: CENTER APERTURE TARGET & BIG GOLDEN EMBLEM (124mm) -->
           <div class="center-col">
-            <div class="center-watermark" style="background-image: url('${emblemDataUrl}');"></div>
             
             <div class="center-header">
               <div class="inst-name">GOVERNMENT COLLEGE CHITTUR</div>
               <div class="elect-name">COLLEGE UNION ELECTION 2026</div>
               <div class="seal-badge-box">
-                <span class="seal-badge-txt">★ OFFICIAL BALLOT BOX APERTURE STRIP SEAL ★</span>
+                <span class="seal-badge-txt">BALLOT BOX APERTURE STRIP SEAL</span>
               </div>
             </div>
 
-            <!-- APERTURE ALIGNMENT TARGET -->
+            <!-- APERTURE TARGET SHOWCASE WITH PROMINENT GOLDEN EMBLEM -->
             <div class="aperture-target-box">
               <div class="target-crosshair top-left"></div>
               <div class="target-crosshair top-right"></div>
               <div class="target-crosshair btm-left"></div>
               <div class="target-crosshair btm-right"></div>
-              <div class="target-center-line"></div>
-              <div class="target-text">
-                <span class="target-icon">⬚</span>
-                <strong>ALIGN DIRECTLY OVER BALLOT DROP SLIT</strong>
-                <span class="target-icon">⬚</span>
+              <div class="target-axis-line"></div>
+              
+              <div class="aperture-flex-row">
+                <!-- Left Target Instructions -->
+                <div class="target-side-col">
+                  <div class="target-side-icon">⬚</div>
+                  <div class="target-side-title">ALIGN DIRECTLY</div>
+                  <div class="target-side-sub">OVER BALLOT DROP SLIT</div>
+                  <div class="target-arrow-indicator">➔ ➔ ➔</div>
+                </div>
+
+                <!-- Center: BIG PROMINENT GOLDEN EMBLEM -->
+                <div class="center-emblem-container">
+                  <img src="${emblemDataUrl}" class="center-big-emblem" alt="GCC Golden Emblem">
+                  <div class="center-emblem-caption">SECURITY APERTURE SEAL</div>
+                </div>
+
+                <!-- Right Target Instructions -->
+                <div class="target-side-col">
+                  <div class="target-side-icon">🔒</div>
+                  <div class="target-side-title">TAMPER-EVIDENT</div>
+                  <div class="target-side-sub">DO NOT PUNCTURE OR TEAR</div>
+                  <div class="target-arrow-indicator">⬅ ⬅ ⬅</div>
+                </div>
               </div>
-              <div class="target-sub-text">DO NOT PUNCTURE &bull; DO NOT BREAK BEFORE COMMENCEMENT OF COUNTING</div>
             </div>
 
             <div class="tamper-warning-bar">
-              ⚠ TAMPER-EVIDENT SECURITY SEAL &bull; ANY DAMAGE OR TEAR WILL BE REPORTED TO RETURNING OFFICER
+              ⚠ TAMPER-EVIDENT SECURITY SEAL &bull; ANY DAMAGE OR BREACH WILL BE REPORTED TO RETURNING OFFICER ⚠
             </div>
           </div>
 
           <!-- SECTION 4: RIGHT WING / SIGNATURES (96mm) -->
           <div class="sign-col">
-            <div class="col-title-bar">
+            <div class="col-title-bar indigo-bar">
               <span class="col-icon">✍️</span>
-              <span class="col-title-txt">STATUTORY SIGNATURES</span>
+              <span class="col-title-txt">SIGNATURES</span>
             </div>
             
             <!-- Presiding Officer -->
@@ -138,14 +155,14 @@ function buildStripSealHtml(slNum) {
               <div class="chk-box"></div>
               <span class="chk-txt">VERIFIED INTACT AT COUNTING</span>
             </div>
-            <div class="flank-tag">RIGHT WING TAB</div>
+            <div class="flank-tag right-tag">RIGHT WING TAB</div>
           </div>
 
         </div>
 
         <!-- Bottom Micro-Security Border -->
         <div class="micro-border-btm">
-          GOVERNMENT COLLEGE CHITTUR &bull; COLLEGE UNION ELECTION 2026 &bull; OFFICIAL STRIP SEAL &bull; BALLOT BOX APERTURE SECURITY &bull; GOVERNMENT COLLEGE CHITTUR &bull; COLLEGE UNION ELECTION 2026 &bull; OFFICIAL STRIP SEAL &bull; BALLOT BOX APERTURE SECURITY &bull; GOVERNMENT COLLEGE CHITTUR &bull; COLLEGE UNION ELECTION 2026
+          GOVERNMENT COLLEGE CHITTUR &bull; COLLEGE UNION ELECTION 2026 &bull; BALLOT BOX APERTURE STRIP SEAL &bull; SECURITY BAND &bull; GOVERNMENT COLLEGE CHITTUR &bull; COLLEGE UNION ELECTION 2026 &bull; BALLOT BOX APERTURE STRIP SEAL &bull; SECURITY BAND &bull; GOVERNMENT COLLEGE CHITTUR &bull; COLLEGE UNION ELECTION 2026
         </div>
 
       </div>
@@ -179,7 +196,7 @@ function generateFullHtml() {
     pagesHtml += `
       <div class="a3-page ${p < TOTAL_PAGES - 1 ? 'page-break' : ''}">
         <div class="page-meta-header">
-          <span>GOVERNMENT COLLEGE CHITTUR &bull; COLLEGE UNION ELECTION 2026 &bull; OFFICIAL BALLOT BOX APERTURE STRIP SEALS</span>
+          <span>GOVERNMENT COLLEGE CHITTUR &bull; COLLEGE UNION ELECTION 2026 &bull; BALLOT BOX APERTURE STRIP SEALS</span>
           <span>A3 HORIZONTAL &bull; 8 CM HEIGHT &bull; SHEET ${p + 1} OF ${TOTAL_PAGES} (SEALS ${String(startIdx).padStart(3, '0')} TO ${String(endIdx).padStart(3, '0')})</span>
         </div>
         <div class="page-content-box">
@@ -253,10 +270,10 @@ function generateFullHtml() {
     .page-meta-header {
       font-size: 7.5pt;
       font-weight: 800;
-      color: #475569;
+      color: #1e3a8a;
       display: flex;
       justify-content: space-between;
-      border-bottom: 1px solid #cbd5e1;
+      border-bottom: 1.5px solid #cbd5e1;
       padding-bottom: 1.5mm;
       margin-bottom: 2mm;
       text-transform: uppercase;
@@ -269,7 +286,7 @@ function generateFullHtml() {
       color: #64748b;
       display: flex;
       justify-content: space-between;
-      border-top: 1px solid #cbd5e1;
+      border-top: 1.5px solid #cbd5e1;
       padding-top: 1.5mm;
       margin-top: 2mm;
     }
@@ -291,23 +308,24 @@ function generateFullHtml() {
     .strip-seal {
       width: 400mm;
       height: 80mm;
-      border: 2.5px solid #000;
+      border: 2.5px solid #1e3a8a;
       border-radius: 4px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       background: #ffffff;
       position: relative;
-      box-shadow: inset 0 0 0 1px #000;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      overflow: hidden;
     }
 
     /* Micro text security border */
     .micro-border-top, .micro-border-btm {
-      background: #000000;
+      background: linear-gradient(90deg, #1e3a8a 0%, #065f46 25%, #991b1b 50%, #d97706 75%, #1e3a8a 100%);
       color: #ffffff;
       font-family: monospace;
       font-size: 4.8pt;
-      font-weight: 700;
+      font-weight: 800;
       text-align: center;
       letter-spacing: 1px;
       padding: 1px 0;
@@ -329,8 +347,8 @@ function generateFullHtml() {
     /* Column 1 & 5: Flanks (42mm each) */
     .flank-col {
       width: 42mm;
-      background: #f8fafc;
-      border-right: 2px solid #000;
+      background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 50%, #fde68a 100%);
+      border-right: 2.5px solid #b91c1c;
       padding: 2mm 2.5mm;
       display: flex;
       flex-direction: column;
@@ -340,12 +358,12 @@ function generateFullHtml() {
     }
     .flank-right {
       border-right: none;
-      border-left: 2px solid #000;
+      border-left: 2.5px solid #b91c1c;
     }
 
     .flank-emblem-wrap {
-      width: 22mm;
-      height: 22mm;
+      width: 23mm;
+      height: 23mm;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -354,65 +372,81 @@ function generateFullHtml() {
       max-width: 100%;
       max-height: 100%;
       object-fit: contain;
+      filter: drop-shadow(0 1px 3px rgba(217, 119, 6, 0.4));
     }
 
     .flank-serial-box {
-      border: 2px solid #dc2626;
-      background: #fef2f2;
-      border-radius: 3px;
+      border: 2px solid #7f1d1d;
+      background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+      border-radius: 4px;
       padding: 1mm 2mm;
       width: 100%;
-      box-shadow: 0 1px 3px rgba(220, 38, 38, 0.15);
+      box-shadow: 0 2px 4px rgba(185, 28, 28, 0.3);
     }
     .flank-serial-lbl {
       display: block;
       font-size: 5.5pt;
       font-weight: 900;
-      color: #991b1b;
-      letter-spacing: 0.5px;
+      color: #fef08a;
+      letter-spacing: 0.8px;
     }
     .flank-serial-num {
       display: block;
       font-family: 'Courier New', monospace;
-      font-size: 14pt;
+      font-size: 15pt;
       font-weight: 900;
-      color: #b91c1c;
+      color: #ffffff;
       letter-spacing: 1.5px;
       line-height: 1;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.4);
     }
     .flank-sub {
       font-size: 5.2pt;
       font-family: monospace;
-      font-weight: 700;
-      color: #334155;
+      font-weight: 800;
+      color: #1e3a8a;
     }
     .flank-tag {
-      font-size: 5pt;
+      font-size: 5.2pt;
       font-weight: 800;
-      color: #64748b;
-      background: #e2e8f0;
-      padding: 0.5mm 1.5mm;
-      border-radius: 2px;
+      padding: 0.8mm 2mm;
+      border-radius: 3px;
       letter-spacing: 0.5px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .flank-tag.left-tag {
+      color: #ffffff;
+      background: #1d4ed8;
+      box-shadow: 0 1px 2px rgba(29, 78, 216, 0.3);
+    }
+    .flank-tag.right-tag {
+      color: #ffffff;
+      background: #b91c1c;
+      box-shadow: 0 1px 2px rgba(185, 28, 28, 0.3);
     }
     .flank-verify-box {
       display: flex;
       align-items: center;
       gap: 1.5mm;
-      border: 1px dashed #64748b;
+      border: 1.5px solid #059669;
       padding: 0.8mm 1.5mm;
-      border-radius: 2px;
-      background: #fff;
+      border-radius: 3px;
+      background: #ecfdf5;
+      width: 100%;
+      box-sizing: border-box;
     }
     .chk-box {
       width: 3.5mm;
       height: 3.5mm;
-      border: 1.2px solid #000;
+      border: 1.5px solid #059669;
+      background: #fff;
+      flex-shrink: 0;
     }
     .chk-txt {
       font-size: 4.8pt;
       font-weight: 800;
-      color: #0f172a;
+      color: #065f46;
       line-height: 1.1;
       text-align: left;
     }
@@ -421,57 +455,63 @@ function generateFullHtml() {
     .details-col {
       width: 96mm;
       padding: 2mm 3.5mm;
-      border-right: 2px solid #000;
+      border-right: 2.5px solid #059669;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      background: #ffffff;
+      background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 45%, #ffffff 70%, #f0fdf4 100%);
     }
 
     .col-title-bar {
       display: flex;
       align-items: center;
-      gap: 1.5mm;
-      border-bottom: 1.5px solid #000;
-      padding-bottom: 1mm;
+      gap: 2mm;
+      border-radius: 3px;
+      padding: 1.2mm 2.5mm;
       margin-bottom: 1mm;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .col-title-bar.green-bar {
+      background: linear-gradient(90deg, #047857 0%, #059669 100%);
+      color: #ffffff;
+    }
+    .col-title-bar.indigo-bar {
+      background: linear-gradient(90deg, #4338ca 0%, #6366f1 100%);
+      color: #ffffff;
     }
     .col-icon { font-size: 9pt; }
     .col-title-txt {
       font-size: 7.5pt;
       font-weight: 900;
-      color: #000;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
     }
 
     .field-list {
       display: flex;
       flex-direction: column;
       gap: 3.2mm;
-      flex: 1;
-      justify-content: space-between;
     }
     .field-row {
       display: flex;
-      align-items: center;
+      align-items: baseline;
       font-size: 7.2pt;
-      font-weight: 700;
-      line-height: 1;
     }
     .f-lbl {
+      font-weight: 800;
+      color: #064e3b;
+      margin-right: 1.5mm;
       white-space: nowrap;
-      color: #000;
     }
-    .f-lbl.ml {
-      margin-left: 2mm;
-    }
+    .f-lbl.ml { margin-left: 2.5mm; }
     .f-sub {
-      margin: 0 1mm;
       font-size: 6.5pt;
-      color: #64748b;
+      color: #047857;
+      margin: 0 1mm;
+      font-weight: 700;
     }
     .f-line {
-      border-bottom: 1px dotted #000;
+      border-bottom: 1.2px dotted #0f172a;
       height: 10px;
     }
     .f-line.short { width: 22mm; }
@@ -482,175 +522,238 @@ function generateFullHtml() {
     .note-row {
       margin-top: 1mm;
       padding: 1.2mm 2mm;
-      background: #f1f5f9;
-      border-left: 3px solid #000;
+      background: #dcfce7;
+      border-left: 3.5px solid #16a34a;
       border-radius: 2px;
     }
     .sec-note-text {
       font-size: 5.5pt;
-      color: #1e293b;
-      font-weight: 600;
+      color: #14532d;
+      font-weight: 700;
       line-height: 1.2;
     }
 
-    /* Column 3: Center Aperture Target & Header (124mm) */
+    /* Column 3: Center Aperture Target & Big Golden Emblem (124mm) */
     .center-col {
       width: 124mm;
-      padding: 2mm 3mm;
+      padding: 1.5mm 3mm;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
       text-align: center;
       position: relative;
-      background: #fff;
-    }
-
-    .center-watermark {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 50mm;
-      height: 50mm;
-      opacity: 0.11;
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-      pointer-events: none;
-      z-index: 0;
+      background: linear-gradient(180deg, #fffdf2 0%, #ffffff 35%, #ffffff 65%, #fffdf2 100%);
     }
 
     .center-header {
-      position: relative;
-      z-index: 1;
       width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6mm;
     }
     .inst-name {
-      font-size: 10pt;
+      font-size: 10.5pt;
       font-weight: 900;
-      letter-spacing: 0.5px;
-      color: #000;
+      letter-spacing: 1px;
+      color: #1e3a8a;
       text-transform: uppercase;
       line-height: 1.1;
+      text-shadow: 0 1px 1px rgba(30, 58, 138, 0.1);
     }
     .elect-name {
-      font-size: 8pt;
+      font-size: 8.2pt;
       font-weight: 800;
-      color: #1e293b;
-      letter-spacing: 0.5px;
-      margin-top: 0.5mm;
+      color: #b91c1c;
+      letter-spacing: 0.8px;
     }
     .seal-badge-box {
-      margin-top: 1mm;
-      background: #000;
-      color: #fff;
-      padding: 1mm 3mm;
+      margin-top: 0.5mm;
+      background: linear-gradient(90deg, #1e3a8a 0%, #2563eb 50%, #1e3a8a 100%);
+      color: #fef08a;
+      border: 1.5px solid #d97706;
+      padding: 0.8mm 4mm;
       border-radius: 3px;
       display: inline-block;
+      box-shadow: 0 1px 3px rgba(30, 58, 138, 0.25);
     }
     .seal-badge-txt {
       font-size: 8.5pt;
       font-weight: 900;
-      letter-spacing: 0.8px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
     }
 
-    /* Aperture Target Alignment Box */
+    /* Aperture Target Alignment Box with BIG EMBLEM */
     .aperture-target-box {
       position: relative;
-      z-index: 1;
       width: 100%;
-      border: 1.8px dashed #dc2626;
-      background: rgba(254, 242, 242, 0.7);
-      border-radius: 3px;
-      padding: 1.5mm 2mm;
+      border: 2px dashed #dc2626;
+      background: linear-gradient(180deg, #fff7ed 0%, #fffdf5 50%, #fff7ed 100%);
+      border-radius: 4px;
+      padding: 1.5mm 2.5mm;
       margin: 1mm 0;
+      box-shadow: inset 0 0 4px rgba(220, 38, 38, 0.1);
     }
-    .target-center-line {
+    .target-crosshair {
+      position: absolute;
+      width: 4mm;
+      height: 4mm;
+      border-color: #dc2626;
+      border-style: solid;
+      pointer-events: none;
+    }
+    .target-crosshair.top-left { top: 1mm; left: 1mm; border-width: 2px 0 0 2px; }
+    .target-crosshair.top-right { top: 1mm; right: 1mm; border-width: 2px 2px 0 0; }
+    .target-crosshair.btm-left { bottom: 1mm; left: 1mm; border-width: 0 0 2px 2px; }
+    .target-crosshair.btm-right { bottom: 1mm; right: 1mm; border-width: 0 2px 2px 0; }
+
+    .target-axis-line {
       position: absolute;
       top: 50%;
-      left: 4mm;
-      right: 4mm;
+      left: 3mm;
+      right: 3mm;
       height: 1px;
-      border-top: 1px dotted #ef4444;
+      border-top: 1px dotted #f97316;
       z-index: 0;
     }
-    .target-text {
+
+    .aperture-flex-row {
       position: relative;
       z-index: 1;
-      font-size: 7.5pt;
-      font-weight: 900;
-      color: #991b1b;
-      letter-spacing: 0.4px;
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 1.5mm;
+      justify-content: space-between;
+      width: 100%;
+      height: 38mm;
     }
-    .target-icon { font-size: 8pt; color: #dc2626; }
-    .target-sub-text {
-      position: relative;
-      z-index: 1;
-      font-size: 5.5pt;
+
+    .target-side-col {
+      width: 28mm;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 1mm;
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 3px;
+      border: 1px solid #fed7aa;
+    }
+    .target-side-icon {
+      font-size: 11pt;
+      color: #dc2626;
+      line-height: 1;
+      margin-bottom: 0.5mm;
+    }
+    .target-side-title {
+      font-size: 6.2pt;
+      font-weight: 900;
+      color: #991b1b;
+      letter-spacing: 0.3px;
+      line-height: 1.15;
+    }
+    .target-side-sub {
+      font-size: 5.2pt;
       font-weight: 800;
-      color: #7f1d1d;
-      letter-spacing: 0.5px;
+      color: #c2410c;
+      letter-spacing: 0.2px;
       margin-top: 0.5mm;
+      line-height: 1.15;
+    }
+    .target-arrow-indicator {
+      font-size: 7pt;
+      font-weight: 900;
+      color: #ea580c;
+      margin-top: 0.8mm;
+      letter-spacing: 1px;
+    }
+
+    .center-emblem-container {
+      width: 48mm;
+      height: 39mm;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: radial-gradient(circle, rgba(254, 240, 138, 0.5) 0%, rgba(255, 255, 255, 0) 72%);
+    }
+    .center-big-emblem {
+      width: 36mm;
+      height: 36mm;
+      object-fit: contain;
+      filter: drop-shadow(0 3px 6px rgba(217, 119, 6, 0.45));
+    }
+    .center-emblem-caption {
+      font-size: 5pt;
+      font-weight: 900;
+      color: #b45309;
+      letter-spacing: 0.8px;
+      margin-top: 0.5mm;
+      text-transform: uppercase;
+      background: #fffbeb;
+      padding: 0.2mm 2mm;
+      border-radius: 2px;
+      border: 1px solid #fde68a;
     }
 
     .tamper-warning-bar {
-      position: relative;
-      z-index: 1;
-      font-size: 5.2pt;
-      font-weight: 800;
-      color: #000;
-      background: #fef08a;
-      border: 1px solid #ca8a04;
-      border-radius: 2px;
+      font-size: 5.4pt;
+      font-weight: 900;
+      color: #78350f;
+      background: linear-gradient(90deg, #fef08a 0%, #fde047 50%, #fef08a 100%);
+      border: 1.5px solid #ca8a04;
+      border-radius: 3px;
       padding: 0.8mm 2mm;
       width: 100%;
+      letter-spacing: 0.3px;
+      box-shadow: 0 1px 2px rgba(202, 138, 4, 0.2);
     }
 
     /* Column 4: Right Wing Signatures (96mm) */
     .sign-col {
       width: 96mm;
       padding: 2mm 3.5mm;
-      border-left: 2px solid #000;
+      border-left: 2.5px solid #4f46e5;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      background: #ffffff;
+      background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 45%, #ffffff 70%, #f5f3ff 100%);
     }
 
     .sign-box-po {
-      border: 1px solid #94a3b8;
+      border: 1.2px solid #818cf8;
       border-radius: 3px;
       padding: 1.5mm 2mm;
-      background: #f8fafc;
+      background: #eef2ff;
       text-align: center;
     }
     .sign-dotted-line {
-      border-bottom: 1px solid #000;
+      border-bottom: 1.2px dotted #1e1b4b;
       height: 6mm;
       margin-bottom: 1mm;
     }
     .sign-label {
       font-size: 6.2pt;
       font-weight: 800;
-      color: #0f172a;
+      color: #1e1b4b;
     }
 
     .agents-box {
-      border: 1px solid #94a3b8;
+      border: 1.2px solid #cbd5e1;
       border-radius: 3px;
       padding: 1.5mm 2mm;
-      background: #fff;
+      background: #ffffff;
     }
     .agents-hdr {
       font-size: 6pt;
       font-weight: 800;
-      color: #334155;
+      color: #312e81;
       margin-bottom: 1mm;
+      border-bottom: 1px solid #e0e7ff;
+      padding-bottom: 0.5mm;
     }
     .agents-grid {
       display: grid;
@@ -658,15 +761,16 @@ function generateFullHtml() {
       gap: 1.5mm 3mm;
     }
     .agent-slot {
+      display: flex;
+      align-items: baseline;
       font-size: 6.2pt;
       font-weight: 700;
-      display: flex;
-      align-items: center;
+      color: #0f172a;
     }
     .agent-line {
       flex: 1;
-      border-bottom: 1px dotted #000;
-      height: 5px;
+      border-bottom: 1px dotted #0f172a;
+      height: 8px;
       margin-left: 1mm;
     }
 
@@ -677,16 +781,17 @@ function generateFullHtml() {
       align-items: center;
       gap: 3mm;
       margin: 1.5mm 0;
-      color: #64748b;
+      color: #b45309;
       height: 3.5mm;
     }
-    .cut-icon { font-size: 7.5pt; font-weight: bold; }
-    .cut-dash { flex: 1; border-top: 1px dashed #94a3b8; }
+    .cut-icon { font-size: 8pt; font-weight: bold; color: #b45309; }
+    .cut-dash { flex: 1; border-top: 1.5px dashed #d97706; }
     .cut-txt {
       font-size: 5.8pt;
       font-weight: 800;
       letter-spacing: 1.5px;
       text-transform: uppercase;
+      color: #92400e;
     }
 
     @media print {
