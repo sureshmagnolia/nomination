@@ -6,6 +6,7 @@ import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading, comparePosts, sortPosts } from '../../utils.js';
 import { CONFIG } from '../../config.js';
+import { exportBallotsToExcel } from '../../excelExporter.js';
 
 export const isAssocPostCheck = (p) => {
   const name = String(p?.post || p?.name || '').toUpperCase();
@@ -167,6 +168,9 @@ export async function renderAdminBallots(container) {
             </p>
           </div>
           <div class="flex items-center gap-3">
+            <button id="btnDownloadBallotsExcel" class="btn btn-secondary py-2.5 px-4 text-xs font-bold flex items-center gap-2 bg-emerald-600/20 border-emerald-500/40 text-emerald-300 hover:bg-emerald-600 hover:text-white shadow-lg shadow-emerald-950/20 transition-all" title="Download all ballots, candidate rosters, and serial distributions in Excel (.xlsx) format">
+              <span>📊</span> Download Ballots (Excel)
+            </button>
             <button id="btnRegenPlanTop" class="btn btn-secondary py-2.5 px-4 text-xs font-semibold flex items-center gap-2 border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white">
               🔄 Finalize Master Plan
             </button>
@@ -406,9 +410,14 @@ export async function renderAdminBallots(container) {
                 <div class="text-[11px] text-slate-500">
                   ${part1Posts.length} Posts (${esc(part1Posts.slice(0, 2).join(', ') + (part1Posts.length > 2 ? '...' : ''))})
                 </div>
-                <button data-type="general_part:gen_1" class="btn btn-primary w-full py-2.5 text-xs preview-btn">
-                  🖨️ Generate Part 1 (G1)
-                </button>
+                <div class="flex gap-2">
+                  <button data-type="general_part:gen_1" class="btn btn-primary flex-1 py-2 text-xs preview-btn">
+                    🖨️ Part 1 (G1)
+                  </button>
+                  <button data-excel-type="general_part:gen_1" class="btn btn-secondary py-2 px-3 text-xs flex items-center justify-center gap-1 border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white excel-btn" title="Download Part 1 Ballots in Excel (.xlsx)">
+                    <span>📊</span> Excel
+                  </button>
+                </div>
               </div>
 
               <!-- Part 2 Ballot -->
@@ -423,9 +432,14 @@ export async function renderAdminBallots(container) {
                 <div class="text-[11px] text-slate-500">
                   ${part2Posts.length} Posts (${esc(part2Posts.slice(0, 2).join(', ') + (part2Posts.length > 2 ? '...' : ''))})
                 </div>
-                <button data-type="general_part:gen_2" class="btn btn-primary w-full py-2.5 text-xs preview-btn">
-                  🖨️ Generate Part 2 (G2)
-                </button>
+                <div class="flex gap-2">
+                  <button data-type="general_part:gen_2" class="btn btn-primary flex-1 py-2 text-xs preview-btn">
+                    🖨️ Part 2 (G2)
+                  </button>
+                  <button data-excel-type="general_part:gen_2" class="btn btn-secondary py-2 px-3 text-xs flex items-center justify-center gap-1 border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white excel-btn" title="Download Part 2 Ballots in Excel (.xlsx)">
+                    <span>📊</span> Excel
+                  </button>
+                </div>
               </div>
 
               <!-- All General Parts Combined -->
@@ -439,9 +453,14 @@ export async function renderAdminBallots(container) {
                 <div class="text-[11px] text-indigo-400/80">
                   Combined print run for press
                 </div>
-                <button data-type="general" class="btn btn-secondary w-full py-2.5 text-xs border-indigo-500/30 text-indigo-200 hover:bg-indigo-600 hover:text-white preview-btn">
-                  🖨️ Generate All Parts
-                </button>
+                <div class="flex gap-2">
+                  <button data-type="general" class="btn btn-secondary flex-1 py-2 text-xs border-indigo-500/30 text-indigo-200 hover:bg-indigo-600 hover:text-white preview-btn">
+                    🖨️ All Parts
+                  </button>
+                  <button data-excel-type="general" class="btn btn-secondary py-2 px-3 text-xs flex items-center justify-center gap-1 border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white excel-btn" title="Download All General Ballots in Excel (.xlsx)">
+                    <span>📊</span> Excel
+                  </button>
+                </div>
               </div>
             ` : `
               <!-- Single General Ballot Card -->
@@ -455,7 +474,14 @@ export async function renderAdminBallots(container) {
                 <div class="text-[11px] text-slate-500">
                   ${part1Posts.length} Posts (Single Master Sheet)
                 </div>
-                <button data-type="general" class="btn btn-primary w-full py-2.5 text-xs preview-btn">🖨️ Generate General Ballot</button>
+                <div class="flex gap-2">
+                  <button data-type="general" class="btn btn-primary flex-1 py-2 text-xs preview-btn">
+                    🖨️ General Ballot
+                  </button>
+                  <button data-excel-type="general" class="btn btn-secondary py-2 px-3 text-xs flex items-center justify-center gap-1 border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white excel-btn" title="Download General Ballots in Excel (.xlsx)">
+                    <span>📊</span> Excel
+                  </button>
+                </div>
               </div>
             `}
 
@@ -467,7 +493,14 @@ export async function renderAdminBallots(container) {
               <p class="text-xs text-slate-400 leading-relaxed">
                 1st, 2nd, 3rd Year &amp; PG Reps. Designed for A5 paper (one post per page).
               </p>
-              <button data-type="year" class="btn btn-primary w-full py-2.5 text-xs preview-btn">🖨️ Generate Year Reps</button>
+              <div class="flex gap-2">
+                <button data-type="year" class="btn btn-primary flex-1 py-2 text-xs preview-btn">
+                  🖨️ Year Reps
+                </button>
+                <button data-excel-type="year" class="btn btn-secondary py-2 px-3 text-xs flex items-center justify-center gap-1 border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white excel-btn" title="Download Year Rep Ballots in Excel (.xlsx)">
+                  <span>📊</span> Excel
+                </button>
+              </div>
             </div>
 
             <!-- Association Reps -->
@@ -478,7 +511,14 @@ export async function renderAdminBallots(container) {
               <p class="text-xs text-slate-400 leading-relaxed">
                 Departmental Association Secretaries. Designed for A5 paper (one post per page).
               </p>
-              <button data-type="assoc" class="btn btn-primary w-full py-2.5 text-xs preview-btn">🖨️ Generate Associations</button>
+              <div class="flex gap-2">
+                <button data-type="assoc" class="btn btn-primary flex-1 py-2 text-xs preview-btn">
+                  🖨️ Associations
+                </button>
+                <button data-excel-type="assoc" class="btn btn-secondary py-2 px-3 text-xs flex items-center justify-center gap-1 border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white excel-btn" title="Download Association Ballots in Excel (.xlsx)">
+                  <span>📊</span> Excel
+                </button>
+              </div>
             </div>
 
             <!-- Summary Report -->
@@ -489,7 +529,14 @@ export async function renderAdminBallots(container) {
               <p class="text-xs text-slate-400 leading-relaxed">
                 Detailed serial number ranges, book counts, and packaging breakdown for printing press.
               </p>
-              <button id="btnGenSummary" class="btn btn-secondary w-full py-2.5 text-xs border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">📑 View Summary Report</button>
+              <div class="flex gap-2">
+                <button id="btnGenSummary" class="btn btn-secondary flex-1 py-2 text-xs border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white">
+                  📑 View Summary
+                </button>
+                <button id="btnExcelSummaryTop" class="btn btn-secondary py-2 px-3 text-xs flex items-center justify-center gap-1 border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white" title="Download Serial Ranges & Packaging Plan in Excel (.xlsx)">
+                  <span>📊</span> Excel
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -648,6 +695,23 @@ export async function renderAdminBallots(container) {
       btnGenSummary.onclick = () => openBallotSummaryConfigModal(pwd);
     }
 
+    // Top Download Ballots Excel button
+    const btnDownloadBallotsExcel = main.querySelector('#btnDownloadBallotsExcel');
+    if (btnDownloadBallotsExcel) {
+      btnDownloadBallotsExcel.onclick = () => openBallotExcelDownloadModal(pwd, currentConfig);
+    }
+
+    // Excel button on summary card
+    const btnExcelSummaryTop = main.querySelector('#btnExcelSummaryTop');
+    if (btnExcelSummaryTop) {
+      btnExcelSummaryTop.onclick = () => downloadBallotsExcel(pwd, 'summary', currentConfig);
+    }
+
+    // Excel buttons on action cards
+    main.querySelectorAll('.excel-btn').forEach(btn => {
+      btn.onclick = () => downloadBallotsExcel(pwd, btn.dataset.excelType, currentConfig);
+    });
+
     // Print Preview buttons
     main.querySelectorAll('.preview-btn').forEach(btn => {
       btn.onclick = () => handlePreview(btn.dataset.type);
@@ -662,7 +726,192 @@ export async function renderAdminBallots(container) {
     openBallotSummaryConfigModal(pwd);
   };
 
+  // Expose global helper for summary window
+  window.gccDownloadBallotsExcel = (type) => downloadBallotsExcel(pwd, type, currentConfig);
+
   renderUI();
+}
+
+export function openBallotExcelDownloadModal(pwd, currentConfig = null) {
+  const existingModal = document.getElementById('modalBallotExcelDownload');
+  if (existingModal) existingModal.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'modalBallotExcelDownload';
+  modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in';
+  modal.innerHTML = `
+    <div class="bg-slate-900 border border-emerald-500/40 rounded-2xl p-6 max-w-lg w-full shadow-2xl text-slate-200 space-y-5 animate-scale-up" style="max-height: 90vh; overflow-y: auto;">
+      <!-- Header -->
+      <div class="flex items-start justify-between border-b border-white/10 pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-xl text-emerald-300">
+            📊
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Download Ballots in Excel (.xlsx)</h3>
+            <p class="text-xs text-slate-400">Contesting candidates, ballot numbers, and packaging plan</p>
+          </div>
+        </div>
+        <button id="btnExcelModalClose" class="text-slate-400 hover:text-white text-lg px-2 py-1 rounded-lg hover:bg-white/5 transition-colors">✕</button>
+      </div>
+
+      <!-- Master Option -->
+      <div class="p-4 rounded-xl bg-gradient-to-br from-emerald-950/40 to-slate-800/80 border border-emerald-500/40 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+            <span>🌟</span> All-In-One Master Workbook (Recommended)
+          </span>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200 font-mono font-bold">Multi-Tab XLSX</span>
+        </div>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Includes all sheets in a single file: <strong>All Contested Ballots</strong>, <strong>General Union</strong>, <strong>Year Reps</strong>, <strong>Associations</strong>, <strong>Serial Ranges &amp; Packaging Plan</strong>, and <strong>Post Election Summary</strong>.
+        </p>
+        <button id="btnDownloadMasterExcel" class="btn btn-primary w-full py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2">
+          <span>📥</span> Download Master Ballot Workbook
+        </button>
+      </div>
+
+      <!-- Category Options Grid -->
+      <div class="space-y-2">
+        <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          Or Download Specific Category
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <!-- General Ballots -->
+          <button data-excel-modal-type="general" class="excel-modal-option-btn p-3 rounded-xl bg-slate-800/70 hover:bg-slate-800 border border-white/10 hover:border-indigo-500/50 text-left transition-all flex items-center justify-between group">
+            <div>
+              <div class="text-xs font-bold text-white group-hover:text-indigo-300 flex items-center gap-1.5">
+                <span>🏆</span> General Union
+              </div>
+              <div class="text-[10px] text-slate-400 mt-0.5">Chairman, Secretary, UUC...</div>
+            </div>
+            <span class="text-xs text-slate-400 group-hover:text-white">📥</span>
+          </button>
+
+          <!-- Year Reps -->
+          <button data-excel-modal-type="year" class="excel-modal-option-btn p-3 rounded-xl bg-slate-800/70 hover:bg-slate-800 border border-white/10 hover:border-emerald-500/50 text-left transition-all flex items-center justify-between group">
+            <div>
+              <div class="text-xs font-bold text-white group-hover:text-emerald-300 flex items-center gap-1.5">
+                <span>📅</span> Year Reps
+              </div>
+              <div class="text-[10px] text-slate-400 mt-0.5">I UG, II UG, III UG, PG</div>
+            </div>
+            <span class="text-xs text-slate-400 group-hover:text-white">📥</span>
+          </button>
+
+          <!-- Associations -->
+          <button data-excel-modal-type="assoc" class="excel-modal-option-btn p-3 rounded-xl bg-slate-800/70 hover:bg-slate-800 border border-white/10 hover:border-amber-500/50 text-left transition-all flex items-center justify-between group">
+            <div>
+              <div class="text-xs font-bold text-white group-hover:text-amber-300 flex items-center gap-1.5">
+                <span>🤝</span> Associations
+              </div>
+              <div class="text-[10px] text-slate-400 mt-0.5">Department Secretaries</div>
+            </div>
+            <span class="text-xs text-slate-400 group-hover:text-white">📥</span>
+          </button>
+
+          <!-- Packaging Plan -->
+          <button data-excel-modal-type="summary" class="excel-modal-option-btn p-3 rounded-xl bg-slate-800/70 hover:bg-slate-800 border border-white/10 hover:border-purple-500/50 text-left transition-all flex items-center justify-between group">
+            <div>
+              <div class="text-xs font-bold text-white group-hover:text-purple-300 flex items-center gap-1.5">
+                <span>📑</span> Packaging Plan
+              </div>
+              <div class="text-[10px] text-slate-400 mt-0.5">Booth Serials &amp; Booklets</div>
+            </div>
+            <span class="text-xs text-slate-400 group-hover:text-white">📥</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-end pt-3 border-t border-white/10">
+        <button type="button" id="btnExcelModalDismiss" class="btn btn-secondary py-2 px-5 text-xs">
+          Close
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const closeModal = () => modal.remove();
+  modal.querySelector('#btnExcelModalClose').onclick = closeModal;
+  modal.querySelector('#btnExcelModalDismiss').onclick = closeModal;
+  modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+  const handleEsc = (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      document.removeEventListener('keydown', handleEsc);
+    }
+  };
+  document.addEventListener('keydown', handleEsc);
+
+  modal.querySelector('#btnDownloadMasterExcel').onclick = () => {
+    closeModal();
+    downloadBallotsExcel(pwd, 'all', currentConfig);
+  };
+
+  modal.querySelectorAll('.excel-modal-option-btn').forEach(btn => {
+    btn.onclick = () => {
+      const type = btn.dataset.excelModalType;
+      closeModal();
+      downloadBallotsExcel(pwd, type, currentConfig);
+    };
+  });
+}
+
+export async function downloadBallotsExcel(pwd, filterType = 'all', overrideConfig = null) {
+  try {
+    showToast('Preparing Excel workbook...', 'info');
+    const [postsData, candidatesResponse, schedule, settings, ballotConfig, rawPlan] = await Promise.all([
+      api.adminGetPosts(pwd).catch(() => []),
+      api.adminGetFinalNominations(pwd).catch(async () => {
+        const all = await api.adminGetNominations(pwd).catch(() => []);
+        return {
+          active: all.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved'),
+          withdrawn: all.filter(n => n.withdrawalStatus === 'Approved'),
+          isPublished: false
+        };
+      }),
+      api.getPublicSchedule().catch(() => ({})),
+      api.adminGetSettings(pwd).catch(() => ({})),
+      overrideConfig ? Promise.resolve(overrideConfig) : api.adminGetBallotConfig(pwd).catch(() => null),
+      api.adminGetBallotPlan(pwd).catch(() => null)
+    ]);
+
+    const activeConfig = overrideConfig || ballotConfig || {
+      isSplit: false,
+      ballots: [
+        { id: 'gen_main', title: 'General Union Posts', shortCode: 'G', paperSize: 'A3', posts: [] }
+      ]
+    };
+
+    let plan = rawPlan;
+    if (!plan) {
+      const genRes = await api.adminGenerateBallotPlan(pwd).catch(() => null);
+      plan = genRes?.plan || null;
+    }
+
+    const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
+    const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
+    const activePlan = plan ? recalculateBallotPlanBooks(plan, savedSize, savedMerge) : null;
+
+    const fileName = exportBallotsToExcel({
+      postsData,
+      candidatesResponse,
+      schedule,
+      settings,
+      currentConfig: activeConfig,
+      masterPlan: activePlan,
+      filterType
+    });
+
+    showToast(`✅ Excel downloaded: ${fileName}`, 'success');
+  } catch (err) {
+    showToast(`Failed to export Excel: ${err.message}`, 'error');
+  }
 }
 
 export function openBallotSummaryConfigModal(pwd) {
@@ -742,13 +991,18 @@ export function openBallotSummaryConfigModal(pwd) {
       </label>
 
       <!-- Footer Buttons -->
-      <div class="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
-        <button type="button" id="btnModalCancel" class="btn btn-secondary py-2 px-4 text-xs">
-          Cancel
+      <div class="flex items-center justify-between pt-3 border-t border-white/10">
+        <button type="button" id="btnModalExcel" class="btn btn-secondary py-2 px-3 text-xs border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white font-bold flex items-center gap-1.5" title="Export this calculated summary directly to Excel (.xlsx)">
+          <span>📊</span> Export to Excel
         </button>
-        <button type="button" id="btnModalConfirm" class="btn btn-primary py-2 px-5 text-xs bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-lg shadow-purple-600/30 flex items-center gap-2">
-          <span>📑</span> View Summary Report
-        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" id="btnModalCancel" class="btn btn-secondary py-2 px-3 text-xs">
+            Cancel
+          </button>
+          <button type="button" id="btnModalConfirm" class="btn btn-primary py-2 px-4 text-xs bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-lg shadow-purple-600/30 flex items-center gap-1.5">
+            <span>📑</span> View Report
+          </button>
+        </div>
       </div>
     </div>
   `;
@@ -796,26 +1050,39 @@ export function openBallotSummaryConfigModal(pwd) {
     if (e.target === modal) closeModal();
   };
 
-  modal.querySelector('#btnModalConfirm').onclick = async () => {
+  const getModalConfigValues = () => {
     let finalSize = 50;
     if (currentSelectedSize === 'custom') {
       const val = parseInt(customInput.value, 10);
       if (isNaN(val) || val < 5 || val > 500) {
         alert('Please enter a valid booklet size between 5 and 500.');
         customInput.focus();
-        return;
+        return null;
       }
       finalSize = val;
     } else {
       finalSize = currentSelectedSize;
     }
-
     const finalMerge = chkMerge.checked;
-    localStorage.setItem('gcc_ballot_book_size', String(finalSize));
-    localStorage.setItem('gcc_ballot_merge_remainders', finalMerge ? 'true' : 'false');
-    closeModal();
+    return { finalSize, finalMerge };
+  };
 
-    await generateAndPrintBallotPressSummary(pwd, finalSize, finalMerge);
+  modal.querySelector('#btnModalExcel').onclick = async () => {
+    const cfg = getModalConfigValues();
+    if (!cfg) return;
+    localStorage.setItem('gcc_ballot_book_size', String(cfg.finalSize));
+    localStorage.setItem('gcc_ballot_merge_remainders', cfg.finalMerge ? 'true' : 'false');
+    closeModal();
+    await downloadBallotsExcel(pwd, 'summary');
+  };
+
+  modal.querySelector('#btnModalConfirm').onclick = async () => {
+    const cfg = getModalConfigValues();
+    if (!cfg) return;
+    localStorage.setItem('gcc_ballot_book_size', String(cfg.finalSize));
+    localStorage.setItem('gcc_ballot_merge_remainders', cfg.finalMerge ? 'true' : 'false');
+    closeModal();
+    await generateAndPrintBallotPressSummary(pwd, cfg.finalSize, cfg.finalMerge);
   };
 }
 
@@ -1613,6 +1880,11 @@ export function buildBallotPressSummaryHtml(masterPlan, settings = {}, schedule 
             <button id="btnToolbarPrint" style="background: #4f46e5; color: #ffffff; border: none; padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);">
               <span>🖨️</span> Print / Save PDF
             </button>
+
+            <!-- Excel Export Button -->
+            <button id="btnToolbarExcel" style="background: #059669; color: #ffffff; border: none; padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.4);">
+              <span>📊</span> Download Excel
+            </button>
           </div>
         </div>
       </div>
@@ -1956,6 +2228,17 @@ export function buildBallotPressSummaryHtml(masterPlan, settings = {}, schedule 
 
         if (btnPrint) {
           btnPrint.onclick = function() { window.print(); };
+        }
+
+        var btnExcel = document.getElementById('btnToolbarExcel');
+        if (btnExcel) {
+          btnExcel.onclick = function() {
+            if (window.opener && window.opener.gccDownloadBallotsExcel) {
+              window.opener.gccDownloadBallotsExcel('summary');
+            } else {
+              alert('Please use the Download Excel option in the main Ballot Printing dashboard.');
+            }
+          };
         }
 
         function getActiveSize() {

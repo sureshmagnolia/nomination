@@ -10,7 +10,7 @@ import { esc, showToast, setLoading } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 import { printOfficialNotice, printBoothDoorPoster, printBatchBoothDoorPosters, printCampusMasterDirectory } from '../../noticesPrinter.js';
 import { getDefaultStatutoryNotices } from '../../noticesTemplates.js';
-import { generateAndPrintBallots, generateAndPrintBallotPressSummary } from './ballots.js';
+import { generateAndPrintBallots, generateAndPrintBallotPressSummary, downloadBallotsExcel } from './ballots.js';
 import { generateAndPrintElectoralRolls, generateAndPrintBallotAccounts } from './booths.js';
 import { openPrintRollModal } from '../../rollPrinter.js';
 
@@ -229,9 +229,14 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                     <h5 class="text-sm font-bold text-white">Printing Press Summary &amp; Serial Ledger</h5>
                     <p class="text-xs text-slate-400 mt-1">Full serial ranges (e.g. G1001-G2500), book numbers, total quantities per booth, and color-coded paper stocks for delivery to the printer.</p>
                   </div>
-                  <button id="btnHubPressSummary" class="btn bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 shadow-md">
-                    <span>🖨️</span> Print Press Summary
-                  </button>
+                  <div class="flex gap-2">
+                    <button id="btnHubPressSummary" class="btn bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-2 px-3 rounded-lg flex-1 flex items-center justify-center gap-1.5 shadow-md">
+                      <span>🖨️</span> Print Summary
+                    </button>
+                    <button id="btnHubExcelPressSummary" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white flex items-center justify-center gap-1" title="Download Packaging Plan in Excel (.xlsx)">
+                      <span>📊</span> Excel
+                    </button>
+                  </div>
                 </div>
 
                 <!-- General Ballots -->
@@ -244,9 +249,14 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                     <h5 class="text-sm font-bold text-white">General Union Ballot Papers</h5>
                     <p class="text-xs text-slate-400 mt-1">Chairman, Vice-Chairman, General Secretary, Joint Secretary, UUC, Arts Club, Student Editor, and Sports with counterfoils.</p>
                   </div>
-                  <button id="btnHubPrintGeneral" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 hover:bg-white/10">
-                    <span>🖨️</span> Print General Ballots
-                  </button>
+                  <div class="flex gap-2">
+                    <button id="btnHubPrintGeneral" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg flex-1 flex items-center justify-center gap-1.5 hover:bg-white/10">
+                      <span>🖨️</span> Print General
+                    </button>
+                    <button id="btnHubExcelGeneral" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white flex items-center justify-center gap-1" title="Download General Ballots in Excel (.xlsx)">
+                      <span>📊</span> Excel
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Year Rep Ballots -->
@@ -259,9 +269,14 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                     <h5 class="text-sm font-bold text-white">Year Representative Ballots</h5>
                     <p class="text-xs text-slate-400 mt-1">Year-wise representative voting slips for I DC, II DC, III DC, I PG, II PG, and Research Scholars across all allotted booths.</p>
                   </div>
-                  <button id="btnHubPrintRep" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 hover:bg-white/10">
-                    <span>🖨️</span> Print Year Rep Ballots
-                  </button>
+                  <div class="flex gap-2">
+                    <button id="btnHubPrintRep" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg flex-1 flex items-center justify-center gap-1.5 hover:bg-white/10">
+                      <span>🖨️</span> Print Year Rep
+                    </button>
+                    <button id="btnHubExcelRep" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white flex items-center justify-center gap-1" title="Download Year Rep Ballots in Excel (.xlsx)">
+                      <span>📊</span> Excel
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Association Ballots -->
@@ -274,9 +289,14 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                     <h5 class="text-sm font-bold text-white">Subject Association Ballots</h5>
                     <p class="text-xs text-slate-400 mt-1">Department-specific Association Secretary ballots distributed strictly to eligible major students with book ID tracking.</p>
                   </div>
-                  <button id="btnHubPrintAssoc" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 hover:bg-white/10">
-                    <span>🖨️</span> Print Assoc. Ballots
-                  </button>
+                  <div class="flex gap-2">
+                    <button id="btnHubPrintAssoc" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg flex-1 flex items-center justify-center gap-1.5 hover:bg-white/10">
+                      <span>🖨️</span> Print Assoc.
+                    </button>
+                    <button id="btnHubExcelAssoc" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white flex items-center justify-center gap-1" title="Download Association Ballots in Excel (.xlsx)">
+                      <span>📊</span> Excel
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -894,16 +914,28 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
   };
   main.querySelector('#btnHubPressSummary')?.addEventListener('click', handlePrintPressSummary);
   main.querySelector('#btnHubQuickPressSummary')?.addEventListener('click', handlePrintPressSummary);
+  main.querySelector('#btnHubExcelPressSummary')?.addEventListener('click', () => {
+    downloadBallotsExcel(pwd, 'summary');
+  });
 
   // Ballots
   main.querySelector('#btnHubPrintGeneral')?.addEventListener('click', () => {
     generateAndPrintBallots(pwd, 'general');
   });
+  main.querySelector('#btnHubExcelGeneral')?.addEventListener('click', () => {
+    downloadBallotsExcel(pwd, 'general');
+  });
   main.querySelector('#btnHubPrintRep')?.addEventListener('click', () => {
     generateAndPrintBallots(pwd, 'rep');
   });
+  main.querySelector('#btnHubExcelRep')?.addEventListener('click', () => {
+    downloadBallotsExcel(pwd, 'year');
+  });
   main.querySelector('#btnHubPrintAssoc')?.addEventListener('click', () => {
     generateAndPrintBallots(pwd, 'assoc');
+  });
+  main.querySelector('#btnHubExcelAssoc')?.addEventListener('click', () => {
+    downloadBallotsExcel(pwd, 'assoc');
   });
 
   // Marked Rolls & Ballot Accounts
