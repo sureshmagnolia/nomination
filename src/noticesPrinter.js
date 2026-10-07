@@ -484,34 +484,36 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
             </div>
           </div>
 
-          <!-- Giant Booth Number Banner -->
+          <!-- Booth Number Banner (Compact) -->
           <div class="booth-giant-banner">
             <div class="booth-sub-label">OFFICIAL DESIGNATED POLLING BOOTH</div>
             <div class="booth-main-number">BOOTH NO. ${esc(booth.boothNumber)}</div>
           </div>
 
-          <!-- Room Location Callout -->
+          <!-- Room Location Callout (Prominent & Large) -->
           <div class="location-banner">
-            <span class="location-icon">📍</span>
-            <span class="location-label">POLLING STATION VENUE:</span>
-            <span class="location-name">${esc(booth.roomName || 'Classroom / Designated Hall')}</span>
+            <div class="location-header">
+              <span class="location-icon">📍</span>
+              <span class="location-label">POLLING STATION VENUE</span>
+            </div>
+            <div class="location-name">${esc(booth.roomName || 'Classroom / Designated Hall')}</div>
           </div>
 
-          <!-- Allotted Classes Section -->
+          <!-- Allotted Classes Section (Primary Focus - Expands to Fill Empty Space) -->
           <div class="classes-container">
             <div class="classes-heading">
               <span>📋 CLASSES ALLOTTED TO VOTE AT THIS BOOTH:</span>
               <span class="voter-badge">${totalVoters ? `${totalVoters} Registered Electors` : 'Electors as Per Roll'}</span>
             </div>
 
-            <div class="classes-grid ${classes.length <= 4 ? 'classes-grid-spacious' : ''}">
+            <div class="classes-grid ${classes.length <= 4 ? 'classes-grid-spacious' : (classes.length <= 8 ? 'classes-grid-medium' : '')}">
               ${classes.length ? classes.map(c => `
                 <div class="class-card">
                   <span class="check-icon">✔</span>
                   <span class="class-text">${esc(c)}</span>
                 </div>
               `).join('') : `
-                <div class="class-card" style="grid-column: 1 / -1; text-align: center; color: #666;">
+                <div class="class-card" style="grid-column: 1 / -1; text-align: center; color: #000;">
                   Allotted as per Department Electoral Schedule
                 </div>
               `}
@@ -562,18 +564,6 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
             <div class="rule-row">
               <span class="rule-icon">✍️</span>
               <span><strong>MARKING PROCEDURE:</strong> Place mark (X or ✔) only in designated candidate column using official booth pen.</span>
-            </div>
-          </div>
-
-          <!-- Bottom Footer with Seal and Presiding Officer Line -->
-          <div class="poster-footer">
-            <div class="footer-seal">
-              [ OFFICIAL ELECTION SEAL ]
-            </div>
-            <div class="footer-sign">
-              <div class="sign-line"></div>
-              <div class="sign-text">By Order of the Returning Officer</div>
-              <div class="sign-sub">${esc(collegeName)}</div>
             </div>
           </div>
 
@@ -668,12 +658,12 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
     .poster-border {
       border: 3.5px solid #000;
       border-radius: 6px;
-      padding: 10px 12px;
+      padding: 12px 14px;
       height: 100%;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
       box-sizing: border-box;
+      gap: 7px;
     }
     .poster-header {
       display: flex;
@@ -682,11 +672,12 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
       gap: 10px;
       text-align: center;
       border-bottom: 2px solid #000;
-      padding-bottom: 6px;
+      padding-bottom: 5px;
+      flex-shrink: 0;
     }
     .poster-logo {
-      max-height: 44px;
-      max-width: 44px;
+      max-height: 42px;
+      max-width: 42px;
       object-fit: contain;
     }
     .college-title {
@@ -694,135 +685,172 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      color: #000;
     }
     .election-title {
-      font-size: 11.5px;
-      font-weight: 600;
-      color: #333;
+      font-size: 11px;
+      font-weight: 700;
+      color: #000;
       margin-top: 1px;
     }
     .booth-giant-banner {
       background: #000;
       color: #fff;
       text-align: center;
-      padding: 10px 8px;
-      margin: 6px 0;
-      border-radius: 5px;
+      padding: 5px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
     }
     .booth-sub-label {
-      font-size: 11px;
-      font-weight: bold;
+      font-size: 9.5px;
+      font-weight: 800;
       letter-spacing: 1.5px;
-      opacity: 0.9;
+      opacity: 0.95;
     }
     .booth-main-number {
-      font-size: 34px;
+      font-size: 24px;
       font-weight: 900;
       letter-spacing: 1px;
       margin-top: 1px;
     }
     .location-banner {
-      border: 2px solid #000;
-      background: #f3f4f6;
-      border-radius: 5px;
-      padding: 7px 10px;
+      border: 2.5px solid #000;
+      background: #fff;
+      border-radius: 6px;
+      padding: 8px 12px;
       text-align: center;
-      font-size: 15px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .location-header {
+      display: flex;
+      align-items: center;
       gap: 6px;
-      margin-bottom: 4px;
     }
     .location-icon {
-      font-size: 18px;
+      font-size: 16px;
     }
     .location-label {
-      font-weight: bold;
-      color: #4b5563;
-      font-size: 11.5px;
+      font-weight: 900;
+      color: #000;
+      font-size: 12px;
+      letter-spacing: 1px;
     }
     .location-name {
-      font-size: 17px;
+      font-size: 22px;
       font-weight: 900;
-      color: #111;
+      color: #000;
       text-transform: uppercase;
+      letter-spacing: 0.5px;
+      line-height: 1.2;
     }
     .classes-container {
-      margin: 5px 0;
-      border: 2px solid #000;
-      border-radius: 5px;
-      padding: 7px 9px;
-      background: #fafafa;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      border: 3px solid #000;
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: #fff;
     }
     .classes-heading {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 11.5px;
-      font-weight: 800;
-      border-bottom: 1.5px solid #000;
-      padding-bottom: 4px;
-      margin-bottom: 6px;
+      font-size: 13.5px;
+      font-weight: 900;
+      color: #000;
+      border-bottom: 2px solid #000;
+      padding-bottom: 6px;
+      margin-bottom: 10px;
+      flex-shrink: 0;
     }
     .voter-badge {
-      background: #e5e7eb;
-      padding: 2px 7px;
+      background: #fff;
+      border: 1.5px solid #000;
+      color: #000;
+      padding: 2px 8px;
       border-radius: 3px;
-      font-size: 10.5px;
-      font-weight: bold;
+      font-size: 11.5px;
+      font-weight: 800;
     }
     .classes-grid {
+      flex: 1;
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 5px;
+      gap: 8px;
+      align-content: stretch;
     }
-    .classes-grid-spacious .class-card {
-      padding: 7px 10px;
+    .classes-grid-spacious {
+      gap: 12px;
     }
     .class-card {
-      border: 1.5px solid #374151;
-      border-radius: 4px;
-      padding: 4px 7px;
+      border: 2px solid #000;
+      border-radius: 6px;
+      padding: 10px 14px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 10px;
       background: #fff;
+      box-sizing: border-box;
+    }
+    .classes-grid-spacious .class-card {
+      padding: 16px 18px;
+    }
+    .classes-grid-medium .class-card {
+      padding: 10px 12px;
     }
     .check-icon {
-      font-size: 11px;
-      font-weight: bold;
+      font-size: 18px;
+      font-weight: 900;
       color: #000;
+      flex-shrink: 0;
+    }
+    .classes-grid-spacious .check-icon {
+      font-size: 24px;
     }
     .class-text {
-      font-size: 11.5px;
-      font-weight: 700;
-      color: #111;
-      line-height: 1.2;
+      font-size: 15px;
+      font-weight: 900;
+      color: #000;
+      line-height: 1.25;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .classes-grid-spacious .class-text {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 0.6px;
     }
     .ballots-section {
-      margin: 5px 0;
       border: 2px solid #000;
       border-radius: 5px;
-      padding: 7px 9px;
+      padding: 6px 9px;
       background: #fff;
+      flex-shrink: 0;
     }
     .ballots-heading {
       display: flex;
       justify-content: space-between;
       align-items: center;
       font-size: 11.5px;
-      font-weight: 800;
+      font-weight: 900;
+      color: #000;
       border-bottom: 1.5px solid #000;
       padding-bottom: 4px;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
     }
     .ballot-count-badge {
       background: #000;
       color: #fff;
-      padding: 2px 7px;
+      padding: 1.5px 6px;
       border-radius: 3px;
-      font-size: 10.5px;
+      font-size: 10px;
       font-weight: bold;
     }
     .ballots-grid {
@@ -834,65 +862,66 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
       flex: 1;
       border: 1.5px solid #000;
       border-radius: 4px;
-      padding: 6px 7px;
-      background: #fdfdfd;
+      padding: 5px 6px;
+      background: #fff;
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 1.5px;
     }
     .ballot-card-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
     .ballot-pill {
-      font-size: 9.5px;
+      font-size: 9px;
       font-weight: 900;
       text-transform: uppercase;
-      background: #e5e7eb;
-      padding: 1px 5px;
-      border-radius: 3px;
-      border: 1px solid #d1d5db;
+      background: #fff;
+      padding: 1px 4px;
+      border-radius: 2px;
+      border: 1px solid #000;
+      color: #000;
     }
     .ballot-code {
-      font-size: 9.5px;
+      font-size: 9px;
       font-weight: bold;
-      color: #4b5563;
+      color: #000;
       font-family: monospace;
     }
     .ballot-title {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 800;
       color: #000;
-      line-height: 1.2;
+      line-height: 1.15;
     }
     .ballot-desc {
-      font-size: 9px;
-      color: #555;
-      line-height: 1.2;
+      font-size: 8.5px;
+      color: #000;
+      line-height: 1.15;
     }
     .uncontested-notice {
-      margin-top: 5px;
-      padding: 4px 7px;
-      background: #fffbeb;
-      border: 1px dashed #d97706;
+      margin-top: 4px;
+      padding: 3px 6px;
+      background: #fff;
+      border: 1px dashed #000;
       border-radius: 3px;
-      font-size: 10px;
-      color: #92400e;
-      line-height: 1.3;
+      font-size: 9.5px;
+      color: #000;
+      line-height: 1.25;
     }
     .rules-box {
       border: 1.5px solid #000;
-      background: #f9fafb;
+      background: #fff;
       border-radius: 5px;
       padding: 6px 9px;
       display: flex;
       flex-direction: column;
-      gap: 3.5px;
-      margin: 5px 0;
-      font-size: 10px;
+      gap: 3px;
+      font-size: 9.5px;
       color: #000;
+      flex-shrink: 0;
     }
     .rule-row {
       display: flex;
@@ -900,47 +929,10 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
       gap: 6px;
     }
     .rule-icon {
-      font-size: 12px;
-      width: 16px;
+      font-size: 11px;
+      width: 14px;
       text-align: center;
       flex-shrink: 0;
-    }
-    .poster-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      border-top: 2px solid #000;
-      padding-top: 5px;
-      margin-top: 2px;
-    }
-    .footer-seal {
-      width: 130px;
-      height: 42px;
-      border: 1px dashed #666;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 8.5px;
-      color: #666;
-      font-weight: bold;
-      text-align: center;
-    }
-    .footer-sign {
-      text-align: right;
-    }
-    .sign-line {
-      width: 170px;
-      border-bottom: 1px solid #000;
-      margin-bottom: 3px;
-      margin-left: auto;
-    }
-    .sign-text {
-      font-size: 11.5px;
-      font-weight: bold;
-    }
-    .sign-sub {
-      font-size: 9.5px;
-      color: #444;
     }
   </style>
 </head>
