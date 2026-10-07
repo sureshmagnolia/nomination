@@ -110,6 +110,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
   let isFirstRender = true;
 
   let currentProposals = [];
+  let customSplitSolver = null;
 
   // Memoized cache for department association contest info
   const _deptAssocCache = new Map();
@@ -406,170 +407,312 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
   };
 
   const openStrategyModal = (proposals) => {
-    currentProposals = proposals;
+    currentProposals = [...proposals];
     const modal = main.querySelector('#strategySelectModal');
     const container = main.querySelector('#strategyModalCardsContainer');
     if (!modal || !container) return;
 
-    container.innerHTML = `
-      <div class="grid grid-cols-1 lg:grid-cols-${Math.min(proposals.length, 3)} gap-4 pb-2">
-        ${proposals.map(p => `
-          <div class="bg-slate-850 rounded-2xl border ${p.badgeColor === 'emerald' ? 'border-emerald-500/40 hover:border-emerald-400' : p.badgeColor === 'amber' ? 'border-amber-500/40 hover:border-amber-400' : 'border-indigo-500/40 hover:border-indigo-400'} flex flex-col justify-between p-4.5 transition-all shadow-xl relative overflow-hidden group" style="background:#1e293b;">
-            <div class="space-y-3">
-              <div class="flex items-center justify-between gap-2 flex-wrap">
-                <span class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${p.badgeColor === 'emerald' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : p.badgeColor === 'amber' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'}">
-                  ${p.badge}
-                </span>
-                <span class="text-xs font-mono text-slate-300 bg-white/5 px-2 py-0.5 rounded border border-white/10">
-                  ${p.splitDepts.length === 0 ? '0 Splits' : `${p.splitDepts.length} Split Dept${p.splitDepts.length > 1 ? 's' : ''}`}
-                </span>
-              </div>
+    let activeFilter = 'all';
 
-              <div>
-                <h5 class="text-base font-bold text-white mb-1">${esc(p.title)}</h5>
-                <p class="text-xs text-slate-300 leading-relaxed">${esc(p.tagline)}</p>
-              </div>
+    const getCardBorderClass = (color) => {
+      if (color === 'emerald') return 'border-emerald-500/40 hover:border-emerald-400';
+      if (color === 'amber') return 'border-amber-500/40 hover:border-amber-400';
+      if (color === 'cyan') return 'border-cyan-500/40 hover:border-cyan-400';
+      if (color === 'fuchsia') return 'border-fuchsia-500/40 hover:border-fuchsia-400';
+      return 'border-indigo-500/40 hover:border-indigo-400';
+    };
 
-              <div class="bg-black/40 rounded-xl p-3 space-y-2 text-xs border border-white/5">
-                <div class="flex justify-between items-center">
-                  <span class="text-slate-400">Voter Queue Range:</span>
-                  <span class="font-mono font-bold text-white">${p.minBooth} – ${p.maxBooth} voters <span class="text-[11px] ${p.spread <= 70 ? 'text-emerald-400' : 'text-amber-400'}">(${p.spread} spread)</span></span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-slate-400">Ballot Paper Workload:</span>
-                  <span class="font-mono font-bold text-indigo-300">${p.minBallots} – ${p.maxBallots} ballots <span class="text-[11px] ${p.ballotSpread <= 110 ? 'text-emerald-400' : 'text-amber-400'}">(${p.ballotSpread} spread)</span></span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-slate-400">Total Books / Booth:</span>
-                  <span class="font-bold ${p.minBooks > 0 ? 'text-emerald-300' : 'text-amber-300'}">
-                    ${p.minBooks} – ${p.maxBooks} books (1 Gen + Assoc + Reps)
-                  </span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-slate-400">PG Cohort Distribution:</span>
-                  <span class="font-bold text-purple-300">${p.pgBoothsCount} of ${p.booths.length} Booths handle PG</span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-slate-400">Department Integrity:</span>
-                  <span class="font-bold text-white">${p.intactCount} of ${p.totalDepts} Intact</span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-slate-400">Counting Complexity:</span>
-                  <span class="font-bold ${p.splitDepts.length <= 1 ? 'text-emerald-300' : 'text-amber-300'}">
-                    ${p.splitDepts.length === 0 ? 'None (0 Merges)' : p.splitDepts.length === 1 ? 'Minimal (1 Dept Merge)' : 'Moderate (2 Dept Merges)'}
-                  </span>
-                </div>
-              </div>
+    const getBadgeStyle = (color) => {
+      if (color === 'emerald') return 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+      if (color === 'amber') return 'bg-amber-500/20 text-amber-300 border border-amber-500/30';
+      if (color === 'cyan') return 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30';
+      if (color === 'fuchsia') return 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30';
+      return 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30';
+    };
 
-              <!-- Hardship Equalization Callout -->
-              <div class="text-[11px] bg-indigo-500/10 border border-indigo-500/25 rounded-lg p-2.5 text-indigo-200 space-y-1">
-                <div class="font-bold text-indigo-300 flex items-center gap-1.5">
-                  <span>⚖️</span> <span>Equal Hardship &amp; Multi-Ballot Balancing Active:</span>
-                </div>
-                <p class="text-[10px] text-slate-300 leading-normal">
-                  Workload factors in <strong>General</strong> (1), <strong>Dept Association</strong> (${p.contestedDeptsCount} contested), and <strong>Cohort Representatives</strong> (I UG, II UG, III UG, PG). 
-                  ${p.uncontestedDepts && p.uncontestedDepts.length > 0 ? `Uncontested depts (<em>${esc(p.uncontestedDepts.join(', '))}</em>) and PG split cohorts are interleaved across separate booths to ensure equal staff burdens.` : `Staff book management (${p.minBooks}–${p.maxBooks} books/booth) and ballot issuance are tightly equalized across all booths.`}
-                </p>
-              </div>
+    const getBtnStyle = (color) => {
+      if (color === 'emerald') return 'background:#059669;';
+      if (color === 'amber') return 'background:#d97706;';
+      if (color === 'cyan') return 'background:#0891b2;';
+      if (color === 'fuchsia') return 'background:#c026d3;';
+      return 'background:#4f46e5;';
+    };
 
-              <!-- Split Details -->
-              ${p.splitDepts.length > 0 ? `
-                <div class="space-y-1.5">
-                  <div class="text-[11px] font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1">
-                    <span>⚠️</span> Split Aggregation Notice:
-                  </div>
-                  ${p.splitDepts.map(sd => `
-                    <div class="text-[11px] bg-amber-500/10 border border-amber-500/20 rounded-lg p-2 text-amber-200 space-y-1">
-                      <div class="font-bold text-white flex justify-between">
-                        <span>🏛️ ${esc(sd.name)}</span>
-                        <div class="flex items-center gap-1.5">
-                          <span class="font-mono text-amber-400 text-[10px]">${sd.part1.count + sd.part2.count} voters</span>
-                          ${!sd.hasAssocContest ? `<span class="text-[9px] bg-rose-500/20 text-rose-300 px-1 py-0.2 rounded font-bold">Uncontested Assoc</span>` : ''}
-                        </div>
-                      </div>
-                      <div class="grid grid-cols-2 gap-1.5 text-[10px]">
-                        <div class="bg-black/30 p-1 rounded">
-                          <span class="font-bold text-amber-300">Booth ${sd.part1.boothNumber}:</span> ${sd.part1.count} voters (${sd.part1.ballots} ballots) &bull; ${esc(sd.part1.label)}
-                        </div>
-                        <div class="bg-black/30 p-1 rounded">
-                          <span class="font-bold text-amber-300">Booth ${sd.part2.boothNumber}:</span> ${sd.part2.count} voters (${sd.part2.ballots} ballots) &bull; ${esc(sd.part2.label)}
-                        </div>
-                      </div>
-                    </div>
-                  `).join('')}
-                </div>
-              ` : `
-                <div class="text-[11px] bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2.5 text-emerald-200">
-                  ✨ <strong>100% Department Integrity:</strong> Every department sits completely intact in a single booth. No ballot merging needed.
-                </div>
-              `}
+    const renderModalContent = () => {
+      let filtered = currentProposals;
+      if (activeFilter === 'minimal') {
+        filtered = currentProposals.filter(p => p.splitDepts.length <= 1);
+      } else if (activeFilter === 'balanced') {
+        filtered = currentProposals.filter(p => p.splitDepts.length === 2);
+      } else if (activeFilter === 'uniform') {
+        filtered = currentProposals.filter(p => p.splitDepts.length >= 3);
+      }
 
-              <!-- Expandable Booth Breakdown -->
-              <div>
-                <button type="button" class="btn btn-secondary btn-xs w-full text-slate-300 toggle-proposal-booths-btn hover:text-white" data-pid="${p.id}">
-                  🔍 Preview All ${p.booths.length} Booths
-                </button>
-                <div id="booths-preview-${p.id}" class="hidden mt-2 max-h-56 overflow-y-auto space-y-1.5 bg-black/50 rounded-lg p-2 border border-white/10 text-[11px]">
-                  ${p.booths.map(b => `
-                    <div class="p-2 rounded bg-white/5 hover:bg-white/10 transition-colors space-y-1">
-                      <div class="flex items-center justify-between gap-2">
-                        <span class="font-bold text-indigo-300 font-mono">Booth ${b.boothNumber}:</span>
-                        <div class="flex items-center gap-1.5">
-                          <span class="font-mono text-white text-[11px] px-1.5 py-0.5 rounded bg-white/10">${b.totalStudents} Voters</span>
-                          <span class="font-mono text-indigo-300 text-[11px] px-1.5 py-0.5 rounded bg-indigo-500/20 border border-indigo-500/30 font-bold">${b.totalBallots} Ballots</span>
-                        </div>
-                      </div>
-                      <div class="flex items-center justify-between gap-2 text-[10px] text-slate-400">
-                        <span>📚 Books: <strong class="text-slate-200">${b.totalBooksCount}</strong> (1 Gen + ${b.assocBooksCount} Assoc + ${b.repBooksCount} Rep)</span>
-                        <span class="${b.hasPG ? 'text-purple-300' : 'text-slate-400'} font-medium">${b.hasPG ? '🎓 Includes PG' : '🏫 UG Only'}</span>
-                      </div>
-                      <div class="flex items-center justify-between gap-2 text-[10px] text-slate-400">
-                        <span class="truncate">Reps: <strong class="text-slate-300">${b.repPosts.length ? esc(b.repPosts.join(', ')) : 'None'}</strong></span>
-                        ${b.uncontestedDepts.length > 0 ? `<span class="text-amber-300/80 font-medium whitespace-nowrap">No Assoc: ${esc(b.uncontestedDepts.join(', '))}</span>` : '<span class="text-emerald-400/80 whitespace-nowrap">All Assoc Contested</span>'}
-                      </div>
-                      <div class="text-slate-300 text-[10px] truncate" title="${esc(b.classes.join(', '))}">
-                        ${esc(b.classes.join(', '))}
-                      </div>
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-            </div>
-
-            <div class="pt-3 mt-3 border-t border-white/10">
-              <button type="button" class="btn btn-primary w-full py-2.5 font-bold shadow-lg select-strategy-apply-btn text-white text-sm" data-pid="${p.id}" style="${p.badgeColor === 'emerald' ? 'background:#059669;' : p.badgeColor === 'amber' ? 'background:#d97706;' : 'background:#4f46e5;'}">
-                ✓ Apply ${esc(p.title.split(':')[0])}
+      container.innerHTML = `
+        <!-- Top Toolbar: Strategy Category Tabs & Quick Depth Explorer -->
+        <div class="mb-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-3 bg-black/40 p-2.5 rounded-xl border border-white/10">
+            <div class="flex flex-wrap items-center gap-1.5" id="strategyFilterTabs">
+              <button type="button" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all filter-tab-btn ${activeFilter === 'all' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white/5 text-slate-300 hover:text-white hover:bg-white/10'}" data-filter="all">
+                All Plans (${currentProposals.length})
+              </button>
+              <button type="button" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all filter-tab-btn ${activeFilter === 'minimal' ? 'bg-emerald-600 text-white shadow-md' : 'bg-white/5 text-slate-300 hover:text-white hover:bg-white/10'}" data-filter="minimal">
+                🛡️ Minimal Splits (0-1)
+              </button>
+              <button type="button" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all filter-tab-btn ${activeFilter === 'balanced' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white/5 text-slate-300 hover:text-white hover:bg-white/10'}" data-filter="balanced">
+                ⚖️ Balanced (2 Splits)
+              </button>
+              <button type="button" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all filter-tab-btn ${activeFilter === 'uniform' ? 'bg-fuchsia-600 text-white shadow-md' : 'bg-white/5 text-slate-300 hover:text-white hover:bg-white/10'}" data-filter="uniform">
+                🎯 Equal Voters (3+ Splits)
               </button>
             </div>
+
+            <!-- Custom Split Quick Depth Pills -->
+            <div class="flex items-center gap-1.5 text-xs">
+              <span class="text-slate-400 font-semibold hidden sm:inline">Split Depth:</span>
+              <div class="flex items-center gap-1 flex-wrap" id="depthPillsContainer">
+                ${[1, 2, 3, 4, 5].map(k => {
+                  const hasPlan = currentProposals.some(p => p.splitDepts.length === k);
+                  return `
+                    <button type="button" class="px-2 py-0.5 rounded text-[11px] font-mono font-bold transition-all depth-pill-btn ${hasPlan ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/40' : 'bg-white/5 text-slate-400 border border-white/10 hover:text-white hover:bg-white/10'}" data-depth="${k}" title="Generate or view allotment plan with ${k} department split${k > 1 ? 's' : ''}">
+                      ${k} Dept${k > 1 ? 's' : ''}
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            </div>
           </div>
-        `).join('')}
-      </div>
-    `;
+        </div>
 
-    // Bind accordion toggles
-    container.querySelectorAll('.toggle-proposal-booths-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const pid = e.currentTarget.dataset.pid;
-        const box = container.querySelector(`#booths-preview-${pid}`);
-        if (box) {
-          box.classList.toggle('hidden');
-          e.currentTarget.textContent = box.classList.contains('hidden') ? `🔍 Preview All ${booths.length} Booths` : '▲ Hide Booth Preview';
-        }
+        ${filtered.length === 0 ? `
+          <div class="p-8 text-center text-slate-400 bg-black/20 rounded-xl border border-white/5 my-4">
+            <span class="text-2xl mb-2 block">🔍</span>
+            <p class="text-sm">No plans found in this category. Click "All Plans" or select a Split Depth pill to generate a plan.</p>
+          </div>
+        ` : `
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pb-2">
+            ${filtered.map(p => {
+              const spreadNote = p.spread <= 25 
+                ? `<span class="text-[11px] font-bold text-fuchsia-300 bg-fuchsia-500/20 px-1.5 py-0.5 rounded border border-fuchsia-500/30">(${p.spread} spread • Approx Equal!)</span>`
+                : p.spread <= 45
+                  ? `<span class="text-[11px] font-bold text-cyan-300 bg-cyan-500/20 px-1.5 py-0.5 rounded border border-cyan-500/30">(${p.spread} spread • High Uniformity)</span>`
+                  : p.spread <= 70
+                    ? `<span class="text-[11px] font-bold text-emerald-400">(${p.spread} spread)</span>`
+                    : `<span class="text-[11px] font-bold text-amber-400">(${p.spread} spread)</span>`;
+
+              const ballotSpreadNote = p.ballotSpread <= 110 
+                ? `<span class="text-[11px] text-emerald-400">(${p.ballotSpread} spread)</span>` 
+                : `<span class="text-[11px] text-amber-400">(${p.ballotSpread} spread)</span>`;
+
+              const countingComplexity = p.splitDepts.length === 0 
+                ? 'None (0 Merges)' 
+                : p.splitDepts.length === 1 
+                  ? 'Minimal (1 Dept Merge)' 
+                  : p.splitDepts.length === 2 
+                    ? 'Moderate (2 Dept Merges)' 
+                    : `Multi-Dept (${p.splitDepts.length} Dept Merges)`;
+
+              return `
+                <div class="bg-slate-850 rounded-2xl border ${getCardBorderClass(p.badgeColor)} flex flex-col justify-between p-4.5 transition-all shadow-xl relative overflow-hidden group" style="background:#1e293b;">
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                      <span class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${getBadgeStyle(p.badgeColor)}">
+                        ${p.badge}
+                      </span>
+                      <span class="text-xs font-mono text-slate-300 bg-white/5 px-2 py-0.5 rounded border border-white/10">
+                        ${p.splitDepts.length === 0 ? '0 Splits' : `${p.splitDepts.length} Split Dept${p.splitDepts.length > 1 ? 's' : ''}`}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h5 class="text-base font-bold text-white mb-1">${esc(p.title)}</h5>
+                      <p class="text-xs text-slate-300 leading-relaxed">${esc(p.tagline)}</p>
+                    </div>
+
+                    <div class="bg-black/40 rounded-xl p-3 space-y-2 text-xs border border-white/5">
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Voter Queue Range:</span>
+                        <span class="font-mono font-bold text-white">${p.minBooth} – ${p.maxBooth} voters ${spreadNote}</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Ballot Paper Workload:</span>
+                        <span class="font-mono font-bold text-indigo-300">${p.minBallots} – ${p.maxBallots} ballots ${ballotSpreadNote}</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Total Books / Booth:</span>
+                        <span class="font-bold ${p.minBooks > 0 ? 'text-emerald-300' : 'text-amber-300'}">
+                          ${p.minBooks} – ${p.maxBooks} books (1 Gen + Assoc + Reps)
+                        </span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-400">PG Cohort Distribution:</span>
+                        <span class="font-bold text-purple-300">${p.pgBoothsCount} of ${p.booths.length} Booths handle PG</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Department Integrity:</span>
+                        <span class="font-bold text-white">${p.intactCount} of ${p.totalDepts} Intact</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Counting Complexity:</span>
+                        <span class="font-bold ${p.splitDepts.length <= 1 ? 'text-emerald-300' : p.splitDepts.length === 2 ? 'text-amber-300' : 'text-fuchsia-300'}">
+                          ${countingComplexity}
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Hardship Equalization Callout -->
+                    <div class="text-[11px] ${p.splitDepts.length >= 3 ? 'bg-fuchsia-500/10 border-fuchsia-500/25 text-fuchsia-200' : 'bg-indigo-500/10 border-indigo-500/25 text-indigo-200'} border rounded-lg p-2.5 space-y-1">
+                      <div class="font-bold ${p.splitDepts.length >= 3 ? 'text-fuchsia-300' : 'text-indigo-300'} flex items-center gap-1.5">
+                        <span>⚖️</span> <span>Equal Hardship &amp; Multi-Ballot Balancing Active:</span>
+                      </div>
+                      <p class="text-[10px] text-slate-300 leading-normal">
+                        Workload factors in <strong>General</strong> (1), <strong>Dept Association</strong> (${p.contestedDeptsCount} contested), and <strong>Cohort Representatives</strong> (I UG, II UG, III UG, PG). 
+                        ${p.splitDepts.length >= 3 
+                          ? `With ${p.splitDepts.length} departments split into balanced halves, voter queues across all booths are equalized to within ${p.spread} voters for near-identical officer workloads.`
+                          : p.uncontestedDepts && p.uncontestedDepts.length > 0 
+                            ? `Uncontested depts (<em>${esc(p.uncontestedDepts.join(', '))}</em>) and PG split cohorts are interleaved across separate booths to ensure equal staff burdens.` 
+                            : `Staff book management (${p.minBooks}–${p.maxBooks} books/booth) and ballot issuance are tightly equalized across all booths.`}
+                      </p>
+                    </div>
+
+                    <!-- Split Details -->
+                    ${p.splitDepts.length > 0 ? `
+                      <div class="space-y-1.5">
+                        <div class="text-[11px] font-bold ${p.splitDepts.length >= 3 ? 'text-cyan-300' : 'text-amber-300'} uppercase tracking-wider flex items-center gap-1">
+                          <span>⚠️</span> Split Aggregation Notice (${p.splitDepts.length} Dept${p.splitDepts.length > 1 ? 's' : ''}):
+                        </div>
+                        <div class="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                          ${p.splitDepts.map(sd => `
+                            <div class="text-[11px] bg-black/40 border border-white/10 rounded-lg p-2 space-y-1">
+                              <div class="font-bold text-white flex justify-between">
+                                <span>🏛️ ${esc(sd.name)}</span>
+                                <div class="flex items-center gap-1.5">
+                                  <span class="font-mono text-amber-400 text-[10px]">${sd.part1.count + sd.part2.count} voters</span>
+                                  ${!sd.hasAssocContest ? `<span class="text-[9px] bg-rose-500/20 text-rose-300 px-1 py-0.2 rounded font-bold">Uncontested Assoc</span>` : ''}
+                                </div>
+                              </div>
+                              <div class="grid grid-cols-2 gap-1.5 text-[10px]">
+                                <div class="bg-white/5 p-1 rounded">
+                                  <span class="font-bold text-amber-300">Booth ${sd.part1.boothNumber}:</span> ${sd.part1.count} v (${sd.part1.ballots} b) &bull; ${esc(sd.part1.label)}
+                                </div>
+                                <div class="bg-white/5 p-1 rounded">
+                                  <span class="font-bold text-amber-300">Booth ${sd.part2.boothNumber}:</span> ${sd.part2.count} v (${sd.part2.ballots} b) &bull; ${esc(sd.part2.label)}
+                                </div>
+                              </div>
+                            </div>
+                          `).join('')}
+                        </div>
+                      </div>
+                    ` : `
+                      <div class="text-[11px] bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2.5 text-emerald-200">
+                        ✨ <strong>100% Department Integrity:</strong> Every department sits completely intact in a single booth. No ballot merging needed.
+                      </div>
+                    `}
+
+                    <!-- Expandable Booth Breakdown -->
+                    <div>
+                      <button type="button" class="btn btn-secondary btn-xs w-full text-slate-300 toggle-proposal-booths-btn hover:text-white" data-pid="${p.id}">
+                        🔍 Preview All ${p.booths.length} Booths
+                      </button>
+                      <div id="booths-preview-${p.id}" class="hidden mt-2 max-h-56 overflow-y-auto space-y-1.5 bg-black/50 rounded-lg p-2 border border-white/10 text-[11px]">
+                        ${p.booths.map(b => `
+                          <div class="p-2 rounded bg-white/5 hover:bg-white/10 transition-colors space-y-1">
+                            <div class="flex items-center justify-between gap-2">
+                              <span class="font-bold text-indigo-300 font-mono">Booth ${b.boothNumber}:</span>
+                              <div class="flex items-center gap-1.5">
+                                <span class="font-mono text-white text-[11px] px-1.5 py-0.5 rounded bg-white/10">${b.totalStudents} Voters</span>
+                                <span class="font-mono text-indigo-300 text-[11px] px-1.5 py-0.5 rounded bg-indigo-500/20 border border-indigo-500/30 font-bold">${b.totalBallots} Ballots</span>
+                              </div>
+                            </div>
+                            <div class="flex items-center justify-between gap-2 text-[10px] text-slate-400">
+                              <span>📚 Books: <strong class="text-slate-200">${b.totalBooksCount}</strong> (1 Gen + ${b.assocBooksCount} Assoc + ${b.repBooksCount} Rep)</span>
+                              <span class="${b.hasPG ? 'text-purple-300' : 'text-slate-400'} font-medium">${b.hasPG ? '🎓 Includes PG' : '🏫 UG Only'}</span>
+                            </div>
+                            <div class="flex items-center justify-between gap-2 text-[10px] text-slate-400">
+                              <span class="truncate">Reps: <strong class="text-slate-300">${b.repPosts.length ? esc(b.repPosts.join(', ')) : 'None'}</strong></span>
+                              ${b.uncontestedDepts.length > 0 ? `<span class="text-amber-300/80 font-medium whitespace-nowrap">No Assoc: ${esc(b.uncontestedDepts.join(', '))}</span>` : '<span class="text-emerald-400/80 whitespace-nowrap">All Assoc Contested</span>'}
+                            </div>
+                            <div class="text-slate-300 text-[10px] truncate" title="${esc(b.classes.join(', '))}">
+                              ${esc(b.classes.join(', '))}
+                            </div>
+                          </div>
+                        `).join('')}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="pt-3 mt-3 border-t border-white/10">
+                    <button type="button" class="btn btn-primary w-full py-2.5 font-bold shadow-lg select-strategy-apply-btn text-white text-sm" data-pid="${p.id}" style="${getBtnStyle(p.badgeColor)}">
+                      ✓ Apply ${esc(p.title.split(':')[0])}
+                    </button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `}
+      `;
+
+      // Bind Category Filter Tabs
+      container.querySelectorAll('.filter-tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          activeFilter = e.currentTarget.dataset.filter;
+          renderModalContent();
+        });
       });
-    });
 
-    // Bind Apply buttons
-    container.querySelectorAll('.select-strategy-apply-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const pid = e.currentTarget.dataset.pid;
-        const selectedProposal = currentProposals.find(p => p.id === pid);
-        if (!selectedProposal) return;
-
-        closeStrategyModal();
-        applyProposal(selectedProposal);
+      // Bind Depth Pills
+      container.querySelectorAll('.depth-pill-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const depth = parseInt(e.currentTarget.dataset.depth, 10);
+          const existing = currentProposals.find(p => p.splitDepts.length === depth);
+          if (existing) {
+            if (depth <= 1) activeFilter = 'minimal';
+            else if (depth === 2) activeFilter = 'balanced';
+            else activeFilter = 'uniform';
+            renderModalContent();
+          } else if (customSplitSolver) {
+            const newProp = customSplitSolver(depth);
+            if (newProp) {
+              currentProposals.push(newProp);
+              if (depth <= 1) activeFilter = 'minimal';
+              else if (depth === 2) activeFilter = 'balanced';
+              else activeFilter = 'uniform';
+              renderModalContent();
+              showToast(`🎯 Generated custom plan splitting ${depth} department${depth > 1 ? 's' : ''}!`, 'success');
+            } else {
+              showToast(`Could not split ${depth} departments with current classes.`, 'info');
+            }
+          }
+        });
       });
-    });
 
+      // Bind accordion toggles
+      container.querySelectorAll('.toggle-proposal-booths-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const pid = e.currentTarget.dataset.pid;
+          const box = container.querySelector(`#booths-preview-${pid}`);
+          if (box) {
+            box.classList.toggle('hidden');
+            e.currentTarget.textContent = box.classList.contains('hidden') ? `🔍 Preview All ${booths.length} Booths` : '▲ Hide Booth Preview';
+          }
+        });
+      });
+
+      // Bind Apply buttons
+      container.querySelectorAll('.select-strategy-apply-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const pid = e.currentTarget.dataset.pid;
+          const selectedProposal = currentProposals.find(p => p.id === pid);
+          if (!selectedProposal) return;
+
+          closeStrategyModal();
+          applyProposal(selectedProposal);
+        });
+      });
+    };
+
+    renderModalContent();
     modal.classList.remove('hidden');
   };
 
@@ -1128,7 +1271,41 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     }
 
     const proposals = [];
-    const largeDepts = depts.filter(d => d.total > meanVoters * 0.75 && d.classes.length > 1).sort((a, b) => b.total - a.total);
+    const eligibleSplitDepts = depts.filter(d => d.classes.length > 1).sort((a, b) => b.total - a.total);
+    const largeDepts = eligibleSplitDepts.filter(d => d.total > meanVoters * 0.75);
+
+    const generateProposalForKDepts = (k, id, title, badge, badgeColor, tagline, penalty = 130, restarts = 30) => {
+      if (!eligibleSplitDepts || eligibleSplitDepts.length < k || k <= 0) return null;
+      const deptsToSplit = eligibleSplitDepts.slice(0, k);
+      const splitPairs = [];
+      const splitNames = new Set();
+      for (const d of deptsToSplit) {
+        const halves = splitSmartBalanced(d);
+        if (!halves) return null;
+        splitPairs.push({ dept: d, halves });
+        splitNames.add(d.name);
+      }
+      const items = [
+        ...depts.filter(d => !splitNames.has(d.name)),
+        ...splitPairs.flatMap(sp => [sp.halves[0], sp.halves[1]])
+      ];
+      const alloc = solvePartition(items, numBooths, penalty, restarts);
+      if (!alloc) return null;
+      return formatProposal(id, title, badge, badgeColor, tagline, alloc, splitPairs);
+    };
+
+    customSplitSolver = (k) => {
+      return generateProposalForKDepts(
+        k,
+        `custom-${k}`,
+        `Custom Plan: ${k} Dept Split${k > 1 ? 's' : ''}`,
+        `🎯 ${k} Dept Split${k > 1 ? 's' : ''}`,
+        k >= 4 ? 'fuchsia' : k === 3 ? 'cyan' : k === 2 ? 'indigo' : 'emerald',
+        `Splits the top ${k} largest departments into 50/50 halves to tighten booth voter queue equality.`,
+        160,
+        35
+      );
+    };
 
     // Check Plan 0: 100% Pure Integrity (0 Splits)
     const tier0Alloc = solvePartition(depts, numBooths, 60, 20);
@@ -1144,7 +1321,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
 
       const isTier0Balanced = (t0Max <= Math.round(meanVoters * 1.25)) && 
                               (t0Min >= Math.round(meanVoters * 0.75)) && 
-                              (t0Spread <= 55) &&
+                              (t0Spread <= 55) && 
                               (t0BSpread <= 90);
       if (isTier0Balanced) {
         proposals.push(formatProposal(
@@ -1160,8 +1337,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     }
 
     // Plan A: Minimal Splitting (Only 1 Dept Split)
-    if (largeDepts.length > 0) {
-      const d1 = largeDepts[0];
+    if (largeDepts.length > 0 || eligibleSplitDepts.length > 0) {
+      const d1 = (largeDepts[0] || eligibleSplitDepts[0]);
       const h1 = splitSmartBalanced(d1);
       if (h1) {
         const items1 = [...depts.filter(d => d.name !== d1.name), h1[0], h1[1]];
@@ -1181,8 +1358,9 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     }
 
     // Plan B: Balanced Queues (Smart 50/50 Halves on 2 Depts)
-    if (largeDepts.length >= 2) {
-      const d1 = largeDepts[0], d2 = largeDepts[1];
+    if (largeDepts.length >= 2 || eligibleSplitDepts.length >= 2) {
+      const d1 = largeDepts[0] || eligibleSplitDepts[0];
+      const d2 = largeDepts[1] || eligibleSplitDepts[1];
       const h1 = splitSmartBalanced(d1), h2 = splitSmartBalanced(d2);
       if (h1 && h2) {
         const items2 = [...depts.filter(d => d.name !== d1.name && d.name !== d2.name), h1[0], h1[1], h2[0], h2[1]];
@@ -1202,8 +1380,9 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     }
 
     // Plan C: Academic Cohort (UG vs PG Split)
-    if (largeDepts.length >= 2) {
-      const d1 = largeDepts[0], d2 = largeDepts[1];
+    if (largeDepts.length >= 2 || eligibleSplitDepts.length >= 2) {
+      const d1 = largeDepts[0] || eligibleSplitDepts[0];
+      const d2 = largeDepts[1] || eligibleSplitDepts[1];
       const h1 = splitAcademicCohort(d1), h2 = splitAcademicCohort(d2);
       if (h1 && h2) {
         const items3 = [...depts.filter(d => d.name !== d1.name && d.name !== d2.name), h1[0], h1[1], h2[0], h2[1]];
@@ -1219,6 +1398,50 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             [{ dept: d1, halves: h1 }, { dept: d2, halves: h2 }]
           ));
         }
+      }
+    }
+
+    // Plan D: High Uniformity (3 Dept Splits)
+    if (eligibleSplitDepts.length >= 3) {
+      const d1 = eligibleSplitDepts[0], d2 = eligibleSplitDepts[1], d3 = eligibleSplitDepts[2];
+      const pD = generateProposalForKDepts(
+        3,
+        'uniform',
+        'Plan D: High Uniformity',
+        '⚖️ High Uniformity (3 Splits)',
+        'cyan',
+        `Splits 3 large departments (${esc(d1.name)}, ${esc(d2.name)}, ${esc(d3.name)}) into balanced 50/50 halves to achieve high voter queue consistency across all booths.`,
+        140,
+        30
+      );
+      if (pD) proposals.push(pD);
+    }
+
+    // Plan E: Equal Voters (Max Splitting ~ Same Voter Count Across All Booths)
+    if (eligibleSplitDepts.length >= 3) {
+      const maxK = Math.min(eligibleSplitDepts.length, numBooths * 2, 8);
+      let bestEqualProp = null;
+      let minSpread = Infinity;
+      const startK = eligibleSplitDepts.length >= 4 ? 4 : 3;
+      for (let k = startK; k <= maxK; k++) {
+        const candidate = generateProposalForKDepts(
+          k,
+          'equal',
+          'Plan E: Equal Voters (Max Splitting)',
+          '🎯 Equal Voters (~Same Count)',
+          'fuchsia',
+          `Splits ${k} departments into balanced halves so that all booths have approximately the exact same number of voters.`,
+          260,
+          40
+        );
+        if (candidate && candidate.spread < minSpread) {
+          minSpread = candidate.spread;
+          bestEqualProp = candidate;
+        }
+      }
+      if (bestEqualProp) {
+        bestEqualProp.tagline = `Divides ${bestEqualProp.splitDepts.length} departments into 50/50 halves so every polling booth has approximately the exact same number of voters (${bestEqualProp.minBooth}–${bestEqualProp.maxBooth} voters, only ${bestEqualProp.spread} spread!).`;
+        proposals.push(bestEqualProp);
       }
     }
 
@@ -1298,7 +1521,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         <!-- Strategy Selection Modal -->
         <div id="strategySelectModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
           <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" id="strategyModalOverlay"></div>
-          <div class="relative bg-slate-900 rounded-2xl border border-indigo-500/30 shadow-2xl w-full max-w-6xl p-6 z-10 flex flex-col max-h-[92vh] text-white">
+          <div class="relative bg-slate-900 rounded-2xl border border-indigo-500/30 shadow-2xl w-full max-w-7xl p-6 z-10 flex flex-col max-h-[92vh] text-white">
             <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
               <div class="flex items-center gap-2.5">
                 <span class="text-2xl">⚡</span>
@@ -1356,7 +1579,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           </div>
           <div class="flex flex-wrap gap-2">
             <button id="btnClearAll" class="btn btn-secondary border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white" title="Action: Unassigns all classes from all booths to reset allotments to blank.&#10;Prerequisite: Ensure you want to wipe current assignments; you will need to re-allot classes manually or via Auto Allot.">🗑️ Clear All</button>
-            <button id="btnAutoAllot" class="btn btn-secondary" title="Action: Analyzes voter loads and automatically distributes classes evenly with minimal department splits.&#10;Prerequisite: Set the total booth count first and ensure the Nominal Roll has been imported.">⚡ Auto Allot</button>
+            <button id="btnAutoAllot" class="btn btn-secondary" title="Action: Analyzes voter loads and automatically distributes classes evenly. Offers multiple allotment strategies ranging from 0-1 department splits up to high-uniformity multi-split plans for approximately equal voters across all booths.&#10;Prerequisite: Set the total booth count first and ensure the Nominal Roll has been imported.">⚡ Auto Allot</button>
             <a href="#/admin/officials" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white" title="Action: Opens the Election Officials Team Builder to allot Presiding Officers, Polling Officers, and Peons to booths.&#10;Prerequisite: Configure booths and assign room locations first so polling stations exist for staffing.">👥 Allot Officials (Team Builder)</a>
             <button id="btnManageLocations" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white" title="Action: Opens Location Manager to add, rename, or delete campus rooms and halls for polling booths.&#10;Prerequisite: Have your list of room numbers / hall names ready.">📍 Manage Locations</button>
             <button id="btnSaveBooths" class="btn btn-primary" title="Action: Saves all assigned room locations and class-to-booth allocations to the database.&#10;Prerequisite: Assign room locations and ensure all classes are allocated to booths before saving.">💾 Save Configuration</button>
