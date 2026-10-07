@@ -2,13 +2,48 @@ import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading, isYearEligible, sortPosts } from '../../utils.js';
 import { CONFIG } from '../../config.js';
-import { saveCountingMeta, getCountingMeta } from '../../offlineStorage.js';
+import { saveCountingMeta, getCountingMeta, getAllResultsLocally } from '../../offlineStorage.js';
 import { router } from '../../router.js';
 
 export function isUuc(postName) {
   if (!postName) return false;
   const u = String(postName).toUpperCase();
   return u.includes('UUC') || u.includes('UNIVERSITY UNION COUNCILLOR') || u.includes('COUNCILLOR');
+}
+
+/**
+ * Automatically deduces physical ballots polled at a counting table
+ * by inspecting results entered for single-vote general posts (Chairman, Gen Sec, etc.).
+ * Dual-vote UUC post is explicitly excluded because voters cast 2 votes on UUC ballots.
+ */
+export function deduceBallotsFromResults(results, tableNum) {
+  if (!Array.isArray(results) || !results.length) return null;
+  const tableResults = results.filter(r => String(r.TableNumber) === String(tableNum));
+  if (!tableResults.length) return null;
+
+  const postVoteSums = {};
+  tableResults.forEach(r => {
+    const p = String(r.Post || '').trim();
+    if (!p || isUuc(p)) return; // Exclude UUC dual-vote post!
+    const v = parseInt(r.Votes, 10) || 0;
+    postVoteSums[p] = (postVoteSums[p] || 0) + v;
+  });
+
+  const validEntries = Object.entries(postVoteSums).filter(([_, count]) => count > 0);
+  if (!validEntries.length) return null;
+
+  // Prioritize executive single-vote general posts
+  const priorityOrder = ['CHAIRMAN', 'GENERAL SECRETARY', 'VICE CHAIRMAN', 'JOINT SECRETARY', 'ARTS CLUB SECRETARY', 'STUDENT EDITOR', 'MAGAZINE EDITOR'];
+  for (const prio of priorityOrder) {
+    const match = validEntries.find(([pName]) => pName.toUpperCase().includes(prio));
+    if (match) {
+      return { ballots: match[1], postName: match[0] };
+    }
+  }
+
+  // Fallback to highest ballot sum among single-vote posts
+  validEntries.sort((a, b) => b[1] - a[1]);
+  return { ballots: validEntries[0][1], postName: validEntries[0][0] };
 }
 
 export async function renderAdminCounting(container) {
@@ -18,14 +53,15 @@ export async function renderAdminCounting(container) {
   `);
 
   try {
-    const [savedMatrix, posts, nominationsRaw, booths, nominalRoll, settings, officialsRaw] = await Promise.all([
+    const [savedMatrix, posts, nominationsRaw, booths, nominalRoll, settings, officialsRaw, resultsRaw] = await Promise.all([
       api.adminGetCountingMatrix(pwd, true).catch(() => null),
       api.getPosts().catch(() => []),
       api.adminGetNominations(pwd).catch(() => []),
       api.adminGetBooths(pwd, true).catch(() => []),
       api.getNominalRoll().catch(() => []),
       api.adminGetSettings(pwd).catch(() => ({})),
-      api.adminGetOfficials(pwd, true).catch(() => null)
+      api.adminGetOfficials(pwd, true).catch(() => null),
+      api.adminGetResults(pwd, true).catch(() => [])
     ]);
 
     const allNoms = Array.isArray(nominationsRaw) ? nominationsRaw : [];
@@ -33,6 +69,7 @@ export async function renderAdminCounting(container) {
     const boothsList = Array.isArray(booths) ? booths : (Array.isArray(booths?.booths) ? booths.booths : []);
     const postsList = Array.isArray(posts) ? posts : (Array.isArray(posts?.posts) ? posts.posts : []);
     const nominalRollList = Array.isArray(nominalRoll) ? nominalRoll : [];
+    const resultsList = Array.isArray(resultsRaw) ? resultsRaw : (Array.isArray(resultsRaw?.results) ? resultsRaw.results : []);
 
     let countingTeams = [];
     if (officialsRaw && Array.isArray(officialsRaw.countingTeams)) {
@@ -44,12 +81,13 @@ export async function renderAdminCounting(container) {
     }
 
     // Cache metadata in IndexedDB for offline access
-    await saveCountingMeta({ savedMatrix, posts: postsList, finalList, booths: boothsList, settings, countingTeams, nominalRoll: nominalRollList });
+    await saveCountingMeta({ savedMatrix, posts: postsList, finalList, booths: boothsList, settings, countingTeams, nominalRoll: nominalRollList, results: resultsList });
 
-    renderCountingUI(container.querySelector('#adminMain'), pwd, savedMatrix, postsList, finalList, boothsList, nominalRollList, settings, false, countingTeams);
+    renderCountingUI(container.querySelector('#adminMain'), pwd, savedMatrix, postsList, finalList, boothsList, nominalRollList, settings, false, countingTeams, resultsList);
   } catch (e) {
     console.warn('Counting online load failed, checking IndexedDB cache:', e);
     const cached = await getCountingMeta();
+    const localResults = await getAllResultsLocally().catch(() => []);
     if (cached && cached.savedMatrix) {
       renderCountingUI(
         container.querySelector('#adminMain'),
@@ -61,7 +99,8 @@ export async function renderAdminCounting(container) {
         cached.nominalRoll || [],
         cached.settings || {},
         true,
-        cached.countingTeams || []
+        cached.countingTeams || [],
+        localResults.length ? localResults : (cached.results || [])
       );
     } else {
       container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
@@ -77,7 +116,7 @@ function getSupervisorNameForTable(tableNum, countingTeams) {
   return team.supervisor.name || team.supervisor.fullName || '';
 }
 
-function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nominalRoll, settings = {}, isOffline = false, countingTeams = []) {
+function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nominalRoll, settings = {}, isOffline = false, countingTeams = [], allResults = []) {
   const collegeName = settings?.collegeName || CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad';
   const electionYear = settings?.electionYear || new Date().getFullYear().toString();
   const collegeLogo = settings?.collegeLogo || '';
@@ -112,14 +151,91 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     return [];
   };
 
+  let currentSavedMatrix = savedMatrix;
+  let localBpa = {};
+  try {
+    localBpa = JSON.parse(localStorage.getItem('gcc_table_polled_ballots') || '{}');
+  } catch (_) {}
+  let tablePolledBallots = {
+    ...(currentSavedMatrix?.tablePolledBallots || {}),
+    ...localBpa
+  };
+
   // Helper to get voter count for a table/booth
   const getVoterCountForTable = (tableNum) => {
     const b = boothsList.find(booth => Number(booth?.boothNumber) === Number(tableNum)) || boothsList[Number(tableNum) - 1];
     return getBoothVoterCount(b, nominalRollList);
   };
 
+  // Helper to determine effective voter count (BPA polled ballots vs nominal roll allotted)
+  const getEffectiveVoterCountForTable = (tableNum) => {
+    const b = boothsList.find(booth => Number(booth?.boothNumber) === Number(tableNum)) || boothsList[Number(tableNum) - 1];
+    const allotted = getBoothVoterCount(b, nominalRollList);
+    const sTable = String(tableNum);
+
+    // 1. Manual entry in tablePolledBallots
+    const manual = parseInt(tablePolledBallots[sTable], 10);
+    if (!isNaN(manual) && manual > 0) {
+      return { count: manual, isActual: true, source: 'manual', allotted };
+    }
+
+    // 2. Auto-deduced from single-vote general posts
+    const deduced = deduceBallotsFromResults(allResults, tableNum);
+    if (deduced && deduced.ballots > 0) {
+      return { count: deduced.ballots, isActual: true, source: 'deduced', deducedPost: deduced.postName, allotted };
+    }
+
+    // 3. Fallback to nominal roll allotted count
+    return { count: allotted, isActual: false, source: 'allotted', allotted };
+  };
+
+  const saveTablePolledBallots = async (newBpa) => {
+    tablePolledBallots = { ...newBpa };
+    try {
+      localStorage.setItem('gcc_table_polled_ballots', JSON.stringify(tablePolledBallots));
+    } catch (_) {}
+
+    const updated = currentSavedMatrix ? { ...currentSavedMatrix, tablePolledBallots } : { tablePolledBallots };
+    currentSavedMatrix = updated;
+
+    try {
+      await api.adminSaveCountingMatrix(pwd, updated);
+      await saveCountingMeta({
+        savedMatrix: updated,
+        posts: postsList,
+        finalList: candidatesList,
+        booths: boothsList,
+        settings,
+        countingTeams,
+        nominalRoll: nominalRollList,
+        results: allResults
+      });
+      showToast('Ballot Paper Account saved. UUC Tally Sheets updated with actual ballot targets.', 'success');
+    } catch (e) {
+      console.warn('Online save BPA failed, saving locally:', e);
+      await saveCountingMeta({
+        savedMatrix: updated,
+        posts: postsList,
+        finalList: candidatesList,
+        booths: boothsList,
+        settings,
+        countingTeams,
+        nominalRoll: nominalRollList,
+        results: allResults
+      });
+      showToast('Saved locally to IndexedDB (Offline mode).', 'info');
+    }
+    renderDisplay(updated);
+  };
+
   // ── Render Display ─────────────────────────────────────────────────────────
   const renderDisplay = (data) => {
+    currentSavedMatrix = data;
+    tablePolledBallots = {
+      ...(currentSavedMatrix?.tablePolledBallots || {}),
+      ...localBpa,
+      ...tablePolledBallots
+    };
     const matrix = Array.isArray(data?.matrix) ? data.matrix : [];
     const formSerials = data?.formSerials && typeof data.formSerials === 'object' ? data.formSerials : {};
     const totalRounds = Number(data?.totalRounds) || (matrix[0] ? matrix[0].length : 0);
@@ -198,6 +314,12 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       }
     }
 
+    const tablesWithPolledCount = boothsList.filter((b, t) => {
+      const bNum = b?.boothNumber || (t + 1);
+      const eff = getEffectiveVoterCountForTable(bNum);
+      return eff.isActual;
+    }).length;
+
     main.innerHTML = `
       <div id="adminCountingRoot" class="page-enter space-y-6">
         ${isMismatch ? `
@@ -225,6 +347,9 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             <p class="text-slate-400 text-sm mt-0.5">${T} tables · ${totalRounds} rounds · ${postsList.length} posts total · ${allFormsList.length} counting forms</p>
           </div>
           <div class="flex gap-2 flex-wrap items-center">
+            <button id="btnOpenBpaModal" class="btn btn-secondary border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500 hover:text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm" title="Action: Enter or auto-detect actual ballots polled in box (Ballot Paper Account / Form 5 / PO Diary) per table to calibrate UUC 25-ballot batches and expected vote totals.">
+              <span>🗳️</span> Ballot Paper Account ${tablesWithPolledCount > 0 ? `<span class="badge bg-emerald-500/30 text-emerald-200 border border-emerald-500/50 text-[10px] py-0 px-1 font-mono">${tablesWithPolledCount}/${T} Polled</span>` : ''}
+            </button>
             <a href="#/admin/officials" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold flex items-center gap-1.5" title="Action: Opens the Election Officials Team Builder to allot Counting Supervisors and Counting Assistants to tables.&#10;Prerequisite: Configure booths/tables and upload staff rosters first.">
               <span>👥</span> Allot Counting Teams
             </a>
@@ -397,7 +522,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                 ${boothsList.map((b, t) => {
                   const bNum = b.boothNumber || (t + 1);
                   const supName = getSupervisorNameForTable(bNum, countingTeams);
-                  const voterCount = getBoothVoterCount(b, nominalRollList);
+                  const eff = getEffectiveVoterCountForTable(bNum);
                   const tableRow = Array.isArray(matrix[t]) 
                     ? matrix[t] 
                     : Array.from({ length: totalRounds }, () => null);
@@ -409,7 +534,10 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                           <span class="text-sm">🪑</span>
                           <span>Table ${bNum}</span>
                         </div>
-                        ${voterCount > 0 ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[9px] px-1.5 py-0.5 border border-indigo-500/30" title="${voterCount} registered voters allotted">${voterCount} Voters</span>` : ''}
+                        ${eff.isActual 
+                          ? `<span class="badge bg-emerald-500/20 text-emerald-300 font-mono text-[9px] px-1.5 py-0.5 border border-emerald-500/40" title="Ballot Paper Account: ${eff.count} ballots in box (${eff.source === 'deduced' ? 'Auto-deduced from ' + eff.deducedPost : 'Manual Entry'}). Allotted: ${eff.allotted}">🗳️ ${eff.count} Polled</span>` 
+                          : (eff.allotted > 0 ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[9px] px-1.5 py-0.5 border border-indigo-500/30" title="${eff.allotted} registered electors allotted (Turnout unknown)">${eff.allotted} Allotted</span>` : '')
+                        }
                       </div>
                       <div class="text-[11px] text-slate-400 font-normal truncate max-w-[140px]" title="${esc(b.roomName || '')}">
                         ${esc(b.roomName || `Room ${bNum}`)}
@@ -426,8 +554,8 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                       const pn = pName(post);
                       const isPostUuc = isUuc(pn);
                       const serial = formSerials[`${t}-${r}`] || `${bNum}-${r + 1}`;
-                      const batches = isPostUuc ? getUucBatchesForVoterCount(voterCount) : [];
-                      const batchSummary = isPostUuc ? getUucBatchesSummaryText(batches, voterCount) : '';
+                      const batches = isPostUuc ? getUucBatchesForVoterCount(eff.count) : [];
+                      const batchSummary = isPostUuc ? getUucBatchesSummaryText(batches, eff.count) : '';
                       return `
                       <td class="align-top py-2.5 min-w-[125px]">
                         <div class="flex items-center justify-between gap-1 mb-1">
@@ -437,8 +565,8 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                               🖨️ Form
                             </button>
                             ${isPostUuc ? `
-                              <button type="button" class="print-single-uuc-btn px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-all cursor-pointer shadow-sm" data-table="${bNum}" title="Print UUC Tally Sheet for Table ${bNum} (${voterCount} allotted voters: ${batchSummary})">
-                                🧮 ${voterCount ? `${voterCount}v` : '2-Seat'}
+                              <button type="button" class="print-single-uuc-btn px-1.5 py-0.5 rounded text-[9px] font-bold ${eff.isActual ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'} hover:brightness-110 transition-all cursor-pointer shadow-sm" data-table="${bNum}" title="Print UUC Tally Sheet for Table ${bNum} (${eff.count} ${eff.isActual ? 'actual ballots in box' : 'allotted electors'}: ${batchSummary})">
+                                🧮 ${eff.count ? `${eff.count}b` : '2-Seat'}
                               </button>
                             ` : ''}
                           </div>
@@ -594,6 +722,73 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                 <button type="button" id="btnConfirmPrintSpecific" class="btn btn-primary text-xs font-bold px-4 py-2 flex items-center gap-1.5 shadow-lg">
                   <span>🖨️</span>
                   <span>Print Selected Forms</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Modal: Ballot Paper Account & Actual Turnout Management ──────────────── -->
+        <div id="modalBpa" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md hidden page-enter">
+          <div class="bg-slate-900 border border-emerald-500/40 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="flex items-center justify-between p-4 border-b border-white/10 bg-slate-950/60">
+              <div class="flex items-center gap-2.5">
+                <span class="text-2xl">🗳️</span>
+                <div>
+                  <h3 class="font-bold text-white text-base">Ballot Paper Account &amp; Table Turnout (Form 5 / PO Diary)</h3>
+                  <p class="text-xs text-slate-400">Set physical ballots polled per table to calibrate UUC 25-ballot milestone targets &amp; Form 6-T tally sheets.</p>
+                </div>
+              </div>
+              <button type="button" id="btnCloseBpaModal" class="text-slate-400 hover:text-white text-xl p-1 rounded-lg hover:bg-white/10 transition-colors">✕</button>
+            </div>
+
+            <!-- Quick Auto-Detect & Bulk Presets Bar -->
+            <div class="p-3.5 bg-slate-950/40 border-b border-white/10 flex flex-wrap items-center justify-between gap-2.5">
+              <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" id="btnBpaAutoDetect" class="btn btn-secondary btn-xs text-xs px-3 py-1.5 rounded-xl border-amber-500/40 bg-amber-500/15 text-amber-300 hover:bg-amber-500 hover:text-black font-bold flex items-center gap-1.5 shadow-sm" title="Inspect counting data entries for single-vote general posts (Chairman, Gen Sec, etc.) and auto-fill polled ballots count for all tables.">
+                  <span>⚡</span> Auto-Detect All from General Seats Results
+                </button>
+                <button type="button" id="btnBpaResetAllotted" class="btn btn-secondary btn-xs text-xs px-2.5 py-1.5 rounded-xl text-slate-400 hover:text-white border-white/10" title="Clear all manual overrides and revert to nominal roll allotted electors">
+                  <span>🔄</span> Reset to Allotted Electors
+                </button>
+              </div>
+              <div class="text-[11px] text-slate-400">
+                <span class="text-emerald-400 font-bold">ℹ️ Note:</span> Dual-vote UUC post is excluded; ballots are deduced from single-vote executive posts.
+              </div>
+            </div>
+
+            <!-- Table of Booths (Scrollable) -->
+            <div class="p-4 overflow-y-auto max-h-[55vh]">
+              <table class="data-table text-xs w-full">
+                <thead>
+                  <tr class="bg-black/40">
+                    <th class="w-32">Table / Booth</th>
+                    <th class="text-center w-24">Allotted Electors</th>
+                    <th class="text-left w-48">Detected from Results</th>
+                    <th class="text-center w-36">Actual Ballots in Box</th>
+                    <th class="text-center w-24">Turnout %</th>
+                    <th class="text-left">UUC 25-Ballot Batches Preview</th>
+                  </tr>
+                </thead>
+                <tbody id="bpaTableBody">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Footer Stats & Save -->
+            <div class="p-3.5 border-t border-white/10 bg-slate-950/60 flex items-center justify-between gap-3 flex-wrap">
+              <div class="flex items-center gap-4 text-xs text-slate-300">
+                <div>Total Allotted: <strong id="bpaTotalAllotted" class="text-indigo-300 font-mono text-sm">0</strong></div>
+                <div>Total Polled: <strong id="bpaTotalPolled" class="text-emerald-300 font-mono text-sm">0</strong></div>
+                <div>Overall Turnout: <strong id="bpaOverallTurnout" class="text-amber-300 font-mono text-sm">0%</strong></div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" id="btnCancelBpaModal" class="btn btn-secondary text-xs px-3 py-1.5">Cancel</button>
+                <button type="button" id="btnSaveBpaModal" class="btn btn-primary text-xs font-bold px-4 py-2 flex items-center gap-1.5 shadow-lg bg-emerald-600 hover:bg-emerald-500">
+                  <span>💾</span>
+                  <span>Save &amp; Apply to Tally Sheets</span>
                 </button>
               </div>
             </div>
@@ -909,8 +1104,8 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
 
         tables.forEach(tInfo => {
           if (targetTable && String(tInfo.tableNum) !== String(targetTable)) return;
-          const vCount = tInfo.voterCount || getVoterCountForTable(tInfo.tableNum);
-          html += buildUucTallySheetHtml(tInfo.tableNum, tInfo.roundNum, tInfo.serial, cands, collegeName, electionYear, collegeLogo, tInfo.supervisorName, tInfo.roomName, isRecount, vCount, orientation);
+          const eff = getEffectiveVoterCountForTable(tInfo.tableNum);
+          html += buildUucTallySheetHtml(tInfo.tableNum, tInfo.roundNum, tInfo.serial, cands, collegeName, electionYear, collegeLogo, tInfo.supervisorName, tInfo.roomName, isRecount, eff.count, orientation, eff.isActual, eff.allotted);
           count++;
         });
       });
@@ -953,8 +1148,8 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         // Second: If UUC, append UUC Tally Sheets
         if (isPostUuc) {
           tables.forEach(tInfo => {
-            const vCount = tInfo.voterCount || getVoterCountForTable(tInfo.tableNum);
-            html += buildUucTallySheetHtml(tInfo.tableNum, tInfo.roundNum, tInfo.serial, cands, collegeName, electionYear, collegeLogo, tInfo.supervisorName, tInfo.roomName, isRecount, vCount, orientation);
+            const eff = getEffectiveVoterCountForTable(tInfo.tableNum);
+            html += buildUucTallySheetHtml(tInfo.tableNum, tInfo.roundNum, tInfo.serial, cands, collegeName, electionYear, collegeLogo, tInfo.supervisorName, tInfo.roomName, isRecount, eff.count, orientation, eff.isActual, eff.allotted);
           });
         }
 
@@ -1152,6 +1347,180 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       executePrintForms({ specificKeys: selectedKeys, collateOrder: selCollatePrint?.value || 'table' });
     });
 
+    // ── Ballot Paper Account (BPA) Modal Logic ─────────────────────────────
+    const modalBpa = main.querySelector('#modalBpa');
+    const bpaTableBody = main.querySelector('#bpaTableBody');
+    const bpaTotalAllottedEl = main.querySelector('#bpaTotalAllotted');
+    const bpaTotalPolledEl = main.querySelector('#bpaTotalPolled');
+    const bpaOverallTurnoutEl = main.querySelector('#bpaOverallTurnout');
+
+    const recalculateBpaStats = () => {
+      if (!modalBpa) return;
+      let totalAllotted = 0;
+      let totalPolled = 0;
+
+      modalBpa.querySelectorAll('.bpa-row').forEach(row => {
+        const allotted = parseInt(row.dataset.allotted, 10) || 0;
+        const input = row.querySelector('.bpa-input-table');
+        const turnoutEl = row.querySelector('.bpa-row-turnout');
+        const previewEl = row.querySelector('.bpa-row-preview');
+
+        const val = parseInt(input?.value, 10);
+        const effectiveCount = (!isNaN(val) && val > 0) ? val : allotted;
+
+        totalAllotted += allotted;
+        if (!isNaN(val) && val > 0) {
+          totalPolled += val;
+        } else {
+          totalPolled += allotted;
+        }
+
+        // Update row turnout %
+        if (turnoutEl) {
+          if (allotted > 0 && !isNaN(val) && val > 0) {
+            const pct = Math.round((val / allotted) * 100);
+            turnoutEl.innerHTML = `<span class="font-bold font-mono ${pct > 100 ? 'text-rose-400' : 'text-emerald-300'}">${pct}%</span>`;
+          } else if (allotted > 0) {
+            turnoutEl.innerHTML = `<span class="text-slate-500 font-mono text-[11px]">(100% allotted)</span>`;
+          } else {
+            turnoutEl.textContent = '–';
+          }
+        }
+
+        // Update row preview
+        if (previewEl) {
+          const batches = getUucBatchesForVoterCount(effectiveCount);
+          const summary = getUucBatchesSummaryText(batches, effectiveCount);
+          previewEl.innerHTML = `<span class="text-slate-300 font-medium">${summary}</span> <span class="text-amber-400/90 font-bold ml-1">(${effectiveCount * 2} votes target)</span>`;
+        }
+      });
+
+      if (bpaTotalAllottedEl) bpaTotalAllottedEl.textContent = totalAllotted;
+      if (bpaTotalPolledEl) bpaTotalPolledEl.textContent = totalPolled;
+      if (bpaOverallTurnoutEl) {
+        const overallPct = totalAllotted > 0 ? Math.round((totalPolled / totalAllotted) * 100) : 0;
+        bpaOverallTurnoutEl.textContent = `${overallPct}%`;
+      }
+    };
+
+    const openBpaModal = () => {
+      if (!modalBpa || !bpaTableBody) return;
+
+      let rowsHtml = '';
+      for (let t = 0; t < T; t++) {
+        const b = boothsList[t];
+        const bNum = b?.boothNumber || (t + 1);
+        const roomName = b?.roomName || `Table ${bNum}`;
+        const allotted = getBoothVoterCount(b, nominalRollList);
+        const deduced = deduceBallotsFromResults(allResults, bNum);
+        const sNum = String(bNum);
+        const manualVal = tablePolledBallots[sNum] !== undefined ? tablePolledBallots[sNum] : '';
+
+        rowsHtml += `
+          <tr class="bpa-row hover:bg-white/[0.02]" data-table="${bNum}" data-allotted="${allotted}">
+            <td class="font-bold text-sky-300 py-2">
+              <div>Table ${bNum}</div>
+              <div class="text-[10px] text-slate-400 font-normal truncate max-w-[120px]">${esc(roomName)}</div>
+            </td>
+            <td class="text-center font-mono font-bold text-indigo-300 py-2">
+              ${allotted || '<span class="text-slate-500">0</span>'}
+            </td>
+            <td class="text-left text-[11px] py-2">
+              ${deduced && deduced.ballots > 0
+                ? `<span class="badge bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-mono text-[10.5px] cursor-pointer hover:bg-emerald-500/30 bpa-btn-apply-deduced" data-table="${bNum}" data-count="${deduced.ballots}" title="Click to use ${deduced.ballots} for Table ${bNum}">
+                     ⚡ ${deduced.ballots} (${esc(deduced.postName)})
+                   </span>`
+                : '<span class="text-slate-500 italic text-[10.5px]">No results entered yet</span>'
+              }
+            </td>
+            <td class="text-center py-2">
+              <input type="number" min="0" max="9999" class="bpa-input-table field text-center font-mono font-bold text-xs py-1 px-2 w-24 bg-black/60 border border-white/20 focus:border-emerald-400 rounded-lg text-emerald-300" data-table="${bNum}" value="${manualVal !== undefined && manualVal !== null ? manualVal : ''}" placeholder="${allotted || '0'}">
+            </td>
+            <td class="text-center bpa-row-turnout py-2">
+              –
+            </td>
+            <td class="text-left text-xs bpa-row-preview py-2">
+              –
+            </td>
+          </tr>
+        `;
+      }
+
+      bpaTableBody.innerHTML = rowsHtml;
+
+      // Attach row input listeners
+      bpaTableBody.querySelectorAll('.bpa-input-table').forEach(input => {
+        input.addEventListener('input', recalculateBpaStats);
+      });
+
+      // Attach click to apply deduced
+      bpaTableBody.querySelectorAll('.bpa-btn-apply-deduced').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tNum = btn.dataset.table;
+          const count = btn.dataset.count;
+          const input = bpaTableBody.querySelector(`.bpa-input-table[data-table="${tNum}"]`);
+          if (input && count) {
+            input.value = count;
+            recalculateBpaStats();
+          }
+        });
+      });
+
+      recalculateBpaStats();
+      modalBpa.classList.remove('hidden');
+    };
+
+    const closeBpaModal = () => {
+      if (!modalBpa) return;
+      modalBpa.classList.add('hidden');
+    };
+
+    main.querySelector('#btnOpenBpaModal')?.addEventListener('click', openBpaModal);
+    main.querySelector('#btnCloseBpaModal')?.addEventListener('click', closeBpaModal);
+    main.querySelector('#btnCancelBpaModal')?.addEventListener('click', closeBpaModal);
+
+    main.querySelector('#btnBpaAutoDetect')?.addEventListener('click', () => {
+      let detectedCount = 0;
+      modalBpa?.querySelectorAll('.bpa-row').forEach(row => {
+        const bNum = row.dataset.table;
+        const deduced = deduceBallotsFromResults(allResults, bNum);
+        if (deduced && deduced.ballots > 0) {
+          const input = row.querySelector('.bpa-input-table');
+          if (input) {
+            input.value = deduced.ballots;
+            detectedCount++;
+          }
+        }
+      });
+      recalculateBpaStats();
+      if (detectedCount > 0) {
+        showToast(`Auto-detected actual polled ballots for ${detectedCount} table(s) from results entry!`, 'success');
+      } else {
+        showToast('No single-vote results found yet for auto-deduction. Enter values manually or enter results first.', 'info');
+      }
+    });
+
+    main.querySelector('#btnBpaResetAllotted')?.addEventListener('click', () => {
+      modalBpa?.querySelectorAll('.bpa-input-table').forEach(input => {
+        input.value = '';
+      });
+      recalculateBpaStats();
+      showToast('Reset all tables to allotted nominal roll electors.', 'info');
+    });
+
+    main.querySelector('#btnSaveBpaModal')?.addEventListener('click', async () => {
+      const newBpa = {};
+      modalBpa?.querySelectorAll('.bpa-input-table').forEach(inp => {
+        const tNum = inp.dataset.table;
+        const val = parseInt(inp.value, 10);
+        if (!isNaN(val) && val > 0) {
+          newBpa[tNum] = val;
+        }
+      });
+      closeBpaModal();
+      await saveTablePolledBallots(newBpa);
+    });
+
     // Initial calculation of print labels & hints
     updatePrintScopeUI();
 
@@ -1251,17 +1620,18 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       matrix,
       formSerials,
       totalRounds: R,
-      roundLabels: Array.from({ length: R }, (_, i) => `Round ${i + 1}`)
+      roundLabels: Array.from({ length: R }, (_, i) => `Round ${i + 1}`),
+      tablePolledBallots: tablePolledBallots || {}
     };
 
     try {
       await api.adminSaveCountingMatrix(pwd, payload);
-      await saveCountingMeta({ savedMatrix: payload, posts: postsList, finalList: candidatesList, booths: boothsList, settings, countingTeams });
+      await saveCountingMeta({ savedMatrix: payload, posts: postsList, finalList: candidatesList, booths: boothsList, settings, countingTeams, nominalRoll: nominalRollList, results: allResults });
       showToast('Counting matrix generated and saved successfully.', 'success');
       renderDisplay(payload);
     } catch (e) {
       console.warn('Online save matrix failed, saving locally to IndexedDB:', e);
-      await saveCountingMeta({ savedMatrix: payload, posts: postsList, finalList: candidatesList, booths: boothsList, settings, countingTeams });
+      await saveCountingMeta({ savedMatrix: payload, posts: postsList, finalList: candidatesList, booths: boothsList, settings, countingTeams, nominalRoll: nominalRollList, results: allResults });
       showToast('Matrix saved locally to IndexedDB (Offline).', 'info');
       renderDisplay(payload);
     }
@@ -1658,7 +2028,7 @@ export function getUucBatchesSummaryText(batches, voterCount) {
  * Dynamically computes batches based on the exact voters allotted to that table / hall / booth.
  * Dynamically scales row height in portrait and landscape so the table completely fills the A4 page without leaving empty space at the bottom.
  */
-export function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, collegeName = CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad', electionYear = '', collegeLogo = '', supervisorName = '', roomName = '', isRecount = false, voterCount = 0, orientation = 'portrait') {
+export function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, collegeName = CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad', electionYear = '', collegeLogo = '', supervisorName = '', roomName = '', isRecount = false, voterCount = 0, orientation = 'portrait', isActualBallotsKnown = false, allottedElectors = 0) {
   const yearStr = electionYear || new Date().getFullYear().toString();
   const candsList = Array.isArray(candidates) ? candidates : [];
   const numVoters = Number(voterCount) || 0;
@@ -1701,15 +2071,23 @@ export function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, c
     <div style="display:flex;justify-content:space-between;align-items:center;background:#f3f4f6;border:1px solid #000;padding:2px 6px;font-size:9px;font-weight:bold;margin-bottom:3px;gap:6px;flex-wrap:nowrap;">
       <span>TABLE: <u>${tableNum}</u> ${roomName ? `<span style="font-weight:normal;color:#444">(${esc(roomName)})</span>` : ''}</span>
       <span>ROUND: <u>${roundNum}</u></span>
-      ${numVoters > 0 ? `<span>VOTERS: <u>${numVoters}</u> <span style="font-weight:normal;color:#444">(${esc(batchesSummary)})</span></span>` : ''}
+      ${isActualBallotsKnown 
+        ? `<span>BALLOTS IN BOX: <u style="background:#e0f2fe;padding:1px 5px;border:1px solid #0284c7;font-size:10px;">[ ${numVoters} ]</u> <span style="font-weight:normal;color:#444">(${esc(batchesSummary)}${allottedElectors ? ` · Turnout ${Math.round((numVoters / allottedElectors) * 100)}%` : ''})</span></span>
+           <span>EXP. VOTES (2×): <u style="background:#fef3c7;padding:1px 5px;border:1px solid #d97706;font-size:10px;">[ ${numVoters * 2} ]</u></span>`
+        : (numVoters > 0 
+            ? `<span>ALLOTTED: <u>${numVoters}</u> <span style="font-weight:normal;color:#444">(${esc(batchesSummary)})</span></span>
+               <span>BALLOTS IN BOX: [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</span>
+               <span>EXP. VOTES (2×): [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</span>`
+            : `<span>BALLOTS IN BOX: [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</span>
+               <span>EXP. VOTES (2×): [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</span>`
+          )
+      }
       <span>SUPERVISOR: <u>${esc(supervisorName || '__________________')}</u></span>
-      <span>BALLOTS IN BOX: [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</span>
-      <span>EXP. VOTES (2×): [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</span>
     </div>
 
     <!-- Squeezed 1-line instructions bar -->
     <div style="background:#fefce8;border:1px solid #d97706;padding:2px 6px;font-size:8px;line-height:1.25;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;color:#1c1917;">
-      <div><strong>📌 INSTRUCTIONS:</strong> Pre-bundle physical ballots in 25s • Each 25-ballot packet MUST yield 50 votes (2 × 25) • Verify batch total = 50 before next batch • Sum rows for Form 6.</div>
+      <div><strong>📌 INSTRUCTIONS:</strong> ${isActualBallotsKnown ? `Ballots in box = <strong>${numVoters}</strong> (Target votes = <strong>${numVoters * 2}</strong>) • ` : ''}Pre-bundle physical ballots in 25s • Each 25-ballot packet MUST yield 50 votes (2 × 25) • Verify batch total = 50 before next batch • Sum rows for Form 6.</div>
       <div style="white-space:nowrap;margin-left:8px;"><strong>Dual-Vote:</strong> 2 votes/ballot (1 vote = 1 Valid + 1 Invalid • Overvote = 2 Invalid • NOTA = 2 NOTA)</div>
     </div>
 
@@ -1783,13 +2161,13 @@ export function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, c
               = ${b.targetVotes} [ &nbsp; ]
             </td>
           `).join('')}
-          <td style="text-align:center;padding:3px 1px;font-weight:bold;color:#1e40af;font-size:8.5px;white-space:nowrap;">= ${numVoters > 0 ? numVoters * 2 : 'Total'} [ &nbsp; ]</td>
+          <td style="text-align:center;padding:3px 1px;font-weight:bold;color:#1e40af;font-size:8.5px;white-space:nowrap;">= ${numVoters > 0 ? numVoters * 2 : 'Total'} [ ${isActualBallotsKnown ? '✓' : '&nbsp;'} ]</td>
         </tr>
       </tbody>
     </table>
 
     <div style="margin-top:3px;border-top:1px dashed #777;padding-top:2px;font-size:8px;color:#555;font-style:italic;text-align:center;">
-      * Working tally sheet for Table Counting Officers. Allotted: ${numVoters || 'General'} voters (${esc(batchesSummary)}). Verify each batch milestone before opening the next. Transfer final verified totals directly onto official Counting Form (Form 6). No signatures required.
+      * Working tally sheet for Table Counting Officers. ${isActualBallotsKnown ? `Ballots in box as per Ballot Paper Account: <strong>${numVoters}</strong> (${esc(batchesSummary)}${allottedElectors ? `, Allotted: ${allottedElectors}` : ''}).` : `Allotted: ${numVoters || 'General'} electors (${esc(batchesSummary)}).`} Verify each batch milestone before opening the next. Transfer final verified totals directly onto official Counting Form (Form 6). No signatures required.
     </div>
   </div>`;
 }
