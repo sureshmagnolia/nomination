@@ -166,7 +166,12 @@ export async function saveFormResultsLocally(tableNum, postName, roundNum, formS
   });
 
   return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve({ ok: true, syncId });
+    tx.oncomplete = () => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('app:sync-state-changed'));
+      }
+      resolve({ ok: true, syncId });
+    };
     tx.onerror = () => reject(tx.error);
   });
 }
@@ -208,7 +213,12 @@ export async function deleteFormResultsLocally(tableNum, postName, formSerial) {
     };
 
     return new Promise((resolve, reject) => {
-      tx.oncomplete = () => resolve({ ok: true });
+      tx.oncomplete = () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('app:sync-state-changed'));
+        }
+        resolve({ ok: true });
+      };
       tx.onerror = () => reject(tx.error);
     });
   } catch (err) {
@@ -328,7 +338,12 @@ export async function updateSyncQueueItem(id, updates = {}) {
       }
     };
     return new Promise((resolve) => {
-      tx.oncomplete = () => resolve(true);
+      tx.oncomplete = () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('app:sync-state-changed'));
+        }
+        resolve(true);
+      };
       tx.onerror = () => resolve(false);
     });
   } catch (err) {
@@ -345,7 +360,12 @@ export async function removeSyncQueueItem(id) {
     const { tx, store } = await txStore('sync_queue', 'readwrite');
     store.delete(id);
     return new Promise((resolve) => {
-      tx.oncomplete = () => resolve(true);
+      tx.oncomplete = () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('app:sync-state-changed'));
+        }
+        resolve(true);
+      };
       tx.onerror = () => resolve(false);
     });
   } catch (err) {
@@ -359,6 +379,37 @@ export async function removeSyncQueueItem(id) {
 export async function getPendingSyncCount() {
   const queue = await getSyncQueue();
   return queue.filter(i => i.status === 'pending' || i.status === 'error' || i.status === 'syncing').length;
+}
+
+/**
+ * Flushes all pending forms in the results sync queue to the online server database.
+ */
+export async function flushResultsSyncQueue(saveResultsApiFn, getPasswordFn) {
+  const queue = await getSyncQueue();
+  const pending = queue.filter(i => i.status === 'pending' || i.status === 'error' || i.status === 'syncing');
+  if (pending.length === 0) return 0;
+
+  const pwd = typeof getPasswordFn === 'function' ? getPasswordFn() : getPasswordFn;
+  if (!pwd) return 0;
+
+  let successCount = 0;
+  for (const item of pending) {
+    if (!navigator.onLine) break;
+    try {
+      await updateSyncQueueItem(item.id, { status: 'syncing' });
+      await saveResultsApiFn(pwd, item.payload);
+      await updateSyncQueueItem(item.id, { status: 'synced', errorMsg: null });
+      await removeSyncQueueItem(item.id);
+      successCount++;
+    } catch (err) {
+      console.warn('Results queue flush error for item', item.id, err);
+      await updateSyncQueueItem(item.id, { status: 'error', errorMsg: err.message });
+      if (!navigator.onLine || err.message?.includes('Network') || err.message?.includes('fetch')) {
+        break;
+      }
+    }
+  }
+  return successCount;
 }
 
 // ─── Emergency Backup Export & Import (USB Safety Net) ─────────────────────────

@@ -907,6 +907,16 @@ export default async function handler(req, res) {
 
     // ─── GET ENDPOINTS ────────────────────────────────────────────────────────
 
+    if (action === 'ping') {
+      try {
+        await sql`SELECT 1`;
+        return jsonOut(res, { ok: true, db: true, time: Date.now() });
+      } catch (dbErr) {
+        console.error('Ping DB health check failed:', dbErr);
+        return jsonOut(res, { ok: false, db: false, error: 'DB_UNREACHABLE', message: dbErr.message, time: Date.now() }, 503);
+      }
+    }
+
     if (action === 'getPublicNominations') {
       const noms = await sql`SELECT post, candidate_serial, proposer_serial, seconder_serial, status, physical_received FROM nominations WHERE status != 'Rejected'`;
       return jsonOut(res, noms.map(n => ({

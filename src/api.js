@@ -11,8 +11,16 @@ import {
   enqueueAdminMutation,
   flushAdminOutbox,
   subscribeAdminSync,
-  getAdminOutboxCount
+  getAdminOutboxCount,
+  checkCloudReachable,
+  markCloudSuccess,
+  markCloudFailure,
+  isCloudOnline,
+  getTotalPendingCount
 } from './offlineAdminStorage.js';
+import {
+  flushResultsSyncQueue
+} from './offlineStorage.js';
 
 const BASE_URL = CONFIG.API_BASE_URL;
 
@@ -95,9 +103,11 @@ async function processQueue() {
         break;
       }
       if (data.error) throw new Error(data.error);
+      markCloudSuccess();
       if (task.resolve) task.resolve(data);
     } catch (err) {
       console.error("Background sync failed for", task.body.action, err);
+      markCloudFailure(err);
       if (task.reject) task.reject(err);
     }
     _syncQueue.shift();
@@ -161,12 +171,14 @@ async function get(params) {
     }
     if (data.error) throw new Error(data.error);
 
+    markCloudSuccess();
     _cache[cacheKey] = data;
     if (isAdminAction) {
       setAdminCached(cacheKey, data).catch(() => {});
     }
     return data;
   } catch (netErr) {
+    markCloudFailure(netErr);
     // If network fails (or device is offline), check IndexedDB fallback for admin data
     if (isAdminAction || params.action === 'getPosts' || params.action === 'getNominalRoll' || params.action === 'getSettings') {
       const local = await getAdminCached(cacheKey);
@@ -191,26 +203,32 @@ async function post(body) {
     throw new Error('Internet connection required. Please connect to the internet to submit your nomination.');
   }
 
-  const res = await fetch(BASE_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    let errMessage = `Network error: ${res.status}`;
-    try { const errData = await res.json(); if (errData.error) errMessage = errData.error; } catch(e) {}
-    if (errMessage.includes('UNAUTHORIZED_SESSION') || errMessage === 'SESSION_EXPIRED') {
-      handleSessionExpired();
+  try {
+    const res = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      let errMessage = `Network error: ${res.status}`;
+      try { const errData = await res.json(); if (errData.error) errMessage = errData.error; } catch(e) {}
+      if (errMessage.includes('UNAUTHORIZED_SESSION') || errMessage === 'SESSION_EXPIRED') {
+        handleSessionExpired();
+      }
+      throw new Error(errMessage);
     }
-    throw new Error(errMessage);
+    const data = await res.json();
+    if (data.error === 'SESSION_EXPIRED' || (data.error && data.error.includes('UNAUTHORIZED_SESSION'))) {
+      handleSessionExpired();
+      throw new Error('SESSION_EXPIRED');
+    }
+    if (data.error) throw new Error(data.error);
+    markCloudSuccess();
+    return data;
+  } catch (postErr) {
+    markCloudFailure(postErr);
+    throw postErr;
   }
-  const data = await res.json();
-  if (data.error === 'SESSION_EXPIRED' || (data.error && data.error.includes('UNAUTHORIZED_SESSION'))) {
-    handleSessionExpired();
-    throw new Error('SESSION_EXPIRED');
-  }
-  if (data.error) throw new Error(data.error);
-  return data;
 }
 
 // Background queued post: For Admin mutations, persists in IndexedDB outbox with auto-sync
@@ -925,7 +943,21 @@ export const api = {
   },
 
   // ─── Offline-First Admin Sync API ───────────────────────────────────────────
-  syncAdminNow: () => flushAdminOutbox(post, getSessionToken),
+  syncAdminNow: async () => {
+    const reachable = await checkCloudReachable(true);
+    if (!reachable) {
+      throw new Error('Online database is currently unreachable. Check your internet connection.');
+    }
+    await flushAdminOutbox(post, getSessionToken);
+    const pwd = localStorage.getItem('adminPwd');
+    if (pwd) {
+      await flushResultsSyncQueue(api.adminSaveResults, pwd);
+    }
+    return { ok: true };
+  },
+  checkCloudReachable,
+  isCloudOnline,
+  getTotalPendingCount,
   subscribeAdminSync,
   getAdminOutboxCount,
 };

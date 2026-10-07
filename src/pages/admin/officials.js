@@ -267,23 +267,32 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     booths = Array.from({ length: 11 }, (_, i) => ({ boothNumber: i + 1, roomName: `Booth ${i + 1}`, classes: [] }));
   }
 
+  // Polling Teams: Server is authoritative truth across PCs
   let pollingTeams = [];
   const cachedPoll = localStorage.getItem('gcc_polling_teams');
+  let localPolling = [];
   if (cachedPoll !== null) {
-    try { pollingTeams = JSON.parse(cachedPoll); } catch (_) { pollingTeams = []; }
-  } else if (Array.isArray(initialOfficialsData?.pollingTeams)) {
+    try { localPolling = JSON.parse(cachedPoll); } catch (_) { localPolling = []; }
+  }
+  if (Array.isArray(initialOfficialsData?.pollingTeams) && initialOfficialsData.pollingTeams.length > 0) {
     pollingTeams = initialOfficialsData.pollingTeams;
     localStorage.setItem('gcc_polling_teams', JSON.stringify(pollingTeams));
+  } else if (localPolling.length > 0) {
+    pollingTeams = localPolling;
   }
 
+  // Counting Teams: Server is authoritative truth across PCs
   let countingTeams = [];
   const cachedCount = localStorage.getItem('gcc_counting_teams');
+  let localCounting = [];
   if (cachedCount !== null) {
-    try { countingTeams = JSON.parse(cachedCount); } catch (_) { countingTeams = []; }
+    try { localCounting = JSON.parse(cachedCount); } catch (_) { localCounting = []; }
   }
-  if ((!Array.isArray(countingTeams) || countingTeams.length === 0) && Array.isArray(initialOfficialsData?.countingTeams) && initialOfficialsData.countingTeams.length > 0) {
+  if (Array.isArray(initialOfficialsData?.countingTeams) && initialOfficialsData.countingTeams.length > 0) {
     countingTeams = initialOfficialsData.countingTeams;
     localStorage.setItem('gcc_counting_teams', JSON.stringify(countingTeams));
+  } else if (localCounting.length > 0) {
+    countingTeams = localCounting;
   }
   // Auto-recover from statutory duty roster backup if counting teams are unassigned or missing supervisors
   if (!Array.isArray(countingTeams) || countingTeams.length === 0 || !countingTeams.some(t => t.supervisor)) {
@@ -291,13 +300,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     localStorage.setItem('gcc_counting_teams', JSON.stringify(countingTeams));
   }
 
+  // Election Observers
   let observers = [];
   const cachedObs = localStorage.getItem('gcc_election_observers');
+  let localObs = [];
   if (cachedObs !== null) {
-    try { observers = JSON.parse(cachedObs); } catch (_) { observers = []; }
-  } else if (Array.isArray(initialOfficialsData?.observers)) {
+    try { localObs = JSON.parse(cachedObs); } catch (_) { localObs = []; }
+  }
+  if (Array.isArray(initialOfficialsData?.observers) && initialOfficialsData.observers.length > 0) {
     observers = initialOfficialsData.observers;
     localStorage.setItem('gcc_election_observers', JSON.stringify(observers));
+  } else if (localObs.length > 0) {
+    observers = localObs;
   }
 
   const isObserver = (name) => {
@@ -305,13 +319,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     return observers.some(o => o.name === name);
   };
 
+  // Campus Discipline Committee
   let disciplineCharge = [];
   const cachedDisc = localStorage.getItem('gcc_election_discipline');
+  let localDisc = [];
   if (cachedDisc !== null) {
-    try { disciplineCharge = JSON.parse(cachedDisc); } catch (_) { disciplineCharge = []; }
-  } else if (Array.isArray(initialOfficialsData?.disciplineCharge)) {
+    try { localDisc = JSON.parse(cachedDisc); } catch (_) { localDisc = []; }
+  }
+  if (Array.isArray(initialOfficialsData?.disciplineCharge) && initialOfficialsData.disciplineCharge.length > 0) {
     disciplineCharge = initialOfficialsData.disciplineCharge;
     localStorage.setItem('gcc_election_discipline', JSON.stringify(disciplineCharge));
+  } else if (localDisc.length > 0) {
+    disciplineCharge = localDisc;
   }
 
   const isDiscipline = (name) => {
@@ -320,13 +339,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     return disciplineCharge.some(d => String(d.name || '').trim().toLowerCase() === clean);
   };
 
+  // Grievance Redressal Committee
   let grievanceCell = [];
   const cachedGriev = localStorage.getItem('gcc_election_grievance');
+  let localGriev = [];
   if (cachedGriev !== null) {
-    try { grievanceCell = JSON.parse(cachedGriev); } catch (_) { grievanceCell = []; }
-  } else if (Array.isArray(initialOfficialsData?.grievanceCell)) {
+    try { localGriev = JSON.parse(cachedGriev); } catch (_) { localGriev = []; }
+  }
+  if (Array.isArray(initialOfficialsData?.grievanceCell) && initialOfficialsData.grievanceCell.length > 0) {
     grievanceCell = initialOfficialsData.grievanceCell;
     localStorage.setItem('gcc_election_grievance', JSON.stringify(grievanceCell));
+  } else if (localGriev.length > 0) {
+    grievanceCell = localGriev;
   }
 
   const isGrievance = (name) => {
@@ -338,11 +362,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   // Returning Officer (RO) State
   let roOfficer = null;
   const cachedRo = localStorage.getItem('gcc_election_ro');
-  if (cachedRo) {
-    try { roOfficer = JSON.parse(cachedRo); } catch (_) { roOfficer = null; }
-  } else if (initialOfficialsData?.roOfficer) {
+  if (initialOfficialsData?.roOfficer) {
     roOfficer = initialOfficialsData.roOfficer;
     localStorage.setItem('gcc_election_ro', JSON.stringify(roOfficer));
+  } else if (cachedRo) {
+    try { roOfficer = JSON.parse(cachedRo); } catch (_) { roOfficer = null; }
   }
   if (!roOfficer) {
     const defaultRoName = settings?.returningOfficerName || 'Suresh P';
@@ -359,22 +383,55 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   // Assistant Returning Officers (AROs) State (Can have 1 or more AROs)
   let aroOfficers = [];
   const cachedAros = localStorage.getItem('gcc_election_aros');
+  let localAros = [];
   if (cachedAros) {
-    try { aroOfficers = JSON.parse(cachedAros); } catch (_) { aroOfficers = []; }
-  } else if (Array.isArray(initialOfficialsData?.aroOfficers)) {
+    try { localAros = JSON.parse(cachedAros); } catch (_) { localAros = []; }
+  }
+  if (Array.isArray(initialOfficialsData?.aroOfficers) && initialOfficialsData.aroOfficers.length > 0) {
     aroOfficers = initialOfficialsData.aroOfficers;
     localStorage.setItem('gcc_election_aros', JSON.stringify(aroOfficers));
+  } else if (localAros.length > 0) {
+    aroOfficers = localAros;
   }
 
-  // Core Committee State (Faculty assigned to assist RO, eligible from all faculty including excluded)
+  // Core Committee State (Faculty assigned to assist RO across polling & counting)
   let coreCommittee = [];
   const cachedCore = localStorage.getItem('gcc_election_core_committee');
+  let localCore = [];
   if (cachedCore) {
-    try { coreCommittee = JSON.parse(cachedCore); } catch (_) { coreCommittee = []; }
-  } else if (Array.isArray(initialOfficialsData?.coreCommittee)) {
+    try { localCore = JSON.parse(cachedCore); } catch (_) { localCore = []; }
+  }
+  if (Array.isArray(initialOfficialsData?.coreCommittee) && initialOfficialsData.coreCommittee.length > 0) {
     coreCommittee = initialOfficialsData.coreCommittee;
     localStorage.setItem('gcc_election_core_committee', JSON.stringify(coreCommittee));
+  } else if (localCore.length > 0) {
+    coreCommittee = localCore;
   }
+
+  // Auto-reconcile and ensure any Core In-Charge assigned on polling or counting teams is registered in coreCommittee
+  [...pollingTeams, ...countingTeams].forEach(t => {
+    if (t?.coreInCharge?.name) {
+      const match = coreCommittee.find(c => String(c.name || '').trim().toLowerCase() === String(t.coreInCharge.name).trim().toLowerCase());
+      if (!match) {
+        const p = getPerson(t.coreInCharge.name);
+        coreCommittee.push({
+          name: t.coreInCharge.name,
+          pen: t.coreInCharge.pen || p?.pen || '',
+          designation: t.coreInCharge.designation || p?.designation || 'Faculty',
+          department: t.coreInCharge.department || p?.department || '',
+          seniority: t.coreInCharge.seniority || p?.seniority || 999
+        });
+      }
+    }
+  });
+
+  // Ensure persistent teamNumber for formed polling and counting teams
+  pollingTeams.forEach((t, idx) => {
+    if (!t.teamNumber) t.teamNumber = idx + 1;
+  });
+  countingTeams.forEach((t, idx) => {
+    if (!t.teamNumber) t.teamNumber = idx + 1;
+  });
 
   const isRo = (name, pen) => {
     if (!roOfficer?.name) return false;
@@ -2109,7 +2166,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
   // Helper to render Core Committee In-Charge options for Polling Booths
   const renderPollingCoreInChargeOptions = (boothNumber, currentSelectedName) => {
-    const sortedCore = [...coreCommittee].sort(compareOfficials);
+    let pool = [...coreCommittee];
+    if (currentSelectedName && !pool.some(c => String(c.name || '').trim().toLowerCase() === String(currentSelectedName).trim().toLowerCase())) {
+      const p = getPerson(currentSelectedName);
+      pool.push({
+        name: currentSelectedName,
+        pen: p?.pen || '',
+        designation: p?.designation || 'Faculty',
+        department: p?.department || '',
+        seniority: p?.seniority || 999
+      });
+    }
+    const sortedCore = pool.sort(compareOfficials);
     return sortedCore.map(c => {
       const isSelected = currentSelectedName === c.name;
       const bInCharge = pollingTeams.find(t => t.coreInCharge && t.coreInCharge.name === c.name && t.boothNumber !== boothNumber);
@@ -2117,11 +2185,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       let inChargeTag = '';
       if (bInCharge && tInCharge) {
-        inChargeTag = `[⚠️ In-Charge: Booth ${bInCharge.boothNumber} & Table ${tInCharge.tableNumber}]`;
+        inChargeTag = `[⚠️ In-Charge: Booth ${bInCharge.boothNumber} & Table ${tInCharge.tableNumber || tInCharge.boothNumber}]`;
       } else if (bInCharge) {
         inChargeTag = `[⚠️ In-Charge: Booth ${bInCharge.boothNumber}]`;
       } else if (tInCharge) {
-        inChargeTag = `[In-Charge: Table ${tInCharge.tableNumber}]`;
+        inChargeTag = `[In-Charge: Table ${tInCharge.tableNumber || tInCharge.boothNumber}]`;
       }
 
       const otherFlags = getOfficialStatusFlags(c.name, c.pen).filter(fl => !fl.startsWith('⭐ Core'));
@@ -2138,17 +2206,28 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
   // Helper to render Core Committee In-Charge options for Counting Tables
   const renderCountingCoreInChargeOptions = (tableNumber, currentSelectedName) => {
-    const sortedCore = [...coreCommittee].sort(compareOfficials);
+    let pool = [...coreCommittee];
+    if (currentSelectedName && !pool.some(c => String(c.name || '').trim().toLowerCase() === String(currentSelectedName).trim().toLowerCase())) {
+      const p = getPerson(currentSelectedName);
+      pool.push({
+        name: currentSelectedName,
+        pen: p?.pen || '',
+        designation: p?.designation || 'Faculty',
+        department: p?.department || '',
+        seniority: p?.seniority || 999
+      });
+    }
+    const sortedCore = pool.sort(compareOfficials);
     return sortedCore.map(c => {
       const isSelected = currentSelectedName === c.name;
-      const tInCharge = countingTeams.find(t => t.coreInCharge && t.coreInCharge.name === c.name && t.tableNumber !== tableNumber);
+      const tInCharge = countingTeams.find(t => t.coreInCharge && t.coreInCharge.name === c.name && (t.tableNumber || t.boothNumber) !== tableNumber);
       const bInCharge = pollingTeams.find(t => t.coreInCharge && t.coreInCharge.name === c.name);
 
       let inChargeTag = '';
       if (bInCharge && tInCharge) {
-        inChargeTag = `[⚠️ In-Charge: Table ${tInCharge.tableNumber} & Booth ${bInCharge.boothNumber}]`;
+        inChargeTag = `[⚠️ In-Charge: Table ${tInCharge.tableNumber || tInCharge.boothNumber} & Booth ${bInCharge.boothNumber}]`;
       } else if (tInCharge) {
-        inChargeTag = `[⚠️ In-Charge: Table ${tInCharge.tableNumber}]`;
+        inChargeTag = `[⚠️ In-Charge: Table ${tInCharge.tableNumber || tInCharge.boothNumber}]`;
       } else if (bInCharge) {
         inChargeTag = `[In-Charge: Booth ${bInCharge.boothNumber}]`;
       }
@@ -2713,8 +2792,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             </div>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
-            <button id="btnPrintMasterDutyListTop" class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 flex items-center gap-1.5 shadow" title="Print Consolidated Master Duty List for all Polling and Counting Personnel">
-              🖨️ Master Duty List (Polling &amp; Counting)
+            <button id="btnPrintMasterDutyListTop" class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 flex items-center gap-1.5 shadow" title="Print Consolidated Master Duty List (Full Details Revealed)">
+              🖨️ Master Duty List (Full)
+            </button>
+            <button id="btnPrintMasterDutyListConcealedTop" class="btn btn-secondary border-cyan-500/50 text-cyan-300 hover:text-white hover:bg-cyan-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Print Master Duty List with Duty & Station concealed (Roll Call / Attendance Mode)">
+              🔒 Master Roll (Concealed Stations)
             </button>
             <button id="btnOpenRoAroModalTop" class="btn btn-secondary border-yellow-500/50 text-yellow-300 hover:text-white hover:bg-yellow-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Configure Returning Officer and Assistant Returning Officers">
               👑 RO &amp; AROs (${1 + aroOfficers.length})
@@ -2856,6 +2938,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <p class="text-xs text-slate-400">Each booth needs 1 Presiding Officer (Seniormost regular faculty), 2 Polling Officers (Regular faculty, Guest faculty, or Librarians), and 1 Polling Assistant (Non-teaching staff). Double duty with counting tables is strictly minimized.</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
+              <button id="btnOpenSwapPollingModal" class="btn btn-secondary border-amber-500/50 text-amber-300 hover:bg-amber-500/20 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Assign or swap formed teams between polling booths without altering team compositions">
+                🔄 Assign / Swap Booth Teams
+              </button>
+              <button id="btnPrintMasterDutyListConcealedPolling" class="btn btn-secondary border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/20 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Print Master Duty List with Duty & Station concealed (Roll Call / Attendance Mode)">
+                🔒 Concealed Stations
+              </button>
               <button id="btnAutoAllotPolling" class="btn btn-primary bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 flex items-center gap-1.5 shadow" title="Auto-allot empty polling slots while preserving all manually chosen officials">
                 ⚡ Auto-Allot Polling Teams
               </button>
@@ -3136,6 +3224,25 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                       </div>
                     </div>
 
+                    <!-- Formed Team Assignment & Swapping Bar -->
+                    <div class="flex items-center justify-between bg-slate-900/90 border border-amber-500/40 rounded-lg p-2 gap-2 mt-2">
+                      <div class="flex items-center gap-1.5 min-w-0">
+                        <span class="text-xs">👥</span>
+                        <label class="text-[11px] font-bold text-amber-300 whitespace-nowrap">Assigned Team:</label>
+                        <select class="bg-slate-800 border border-amber-500/40 rounded px-2 py-1 text-xs text-amber-200 font-bold focus:outline-none select-assign-polling-team" data-booth="${b.boothNumber}">
+                          ${pollingTeams.map((pt, ptIdx) => {
+                            const tNum = pt.teamNumber || (ptIdx + 1);
+                            const isCur = pt.boothNumber === b.boothNumber;
+                            const poName = pt.presidingOfficer?.name ? `PO: ${pt.presidingOfficer.name}` : (pt.coreInCharge?.name ? `Core: ${pt.coreInCharge.name}` : 'Unassigned');
+                            return `<option value="${tNum}" ${isCur ? 'selected' : ''}>Team ${tNum} (${poName}) ${isCur ? '✓ [Current]' : ''}</option>`;
+                          }).join('')}
+                        </select>
+                      </div>
+                      <button type="button" class="btn btn-secondary text-[11px] py-1 px-2 border-amber-500/40 text-amber-300 hover:bg-amber-500/20 btn-quick-swap-booth" data-booth="${b.boothNumber}" title="Swap entire formed team with another booth without changing team members">
+                        ⇄ Swap Booth
+                      </button>
+                    </div>
+
                     ${hierarchyViolation ? `
                       <div class="mt-2.5 p-2 rounded bg-amber-500/20 border border-amber-500/40 text-[11px] text-amber-200 flex items-center justify-between gap-1">
                         <span>⚠️ Hierarchy Alert: Polling Officer is more senior than Presiding Officer!</span>
@@ -3270,8 +3377,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <button id="btnRestoreOfficialDutyRoster" class="btn btn-secondary border-purple-500/50 bg-purple-900/40 text-purple-200 hover:bg-purple-600 hover:text-white text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Restores all 12 tables to the verified statutory roster from Order No: GCC/ELEC/2026/MASTER-DUTY-01">
                 📋 Restore Official Order
               </button>
-              <button id="btnPrintMasterDutyListCounting" class="btn btn-primary bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs px-3.5 py-2 flex items-center gap-1.5 shadow" title="Print Master Duty List with Observers 1st and Department-wise Officials">
-                🖨️ Master Duty List
+              <button id="btnOpenSwapCountingModal" class="btn btn-secondary border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/20 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Assign or swap formed teams between counting tables without altering team compositions">
+                🔄 Assign / Swap Table Teams
+              </button>
+              <button id="btnPrintMasterDutyListCounting" class="btn btn-primary bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs px-3.5 py-2 flex items-center gap-1.5 shadow" title="Print Master Duty List (Full Details)">
+                🖨️ Master Duty List (Full)
+              </button>
+              <button id="btnPrintMasterDutyListConcealedCounting" class="btn btn-secondary border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/20 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Print Master Duty List with Duty & Station concealed (Roll Call / Attendance Mode)">
+                🔒 Concealed Stations
               </button>
               <button id="btnPrintCountingOrders" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5">
                 🖨️ Print Counting Orders
@@ -3327,6 +3440,25 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           <span class="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded border border-white/10">Fresh Team</span>
                         `}
                       </div>
+                    </div>
+
+                    <!-- Formed Counting Team Assignment & Swapping Bar -->
+                    <div class="flex items-center justify-between bg-slate-900/90 border border-emerald-500/40 rounded-lg p-2 gap-2 mt-2">
+                      <div class="flex items-center gap-1.5 min-w-0">
+                        <span class="text-xs">👥</span>
+                        <label class="text-[11px] font-bold text-emerald-300 whitespace-nowrap">Assigned Team:</label>
+                        <select class="bg-slate-800 border border-emerald-500/40 rounded px-2 py-1 text-xs text-emerald-200 font-bold focus:outline-none select-assign-counting-team" data-table="${b.boothNumber}">
+                          ${countingTeams.map((ct, ctIdx) => {
+                            const tNum = ct.teamNumber || (ctIdx + 1);
+                            const isCur = String(ct.tableNumber || ct.boothNumber) === String(b.boothNumber);
+                            const supName = ct.supervisor?.name ? `Sup: ${ct.supervisor.name}` : (ct.coreInCharge?.name ? `Core: ${ct.coreInCharge.name}` : 'Unassigned');
+                            return `<option value="${tNum}" ${isCur ? 'selected' : ''}>Team ${tNum} (${supName}) ${isCur ? '✓ [Current]' : ''}</option>`;
+                          }).join('')}
+                        </select>
+                      </div>
+                      <button type="button" class="btn btn-secondary text-[11px] py-1 px-2 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20 btn-quick-swap-table" data-table="${b.boothNumber}" title="Swap entire formed team with another table without changing team members">
+                        ⇄ Swap Table
+                      </button>
                     </div>
 
                     ${hierarchyViolation ? `
@@ -4530,13 +4662,337 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       openDutyOrdersWindow('counting');
     });
 
-    // Print Master Duty List (Polling & Counting)
+    // Print Master Duty List (Full Details)
     const handlePrintMasterDutyList = () => {
-      openMasterDutyListWindow();
+      openMasterDutyListWindow(false);
     };
     main.querySelector('#btnPrintMasterDutyListTop')?.addEventListener('click', handlePrintMasterDutyList);
     main.querySelector('#btnPrintMasterDutyListPolling')?.addEventListener('click', handlePrintMasterDutyList);
     main.querySelector('#btnPrintMasterDutyListCounting')?.addEventListener('click', handlePrintMasterDutyList);
+
+    // Print Master Duty List (Concealed Stations for Roll Call)
+    const handlePrintMasterDutyListConcealed = () => {
+      openMasterDutyListWindow(true);
+    };
+    main.querySelector('#btnPrintMasterDutyListConcealedTop')?.addEventListener('click', handlePrintMasterDutyListConcealed);
+    main.querySelector('#btnPrintMasterDutyListConcealedPolling')?.addEventListener('click', handlePrintMasterDutyListConcealed);
+    main.querySelector('#btnPrintMasterDutyListConcealedCounting')?.addEventListener('click', handlePrintMasterDutyListConcealed);
+
+    // Swapping / Reassigning Formed Polling Teams
+    const swapPollingTeams = async (boothA, boothB) => {
+      const bNumA = parseInt(boothA, 10);
+      const bNumB = parseInt(boothB, 10);
+      if (isNaN(bNumA) || isNaN(bNumB) || bNumA === bNumB) return;
+      const teamA = pollingTeams.find(t => t.boothNumber === bNumA);
+      const teamB = pollingTeams.find(t => t.boothNumber === bNumB);
+      if (!teamA || !teamB) {
+        showToast('Both booth teams must exist to swap.', 'error');
+        return;
+      }
+      const bObjA = booths.find(x => x.boothNumber === bNumA);
+      const bObjB = booths.find(x => x.boothNumber === bNumB);
+
+      teamA.boothNumber = bNumB;
+      teamA.roomName = bObjB?.roomName || `Booth ${bNumB}`;
+
+      teamB.boothNumber = bNumA;
+      teamB.roomName = bObjA?.roomName || `Booth ${bNumA}`;
+
+      await saveAll(true);
+      showToast(`Swapped: Team ${teamA.teamNumber || bNumA} assigned to Booth ${bNumB}, Team ${teamB.teamNumber || bNumB} assigned to Booth ${bNumA}. (Officials preserved intact)`, 'success');
+      renderUI();
+    };
+
+    const openSwapBoothModal = (curBooth) => {
+      const bObj = booths.find(x => x.boothNumber === curBooth);
+      const otherBooths = booths.filter(x => x.boothNumber !== curBooth);
+      if (otherBooths.length === 0) {
+        showToast('Only one booth configured.', 'info');
+        return;
+      }
+
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+      modal.innerHTML = `
+        <div class="glass border border-amber-500/40 rounded-2xl w-full max-w-lg bg-slate-900/95 shadow-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-white/10 pb-3">
+            <h4 class="font-bold text-white text-base flex items-center gap-2">
+              <span>🔄</span> Swap Booth Team (Booth ${curBooth})
+            </h4>
+            <button class="text-slate-400 hover:text-white text-xl font-bold btn-close-swap-modal">&times;</button>
+          </div>
+          <p class="text-xs text-slate-300">
+            Swap the entire formed team currently at <strong>Booth ${curBooth} (${esc(bObj?.roomName || `Booth ${curBooth}`)})</strong> with another booth's team. Team composition remains 100% intact.
+          </p>
+          <div class="space-y-2">
+            <label class="text-xs font-bold text-amber-300">Select Target Booth to Swap With:</label>
+            <select id="selectTargetSwapBooth" class="w-full bg-slate-800 border border-amber-500/40 rounded-lg p-2.5 text-xs text-white font-bold focus:outline-none">
+              ${otherBooths.map(ob => {
+                const oTeam = pollingTeams.find(t => t.boothNumber === ob.boothNumber);
+                const poName = oTeam?.presidingOfficer?.name ? `PO: ${oTeam.presidingOfficer.name}` : 'Unassigned';
+                return `<option value="${ob.boothNumber}">Booth ${ob.boothNumber} (${esc(ob.roomName || `Booth ${ob.boothNumber}`)}) — Team ${oTeam?.teamNumber || ob.boothNumber} (${poName})</option>`;
+              }).join('')}
+            </select>
+          </div>
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+            <button class="btn btn-secondary text-xs px-3.5 py-2 btn-close-swap-modal">Cancel</button>
+            <button id="btnConfirmSwapBooth" class="btn btn-primary bg-amber-600 hover:bg-amber-500 text-black font-bold text-xs px-4 py-2">
+              Confirm Swap
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      modal.querySelectorAll('.btn-close-swap-modal').forEach(b => b.onclick = () => modal.remove());
+      modal.querySelector('#btnConfirmSwapBooth').onclick = async () => {
+        const targetBooth = parseInt(modal.querySelector('#selectTargetSwapBooth').value, 10);
+        modal.remove();
+        await swapPollingTeams(curBooth, targetBooth);
+      };
+    };
+
+    const openSwapPollingTeamsModal = () => {
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+      modal.innerHTML = `
+        <div class="glass border border-amber-500/40 rounded-2xl w-full max-w-2xl bg-slate-900/95 shadow-2xl p-5 space-y-4 max-h-[90vh] flex flex-col">
+          <div class="flex items-center justify-between border-b border-white/10 pb-3">
+            <div>
+              <h4 class="font-bold text-white text-base flex items-center gap-2">
+                <span>🔄</span> Assign / Reallocate Formed Teams to Polling Booths
+              </h4>
+              <p class="text-xs text-slate-400">Map your formed teams to specific physical polling booths without changing who is on which team.</p>
+            </div>
+            <button class="text-slate-400 hover:text-white text-xl font-bold btn-close-swap-all-modal">&times;</button>
+          </div>
+          <div class="overflow-y-auto space-y-3 flex-1 pr-1">
+            <div class="text-[11px] text-amber-200/90 bg-amber-950/40 p-2.5 rounded-lg border border-amber-500/30">
+              💡 Select which Formed Team (PO, PO1, PO2, PA) is stationed at each Booth. Choosing a team automatically swaps with its current station.
+            </div>
+            <div class="divide-y divide-white/10">
+              ${booths.map(b => {
+                const curTeam = pollingTeams.find(t => t.boothNumber === b.boothNumber);
+                const curTeamNum = curTeam?.teamNumber || b.boothNumber;
+                return `
+                  <div class="py-2.5 flex items-center justify-between gap-3">
+                    <div>
+                      <div class="font-bold text-white text-xs">Booth ${b.boothNumber}: ${esc(b.roomName || `Booth ${b.boothNumber}`)}</div>
+                      <div class="text-[10px] text-slate-400">${getBoothVoterCount(b)} voters</div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <select class="bg-slate-800 border border-amber-500/40 rounded px-2.5 py-1.5 text-xs text-amber-200 font-bold focus:outline-none select-modal-assign-poll" data-booth="${b.boothNumber}">
+                        ${pollingTeams.map((pt, ptIdx) => {
+                          const tNum = pt.teamNumber || (ptIdx + 1);
+                          const isSel = tNum === curTeamNum;
+                          const poName = pt.presidingOfficer?.name ? `PO: ${pt.presidingOfficer.name}` : 'Unassigned';
+                          return `<option value="${tNum}" ${isSel ? 'selected' : ''}>Team ${tNum} (${poName})</option>`;
+                        }).join('')}
+                      </select>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+          <div class="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
+            <button class="btn btn-secondary text-xs px-4 py-2 btn-close-swap-all-modal">Done</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      modal.querySelectorAll('.btn-close-swap-all-modal').forEach(b => b.onclick = () => modal.remove());
+      modal.querySelectorAll('.select-modal-assign-poll').forEach(sel => {
+        sel.addEventListener('change', async (e) => {
+          const curBooth = parseInt(e.target.dataset.booth, 10);
+          const targetTeamNum = parseInt(e.target.value, 10);
+          const targetTeam = pollingTeams.find(t => (t.teamNumber || t.boothNumber) === targetTeamNum);
+          if (targetTeam && targetTeam.boothNumber !== curBooth) {
+            await swapPollingTeams(curBooth, targetTeam.boothNumber);
+            modal.remove();
+            openSwapPollingTeamsModal();
+          }
+        });
+      });
+    };
+
+    main.querySelectorAll('.select-assign-polling-team').forEach(sel => {
+      sel.addEventListener('change', async (e) => {
+        const curBooth = parseInt(e.target.dataset.booth, 10);
+        const targetTeamNum = parseInt(e.target.value, 10);
+        const targetTeam = pollingTeams.find(t => (t.teamNumber || t.boothNumber) === targetTeamNum);
+        if (targetTeam && targetTeam.boothNumber !== curBooth) {
+          await swapPollingTeams(curBooth, targetTeam.boothNumber);
+        }
+      });
+    });
+
+    main.querySelectorAll('.btn-quick-swap-booth').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const curBooth = parseInt(e.currentTarget.dataset.booth, 10);
+        openSwapBoothModal(curBooth);
+      });
+    });
+
+    main.querySelector('#btnOpenSwapPollingModal')?.addEventListener('click', openSwapPollingTeamsModal);
+
+    // Swapping / Reassigning Formed Counting Teams
+    const swapCountingTeams = async (tableA, tableB) => {
+      const tNumA = parseInt(tableA, 10);
+      const tNumB = parseInt(tableB, 10);
+      if (isNaN(tNumA) || isNaN(tNumB) || tNumA === tNumB) return;
+      const teamA = countingTeams.find(t => (t.tableNumber || t.boothNumber) === tNumA);
+      const teamB = countingTeams.find(t => (t.tableNumber || t.boothNumber) === tNumB);
+      if (!teamA || !teamB) {
+        showToast('Both table teams must exist to swap.', 'error');
+        return;
+      }
+      const bObjA = booths.find(x => x.boothNumber === tNumA);
+      const bObjB = booths.find(x => x.boothNumber === tNumB);
+
+      teamA.tableNumber = tNumB;
+      teamA.boothNumber = tNumB;
+      teamA.roomName = bObjB?.roomName || `Table ${tNumB}`;
+
+      teamB.tableNumber = tNumA;
+      teamB.boothNumber = tNumA;
+      teamB.roomName = bObjA?.roomName || `Table ${tNumA}`;
+
+      await saveAll(true);
+      showToast(`Swapped: Team ${teamA.teamNumber || tNumA} assigned to Table ${tNumB}, Team ${teamB.teamNumber || tNumB} assigned to Table ${tNumA}. (Officials preserved intact)`, 'success');
+      renderUI();
+    };
+
+    const openSwapTableModal = (curTable) => {
+      const bObj = booths.find(x => x.boothNumber === curTable);
+      const otherTables = booths.filter(x => x.boothNumber !== curTable);
+      if (otherTables.length === 0) {
+        showToast('Only one table configured.', 'info');
+        return;
+      }
+
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+      modal.innerHTML = `
+        <div class="glass border border-emerald-500/40 rounded-2xl w-full max-w-lg bg-slate-900/95 shadow-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-white/10 pb-3">
+            <h4 class="font-bold text-white text-base flex items-center gap-2">
+              <span>🔄</span> Swap Counting Team (Table ${curTable})
+            </h4>
+            <button class="text-slate-400 hover:text-white text-xl font-bold btn-close-swap-modal">&times;</button>
+          </div>
+          <p class="text-xs text-slate-300">
+            Swap the formed counting team at <strong>Table ${curTable} (${esc(bObj?.roomName || `Table ${curTable}`)})</strong> with another table's team. Team composition remains 100% intact.
+          </p>
+          <div class="space-y-2">
+            <label class="text-xs font-bold text-emerald-300">Select Target Table to Swap With:</label>
+            <select id="selectTargetSwapTable" class="w-full bg-slate-800 border border-emerald-500/40 rounded-lg p-2.5 text-xs text-white font-bold focus:outline-none">
+              ${otherTables.map(ob => {
+                const oTeam = countingTeams.find(t => (t.tableNumber || t.boothNumber) === ob.boothNumber);
+                const supName = oTeam?.supervisor?.name ? `Sup: ${oTeam.supervisor.name}` : 'Unassigned';
+                return `<option value="${ob.boothNumber}">Table ${ob.boothNumber} (${esc(ob.roomName || `Table ${ob.boothNumber}`)}) — Team ${oTeam?.teamNumber || ob.boothNumber} (${supName})</option>`;
+              }).join('')}
+            </select>
+          </div>
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+            <button class="btn btn-secondary text-xs px-3.5 py-2 btn-close-swap-modal">Cancel</button>
+            <button id="btnConfirmSwapTable" class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2">
+              Confirm Swap
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      modal.querySelectorAll('.btn-close-swap-modal').forEach(b => b.onclick = () => modal.remove());
+      modal.querySelector('#btnConfirmSwapTable').onclick = async () => {
+        const targetTable = parseInt(modal.querySelector('#selectTargetSwapTable').value, 10);
+        modal.remove();
+        await swapCountingTeams(curTable, targetTable);
+      };
+    };
+
+    const openSwapCountingTeamsModal = () => {
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+      modal.innerHTML = `
+        <div class="glass border border-emerald-500/40 rounded-2xl w-full max-w-2xl bg-slate-900/95 shadow-2xl p-5 space-y-4 max-h-[90vh] flex flex-col">
+          <div class="flex items-center justify-between border-b border-white/10 pb-3">
+            <div>
+              <h4 class="font-bold text-white text-base flex items-center gap-2">
+                <span>🔄</span> Assign / Reallocate Formed Teams to Counting Tables
+              </h4>
+              <p class="text-xs text-slate-400">Map your formed teams to specific counting tables without changing team members.</p>
+            </div>
+            <button class="text-slate-400 hover:text-white text-xl font-bold btn-close-swap-count-modal">&times;</button>
+          </div>
+          <div class="overflow-y-auto space-y-3 flex-1 pr-1">
+            <div class="text-[11px] text-emerald-200/90 bg-emerald-950/40 p-2.5 rounded-lg border border-emerald-500/30">
+              💡 Select which Formed Team (Supervisor, Counting Officers, Assistant) is stationed at each Table. Choosing a team automatically swaps stations.
+            </div>
+            <div class="divide-y divide-white/10">
+              ${booths.map(b => {
+                const curTeam = countingTeams.find(t => (t.tableNumber || t.boothNumber) === b.boothNumber);
+                const curTeamNum = curTeam?.teamNumber || b.boothNumber;
+                return `
+                  <div class="py-2.5 flex items-center justify-between gap-3">
+                    <div>
+                      <div class="font-bold text-white text-xs">Table ${b.boothNumber}: ${esc(b.roomName || `Table ${b.boothNumber}`)}</div>
+                      <div class="text-[10px] text-slate-400">${getBoothVoterCount(b)} voters</div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <select class="bg-slate-800 border border-emerald-500/40 rounded px-2.5 py-1.5 text-xs text-emerald-200 font-bold focus:outline-none select-modal-assign-count" data-table="${b.boothNumber}">
+                        ${countingTeams.map((ct, ctIdx) => {
+                          const tNum = ct.teamNumber || (ctIdx + 1);
+                          const isSel = tNum === curTeamNum;
+                          const supName = ct.supervisor?.name ? `Sup: ${ct.supervisor.name}` : 'Unassigned';
+                          return `<option value="${tNum}" ${isSel ? 'selected' : ''}>Team ${tNum} (${supName})</option>`;
+                        }).join('')}
+                      </select>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+          <div class="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
+            <button class="btn btn-secondary text-xs px-4 py-2 btn-close-swap-count-modal">Done</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      modal.querySelectorAll('.btn-close-swap-count-modal').forEach(b => b.onclick = () => modal.remove());
+      modal.querySelectorAll('.select-modal-assign-count').forEach(sel => {
+        sel.addEventListener('change', async (e) => {
+          const curTable = parseInt(e.target.dataset.table, 10);
+          const targetTeamNum = parseInt(e.target.value, 10);
+          const targetTeam = countingTeams.find(t => (t.teamNumber || t.tableNumber || t.boothNumber) === targetTeamNum);
+          if (targetTeam && (targetTeam.tableNumber || targetTeam.boothNumber) !== curTable) {
+            await swapCountingTeams(curTable, targetTeam.tableNumber || targetTeam.boothNumber);
+            modal.remove();
+            openSwapCountingTeamsModal();
+          }
+        });
+      });
+    };
+
+    main.querySelectorAll('.select-assign-counting-team').forEach(sel => {
+      sel.addEventListener('change', async (e) => {
+        const curTable = parseInt(e.target.dataset.table, 10);
+        const targetTeamNum = parseInt(e.target.value, 10);
+        const targetTeam = countingTeams.find(t => (t.teamNumber || t.tableNumber || t.boothNumber) === targetTeamNum);
+        if (targetTeam && (targetTeam.tableNumber || targetTeam.boothNumber) !== curTable) {
+          await swapCountingTeams(curTable, targetTeam.tableNumber || targetTeam.boothNumber);
+        }
+      });
+    });
+
+    main.querySelectorAll('.btn-quick-swap-table').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const curTable = parseInt(e.currentTarget.dataset.table, 10);
+        openSwapTableModal(curTable);
+      });
+    });
+
+    main.querySelector('#btnOpenSwapCountingModal')?.addEventListener('click', openSwapCountingTeamsModal);
 
     // Open Observer Allotment Modal
     main.querySelector('#btnOpenObserverModal')?.addEventListener('click', () => openObserverModal());
@@ -4597,7 +5053,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     // Change Polling Core Committee In-Charge Dropdown
     main.querySelectorAll('.select-polling-core-incharge').forEach(sel => {
-      sel.addEventListener('change', (e) => {
+      sel.addEventListener('change', async (e) => {
         const boothNum = parseInt(e.target.dataset.booth, 10);
         const selectedName = e.target.value;
         let team = pollingTeams.find(t => t.boothNumber === boothNum);
@@ -4606,25 +5062,36 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           pollingTeams.push(team);
         }
         if (selectedName) {
-          const coreMem = coreCommittee.find(c => c.name === selectedName) || getPerson(selectedName);
-          team.coreInCharge = coreMem ? {
+          let coreMem = coreCommittee.find(c => c.name === selectedName);
+          if (!coreMem) {
+            const p = getPerson(selectedName);
+            coreMem = {
+              name: selectedName,
+              pen: p?.pen || '',
+              designation: p?.designation || 'Faculty',
+              department: p?.department || '',
+              seniority: p?.seniority || 999
+            };
+            coreCommittee.push(coreMem);
+          }
+          team.coreInCharge = {
             name: coreMem.name,
             pen: coreMem.pen || '',
             designation: coreMem.designation || 'Faculty',
             department: coreMem.department || '',
             seniority: coreMem.seniority || 999
-          } : null;
+          };
         } else {
           team.coreInCharge = null;
         }
-        saveAll(true);
+        await saveAll(true);
         renderUI();
       });
     });
 
     // Change Counting Core Committee In-Charge Dropdown
     main.querySelectorAll('.select-counting-core-incharge').forEach(sel => {
-      sel.addEventListener('change', (e) => {
+      sel.addEventListener('change', async (e) => {
         const tableNum = parseInt(e.target.dataset.table, 10);
         const selectedName = e.target.value;
         let team = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(tableNum));
@@ -4633,18 +5100,29 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           countingTeams.push(team);
         }
         if (selectedName) {
-          const coreMem = coreCommittee.find(c => c.name === selectedName) || getPerson(selectedName);
-          team.coreInCharge = coreMem ? {
+          let coreMem = coreCommittee.find(c => c.name === selectedName);
+          if (!coreMem) {
+            const p = getPerson(selectedName);
+            coreMem = {
+              name: selectedName,
+              pen: p?.pen || '',
+              designation: p?.designation || 'Faculty',
+              department: p?.department || '',
+              seniority: p?.seniority || 999
+            };
+            coreCommittee.push(coreMem);
+          }
+          team.coreInCharge = {
             name: coreMem.name,
             pen: coreMem.pen || '',
             designation: coreMem.designation || 'Faculty',
             department: coreMem.department || '',
             seniority: coreMem.seniority || 999
-          } : null;
+          };
         } else {
           team.coreInCharge = null;
         }
-        saveAll(true);
+        await saveAll(true);
         renderUI();
       });
     });
@@ -6991,7 +7469,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     return { roData, aroList, coreList, obsList, discList, grievList, personnel: safePersonnel, reserveList: safeReserveList };
   };
 
-  const openMasterDutyListWindow = () => {
+  const openMasterDutyListWindow = (hideStation = false) => {
     const orderDate = new Date().toLocaleDateString('en-GB');
 
     const win = window.open('', '_blank');
@@ -7000,16 +7478,17 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       return;
     }
 
-    const pageHtml = buildStandaloneMasterDutyListPage(orderDate);
+    const pageHtml = buildStandaloneMasterDutyListPage(orderDate, hideStation);
     win.document.open();
     win.document.write(pageHtml);
     win.document.close();
   };
 
-  const buildStandaloneMasterDutyListPage = (orderDate) => {
+  const buildStandaloneMasterDutyListPage = (orderDate, initialHideStation = false) => {
     const title = `Master_Duty_List_Polling_Counting_${electionYear}`;
-    const deptWiseHtml = buildDeptWiseMasterRollHtml(orderDate);
-    const boothWiseHtml = buildBoothWiseDeploymentHtml(orderDate);
+    const deptWiseHtmlFull = buildDeptWiseMasterRollHtml(orderDate, false);
+    const deptWiseHtmlConcealed = buildDeptWiseMasterRollHtml(orderDate, true);
+    const boothWiseHtmlFull = buildBoothWiseDeploymentHtml(orderDate, false);
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -7024,13 +7503,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
         font-size: 8pt;
         font-weight: bold;
-        color: #374151;
+        color: #000000;
       }
       @bottom-left {
         content: "College Union Election — Master Duty Deployment";
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
         font-size: 7.5pt;
-        color: #6b7280;
+        color: #000000;
       }
     }
   </style>
@@ -7050,14 +7529,19 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       line-height: 1.35;
     }
     @media print {
-      * {
+      *, *::before, *::after {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
         color: #000000 !important;
         border-color: #000000 !important;
+        background-color: transparent !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
       }
       body {
         background: #ffffff !important;
+        color: #000000 !important;
         padding: 0 !important;
       }
       .no-print {
@@ -7074,14 +7558,30 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         border: none !important;
         max-width: none !important;
         width: 100% !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+      th, td, tr, .section-title-box, .summary-metrics-bar, .meta-bar {
+        background-color: transparent !important;
+        background: transparent !important;
+        color: #000000 !important;
+        border-color: #000000 !important;
+      }
+      .master-table th, .master-table td {
+        border: 1px solid #000000 !important;
+      }
+      .sign-box {
+        border: 1px dashed #000000 !important;
+        background: #ffffff !important;
       }
     }
-    /* Action Bar on Screen */
+
+    /* Screen Action Bar */
     .top-action-bar {
       position: sticky;
       top: 0;
       z-index: 999;
-      background: #064e3b;
+      background: #000000;
       color: #ffffff;
       padding: 10px 20px;
       display: flex;
@@ -7105,10 +7605,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-wrap: wrap;
     }
     .btn-tab-toggle {
-      background: rgba(255,255,255,0.12);
-      border: 1px solid rgba(255,255,255,0.25);
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
       color: #ffffff;
       padding: 6px 12px;
       border-radius: 6px;
@@ -7121,31 +7622,31 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       background: rgba(255,255,255,0.25);
     }
     .btn-tab-toggle.active {
-      background: #10b981;
-      border-color: #34d399;
-      color: #ffffff;
-      font-weight: 700;
+      background: #ffffff;
+      border-color: #ffffff;
+      color: #000000;
+      font-weight: 800;
     }
     .btn-action {
-      background: #f59e0b;
-      border: 1px solid #d97706;
+      background: #ffffff;
+      border: 1px solid #ffffff;
       color: #000000;
       padding: 6px 14px;
       border-radius: 6px;
       cursor: pointer;
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 800;
       display: flex;
       align-items: center;
       gap: 5px;
     }
     .btn-action:hover {
-      background: #fbbf24;
+      background: #e2e8f0;
     }
     .btn-close-win {
-      background: rgba(239, 68, 68, 0.2);
-      border: 1px solid rgba(239, 68, 68, 0.4);
-      color: #fca5a5;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #ffffff;
       padding: 6px 10px;
       border-radius: 6px;
       cursor: pointer;
@@ -7153,11 +7654,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       font-weight: 600;
     }
     .btn-close-win:hover {
-      background: #ef4444;
-      color: #ffffff;
+      background: rgba(255, 255, 255, 0.25);
     }
 
-    /* Paper Document Canvas */
+    /* Paper Document Canvas — Pure Black & White */
     .sheet-wrapper {
       padding: 20px;
       display: flex;
@@ -7165,8 +7665,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     }
     .paper-sheet {
       background: #ffffff;
+      color: #000000;
       box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-      border: 1px solid #cbd5e1;
+      border: 1px solid #000000;
       padding: 12mm 15mm;
       max-width: 297mm;
       min-height: 210mm;
@@ -7174,7 +7675,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       position: relative;
     }
 
-    /* Typography & Print Components */
+    /* Typography & Print Components (Strictly Black & White) */
     .header-container {
       text-align: center;
       border-bottom: 2px solid #000000;
@@ -7185,10 +7686,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       height: 38px;
       margin-bottom: 3px;
       display: inline-block;
+      filter: grayscale(100%);
     }
     .college-title {
       font-size: 15px;
-      font-weight: 800;
+      font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin: 0 0 2px 0;
@@ -7196,7 +7698,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     }
     .order-title {
       font-size: 12px;
-      font-weight: 800;
+      font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin: 2px 0 1px 0;
@@ -7204,8 +7706,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     }
     .order-sub {
       font-size: 9.5px;
-      font-weight: 700;
-      color: #1f2937;
+      font-weight: 800;
+      color: #000000;
       margin: 0;
       text-transform: uppercase;
     }
@@ -7217,7 +7719,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       font-weight: 700;
       margin: 6px 0 8px 0;
       padding: 3px 0;
-      border-bottom: 1px dashed #64748b;
+      border-bottom: 1px dashed #000000;
       color: #000000;
     }
     .preamble-text {
@@ -7228,10 +7730,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       color: #000000;
     }
     .section-title-box {
-      background: #f1f5f9;
-      border: 1px solid #000000;
+      background: #ffffff !important;
+      border: 1.5px solid #000000 !important;
+      color: #000000 !important;
       padding: 4px 8px;
-      font-weight: 800;
+      font-weight: 900;
       font-size: 10px;
       text-transform: uppercase;
       margin: 10px 0 6px 0;
@@ -7241,26 +7744,42 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       break-after: avoid;
       page-break-after: avoid;
     }
+    .summary-metrics-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: #ffffff !important;
+      border: 1px solid #000000 !important;
+      color: #000000 !important;
+      padding: 5px 10px;
+      font-size: 9px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
     .master-table {
       width: 100%;
       border-collapse: collapse;
       table-layout: fixed;
       margin-bottom: 10px;
+      color: #000000;
     }
     .master-table th, .master-table td {
-      border: 1px solid #000000;
+      border: 1px solid #000000 !important;
       padding: 4px 5px;
       vertical-align: middle;
       font-size: 9px;
       word-break: break-word;
+      color: #000000 !important;
+      background: #ffffff !important;
     }
     .master-table th {
-      background: #f1f5f9 !important;
-      font-weight: 800;
+      border: 1.5px solid #000000 !important;
+      font-weight: 900;
       text-transform: uppercase;
       font-size: 8.5px;
-      color: #000000;
+      color: #000000 !important;
       text-align: left;
+      background: #ffffff !important;
     }
     .master-table th.col-center, .master-table td.col-center {
       text-align: center;
@@ -7268,24 +7787,22 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     .master-table tr {
       page-break-inside: avoid;
       break-inside: avoid;
-    }
-    .master-table tbody tr:nth-child(even) {
-      background-color: #f8fafc !important;
+      background: #ffffff !important;
     }
     .staff-name {
-      font-weight: 700;
+      font-weight: 800;
       font-size: 9.5px;
       color: #000000;
       display: block;
     }
     .staff-meta {
       font-size: 8px;
-      color: #475569;
+      color: #000000;
       display: block;
     }
     .dept-badge {
       font-weight: 700;
-      color: #064e3b;
+      color: #000000;
       font-size: 9px;
     }
     .col-sign {
@@ -7295,8 +7812,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     }
     .sign-box {
       height: 26px;
-      border: 1px dashed #94a3b8;
-      background: #ffffff;
+      border: 1px dashed #000000 !important;
+      background: #ffffff !important;
       margin: 2px 0;
     }
     .footer-row {
@@ -7306,18 +7823,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       margin-top: 14px;
       page-break-inside: avoid;
       break-inside: avoid;
+      color: #000000;
     }
     .copy-block {
       font-size: 8.5px;
-      color: #374151;
+      color: #000000;
       line-height: 1.4;
     }
     .ro-sign-block {
       text-align: center;
       width: 220px;
+      color: #000000;
     }
     .ro-sign-line {
-      border-bottom: 1px solid #000000;
+      border-bottom: 1.5px solid #000000;
       height: 38px;
       margin-bottom: 3px;
     }
@@ -7325,21 +7844,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       page-break-after: always;
       break-after: page;
     }
-    .summary-metrics-bar {
-      display: flex;
-      gap: 12px;
-      background: #f8fafc;
-      border: 1px solid #cbd5e1;
-      padding: 6px 10px;
-      font-size: 9px;
-      font-weight: 600;
-      margin-bottom: 10px;
-      border-radius: 3px;
-    }
   </style>
 </head>
 <body>
-  <!-- Action Bar on Screen -->
+  <!-- Screen Action Bar -->
   <div class="no-print top-action-bar">
     <div class="action-bar-left">
       <span class="title-badge">📑 Master Duty List (Polling &amp; Counting)</span>
@@ -7354,6 +7862,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       <button id="btnViewCombined" onclick="switchMasterView('combined')" class="btn-tab-toggle">
         📑 Combined View (All Sections)
       </button>
+      <button id="btnToggleStationConceal" onclick="toggleConcealStation()" class="btn-tab-toggle">
+        🔒 Conceal Stations (Roll Call)
+      </button>
       <button onclick="window.print()" class="btn-action">
         🖨️ Print Master Duty List
       </button>
@@ -7366,28 +7877,71 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   <!-- Document Sheet -->
   <div class="sheet-wrapper">
     <div id="paperSheet" class="paper-sheet">
-      <!-- View 1: Department-Wise Master Roll (Observers 1st) -->
-      <div id="viewDeptWise">
-        ${deptWiseHtml}
+      <!-- View 1: Department-Wise Master Roll (Full Details) -->
+      <div id="viewDeptWiseFull" style="display: ${initialHideStation ? 'none' : 'block'};">
+        ${deptWiseHtmlFull}
+      </div>
+
+      <!-- View 1B: Department-Wise Master Roll (Concealed Stations) -->
+      <div id="viewDeptWiseConcealed" style="display: ${initialHideStation ? 'block' : 'none'};">
+        ${deptWiseHtmlConcealed}
       </div>
 
       <!-- View 2: Booth & Table-Wise Deployment Schedule -->
       <div id="viewBoothWise" style="display: none;">
-        ${boothWiseHtml}
+        ${boothWiseHtmlFull}
       </div>
 
       <!-- View 3: Combined View -->
       <div id="viewCombined" style="display: none;">
-        ${deptWiseHtml}
+        <div id="combDeptContainer">
+          ${initialHideStation ? deptWiseHtmlConcealed : deptWiseHtmlFull}
+        </div>
         <div class="page-break" style="margin: 20px 0;"></div>
-        ${boothWiseHtml}
+        ${boothWiseHtmlFull}
       </div>
     </div>
   </div>
 
   <script>
+    let isConcealed = ${initialHideStation ? 'true' : 'false'};
+    let currentMainView = 'dept';
+
+    function updateConcealUI() {
+      const btn = document.getElementById('btnToggleStationConceal');
+      if (btn) {
+        btn.innerHTML = isConcealed ? '👁️ Reveal Stations & Duties' : '🔒 Conceal Stations (Roll Call)';
+        if (isConcealed) btn.classList.add('active'); else btn.classList.remove('active');
+      }
+
+      const vFull = document.getElementById('viewDeptWiseFull');
+      const vConc = document.getElementById('viewDeptWiseConcealed');
+      const combDept = document.getElementById('combDeptContainer');
+
+      if (currentMainView === 'dept') {
+        if (isConcealed) {
+          vFull.style.display = 'none';
+          vConc.style.display = 'block';
+        } else {
+          vFull.style.display = 'block';
+          vConc.style.display = 'none';
+        }
+      }
+
+      if (combDept) {
+        combDept.innerHTML = isConcealed ? document.getElementById('viewDeptWiseConcealed').innerHTML : document.getElementById('viewDeptWiseFull').innerHTML;
+      }
+    }
+
+    function toggleConcealStation() {
+      isConcealed = !isConcealed;
+      updateConcealUI();
+    }
+
     function switchMasterView(mode) {
-      const vDept = document.getElementById('viewDeptWise');
+      currentMainView = mode;
+      const vFull = document.getElementById('viewDeptWiseFull');
+      const vConc = document.getElementById('viewDeptWiseConcealed');
       const vBooth = document.getElementById('viewBoothWise');
       const vComb = document.getElementById('viewCombined');
       const bDept = document.getElementById('btnViewDept');
@@ -7399,17 +7953,25 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       bComb.classList.remove('active');
 
       if (mode === 'booth') {
-        vDept.style.display = 'none';
+        vFull.style.display = 'none';
+        vConc.style.display = 'none';
         vBooth.style.display = 'block';
         vComb.style.display = 'none';
         bBooth.classList.add('active');
       } else if (mode === 'combined') {
-        vDept.style.display = 'none';
+        vFull.style.display = 'none';
+        vConc.style.display = 'none';
         vBooth.style.display = 'none';
         vComb.style.display = 'block';
         bComb.classList.add('active');
       } else {
-        vDept.style.display = 'block';
+        if (isConcealed) {
+          vFull.style.display = 'none';
+          vConc.style.display = 'block';
+        } else {
+          vFull.style.display = 'block';
+          vConc.style.display = 'none';
+        }
         vBooth.style.display = 'none';
         vComb.style.display = 'none';
         bDept.classList.add('active');
@@ -7417,6 +7979,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     }
 
     window.addEventListener('load', function() {
+      updateConcealUI();
       setTimeout(function() {
         window.print();
       }, 350);
@@ -7426,7 +7989,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 </html>`;
   };
 
-  const buildDeptWiseMasterRollHtml = (orderDate) => {
+  const buildDeptWiseMasterRollHtml = (orderDate, hideStation = false) => {
     const { roData, aroList, coreList, obsList, discList, grievList, personnel, reserveList } = getMasterDutyData();
     const roAroCount = (roData ? 1 : 0) + aroList.length;
     const coreCount = coreList.length;
@@ -7455,13 +8018,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <span>Date: ${esc(orderDate)}</span>
         </div>
 
-        <!-- Preamble -->
+        <!-- Preamble (Cleaned: Strict Seniority notice removed as requested) -->
         <p class="preamble-text">
           For the smooth, fair, and orderly conduct of the <strong>College Union Election ${esc(electionYear)}</strong>, 
           the following Teaching Faculty and Non-Teaching Staff members are assigned election duties as 
-          <strong>Returning Officer, Assistant Returning Officers, Core Committee, Observers, Campus Discipline Committee, Grievance Redressal Committee, Polling &amp; Counting Personnel, and Reserve Pool</strong>. 
-          Officials are sorted strictly by seniority across departments for administrative convenience and are kindly requested to report at their respective stations as scheduled. 
-          Personnel in the Reserve Pool are requested to remain on standby at the Central Control Room for relief and support as needed. 
+          <strong>Observers, Returning Officer, Assistant Returning Officers, Campus Discipline Committee, Grievance Redressal Committee, Core Committee, Polling &amp; Counting Personnel, and Reserve Pool</strong>. 
           Your kind cooperation and active support are earnestly requested for the successful conduct of the election.
         </p>
 
@@ -7469,15 +8030,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <div class="summary-metrics-bar">
           <span><strong>Total Roster Personnel:</strong> ${totalPersonnelCount}</span>
           <span>•</span>
-          <span><strong>RO &amp; AROs:</strong> ${roAroCount}</span>
-          <span>•</span>
-          <span><strong>Core Committee:</strong> ${coreCount}</span>
-          <span>•</span>
           <span><strong>Observers:</strong> ${obsList.length}</span>
+          <span>•</span>
+          <span><strong>RO &amp; AROs:</strong> ${roAroCount}</span>
           <span>•</span>
           <span><strong>Discipline Committee:</strong> ${discList.length}</span>
           <span>•</span>
           <span><strong>Grievance Committee:</strong> ${grievList.length}</span>
+          <span>•</span>
+          <span><strong>Core Committee:</strong> ${coreCount}</span>
           <span>•</span>
           <span><strong>Active Duty Deployed:</strong> ${activeDutyCount}</span>
           <span>•</span>
@@ -7486,121 +8047,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <span><strong>Double Duty (Poll &amp; Count):</strong> ${doubleDutyCount}</span>
         </div>
 
-        <!-- SECTION 1: RETURNING OFFICER & ASSISTANT RETURNING OFFICERS -->
+        <!-- SECTION 1: ELECTION OBSERVERS -->
         <div class="section-title-box">
-          <span>👑 SECTION 1: RETURNING OFFICER (RO) &amp; ASSISTANT RETURNING OFFICERS (AROs)</span>
-        </div>
-
-        <table class="master-table">
-          <colgroup>
-            <col style="width: 7%;">
-            <col style="width: 28%;">
-            <col style="width: 22%;">
-            <col style="width: 18%;">
-            <col style="width: 11%;">
-            <col style="width: 14%;">
-          </colgroup>
-          <thead>
-            <tr>
-              <th class="col-center">Sl #</th>
-              <th>Name of Official</th>
-              <th>Designated Office / Role</th>
-              <th>Department / Desig</th>
-              <th>PEN #</th>
-              <th class="col-center">Signature</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${roData ? `
-              <tr style="background: #fefce8 !important;">
-                <td class="col-center" style="font-weight: 800; font-family: monospace;">RO</td>
-                <td>
-                  <span class="staff-name" style="font-size: 11px;">${esc(roData.name)}</span>
-                </td>
-                <td><strong style="color: #854d0e;">👑 Returning Officer (RO)</strong></td>
-                <td>${esc(roData.designation)}${roData.department && roData.department !== '–' ? ` · <span class="dept-badge" style="color: #854d0e;">${esc(roData.department)}</span>` : ''}</td>
-                <td style="font-family: monospace; font-weight: 700;">${esc(roData.pen)}</td>
-                <td class="col-sign"><div class="sign-box"></div></td>
-              </tr>
-            ` : ''}
-            ${aroList.map(aro => `
-              <tr style="background: #fffbeb !important;">
-                <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(aro.slNo)}</td>
-                <td>
-                  <span class="staff-name">${esc(aro.name)}</span>
-                </td>
-                <td><strong style="color: #b45309;">⚖️ Assistant Returning Officer (ARO)</strong></td>
-                <td>${esc(aro.designation)}${aro.department && aro.department !== '–' ? ` · <span class="dept-badge">${esc(aro.department)}</span>` : ''}</td>
-                <td style="font-family: monospace; font-weight: 600;">${esc(aro.pen)}</td>
-                <td class="col-sign"><div class="sign-box"></div></td>
-              </tr>
-            `).join('')}
-            ${!roData && aroList.length === 0 ? `
-              <tr><td colspan="6" class="col-center" style="color: #64748b; font-style: italic; padding: 8px;">No Returning Officer or ARO configured.</td></tr>
-            ` : ''}
-          </tbody>
-        </table>
-
-        <!-- SECTION 2: CORE COMMITTEE -->
-        <div class="section-title-box" style="margin-top: 14px;">
-          <span>⭐ SECTION 2: CORE COMMITTEE</span>
-          <span style="font-size: 8.5px; font-weight: normal;">Election Management &amp; Booth / Table In-Charge Supervision</span>
-        </div>
-
-        ${coreList.length === 0 ? `
-          <div style="border: 1px dashed #cbd5e1; padding: 10px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
-            No Core Committee appointed.
-          </div>
-        ` : `
-          <table class="master-table">
-            <colgroup>
-              <col style="width: 7%;">
-              <col style="width: 25%;">
-              ${coreHasDept ? '<col style="width: 15%;">' : ''}
-              <col style="width: 15%;">
-              <col style="width: 10%;">
-              <col style="width: 18%;">
-              <col style="width: 10%;">
-            </colgroup>
-            <thead>
-              <tr>
-                <th class="col-center">Sl #</th>
-                <th>Name of Official</th>
-                ${coreHasDept ? '<th>Department</th>' : ''}
-                <th>Designation</th>
-                <th>PEN #</th>
-                <th>Assigned Responsibility &amp; Station</th>
-                <th class="col-center">Signature</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${coreList.map(c => `
-                <tr style="background: #f0fdfa !important;">
-                  <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(c.slNo)}</td>
-                  <td>
-                    <span class="staff-name">${esc(c.name)}</span>
-                  </td>
-                  ${coreHasDept ? `<td><span class="dept-badge" style="color: #0f766e;">${esc(c.department)}</span></td>` : ''}
-                  <td>${esc(c.designation)}</td>
-                  <td style="font-family: monospace; font-weight: 600;">${esc(c.pen)}</td>
-                  <td>
-                    <div style="font-weight: 600; color: #0f766e;">${esc(c.duty)}</div>
-                    <span class="staff-meta">Station: ${esc(c.station)}</span>
-                  </td>
-                  <td class="col-sign"><div class="sign-box"></div></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        `}
-
-        <!-- SECTION 3: ELECTION OBSERVERS -->
-        <div class="section-title-box" style="margin-top: 14px;">
-          <span>⚖️ SECTION 3: ELECTION OBSERVERS</span>
+          <span>⚖️ SECTION 1: ELECTION OBSERVERS</span>
         </div>
 
         ${obsList.length === 0 ? `
-          <div style="border: 1px dashed #cbd5e1; padding: 10px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
+          <div style="border: 1px dashed #000000; padding: 10px; text-align: center; color: #000000; font-style: italic; margin-bottom: 10px;">
             No separate observers appointed.
           </div>
         ` : `
@@ -7633,7 +8086,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             </thead>
             <tbody>
               ${obsList.map(obs => `
-                <tr style="background: #fffbeb !important;">
+                <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(obs.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(obs.name)}</span>
@@ -7650,13 +8103,68 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </table>
         `}
 
-        <!-- SECTION 4: CAMPUS DISCIPLINE -->
+        <!-- SECTION 2: RETURNING OFFICER & ASSISTANT RETURNING OFFICERS -->
+        <div class="section-title-box" style="margin-top: 14px;">
+          <span>👑 SECTION 2: RETURNING OFFICER (RO) &amp; ASSISTANT RETURNING OFFICERS (AROs)</span>
+        </div>
+
+        <table class="master-table">
+          <colgroup>
+            <col style="width: 7%;">
+            <col style="width: 28%;">
+            <col style="width: 22%;">
+            <col style="width: 18%;">
+            <col style="width: 11%;">
+            <col style="width: 14%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="col-center">Sl #</th>
+              <th>Name of Official</th>
+              <th>Designated Office / Role</th>
+              <th>Department / Desig</th>
+              <th>PEN #</th>
+              <th class="col-center">Signature</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${roData ? `
+              <tr>
+                <td class="col-center" style="font-weight: 800; font-family: monospace;">RO</td>
+                <td>
+                  <span class="staff-name" style="font-size: 11px;">${esc(roData.name)}</span>
+                </td>
+                <td><strong>👑 Returning Officer (RO)</strong></td>
+                <td>${esc(roData.designation)}${roData.department && roData.department !== '–' ? ` · <span class="dept-badge">${esc(roData.department)}</span>` : ''}</td>
+                <td style="font-family: monospace; font-weight: 700;">${esc(roData.pen)}</td>
+                <td class="col-sign"><div class="sign-box"></div></td>
+              </tr>
+            ` : ''}
+            ${aroList.map(aro => `
+              <tr>
+                <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(aro.slNo)}</td>
+                <td>
+                  <span class="staff-name">${esc(aro.name)}</span>
+                </td>
+                <td><strong>⚖️ Assistant Returning Officer (ARO)</strong></td>
+                <td>${esc(aro.designation)}${aro.department && aro.department !== '–' ? ` · <span class="dept-badge">${esc(aro.department)}</span>` : ''}</td>
+                <td style="font-family: monospace; font-weight: 600;">${esc(aro.pen)}</td>
+                <td class="col-sign"><div class="sign-box"></div></td>
+              </tr>
+            `).join('')}
+            ${!roData && aroList.length === 0 ? `
+              <tr><td colspan="6" class="col-center" style="color: #000000; font-style: italic; padding: 8px;">No Returning Officer or ARO configured.</td></tr>
+            ` : ''}
+          </tbody>
+        </table>
+
+        <!-- SECTION 4: CAMPUS DISCIPLINE COMMITTEE -->
         <div class="section-title-box" style="margin-top: 14px;">
           <span>🛡️ SECTION 4: CAMPUS DISCIPLINE COMMITTEE</span>
         </div>
 
         ${discList.length === 0 ? `
-          <div style="border: 1px dashed #cbd5e1; padding: 10px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
+          <div style="border: 1px dashed #000000; padding: 10px; text-align: center; color: #000000; font-style: italic; margin-bottom: 10px;">
             No separate discipline committee appointed.
           </div>
         ` : `
@@ -7689,12 +8197,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             </thead>
             <tbody>
               ${discList.map(disc => `
-                <tr style="background: #f0fdf4 !important;">
+                <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(disc.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(disc.name)}</span>
                   </td>
-                  ${discHasDept ? `<td><span class="dept-badge" style="color: #166534;">${esc(disc.department)}</span></td>` : ''}
+                  ${discHasDept ? `<td><span class="dept-badge">${esc(disc.department)}</span></td>` : ''}
                   <td>${esc(disc.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(disc.pen)}</td>
                   <td class="col-sign">
@@ -7712,7 +8220,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         </div>
 
         ${grievList.length === 0 ? `
-          <div style="border: 1px dashed #cbd5e1; padding: 10px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
+          <div style="border: 1px dashed #000000; padding: 10px; text-align: center; color: #000000; font-style: italic; margin-bottom: 10px;">
             No separate grievance committee appointed.
           </div>
         ` : `
@@ -7745,17 +8253,74 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             </thead>
             <tbody>
               ${grievList.map(g => `
-                <tr style="background: #f0f9ff !important;">
+                <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(g.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(g.name)}</span>
                   </td>
-                  ${grievHasDept ? `<td><span class="dept-badge" style="color: #0369a1;">${esc(g.department)}</span></td>` : ''}
+                  ${grievHasDept ? `<td><span class="dept-badge">${esc(g.department)}</span></td>` : ''}
                   <td>${esc(g.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(g.pen)}</td>
                   <td class="col-sign">
                     <div class="sign-box"></div>
                   </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `}
+
+        <!-- CORE COMMITTEE -->
+        <div class="section-title-box" style="margin-top: 14px;">
+          <span>⭐ CORE COMMITTEE</span>
+          <span style="font-size: 8.5px; font-weight: normal;">Election Management &amp; Booth / Table In-Charge Supervision</span>
+        </div>
+
+        ${coreList.length === 0 ? `
+          <div style="border: 1px dashed #000000; padding: 10px; text-align: center; color: #000000; font-style: italic; margin-bottom: 10px;">
+            No Core Committee appointed.
+          </div>
+        ` : `
+          <table class="master-table">
+            <colgroup>
+              <col style="width: 7%;">
+              <col style="width: 25%;">
+              ${coreHasDept ? '<col style="width: 15%;">' : ''}
+              <col style="width: 15%;">
+              <col style="width: 10%;">
+              <col style="width: 18%;">
+              <col style="width: 10%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-center">Sl #</th>
+                <th>Name of Official</th>
+                ${coreHasDept ? '<th>Department</th>' : ''}
+                <th>Designation</th>
+                <th>PEN #</th>
+                <th>Assigned Responsibility &amp; Station</th>
+                <th class="col-center">Signature</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${coreList.map(c => `
+                <tr>
+                  <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(c.slNo)}</td>
+                  <td>
+                    <span class="staff-name">${esc(c.name)}</span>
+                  </td>
+                  ${coreHasDept ? `<td><span class="dept-badge">${esc(c.department)}</span></td>` : ''}
+                  <td>${esc(c.designation)}</td>
+                  <td style="font-family: monospace; font-weight: 600;">${esc(c.pen)}</td>
+                  <td>
+                    ${hideStation ? `
+                      <div style="font-weight: 700; color: #000000;">[ Station &amp; Duty Disclosed at Briefing ]</div>
+                    ` : `
+                      <div style="font-weight: 700; color: #000000;">${esc(c.duty)}</div>
+                      <span class="staff-meta">Station: ${esc(c.station)}</span>
+                    `}
+                  </td>
+                  <td class="col-sign"><div class="sign-box"></div></td>
                 </tr>
               `).join('')}
             </tbody>
@@ -7769,7 +8334,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         </div>
 
         ${personnel.length === 0 ? `
-          <div style="border: 1px dashed #cbd5e1; padding: 10px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
+          <div style="border: 1px dashed #000000; padding: 10px; text-align: center; color: #000000; font-style: italic; margin-bottom: 10px;">
             No personnel duty allotments recorded yet. Please complete booth and table allotments in the Team Builder first.
           </div>
         ` : `
@@ -7805,12 +8370,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             </thead>
             <tbody>
               ${personnel.map((p, idx) => `
-                <tr style="${p.isReserve ? 'background: #f8fafc !important;' : ''}">
+                <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${idx + 1}</td>
                   <td>
                     <span class="staff-name">${esc(p.name)}</span>
-                    ${p.hasDoubleDuty ? `<span style="font-size: 8px; color: #b45309; font-weight: bold; background: #fef3c7; padding: 1px 4px; border-radius: 3px; display: inline-block; margin-top: 1px;">⚠️ Double Duty (Polling &amp; Counting)</span>` : ''}
-                    ${p.isReserve ? `<span style="font-size: 8px; color: #475569; font-weight: 600; background: #e2e8f0; padding: 1px 5px; border-radius: 3px; display: inline-block; margin-top: 1px;">Reserve Official</span>` : ''}
+                    ${!hideStation && p.hasDoubleDuty ? `<span style="font-size: 8px; color: #000000; font-weight: bold; border: 1px solid #000000; padding: 0 3px; display: inline-block; margin-top: 1px;">⚠️ Double Duty (Polling &amp; Counting)</span>` : ''}
+                    ${!hideStation && p.isReserve ? `<span style="font-size: 8px; color: #000000; font-weight: 700; border: 1px solid #000000; padding: 0 4px; display: inline-block; margin-top: 1px;">Reserve Official</span>` : ''}
                   </td>
                   ${personnelHasDept ? `
                   <td>
@@ -7822,13 +8387,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   </td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(p.pen)}</td>
                   <td>
-                    ${p.isReserve ? `
-                      <strong style="color: #475569;">${esc(p.duty)}</strong><br>
+                    ${hideStation ? `
+                      <div style="font-weight: 700; color: #000000;">[ Station Disclosed at Briefing ]</div>
+                    ` : (p.isReserve ? `
+                      <strong style="color: #000000;">${esc(p.duty)}</strong><br>
                       <span class="staff-meta">Station: ${esc(p.station)}</span>
                     ` : `
-                      <div style="font-weight: 600; color: #0f172a;">${esc(p.duty)}</div>
+                      <div style="font-weight: 700; color: #000000;">${esc(p.duty)}</div>
                       <span class="staff-meta">Venue: ${esc(p.station)}</span>
-                    `}
+                    `)}
                   </td>
                   <td class="col-sign">
                     <div class="sign-box"></div>
@@ -7853,14 +8420,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <div class="ro-sign-line"></div>
             <strong>RETURNING OFFICER</strong><br>
             <span style="font-size: 9px;">College Union Election ${esc(electionYear)}</span><br>
-            <span style="font-size: 8.5px; color: #4b5563;">${esc(collegeName)}</span>
+            <span style="font-size: 8.5px; color: #000000;">${esc(collegeName)}</span>
           </div>
         </div>
       </div>
     `;
   };
 
-  const buildBoothWiseDeploymentHtml = (orderDate) => {
+  const buildBoothWiseDeploymentHtml = (orderDate, hideStation = false) => {
     const { roData, aroList, coreList, obsList, discList, grievList, reserveList } = getMasterDutyData();
 
     const obsHasDept = obsList.some(o => o.department && o.department.trim() && o.department !== '–' && o.department !== 'N/A' && o.department !== '-');
@@ -7871,7 +8438,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     const pollHasDept = booths.some(b => {
       const team = pollingTeams.find(t => t.boothNumber === b.boothNumber) || {};
-      const slots = [team.coreInCharge, team.presidingOfficer, team.pollingOfficer1, team.pollingOfficer2, team.pollingOfficer3, team.pollingAssistant];
+      const slots = [team.presidingOfficer, team.pollingOfficer1, team.pollingOfficer2, team.pollingOfficer3, team.pollingAssistant, team.coreInCharge];
       return slots.some(s => {
         if (!s || !s.name) return false;
         const personObj = getPerson(s.name);
@@ -7881,8 +8448,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     });
 
     const countHasDept = booths.some(b => {
-      const team = countingTeams.find(t => t.tableNumber === b.boothNumber) || {};
-      const slots = [team.coreInCharge, team.supervisor, team.countingOfficer1, team.countingOfficer2, team.countingOfficer3, team.countingAssistant];
+      const team = countingTeams.find(t => (t.tableNumber || t.boothNumber) === b.boothNumber) || {};
+      const slots = [team.supervisor, team.countingOfficer1, team.countingOfficer2, team.countingOfficer3, team.countingAssistant, team.coreInCharge];
       return slots.some(s => {
         if (!s || !s.name) return false;
         const personObj = getPerson(s.name);
@@ -7906,114 +8473,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <span>Date: ${esc(orderDate)}</span>
         </div>
 
-        <!-- SECTION 1: RETURNING OFFICER & ASSISTANT RETURNING OFFICERS -->
+        <!-- SECTION 1: ELECTION OBSERVERS -->
         <div class="section-title-box">
-          <span>👑 RETURNING OFFICER (RO) &amp; ASSISTANT RETURNING OFFICERS (AROs)</span>
-        </div>
-
-        <table class="master-table">
-          <colgroup>
-            <col style="width: 8%;">
-            <col style="width: 28%;">
-            <col style="width: 22%;">
-            <col style="width: 16%;">
-            <col style="width: 12%;">
-            <col style="width: 14%;">
-          </colgroup>
-          <thead>
-            <tr>
-              <th class="col-center">Slot #</th>
-              <th>Name of Official</th>
-              <th>Designated Office / Role</th>
-              <th>Department / Desig</th>
-              <th>PEN #</th>
-              <th class="col-center">Signature</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${roData ? `
-              <tr style="background: #fefce8 !important;">
-                <td class="col-center" style="font-weight: 800; font-family: monospace;">RO</td>
-                <td><span class="staff-name">${esc(roData.name)}</span></td>
-                <td><strong style="color: #854d0e;">👑 Returning Officer (RO)</strong></td>
-                <td>${esc(roData.designation)}${roData.department && roData.department !== '–' ? ` · <span class="dept-badge" style="color: #854d0e;">${esc(roData.department)}</span>` : ''}</td>
-                <td style="font-family: monospace; font-weight: 700;">${esc(roData.pen)}</td>
-                <td class="col-sign"><div class="sign-box"></div></td>
-              </tr>
-            ` : ''}
-            ${aroList.map(aro => `
-              <tr style="background: #fffbeb !important;">
-                <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(aro.slNo)}</td>
-                <td><span class="staff-name">${esc(aro.name)}</span></td>
-                <td><strong style="color: #b45309;">⚖️ Assistant Returning Officer (ARO)</strong></td>
-                <td>${esc(aro.designation)}${aro.department && aro.department !== '–' ? ` · <span class="dept-badge">${esc(aro.department)}</span>` : ''}</td>
-                <td style="font-family: monospace; font-weight: 600;">${esc(aro.pen)}</td>
-                <td class="col-sign"><div class="sign-box"></div></td>
-              </tr>
-            `).join('')}
-            ${!roData && aroList.length === 0 ? `
-              <tr><td colspan="6" class="col-center" style="color: #64748b; font-style: italic; padding: 8px;">No Returning Officer or ARO configured.</td></tr>
-            ` : ''}
-          </tbody>
-        </table>
-
-        <!-- SECTION 2: CORE COMMITTEE -->
-        <div class="section-title-box" style="margin-top: 14px;">
-          <span>⭐ CORE COMMITTEE</span>
-        </div>
-
-        ${coreList.length === 0 ? `
-          <div style="border: 1px dashed #cbd5e1; padding: 8px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
-            No Core Committee appointed.
-          </div>
-        ` : `
-          <table class="master-table">
-            <colgroup>
-              <col style="width: 8%;">
-              <col style="width: 25%;">
-              ${coreHasDept ? '<col style="width: 15%;">' : ''}
-              <col style="width: 15%;">
-              <col style="width: 12%;">
-              <col style="width: 15%;">
-              <col style="width: 10%;">
-            </colgroup>
-            <thead>
-              <tr>
-                <th class="col-center">Slot #</th>
-                <th>Name of Official</th>
-                ${coreHasDept ? '<th>Department</th>' : ''}
-                <th>Designation</th>
-                <th>PEN #</th>
-                <th>Assigned Responsibility</th>
-                <th class="col-center">Signature</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${coreList.map(c => `
-                <tr style="background: #f0fdfa !important;">
-                  <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(c.slNo)}</td>
-                  <td><span class="staff-name">${esc(c.name)}</span></td>
-                  ${coreHasDept ? `<td><span class="dept-badge" style="color: #0f766e;">${esc(c.department)}</span></td>` : ''}
-                  <td>${esc(c.designation)}</td>
-                  <td style="font-family: monospace; font-weight: 600;">${esc(c.pen)}</td>
-                  <td>
-                    <div style="font-weight: 600; color: #0f766e;">${esc(c.duty)}</div>
-                    <span class="staff-meta">Station: ${esc(c.station)}</span>
-                  </td>
-                  <td class="col-sign"><div class="sign-box"></div></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        `}
-
-        <!-- SECTION 3: OBSERVERS -->
-        <div class="section-title-box" style="margin-top: 14px;">
-          <span>⚖️ ELECTION OBSERVERS</span>
+          <span>⚖️ SECTION 1: ELECTION OBSERVERS</span>
         </div>
 
         ${obsList.length === 0 ? `
-          <div style="border: 1px dashed #cbd5e1; padding: 8px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
+          <div style="border: 1px dashed #000000; padding: 8px; text-align: center; color: #000000; font-style: italic; margin-bottom: 10px;">
             No separate observers appointed.
           </div>
         ` : `
@@ -8046,7 +8512,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             </thead>
             <tbody>
               ${obsList.map(obs => `
-                <tr style="background: #fffbeb !important;">
+                <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(obs.slNo)}</td>
                   <td><span class="staff-name">${esc(obs.name)}</span></td>
                   ${obsHasDept ? `<td><span class="dept-badge">${esc(obs.department)}</span></td>` : ''}
@@ -8059,13 +8525,64 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </table>
         `}
 
-        <!-- SECTION 4: CAMPUS DISCIPLINE -->
+        <!-- SECTION 2: RETURNING OFFICER & ASSISTANT RETURNING OFFICERS -->
         <div class="section-title-box" style="margin-top: 14px;">
-          <span>🛡️ CAMPUS DISCIPLINE COMMITTEE</span>
+          <span>👑 SECTION 2: RETURNING OFFICER (RO) &amp; ASSISTANT RETURNING OFFICERS (AROs)</span>
+        </div>
+
+        <table class="master-table">
+          <colgroup>
+            <col style="width: 8%;">
+            <col style="width: 28%;">
+            <col style="width: 22%;">
+            <col style="width: 16%;">
+            <col style="width: 12%;">
+            <col style="width: 14%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="col-center">Slot #</th>
+              <th>Name of Official</th>
+              <th>Designated Office / Role</th>
+              <th>Department / Desig</th>
+              <th>PEN #</th>
+              <th class="col-center">Signature</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${roData ? `
+              <tr>
+                <td class="col-center" style="font-weight: 800; font-family: monospace;">RO</td>
+                <td><span class="staff-name">${esc(roData.name)}</span></td>
+                <td><strong>👑 Returning Officer (RO)</strong></td>
+                <td>${esc(roData.designation)}${roData.department && roData.department !== '–' ? ` · <span class="dept-badge">${esc(roData.department)}</span>` : ''}</td>
+                <td style="font-family: monospace; font-weight: 700;">${esc(roData.pen)}</td>
+                <td class="col-sign"><div class="sign-box"></div></td>
+              </tr>
+            ` : ''}
+            ${aroList.map(aro => `
+              <tr>
+                <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(aro.slNo)}</td>
+                <td><span class="staff-name">${esc(aro.name)}</span></td>
+                <td><strong>⚖️ Assistant Returning Officer (ARO)</strong></td>
+                <td>${esc(aro.designation)}${aro.department && aro.department !== '–' ? ` · <span class="dept-badge">${esc(aro.department)}</span>` : ''}</td>
+                <td style="font-family: monospace; font-weight: 600;">${esc(aro.pen)}</td>
+                <td class="col-sign"><div class="sign-box"></div></td>
+              </tr>
+            `).join('')}
+            ${!roData && aroList.length === 0 ? `
+              <tr><td colspan="6" class="col-center" style="color: #000000; font-style: italic; padding: 8px;">No Returning Officer or ARO configured.</td></tr>
+            ` : ''}
+          </tbody>
+        </table>
+
+        <!-- SECTION 4: CAMPUS DISCIPLINE COMMITTEE -->
+        <div class="section-title-box" style="margin-top: 14px;">
+          <span>🛡️ SECTION 4: CAMPUS DISCIPLINE COMMITTEE</span>
         </div>
 
         ${discList.length === 0 ? `
-          <div style="border: 1px dashed #cbd5e1; padding: 8px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
+          <div style="border: 1px dashed #000000; padding: 8px; text-align: center; color: #000000; font-style: italic; margin-bottom: 10px;">
             No separate discipline committee appointed.
           </div>
         ` : `
@@ -8098,12 +8615,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             </thead>
             <tbody>
               ${discList.map(disc => `
-                <tr style="background: #f0fdf4 !important;">
+                <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(disc.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(disc.name)}</span>
                   </td>
-                  ${discHasDept ? `<td><span class="dept-badge" style="color: #166534;">${esc(disc.department)}</span></td>` : ''}
+                  ${discHasDept ? `<td><span class="dept-badge">${esc(disc.department)}</span></td>` : ''}
                   <td>${esc(disc.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(disc.pen)}</td>
                   <td class="col-sign"><div class="sign-box"></div></td>
@@ -8115,11 +8632,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
         <!-- SECTION 5: GRIEVANCE REDRESSAL COMMITTEE -->
         <div class="section-title-box" style="margin-top: 14px;">
-          <span>🤝 GRIEVANCE REDRESSAL COMMITTEE</span>
+          <span>🤝 SECTION 5: GRIEVANCE REDRESSAL COMMITTEE</span>
         </div>
 
         ${grievList.length === 0 ? `
-          <div style="border: 1px dashed #cbd5e1; padding: 8px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
+          <div style="border: 1px dashed #000000; padding: 8px; text-align: center; color: #000000; font-style: italic; margin-bottom: 10px;">
             No separate grievance committee appointed.
           </div>
         ` : `
@@ -8152,12 +8669,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             </thead>
             <tbody>
               ${grievList.map(g => `
-                <tr style="background: #f0f9ff !important;">
+                <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(g.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(g.name)}</span>
                   </td>
-                  ${grievHasDept ? `<td><span class="dept-badge" style="color: #0369a1;">${esc(g.department)}</span></td>` : ''}
+                  ${grievHasDept ? `<td><span class="dept-badge">${esc(g.department)}</span></td>` : ''}
                   <td>${esc(g.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(g.pen)}</td>
                   <td class="col-sign"><div class="sign-box"></div></td>
@@ -8167,7 +8684,57 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </table>
         `}
 
-        <!-- PART A: POLLING BOOTHS -->
+        <!-- CORE COMMITTEE -->
+        <div class="section-title-box" style="margin-top: 14px;">
+          <span>⭐ CORE COMMITTEE</span>
+        </div>
+
+        ${coreList.length === 0 ? `
+          <div style="border: 1px dashed #000000; padding: 8px; text-align: center; color: #000000; font-style: italic; margin-bottom: 10px;">
+            No Core Committee appointed.
+          </div>
+        ` : `
+          <table class="master-table">
+            <colgroup>
+              <col style="width: 8%;">
+              <col style="width: 25%;">
+              ${coreHasDept ? '<col style="width: 15%;">' : ''}
+              <col style="width: 15%;">
+              <col style="width: 12%;">
+              <col style="width: 15%;">
+              <col style="width: 10%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-center">Slot #</th>
+                <th>Name of Official</th>
+                ${coreHasDept ? '<th>Department</th>' : ''}
+                <th>Designation</th>
+                <th>PEN #</th>
+                <th>Assigned Responsibility</th>
+                <th class="col-center">Signature</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${coreList.map(c => `
+                <tr>
+                  <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(c.slNo)}</td>
+                  <td><span class="staff-name">${esc(c.name)}</span></td>
+                  ${coreHasDept ? `<td><span class="dept-badge">${esc(c.department)}</span></td>` : ''}
+                  <td>${esc(c.designation)}</td>
+                  <td style="font-family: monospace; font-weight: 600;">${esc(c.pen)}</td>
+                  <td>
+                    <div style="font-weight: 700; color: #000000;">${esc(c.duty)}</div>
+                    <span class="staff-meta">Station: ${esc(c.station)}</span>
+                  </td>
+                  <td class="col-sign"><div class="sign-box"></div></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `}
+
+        <!-- PART A: POLLING BOOTHS (BOOTHS 1 TO ${booths.length}) -->
         <div class="section-title-box">
           <span>🏫 PART A: POLLING BOOTHS (BOOTHS 1 TO ${booths.length})</span>
           <span style="font-size: 8.5px; font-weight: normal;">Reporting: 08:00 AM · Polling: 09:30 AM – 12:00 PM</span>
@@ -8206,13 +8773,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <tbody>
             ${booths.map(b => {
               const team = pollingTeams.find(t => t.boothNumber === b.boothNumber) || {};
+              // Core Committee In-Charge is strictly pushed to the end, after Polling Assistant
               const slots = [
-                ...(team.coreInCharge ? [{ role: 'Core Committee In-Charge', person: team.coreInCharge, isCore: true }] : []),
                 { role: 'Presiding Officer', person: team.presidingOfficer, isHead: true },
                 { role: 'Polling Officer', person: team.pollingOfficer1 },
                 { role: 'Polling Officer', person: team.pollingOfficer2 },
                 ...(team.pollingOfficer3 ? [{ role: 'Polling Officer', person: team.pollingOfficer3 }] : []),
-                { role: 'Polling Assistant', person: team.pollingAssistant, isAssistant: true }
+                { role: 'Polling Assistant', person: team.pollingAssistant, isAssistant: true },
+                ...(team.coreInCharge ? [{ role: 'Core Committee In-Charge', person: team.coreInCharge, isCore: true }] : [])
               ];
 
               return slots.map((s, sIdx) => {
@@ -8223,19 +8791,19 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 return `
                   <tr>
                     ${sIdx === 0 ? `
-                      <td rowspan="${slots.length}" class="col-center" style="font-weight: 800; font-family: monospace; font-size: 11px; background: #f8fafc;">
+                      <td rowspan="${slots.length}" class="col-center" style="font-weight: 800; font-family: monospace; font-size: 11px;">
                         Booth ${b.boothNumber}
                       </td>
-                      <td rowspan="${slots.length}" style="font-weight: 700; background: #f8fafc;">
+                      <td rowspan="${slots.length}" style="font-weight: 700;">
                         ${esc(b.roomName || `Booth ${b.boothNumber}`)}
                       </td>
                     ` : ''}
                     <td>
                       ${s.person && s.person.name && (!personObj?.isExcluded || s.isCore) ? `
                         <span class="staff-name">${esc(s.person.name)}</span>
-                      ` : (personObj?.isExcluded && !s.isCore ? '<span style="color: #94a3b8; font-style: italic;">– Excluded Official –</span>' : '<span style="color: #94a3b8; font-style: italic;">– Unassigned –</span>')}
+                      ` : (personObj?.isExcluded && !s.isCore ? '<span style="color: #000000; font-style: italic;">– Excluded Official –</span>' : '<span style="color: #000000; font-style: italic;">– Unassigned –</span>')}
                     </td>
-                    <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: ${s.isCore ? '#0284c7' : (s.isHead ? '#b45309' : (s.isAssistant ? '#047857' : '#0f172a'))};">
+                    <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: #000000;">
                       ${s.isCore ? '⭐ ' : ''}${esc(s.role)}
                     </td>
                     ${pollHasDept ? `<td><span class="dept-badge">${esc((personObj?.isExcluded && !s.isCore) ? '–' : dept)}</span></td>` : ''}
@@ -8248,7 +8816,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </tbody>
         </table>
 
-        <!-- PART B: COUNTING TABLES -->
+        <!-- PART B: COUNTING TABLES (TABLES 1 TO ${booths.length}) -->
         <div class="section-title-box">
           <span>🧮 PART B: COUNTING TABLES (TABLES 1 TO ${booths.length})</span>
           <span style="font-size: 8.5px; font-weight: normal;">Reporting: 01:30 PM · Counting: 02:00 PM Continuously</span>
@@ -8286,15 +8854,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </thead>
           <tbody>
             ${booths.map(b => {
-              const team = countingTeams.find(t => t.tableNumber === b.boothNumber) || {};
+              const team = countingTeams.find(t => (t.tableNumber || t.boothNumber) === b.boothNumber) || {};
+              // Core Committee In-Charge is strictly pushed to the end, after Counting Assistant
               const slots = [
-                ...(team.coreInCharge ? [{ role: 'Core Committee In-Charge', person: team.coreInCharge, isCore: true }] : []),
                 { role: 'Counting Supervisor', person: team.supervisor, isHead: true },
                 { role: 'Counting Officer', person: team.countingOfficer1 },
                 { role: 'Counting Officer', person: team.countingOfficer2 },
                 ...(team.countingOfficer3 ? [{ role: 'Counting Officer', person: team.countingOfficer3, isAddl: true }] : []),
-                { role: 'Counting Assistant', person: team.countingAssistant, isAssistant: true }
-              ].filter(s => !s.isAddl || team.countingOfficer3);
+                { role: 'Counting Assistant', person: team.countingAssistant, isAssistant: true },
+                ...(team.coreInCharge ? [{ role: 'Core Committee In-Charge', person: team.coreInCharge, isCore: true }] : [])
+              ];
 
               return slots.map((s, sIdx) => {
                 const personObj = s.person ? getPerson(s.person.name) : null;
@@ -8304,19 +8873,19 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 return `
                   <tr>
                     ${sIdx === 0 ? `
-                      <td rowspan="${slots.length}" class="col-center" style="font-weight: 800; font-family: monospace; font-size: 11px; background: #f8fafc;">
+                      <td rowspan="${slots.length}" class="col-center" style="font-weight: 800; font-family: monospace; font-size: 11px;">
                         Table ${b.boothNumber}
                       </td>
-                      <td rowspan="${slots.length}" style="font-weight: 700; background: #f8fafc;">
+                      <td rowspan="${slots.length}" style="font-weight: 700;">
                         ${esc(b.roomName || `Table ${b.boothNumber}`)}
                       </td>
                     ` : ''}
                     <td>
                       ${s.person && s.person.name && (!personObj?.isExcluded || s.isCore) ? `
                         <span class="staff-name">${esc(s.person.name)}</span>
-                      ` : (personObj?.isExcluded && !s.isCore ? '<span style="color: #94a3b8; font-style: italic;">– Excluded Official –</span>' : '<span style="color: #94a3b8; font-style: italic;">– Unassigned –</span>')}
+                      ` : (personObj?.isExcluded && !s.isCore ? '<span style="color: #000000; font-style: italic;">– Excluded Official –</span>' : '<span style="color: #000000; font-style: italic;">– Unassigned –</span>')}
                     </td>
-                    <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: ${s.isCore ? '#0284c7' : (s.isHead ? '#7e22ce' : (s.isAssistant ? '#047857' : '#0f172a'))};">
+                    <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: #000000;">
                       ${s.isCore ? '⭐ ' : ''}${esc(s.role)}
                     </td>
                     ${countHasDept ? `<td><span class="dept-badge">${esc((personObj?.isExcluded && !s.isCore) ? '–' : dept)}</span></td>` : ''}
@@ -8329,37 +8898,29 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </tbody>
         </table>
 
-        <!-- PART C: RESERVE POOL -->
+        <!-- PART C: RESERVE POOL PERSONNEL -->
         <div class="section-title-box" style="margin-top: 14px;">
-          <span>👥 PART C: RESERVE POOL (STANDBY)</span>
-          <span style="font-size: 8.5px; font-weight: normal;">Station: Central Control Room · Reporting: 08:00 AM · Standby for Relief</span>
+          <span>🛡️ RESERVE POOL PERSONNEL (STANDBY DUTY)</span>
+          <span style="font-size: 8.5px; font-weight: normal;">Reporting: 08:00 AM · Central Control Room</span>
         </div>
 
         ${reserveList.length === 0 ? `
-          <div style="border: 1px dashed #cbd5e1; padding: 8px; text-align: center; color: #64748b; font-style: italic; margin-bottom: 10px;">
-            All non-excluded personnel have been deployed to active duty stations. No reserve personnel currently unassigned.
+          <div style="border: 1px dashed #000000; padding: 8px; text-align: center; color: #000000; font-style: italic; margin-bottom: 10px;">
+            No personnel in Reserve Pool. All available staff actively deployed.
           </div>
         ` : `
           <table class="master-table">
             <colgroup>
-              ${resHasDept ? `
-                <col style="width: 8%;">
-                <col style="width: 28%;">
-                <col style="width: 22%;">
-                <col style="width: 16%;">
-                <col style="width: 12%;">
-                <col style="width: 14%;">
-              ` : `
-                <col style="width: 8%;">
-                <col style="width: 38%;">
-                <col style="width: 22%;">
-                <col style="width: 16%;">
-                <col style="width: 16%;">
-              `}
+              <col style="width: 8%;">
+              <col style="width: 32%;">
+              ${resHasDept ? '<col style="width: 18%;">' : ''}
+              <col style="width: 16%;">
+              <col style="width: 12%;">
+              <col style="width: 14%;">
             </colgroup>
             <thead>
               <tr>
-                <th class="col-center">Slot #</th>
+                <th class="col-center">Sl #</th>
                 <th>Name of Official</th>
                 ${resHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
@@ -8368,13 +8929,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               </tr>
             </thead>
             <tbody>
-              ${reserveList.map((res, rIdx) => `
-                <tr style="background: #f8fafc !important;">
-                  <td class="col-center" style="font-weight: 700; font-family: monospace;">Res-${rIdx + 1}</td>
-                  <td><span class="staff-name">${esc(res.name)}</span></td>
-                  ${resHasDept ? `<td><span class="dept-badge">${esc(res.department)}</span></td>` : ''}
-                  <td>${esc(res.designation)}</td>
-                  <td style="font-family: monospace; font-weight: 600;">${esc(res.pen)}</td>
+              ${reserveList.map((r, idx) => `
+                <tr>
+                  <td class="col-center" style="font-weight: 700; font-family: monospace;">${idx + 1}</td>
+                  <td><span class="staff-name">${esc(r.name)}</span></td>
+                  ${resHasDept ? `<td><span class="dept-badge">${esc(r.department)}</span></td>` : ''}
+                  <td>${esc(r.designation)}</td>
+                  <td style="font-family: monospace; font-weight: 600;">${esc(r.pen)}</td>
                   <td class="col-sign"><div class="sign-box"></div></td>
                 </tr>
               `).join('')}
@@ -8396,7 +8957,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <div class="ro-sign-line"></div>
             <strong>RETURNING OFFICER</strong><br>
             <span style="font-size: 9px;">College Union Election ${esc(electionYear)}</span><br>
-            <span style="font-size: 8.5px; color: #4b5563;">${esc(collegeName)}</span>
+            <span style="font-size: 8.5px; color: #000000;">${esc(collegeName)}</span>
           </div>
         </div>
       </div>

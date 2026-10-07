@@ -122,42 +122,72 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
   if (syncBadgeEl && api.subscribeAdminSync) {
     const unsub = api.subscribeAdminSync((state) => {
       if (!syncBadgeEl || !document.body.contains(syncBadgeEl)) return;
-      const { count = 0, isSyncing = false, isOnline = true } = state || {};
+      const { count = 0, isSyncing = false, isOnline = false } = state || {};
 
       if (isSyncing) {
         syncBadgeEl.innerHTML = `
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20" title="Uploading pending changes to online cloud database...">
             <span class="spinner" style="width:10px;height:10px;border-width:2px;"></span>
-            Syncing ${count > 0 ? `(${count})` : ''}...
+            Syncing to Cloud${count > 0 ? ` (${count})` : ''}...
           </span>
         `;
-      } else if (count > 0 || !isOnline) {
+      } else if (!isOnline) {
+        // STRICT RULE: If offline or cannot reach online database, NEVER show Green!
         syncBadgeEl.innerHTML = `
           <div class="flex items-center gap-1.5">
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${isOnline ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' : 'bg-rose-500/10 text-rose-300 border border-rose-500/20'}">
-              <span class="w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-amber-400 animate-pulse' : 'bg-rose-400'}"></span>
-              ${!isOnline ? 'Offline' : ''} ${count > 0 ? `${count} Queued` : 'No Internet'}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-300 border border-rose-500/20" title="No connection to online cloud database. Operating in local-only mode.">
+              <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+              ${count > 0 ? `Offline • ${count} Local Only` : '🔴 Offline (Local Only)'}
             </span>
-            ${isOnline && count > 0 ? `
-              <button id="btnHeaderAdminSync" class="btn btn-xs py-0.5 px-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-full flex items-center gap-1 text-[11px] shadow-sm">
-                <span>⚡</span> Sync Now
-              </button>
-            ` : ''}
+            <button id="btnHeaderAdminRetryConn" class="btn btn-xs py-0.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10 rounded-full flex items-center gap-1 text-[11px]" title="Test online database connection">
+              <span>🔄</span> Check Online
+            </button>
+          </div>
+        `;
+        syncBadgeEl.querySelector('#btnHeaderAdminRetryConn')?.addEventListener('click', async () => {
+          showToast('Checking connection to online cloud database...', 'info');
+          const reached = await api.checkCloudReachable(true);
+          if (reached) {
+            showToast('Connected to online database!', 'success');
+            if (count > 0) {
+              try {
+                await api.syncAdminNow();
+                showToast('All local changes synced to online database!', 'success');
+              } catch (syncErr) {
+                showToast(`Sync failed: ${syncErr.message}`, 'error');
+              }
+            }
+          } else {
+            showToast('Online database is unreachable. Check your internet connection.', 'warning');
+          }
+        });
+      } else if (count > 0) {
+        // Online, but has unsynced local changes waiting to be pushed to online database
+        syncBadgeEl.innerHTML = `
+          <div class="flex items-center gap-1.5">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/20" title="${count} change(s) stored locally on this device, waiting to push to the online database">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+              ${count} Unsynced (Local Only)
+            </span>
+            <button id="btnHeaderAdminSync" class="btn btn-xs py-0.5 px-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-full flex items-center gap-1 text-[11px] shadow-sm">
+              <span>⚡</span> Sync to Cloud
+            </button>
           </div>
         `;
         syncBadgeEl.querySelector('#btnHeaderAdminSync')?.addEventListener('click', async () => {
-          showToast('Syncing all changes to server...', 'info');
+          showToast('Syncing all changes to online cloud database...', 'info');
           try {
             await api.syncAdminNow();
-            showToast('Sync completed successfully!', 'success');
+            showToast('All changes successfully synced to online database!', 'success');
           } catch (err) {
             showToast(`Sync failed: ${err.message}`, 'error');
           }
         });
       } else {
+        // ONLY show Green when: isOnline === true (online DB verified reachable) AND count === 0
         syncBadgeEl.innerHTML = `
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Synced
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" title="Connected to online database. All changes are committed to the cloud.">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Synced (Online DB)
           </span>
         `;
       }

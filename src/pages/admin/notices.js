@@ -867,10 +867,11 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
   `;
 
   // Attach event handlers
-  attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts, nominalRoll);
+  attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts, nominalRoll, plan);
 }
 
-function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts = [], nominalRoll = []) {
+function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts = [], nominalRoll = [], plan = null) {
+  const ballotPlan = plan || settings?.ballotPlan || null;
   // Navigation Tabs: Master Print vs Posters vs Notices vs Index
   const tabMaster = main.querySelector('#adminTabMasterPrint');
   const tabPosters = main.querySelector('#adminTabPosters');
@@ -952,7 +953,7 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
       showToast('No polling booths configured to print.', 'error');
       return;
     }
-    printBatchBoothDoorPosters(booths, settings, schedule, { plan, posts });
+    printBatchBoothDoorPosters(booths, settings, schedule, { plan: ballotPlan, posts });
   });
   main.querySelector('#btnHubPrintCampusDirectory')?.addEventListener('click', () => {
     if (!booths.length) {
@@ -1014,7 +1015,7 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
       alert('No polling booths configured to print.');
       return;
     }
-    printBatchBoothDoorPosters(booths, settings, schedule, { plan, posts });
+    printBatchBoothDoorPosters(booths, settings, schedule, { plan: ballotPlan, posts });
   });
 
   // Print Master Campus Directory
@@ -1032,7 +1033,7 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
       const num = Number(btn.dataset.num);
       const b = booths.find(item => Number(item.boothNumber) === num);
       if (b) {
-        printBoothDoorPoster(b, settings, schedule, { plan, posts });
+        printBoothDoorPoster(b, settings, schedule, { plan: ballotPlan, posts });
       }
     });
   });

@@ -5,12 +5,93 @@
  * NOTE: Strictly Admin-only. Public submissions (e.g. submitNomination) do NOT use local queuing.
  */
 
+import { getPendingSyncCount } from './offlineStorage.js';
+
 const ADMIN_DB_NAME = 'GCC_Election_Admin_DB';
 const ADMIN_DB_VERSION = 1;
 
 let _dbPromise = null;
 const _syncListeners = new Set();
 let _isSyncing = false;
+
+// ─── Live Cloud Database Reachability State ─────────────────────────────────
+let _isCloudReachable = false;
+let _lastCheckedAt = 0;
+let _checkingPromise = null;
+
+export async function checkCloudReachable(force = false) {
+  if (typeof window === 'undefined') return false;
+  if (!navigator.onLine) {
+    _isCloudReachable = false;
+    notifySyncListeners();
+    return false;
+  }
+
+  const now = Date.now();
+  if (!force && _checkingPromise) {
+    return _checkingPromise;
+  }
+  if (!force && _lastCheckedAt > 0 && (now - _lastCheckedAt < 12000)) {
+    return _isCloudReachable;
+  }
+
+  _checkingPromise = (async () => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const res = await fetch(`/api/main?action=ping&_t=${Date.now()}`, {
+        method: 'GET',
+        signal: controller.signal,
+        cache: 'no-store',
+        headers: { 'Accept': 'application/json' }
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        _isCloudReachable = Boolean(data && data.ok === true && data.db !== false);
+      } else {
+        _isCloudReachable = false;
+      }
+    } catch (err) {
+      _isCloudReachable = false;
+    } finally {
+      _lastCheckedAt = Date.now();
+      _checkingPromise = null;
+      notifySyncListeners();
+    }
+    return _isCloudReachable;
+  })();
+
+  return _checkingPromise;
+}
+
+export function markCloudSuccess() {
+  _isCloudReachable = true;
+  _lastCheckedAt = Date.now();
+  notifySyncListeners();
+}
+
+export function markCloudFailure(err) {
+  _isCloudReachable = false;
+  _lastCheckedAt = Date.now();
+  notifySyncListeners();
+}
+
+export function isCloudOnline() {
+  return Boolean(_isCloudReachable && (typeof navigator !== 'undefined' ? navigator.onLine : false));
+}
+
+export async function getTotalPendingCount() {
+  const [adminCount, resultsCount] = await Promise.all([
+    getAdminOutboxCount().catch(() => 0),
+    getPendingSyncCount ? getPendingSyncCount().catch(() => 0) : 0
+  ]);
+  return {
+    total: adminCount + resultsCount,
+    adminCount,
+    resultsCount
+  };
+}
 
 function openAdminDB() {
   if (_dbPromise) return _dbPromise;
@@ -38,19 +119,34 @@ function openAdminDB() {
 
 export function subscribeAdminSync(listener) {
   _syncListeners.add(listener);
-  // Emit current state immediately
-  getAdminOutboxCount().then(count => {
-    listener({ isSyncing: _isSyncing, count, isOnline: navigator.onLine });
+  // Trigger ping check in background on initial subscription
+  checkCloudReachable(false).catch(() => {});
+  
+  // Emit current state immediately (defaults to offline/local-only until verified)
+  getTotalPendingCount().then(({ total, adminCount, resultsCount }) => {
+    const isOnline = Boolean(_isCloudReachable && navigator.onLine);
+    listener({
+      isSyncing: _isSyncing,
+      count: total,
+      adminCount,
+      resultsCount,
+      isOnline,
+      isCloudReachable: _isCloudReachable
+    });
   }).catch(() => {});
   return () => _syncListeners.delete(listener);
 }
 
-function notifySyncListeners(state = {}) {
-  getAdminOutboxCount().then(count => {
+export function notifySyncListeners(state = {}) {
+  getTotalPendingCount().then(({ total, adminCount, resultsCount }) => {
+    const isOnline = Boolean(_isCloudReachable && navigator.onLine);
     const detail = {
       isSyncing: _isSyncing,
-      count,
-      isOnline: navigator.onLine,
+      count: total,
+      adminCount,
+      resultsCount,
+      isOnline,
+      isCloudReachable: _isCloudReachable,
       ...state
     };
     _syncListeners.forEach(fn => {
@@ -201,7 +297,7 @@ export async function getAdminOutboxCount() {
 // ─── Outbox Background Sync Worker ───────────────────────────────────────────
 export async function flushAdminOutbox(apiPostFn, getSessionTokenFn) {
   if (_isSyncing) return;
-  if (!navigator.onLine) {
+  if (!navigator.onLine || !_isCloudReachable) {
     notifySyncListeners();
     return;
   }
@@ -217,7 +313,7 @@ export async function flushAdminOutbox(apiPostFn, getSessionTokenFn) {
 
   try {
     for (const item of items) {
-      if (!navigator.onLine) break;
+      if (!navigator.onLine || !_isCloudReachable) break;
 
       try {
         let body = { ...item.payload, action: item.action };
@@ -248,6 +344,7 @@ export async function flushAdminOutbox(apiPostFn, getSessionTokenFn) {
 
         // If offline error, halt processing until network returns
         if (!navigator.onLine || postErr.message?.includes('Failed to fetch') || postErr.message?.includes('Network error')) {
+          _isCloudReachable = false;
           break;
         }
       }
@@ -258,15 +355,30 @@ export async function flushAdminOutbox(apiPostFn, getSessionTokenFn) {
   }
 }
 
-// Listen to online events to auto-flush
+// Listen to network events and window events to maintain accurate online status
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => {
-    notifySyncListeners({ isOnline: true });
-    window.dispatchEvent(new CustomEvent('admin:online-reconnected'));
+    checkCloudReachable(true).then((online) => {
+      if (online) {
+        window.dispatchEvent(new CustomEvent('admin:online-reconnected'));
+      }
+    });
   });
   window.addEventListener('offline', () => {
-    notifySyncListeners({ isOnline: false });
+    _isCloudReachable = false;
+    notifySyncListeners({ isOnline: false, isCloudReachable: false });
   });
+  window.addEventListener('app:sync-state-changed', () => {
+    notifySyncListeners();
+  });
+  window.addEventListener('focus', () => {
+    if (Date.now() - _lastCheckedAt > 15000) {
+      checkCloudReachable(false);
+    }
+  });
+  setInterval(() => {
+    checkCloudReachable(false);
+  }, 25000);
 }
 
 // ─── Full Admin Backup Export & Import (USB) ──────────────────────────────────

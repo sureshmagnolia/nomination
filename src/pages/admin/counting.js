@@ -1886,7 +1886,7 @@ function triggerCountingPrint(htmlContent, title = 'Counting Documents', college
     .serial-tag { border: 2px solid #000; padding: 4px 10px; font-family: monospace; font-size: 14px; font-weight: bold; background: #fff; border-radius: 2px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
     th, td { border: 1.5px solid #000; padding: 5px 6px; }
-    th { background: #f3f4f6; }
+    th { background: #fff; color: #000; }
     .watermark-global { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 450px; height: 450px; opacity: 0.08; filter: grayscale(100%); pointer-events: none; z-index: -1; background-size: contain; background-repeat: no-repeat; background-position: center; }
 
     /* UUC Dual-Vote Tally Marking Compartments */
@@ -1907,77 +1907,124 @@ function buildFormHtml(tableNum, roundNum, postName, candidates, serial, college
   const candsList = Array.isArray(candidates) ? candidates : [];
   const isPostUuc = isUuc(postName);
 
+  // Dynamic row height to utilize all available space on A4 page
+  // Total rows that need expanded height: candidates + NOTA + INVALID
+  const totalDynamicRows = (candsList.length || 1) + 2;
+  // Available height for candidate tally rows is approx 580px on standard A4
+  const computedRowH = Math.floor(580 / totalDynamicRows);
+  const rowHeightPx = Math.max(50, Math.min(180, computedRowH));
+  const rowHStyle = `height:${rowHeightPx}px;`;
+
   const rows = candsList.length
-    ? candsList.map((c, i) => `<tr>
-        <td style="text-align:center;padding:12px 8px;font-weight:bold">${i+1}</td>
-        <td style="padding:12px 10px;font-size:14.5px;font-weight:bold;line-height:1.2;">
-          ${esc(c.candidateName || '')}
-          <div style="font-size:11px;font-weight:normal;color:#475569;margin-top:2px;">${esc(c.candidateClass || '')}</div>
-        </td>
-        <td style="padding:12px 8px"></td></tr>`).join('')
-    : `<tr><td colspan="3" style="padding:12px;text-align:center;color:#555">No Contesting Candidates</td></tr>`;
+    ? candsList.map((c, i) => `
+        <tr style="${rowHStyle}">
+          <td style="text-align:center;padding:6px 4px;font-weight:bold;vertical-align:middle;font-size:13px;border:1.5px solid #000;">${i + 1}</td>
+          <td style="padding:8px 10px;vertical-align:top;line-height:1.25;border:1.5px solid #000;">
+            <div style="font-size:14.5px;font-weight:bold;color:#000;">${esc(c.candidateName || '')}</div>
+            <div style="font-size:11px;font-weight:normal;color:#000;margin-top:2px;">${esc(c.candidateClass || '')}</div>
+          </td>
+          <td style="vertical-align:top;padding:6px 8px;border:1.5px solid #000;background:#fff;">
+            <div style="font-size:8.5px;color:#000;letter-spacing:0.5px;opacity:0.4;user-select:none;">TALLY MARKS ( Working Space: ||||  ||||  ... )</div>
+          </td>
+          <td style="text-align:center;vertical-align:middle;padding:6px 8px;font-family:monospace;font-size:15px;font-weight:bold;border:1.5px solid #000;background:#fff;">
+            [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]
+          </td>
+        </tr>`).join('')
+    : `
+        <tr style="${rowHStyle}">
+          <td colspan="4" style="padding:16px;text-align:center;color:#000;vertical-align:middle;font-weight:bold;border:1.5px solid #000;">No Contesting Candidates</td>
+        </tr>`;
 
   return `<div class="pg" style="page-break-inside:avoid;">
     <!-- Top 3-Column Header: Balanced Left Spacer + Center Branding + Right Badge -->
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-      <!-- Left spacer strictly balancing right badge width for perfect true centering -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
       <div style="width:140px;flex-shrink:0;"></div>
-
-      <!-- Center Branding -->
       <div style="flex:1;text-align:center;padding:0 6px;">
-        ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:42px;max-width:120px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
-        <div style="font-size:13.5px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px;line-height:1.2;">${esc(collegeName)}</div>
-        <div style="font-size:11.5px;font-weight:700;color:#334155;margin-top:2px;">College Union Election ${esc(yearStr)}</div>
-        <h2 style="margin:5px 0 0;font-size:19px;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:#000;">
-          Counting Form ${isRecount ? '<span style="color:#b91c1c;font-size:13px;border:1.5px solid #b91c1c;padding:2px 6px;vertical-align:middle;margin-left:8px;border-radius:2px;letter-spacing:1px;">RECOUNT</span>' : ''}
+        ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:40px;max-width:120px;margin:0 auto 3px auto;display:block;object-fit:contain;filter:grayscale(100%);" alt="College Logo">` : ''}
+        <div style="font-size:13.5px;font-weight:800;color:#000;text-transform:uppercase;letter-spacing:0.5px;line-height:1.2;">${esc(collegeName)}</div>
+        <div style="font-size:11.5px;font-weight:700;color:#000;margin-top:2px;">College Union Election ${esc(yearStr)}</div>
+        <h2 style="margin:4px 0 0;font-size:18px;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:#000;">
+          Counting Form ${isRecount ? '<span style="color:#000;font-size:13px;border:1.5px solid #000;padding:2px 6px;vertical-align:middle;margin-left:8px;border-radius:2px;letter-spacing:1px;">RECOUNT</span>' : ''}
         </h2>
       </div>
-
-      <!-- Right Form Serial Badge -->
       <div style="width:140px;flex-shrink:0;display:flex;justify-content:flex-end;">
-        <div class="serial-tag" ${isRecount ? 'style="border-color:#b91c1c;color:#b91c1c;white-space:nowrap;"' : 'style="white-space:nowrap;"'}>
+        <div class="serial-tag" style="border:2px solid #000;color:#000;white-space:nowrap;">
           ${isRecount ? `RECOUNT — FORM #${serial}` : `FORM #${serial}`}
         </div>
       </div>
     </div>
 
-    <!-- Table No and Round No Bar — Perfectly Aligned 100% Width -->
-    <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;padding:5px 12px;border:1.5px solid #000;margin-bottom:8px;font-size:13px;font-weight:bold;">
-      <span>TABLE NO: <u style="font-size:14px;font-weight:800;">${tableNum}</u> ${roomName ? `<span style="font-size:11px;font-weight:normal;color:#475569">(${esc(roomName)})</span>` : ''}</span>
+    <!-- Table No and Round No Bar — Pure Black & White -->
+    <div style="display:flex;justify-content:space-between;align-items:center;background:#fff;padding:5px 12px;border:1.5px solid #000;margin-bottom:6px;font-size:13px;font-weight:bold;color:#000;">
+      <span>TABLE NO: <u style="font-size:14px;font-weight:800;">${tableNum}</u> ${roomName ? `<span style="font-size:11px;font-weight:normal;color:#000">(${esc(roomName)})</span>` : ''}</span>
       <span>ROUND NO: <u style="font-size:14px;font-weight:800;">${roundNum}</u></span>
     </div>
 
-    <!-- Post Title Bar — Perfectly Aligned 100% Width -->
-    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:12px;">
-      <h3 style="margin:0;font-size:15px;font-weight:800;text-decoration:underline;text-transform:uppercase;letter-spacing:0.5px;">POST: ${esc(postName)}</h3>
-      ${isPostUuc ? `<div style="font-size:11px;font-weight:bold;color:#b45309;margin-top:3px;">⭐ TWO (2) VACANCIES — DUAL-VOTE COUNTING (Total votes tallied = 2 × Ballots cast)</div>` : ''}
+    <!-- Post Title Bar -->
+    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px;color:#000;">
+      <h3 style="margin:0;font-size:15px;font-weight:800;text-decoration:underline;text-transform:uppercase;letter-spacing:0.5px;color:#000;">POST: ${esc(postName)}</h3>
+      ${isPostUuc ? `<div style="font-size:11px;font-weight:bold;color:#000;margin-top:2px;">⭐ TWO (2) VACANCIES — DUAL-VOTE COUNTING (Total votes tallied = 2 × Ballots cast)</div>` : ''}
     </div>
 
-    <!-- Candidate Table — Full 100% Width -->
-    <table>
-      <thead><tr>
-        <th style="width:8%;text-align:center;padding:8px 6px;">#</th>
-        <th style="text-align:left;width:62%;padding:8px 10px;">Candidate Name &amp; Class</th>
-        <th style="width:30%;text-align:center;padding:8px 6px;">Votes Tallied</th>
-      </tr></thead>
+    <!-- Candidate Table — Full 100% Width with Robust Tally Marks Column -->
+    <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+      <thead>
+        <tr style="background:#fff;border-bottom:2px solid #000;">
+          <th style="width:5%;text-align:center;padding:7px 4px;border:1.5px solid #000;color:#000;font-size:11px;">#</th>
+          <th style="width:32%;text-align:left;padding:7px 8px;border:1.5px solid #000;color:#000;font-size:11px;">Candidate Name &amp; Class</th>
+          <th style="width:48%;text-align:center;padding:7px 8px;border:1.5px solid #000;color:#000;font-size:11px;">Tally Marks ( Working Space for 5-Bar Bundles |||| )</th>
+          <th style="width:15%;text-align:center;padding:7px 6px;border:1.5px solid #000;color:#000;font-size:11px;">Votes Tallied</th>
+        </tr>
+      </thead>
       <tbody>
         ${rows}
-        <tr><td style="text-align:center;padding:12px 8px;font-weight:bold">–</td><td style="padding:12px 10px;font-weight:bold">NOTA</td><td></td></tr>
-        <tr><td style="text-align:center;padding:12px 8px;font-weight:bold">–</td><td style="padding:12px 10px;font-weight:bold;color:#444">INVALID</td><td></td></tr>
-        <tr style="background:#eee;border-top:2px solid #000"><td style="text-align:center;padding:12px 8px;font-weight:bold">–</td><td style="padding:12px 10px;font-weight:black;font-size:15px">TOTAL VOTES TALLIED</td><td></td></tr>
+        <tr style="${rowHStyle}">
+          <td style="text-align:center;padding:6px 4px;font-weight:bold;vertical-align:middle;border:1.5px solid #000;font-size:13px;">–</td>
+          <td style="padding:8px 10px;font-weight:bold;vertical-align:top;font-size:13px;border:1.5px solid #000;color:#000;">NOTA</td>
+          <td style="vertical-align:top;padding:6px 8px;border:1.5px solid #000;background:#fff;">
+            <div style="font-size:8.5px;color:#000;letter-spacing:0.5px;opacity:0.4;user-select:none;">TALLY MARKS FOR NOTA</div>
+          </td>
+          <td style="text-align:center;vertical-align:middle;padding:6px 8px;font-family:monospace;font-size:15px;font-weight:bold;border:1.5px solid #000;background:#fff;">
+            [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]
+          </td>
+        </tr>
+        <tr style="${rowHStyle}">
+          <td style="text-align:center;padding:6px 4px;font-weight:bold;vertical-align:middle;border:1.5px solid #000;font-size:13px;">–</td>
+          <td style="padding:8px 10px;font-weight:bold;vertical-align:top;border:1.5px solid #000;color:#000;">
+            <div style="font-size:13px;font-weight:bold;">INVALID</div>
+            <div style="font-size:10px;font-weight:normal;color:#000;margin-top:2px;">(Defective / Blank / Overvoted)</div>
+          </td>
+          <td style="vertical-align:top;padding:6px 8px;border:1.5px solid #000;background:#fff;">
+            <div style="font-size:8.5px;color:#000;letter-spacing:0.5px;opacity:0.4;user-select:none;">TALLY MARKS FOR INVALID BALLOTS</div>
+          </td>
+          <td style="text-align:center;vertical-align:middle;padding:6px 8px;font-family:monospace;font-size:15px;font-weight:bold;border:1.5px solid #000;background:#fff;">
+            [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]
+          </td>
+        </tr>
+        <!-- TOTAL ROW: Compact standard height (Except Total) -->
+        <tr style="background:#fff;border-top:2.5px solid #000;border-bottom:2.5px solid #000;height:42px;">
+          <td style="text-align:center;padding:8px 4px;font-weight:bold;border:1.5px solid #000;font-size:13px;">–</td>
+          <td style="padding:8px 10px;font-weight:900;font-size:13.5px;border:1.5px solid #000;color:#000;">TOTAL VOTES TALLIED</td>
+          <td style="border:1.5px solid #000;background:#fff;padding:8px 10px;font-size:10.5px;font-style:italic;color:#000;text-align:center;">
+            (Sum of all candidate tallies + NOTA + Invalid = Total ballots checked)
+          </td>
+          <td style="text-align:center;vertical-align:middle;padding:8px;font-family:monospace;font-size:16px;font-weight:900;border:1.5px solid #000;background:#fff;">
+            [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]
+          </td>
+        </tr>
       </tbody>
     </table>
 
     <!-- Signature Block -->
-    <div style="display:flex;justify-content:space-between;margin-top:50px;text-align:center">
+    <div style="display:flex;justify-content:space-between;margin-top:35px;text-align:center;color:#000;">
       <div>
         <div style="border-top:1.5px solid #000;width:200px;margin-bottom:4px"></div>
-        <div style="font-size:11px">Signature of the Agents</div>
+        <div style="font-size:11px;color:#000;">Signature of Counting Agents</div>
       </div>
       <div>
-        <div style="border-top:1.5px solid #000;width:220px;margin-bottom:4px"></div>
-        <div style="font-size:11px;font-weight:bold">Counting Supervisor Signature</div>
-        ${supervisorName ? `<div style="font-size:10.5px;color:#222;margin-top:3px;font-style:italic;">( Name: ${esc(supervisorName)} )</div>` : `<div style="font-size:10.5px;color:#666;margin-top:3px;font-style:italic;">( Name: _______________________ )</div>`}
+        <div style="border-top:1.5px solid #000;width:230px;margin-bottom:4px"></div>
+        <div style="font-size:11px;font-weight:bold;color:#000;">Counting Supervisor Signature</div>
+        ${supervisorName ? `<div style="font-size:10.5px;color:#000;margin-top:3px;font-style:italic;">( Name: ${esc(supervisorName)} )</div>` : `<div style="font-size:10.5px;color:#000;margin-top:3px;font-style:italic;">( Name: _______________________ )</div>`}
       </div>
     </div>
   </div>`;
@@ -2000,54 +2047,54 @@ function buildConsolidationHtml(postName, tableEntries, candidates, collegeName 
   const rows = entries.length ? entries.map((entry, idx) => `
     <tr>
       <td style="text-align:center;font-weight:bold;padding:4px 3px;">${idx + 1}</td>
-      <td style="font-size:11px;padding:4px 5px;">
+      <td style="font-size:11px;padding:4px 5px;color:#000;">
         <strong>Table ${entry.tableNum}</strong>
-        ${entry.roomName ? `<span style="font-size:9.5px;color:#555"> (${esc(entry.roomName)})</span>` : ''}
+        ${entry.roomName ? `<span style="font-size:9.5px;color:#000"> (${esc(entry.roomName)})</span>` : ''}
       </td>
-      <td style="text-align:center;font-size:11px;padding:4px 3px;">R-${entry.roundNum}</td>
-      <td style="text-align:center;font-family:monospace;font-weight:bold;font-size:11.5px;padding:4px 3px;">#${esc(entry.serial)}</td>
-      ${candsList.map(() => `<td style="padding:4px 4px"></td>`).join('')}
-      <td style="padding:4px 4px"></td>
-      <td style="padding:4px 4px"></td>
-      <td style="padding:4px 4px;background:#fafafa"></td>
-      <td style="padding:4px 4px"></td>
+      <td style="text-align:center;font-size:11px;padding:4px 3px;color:#000;">R-${entry.roundNum}</td>
+      <td style="text-align:center;font-family:monospace;font-weight:bold;font-size:11.5px;padding:4px 3px;color:#000;">#${esc(entry.serial)}</td>
+      ${candsList.map(() => `<td style="padding:4px 4px;border:1px solid #000;"></td>`).join('')}
+      <td style="padding:4px 4px;border:1px solid #000;"></td>
+      <td style="padding:4px 4px;border:1px solid #000;"></td>
+      <td style="padding:4px 4px;border:1px solid #000;"></td>
+      <td style="padding:4px 4px;border:1px solid #000;"></td>
     </tr>
   `).join('') : `
     <tr>
-      <td style="text-align:center;padding:4px 3px;">1</td>
-      <td style="padding:4px 5px;">Table 1</td>
-      <td style="text-align:center;padding:4px 3px;">R-1</td>
-      <td style="text-align:center;font-family:monospace;padding:4px 3px;">–</td>
-      ${candsList.map(() => `<td style="padding:4px 4px"></td>`).join('')}
-      <td style="padding:4px 4px"></td><td style="padding:4px 4px"></td><td style="padding:4px 4px"></td><td style="padding:4px 4px"></td>
+      <td style="text-align:center;padding:4px 3px;color:#000;">1</td>
+      <td style="padding:4px 5px;color:#000;">Table 1</td>
+      <td style="text-align:center;padding:4px 3px;color:#000;">R-1</td>
+      <td style="text-align:center;font-family:monospace;padding:4px 3px;color:#000;">–</td>
+      ${candsList.map(() => `<td style="padding:4px 4px;border:1px solid #000;"></td>`).join('')}
+      <td style="padding:4px 4px;border:1px solid #000;"></td><td style="padding:4px 4px;border:1px solid #000;"></td><td style="padding:4px 4px;border:1px solid #000;"></td><td style="padding:4px 4px;border:1px solid #000;"></td>
     </tr>
   `;
 
-  return `<div class="pg pg-consolidation" style="page-break-inside:avoid;">
-    ${isRecount ? `<div style="position:absolute;top:6px;right:6px;border:2px solid #b91c1c;color:#b91c1c;padding:3px 10px;font-size:12px;font-weight:bold;letter-spacing:1px;background:#fff;">🔁 RECOUNTING</div>` : ''}
-    <div style="text-align:center;border-bottom:1.5px solid #000;padding-bottom:5px;margin-bottom:8px;">
-      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:30px;max-width:100px;margin:0 auto 2px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
-      <div style="font-size:11.5px;font-weight:bold;color:#111;text-transform:uppercase;">${esc(collegeName)}</div>
-      <div style="font-size:10.5px;font-weight:bold;color:#444;margin-top:1px;">College Union Election ${esc(yearStr)}</div>
-      <h2 style="margin:3px 0 0;font-size:15px;text-transform:uppercase;letter-spacing:1px">
-        FORM 7 — TABULATION &amp; CONSOLIDATION REGISTER ${isRecount ? '<span style="color:#b91c1c;">(RECOUNT)</span>' : ''}
+  return `<div class="pg pg-consolidation" style="page-break-inside:avoid;color:#000;">
+    ${isRecount ? `<div style="position:absolute;top:6px;right:6px;border:2px solid #000;color:#000;padding:3px 10px;font-size:12px;font-weight:bold;letter-spacing:1px;background:#fff;">🔁 RECOUNTING</div>` : ''}
+    <div style="text-align:center;border-bottom:1.5px solid #000;padding-bottom:5px;margin-bottom:8px;color:#000;">
+      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:30px;max-width:100px;margin:0 auto 2px auto;display:block;object-fit:contain;filter:grayscale(100%);" alt="College Logo">` : ''}
+      <div style="font-size:11.5px;font-weight:bold;color:#000;text-transform:uppercase;">${esc(collegeName)}</div>
+      <div style="font-size:10.5px;font-weight:bold;color:#000;margin-top:1px;">College Union Election ${esc(yearStr)}</div>
+      <h2 style="margin:3px 0 0;font-size:15px;text-transform:uppercase;letter-spacing:1px;color:#000;">
+        FORM 7 — TABULATION &amp; CONSOLIDATION REGISTER ${isRecount ? '<span>(RECOUNT)</span>' : ''}
       </h2>
-      <h3 style="margin:3px 0 0;font-size:13px;text-decoration:underline;text-transform:uppercase">
-        POST: ${esc(postName)} ${postUuc ? '<span style="font-size:11px;color:#b45309;font-weight:bold;">[2 Vacancies — Dual-Vote]</span>' : ''}
+      <h3 style="margin:3px 0 0;font-size:13px;text-decoration:underline;text-transform:uppercase;color:#000;">
+        POST: ${esc(postName)} ${postUuc ? '<span style="font-size:11px;color:#000;font-weight:bold;">[2 Vacancies — Dual-Vote]</span>' : ''}
       </h3>
     </div>
 
-    <table style="font-size:10.5px;margin-bottom:8px;">
+    <table style="font-size:10.5px;margin-bottom:8px;color:#000;border:1px solid #000;">
       <thead>
         <tr>
-          <th style="width:4%;text-align:center;padding:4px 2px;">#</th>
-          <th style="width:14%;text-align:left;padding:4px 5px;">Table / Booth</th>
-          <th style="width:6%;text-align:center;padding:4px 2px;">Round</th>
-          <th style="width:10%;text-align:center;padding:4px 2px;">Ref Form #</th>
+          <th style="width:4%;text-align:center;padding:4px 2px;color:#000;border:1px solid #000;">#</th>
+          <th style="width:14%;text-align:left;padding:4px 5px;color:#000;border:1px solid #000;">Table / Booth</th>
+          <th style="width:6%;text-align:center;padding:4px 2px;color:#000;border:1px solid #000;">Round</th>
+          <th style="width:10%;text-align:center;padding:4px 2px;color:#000;border:1px solid #000;">Ref Form #</th>
           ${candsList.map(c => `
-            <th style="width:${candColWidth}%;text-align:center;padding:4px 3px;">
+            <th style="width:${candColWidth}%;text-align:center;padding:4px 3px;color:#000;border:1px solid #000;">
               ${esc(c.candidateName)}
-              <div style="font-size:8.5px;font-weight:normal;color:#444">${esc(c.candidateClass || '')}</div>
+              <div style="font-size:8.5px;font-weight:normal;color:#000">${esc(c.candidateClass || '')}</div>
             </th>
           `).join('')}
           <th style="width:7%;text-align:center;padding:4px 2px;">NOTA</th>
@@ -2245,29 +2292,29 @@ export function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, c
     : Math.max(45, Math.min(135, computedH));
   const rowHStyle = `height:${rowHeightPx}px;`;
 
-  return `<div class="pg pg-tally" style="page-break-inside:avoid;padding:2px 2px;">
+  return `<div class="pg pg-tally" style="page-break-inside:avoid;padding:2px 2px;color:#000;">
     <!-- Stripped compact header line -->
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1.5px solid #000;padding-bottom:2px;margin-bottom:3px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1.5px solid #000;padding-bottom:2px;margin-bottom:3px;color:#000;">
       <div>
-        <span style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;">${esc(collegeName)}</span>
-        <span style="font-size:10.5px;font-weight:700;color:#1e3a8a;margin-left:8px;">FORM 6-T (UUC) — BATCH TALLY SHEET</span>
-        <span style="font-size:9.5px;font-weight:600;color:#333;margin-left:6px;">[POST: UNIVERSITY UNION COUNCILLOR]</span>
-        ${isRecount ? '<span style="color:#b91c1c;font-weight:bold;margin-left:6px;">(RECOUNT)</span>' : ''}
+        <span style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#000;">${esc(collegeName)}</span>
+        <span style="font-size:10.5px;font-weight:700;color:#000;margin-left:8px;">FORM 6-T (UUC) — BATCH TALLY SHEET</span>
+        <span style="font-size:9.5px;font-weight:600;color:#000;margin-left:6px;">[POST: UNIVERSITY UNION COUNCILLOR]</span>
+        ${isRecount ? '<span style="color:#000;font-weight:bold;margin-left:6px;border:1px solid #000;padding:0 3px;">(RECOUNT)</span>' : ''}
       </div>
-      <div style="font-size:9.5px;font-family:monospace;font-weight:bold;color:#111;">
+      <div style="font-size:9.5px;font-family:monospace;font-weight:bold;color:#000;">
         REF: #${serial} | ${esc(yearStr)}
       </div>
     </div>
 
     <!-- Stripped 1-line metadata bar -->
-    <div style="display:flex;justify-content:space-between;align-items:center;background:#f3f4f6;border:1px solid #000;padding:2px 6px;font-size:9px;font-weight:bold;margin-bottom:3px;gap:6px;flex-wrap:nowrap;">
-      <span>TABLE: <u>${tableNum}</u> ${roomName ? `<span style="font-weight:normal;color:#444">(${esc(roomName)})</span>` : ''}</span>
+    <div style="display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #000;padding:2px 6px;font-size:9px;font-weight:bold;margin-bottom:3px;gap:6px;flex-wrap:nowrap;color:#000;">
+      <span>TABLE: <u>${tableNum}</u> ${roomName ? `<span style="font-weight:normal;color:#000">(${esc(roomName)})</span>` : ''}</span>
       <span>ROUND: <u>${roundNum}</u></span>
       ${isActualBallotsKnown 
-        ? `<span>BALLOTS IN BOX: <u style="background:#e0f2fe;padding:1px 5px;border:1px solid #0284c7;font-size:10px;">[ ${numVoters} ]</u> <span style="font-weight:normal;color:#444">(${esc(batchesSummary)}${allottedElectors ? ` · Turnout ${Math.round((numVoters / allottedElectors) * 100)}%` : ''})</span></span>
-           <span>EXP. VOTES (2×): <u style="background:#fef3c7;padding:1px 5px;border:1px solid #d97706;font-size:10px;">[ ${numVoters * 2} ]</u></span>`
+        ? `<span>BALLOTS IN BOX: <u style="background:#fff;padding:1px 5px;border:1px solid #000;font-size:10px;">[ ${numVoters} ]</u> <span style="font-weight:normal;color:#000">(${esc(batchesSummary)}${allottedElectors ? ` · Turnout ${Math.round((numVoters / allottedElectors) * 100)}%` : ''})</span></span>
+           <span>EXP. VOTES (2×): <u style="background:#fff;padding:1px 5px;border:1px solid #000;font-size:10px;">[ ${numVoters * 2} ]</u></span>`
         : (numVoters > 0 
-            ? `<span>ALLOTTED: <u>${numVoters}</u> <span style="font-weight:normal;color:#444">(${esc(batchesSummary)})</span></span>
+            ? `<span>ALLOTTED: <u>${numVoters}</u> <span style="font-weight:normal;color:#000">(${esc(batchesSummary)})</span></span>
                <span>BALLOTS IN BOX: [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</span>
                <span>EXP. VOTES (2×): [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</span>`
             : `<span>BALLOTS IN BOX: [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</span>
@@ -2278,7 +2325,7 @@ export function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, c
     </div>
 
     <!-- Squeezed 1-line instructions bar -->
-    <div style="background:#fefce8;border:1px solid #d97706;padding:2px 6px;font-size:8px;line-height:1.25;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;color:#1c1917;">
+    <div style="background:#fff;border:1px solid #000;padding:2px 6px;font-size:8px;line-height:1.25;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;color:#000;">
       <div><strong>📌 INSTRUCTIONS:</strong> ${isActualBallotsKnown ? `Ballots in box = <strong>${numVoters}</strong> (Target votes = <strong>${numVoters * 2}</strong>) • ` : ''}Pre-bundle physical ballots in 25s • Each 25-ballot packet MUST yield 50 votes (2 × 25) • Verify batch total = 50 before next batch • Sum rows for Form 6.</div>
       <div style="white-space:nowrap;margin-left:8px;"><strong>Dual-Vote:</strong> 2 votes/ballot (1 vote = 1 Valid + 1 Invalid • Overvote = 2 Invalid • NOTA = 2 NOTA)</div>
     </div>
@@ -2292,73 +2339,73 @@ export function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, c
             <div style="font-size:${numBatches > 5 ? '8.5px' : '9.5px'};line-height:1.1;">Candidate Name &amp; Class</div>
           </th>
           ${batches.map(b => `
-            <th style="width:${batchColWidth}%;text-align:center;padding:3px 1px;">
-              <div style="font-weight:bold;font-size:${numBatches > 6 ? '8.5px' : '9.5px'}">${esc(b.name)}</div>
-              <div style="font-size:7.5px;font-weight:normal;color:#333">${esc(b.range)}</div>
-              <div style="font-size:7.5px;font-weight:normal;color:#555">Target: ${b.targetVotes} v</div>
+            <th style="width:${batchColWidth}%;text-align:center;padding:3px 1px;border:1px solid #000;color:#000;">
+              <div style="font-weight:bold;font-size:${numBatches > 6 ? '8.5px' : '9.5px'};color:#000;">${esc(b.name)}</div>
+              <div style="font-size:7.5px;font-weight:normal;color:#000;">${esc(b.range)}</div>
+              <div style="font-size:7.5px;font-weight:normal;color:#000;">Target: ${b.targetVotes} v</div>
             </th>
           `).join('')}
-          <th style="width:${finalWidth}%;text-align:center;padding:3px 1px;background:#e0e7ff;">
+          <th style="width:${finalWidth}%;text-align:center;padding:3px 1px;background:#fff;border:1px solid #000;color:#000;">
             <div style="font-weight:bold;font-size:8.5px;line-height:1.1;">TOTAL</div>
-            <div style="font-size:6.5px;font-weight:normal;color:#1e40af;line-height:1;">To Form 6</div>
+            <div style="font-size:6.5px;font-weight:normal;color:#000;line-height:1;">To Form 6</div>
           </th>
         </tr>
       </thead>
       <tbody>
         ${candsList.map((c, i) => `
           <tr style="${rowHStyle}">
-            <td style="text-align:center;font-weight:bold;padding:4px 1px;vertical-align:top;">${i + 1}</td>
-            <td style="font-weight:bold;padding:4px 4px;line-height:1.2;vertical-align:top;">
+            <td style="text-align:center;font-weight:bold;padding:4px 1px;vertical-align:top;border:1px solid #000;color:#000;">${i + 1}</td>
+            <td style="font-weight:bold;padding:4px 4px;line-height:1.2;vertical-align:top;border:1px solid #000;color:#000;">
               <div style="font-size:${numBatches > 6 ? '9px' : '10px'};white-space:normal;word-break:break-word;">${esc(c.candidateName)}</div>
-              <div style="font-size:8px;font-weight:normal;color:#555;margin-top:2px;">${esc(c.candidateClass || '')}</div>
+              <div style="font-size:8px;font-weight:normal;color:#000;margin-top:2px;">${esc(c.candidateClass || '')}</div>
             </td>
-            ${batches.map(() => `<td class="tally-td"></td>`).join('')}
-            <td style="padding:4px 1px;background:#f8fafc;font-weight:bold;font-size:12px;text-align:center;font-family:monospace;white-space:nowrap;vertical-align:middle;">[ &nbsp;&nbsp;&nbsp; ]</td>
+            ${batches.map(() => `<td class="tally-td" style="border:1px solid #000;background:#fff;"></td>`).join('')}
+            <td style="padding:4px 1px;background:#fff;font-weight:bold;font-size:12px;text-align:center;font-family:monospace;white-space:nowrap;vertical-align:middle;border:1px solid #000;color:#000;">[ &nbsp;&nbsp;&nbsp; ]</td>
           </tr>
         `).join('')}
         <tr style="${rowHStyle}">
-          <td style="text-align:center;font-weight:bold;padding:4px 1px;vertical-align:top;">–</td>
-          <td style="font-weight:bold;padding:4px 4px;font-size:10px;vertical-align:top;">NOTA</td>
-          ${batches.map(() => `<td class="tally-td"></td>`).join('')}
-          <td style="padding:4px 1px;background:#f8fafc;font-weight:bold;font-size:12px;text-align:center;font-family:monospace;white-space:nowrap;vertical-align:middle;">[ &nbsp;&nbsp;&nbsp; ]</td>
+          <td style="text-align:center;font-weight:bold;padding:4px 1px;vertical-align:top;border:1px solid #000;color:#000;">–</td>
+          <td style="font-weight:bold;padding:4px 4px;font-size:10px;vertical-align:top;border:1px solid #000;color:#000;">NOTA</td>
+          ${batches.map(() => `<td class="tally-td" style="border:1px solid #000;background:#fff;"></td>`).join('')}
+          <td style="padding:4px 1px;background:#fff;font-weight:bold;font-size:12px;text-align:center;font-family:monospace;white-space:nowrap;vertical-align:middle;border:1px solid #000;color:#000;">[ &nbsp;&nbsp;&nbsp; ]</td>
         </tr>
         <tr style="${rowHStyle}">
-          <td style="text-align:center;font-weight:bold;padding:4px 1px;vertical-align:top;">–</td>
-          <td style="padding:4px 4px;line-height:1.2;vertical-align:top;">
-            <strong style="color:#b91c1c;font-size:9.5px;">INVALID</strong>
-            <div style="font-size:7.5px;color:#555;margin-top:2px;">(1-choice, &gt;2, Blank)</div>
+          <td style="text-align:center;font-weight:bold;padding:4px 1px;vertical-align:top;border:1px solid #000;color:#000;">–</td>
+          <td style="padding:4px 4px;line-height:1.2;vertical-align:top;border:1px solid #000;color:#000;">
+            <strong style="color:#000;font-size:9.5px;">INVALID</strong>
+            <div style="font-size:7.5px;color:#000;margin-top:2px;">(1-choice, &gt;2, Blank)</div>
           </td>
-          ${batches.map(() => `<td class="tally-td"></td>`).join('')}
-          <td style="padding:4px 1px;background:#f8fafc;font-weight:bold;font-size:12px;text-align:center;color:#b91c1c;font-family:monospace;white-space:nowrap;vertical-align:middle;">[ &nbsp;&nbsp;&nbsp; ]</td>
+          ${batches.map(() => `<td class="tally-td" style="border:1px solid #000;background:#fff;"></td>`).join('')}
+          <td style="padding:4px 1px;background:#fff;font-weight:bold;font-size:12px;text-align:center;color:#000;font-family:monospace;white-space:nowrap;vertical-align:middle;border:1px solid #000;">[ &nbsp;&nbsp;&nbsp; ]</td>
         </tr>
 
         <!-- Batch Milestone Verification Subtotal Row -->
-        <tr style="background:#fef3c7;font-weight:bold;border-top:2px solid #000;height:32px;">
-          <td colspan="2" style="text-align:right;padding:4px 4px;font-size:9px;letter-spacing:0.3px;">
+        <tr style="background:#fff;font-weight:bold;border-top:2px solid #000;height:32px;color:#000;">
+          <td colspan="2" style="text-align:right;padding:4px 4px;font-size:9px;letter-spacing:0.3px;border:1px solid #000;color:#000;">
             BATCH TOTAL:
           </td>
           ${batches.map(() => `
-            <td style="text-align:center;padding:4px 1px;font-size:11px;font-family:monospace;white-space:nowrap;">[ &nbsp;&nbsp;&nbsp; ]</td>
+            <td style="text-align:center;padding:4px 1px;font-size:11px;font-family:monospace;white-space:nowrap;border:1px solid #000;background:#fff;color:#000;">[ &nbsp;&nbsp;&nbsp; ]</td>
           `).join('')}
-          <td style="text-align:center;padding:4px 1px;background:#dbeafe;font-size:12px;font-weight:bold;font-family:monospace;white-space:nowrap;">[ &nbsp;&nbsp;&nbsp; ]</td>
+          <td style="text-align:center;padding:4px 1px;background:#fff;font-size:12px;font-weight:bold;font-family:monospace;white-space:nowrap;border:1px solid #000;color:#000;">[ &nbsp;&nbsp;&nbsp; ]</td>
         </tr>
 
         <!-- Batch Balance Check (Must Equal Target) -->
-        <tr style="background:#f9fafb;font-size:8.5px;border-bottom:2px double #000;height:26px;">
-          <td colspan="2" style="text-align:right;padding:3px 4px;font-weight:bold;color:#444;font-size:8.5px;">
+        <tr style="background:#fff;font-size:8.5px;border-bottom:2px double #000;height:26px;color:#000;">
+          <td colspan="2" style="text-align:right;padding:3px 4px;font-weight:bold;color:#000;font-size:8.5px;border:1px solid #000;">
             CHECK:
           </td>
           ${batches.map(b => `
-            <td style="text-align:center;padding:3px 1px;color:#15803d;font-weight:bold;font-size:8.5px;white-space:nowrap;">
+            <td style="text-align:center;padding:3px 1px;color:#000;font-weight:bold;font-size:8.5px;white-space:nowrap;border:1px solid #000;background:#fff;">
               = ${b.targetVotes} [ &nbsp; ]
             </td>
           `).join('')}
-          <td style="text-align:center;padding:3px 1px;font-weight:bold;color:#1e40af;font-size:8.5px;white-space:nowrap;">= ${numVoters > 0 ? numVoters * 2 : 'Total'} [ ${isActualBallotsKnown ? '✓' : '&nbsp;'} ]</td>
+          <td style="text-align:center;padding:3px 1px;font-weight:bold;color:#000;font-size:8.5px;white-space:nowrap;border:1px solid #000;background:#fff;">= ${numVoters > 0 ? numVoters * 2 : 'Total'} [ ${isActualBallotsKnown ? '✓' : '&nbsp;'} ]</td>
         </tr>
       </tbody>
     </table>
 
-    <div style="margin-top:3px;border-top:1px dashed #777;padding-top:2px;font-size:8px;color:#555;font-style:italic;text-align:center;">
+    <div style="margin-top:3px;border-top:1px dashed #000;padding-top:2px;font-size:8px;color:#000;font-style:italic;text-align:center;">
       * Working tally sheet for Table Counting Officers. ${isActualBallotsKnown ? `Ballots in box as per Ballot Paper Account: <strong>${numVoters}</strong> (${esc(batchesSummary)}${allottedElectors ? `, Allotted: ${allottedElectors}` : ''}).` : `Allotted: ${numVoters || 'General'} electors (${esc(batchesSummary)}).`} Verify each batch milestone before opening the next. Transfer final verified totals directly onto official Counting Form (Form 6). No signatures required.
     </div>
   </div>`;
