@@ -81,6 +81,34 @@ function formatExcelDate(val) {
   return String(val).trim();
 }
 
+/**
+ * Strips 'Dr.' / 'DR' prefixes and converts faculty names to standardized UPPERCASE.
+ * Handles "Dr.", "DR.", "Dr ", "DR ", "Dr.Name", "DR.Name", "DR,Name", "Lt.Dr.", "Prof. Dr.", etc.
+ * Uses word boundaries so names naturally starting with Dr (e.g. "Dravid") are preserved.
+ */
+export function cleanFacultyName(raw) {
+  if (!raw || typeof raw !== 'string') return '';
+  let s = raw.trim();
+
+  // Strip wrapping quotes
+  s = s.replace(/^["'`\s]+/, '').replace(/["'`\s]+$/, '');
+
+  // 1. Remove combined honorary/military prefixes with Dr (e.g., "Lt. Dr.", "LT.DR.", "Prof. Dr.", "Capt. Dr.")
+  s = s.replace(/^(?:lt\.?|capt\.?|major\.?|prof\.?)\s*(?:dr\b\.?|dr\.)\s*[-–—:,.]?\s*/i, '');
+
+  // 2. Remove standard Dr / DR / Dr. / DR. / Dr: / DR, prefix
+  s = s.replace(/^(?:dr\b\.?|dr\.)\s*[-–—:,.]?\s*/i, '');
+
+  // Strip wrapping quotes again if any were internal
+  s = s.replace(/^["'`\s]+/, '').replace(/["'`\s]+$/, '');
+
+  // 3. Normalize whitespace (collapse multiple spaces into single space)
+  s = s.replace(/\s+/g, ' ').trim();
+
+  // 4. Convert all characters to uppercase
+  return s.toUpperCase();
+}
+
 export async function renderAdminOfficials(container) {
   const pwd = getAdminPassword();
   if (!pwd) return;
@@ -136,8 +164,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       });
       const isEx = !!(f.isExcluded || f.excluded || f.is_excluded || match?.isExcluded || match?.excluded || match?.is_excluded || String(f.status || '').toLowerCase() === 'excluded' || String(match?.status || '').toLowerCase() === 'excluded');
       const exReason = (f.exclusionReason || match?.exclusionReason || '').trim();
+      const rawName = f.name || match?.name || '';
       return {
         ...f,
+        name: cleanFacultyName(rawName),
         isExcluded: isEx,
         excluded: isEx,
         is_excluded: isEx,
@@ -146,11 +176,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       };
     });
   } else if (serverFaculty.length > 0) {
-    faculty = serverFaculty;
+    faculty = serverFaculty.map(f => ({ ...f, name: cleanFacultyName(f.name) }));
   } else if (localFaculty.length > 0) {
-    faculty = localFaculty;
+    faculty = localFaculty.map(f => ({ ...f, name: cleanFacultyName(f.name) }));
   } else {
-    faculty = Array.isArray(DEFAULT_FACULTY_ROSTER) ? [...DEFAULT_FACULTY_ROSTER] : [];
+    faculty = Array.isArray(DEFAULT_FACULTY_ROSTER) ? DEFAULT_FACULTY_ROSTER.map(f => ({ ...f, name: cleanFacultyName(f.name) })) : [];
   }
   localStorage.setItem('gcc_faculty_roster', JSON.stringify(faculty));
 
@@ -1115,7 +1145,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
           parsedFaculty.push({
             seniority: isNaN(rawSl) ? parsedFaculty.length + 1 : rawSl,
-            name: name,
+            name: cleanFacultyName(name),
             pen: pen,
             designation: desig,
             department: dept,
@@ -3435,6 +3465,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <button id="btnExportFaculty" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5">
                 📤 Export Roster
               </button>
+              <button id="btnCleanFacultyNames" class="btn btn-secondary border-amber-500/50 text-amber-300 hover:text-white hover:bg-amber-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Strip all 'Dr.' prefixes and convert all faculty names to UPPERCASE">
+                ✨ Clean 'Dr.' & Uppercase All
+              </button>
               <button id="btnDownloadFacultyTemplate" class="btn btn-secondary text-xs text-sky-300 hover:bg-sky-500/20 px-3 py-2 flex items-center gap-1.5" title="Download sample CSV template for Teaching Faculty">
                 📄 Download CSV Template
               </button>
@@ -4277,6 +4310,58 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         renderUI();
       }
     });
+
+    // Helper to update person name in duty assignments
+    const updateDutyPersonName = (p) => {
+      if (!p) return p;
+      if (typeof p === 'string') return cleanFacultyName(p);
+      if (typeof p === 'object' && p.name) {
+        return { ...p, name: cleanFacultyName(p.name) };
+      }
+      return p;
+    };
+
+    // Clean 'Dr.' & Uppercase All Faculty Names
+    const executeCleanFacultyRoster = async () => {
+      let changedCount = 0;
+      faculty = faculty.map(f => {
+        const oldName = f.name || '';
+        const newName = cleanFacultyName(oldName);
+        if (oldName !== newName) changedCount++;
+        return { ...f, name: newName };
+      });
+
+      pollingTeams = pollingTeams.map(t => ({
+        ...t,
+        presidingOfficer: updateDutyPersonName(t.presidingOfficer),
+        pollingOfficer1: updateDutyPersonName(t.pollingOfficer1),
+        pollingOfficer2: updateDutyPersonName(t.pollingOfficer2),
+        pollingOfficer3: updateDutyPersonName(t.pollingOfficer3),
+        coreInCharge: updateDutyPersonName(t.coreInCharge)
+      }));
+
+      countingTeams = countingTeams.map(t => ({
+        ...t,
+        supervisor: updateDutyPersonName(t.supervisor),
+        countingOfficer1: updateDutyPersonName(t.countingOfficer1),
+        countingOfficer2: updateDutyPersonName(t.countingOfficer2),
+        countingOfficer3: updateDutyPersonName(t.countingOfficer3)
+      }));
+
+      if (roOfficer) roOfficer = updateDutyPersonName(roOfficer);
+      aroOfficers = aroOfficers.map(updateDutyPersonName);
+      coreCommittee = coreCommittee.map(updateDutyPersonName);
+      observers = observers.map(updateDutyPersonName);
+      disciplineCharge = disciplineCharge.map(updateDutyPersonName);
+      grievanceCell = grievanceCell.map(updateDutyPersonName);
+
+      renderUI();
+      await saveAll(false);
+      showToast(`✨ Successfully standardized ${changedCount} faculty names! 'Dr.' removed and all names converted to UPPERCASE (saved to cloud & local storage).`, 'success');
+    };
+
+    main.querySelector('#btnCleanFacultyNames')?.addEventListener('click', executeCleanFacultyRoster);
+    window.cleanFacultyRoster = executeCleanFacultyRoster;
 
     // Download Faculty CSV Template
     main.querySelector('#btnDownloadFacultyTemplate')?.addEventListener('click', () => {
