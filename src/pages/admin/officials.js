@@ -3226,22 +3226,23 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     </div>
 
                     <!-- Formed Team Assignment & Swapping Bar -->
-                    <div class="flex items-center justify-between bg-slate-900/90 border border-amber-500/40 rounded-lg p-2 gap-2 mt-2">
-                      <div class="flex items-center gap-1.5 min-w-0">
-                        <span class="text-xs">👥</span>
-                        <label class="text-[11px] font-bold text-amber-300 whitespace-nowrap">Assigned Team:</label>
-                        <select class="bg-slate-800 border border-amber-500/40 rounded px-2 py-1 text-xs text-amber-200 font-bold focus:outline-none select-assign-polling-team" data-booth="${b.boothNumber}">
-                          ${pollingTeams.map((pt, ptIdx) => {
-                            const tNum = pt.teamNumber || (ptIdx + 1);
-                            const isCur = pt.boothNumber === b.boothNumber;
-                            const poName = pt.presidingOfficer?.name ? `PO: ${pt.presidingOfficer.name}` : (pt.coreInCharge?.name ? `Core: ${pt.coreInCharge.name}` : 'Unassigned');
-                            return `<option value="${tNum}" ${isCur ? 'selected' : ''}>Team ${tNum} (${poName}) ${isCur ? '✓ [Current]' : ''}</option>`;
-                          }).join('')}
-                        </select>
+                    <div class="bg-slate-900/90 border border-amber-500/40 rounded-lg p-2.5 mt-2 space-y-1.5">
+                      <div class="flex items-center justify-between gap-2">
+                        <label class="text-[11px] font-bold text-amber-300 flex items-center gap-1.5 truncate">
+                          <span>👥</span> ASSIGNED TEAM
+                        </label>
+                        <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 border-amber-500/40 text-amber-300 hover:bg-amber-500/20 shrink-0 whitespace-nowrap flex items-center gap-1 btn-quick-swap-booth" data-booth="${b.boothNumber}" title="Swap entire formed team with another booth without changing team members">
+                          <span>⇄</span> Swap Booth
+                        </button>
                       </div>
-                      <button type="button" class="btn btn-secondary text-[11px] py-1 px-2 border-amber-500/40 text-amber-300 hover:bg-amber-500/20 btn-quick-swap-booth" data-booth="${b.boothNumber}" title="Swap entire formed team with another booth without changing team members">
-                        ⇄ Swap Booth
-                      </button>
+                      <select class="w-full bg-slate-800 border border-amber-500/40 rounded px-2.5 py-1.5 text-xs text-amber-200 font-bold focus:outline-none select-assign-polling-team cursor-pointer" data-booth="${b.boothNumber}">
+                        ${pollingTeams.map((pt, ptIdx) => {
+                          const tNum = pt.teamNumber || (ptIdx + 1);
+                          const isCur = pt.boothNumber === b.boothNumber;
+                          const poName = pt.presidingOfficer?.name ? `PO: ${pt.presidingOfficer.name}` : (pt.coreInCharge?.name ? `Core: ${pt.coreInCharge.name}` : 'Unassigned');
+                          return `<option value="${tNum}" ${isCur ? 'selected' : ''}>Team ${tNum} (${poName}) ${isCur ? '✓ [Current]' : ''}</option>`;
+                        }).join('')}
+                      </select>
                     </div>
 
                     ${hierarchyViolation ? `
@@ -3444,22 +3445,23 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     </div>
 
                     <!-- Formed Counting Team Assignment & Swapping Bar -->
-                    <div class="flex items-center justify-between bg-slate-900/90 border border-emerald-500/40 rounded-lg p-2 gap-2 mt-2">
-                      <div class="flex items-center gap-1.5 min-w-0">
-                        <span class="text-xs">👥</span>
-                        <label class="text-[11px] font-bold text-emerald-300 whitespace-nowrap">Assigned Team:</label>
-                        <select class="bg-slate-800 border border-emerald-500/40 rounded px-2 py-1 text-xs text-emerald-200 font-bold focus:outline-none select-assign-counting-team" data-table="${b.boothNumber}">
-                          ${countingTeams.map((ct, ctIdx) => {
-                            const tNum = ct.teamNumber || (ctIdx + 1);
-                            const isCur = String(ct.tableNumber || ct.boothNumber) === String(b.boothNumber);
-                            const supName = ct.supervisor?.name ? `Sup: ${ct.supervisor.name}` : (ct.coreInCharge?.name ? `Core: ${ct.coreInCharge.name}` : 'Unassigned');
-                            return `<option value="${tNum}" ${isCur ? 'selected' : ''}>Team ${tNum} (${supName}) ${isCur ? '✓ [Current]' : ''}</option>`;
-                          }).join('')}
-                        </select>
+                    <div class="bg-slate-900/90 border border-emerald-500/40 rounded-lg p-2.5 mt-2 space-y-1.5">
+                      <div class="flex items-center justify-between gap-2">
+                        <label class="text-[11px] font-bold text-emerald-300 flex items-center gap-1.5 truncate">
+                          <span>👥</span> ASSIGNED TEAM
+                        </label>
+                        <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20 shrink-0 whitespace-nowrap flex items-center gap-1 btn-quick-swap-table" data-table="${b.boothNumber}" title="Swap entire formed team with another table without changing team members">
+                          <span>⇄</span> Swap Table
+                        </button>
                       </div>
-                      <button type="button" class="btn btn-secondary text-[11px] py-1 px-2 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20 btn-quick-swap-table" data-table="${b.boothNumber}" title="Swap entire formed team with another table without changing team members">
-                        ⇄ Swap Table
-                      </button>
+                      <select class="w-full bg-slate-800 border border-emerald-500/40 rounded px-2.5 py-1.5 text-xs text-emerald-200 font-bold focus:outline-none select-assign-counting-team cursor-pointer" data-table="${b.boothNumber}">
+                        ${countingTeams.map((ct, ctIdx) => {
+                          const tNum = ct.teamNumber || (ctIdx + 1);
+                          const isCur = String(ct.tableNumber || ct.boothNumber) === String(b.boothNumber);
+                          const supName = ct.supervisor?.name ? `Sup: ${ct.supervisor.name}` : (ct.coreInCharge?.name ? `Core: ${ct.coreInCharge.name}` : 'Unassigned');
+                          return `<option value="${tNum}" ${isCur ? 'selected' : ''}>Team ${tNum} (${supName}) ${isCur ? '✓ [Current]' : ''}</option>`;
+                        }).join('')}
+                      </select>
                     </div>
 
                     ${hierarchyViolation ? `
