@@ -2,7 +2,7 @@ import { writeFileSync, copyFileSync } from 'fs';
 import { resolve } from 'path';
 import { execSync } from 'child_process';
 
-const emblemDataUrl = 'images/gcc_logo_emblem_golden.png';
+const emblemDataUrl = 'images/gcc_logo_emblem_golden_red.png';
 
 const TOTAL_SEALS = 30;
 const SEALS_PER_PAGE = 3;
