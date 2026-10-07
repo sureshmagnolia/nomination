@@ -1295,6 +1295,7 @@ function triggerCountingPrint(htmlContent, title = 'Counting Documents', college
   }
   w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>
     @page {
+      size: A4 ${orientation === 'landscape' ? 'landscape' : 'portrait'};
       margin: 8mm 10mm 12mm 10mm;
       @bottom-right {
         content: "Page " counter(page) " of " counter(pages);
@@ -1325,6 +1326,17 @@ function triggerCountingPrint(htmlContent, title = 'Counting Documents', college
     th, td { border: 1.5px solid #000; padding: 5px 6px; }
     th { background: #f3f4f6; }
     .watermark-global { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 450px; height: 450px; opacity: 0.08; filter: grayscale(100%); pointer-events: none; z-index: -1; background-size: contain; background-repeat: no-repeat; background-position: center; }
+
+    /* UUC Dual-Vote Tally Marking Compartments */
+    .tally-td { padding: 2.5px 2px !important; vertical-align: middle; background: #fff; }
+    .tally-cell-wrap { display: flex; flex-direction: column; gap: 2px; width: 100%; min-height: 42px; justify-content: center; }
+    .tally-row-top { display: flex; gap: 2px; width: 100%; justify-content: center; }
+    .tally-row-bot { display: flex; gap: 2.5px; width: 100%; justify-content: center; }
+    .tally-box { flex: 1; height: 19px; border: 1px solid #444; border-radius: 2px; background: #fff; position: relative; min-width: 14px; }
+    .tally-row-bot .tally-box { flex: 0 0 46%; }
+    .tally-lbl { position: absolute; bottom: 1px; right: 2px; font-size: 6px; color: #888; font-weight: 700; line-height: 1; pointer-events: none; user-select: none; }
+    .tally-box-disabled { background: #f1f5f9; border-color: #cbd5e1; opacity: 0.45; }
+    .tally-box-disabled .tally-lbl { color: #cbd5e1; }
   </style></head><body>
     ${collegeLogo ? `<div class="watermark-global" style="background-image: url('${collegeLogo}');"></div>` : ''}
     ${htmlContent}
@@ -1628,6 +1640,29 @@ export function getUucBatchesSummaryText(batches, voterCount) {
 }
 
 /**
+ * Renders 5 distinct tally mark compartments [ ] inside each batch cell.
+ * Arranged in a 2-tier cluster (3 boxes top, 2 boxes bottom) so each box has maximum
+ * physical width and height for counting officers to comfortably draw 5-vote tallies (卌).
+ * For partial remainder batches (e.g. Rest 19), boxes exceeding possible votes are greyed out.
+ */
+function renderUucTallyBoxesHtml(batch, isCompact = false) {
+  const ballots = batch ? Number(batch.ballots) : 25;
+  const maxBundles = (ballots > 0) ? Math.min(5, Math.ceil(ballots / 5)) : 5;
+  const boxH = isCompact ? '17px' : '20px';
+  return `<div class="tally-cell-wrap" style="display:flex;flex-direction:column;gap:2px;width:100%;min-height:${isCompact ? '38px' : '44px'};justify-content:center;">
+    <div class="tally-row-top" style="display:flex;gap:2px;width:100%;justify-content:center;">
+      <div class="tally-box ${maxBundles < 1 ? 'tally-box-disabled' : ''}" style="flex:1;height:${boxH};border:1px solid ${maxBundles < 1 ? '#cbd5e1' : '#444'};border-radius:2px;background:${maxBundles < 1 ? '#f1f5f9' : '#fff'};position:relative;min-width:14px;"><span class="tally-lbl" style="position:absolute;bottom:1px;right:2px;font-size:6px;color:${maxBundles < 1 ? '#cbd5e1' : '#888'};font-weight:700;line-height:1;pointer-events:none;user-select:none;">5</span></div>
+      <div class="tally-box ${maxBundles < 2 ? 'tally-box-disabled' : ''}" style="flex:1;height:${boxH};border:1px solid ${maxBundles < 2 ? '#cbd5e1' : '#444'};border-radius:2px;background:${maxBundles < 2 ? '#f1f5f9' : '#fff'};position:relative;min-width:14px;"><span class="tally-lbl" style="position:absolute;bottom:1px;right:2px;font-size:6px;color:${maxBundles < 2 ? '#cbd5e1' : '#888'};font-weight:700;line-height:1;pointer-events:none;user-select:none;">10</span></div>
+      <div class="tally-box ${maxBundles < 3 ? 'tally-box-disabled' : ''}" style="flex:1;height:${boxH};border:1px solid ${maxBundles < 3 ? '#cbd5e1' : '#444'};border-radius:2px;background:${maxBundles < 3 ? '#f1f5f9' : '#fff'};position:relative;min-width:14px;"><span class="tally-lbl" style="position:absolute;bottom:1px;right:2px;font-size:6px;color:${maxBundles < 3 ? '#cbd5e1' : '#888'};font-weight:700;line-height:1;pointer-events:none;user-select:none;">15</span></div>
+    </div>
+    <div class="tally-row-bot" style="display:flex;gap:2.5px;width:100%;justify-content:center;">
+      <div class="tally-box ${maxBundles < 4 ? 'tally-box-disabled' : ''}" style="flex:0 0 46%;height:${boxH};border:1px solid ${maxBundles < 4 ? '#cbd5e1' : '#444'};border-radius:2px;background:${maxBundles < 4 ? '#f1f5f9' : '#fff'};position:relative;min-width:14px;"><span class="tally-lbl" style="position:absolute;bottom:1px;right:2px;font-size:6px;color:${maxBundles < 4 ? '#cbd5e1' : '#888'};font-weight:700;line-height:1;pointer-events:none;user-select:none;">20</span></div>
+      <div class="tally-box ${maxBundles < 5 ? 'tally-box-disabled' : ''}" style="flex:0 0 46%;height:${boxH};border:1px solid ${maxBundles < 5 ? '#cbd5e1' : '#444'};border-radius:2px;background:${maxBundles < 5 ? '#f1f5f9' : '#fff'};position:relative;min-width:14px;"><span class="tally-lbl" style="position:absolute;bottom:1px;right:2px;font-size:6px;color:${maxBundles < 5 ? '#cbd5e1' : '#888'};font-weight:700;line-height:1;pointer-events:none;user-select:none;">25</span></div>
+    </div>
+  </div>`;
+}
+
+/**
  * Form 6-T (UUC) — Batch-of-25 Dual-Vote Counting Tally Sheet
  * Implements the 25-Ballot Milestone Check Method for foolproof UUC tallying.
  * Dynamically computes batches based on the exact voters allotted to that table / hall / booth.
@@ -1638,6 +1673,7 @@ function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, collegeN
   const numVoters = Number(voterCount) || 0;
   const batches = getUucBatchesForVoterCount(numVoters);
   const batchesSummary = getUucBatchesSummaryText(batches, numVoters);
+  const isCompact = candsList.length > 4;
 
   // Column width calculations - optimized to maximize writing space for tally marks in batch columns
   const numBatches = batches.length;
@@ -1704,7 +1740,8 @@ function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, collegeN
           <strong>Dual-Vote Rule Reminder:</strong><br>
           • 2 candidates marked = 1 vote to each<br>
           • 1 candidate marked = 1 Valid + 1 Invalid<br>
-          • NOTA = 2 NOTA | Overvote = 2 Invalid
+          • NOTA = 2 NOTA | Overvote = 2 Invalid<br>
+          • 5 tally boxes [5][10][15][20][25] per cell (卌 = 5 v)
         </td>
       </tr>
     </table>
@@ -1733,29 +1770,29 @@ function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, collegeN
       <tbody>
         ${candsList.map((c, i) => `
           <tr>
-            <td style="text-align:center;font-weight:bold;padding:4px 1px;">${i + 1}</td>
-            <td style="font-weight:bold;padding:4px 3px;line-height:1.15;">
+            <td style="text-align:center;font-weight:bold;padding:3px 1px;">${i + 1}</td>
+            <td style="font-weight:bold;padding:3px 3px;line-height:1.15;">
               <div style="font-size:${numBatches > 6 ? '8.5px' : (numBatches > 4 ? '9px' : '9.5px')};white-space:normal;word-break:break-word;">${esc(c.candidateName)}</div>
               <div style="font-size:7.5px;font-weight:normal;color:#555;">${esc(c.candidateClass || '')}</div>
             </td>
-            ${batches.map(() => `<td style="padding:4px 2px;"></td>`).join('')}
-            <td style="padding:4px 1px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;"></td>
+            ${batches.map(b => `<td class="tally-td" style="padding:2px 1.5px;vertical-align:middle;background:#fff;">${renderUucTallyBoxesHtml(b, isCompact)}</td>`).join('')}
+            <td style="padding:3px 1px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;font-family:monospace;">[ &nbsp;&nbsp;&nbsp; ]</td>
           </tr>
         `).join('')}
         <tr>
-          <td style="text-align:center;font-weight:bold;padding:4px 1px;">–</td>
-          <td style="font-weight:bold;padding:4px 3px;font-size:9.5px;">NOTA</td>
-          ${batches.map(() => `<td style="padding:4px 2px;"></td>`).join('')}
-          <td style="padding:4px 1px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;"></td>
+          <td style="text-align:center;font-weight:bold;padding:3px 1px;">–</td>
+          <td style="font-weight:bold;padding:3px 3px;font-size:9.5px;">NOTA</td>
+          ${batches.map(b => `<td class="tally-td" style="padding:2px 1.5px;vertical-align:middle;background:#fff;">${renderUucTallyBoxesHtml(b, isCompact)}</td>`).join('')}
+          <td style="padding:3px 1px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;font-family:monospace;">[ &nbsp;&nbsp;&nbsp; ]</td>
         </tr>
         <tr>
-          <td style="text-align:center;font-weight:bold;padding:4px 1px;">–</td>
-          <td style="padding:4px 3px;line-height:1.15;">
+          <td style="text-align:center;font-weight:bold;padding:3px 1px;">–</td>
+          <td style="padding:3px 3px;line-height:1.15;">
             <strong style="color:#b91c1c;font-size:9px;">INVALID</strong>
             <div style="font-size:7px;color:#555;">(1-choice, &gt;2, Blank)</div>
           </td>
-          ${batches.map(() => `<td style="padding:4px 2px;"></td>`).join('')}
-          <td style="padding:4px 1px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;color:#b91c1c;"></td>
+          ${batches.map(b => `<td class="tally-td" style="padding:2px 1.5px;vertical-align:middle;background:#fff;">${renderUucTallyBoxesHtml(b, isCompact)}</td>`).join('')}
+          <td style="padding:3px 1px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;color:#b91c1c;font-family:monospace;">[ &nbsp;&nbsp;&nbsp; ]</td>
         </tr>
 
         <!-- Batch Milestone Verification Subtotal Row -->
@@ -1766,7 +1803,7 @@ function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, collegeN
           ${batches.map(() => `
             <td style="text-align:center;padding:4px 1px;font-size:10px;font-family:monospace;">[ &nbsp;&nbsp;&nbsp; ]</td>
           `).join('')}
-          <td style="text-align:center;padding:4px 1px;background:#dbeafe;font-size:11px;font-weight:black;"></td>
+          <td style="text-align:center;padding:4px 1px;background:#dbeafe;font-size:11px;font-weight:black;font-family:monospace;">[ &nbsp;&nbsp;&nbsp; ]</td>
         </tr>
 
         <!-- Batch Balance Check (Must Equal Target) -->
@@ -1779,7 +1816,7 @@ function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, collegeN
               = ${b.targetVotes} [ &nbsp; ]
             </td>
           `).join('')}
-          <td style="text-align:center;padding:2px 1px;font-weight:bold;color:#1e40af;font-size:7.5px;">TOTAL</td>
+          <td style="text-align:center;padding:2px 1px;font-weight:bold;color:#1e40af;font-size:7.5px;">= ${numVoters > 0 ? numVoters * 2 : 'Total'} [ &nbsp; ]</td>
         </tr>
       </tbody>
     </table>
