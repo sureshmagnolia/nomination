@@ -557,7 +557,7 @@ export function getStudentDeptClassKey(student) {
   return rawClass;
 }
 
-// ─── Program Level Progression Weight (RS placed at the end of each department) ───
+// ─── Program Level Progression Weight (1st UG then PG: 1 UG, II UG, III UG, I PG, II PG, RS) ───
 export function getProgWeight(className) {
   const c = String(className || '').toUpperCase().trim();
   
@@ -568,40 +568,64 @@ export function getProgWeight(className) {
   
   // 2. Post-Graduate (PG) Classes: Check PG indicators first
   const isPg = /(^|[^A-Z])(PG|POST\s*GRADUATE|M\.?A|M\.?SC|M\.?COM|MCA|MSW|M\.?VOC|M\.?ED|M\.?TECH|MASTER)([^A-Z]|$)/i.test(c) ||
-               /^(I|II|III|1ST|2ND|3RD|1|2|3)\s*(YEAR\s*)?(M|PG)\b/i.test(c);
+               /^(I|II|III|1ST|2ND|3RD|1|2|3)\s*(YEAR\s*)?(M|PG)\b/i.test(c) ||
+               /^[123]\s*PG\b/i.test(c);
   
   if (isPg) {
     // PG 2nd Year
-    if (/(^|[^A-Z])(2ND|II|SECOND)([^A-Z]|$)/i.test(c) || /2ND\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[34]|S[34]|[34](RD|TH)\s*SEM)([^A-Z]|$)/i.test(c)) {
+    if (/(^|[^A-Z0-9])(2ND|II|SECOND|2)([^A-Z0-9]|$)/i.test(c) || /2ND\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[34]|S[34]|[34](RD|TH)\s*SEM)([^A-Z]|$)/i.test(c)) {
       return 5000;
     }
     // PG 3rd Year (e.g. 3-year MCA)
-    if (/(^|[^A-Z])(3RD|III|THIRD)([^A-Z]|$)/i.test(c) || /3RD\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[56]|S[56]|[56](TH)\s*SEM)([^A-Z]|$)/i.test(c)) {
+    if (/(^|[^A-Z0-9])(3RD|III|THIRD|3)([^A-Z0-9]|$)/i.test(c) || /3RD\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[56]|S[56]|[56](TH)\s*SEM)([^A-Z]|$)/i.test(c)) {
       return 5500;
     }
     // PG 1st Year (or general PG default)
     return 4000;
   }
   
-  // 3. Under-Graduate (UG) Classes
+  // 3. Under-Graduate (UG) Classes: 1 UG -> II UG -> III UG -> IV UG
   // 1st Year UG
-  if (/(^|[^A-Z])(1ST|I|FIRST)([^A-Z]|$)/i.test(c) || /1ST\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[12]|S[12]|[12](ST|ND)\s*SEM)([^A-Z]|$)/i.test(c) || /^I\s+(B|UG)/i.test(c)) {
+  if (/(^|[^A-Z0-9])(1ST|I|FIRST|1)([^A-Z0-9]|$)/i.test(c) || /1ST\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[12]|S[12]|[12](ST|ND)\s*SEM)([^A-Z]|$)/i.test(c) || /^(I|1|1ST)\s+(B|UG|DC|DEG)/i.test(c)) {
     return 1000;
   }
   // 2nd Year UG
-  if (/(^|[^A-Z])(2ND|II|SECOND)([^A-Z]|$)/i.test(c) || /2ND\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[34]|S[34]|[34](RD|TH)\s*SEM)([^A-Z]|$)/i.test(c) || /^II\s+(B|UG)/i.test(c)) {
+  if (/(^|[^A-Z0-9])(2ND|II|SECOND|2)([^A-Z0-9]|$)/i.test(c) || /2ND\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[34]|S[34]|[34](RD|TH)\s*SEM)([^A-Z]|$)/i.test(c) || /^(II|2|2ND)\s+(B|UG|DC|DEG)/i.test(c)) {
     return 2000;
   }
   // 3rd Year UG
-  if (/(^|[^A-Z])(3RD|III|THIRD)([^A-Z]|$)/i.test(c) || /3RD\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[56]|S[56]|[56](TH)\s*SEM)([^A-Z]|$)/i.test(c) || /^III\s+(B|UG)/i.test(c)) {
+  if (/(^|[^A-Z0-9])(3RD|III|THIRD|3)([^A-Z0-9]|$)/i.test(c) || /3RD\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[56]|S[56]|[56](TH)\s*SEM)([^A-Z]|$)/i.test(c) || /^(III|3|3RD)\s+(B|UG|DC|DEG)/i.test(c)) {
     return 3000;
   }
   // 4th Year UG (FYUGP)
-  if (/(^|[^A-Z])(4TH|IV|FOURTH)([^A-Z]|$)/i.test(c) || /4TH\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[78]|S[78]|[78](TH)\s*SEM)([^A-Z]|$)/i.test(c) || /^IV\s+(B|UG)/i.test(c)) {
+  if (/(^|[^A-Z0-9])(4TH|IV|FOURTH|4)([^A-Z0-9]|$)/i.test(c) || /4TH\s+YEAR/i.test(c) || /(^|[^A-Z])(SEM\s*[78]|S[78]|[78](TH)\s*SEM)([^A-Z]|$)/i.test(c) || /^(IV|4|4TH)\s+(B|UG|DC|DEG)/i.test(c)) {
     return 3500;
   }
   
   return 3800;
+}
+
+/**
+ * Universal Year-Progression Class Comparator:
+ * Sorts classes by Department (if present), then by Year Progression:
+ * 1st UG -> II UG -> III UG -> (IV UG) -> I PG -> II PG -> (III PG) -> Research Scholars (RS)
+ * followed alphabetically by class name within the same year cohort.
+ */
+export function compareClassesByYearOrder(classA, classB) {
+  const nameA = typeof classA === 'string' ? classA : (classA?.name || classA?.className || '');
+  const nameB = typeof classB === 'string' ? classB : (classB?.name || classB?.className || '');
+  const deptA = typeof classA === 'object' ? String(classA?.dept || '') : '';
+  const deptB = typeof classB === 'object' ? String(classB?.dept || '') : '';
+
+  if (deptA && deptB && deptA.toUpperCase() !== deptB.toUpperCase()) {
+    return deptA.localeCompare(deptB);
+  }
+
+  const wA = getProgWeight(nameA);
+  const wB = getProgWeight(nameB);
+  if (wA !== wB) return wA - wB;
+
+  return nameA.localeCompare(nameB);
 }
 
 // ─── Post Classification & Alphabetical Association Secretary Sorting ────────

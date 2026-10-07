@@ -1667,7 +1667,7 @@ function renderUucTallyBoxesHtml(batch, isCompact = false) {
  * Implements the 25-Ballot Milestone Check Method for foolproof UUC tallying.
  * Dynamically computes batches based on the exact voters allotted to that table / hall / booth.
  */
-function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, collegeName = CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad', electionYear = '', collegeLogo = '', supervisorName = '', roomName = '', isRecount = false, voterCount = 0) {
+export function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, collegeName = CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad', electionYear = '', collegeLogo = '', supervisorName = '', roomName = '', isRecount = false, voterCount = 0) {
   const yearStr = electionYear || new Date().getFullYear().toString();
   const candsList = Array.isArray(candidates) ? candidates : [];
   const numVoters = Number(voterCount) || 0;

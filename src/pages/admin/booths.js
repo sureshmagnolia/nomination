@@ -4,7 +4,7 @@
  */
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast, setLoading, getStudentYearLevel } from '../../utils.js';
+import { esc, showToast, setLoading, getStudentYearLevel, compareClassesByYearOrder } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 
 export async function renderAdminBooths(container) {
@@ -85,7 +85,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     classStats[key].count++;
   });
   
-  const allClasses = Object.values(classStats).sort((a, b) => a.dept.localeCompare(b.dept) || a.name.localeCompare(b.name));
+  const allClasses = Object.values(classStats).sort(compareClassesByYearOrder);
   let booths = initialBooths.length ? [...initialBooths] : [{ boothNumber: 1, roomName: '', classes: [] }];
   
   // Migrate legacy generic 'RESEARCH SCHOLAR' entries to department-specific classes if applicable
@@ -98,6 +98,9 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           b.classes.push(rKey);
         }
       });
+    }
+    if (Array.isArray(b.classes)) {
+      b.classes.sort(compareClassesByYearOrder);
     }
   });
 
@@ -579,7 +582,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     for (let i = 0; i < booths.length; i++) {
       const pb = proposal.booths.find(b => b.boothNumber === booths[i].boothNumber);
       if (pb) {
-        booths[i].classes = [...pb.classes];
+        booths[i].classes = [...pb.classes].sort(compareClassesByYearOrder);
         booths[i].totalStudents = pb.totalStudents;
         booths[i].totalBallots = pb.totalBallots;
       }
@@ -1496,7 +1499,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
                   ${bNoContestDepts.size > 0 ? `<span class="text-amber-300/80 truncate max-w-[130px]" title="No Assoc Contest: ${esc(Array.from(bNoContestDepts).join(', '))}">No Assoc: ${esc(Array.from(bNoContestDepts).join(', '))}</span>` : '<span class="text-emerald-400/80">All Contested</span>'}
                 </div>
                 <div class="text-xs text-slate-500 h-16 overflow-y-auto bg-black/20 rounded p-1">
-                  ${b.classes.length ? b.classes.map(c => `<div class="whitespace-nowrap overflow-hidden text-ellipsis">• ${esc(c)} (${classStats[c]?.count || 0})</div>`).join('') : '<em class="opacity-30">No classes assigned</em>'}
+                  ${b.classes.length ? b.classes.slice().sort(compareClassesByYearOrder).map(c => `<div class="whitespace-nowrap overflow-hidden text-ellipsis">• ${esc(c)} (${classStats[c]?.count || 0})</div>`).join('') : '<em class="opacity-30">No classes assigned</em>'}
                 </div>
               </div>
             `;
@@ -1938,6 +1941,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
         booths.forEach(b => { b.classes = b.classes.filter(c => c !== clsName); });
         if (newBoothIdx !== '') {
           booths[parseInt(newBoothIdx, 10)].classes.push(clsName);
+          booths[parseInt(newBoothIdx, 10)].classes.sort(compareClassesByYearOrder);
         }
         try {
           await api.adminSaveBooths(pwd, booths);
@@ -2037,7 +2041,7 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
     if (!b.classes || b.classes.length === 0) return;
     const boothStudents = students.filter(s => isStudentInBoothCheck(s, b.classes));
     const totalVoters = boothStudents.length;
-    const boothClasses = b.classes.map(cn => classStats[cn]).filter(Boolean);
+    const boothClasses = b.classes.map(cn => classStats[cn]).filter(Boolean).sort(compareClassesByYearOrder);
     
     const assignments = plan.boothAssignments[b.boothNumber] || { general: null, reps: [], assocs: [] };
 
