@@ -8,7 +8,7 @@ import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
 import { CONFIG } from '../../config.js';
-import { printOfficialNotice, printBoothDoorPoster, printBatchBoothDoorPosters, printCampusMasterDirectory, printBallotBoxStripSeals, openBallotBoxStripSealsPdf } from '../../noticesPrinter.js';
+import { printOfficialNotice, printBoothDoorPoster, printBatchBoothDoorPosters, printCampusMasterDirectory, printBallotBoxStripSeals, openBallotBoxStripSealsPdf, printDepartmentClassDirectoryPoster, openDepartmentClassPosterPdf } from '../../noticesPrinter.js';
 import { getDefaultStatutoryNotices } from '../../noticesTemplates.js';
 import { generateAndPrintBallots, generateAndPrintBallotPressSummary, downloadBallotsExcel } from './ballots.js';
 import { generateAndPrintElectoralRolls, generateAndPrintBallotAccounts } from './booths.js';
@@ -319,7 +319,7 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                 </a>
               </div>
 
-              <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 <!-- Marked Electoral Rolls -->
                 <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-emerald-500/40 transition flex flex-col justify-between space-y-3">
                   <div>
@@ -398,6 +398,26 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                   <button id="btnHubPrintCampusDirectory" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 hover:bg-white/10">
                     <span>🖨️</span> Print Campus Directory
                   </button>
+                </div>
+
+                <!-- Department & Class-wise Polling Directory Poster (1 UG to PG) -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">Gate &amp; Dept Poster</span>
+                      <span class="text-[10px] font-mono text-slate-400">A3 / A4 (1 UG&rarr;PG)</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Dept &amp; Class Polling Directory</h5>
+                    <p class="text-xs text-slate-400 mt-1">Structured by Department in academic sequence (1 UG to PG) with Booth No. &amp; Room venue location.</p>
+                  </div>
+                  <div class="flex gap-2">
+                    <button id="btnHubPrintDeptClassPoster" class="btn bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-2 px-3 rounded-lg flex-1 flex items-center justify-center gap-1.5 shadow-md">
+                      <span>🖨️</span> Print Poster
+                    </button>
+                    <button id="btnHubPdfDeptClassPoster" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-amber-500/30 text-amber-300 hover:bg-amber-500/20 flex items-center justify-center gap-1" title="Open PDF in new tab">
+                      <span>📄</span> PDF
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -622,6 +642,9 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
               <button id="btnPrintMasterDirectory" class="btn btn-secondary btn-sm flex items-center gap-1.5">
                 <span>📋</span> Print Master Campus Directory
               </button>
+              <button id="btnPrintDeptClassPoster" class="btn bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold btn-sm flex items-center gap-1.5 shadow-md">
+                <span>🏛️</span> Dept &amp; Class Directory (1 UG&rarr;PG)
+              </button>
             </div>
           </div>
 
@@ -760,8 +783,16 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
               <h4 class="font-bold text-white text-base">Class-to-Booth Alphabetical Quick Reference</h4>
               <p class="text-slate-400 text-xs mt-0.5">Alphabetical class lookup for campus help desk, polling officers, and queue control.</p>
             </div>
-            <div class="w-full sm:w-72">
-              <input type="text" id="classIndexSearch" class="field text-xs w-full py-1.5 px-3" placeholder="🔍 Search class, dept, or booth...">
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="w-full sm:w-60">
+                <input type="text" id="classIndexSearch" class="field text-xs w-full py-1.5 px-3" placeholder="🔍 Search class, dept, or booth...">
+              </div>
+              <button id="btnTabIndexPrintPoster" class="btn bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-1.5 px-3 rounded-lg flex items-center gap-1.5 shadow-md shrink-0" title="Print Department & Class-wise Polling Directory Poster">
+                <span>🖨️</span> Print Poster (1 UG&rarr;PG)
+              </button>
+              <button id="btnTabIndexPdfPoster" class="btn btn-secondary text-xs font-bold py-1.5 px-2.5 rounded-lg border-amber-500/30 text-amber-300 hover:bg-amber-500/20 flex items-center gap-1 shrink-0" title="Open A3 Portrait PDF">
+                <span>📄</span> PDF
+              </button>
             </div>
           </div>
 
@@ -989,6 +1020,23 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
   });
   main.querySelector('#btnHubPdfStripSeals')?.addEventListener('click', () => {
     openBallotBoxStripSealsPdf();
+  });
+
+  // Department & Class-wise Polling Directory Poster (1 UG to PG)
+  main.querySelector('#btnHubPrintDeptClassPoster')?.addEventListener('click', () => {
+    printDepartmentClassDirectoryPoster();
+  });
+  main.querySelector('#btnHubPdfDeptClassPoster')?.addEventListener('click', () => {
+    openDepartmentClassPosterPdf();
+  });
+  main.querySelector('#btnTabIndexPrintPoster')?.addEventListener('click', () => {
+    printDepartmentClassDirectoryPoster();
+  });
+  main.querySelector('#btnTabIndexPdfPoster')?.addEventListener('click', () => {
+    openDepartmentClassPosterPdf();
+  });
+  main.querySelector('#btnPrintDeptClassPoster')?.addEventListener('click', () => {
+    printDepartmentClassDirectoryPoster();
   });
 
   // Nominal Roll Studio

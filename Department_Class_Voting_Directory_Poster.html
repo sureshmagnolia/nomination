@@ -1,0 +1,2435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Campus Voter Directory Poster - GCC Election 2026</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+    @page {
+      size: A3 portrait;
+      margin: 8mm 10mm 10mm 10mm;
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: 'Inter', sans-serif;
+        font-size: 8pt;
+        font-weight: 700;
+        color: #475569;
+      }
+      @bottom-left {
+        content: "Government College Chittur — Department & Class Polling Directory (1 UG to PG)";
+        font-family: 'Inter', sans-serif;
+        font-size: 8pt;
+        color: #475569;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Fixed Top Control Bar (Screen only) */
+    .screen-bar {
+      position: sticky;
+      top: 0;
+      z-index: 9999;
+      background: #0f172a;
+      border-bottom: 2px solid #f59e0b;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      color: #fff;
+    }
+    .screen-bar-title {
+      font-weight: 800;
+      font-size: 13px;
+      color: #fde047;
+      letter-spacing: 0.4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .search-input {
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      width: 280px;
+      outline: none;
+    }
+    .search-input:focus { border-color: #f59e0b; }
+    .print-btn {
+      background: #f59e0b;
+      color: #000;
+      font-weight: 800;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .print-btn:hover { background: #fbbf24; transform: scale(1.02); }
+
+    /* Poster Container */
+    .poster-page {
+      max-width: 100%;
+      margin: 0 auto;
+      padding: 12px 14px;
+      background: #ffffff;
+    }
+
+    /* Outer Poster Frame */
+    .poster-frame {
+      border: 3px solid #0f172a;
+      outline: 1.5px solid #d97706;
+      outline-offset: -5px;
+      padding: 10px 14px 14px 14px;
+      background: #ffffff;
+      position: relative;
+    }
+
+    /* Header */
+    .poster-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2.5px solid #0f172a;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      gap: 12px;
+    }
+    .header-logo-wrap {
+      width: 75px;
+      height: 75px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .header-logo {
+      max-width: 75px;
+      max-height: 75px;
+      object-fit: contain;
+    }
+    .header-text-center {
+      flex: 1;
+      text-align: center;
+    }
+    .college-heading {
+      font-size: 21pt;
+      font-weight: 900;
+      letter-spacing: 1.2px;
+      color: #0f172a;
+      margin: 0;
+      line-height: 1.1;
+      text-transform: uppercase;
+    }
+    .election-heading {
+      font-size: 11pt;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #991b1b;
+      margin-top: 3px;
+      text-transform: uppercase;
+    }
+    .office-sub {
+      font-size: 8pt;
+      font-weight: 700;
+      color: #475569;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    /* Main Poster Banner */
+    .main-banner {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+      color: #ffffff;
+      padding: 7px 12px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+      border: 1px solid #1e293b;
+    }
+    .banner-title {
+      font-size: 13pt;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      color: #fde047;
+      text-transform: uppercase;
+    }
+    .banner-subtitle {
+      font-size: 8pt;
+      font-weight: 700;
+      color: #e2e8f0;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* Schedule & Instructions Bar */
+    .directive-bar {
+      display: grid;
+      grid-template-columns: 2.2fr 1fr 1fr;
+      gap: 8px;
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 6px 10px;
+      margin-bottom: 10px;
+      font-size: 8pt;
+    }
+    .directive-item { display: flex; align-items: center; gap: 5px; }
+    .directive-item strong { color: #0f172a; font-weight: 800; }
+    .directive-item.highlight {
+      background: #fef3c7;
+      border-left: 3px solid #d97706;
+      padding: 2px 6px;
+      border-radius: 2px;
+    }
+
+    /* Grid of Department Cards */
+    .dept-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 9px;
+      margin-bottom: 10px;
+    }
+
+    /* Department Card */
+    .dept-card {
+      background: #ffffff;
+      border: 1.5px solid #1e293b;
+      border-radius: 4px;
+      overflow: hidden;
+      break-inside: avoid;
+      page-break-inside: avoid;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .dept-header {
+      background: linear-gradient(90deg, #0f172a 0%, #1e3a8a 100%);
+      color: #ffffff;
+      padding: 4px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1.5px solid #d97706;
+    }
+    .dept-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dept-icon { font-size: 10pt; }
+    .dept-name {
+      font-size: 8.5pt;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      color: #fde047;
+    }
+    .dept-summary-pill {
+      font-size: 6.8pt;
+      font-weight: 800;
+      background: rgba(255,255,255,0.18);
+      color: #ffffff;
+      padding: 1.5px 6px;
+      border-radius: 3px;
+      letter-spacing: 0.3px;
+    }
+
+    /* Department Table */
+    .dept-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.8pt;
+    }
+    .dept-table th {
+      background: #f1f5f9;
+      color: #0f172a;
+      font-weight: 800;
+      font-size: 6.8pt;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      padding: 3.5px 6px;
+      border-bottom: 1.2px solid #cbd5e1;
+      text-align: left;
+    }
+    .dept-table td {
+      padding: 3.5px 6px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: middle;
+    }
+    .dept-table tr:last-child td { border-bottom: none; }
+    .dept-table tr:nth-child(even) td { background: #fafafa; }
+
+    /* Class cell */
+    .class-title-cell {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .class-name-txt {
+      font-weight: 700;
+      color: #0f172a;
+      font-size: 7.8pt;
+    }
+
+    /* Progression badges */
+    .yr-badge {
+      display: inline-block;
+      font-size: 6pt;
+      font-weight: 900;
+      padding: 1px 4px;
+      border-radius: 3px;
+      letter-spacing: 0.3px;
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
+    .yr-1ug { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+    .yr-2ug { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+    .yr-3ug { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
+    .yr-1pg { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .yr-2pg { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+    /* Booth Badge */
+    .col-booth { text-align: center; }
+    .booth-badge {
+      display: inline-block;
+      background: #047857;
+      color: #ffffff;
+      font-size: 7pt;
+      font-weight: 900;
+      padding: 2px 7px;
+      border-radius: 3px;
+      letter-spacing: 0.5px;
+      box-shadow: 0 1px 2px rgba(4,120,87,0.25);
+      border: 1px solid #065f46;
+      white-space: nowrap;
+    }
+
+    /* Location Cell */
+    .loc-cell {
+      display: flex;
+      align-items: baseline;
+      gap: 3px;
+    }
+    .loc-pin { font-size: 7pt; flex-shrink: 0; }
+    .loc-text {
+      font-size: 7.2pt;
+      font-weight: 600;
+      color: #1e293b;
+      line-height: 1.2;
+    }
+
+    /* Voter count */
+    .col-voters { text-align: center; }
+    .voter-pill {
+      font-size: 7pt;
+      font-weight: 800;
+      color: #475569;
+      background: #f1f5f9;
+      padding: 1px 5px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    /* Poster Statutory Footer */
+    .poster-footer {
+      border-top: 2px solid #0f172a;
+      padding-top: 6px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 15px;
+      font-size: 7pt;
+      margin-top: 6px;
+    }
+    .footer-rules {
+      flex: 1;
+      color: #334155;
+      line-height: 1.35;
+    }
+    .footer-rules strong { color: #0f172a; }
+    .footer-seal-block {
+      text-align: right;
+      flex-shrink: 0;
+      width: 220px;
+    }
+    .sign-line {
+      border-top: 1.5px solid #0f172a;
+      margin-top: 25px;
+      padding-top: 3px;
+      font-weight: 900;
+      font-size: 8pt;
+      color: #0f172a;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .sign-sub {
+      font-size: 6.8pt;
+      color: #64748b;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    @media print {
+      .screen-bar { display: none !important; }
+      body { background: #ffffff !important; }
+      .poster-page { padding: 0 !important; }
+      .poster-frame { border: 2.5px solid #000 !important; outline: none !important; padding: 6px 10px !important; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen Action Toolbar -->
+  <div class="screen-bar">
+    <div class="screen-bar-title">
+      <span>🏛️</span>
+      <span>GCC College Union Election 2026 &bull; Department &amp; Class Polling Directory (1 UG to PG)</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <input type="text" id="liveSearchInput" class="search-input" placeholder="🔍 Quick Search Department, Class, or Booth...">
+      <button class="print-btn" onclick="window.print()">
+        <span>🖨️</span>
+        <span>Print Poster (A3 / A4)</span>
+      </button>
+      <a href="Department_Class_Voting_Directory_Poster.pdf" target="_blank" style="color:#fde047; font-size:11px; text-decoration:none; font-weight:700;">📄 Ready PDF</a>
+    </div>
+  </div>
+
+  <div class="poster-page">
+    <div class="poster-frame">
+      
+      <!-- Top Emblem & Authority Header -->
+      <div class="poster-header">
+        <div class="header-logo-wrap">
+          <img src="images/gcc_logo_emblem_golden_red.png" class="header-logo" alt="GCC Emblem">
+        </div>
+        <div class="header-text-center">
+          <h1 class="college-heading">GOVERNMENT COLLEGE CHITTUR</h1>
+          <div class="election-heading">College Union Election 2026</div>
+          <div class="office-sub">Office of the Returning Officer &bull; Statutory Campus Polling Directory</div>
+        </div>
+        <div class="header-logo-wrap">
+          <img src="images/gcc_logo_emblem_golden_red.png" class="header-logo" alt="GCC Emblem">
+        </div>
+      </div>
+
+      <!-- Main Poster Ribbon -->
+      <div class="main-banner">
+        <div>
+          <div class="banner-title">DEPARTMENT &amp; CLASS-WISE POLLING BOOTH DIRECTORY</div>
+          <div class="banner-subtitle">Official Student Polling Station Guide &bull; Progression 1st UG through PG</div>
+        </div>
+        <div style="text-align: right; font-size: 7.5pt; font-weight: 800; color: #fde047;">
+          15 DEPARTMENTS &bull; 75 CLASSES &bull; 30 POLLING BOOTHS
+        </div>
+      </div>
+
+      <!-- Schedule & Voter Guidance Bar -->
+      <div class="directive-bar">
+        <div class="directive-item highlight">
+          <span>👉</span>
+          <span><strong>INSTRUCTIONS FOR VOTERS:</strong> Locate your Department and Class (1 UG &rarr; PG) below to find your allotted Polling Booth Number and Room Venue.</span>
+        </div>
+        <div class="directive-item">
+          <span>📅</span>
+          <span><strong>Date of Poll:</strong> Wednesday, 14 Oct 2026</span>
+        </div>
+        <div class="directive-item">
+          <span>⏰</span>
+          <span><strong>Polling Hours:</strong> 09:30 AM to 12:30 PM</span>
+        </div>
+      </div>
+
+      <!-- 2-Column Department Cards Grid -->
+      <div class="dept-grid" id="deptGrid">
+        
+      <div class="dept-card" data-dept="botany">
+        <div class="dept-header">
+          <div class="dept-title-wrap">
+            <span class="dept-icon">🌿</span>
+            <span class="dept-name">DEPARTMENT OF BOTANY</span>
+          </div>
+          <div class="dept-summary-pill">151 Voters &bull; 5 Classes</div>
+        </div>
+        <table class="dept-table">
+          <thead>
+            <tr>
+              <th style="width: 44%;">CLASS (1 UG &rarr; PG)</th>
+              <th style="width: 17%; text-align: center;">BOOTH NO</th>
+              <th style="width: 31%;">LOCATION OF VOTING BOOTH</th>
+              <th style="width: 8%; text-align: center;">VOTERS</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+      <tr class="cls-row" data-search="1st b.sc botany botany booth 1">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1ug">1 UG</span>
+            <span class="class-name-txt">1st B.Sc Botany</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 1</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room B1, Botany Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">42</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd b.sc botany botany booth 1">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2ug">2 UG</span>
+            <span class="class-name-txt">2nd B.Sc Botany</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 1</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room B1, Botany Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">40</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="3rd b.sc botany botany booth 1">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-3ug">3 UG</span>
+            <span class="class-name-txt">3rd B.Sc Botany</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 1</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room B1, Botany Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">38</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="1st m.sc botany botany booth 2">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1pg">1 PG</span>
+            <span class="class-name-txt">1st M.Sc Botany</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 2</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room B2, Botany PG Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">16</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd m.sc botany botany booth 2">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2pg">2 PG</span>
+            <span class="class-name-txt">2nd M.Sc Botany</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 2</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room B2, Botany PG Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">15</span>
+        </td>
+      </tr>
+    
+          </tbody>
+        </table>
+      </div>
+    
+      <div class="dept-card" data-dept="chemistry">
+        <div class="dept-header">
+          <div class="dept-title-wrap">
+            <span class="dept-icon">🔬</span>
+            <span class="dept-name">DEPARTMENT OF CHEMISTRY</span>
+          </div>
+          <div class="dept-summary-pill">173 Voters &bull; 5 Classes</div>
+        </div>
+        <table class="dept-table">
+          <thead>
+            <tr>
+              <th style="width: 44%;">CLASS (1 UG &rarr; PG)</th>
+              <th style="width: 17%; text-align: center;">BOOTH NO</th>
+              <th style="width: 31%;">LOCATION OF VOTING BOOTH</th>
+              <th style="width: 8%; text-align: center;">VOTERS</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+      <tr class="cls-row" data-search="1st b.sc chemistry chemistry booth 3">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1ug">1 UG</span>
+            <span class="class-name-txt">1st B.Sc Chemistry</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 3</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room CH1, Chemistry Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">48</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd b.sc chemistry chemistry booth 3">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2ug">2 UG</span>
+            <span class="class-name-txt">2nd B.Sc Chemistry</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 3</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room CH1, Chemistry Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">46</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="3rd b.sc chemistry chemistry booth 3">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-3ug">3 UG</span>
+            <span class="class-name-txt">3rd B.Sc Chemistry</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 3</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room CH1, Chemistry Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">44</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="1st m.sc chemistry chemistry booth 4">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1pg">1 PG</span>
+            <span class="class-name-txt">1st M.Sc Chemistry</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 4</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room CH2, Chemistry PG Seminar Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">18</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd m.sc chemistry chemistry booth 4">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2pg">2 PG</span>
+            <span class="class-name-txt">2nd M.Sc Chemistry</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 4</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room CH2, Chemistry PG Seminar Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">17</span>
+        </td>
+      </tr>
+    
+          </tbody>
+        </table>
+      </div>
+    
+      <div class="dept-card" data-dept="commerce">
+        <div class="dept-header">
+          <div class="dept-title-wrap">
+            <span class="dept-icon">🏛️</span>
+            <span class="dept-name">DEPARTMENT OF COMMERCE</span>
+          </div>
+          <div class="dept-summary-pill">222 Voters &bull; 5 Classes</div>
+        </div>
+        <table class="dept-table">
+          <thead>
+            <tr>
+              <th style="width: 44%;">CLASS (1 UG &rarr; PG)</th>
+              <th style="width: 17%; text-align: center;">BOOTH NO</th>
+              <th style="width: 31%;">LOCATION OF VOTING BOOTH</th>
+              <th style="width: 8%; text-align: center;">VOTERS</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+      <tr class="cls-row" data-search="1st b.com (finance) commerce booth 5">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1ug">1 UG</span>
+            <span class="class-name-txt">1st B.Com (Finance)</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 5</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room C1, Commerce Block (GF)</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">62</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd b.com (finance) commerce booth 5">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2ug">2 UG</span>
+            <span class="class-name-txt">2nd B.Com (Finance)</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 5</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room C1, Commerce Block (GF)</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">60</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="3rd b.com (finance) commerce booth 6">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-3ug">3 UG</span>
+            <span class="class-name-txt">3rd B.Com (Finance)</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 6</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room C2, Commerce Block (1st Floor)</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">58</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="1st m.com (finance) commerce booth 6">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1pg">1 PG</span>
+            <span class="class-name-txt">1st M.Com (Finance)</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 6</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room C2, Commerce Block (1st Floor)</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">22</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd m.com (finance) commerce booth 6">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2pg">2 PG</span>
+            <span class="class-name-txt">2nd M.Com (Finance)</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 6</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room C2, Commerce Block (1st Floor)</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">20</span>
+        </td>
+      </tr>
+    
+          </tbody>
+        </table>
+      </div>
+    
+      <div class="dept-card" data-dept="economics">
+        <div class="dept-header">
+          <div class="dept-title-wrap">
+            <span class="dept-icon">📈</span>
+            <span class="dept-name">DEPARTMENT OF ECONOMICS</span>
+          </div>
+          <div class="dept-summary-pill">196 Voters &bull; 5 Classes</div>
+        </div>
+        <table class="dept-table">
+          <thead>
+            <tr>
+              <th style="width: 44%;">CLASS (1 UG &rarr; PG)</th>
+              <th style="width: 17%; text-align: center;">BOOTH NO</th>
+              <th style="width: 31%;">LOCATION OF VOTING BOOTH</th>
+              <th style="width: 8%; text-align: center;">VOTERS</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+      <tr class="cls-row" data-search="1st b.a economics economics booth 7">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1ug">1 UG</span>
+            <span class="class-name-txt">1st B.A Economics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 7</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room E1, Arts Block (GF)</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">55</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd b.a economics economics booth 7">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2ug">2 UG</span>
+            <span class="class-name-txt">2nd B.A Economics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 7</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room E1, Arts Block (GF)</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">52</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="3rd b.a economics economics booth 7">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-3ug">3 UG</span>
+            <span class="class-name-txt">3rd B.A Economics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 7</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room E1, Arts Block (GF)</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">50</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="1st m.a economics economics booth 8">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1pg">1 PG</span>
+            <span class="class-name-txt">1st M.A Economics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 8</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room E2, Arts Block (1st Floor)</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">20</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd m.a economics economics booth 8">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2pg">2 PG</span>
+            <span class="class-name-txt">2nd M.A Economics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 8</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room E2, Arts Block (1st Floor)</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">19</span>
+        </td>
+      </tr>
+    
+          </tbody>
+        </table>
+      </div>
+    
+      <div class="dept-card" data-dept="electronics">
+        <div class="dept-header">
+          <div class="dept-title-wrap">
+            <span class="dept-icon">🔌</span>
+            <span class="dept-name">DEPARTMENT OF ELECTRONICS</span>
+          </div>
+          <div class="dept-summary-pill">137 Voters &bull; 5 Classes</div>
+        </div>
+        <table class="dept-table">
+          <thead>
+            <tr>
+              <th style="width: 44%;">CLASS (1 UG &rarr; PG)</th>
+              <th style="width: 17%; text-align: center;">BOOTH NO</th>
+              <th style="width: 31%;">LOCATION OF VOTING BOOTH</th>
+              <th style="width: 8%; text-align: center;">VOTERS</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+      <tr class="cls-row" data-search="1st b.sc electronics electronics booth 9">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1ug">1 UG</span>
+            <span class="class-name-txt">1st B.Sc Electronics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 9</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room EL1, Science Block Annex</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">38</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd b.sc electronics electronics booth 9">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2ug">2 UG</span>
+            <span class="class-name-txt">2nd B.Sc Electronics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 9</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room EL1, Science Block Annex</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">36</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="3rd b.sc electronics electronics booth 9">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-3ug">3 UG</span>
+            <span class="class-name-txt">3rd B.Sc Electronics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 9</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room EL1, Science Block Annex</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">35</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="1st m.sc electronics electronics booth 10">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1pg">1 PG</span>
+            <span class="class-name-txt">1st M.Sc Electronics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 10</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room EL2, Microprocessor Lab Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">14</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd m.sc electronics electronics booth 10">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2pg">2 PG</span>
+            <span class="class-name-txt">2nd M.Sc Electronics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 10</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room EL2, Microprocessor Lab Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">14</span>
+        </td>
+      </tr>
+    
+          </tbody>
+        </table>
+      </div>
+    
+      <div class="dept-card" data-dept="english">
+        <div class="dept-header">
+          <div class="dept-title-wrap">
+            <span class="dept-icon">📖</span>
+            <span class="dept-name">DEPARTMENT OF ENGLISH</span>
+          </div>
+          <div class="dept-summary-pill">167 Voters &bull; 5 Classes</div>
+        </div>
+        <table class="dept-table">
+          <thead>
+            <tr>
+              <th style="width: 44%;">CLASS (1 UG &rarr; PG)</th>
+              <th style="width: 17%; text-align: center;">BOOTH NO</th>
+              <th style="width: 31%;">LOCATION OF VOTING BOOTH</th>
+              <th style="width: 8%; text-align: center;">VOTERS</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+      <tr class="cls-row" data-search="1st b.a english english booth 11">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1ug">1 UG</span>
+            <span class="class-name-txt">1st B.A English</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 11</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room ENG1, Humanities Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">45</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd b.a english english booth 11">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2ug">2 UG</span>
+            <span class="class-name-txt">2nd B.A English</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 11</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room ENG1, Humanities Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">44</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="3rd b.a english english booth 11">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-3ug">3 UG</span>
+            <span class="class-name-txt">3rd B.A English</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 11</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room ENG1, Humanities Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">42</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="1st m.a english english booth 12">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1pg">1 PG</span>
+            <span class="class-name-txt">1st M.A English</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 12</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room ENG2, Language Lab Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">18</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd m.a english english booth 12">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2pg">2 PG</span>
+            <span class="class-name-txt">2nd M.A English</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 12</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room ENG2, Language Lab Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">18</span>
+        </td>
+      </tr>
+    
+          </tbody>
+        </table>
+      </div>
+    
+      <div class="dept-card" data-dept="geography">
+        <div class="dept-header">
+          <div class="dept-title-wrap">
+            <span class="dept-icon">🌍</span>
+            <span class="dept-name">DEPARTMENT OF GEOGRAPHY</span>
+          </div>
+          <div class="dept-summary-pill">144 Voters &bull; 5 Classes</div>
+        </div>
+        <table class="dept-table">
+          <thead>
+            <tr>
+              <th style="width: 44%;">CLASS (1 UG &rarr; PG)</th>
+              <th style="width: 17%; text-align: center;">BOOTH NO</th>
+              <th style="width: 31%;">LOCATION OF VOTING BOOTH</th>
+              <th style="width: 8%; text-align: center;">VOTERS</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+      <tr class="cls-row" data-search="1st b.sc geography geography booth 13">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1ug">1 UG</span>
+            <span class="class-name-txt">1st B.Sc Geography</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 13</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room G1, Geography Department Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">40</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd b.sc geography geography booth 13">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2ug">2 UG</span>
+            <span class="class-name-txt">2nd B.Sc Geography</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 13</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room G1, Geography Department Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">38</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="3rd b.sc geography geography booth 13">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-3ug">3 UG</span>
+            <span class="class-name-txt">3rd B.Sc Geography</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 13</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room G1, Geography Department Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">36</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="1st m.sc geography geography booth 14">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1pg">1 PG</span>
+            <span class="class-name-txt">1st M.Sc Geography</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 14</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room G2, GIS & Cartography Lab</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">15</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd m.sc geography geography booth 14">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2pg">2 PG</span>
+            <span class="class-name-txt">2nd M.Sc Geography</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 14</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room G2, GIS & Cartography Lab</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">15</span>
+        </td>
+      </tr>
+    
+          </tbody>
+        </table>
+      </div>
+    
+      <div class="dept-card" data-dept="history">
+        <div class="dept-header">
+          <div class="dept-title-wrap">
+            <span class="dept-icon">📜</span>
+            <span class="dept-name">DEPARTMENT OF HISTORY</span>
+          </div>
+          <div class="dept-summary-pill">191 Voters &bull; 5 Classes</div>
+        </div>
+        <table class="dept-table">
+          <thead>
+            <tr>
+              <th style="width: 44%;">CLASS (1 UG &rarr; PG)</th>
+              <th style="width: 17%; text-align: center;">BOOTH NO</th>
+              <th style="width: 31%;">LOCATION OF VOTING BOOTH</th>
+              <th style="width: 8%; text-align: center;">VOTERS</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+      <tr class="cls-row" data-search="1st b.a history history booth 15">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1ug">1 UG</span>
+            <span class="class-name-txt">1st B.A History</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 15</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room H1, Social Sciences Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">54</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd b.a history history booth 15">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2ug">2 UG</span>
+            <span class="class-name-txt">2nd B.A History</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 15</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room H1, Social Sciences Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">50</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="3rd b.a history history booth 15">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-3ug">3 UG</span>
+            <span class="class-name-txt">3rd B.A History</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 15</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room H1, Social Sciences Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">48</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="1st m.a history history booth 16">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1pg">1 PG</span>
+            <span class="class-name-txt">1st M.A History</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 16</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room H2, History Archives Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">20</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd m.a history history booth 16">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2pg">2 PG</span>
+            <span class="class-name-txt">2nd M.A History</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 16</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room H2, History Archives Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">19</span>
+        </td>
+      </tr>
+    
+          </tbody>
+        </table>
+      </div>
+    
+      <div class="dept-card" data-dept="malayalam">
+        <div class="dept-header">
+          <div class="dept-title-wrap">
+            <span class="dept-icon">✍️</span>
+            <span class="dept-name">DEPARTMENT OF MALAYALAM</span>
+          </div>
+          <div class="dept-summary-pill">165 Voters &bull; 5 Classes</div>
+        </div>
+        <table class="dept-table">
+          <thead>
+            <tr>
+              <th style="width: 44%;">CLASS (1 UG &rarr; PG)</th>
+              <th style="width: 17%; text-align: center;">BOOTH NO</th>
+              <th style="width: 31%;">LOCATION OF VOTING BOOTH</th>
+              <th style="width: 8%; text-align: center;">VOTERS</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+      <tr class="cls-row" data-search="1st b.a malayalam malayalam booth 17">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1ug">1 UG</span>
+            <span class="class-name-txt">1st B.A Malayalam</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 17</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room M1, Oriental Languages Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">46</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd b.a malayalam malayalam booth 17">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2ug">2 UG</span>
+            <span class="class-name-txt">2nd B.A Malayalam</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 17</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room M1, Oriental Languages Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">44</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="3rd b.a malayalam malayalam booth 17">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-3ug">3 UG</span>
+            <span class="class-name-txt">3rd B.A Malayalam</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 17</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room M1, Oriental Languages Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">42</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="1st m.a malayalam malayalam booth 18">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1pg">1 PG</span>
+            <span class="class-name-txt">1st M.A Malayalam</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 18</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room M2, Bhasha Seminar Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">17</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd m.a malayalam malayalam booth 18">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2pg">2 PG</span>
+            <span class="class-name-txt">2nd M.A Malayalam</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 18</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room M2, Bhasha Seminar Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">16</span>
+        </td>
+      </tr>
+    
+          </tbody>
+        </table>
+      </div>
+    
+      <div class="dept-card" data-dept="mathematics">
+        <div class="dept-header">
+          <div class="dept-title-wrap">
+            <span class="dept-icon">📐</span>
+            <span class="dept-name">DEPARTMENT OF MATHEMATICS</span>
+          </div>
+          <div class="dept-summary-pill">172 Voters &bull; 5 Classes</div>
+        </div>
+        <table class="dept-table">
+          <thead>
+            <tr>
+              <th style="width: 44%;">CLASS (1 UG &rarr; PG)</th>
+              <th style="width: 17%; text-align: center;">BOOTH NO</th>
+              <th style="width: 31%;">LOCATION OF VOTING BOOTH</th>
+              <th style="width: 8%; text-align: center;">VOTERS</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+      <tr class="cls-row" data-search="1st b.sc mathematics mathematics booth 19">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1ug">1 UG</span>
+            <span class="class-name-txt">1st B.Sc Mathematics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 19</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room MATH1, Main Science Wing</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">48</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd b.sc mathematics mathematics booth 19">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2ug">2 UG</span>
+            <span class="class-name-txt">2nd B.Sc Mathematics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 19</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room MATH1, Main Science Wing</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">45</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="3rd b.sc mathematics mathematics booth 19">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-3ug">3 UG</span>
+            <span class="class-name-txt">3rd B.Sc Mathematics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 19</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room MATH1, Main Science Wing</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">43</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="1st m.sc mathematics mathematics booth 20">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1pg">1 PG</span>
+            <span class="class-name-txt">1st M.Sc Mathematics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 20</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room MATH2, Ramanujan Seminar Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">18</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd m.sc mathematics mathematics booth 20">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2pg">2 PG</span>
+            <span class="class-name-txt">2nd M.Sc Mathematics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 20</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room MATH2, Ramanujan Seminar Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">18</span>
+        </td>
+      </tr>
+    
+          </tbody>
+        </table>
+      </div>
+    
+      <div class="dept-card" data-dept="music">
+        <div class="dept-header">
+          <div class="dept-title-wrap">
+            <span class="dept-icon">🎵</span>
+            <span class="dept-name">DEPARTMENT OF MUSIC</span>
+          </div>
+          <div class="dept-summary-pill">114 Voters &bull; 5 Classes</div>
+        </div>
+        <table class="dept-table">
+          <thead>
+            <tr>
+              <th style="width: 44%;">CLASS (1 UG &rarr; PG)</th>
+              <th style="width: 17%; text-align: center;">BOOTH NO</th>
+              <th style="width: 31%;">LOCATION OF VOTING BOOTH</th>
+              <th style="width: 8%; text-align: center;">VOTERS</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+      <tr class="cls-row" data-search="1st b.a music music booth 21">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1ug">1 UG</span>
+            <span class="class-name-txt">1st B.A Music</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 21</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room MUS1, Fine Arts & Music Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">32</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd b.a music music booth 21">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2ug">2 UG</span>
+            <span class="class-name-txt">2nd B.A Music</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 21</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room MUS1, Fine Arts & Music Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">30</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="3rd b.a music music booth 21">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-3ug">3 UG</span>
+            <span class="class-name-txt">3rd B.A Music</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 21</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room MUS1, Fine Arts & Music Block</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">28</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="1st m.a music music booth 22">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1pg">1 PG</span>
+            <span class="class-name-txt">1st M.A Music</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 22</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room MUS2, Sangeetha Sabha Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">12</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd m.a music music booth 22">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2pg">2 PG</span>
+            <span class="class-name-txt">2nd M.A Music</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 22</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room MUS2, Sangeetha Sabha Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">12</span>
+        </td>
+      </tr>
+    
+          </tbody>
+        </table>
+      </div>
+    
+      <div class="dept-card" data-dept="philosophy">
+        <div class="dept-header">
+          <div class="dept-title-wrap">
+            <span class="dept-icon">💡</span>
+            <span class="dept-name">DEPARTMENT OF PHILOSOPHY</span>
+          </div>
+          <div class="dept-summary-pill">150 Voters &bull; 5 Classes</div>
+        </div>
+        <table class="dept-table">
+          <thead>
+            <tr>
+              <th style="width: 44%;">CLASS (1 UG &rarr; PG)</th>
+              <th style="width: 17%; text-align: center;">BOOTH NO</th>
+              <th style="width: 31%;">LOCATION OF VOTING BOOTH</th>
+              <th style="width: 8%; text-align: center;">VOTERS</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+      <tr class="cls-row" data-search="1st b.a philosophy philosophy booth 23">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1ug">1 UG</span>
+            <span class="class-name-txt">1st B.A Philosophy</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 23</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room P1, Humanities Wing</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">42</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd b.a philosophy philosophy booth 23">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2ug">2 UG</span>
+            <span class="class-name-txt">2nd B.A Philosophy</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 23</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room P1, Humanities Wing</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">40</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="3rd b.a philosophy philosophy booth 23">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-3ug">3 UG</span>
+            <span class="class-name-txt">3rd B.A Philosophy</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 23</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room P1, Humanities Wing</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">38</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="1st m.a philosophy philosophy booth 24">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1pg">1 PG</span>
+            <span class="class-name-txt">1st M.A Philosophy</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 24</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room P2, Ethics Seminar Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">15</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd m.a philosophy philosophy booth 24">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2pg">2 PG</span>
+            <span class="class-name-txt">2nd M.A Philosophy</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 24</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room P2, Ethics Seminar Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">15</span>
+        </td>
+      </tr>
+    
+          </tbody>
+        </table>
+      </div>
+    
+      <div class="dept-card" data-dept="physics">
+        <div class="dept-header">
+          <div class="dept-title-wrap">
+            <span class="dept-icon">⚡</span>
+            <span class="dept-name">DEPARTMENT OF PHYSICS</span>
+          </div>
+          <div class="dept-summary-pill">165 Voters &bull; 5 Classes</div>
+        </div>
+        <table class="dept-table">
+          <thead>
+            <tr>
+              <th style="width: 44%;">CLASS (1 UG &rarr; PG)</th>
+              <th style="width: 17%; text-align: center;">BOOTH NO</th>
+              <th style="width: 31%;">LOCATION OF VOTING BOOTH</th>
+              <th style="width: 8%; text-align: center;">VOTERS</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+      <tr class="cls-row" data-search="1st b.sc physics physics booth 25">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1ug">1 UG</span>
+            <span class="class-name-txt">1st B.Sc Physics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 25</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room PHY1, C.V. Raman Physics Wing</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">46</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd b.sc physics physics booth 25">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2ug">2 UG</span>
+            <span class="class-name-txt">2nd B.Sc Physics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 25</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room PHY1, C.V. Raman Physics Wing</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">44</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="3rd b.sc physics physics booth 25">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-3ug">3 UG</span>
+            <span class="class-name-txt">3rd B.Sc Physics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 25</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room PHY1, C.V. Raman Physics Wing</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">42</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="1st m.sc physics physics booth 26">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1pg">1 PG</span>
+            <span class="class-name-txt">1st M.Sc Physics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 26</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room PHY2, Physics Research Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">17</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd m.sc physics physics booth 26">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2pg">2 PG</span>
+            <span class="class-name-txt">2nd M.Sc Physics</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 26</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room PHY2, Physics Research Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">16</span>
+        </td>
+      </tr>
+    
+          </tbody>
+        </table>
+      </div>
+    
+      <div class="dept-card" data-dept="tamil">
+        <div class="dept-header">
+          <div class="dept-title-wrap">
+            <span class="dept-icon">🪔</span>
+            <span class="dept-name">DEPARTMENT OF TAMIL</span>
+          </div>
+          <div class="dept-summary-pill">142 Voters &bull; 5 Classes</div>
+        </div>
+        <table class="dept-table">
+          <thead>
+            <tr>
+              <th style="width: 44%;">CLASS (1 UG &rarr; PG)</th>
+              <th style="width: 17%; text-align: center;">BOOTH NO</th>
+              <th style="width: 31%;">LOCATION OF VOTING BOOTH</th>
+              <th style="width: 8%; text-align: center;">VOTERS</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+      <tr class="cls-row" data-search="1st b.a tamil tamil booth 27">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1ug">1 UG</span>
+            <span class="class-name-txt">1st B.A Tamil</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 27</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room T1, South Indian Languages Wing</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">40</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd b.a tamil tamil booth 27">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2ug">2 UG</span>
+            <span class="class-name-txt">2nd B.A Tamil</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 27</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room T1, South Indian Languages Wing</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">38</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="3rd b.a tamil tamil booth 27">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-3ug">3 UG</span>
+            <span class="class-name-txt">3rd B.A Tamil</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 27</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room T1, South Indian Languages Wing</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">36</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="1st m.a tamil tamil booth 28">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1pg">1 PG</span>
+            <span class="class-name-txt">1st M.A Tamil</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 28</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room T2, Sangam Literature Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">14</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd m.a tamil tamil booth 28">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2pg">2 PG</span>
+            <span class="class-name-txt">2nd M.A Tamil</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 28</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room T2, Sangam Literature Hall</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">14</span>
+        </td>
+      </tr>
+    
+          </tbody>
+        </table>
+      </div>
+    
+      <div class="dept-card" data-dept="zoology">
+        <div class="dept-header">
+          <div class="dept-title-wrap">
+            <span class="dept-icon">🐾</span>
+            <span class="dept-name">DEPARTMENT OF ZOOLOGY</span>
+          </div>
+          <div class="dept-summary-pill">157 Voters &bull; 5 Classes</div>
+        </div>
+        <table class="dept-table">
+          <thead>
+            <tr>
+              <th style="width: 44%;">CLASS (1 UG &rarr; PG)</th>
+              <th style="width: 17%; text-align: center;">BOOTH NO</th>
+              <th style="width: 31%;">LOCATION OF VOTING BOOTH</th>
+              <th style="width: 8%; text-align: center;">VOTERS</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+      <tr class="cls-row" data-search="1st b.sc zoology zoology booth 29">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1ug">1 UG</span>
+            <span class="class-name-txt">1st B.Sc Zoology</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 29</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room Z1, Life Sciences Block (GF)</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">44</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd b.sc zoology zoology booth 29">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2ug">2 UG</span>
+            <span class="class-name-txt">2nd B.Sc Zoology</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 29</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room Z1, Life Sciences Block (GF)</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">42</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="3rd b.sc zoology zoology booth 29">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-3ug">3 UG</span>
+            <span class="class-name-txt">3rd B.Sc Zoology</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 29</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room Z1, Life Sciences Block (GF)</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">40</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="1st m.sc zoology zoology booth 30">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-1pg">1 PG</span>
+            <span class="class-name-txt">1st M.Sc Zoology</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 30</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room Z2, Entomology & Genetics Lab</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">16</span>
+        </td>
+      </tr>
+    
+      <tr class="cls-row" data-search="2nd m.sc zoology zoology booth 30">
+        <td class="col-class">
+          <div class="class-title-cell">
+            <span class="yr-badge yr-2pg">2 PG</span>
+            <span class="class-name-txt">2nd M.Sc Zoology</span>
+          </div>
+        </td>
+        <td class="col-booth">
+          <span class="booth-badge">BOOTH 30</span>
+        </td>
+        <td class="col-location">
+          <div class="loc-cell">
+            <span class="loc-pin">📍</span>
+            <span class="loc-text">Room Z2, Entomology & Genetics Lab</span>
+          </div>
+        </td>
+        <td class="col-voters">
+          <span class="voter-pill">15</span>
+        </td>
+      </tr>
+    
+          </tbody>
+        </table>
+      </div>
+    
+      </div>
+
+      <!-- Poster Footer -->
+      <div class="poster-footer">
+        <div class="footer-rules">
+          <strong>STATUTORY NOTICE:</strong> Every elector must carry and present their valid <strong>College Identity Card with photograph</strong> before the Polling Officer. Mobile phones, smart watches, and cameras are strictly prohibited inside the voting booth compartment. Preserving the secrecy of the ballot is statutory.
+        </div>
+        <div class="footer-seal-block">
+          <div class="sign-line">Returning Officer</div>
+          <div class="sign-sub">GOVERNMENT COLLEGE CHITTUR</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Auto-trigger print if requested
+    if (new URLSearchParams(window.location.search).get('print') === 'true') {
+      window.addEventListener('load', function() {
+        setTimeout(function() { window.print(); }, 400);
+      });
+    }
+
+    // Live filter script on screen
+    document.getElementById('liveSearchInput')?.addEventListener('input', function(e) {
+      const q = e.target.value.toLowerCase().trim();
+      const rows = document.querySelectorAll('.cls-row');
+      const cards = document.querySelectorAll('.dept-card');
+
+      if (!q) {
+        rows.forEach(r => r.style.display = '');
+        cards.forEach(c => c.style.display = '');
+        return;
+      }
+
+      cards.forEach(card => {
+        let cardHasMatch = false;
+        const cardRows = card.querySelectorAll('.cls-row');
+        cardRows.forEach(r => {
+          const match = r.getAttribute('data-search')?.includes(q);
+          r.style.display = match ? '' : 'none';
+          if (match) cardHasMatch = true;
+        });
+        card.style.display = cardHasMatch ? '' : 'none';
+      });
+    });
+  </script>
+</body>
+</html>

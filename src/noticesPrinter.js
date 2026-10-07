@@ -1690,3 +1690,23 @@ export function openBallotBoxStripSealsPdf() {
   }
 }
 
+/**
+ * Open high-visibility Department & Class-wise Polling Booth Directory Poster (1 UG to PG).
+ */
+export function printDepartmentClassDirectoryPoster() {
+  const w = window.open('./Department_Class_Voting_Directory_Poster.html?print=true', '_blank');
+  if (!w) {
+    alert('Pop-up blocker prevented opening the directory poster. Please allow pop-ups for this site.');
+  }
+}
+
+/**
+ * Open pre-compiled high-resolution PDF for Department & Class Polling Directory Poster.
+ */
+export function openDepartmentClassPosterPdf() {
+  const w = window.open('./Department_Class_Voting_Directory_Poster.pdf', '_blank');
+  if (!w) {
+    alert('Pop-up blocker prevented opening the directory poster PDF. Please allow pop-ups for this site.');
+  }
+}
+
