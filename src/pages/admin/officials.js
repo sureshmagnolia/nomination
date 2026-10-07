@@ -408,23 +408,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     coreCommittee = localCore;
   }
 
-  // Auto-reconcile and ensure any Core In-Charge assigned on polling or counting teams is registered in coreCommittee
-  [...pollingTeams, ...countingTeams].forEach(t => {
-    if (t?.coreInCharge?.name) {
-      const match = coreCommittee.find(c => String(c.name || '').trim().toLowerCase() === String(t.coreInCharge.name).trim().toLowerCase());
-      if (!match) {
-        const p = getPerson(t.coreInCharge.name);
-        coreCommittee.push({
-          name: t.coreInCharge.name,
-          pen: t.coreInCharge.pen || p?.pen || '',
-          designation: t.coreInCharge.designation || p?.designation || 'Faculty',
-          department: t.coreInCharge.department || p?.department || '',
-          seniority: t.coreInCharge.seniority || p?.seniority || 999
-        });
-      }
-    }
-  });
-
   // Ensure persistent teamNumber for formed polling and counting teams
   pollingTeams.forEach((t, idx) => {
     if (!t.teamNumber) t.teamNumber = idx + 1;
@@ -433,16 +416,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     if (!t.teamNumber) t.teamNumber = idx + 1;
   });
 
-  const isRo = (name, pen) => {
+  function isRo(name, pen) {
     if (!roOfficer?.name) return false;
     const cn = String(name || '').trim().toLowerCase();
     const cp = String(pen || '').trim().toLowerCase();
     const ron = String(roOfficer.name || '').trim().toLowerCase();
     const rop = String(roOfficer.pen || '').trim().toLowerCase();
     return (cn && cn === ron) || (cp && rop && cp === rop);
-  };
+  }
 
-  const isAro = (name, pen) => {
+  function isAro(name, pen) {
     const cn = String(name || '').trim().toLowerCase();
     const cp = String(pen || '').trim().toLowerCase();
     return aroOfficers.some(a => {
@@ -450,9 +433,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const ap = String(a.pen || '').trim().toLowerCase();
       return (cn && cn === an) || (cp && ap && cp === ap);
     });
-  };
+  }
 
-  const isCore = (name, pen) => {
+  function isCore(name, pen) {
     const cn = String(name || '').trim().toLowerCase();
     const cp = String(pen || '').trim().toLowerCase();
     return coreCommittee.some(c => {
@@ -460,7 +443,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const cpen = String(c.pen || '').trim().toLowerCase();
       return (cn && cn === cname) || (cp && cpen && cp === cpen);
     });
-  };
+  }
 
   // Active UI state
   let activeTab = 'polling'; // 'polling' | 'counting' | 'faculty' | 'nonteaching'
@@ -628,7 +611,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   };
 
   // Helper: Determine if an official is excluded by flag, reason, status, returning officer designation, or matching record in rosters
-  const isPersonExcluded = (p) => {
+  function isPersonExcluded(p) {
     if (!p) return false;
 
     const pName = typeof p === 'string' ? p : (p.name || '');
@@ -692,7 +675,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     }
 
     return false;
-  };
+  }
 
   // Helper: Check if a person is assigned to ANY active election duty (RO, ARO, Core, Observer, Discipline, Grievance, Polling, Counting)
   const isPersonOnDuty = (p) => {
@@ -744,7 +727,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   };
 
   // Helper: Get person from either Teaching Faculty or Non-Teaching Staff roster
-  const getPerson = (identifier) => {
+  function getPerson(identifier) {
     if (!identifier) return null;
     const clean = String(identifier).trim().toLowerCase();
     const fac = faculty.find(f => {
@@ -762,7 +745,25 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     });
     if (nt) return { ...nt, type: 'Non-Teaching Staff', isExcluded: isPersonExcluded(nt) };
     return null;
-  };
+  }
+
+  // Auto-reconcile and ensure any Core In-Charge assigned on polling or counting teams is registered in coreCommittee
+  [...pollingTeams, ...countingTeams].forEach(t => {
+    if (t?.coreInCharge?.name) {
+      const match = coreCommittee.find(c => String(c.name || '').trim().toLowerCase() === String(t.coreInCharge.name).trim().toLowerCase());
+      if (!match) {
+        const p = getPerson(t.coreInCharge.name);
+        coreCommittee.push({
+          name: t.coreInCharge.name,
+          pen: t.coreInCharge.pen || p?.pen || '',
+          designation: t.coreInCharge.designation || p?.designation || 'Faculty',
+          department: t.coreInCharge.department || p?.department || '',
+          seniority: t.coreInCharge.seniority || p?.seniority || 999
+        });
+      }
+    }
+  });
+  coreCommittee.sort(compareOfficials);
 
   // Helper: Get all roster personnel (Faculty + Non-Teaching Staff) sorted by seniority and category
   const getAllRosterPersonnel = () => {
