@@ -1312,10 +1312,27 @@ function triggerCountingPrint(htmlContent, title = 'Counting Documents', college
       }
     }
     @media print {
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: #000000 !important; border-color: #000000 !important; }
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; color: #000000; }
       thead { display: table-header-group; }
       tr { page-break-inside: avoid; break-inside: avoid; }
+      .tally-box {
+        border: 1px dashed #94a3b8 !important;
+        border-color: #94a3b8 !important;
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+      }
+      .tally-box-disabled {
+        border: 1px solid #e2e8f0 !important;
+        border-color: #e2e8f0 !important;
+        background: #f8fafc !important;
+        background-color: #f8fafc !important;
+        opacity: 0.3 !important;
+      }
+      .tally-lbl {
+        color: transparent !important;
+        display: none !important;
+      }
     }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #fff; color: #000; font-size: 12px; }
@@ -1328,15 +1345,14 @@ function triggerCountingPrint(htmlContent, title = 'Counting Documents', college
     .watermark-global { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 450px; height: 450px; opacity: 0.08; filter: grayscale(100%); pointer-events: none; z-index: -1; background-size: contain; background-repeat: no-repeat; background-position: center; }
 
     /* UUC Dual-Vote Tally Marking Compartments */
-    .tally-td { padding: 2.5px 2px !important; vertical-align: middle; background: #fff; }
-    .tally-cell-wrap { display: flex; flex-direction: column; gap: 2px; width: 100%; min-height: 42px; justify-content: center; }
-    .tally-row-top { display: flex; gap: 2px; width: 100%; justify-content: center; }
-    .tally-row-bot { display: flex; gap: 2.5px; width: 100%; justify-content: center; }
-    .tally-box { flex: 1; height: 19px; border: 1px solid #444; border-radius: 2px; background: #fff; position: relative; min-width: 14px; }
+    .tally-td { padding: 3px 2px !important; vertical-align: middle; background: #fff; }
+    .tally-cell-wrap { display: flex; flex-direction: column; gap: 3px; width: 100%; justify-content: center; }
+    .tally-row-top { display: flex; gap: 3px; width: 100%; justify-content: center; }
+    .tally-row-bot { display: flex; gap: 3px; width: 100%; justify-content: center; }
+    .tally-box { flex: 1; border: 1px dashed #cbd5e1; border-radius: 2px; background: #fff; position: relative; min-width: 14px; }
     .tally-row-bot .tally-box { flex: 0 0 46%; }
-    .tally-lbl { position: absolute; bottom: 1px; right: 2px; font-size: 6px; color: #888; font-weight: 700; line-height: 1; pointer-events: none; user-select: none; }
-    .tally-box-disabled { background: #f1f5f9; border-color: #cbd5e1; opacity: 0.45; }
-    .tally-box-disabled .tally-lbl { color: #cbd5e1; }
+    .tally-lbl { color: transparent; display: none; }
+    .tally-box-disabled { background: #f8fafc; border: 1px solid #e2e8f0; opacity: 0.3; }
   </style></head><body>
     ${collegeLogo ? `<div class="watermark-global" style="background-image: url('${collegeLogo}');"></div>` : ''}
     ${htmlContent}
@@ -1645,19 +1661,18 @@ export function getUucBatchesSummaryText(batches, voterCount) {
  * physical width and height for counting officers to comfortably draw 5-vote tallies (卌).
  * For partial remainder batches (e.g. Rest 19), boxes exceeding possible votes are greyed out.
  */
-function renderUucTallyBoxesHtml(batch, isCompact = false) {
+function renderUucTallyBoxesHtml(batch, boxH = '28px') {
   const ballots = batch ? Number(batch.ballots) : 25;
   const maxBundles = (ballots > 0) ? Math.min(5, Math.ceil(ballots / 5)) : 5;
-  const boxH = isCompact ? '17px' : '20px';
-  return `<div class="tally-cell-wrap" style="display:flex;flex-direction:column;gap:2px;width:100%;min-height:${isCompact ? '38px' : '44px'};justify-content:center;">
-    <div class="tally-row-top" style="display:flex;gap:2px;width:100%;justify-content:center;">
-      <div class="tally-box ${maxBundles < 1 ? 'tally-box-disabled' : ''}" style="flex:1;height:${boxH};border:1px solid ${maxBundles < 1 ? '#cbd5e1' : '#444'};border-radius:2px;background:${maxBundles < 1 ? '#f1f5f9' : '#fff'};position:relative;min-width:14px;"><span class="tally-lbl" style="position:absolute;bottom:1px;right:2px;font-size:6px;color:${maxBundles < 1 ? '#cbd5e1' : '#888'};font-weight:700;line-height:1;pointer-events:none;user-select:none;">5</span></div>
-      <div class="tally-box ${maxBundles < 2 ? 'tally-box-disabled' : ''}" style="flex:1;height:${boxH};border:1px solid ${maxBundles < 2 ? '#cbd5e1' : '#444'};border-radius:2px;background:${maxBundles < 2 ? '#f1f5f9' : '#fff'};position:relative;min-width:14px;"><span class="tally-lbl" style="position:absolute;bottom:1px;right:2px;font-size:6px;color:${maxBundles < 2 ? '#cbd5e1' : '#888'};font-weight:700;line-height:1;pointer-events:none;user-select:none;">10</span></div>
-      <div class="tally-box ${maxBundles < 3 ? 'tally-box-disabled' : ''}" style="flex:1;height:${boxH};border:1px solid ${maxBundles < 3 ? '#cbd5e1' : '#444'};border-radius:2px;background:${maxBundles < 3 ? '#f1f5f9' : '#fff'};position:relative;min-width:14px;"><span class="tally-lbl" style="position:absolute;bottom:1px;right:2px;font-size:6px;color:${maxBundles < 3 ? '#cbd5e1' : '#888'};font-weight:700;line-height:1;pointer-events:none;user-select:none;">15</span></div>
+  return `<div class="tally-cell-wrap" style="display:flex;flex-direction:column;gap:3px;width:100%;justify-content:center;">
+    <div class="tally-row-top" style="display:flex;gap:3px;width:100%;justify-content:center;">
+      <div class="tally-box ${maxBundles < 1 ? 'tally-box-disabled' : ''}" style="flex:1;height:${boxH};border:1px dashed #cbd5e1;border-radius:2px;background:#fff;"></div>
+      <div class="tally-box ${maxBundles < 2 ? 'tally-box-disabled' : ''}" style="flex:1;height:${boxH};border:1px dashed #cbd5e1;border-radius:2px;background:#fff;"></div>
+      <div class="tally-box ${maxBundles < 3 ? 'tally-box-disabled' : ''}" style="flex:1;height:${boxH};border:1px dashed #cbd5e1;border-radius:2px;background:#fff;"></div>
     </div>
-    <div class="tally-row-bot" style="display:flex;gap:2.5px;width:100%;justify-content:center;">
-      <div class="tally-box ${maxBundles < 4 ? 'tally-box-disabled' : ''}" style="flex:0 0 46%;height:${boxH};border:1px solid ${maxBundles < 4 ? '#cbd5e1' : '#444'};border-radius:2px;background:${maxBundles < 4 ? '#f1f5f9' : '#fff'};position:relative;min-width:14px;"><span class="tally-lbl" style="position:absolute;bottom:1px;right:2px;font-size:6px;color:${maxBundles < 4 ? '#cbd5e1' : '#888'};font-weight:700;line-height:1;pointer-events:none;user-select:none;">20</span></div>
-      <div class="tally-box ${maxBundles < 5 ? 'tally-box-disabled' : ''}" style="flex:0 0 46%;height:${boxH};border:1px solid ${maxBundles < 5 ? '#cbd5e1' : '#444'};border-radius:2px;background:${maxBundles < 5 ? '#f1f5f9' : '#fff'};position:relative;min-width:14px;"><span class="tally-lbl" style="position:absolute;bottom:1px;right:2px;font-size:6px;color:${maxBundles < 5 ? '#cbd5e1' : '#888'};font-weight:700;line-height:1;pointer-events:none;user-select:none;">25</span></div>
+    <div class="tally-row-bot" style="display:flex;gap:3px;width:100%;justify-content:center;">
+      <div class="tally-box ${maxBundles < 4 ? 'tally-box-disabled' : ''}" style="flex:0 0 46%;height:${boxH};border:1px dashed #cbd5e1;border-radius:2px;background:#fff;"></div>
+      <div class="tally-box ${maxBundles < 5 ? 'tally-box-disabled' : ''}" style="flex:0 0 46%;height:${boxH};border:1px dashed #cbd5e1;border-radius:2px;background:#fff;"></div>
     </div>
   </div>`;
 }
@@ -1673,7 +1688,6 @@ export function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, c
   const numVoters = Number(voterCount) || 0;
   const batches = getUucBatchesForVoterCount(numVoters);
   const batchesSummary = getUucBatchesSummaryText(batches, numVoters);
-  const isCompact = candsList.length > 4;
 
   // Column width calculations - optimized to maximize writing space for tally marks in batch columns
   const numBatches = batches.length;
@@ -1683,75 +1697,50 @@ export function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, c
   const remainingWidth = 100 - (indexWidth + nameWidth + finalWidth);
   const batchColWidth = (remainingWidth / numBatches).toFixed(1);
 
+  // Dynamic box height calculation based on total row count so rows expand to fill the A4 page
+  const totalRows = candsList.length + 2; // candidates + NOTA + Invalid
+  let boxH = '28px';
+  if (totalRows <= 5) boxH = '34px';
+  else if (totalRows <= 7) boxH = '30px';
+  else if (totalRows <= 9) boxH = '24px';
+  else boxH = '19px';
+
   return `<div class="pg pg-tally" style="page-break-inside:avoid;">
-    ${isRecount ? `<div style="position:absolute;top:6px;right:6px;border:2px solid #b91c1c;color:#b91c1c;padding:3px 10px;font-size:12px;font-weight:bold;letter-spacing:1px;background:#fff;">🔁 RECOUNTING</div>` : ''}
-    <div style="text-align:center;border-bottom:1.5px solid #000;padding-bottom:5px;margin-bottom:6px;">
-      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:30px;max-width:100px;margin:0 auto 2px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
-      <div style="font-size:11px;font-weight:bold;color:#111;text-transform:uppercase;">${esc(collegeName)}</div>
-      <div style="font-size:10px;font-weight:bold;color:#444;margin-top:1px;">College Union Election ${esc(yearStr)}</div>
-      <h2 style="margin:2px 0 0;font-size:14px;text-transform:uppercase;letter-spacing:1px">
-        FORM 6-T (UUC) — BATCH-OF-25 DUAL-VOTE TALLY SHEET ${isRecount ? '<span style="color:#b91c1c;">(RECOUNT)</span>' : ''}
-      </h2>
-      <div style="font-size:11px;font-weight:bold;margin-top:1px;text-decoration:underline">
-        POST: UNIVERSITY UNION COUNCILLOR (TWO VACANCIES)
+    <!-- Stripped compact header line -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1.5px solid #000;padding-bottom:2px;margin-bottom:3px;">
+      <div>
+        <span style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;">${esc(collegeName)}</span>
+        <span style="font-size:10.5px;font-weight:700;color:#1e3a8a;margin-left:8px;">FORM 6-T (UUC) — BATCH TALLY SHEET</span>
+        <span style="font-size:9.5px;font-weight:600;color:#333;margin-left:6px;">[POST: UNIVERSITY UNION COUNCILLOR]</span>
+        ${isRecount ? '<span style="color:#b91c1c;font-weight:bold;margin-left:6px;">(RECOUNT)</span>' : ''}
       </div>
-      
-      <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:10.5px;font-weight:bold;background:#f3f4f6;padding:3px 8px;border:1px solid #000;flex-wrap:wrap;gap:4px;">
-        <span>TABLE NO: <u>${tableNum}</u> ${roomName ? `<span style="font-weight:normal;color:#555">(${esc(roomName)})</span>` : ''}</span>
-        ${numVoters > 0 ? `<span>ALLOTTED VOTERS: <u>${numVoters}</u> <span style="font-weight:normal;color:#555">(${esc(batchesSummary)})</span></span>` : ''}
-        <span>ROUND NO: <u>${roundNum}</u></span>
-        <span>REF FORM: <u>#${serial}</u></span>
-        <span>SUPERVISOR: <u>${esc(supervisorName || '__________________')}</u></span>
+      <div style="font-size:9.5px;font-family:monospace;font-weight:bold;color:#111;">
+        REF: #${serial} | ${esc(yearStr)}
       </div>
     </div>
 
-    <!-- The 3-Step Milestone Rule Guide -->
-    <div style="border:1.5px solid #000;padding:4px 8px;margin-bottom:5px;font-size:9.5px;background:#fefce8;line-height:1.3;">
-      <strong>📌 BATCH-OF-25 COUNTING PROTOCOL (AVOIDS END-OF-ROUND RECOUNTS):</strong>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:2px;">
-        <div style="background:#fff;padding:2px 5px;border:1px solid #eab308;border-radius:3px;">
-          <strong>1. Pre-Bundle in 25s:</strong> Rubber-band physical ballots into packets of <strong>25 ballots</strong>.
-        </div>
-        <div style="background:#fff;padding:2px 5px;border:1px solid #eab308;border-radius:3px;">
-          <strong>2. Milestone Rule:</strong> Each 25-ballot packet MUST yield <strong>exactly 50 votes</strong> (2 × 25).
-        </div>
-        <div style="background:#fff;padding:2px 5px;border:1px solid #eab308;border-radius:3px;">
-          <strong>3. Lock &amp; Proceed:</strong> Verify subtotal = 50 before opening next batch. Sum rows at the end.
-        </div>
-      </div>
+    <!-- Stripped 1-line metadata bar -->
+    <div style="display:flex;justify-content:space-between;align-items:center;background:#f3f4f6;border:1px solid #000;padding:2px 6px;font-size:9px;font-weight:bold;margin-bottom:3px;gap:6px;flex-wrap:nowrap;">
+      <span>TABLE: <u>${tableNum}</u> ${roomName ? `<span style="font-weight:normal;color:#444">(${esc(roomName)})</span>` : ''}</span>
+      <span>ROUND: <u>${roundNum}</u></span>
+      ${numVoters > 0 ? `<span>VOTERS: <u>${numVoters}</u> <span style="font-weight:normal;color:#444">(${esc(batchesSummary)})</span></span>` : ''}
+      <span>SUPERVISOR: <u>${esc(supervisorName || '__________________')}</u></span>
+      <span>BALLOTS IN BOX: [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</span>
+      <span>EXP. VOTES (2×): [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</span>
     </div>
 
-    <!-- Section 1: Ballot & Batch Target Account -->
-    <table style="width:100%;margin-bottom:5px;font-size:10px;">
-      <tr>
-        <td style="width:35%;padding:3px 6px;font-weight:bold;background:#f3f4f6">
-          Total Physical Ballots in Box: <br>
-          <span style="font-size:12.5px;font-family:monospace">
-            ${numVoters > 0 ? `Allotted: <strong>${numVoters}</strong> | Actual: [ &nbsp;&nbsp;&nbsp; ]` : `[ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ] Ballots`}
-          </span>
-        </td>
-        <td style="width:35%;padding:3px 6px;font-weight:bold;background:#e0e7ff;text-align:center">
-          Expected Accountable Votes: <br>
-          <span style="font-size:12.5px;font-family:monospace;color:#1e40af">
-            ${numVoters > 0 ? `Max: <strong>${numVoters * 2}</strong> | 2 × Ballots = [ &nbsp;&nbsp;&nbsp; ]` : `[ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ] = 2 × Ballots`}
-          </span>
-        </td>
-        <td style="width:30%;padding:3px 6px;font-size:8.5px;background:#f9fafb;line-height:1.2">
-          <strong>Dual-Vote Rule Reminder:</strong><br>
-          • 2 candidates marked = 1 vote to each<br>
-          • 1 candidate marked = 1 Valid + 1 Invalid<br>
-          • NOTA = 2 NOTA | Overvote = 2 Invalid<br>
-          • 5 tally boxes [5][10][15][20][25] per cell (卌 = 5 v)
-        </td>
-      </tr>
-    </table>
+    <!-- Squeezed 1-line instructions bar -->
+    <div style="background:#fefce8;border:1px solid #d97706;padding:2px 6px;font-size:8px;line-height:1.25;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;color:#1c1917;">
+      <div><strong>📌 INSTRUCTIONS:</strong> Pre-bundle physical ballots in 25s • Each 25-ballot packet MUST yield 50 votes (2 × 25) • Verify batch total = 50 before next batch • Sum rows for Form 6.</div>
+      <div style="white-space:nowrap;margin-left:8px;"><strong>Dual-Vote:</strong> 2 votes/ballot (1 vote = 1 Valid + 1 Invalid • Overvote = 2 Invalid • NOTA = 2 NOTA)</div>
+    </div>
 
-    <!-- Section 2: Dynamic Batch-of-25 Milestone Tally Matrix -->
+    <!-- Dynamic Batch-of-25 Milestone Tally Matrix -->
     <table style="width:100%;border-collapse:collapse;margin-bottom:5px;font-size:10px;">
       <thead>
         <tr>
           <th style="width:${indexWidth}%;text-align:center;padding:3px 1px;">#</th>
-          <th style="width:${nameWidth}%;text-align:left;padding:3px 3px;">
+          <th style="width:${nameWidth}%;text-align:left;padding:3px 4px;">
             <div style="font-size:${numBatches > 5 ? '8.5px' : '9.5px'};line-height:1.1;">Candidate Name &amp; Class</div>
           </th>
           ${batches.map(b => `
@@ -1770,58 +1759,58 @@ export function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, c
       <tbody>
         ${candsList.map((c, i) => `
           <tr>
-            <td style="text-align:center;font-weight:bold;padding:3px 1px;">${i + 1}</td>
-            <td style="font-weight:bold;padding:3px 3px;line-height:1.15;">
-              <div style="font-size:${numBatches > 6 ? '8.5px' : (numBatches > 4 ? '9px' : '9.5px')};white-space:normal;word-break:break-word;">${esc(c.candidateName)}</div>
-              <div style="font-size:7.5px;font-weight:normal;color:#555;">${esc(c.candidateClass || '')}</div>
+            <td style="text-align:center;font-weight:bold;padding:4px 1px;">${i + 1}</td>
+            <td style="font-weight:bold;padding:4px 4px;line-height:1.2;">
+              <div style="font-size:${numBatches > 6 ? '9px' : '10px'};white-space:normal;word-break:break-word;">${esc(c.candidateName)}</div>
+              <div style="font-size:8px;font-weight:normal;color:#555;">${esc(c.candidateClass || '')}</div>
             </td>
-            ${batches.map(b => `<td class="tally-td" style="padding:2px 1.5px;vertical-align:middle;background:#fff;">${renderUucTallyBoxesHtml(b, isCompact)}</td>`).join('')}
-            <td style="padding:3px 1px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;font-family:monospace;">[ &nbsp;&nbsp;&nbsp; ]</td>
+            ${batches.map(b => `<td class="tally-td">${renderUucTallyBoxesHtml(b, boxH)}</td>`).join('')}
+            <td style="padding:4px 1px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;font-family:monospace;white-space:nowrap;">[ &nbsp;&nbsp;&nbsp; ]</td>
           </tr>
         `).join('')}
         <tr>
-          <td style="text-align:center;font-weight:bold;padding:3px 1px;">–</td>
-          <td style="font-weight:bold;padding:3px 3px;font-size:9.5px;">NOTA</td>
-          ${batches.map(b => `<td class="tally-td" style="padding:2px 1.5px;vertical-align:middle;background:#fff;">${renderUucTallyBoxesHtml(b, isCompact)}</td>`).join('')}
-          <td style="padding:3px 1px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;font-family:monospace;">[ &nbsp;&nbsp;&nbsp; ]</td>
+          <td style="text-align:center;font-weight:bold;padding:4px 1px;">–</td>
+          <td style="font-weight:bold;padding:4px 4px;font-size:10px;">NOTA</td>
+          ${batches.map(b => `<td class="tally-td">${renderUucTallyBoxesHtml(b, boxH)}</td>`).join('')}
+          <td style="padding:4px 1px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;font-family:monospace;white-space:nowrap;">[ &nbsp;&nbsp;&nbsp; ]</td>
         </tr>
         <tr>
-          <td style="text-align:center;font-weight:bold;padding:3px 1px;">–</td>
-          <td style="padding:3px 3px;line-height:1.15;">
-            <strong style="color:#b91c1c;font-size:9px;">INVALID</strong>
-            <div style="font-size:7px;color:#555;">(1-choice, &gt;2, Blank)</div>
+          <td style="text-align:center;font-weight:bold;padding:4px 1px;">–</td>
+          <td style="padding:4px 4px;line-height:1.2;">
+            <strong style="color:#b91c1c;font-size:9.5px;">INVALID</strong>
+            <div style="font-size:7.5px;color:#555;">(1-choice, &gt;2, Blank)</div>
           </td>
-          ${batches.map(b => `<td class="tally-td" style="padding:2px 1.5px;vertical-align:middle;background:#fff;">${renderUucTallyBoxesHtml(b, isCompact)}</td>`).join('')}
-          <td style="padding:3px 1px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;color:#b91c1c;font-family:monospace;">[ &nbsp;&nbsp;&nbsp; ]</td>
+          ${batches.map(b => `<td class="tally-td">${renderUucTallyBoxesHtml(b, boxH)}</td>`).join('')}
+          <td style="padding:4px 1px;background:#f8fafc;font-weight:bold;font-size:11px;text-align:center;color:#b91c1c;font-family:monospace;white-space:nowrap;">[ &nbsp;&nbsp;&nbsp; ]</td>
         </tr>
 
         <!-- Batch Milestone Verification Subtotal Row -->
         <tr style="background:#fef3c7;font-weight:bold;border-top:2px solid #000;">
-          <td colspan="2" style="text-align:right;padding:4px 3px;font-size:8.5px;letter-spacing:0.3px;">
+          <td colspan="2" style="text-align:right;padding:5px 4px;font-size:9px;letter-spacing:0.3px;">
             BATCH TOTAL:
           </td>
           ${batches.map(() => `
-            <td style="text-align:center;padding:4px 1px;font-size:10px;font-family:monospace;">[ &nbsp;&nbsp;&nbsp; ]</td>
+            <td style="text-align:center;padding:5px 1px;font-size:11px;font-family:monospace;white-space:nowrap;">[ &nbsp;&nbsp;&nbsp; ]</td>
           `).join('')}
-          <td style="text-align:center;padding:4px 1px;background:#dbeafe;font-size:11px;font-weight:black;font-family:monospace;">[ &nbsp;&nbsp;&nbsp; ]</td>
+          <td style="text-align:center;padding:5px 1px;background:#dbeafe;font-size:12px;font-weight:bold;font-family:monospace;white-space:nowrap;">[ &nbsp;&nbsp;&nbsp; ]</td>
         </tr>
 
         <!-- Batch Balance Check (Must Equal Target) -->
         <tr style="background:#f9fafb;font-size:8.5px;border-bottom:2px double #000;">
-          <td colspan="2" style="text-align:right;padding:3px 3px;font-weight:bold;color:#444;font-size:8px;">
+          <td colspan="2" style="text-align:right;padding:3px 4px;font-weight:bold;color:#444;font-size:8.5px;">
             CHECK:
           </td>
           ${batches.map(b => `
-            <td style="text-align:center;padding:2px 1px;color:#15803d;font-weight:bold;font-size:8px;">
+            <td style="text-align:center;padding:3px 1px;color:#15803d;font-weight:bold;font-size:8.5px;white-space:nowrap;">
               = ${b.targetVotes} [ &nbsp; ]
             </td>
           `).join('')}
-          <td style="text-align:center;padding:2px 1px;font-weight:bold;color:#1e40af;font-size:7.5px;">= ${numVoters > 0 ? numVoters * 2 : 'Total'} [ &nbsp; ]</td>
+          <td style="text-align:center;padding:3px 1px;font-weight:bold;color:#1e40af;font-size:8.5px;white-space:nowrap;">= ${numVoters > 0 ? numVoters * 2 : 'Total'} [ &nbsp; ]</td>
         </tr>
       </tbody>
     </table>
 
-    <div style="margin-top:5px;border-top:1px dashed #777;padding-top:3px;font-size:9px;color:#555;font-style:italic;text-align:center;">
+    <div style="margin-top:4px;border-top:1px dashed #777;padding-top:3px;font-size:8.5px;color:#555;font-style:italic;text-align:center;">
       * Working tally sheet for Table Counting Officers. Allotted: ${numVoters || 'General'} voters (${esc(batchesSummary)}). Verify each batch milestone before opening the next. Transfer final verified totals directly onto official Counting Form (Form 6). No signatures required.
     </div>
   </div>`;
