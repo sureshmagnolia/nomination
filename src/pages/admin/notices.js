@@ -8,7 +8,7 @@ import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
 import { CONFIG } from '../../config.js';
-import { printOfficialNotice, printBoothDoorPoster, printBatchBoothDoorPosters, printCampusMasterDirectory } from '../../noticesPrinter.js';
+import { printOfficialNotice, printBoothDoorPoster, printBatchBoothDoorPosters, printCampusMasterDirectory, printBallotBoxStripSeals, openBallotBoxStripSealsPdf } from '../../noticesPrinter.js';
 import { getDefaultStatutoryNotices } from '../../noticesTemplates.js';
 import { generateAndPrintBallots, generateAndPrintBallotPressSummary, downloadBallotsExcel } from './ballots.js';
 import { generateAndPrintElectoralRolls, generateAndPrintBallotAccounts } from './booths.js';
@@ -319,7 +319,7 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                 </a>
               </div>
 
-              <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                 <!-- Marked Electoral Rolls -->
                 <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-emerald-500/40 transition flex flex-col justify-between space-y-3">
                   <div>
@@ -363,6 +363,26 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                   <button id="btnHubPrintBatchPosters" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 hover:bg-white/10">
                     <span>🖨️</span> Print ALL Door Posters
                   </button>
+                </div>
+
+                <!-- Ballot Box Aperture Strip Seals -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">Aperture Seal</span>
+                      <span class="text-[10px] font-mono text-slate-400">A3 Land. (30 Nos)</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Ballot Box Strip Seals (30 Nos)</h5>
+                    <p class="text-xs text-slate-400 mt-1">Aperture seals (8 cm &times; 40 cm) with Golden Emblem, serials 001–030, drop slit target, and Presiding Officer/Agent sign boxes.</p>
+                  </div>
+                  <div class="flex gap-2">
+                    <button id="btnHubPrintStripSeals" class="btn bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-2 px-3 rounded-lg flex-1 flex items-center justify-center gap-1.5 shadow-md">
+                      <span>🖨️</span> Print Seals
+                    </button>
+                    <button id="btnHubPdfStripSeals" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-amber-500/30 text-amber-300 hover:bg-amber-500/20 flex items-center justify-center gap-1" title="Open PDF in new tab">
+                      <span>📄</span> PDF
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Campus Master Directory -->
@@ -961,6 +981,14 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
       return;
     }
     printCampusMasterDirectory(booths, settings, schedule);
+  });
+
+  // Ballot Box Strip Seals (30 Nos - A3 Landscape)
+  main.querySelector('#btnHubPrintStripSeals')?.addEventListener('click', () => {
+    printBallotBoxStripSeals();
+  });
+  main.querySelector('#btnHubPdfStripSeals')?.addEventListener('click', () => {
+    openBallotBoxStripSealsPdf();
   });
 
   // Nominal Roll Studio

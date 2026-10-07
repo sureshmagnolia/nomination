@@ -1669,3 +1669,24 @@ export function printBlankWithdrawalForm(settings = {}) {
   const html = buildWithdrawalPaper('', {}, collegeName, year, true, collegeLogo, collegePlace);
   triggerPrint(html, `Blank Withdrawal Form - ${esc(shortName)} Election ${esc(year)}`, collegeLogo);
 }
+
+/**
+ * Open high-precision A3 landscape Ballot Box Strip Seal printable sheets (30 Nos).
+ */
+export function printBallotBoxStripSeals() {
+  const w = window.open('./Ballot_Box_Strip_Seals_A3_30_Seals.html', '_blank');
+  if (!w) {
+    alert('Pop-up blocker prevented opening the strip seal print sheets. Please allow pop-ups for this site.');
+  }
+}
+
+/**
+ * Open pre-compiled high-resolution PDF for Ballot Box Strip Seals (A3 Landscape, 30 Nos).
+ */
+export function openBallotBoxStripSealsPdf() {
+  const w = window.open('./Ballot_Box_Strip_Seals_A3_30_Seals.pdf', '_blank');
+  if (!w) {
+    alert('Pop-up blocker prevented opening the strip seal PDF. Please allow pop-ups for this site.');
+  }
+}
+
