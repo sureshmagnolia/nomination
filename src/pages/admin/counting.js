@@ -1338,7 +1338,7 @@ function triggerCountingPrint(htmlContent, title = 'Counting Documents', college
     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #fff; color: #000; font-size: 12px; }
     .pg { page-break-after: always; padding: 6px 8px; position: relative; }
     .pg:last-child { page-break-after: avoid; }
-    .serial-tag { position: absolute; top: 8px; right: 8px; border: 2px solid #000; padding: 4px 10px; font-family: monospace; font-size: 15px; font-weight: bold; background: #fff; }
+    .serial-tag { border: 2px solid #000; padding: 4px 10px; font-family: monospace; font-size: 14px; font-weight: bold; background: #fff; border-radius: 2px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
     th, td { border: 1.5px solid #000; padding: 5px 6px; }
     th { background: #f3f4f6; }
@@ -1371,46 +1371,67 @@ function buildFormHtml(tableNum, roundNum, postName, candidates, serial, college
 
   const rows = candsList.length
     ? candsList.map((c, i) => `<tr>
-        <td style="text-align:center;padding:14px 8px;font-weight:bold">${i+1}</td>
-        <td style="padding:14px 8px;font-size:15px;font-weight:bold">
+        <td style="text-align:center;padding:12px 8px;font-weight:bold">${i+1}</td>
+        <td style="padding:12px 10px;font-size:14.5px;font-weight:bold;line-height:1.2;">
           ${esc(c.candidateName || '')}
-          <div style="font-size:11px;font-weight:normal;color:#444;margin-top:2px;">${esc(c.candidateClass || '')}</div>
+          <div style="font-size:11px;font-weight:normal;color:#475569;margin-top:2px;">${esc(c.candidateClass || '')}</div>
         </td>
-        <td style="padding:14px 8px"></td></tr>`).join('')
-    : `<tr><td colspan="3" style="padding:14px;text-align:center;color:#555">No Contesting Candidates</td></tr>`;
+        <td style="padding:12px 8px"></td></tr>`).join('')
+    : `<tr><td colspan="3" style="padding:12px;text-align:center;color:#555">No Contesting Candidates</td></tr>`;
 
-  return `<div class="pg">
-    <div class="serial-tag" ${isRecount ? 'style="border-color:#b91c1c;color:#b91c1c;"' : ''}>
-      ${isRecount ? `RECOUNT — FORM #${serial}` : `FORM #${serial}`}
-    </div>
-    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:14px;padding-right:110px;">
-      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:42px;max-width:120px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
-      <div style="font-size:13px;font-weight:bold;color:#111;text-transform:uppercase;">${esc(collegeName)}</div>
-      <div style="font-size:12px;font-weight:bold;color:#444;margin-top:2px;">College Union Election ${esc(yearStr)}</div>
-      <h2 style="margin:5px 0 0;font-size:19px;text-transform:uppercase;letter-spacing:2px">
-        Counting Form ${isRecount ? '<span style="color:#b91c1c;font-size:14px;border:1.5px solid #b91c1c;padding:2px 6px;vertical-align:middle;margin-left:6px;">RECOUNT</span>' : ''}
-      </h2>
-      <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:14px;font-weight:bold;background:#f9fafb;padding:4px 8px;border:1px solid #ccc;">
-        <span>TABLE NO: <u>${tableNum}</u> ${roomName ? `<span style="font-size:11px;font-weight:normal;color:#555">(${esc(roomName)})</span>` : ''}</span>
-        <span>ROUND NO: <u>${roundNum}</u></span>
+  return `<div class="pg" style="page-break-inside:avoid;">
+    <!-- Top 3-Column Header: Balanced Left Spacer + Center Branding + Right Badge -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+      <!-- Left spacer strictly balancing right badge width for perfect true centering -->
+      <div style="width:140px;flex-shrink:0;"></div>
+
+      <!-- Center Branding -->
+      <div style="flex:1;text-align:center;padding:0 6px;">
+        ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:42px;max-width:120px;margin:0 auto 4px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
+        <div style="font-size:13.5px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px;line-height:1.2;">${esc(collegeName)}</div>
+        <div style="font-size:11.5px;font-weight:700;color:#334155;margin-top:2px;">College Union Election ${esc(yearStr)}</div>
+        <h2 style="margin:5px 0 0;font-size:19px;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:#000;">
+          Counting Form ${isRecount ? '<span style="color:#b91c1c;font-size:13px;border:1.5px solid #b91c1c;padding:2px 6px;vertical-align:middle;margin-left:8px;border-radius:2px;letter-spacing:1px;">RECOUNT</span>' : ''}
+        </h2>
       </div>
-      <h3 style="margin:8px 0 0;font-size:15px;text-decoration:underline;text-transform:uppercase">POST: ${esc(postName)}</h3>
+
+      <!-- Right Form Serial Badge -->
+      <div style="width:140px;flex-shrink:0;display:flex;justify-content:flex-end;">
+        <div class="serial-tag" ${isRecount ? 'style="border-color:#b91c1c;color:#b91c1c;white-space:nowrap;"' : 'style="white-space:nowrap;"'}>
+          ${isRecount ? `RECOUNT — FORM #${serial}` : `FORM #${serial}`}
+        </div>
+      </div>
+    </div>
+
+    <!-- Table No and Round No Bar — Perfectly Aligned 100% Width -->
+    <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;padding:5px 12px;border:1.5px solid #000;margin-bottom:8px;font-size:13px;font-weight:bold;">
+      <span>TABLE NO: <u style="font-size:14px;font-weight:800;">${tableNum}</u> ${roomName ? `<span style="font-size:11px;font-weight:normal;color:#475569">(${esc(roomName)})</span>` : ''}</span>
+      <span>ROUND NO: <u style="font-size:14px;font-weight:800;">${roundNum}</u></span>
+    </div>
+
+    <!-- Post Title Bar — Perfectly Aligned 100% Width -->
+    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:12px;">
+      <h3 style="margin:0;font-size:15px;font-weight:800;text-decoration:underline;text-transform:uppercase;letter-spacing:0.5px;">POST: ${esc(postName)}</h3>
       ${isPostUuc ? `<div style="font-size:11px;font-weight:bold;color:#b45309;margin-top:3px;">⭐ TWO (2) VACANCIES — DUAL-VOTE COUNTING (Total votes tallied = 2 × Ballots cast)</div>` : ''}
     </div>
+
+    <!-- Candidate Table — Full 100% Width -->
     <table>
       <thead><tr>
-        <th style="width:8%;text-align:center">#</th>
-        <th style="text-align:left;width:62%">Candidate Name &amp; Class</th>
-        <th style="width:30%;text-align:center">Votes Tallied</th>
+        <th style="width:8%;text-align:center;padding:8px 6px;">#</th>
+        <th style="text-align:left;width:62%;padding:8px 10px;">Candidate Name &amp; Class</th>
+        <th style="width:30%;text-align:center;padding:8px 6px;">Votes Tallied</th>
       </tr></thead>
       <tbody>
         ${rows}
-        <tr><td style="text-align:center;padding:14px 8px">–</td><td style="padding:14px 8px;font-weight:bold">NOTA</td><td></td></tr>
-        <tr><td style="text-align:center;padding:14px 8px">–</td><td style="padding:14px 8px;font-weight:bold;color:#444">INVALID</td><td></td></tr>
-        <tr style="background:#eee;border-top:2px solid #000"><td style="text-align:center;padding:14px 8px">–</td><td style="padding:14px 8px;font-weight:black;font-size:16px">TOTAL VOTES TALLIED</td><td></td></tr>
+        <tr><td style="text-align:center;padding:12px 8px;font-weight:bold">–</td><td style="padding:12px 10px;font-weight:bold">NOTA</td><td></td></tr>
+        <tr><td style="text-align:center;padding:12px 8px;font-weight:bold">–</td><td style="padding:12px 10px;font-weight:bold;color:#444">INVALID</td><td></td></tr>
+        <tr style="background:#eee;border-top:2px solid #000"><td style="text-align:center;padding:12px 8px;font-weight:bold">–</td><td style="padding:12px 10px;font-weight:black;font-size:15px">TOTAL VOTES TALLIED</td><td></td></tr>
       </tbody>
     </table>
-    <div style="display:flex;justify-content:space-between;margin-top:55px;text-align:center">
+
+    <!-- Signature Block -->
+    <div style="display:flex;justify-content:space-between;margin-top:50px;text-align:center">
       <div>
         <div style="border-top:1.5px solid #000;width:200px;margin-bottom:4px"></div>
         <div style="font-size:11px">Signature of the Agents</div>
