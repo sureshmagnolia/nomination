@@ -564,7 +564,7 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
             </div>
             <div class="rule-row">
               <span class="rule-icon">✍️</span>
-              <span><strong>MARKING PROCEDURE:</strong> Place mark (X or ✔) only in designated candidate column using official booth pen.</span>
+              <span><strong>MARKING PROCEDURE:</strong> Place arrow cross mark only in designated candidate column using official booth pen. Placing Tick mark, Finger Prints etc on the ballot will make it invalid.</span>
             </div>
           </div>
 
@@ -1692,23 +1692,559 @@ export function openBallotBoxStripSealsPdf() {
 }
 
 /**
- * Open high-visibility Department & Class-wise Polling Booth Directory Poster (1 UG to PG).
+ * Helper to infer department name from class label if not explicit in nominal roll
  */
-export function printDepartmentClassDirectoryPoster() {
-  const w = window.open('./Department_Class_Voting_Directory_Poster.html?print=true', '_blank');
-  if (!w) {
-    alert('Pop-up blocker prevented opening the directory poster. Please allow pop-ups for this site.');
-  }
+function inferDeptFromClassName(clsName) {
+  const u = String(clsName || '').toUpperCase();
+  if (u.includes('COMMERCE') || u.includes('BCOM') || u.includes('B.COM') || u.includes('MCOM') || u.includes('M.COM')) return 'Commerce';
+  if (u.includes('ECONOMICS') || u.includes('BA ECON')) return 'Economics';
+  if (u.includes('HISTORY') || u.includes('BA HIST')) return 'History';
+  if (u.includes('MATH')) return 'Mathematics';
+  if (u.includes('PHYSIC')) return 'Physics';
+  if (u.includes('CHEMIS')) return 'Chemistry';
+  if (u.includes('BOTANY')) return 'Botany';
+  if (u.includes('ZOOLOGY')) return 'Zoology';
+  if (u.includes('ENGLISH') || u.includes('BA ENG') || u.includes('MA ENG')) return 'English';
+  if (u.includes('MALAYALAM') || u.includes('BA MAL') || u.includes('MA MAL')) return 'Malayalam';
+  if (u.includes('TAMIL') || u.includes('BA TAMIL') || u.includes('MA TAMIL')) return 'Tamil';
+  if (u.includes('MUSIC')) return 'Music';
+  if (u.includes('PHILOSOPHY') || u.includes('BA PHIL')) return 'Philosophy';
+  if (u.includes('GEOGRAPHY')) return 'Geography';
+  if (u.includes('ELECTRONIC')) return 'Electronics';
+  if (u.includes('POLITIC') || u.includes('POLITICAL')) return 'Political Science';
+  return 'General / Multidisciplinary';
 }
 
 /**
- * Open pre-compiled high-resolution PDF for Department & Class Polling Directory Poster.
+ * Dynamically renders and prints the Official Department & Class Polling Directory Poster (1 UG to PG)
+ * using the LIVE system data (booths, nominalRoll, settings, schedule).
  */
-export function openDepartmentClassPosterPdf() {
-  const w = window.open('./Department_Class_Voting_Directory_Poster.pdf', '_blank');
+export function printDepartmentClassDirectoryPoster(options = {}) {
+  const boothsList = Array.isArray(options.booths) ? options.booths : (Array.isArray(options) ? options : []);
+  const settings = options.settings || {};
+  const schedule = options.schedule || {};
+  const nominalRoll = Array.isArray(options.nominalRoll) ? options.nominalRoll : [];
+  const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME || 'GOVERNMENT COLLEGE CHITTUR';
+  const collegePlace = settings.collegePlace || CONFIG.COLLEGE_PLACE || 'Chittur, Palakkad';
+  const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME || 'GCC';
+  const year = settings.electionYear || new Date().getFullYear().toString();
+  const collegeLogo = settings.collegeLogo || CONFIG.COLLEGE_LOGO || '';
+
+  // 1. Build class-to-booth lookup from live booths
+  const classToBoothMap = {};
+  boothsList.forEach(b => {
+    const bNum = b.boothNumber || b.tableNumber;
+    const room = b.roomName || b.room || `Booth ${bNum}`;
+    const bClasses = Array.isArray(b.classes) ? b.classes : (typeof b.classes === 'string' ? b.classes.split(',').map(s => s.trim()) : []);
+    bClasses.forEach(cName => {
+      const trimmed = String(cName).trim();
+      if (trimmed) {
+        classToBoothMap[trimmed] = {
+          boothNumber: bNum,
+          roomName: room,
+          booth: b
+        };
+      }
+    });
+  });
+
+  // 2. Aggregate actual statistics from nominal roll
+  const classStats = {};
+  const deptMap = {}; // deptName -> Set of classKeys
+
+  nominalRoll.forEach(s => {
+    const rawCls = String(s['CLASS'] || '').trim();
+    const rawDept = String(s['Dept'] || '').trim();
+    const dept = rawDept || inferDeptFromClassName(rawCls);
+    const isRS = rawCls.toUpperCase().includes('RESEARCH') || rawCls.toUpperCase().includes('SCHOLAR') || rawCls.toUpperCase().includes('PHD');
+    const cKey = isRS ? `RESEARCH SCHOLAR - ${dept}` : rawCls;
+    if (!cKey) return;
+
+    if (!classStats[cKey]) {
+      classStats[cKey] = {
+        name: cKey,
+        dept: dept,
+        count: 0
+      };
+    }
+    classStats[cKey].count++;
+
+    if (!deptMap[dept]) deptMap[dept] = new Set();
+    deptMap[dept].add(cKey);
+  });
+
+  // Also include any classes assigned in booths that might have 0 voters in nominal roll
+  boothsList.forEach(b => {
+    const bClasses = Array.isArray(b.classes) ? b.classes : (typeof b.classes === 'string' ? b.classes.split(',').map(s => s.trim()) : []);
+    bClasses.forEach(cName => {
+      const cKey = String(cName).trim();
+      if (!cKey) return;
+      if (!classStats[cKey]) {
+        const dept = inferDeptFromClassName(cKey);
+        classStats[cKey] = {
+          name: cKey,
+          dept: dept,
+          count: 0
+        };
+        if (!deptMap[dept]) deptMap[dept] = new Set();
+        deptMap[dept].add(cKey);
+      }
+    });
+  });
+
+  // 3. Academic Year-wise ordering helper (1 UG -> 2 UG -> 3 UG -> 1 PG -> 2 PG -> RS)
+  const getWeight = (name) => {
+    const u = String(name).toUpperCase();
+    if (u.includes('1ST YEAR') || /^\s*(1|1ST|I)\b/.test(u) || /\b1ST\b/.test(u) || u.includes('I UG') || u.includes('1_UG')) return 1;
+    if (u.includes('2ND YEAR') || /^\s*(2|2ND|II)\b/.test(u) || /\b2ND\b/.test(u) || u.includes('II UG') || u.includes('2_UG')) return 2;
+    if (u.includes('3RD YEAR') || /^\s*(3|3RD|III)\b/.test(u) || /\b3RD\b/.test(u) || u.includes('III UG') || u.includes('3_UG')) return 3;
+    const isPG = ['MA', 'MSC', 'MCOM', 'M.SC', 'M.COM', 'M.A', 'PG'].some(pg => u.includes(pg));
+    if (isPG) {
+      if (u.includes('1ST') || /^\s*(1|1ST|I)\b/.test(u) || u.includes('I PG') || u.includes('PREVIOUS')) return 4;
+      if (u.includes('2ND') || /^\s*(2|2ND|II)\b/.test(u) || u.includes('II PG') || u.includes('FINAL')) return 5;
+      return 6;
+    }
+    if (u.includes('RESEARCH') || u.includes('SCHOLAR') || u.includes('PHD')) return 7;
+    return 8;
+  };
+
+  const sortClasses = (cA, cB) => {
+    const wA = getWeight(cA);
+    const wB = getWeight(cB);
+    if (wA !== wB) return wA - wB;
+    return cA.localeCompare(cB);
+  };
+
+  const sortedDepts = Object.keys(deptMap).sort((a, b) => a.localeCompare(b));
+  const totalClasses = Object.keys(classStats).length;
+  const totalElectors = nominalRoll.length || Object.values(classStats).reduce((sum, c) => sum + c.count, 0);
+
+  const formatTime = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+  const pollStart = formatTime(schedule.pollingStart) || '09:30 AM';
+  const pollEnd = formatTime(schedule.pollingEnd) || '12:30 PM';
+
+  const w = window.open('', '_blank');
   if (!w) {
-    alert('Pop-up blocker prevented opening the directory poster PDF. Please allow pop-ups for this site.');
+    alert('Pop-up blocker prevented opening the directory poster. Please allow pop-ups for this site.');
+    return;
   }
+
+  w.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Department &amp; Class Polling Directory - ${esc(shortName)} Election ${esc(year)}</title>
+  <style>
+    @page {
+      size: A3 portrait;
+      margin: 8mm 10mm 10mm 10mm;
+      @bottom-right {
+        content: "Campus Polling Directory &bull; Page " counter(page) " of " counter(pages);
+        font-family: Arial, sans-serif;
+        font-size: 8pt;
+        font-weight: 700;
+        color: #475569;
+      }
+      @bottom-left {
+        content: "${esc(collegeName)} — Official Department & Class Polling Directory";
+        font-family: Arial, sans-serif;
+        font-size: 8pt;
+        color: #475569;
+      }
+    }
+
+    @media print {
+      html, body {
+        width: 100%;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .no-print { display: none !important; }
+      .dept-card {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+      line-height: 1.25;
+      font-size: 9pt;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .screen-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: #0f172a;
+      color: #fff;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .topbar-btn {
+      background: #f59e0b;
+      color: #0f172a;
+      border: none;
+      padding: 7px 16px;
+      font-weight: 800;
+      font-size: 13px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .topbar-btn:hover { background: #d97706; color: #fff; }
+
+    .poster-container {
+      max-width: 1200px;
+      margin: 15px auto;
+      background: #ffffff;
+      border: 3px solid #0f172a;
+      padding: 12px 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    /* Header */
+    .header-box {
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+    }
+    .emblem-img {
+      width: 65px;
+      height: 65px;
+      object-fit: contain;
+    }
+    .header-center {
+      text-align: center;
+      flex: 1;
+    }
+    .inst-name {
+      font-size: 18pt;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .inst-sub {
+      font-size: 9pt;
+      font-weight: 600;
+      color: #475569;
+    }
+    .election-title {
+      font-size: 11pt;
+      font-weight: 800;
+      color: #1e3a8a;
+      letter-spacing: 1px;
+      margin-top: 3px;
+    }
+    .poster-main-badge {
+      display: inline-block;
+      background: #0f172a;
+      color: #facc15;
+      font-size: 11pt;
+      font-weight: 900;
+      padding: 3px 18px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+      margin-top: 5px;
+      text-transform: uppercase;
+    }
+    .poster-sub-note {
+      font-size: 8pt;
+      font-weight: 700;
+      color: #dc2626;
+      margin-top: 4px;
+      letter-spacing: 0.3px;
+    }
+
+    /* Meta Info Bar */
+    .meta-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      background: #0f172a;
+      color: #fff;
+      padding: 6px 12px;
+      margin-top: 8px;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .meta-item strong {
+      display: block;
+      font-size: 7pt;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .meta-item span {
+      font-size: 10pt;
+      font-weight: 800;
+      color: #fde047;
+    }
+
+    /* Department Cards Grid */
+    .depts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .dept-card {
+      border: 1.5px solid #0f172a;
+      border-radius: 5px;
+      overflow: hidden;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+    }
+    .dept-card-header {
+      background: #1e3a8a;
+      color: #ffffff;
+      padding: 5px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .dept-title {
+      font-size: 10pt;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .dept-badge {
+      background: rgba(255,255,255,0.2);
+      font-size: 7pt;
+      font-weight: 800;
+      padding: 1.5px 6px;
+      border-radius: 3px;
+    }
+
+    /* Class Table inside card */
+    .dept-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8.5pt;
+    }
+    .dept-table th {
+      background: #e2e8f0;
+      color: #0f172a;
+      font-size: 7.5pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 3.5px 6px;
+      border-bottom: 1px solid #cbd5e1;
+      text-align: left;
+    }
+    .dept-table td {
+      padding: 4px 6px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: middle;
+      line-height: 1.2;
+    }
+    .dept-table tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+    .col-class {
+      font-weight: 800;
+      color: #0f172a;
+      width: 38%;
+    }
+    .col-booth {
+      width: 22%;
+      text-align: center;
+    }
+    .col-venue {
+      width: 28%;
+      color: #334155;
+      font-size: 8pt;
+    }
+    .col-voters {
+      width: 12%;
+      text-align: right;
+      font-weight: 800;
+      color: #0369a1;
+      font-family: monospace;
+    }
+
+    .booth-tag {
+      display: inline-block;
+      background: #0f172a;
+      color: #fde047;
+      font-weight: 900;
+      font-size: 8pt;
+      padding: 1.5px 6px;
+      border-radius: 3px;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+    }
+    .booth-unassigned {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px dashed #f87171;
+    }
+
+    /* Footer Directives */
+    .poster-footer {
+      margin-top: 10px;
+      border-top: 2px solid #0f172a;
+      padding-top: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 7.5pt;
+      color: #475569;
+    }
+    .footer-stamp {
+      border: 1px dashed #94a3b8;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-weight: 700;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen Control Bar -->
+  <div class="screen-topbar no-print">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <strong style="font-size: 14px; color: #fff;">Department &amp; Class Polling Directory Poster</strong>
+      <span style="font-size: 11px; color: #94a3b8;">${sortedDepts.length} Departments &bull; ${totalClasses} Classes &bull; ${boothsList.length} Booths (Live Data)</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <button class="topbar-btn" onclick="window.print()">
+        <span>🖨️</span> Print Directory Poster (A3 / A4)
+      </button>
+      <button class="topbar-btn" style="background: #475569; color: #fff;" onclick="window.close()">
+        <span>✕</span> Close
+      </button>
+    </div>
+  </div>
+
+  <div class="poster-container">
+    <!-- Header -->
+    <div class="header-box">
+      ${collegeLogo ? `<img src="${collegeLogo}" class="emblem-img" alt="Emblem">` : ''}
+      <div class="header-center">
+        <div class="inst-name">${esc(collegeName)}</div>
+        <div class="inst-sub">${esc(collegePlace)} &bull; Established Under Govt. of Kerala</div>
+        <div class="election-title">COLLEGE UNION ELECTIONS ${esc(year)}</div>
+        <div class="poster-main-badge">DEPARTMENT &amp; CLASS-WISE POLLING DIRECTORY</div>
+        <div class="poster-sub-note">📢 OFFICIAL NOTICE BOARD &amp; ENTRY GATE GUIDE &bull; ALLOTTED POLLING BOOTHS &amp; ROOM VENUES</div>
+      </div>
+      ${collegeLogo ? `<img src="${collegeLogo}" class="emblem-img" alt="Emblem">` : ''}
+    </div>
+
+    <!-- Meta Information Bar -->
+    <div class="meta-bar">
+      <div class="meta-item">
+        <strong>Polling Schedule</strong>
+        <span>${esc(pollStart)} – ${esc(pollEnd)}</span>
+      </div>
+      <div class="meta-item">
+        <strong>Voter Identification</strong>
+        <span>College ID Mandatory</span>
+      </div>
+      <div class="meta-item">
+        <strong>Polling Booths</strong>
+        <span>${boothsList.length} Physical Booths</span>
+      </div>
+      <div class="meta-item">
+        <strong>Total Electors</strong>
+        <span>${totalElectors} Registered Students</span>
+      </div>
+    </div>
+
+    <!-- Departments & Classes Grid -->
+    <div class="depts-grid">
+      ${sortedDepts.map(deptName => {
+        const classKeys = Array.from(deptMap[deptName] || []).sort(sortClasses);
+        const deptElectors = classKeys.reduce((sum, cn) => sum + (classStats[cn]?.count || 0), 0);
+        return `
+          <div class="dept-card">
+            <div class="dept-card-header">
+              <span class="dept-title">${esc(deptName)}</span>
+              <span class="dept-badge">${deptElectors} Voters &bull; ${classKeys.length} Classes</span>
+            </div>
+            <table class="dept-table">
+              <thead>
+                <tr>
+                  <th class="col-class">Class / Cohort (1 UG &rarr; PG)</th>
+                  <th class="col-booth">Booth No.</th>
+                  <th class="col-venue">Room Venue</th>
+                  <th class="col-voters">Voters</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${classKeys.map(cName => {
+                  const stat = classStats[cName];
+                  const boothInfo = classToBoothMap[cName];
+                  return `
+                    <tr>
+                      <td class="col-class">${esc(cName)}</td>
+                      <td class="col-booth">
+                        ${boothInfo 
+                          ? `<span class="booth-tag">Booth ${boothInfo.boothNumber}</span>`
+                          : '<span class="booth-tag booth-unassigned">Not Allotted</span>'
+                        }
+                      </td>
+                      <td class="col-venue">
+                        ${boothInfo ? esc(boothInfo.roomName) : '—'}
+                      </td>
+                      <td class="col-voters">${stat?.count || '0'}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }).join('')}
+    </div>
+
+    <!-- Footer -->
+    <div class="poster-footer">
+      <div>
+        <strong>STATUTORY DIRECTIVE:</strong> Electors must report to their allotted polling booth strictly during polling hours. Late arrivals will not be admitted.
+      </div>
+      <div class="footer-stamp">
+        RETURNING OFFICER (RO)<br>
+        <span style="font-size: 6.5pt; color: #64748b;">${esc(collegeName)}</span>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>`);
+
+  w.document.close();
+  setTimeout(() => w.print(), 350);
+}
+
+/**
+ * Open high-resolution printable PDF view for Department & Class Polling Directory Poster.
+ */
+export function openDepartmentClassPosterPdf(options = {}) {
+  printDepartmentClassDirectoryPoster(options);
 }
 
 

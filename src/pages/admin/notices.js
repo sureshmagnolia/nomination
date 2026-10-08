@@ -1050,21 +1050,29 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
     openBallotBoxStripSealsPdf();
   });
 
-  // Department & Class-wise Polling Directory Poster (1 UG to PG)
+  // Department & Class-wise Polling Directory Poster (1 UG to PG) - Live System Data
+  const getDeptPosterOptions = () => ({
+    booths,
+    settings,
+    schedule,
+    nominalRoll,
+    classMap
+  });
+
   main.querySelector('#btnHubPrintDeptClassPoster')?.addEventListener('click', () => {
-    printDepartmentClassDirectoryPoster();
+    printDepartmentClassDirectoryPoster(getDeptPosterOptions());
   });
   main.querySelector('#btnHubPdfDeptClassPoster')?.addEventListener('click', () => {
-    openDepartmentClassPosterPdf();
+    openDepartmentClassPosterPdf(getDeptPosterOptions());
   });
   main.querySelector('#btnTabIndexPrintPoster')?.addEventListener('click', () => {
-    printDepartmentClassDirectoryPoster();
+    printDepartmentClassDirectoryPoster(getDeptPosterOptions());
   });
   main.querySelector('#btnTabIndexPdfPoster')?.addEventListener('click', () => {
-    openDepartmentClassPosterPdf();
+    openDepartmentClassPosterPdf(getDeptPosterOptions());
   });
   main.querySelector('#btnPrintDeptClassPoster')?.addEventListener('click', () => {
-    printDepartmentClassDirectoryPoster();
+    printDepartmentClassDirectoryPoster(getDeptPosterOptions());
   });
 
   // Nominal Roll Studio
