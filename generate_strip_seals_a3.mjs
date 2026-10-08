@@ -1,8 +1,14 @@
-import { writeFileSync, copyFileSync } from 'fs';
+import { readFileSync, writeFileSync, copyFileSync } from 'fs';
 import { resolve } from 'path';
 import { execSync } from 'child_process';
 
-const emblemDataUrl = 'images/gcc_logo_emblem_golden_red.png';
+const oldLogoPath = resolve('GCC_Old_Logo.jpg');
+const oldLogoBuffer = readFileSync(oldLogoPath);
+const emblemDataUrl = `data:image/jpeg;base64,${oldLogoBuffer.toString('base64')}`;
+
+try { copyFileSync(oldLogoPath, resolve('public/GCC_Old_Logo.jpg')); } catch (e) {}
+try { copyFileSync(oldLogoPath, resolve('images/GCC_Old_Logo.jpg')); } catch (e) {}
+try { copyFileSync(oldLogoPath, resolve('public/images/GCC_Old_Logo.jpg')); } catch (e) {}
 
 const TOTAL_SEALS = 30;
 const SEALS_PER_PAGE = 3;
@@ -358,8 +364,8 @@ function generateFullHtml() {
     }
 
     .flank-emblem-wrap {
-      width: 23mm;
-      height: 23mm;
+      width: 24mm;
+      height: 24mm;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -368,7 +374,7 @@ function generateFullHtml() {
       max-width: 100%;
       max-height: 100%;
       object-fit: contain;
-      filter: drop-shadow(0 1px 3px rgba(217, 119, 6, 0.4));
+      mix-blend-mode: multiply;
     }
 
     .flank-serial-box {
@@ -677,10 +683,10 @@ function generateFullHtml() {
       background: radial-gradient(circle, rgba(254, 240, 138, 0.5) 0%, rgba(255, 255, 255, 0) 72%);
     }
     .center-big-emblem {
-      width: 36mm;
-      height: 36mm;
+      max-width: 38mm;
+      max-height: 35mm;
       object-fit: contain;
-      filter: drop-shadow(0 3px 6px rgba(217, 119, 6, 0.45));
+      mix-blend-mode: multiply;
     }
     .center-emblem-caption {
       font-size: 5pt;
