@@ -946,10 +946,10 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
   `;
 
   // Attach event handlers
-  attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts, nominalRoll, plan, countingTeams, countingMatrixData);
+  attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts, nominalRoll, plan, countingTeams, countingMatrixData, classMap);
 }
 
-function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts = [], nominalRoll = [], plan = null, countingTeams = [], countingMatrixData = null) {
+function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts = [], nominalRoll = [], plan = null, countingTeams = [], countingMatrixData = null, classMap = {}) {
   const ballotPlan = plan || settings?.ballotPlan || null;
   // Navigation Tabs: Master Print vs Posters vs Notices vs Index
   const tabMaster = main.querySelector('#adminTabMasterPrint');
@@ -1056,7 +1056,7 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
     settings,
     schedule,
     nominalRoll,
-    classMap
+    classMap: (typeof classMap === 'object' && classMap) ? classMap : {}
   });
 
   main.querySelector('#btnHubPrintDeptClassPoster')?.addEventListener('click', () => {
