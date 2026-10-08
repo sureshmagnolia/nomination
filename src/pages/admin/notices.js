@@ -935,10 +935,10 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
   `;
 
   // Attach event handlers
-  attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts, nominalRoll, plan);
+  attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts, nominalRoll, plan, countingTeams);
 }
 
-function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts = [], nominalRoll = [], plan = null) {
+function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts = [], nominalRoll = [], plan = null, countingTeams = []) {
   const ballotPlan = plan || settings?.ballotPlan || null;
   // Navigation Tabs: Master Print vs Posters vs Notices vs Index
   const tabMaster = main.querySelector('#adminTabMasterPrint');
