@@ -937,6 +937,7 @@ export default async function handler(req, res) {
           CASE 
             WHEN serial_number ~ '^[0-9]+$' THEN CAST(serial_number AS BIGINT) 
             WHEN regexp_replace(serial_number, '^D', '', 'i') ~ '^[0-9]+[a-zA-Z]*$' THEN CAST(regexp_replace(regexp_replace(serial_number, '^D', '', 'i'), '[^0-9]', '', 'g') AS BIGINT)
+            WHEN UPPER(serial_number) ~ '^RS-?[0-9]+' THEN 100000000 + CAST(regexp_replace(UPPER(serial_number), '[^0-9]', '', 'g') AS BIGINT)
             ELSE 999999999 
           END ASC, 
           serial_number ASC
@@ -951,18 +952,20 @@ export default async function handler(req, res) {
 
     if (action === 'getSettings' || action === 'adminGetSettings') {
       const status = await getFullElectionStatus();
-      const [colName, colShort, colLogo, colPlace] = await Promise.all([
+      const [colName, colShort, colLogo, colPlace, incRS] = await Promise.all([
         getSetting('collegeName'),
         getSetting('collegeShortName'),
         getSetting('collegeLogo'),
-        getSetting('collegePlace')
+        getSetting('collegePlace'),
+        getSetting('include_research_scholars')
       ]);
       const obj = {
         ...status,
         collegeName: colName || 'Government Victoria College, Palakkad',
         collegeShortName: colShort || 'GVC',
         collegeLogo: colLogo || '',
-        collegePlace: colPlace || 'Palakkad'
+        collegePlace: colPlace || 'Palakkad',
+        includeResearchScholars: incRS === 'true'
       };
       if (action === 'adminGetSettings') {
         const rows = await sql`SELECT value FROM settings WHERE key = 'adminEmail'`;
@@ -1339,7 +1342,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       return jsonOut(res, safeJsonParse(data, null));
     }
 
-    if (action === 'adminGenerateBallotPlan') {
+    const generateBallotPlanInternal = async (opts = {}) => {
       const posts = await fetchPostsFromDb();
 
       const nomRows = await sql`SELECT * FROM nominations WHERE status = 'Valid'`;
@@ -1349,7 +1352,45 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       const booths = safeJsonParse(boothsDataRaw, []);
       booths.sort((a, b) => Number(a.boothNumber) - Number(b.boothNumber));
 
-      const students = await sql`SELECT serial_number as "Nominal Roll Serial Number", name as "NAME", class as "CLASS", admission_no as "ADMISION NO", dept as "Dept" FROM nominal_roll`;
+      let students = await sql`SELECT serial_number as "Nominal Roll Serial Number", name as "NAME", class as "CLASS", admission_no as "ADMISION NO", dept as "Dept" FROM nominal_roll`;
+
+      // Check whether Research Scholars are included in nominal_roll or settings; always ensure they are accommodated in ballot planning as reserves
+      const incRSSetting = await getSetting('include_research_scholars');
+      const shouldAccommodateRS = incRSSetting === 'true' || opts.accommodateResearchScholars !== false;
+
+      const hasRSRows = students.some(s => {
+        const sl = String(s['Nominal Roll Serial Number'] || '').toUpperCase();
+        const c = String(s.CLASS || '').toUpperCase();
+        return sl.startsWith('RS') || c.includes('RESEARCH') || c.includes('SCHOLAR');
+      });
+
+      if (shouldAccommodateRS && !hasRSRows) {
+        // Statutory roster of 21 Research Scholars (RS1–RS21) to accommodate in ballot planning
+        const statutoryScholars = [
+          { 'Nominal Roll Serial Number': 'RS1', NAME: 'THUSHARA N C', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24007', Dept: 'Economics' },
+          { 'Nominal Roll Serial Number': 'RS2', NAME: 'SNEHA H', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24904', Dept: 'Economics' },
+          { 'Nominal Roll Serial Number': 'RS3', NAME: 'GAYATHRI V', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '21895', Dept: 'Geography' },
+          { 'Nominal Roll Serial Number': 'RS4', NAME: 'RAHANA K V', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24901', Dept: 'Geography' },
+          { 'Nominal Roll Serial Number': 'RS5', NAME: 'SELSHA S', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '22907', Dept: 'Mathematics' },
+          { 'Nominal Roll Serial Number': 'RS6', NAME: 'SOORYADAS M', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24005', Dept: 'Mathematics' },
+          { 'Nominal Roll Serial Number': 'RS7', NAME: 'RARI B', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '25880', Dept: 'Mathematics' },
+          { 'Nominal Roll Serial Number': 'RS8', NAME: 'AISWARYA', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '21076', Dept: 'Music' },
+          { 'Nominal Roll Serial Number': 'RS9', NAME: 'ANJALAI N P', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '22916', Dept: 'Music' },
+          { 'Nominal Roll Serial Number': 'RS10', NAME: 'DEVIKA', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24902', Dept: 'Music' },
+          { 'Nominal Roll Serial Number': 'RS11', NAME: 'VARSHA', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24009', Dept: 'Music' },
+          { 'Nominal Roll Serial Number': 'RS12', NAME: 'SAKUNTHALAMANI.P', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '248/2020', Dept: 'Tamil' },
+          { 'Nominal Roll Serial Number': 'RS13', NAME: 'ANUSUYA R', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '884/2021', Dept: 'Tamil' },
+          { 'Nominal Roll Serial Number': 'RS14', NAME: 'PETER PAUL L', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '21894', Dept: 'Tamil' },
+          { 'Nominal Roll Serial Number': 'RS15', NAME: 'JOTHILAKSHMY L', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '21898', Dept: 'Tamil' },
+          { 'Nominal Roll Serial Number': 'RS16', NAME: 'PRIYANKA T', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '21896', Dept: 'Tamil' },
+          { 'Nominal Roll Serial Number': 'RS17', NAME: 'RAMYA RANI M', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '22913', Dept: 'Tamil' },
+          { 'Nominal Roll Serial Number': 'RS18', NAME: 'RANJINI K', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '22914', Dept: 'Tamil' },
+          { 'Nominal Roll Serial Number': 'RS19', NAME: 'SANTHIYA. S', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24909', Dept: 'Tamil' },
+          { 'Nominal Roll Serial Number': 'RS20', NAME: 'VELANKANNI Y', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24008', Dept: 'Tamil' },
+          { 'Nominal Roll Serial Number': 'RS21', NAME: 'NISHA A', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24012', Dept: 'Tamil' }
+        ];
+        students = [...students, ...statutoryScholars];
+      }
 
       const isAssoc = (p) => {
         const name = String(p.post || '').toUpperCase();
@@ -1416,12 +1457,13 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       const savedBookSizeSetting = await getSetting('ballot_book_size');
       const savedMergeSetting = await getSetting('ballot_merge_remainders');
 
-      const standard = Number(body.bookSize) > 0
-        ? Number(body.bookSize)
+      const standard = Number(opts.bookSize !== undefined ? opts.bookSize : body.bookSize) > 0
+        ? Number(opts.bookSize !== undefined ? opts.bookSize : body.bookSize)
         : (Number(savedBookSizeSetting) > 0 ? Number(savedBookSizeSetting) : 50);
 
-      const enableMerge = body.mergeRemainders !== undefined
-        ? (body.mergeRemainders !== false && body.mergeRemainders !== 'false')
+      const reqMerge = opts.mergeRemainders !== undefined ? opts.mergeRemainders : body.mergeRemainders;
+      const enableMerge = reqMerge !== undefined
+        ? (reqMerge !== false && reqMerge !== 'false')
         : (savedMergeSetting !== 'false' && savedMergeSetting !== false);
 
       const threshold = enableMerge ? Math.max(5, Math.round(standard * 0.3)) : 0;
@@ -1488,16 +1530,46 @@ All students are directed to strictly adhere to the University Code of Conduct, 
         boothMap[b.boothNumber] = { general: null, generalParts: [], reps: [], assocs: [] };
       });
 
-      const isStudentInBoothServer = (s, bClasses) => {
+      // Map each of the 5 RS departments to exactly one booth
+      const rsDepts = ['ECONOMICS', 'GEOGRAPHY', 'MATHEMATICS', 'MUSIC', 'TAMIL'];
+      const rsDeptToBoothMap = {};
+      for (const d of rsDepts) {
+        // 1. Explicit RESEARCH SCHOLAR - <Dept>
+        let matched = booths.find(b => {
+          const bCls = (Array.isArray(b.classes) ? b.classes : safeJsonParse(b.classes, [])).map(c => String(c).trim().toUpperCase());
+          return bCls.includes(`RESEARCH SCHOLAR - ${d}`);
+        });
+        // 2. Booth with PG of that department
+        if (!matched) {
+          matched = booths.find(b => {
+            const bCls = (Array.isArray(b.classes) ? b.classes : safeJsonParse(b.classes, [])).map(c => String(c).trim().toUpperCase());
+            return bCls.some(c => (c.includes('PG') || c.includes('MA') || c.includes('MSC') || c.includes('MCOM')) && c.includes(d));
+          });
+        }
+        // 3. Any booth with that department
+        if (!matched) {
+          matched = booths.find(b => {
+            const bCls = (Array.isArray(b.classes) ? b.classes : safeJsonParse(b.classes, [])).map(c => String(c).trim().toUpperCase());
+            return bCls.some(c => c.includes(d));
+          });
+        }
+        if (matched) {
+          rsDeptToBoothMap[d] = Number(matched.boothNumber);
+        }
+      }
+
+      const isStudentInBoothServer = (s, bClasses, boothNum) => {
         if (!bClasses || !bClasses.length) return false;
         const rawClass = String(s.CLASS || '').trim().toUpperCase();
-        if (bClasses.includes(rawClass)) return true;
         const dept = String(s.Dept || '').trim().toUpperCase();
         if (rawClass.includes('RESEARCH') || rawClass.includes('SCHOLAR') || rawClass.includes('PHD') || rawClass.includes('PH.D')) {
-          const deptKey = `RESEARCH SCHOLAR - ${dept}`.toUpperCase();
+          if (rsDeptToBoothMap[dept] !== undefined) {
+            return rsDeptToBoothMap[dept] === Number(boothNum);
+          }
+          const deptKey = `RESEARCH SCHOLAR - ${dept}`;
           return bClasses.includes(deptKey);
         }
-        return false;
+        return bClasses.includes(rawClass);
       };
 
       // 1. General Posts (Single or Split Parts)
@@ -1509,7 +1581,20 @@ All students are directed to strictly adhere to the University Code of Conduct, 
 
         booths.forEach(b => {
           const bClasses = (Array.isArray(b.classes) ? b.classes : safeJsonParse(b.classes, [])).map(c => String(c).trim().toUpperCase());
-          const boothStudents = students.filter(s => isStudentInBoothServer(s, bClasses));
+          const boothStudents = students.filter(s => isStudentInBoothServer(s, bClasses, b.boothNumber));
+          const regStudents = boothStudents.filter(s => {
+            const c = String(s.CLASS || '').toUpperCase();
+            const sl = String(s['Nominal Roll Serial Number'] || '').toUpperCase();
+            return !c.includes('RESEARCH') && !c.includes('SCHOLAR') && !c.includes('PHD') && !sl.startsWith('RS');
+          });
+          const rsStudents = boothStudents.filter(s => {
+            const c = String(s.CLASS || '').toUpperCase();
+            const sl = String(s['Nominal Roll Serial Number'] || '').toUpperCase();
+            return c.includes('RESEARCH') || c.includes('SCHOLAR') || c.includes('PHD') || sl.startsWith('RS');
+          });
+
+          const regCount = regStudents.length;
+          const rsCount = rsStudents.length;
           const count = boothStudents.length;
           const start = partSl;
           const end = start + count - 1;
@@ -1523,10 +1608,14 @@ All students are directed to strictly adhere to the University Code of Conduct, 
             prefix: gp.shortCode,
             booth: b.boothNumber,
             count,
+            regCount,
+            rsCount,
             start,
             end,
             books: bookData.books,
-            bookIds: bookData.ids
+            bookIds: bookData.ids,
+            reserveSlipsRange: rsCount > 0 ? `${gp.shortCode}${start + regCount} - ${gp.shortCode}${end}` : null,
+            hasReserves: rsCount > 0
           };
           partBoothResults.push(data);
           boothMap[b.boothNumber].generalParts.push(data);
@@ -1552,16 +1641,16 @@ All students are directed to strictly adhere to the University Code of Conduct, 
         boothMap[b.boothNumber].general = boothMap[b.boothNumber].generalParts[0] || null;
       });
 
-      // 2. Reps (filtered using isYearEligibleServer)
+      // 2. Reps (filtered using isYearEligibleServer, strictly excluding Research Scholars)
       const repResults = [];
       const yrPosts = contestablePosts.filter(p => isYear(p) && !isAssoc(p));
       yrPosts.forEach(p => {
         booths.forEach(b => {
           const bClasses = (Array.isArray(b.classes) ? b.classes : safeJsonParse(b.classes, [])).map(c => String(c).trim().toUpperCase());
-          const boothStudents = students.filter(s => isStudentInBoothServer(s, bClasses));
+          const boothStudents = students.filter(s => isStudentInBoothServer(s, bClasses, b.boothNumber));
           const targetStudents = boothStudents.filter(s => {
             const cls = String(s.CLASS || '').toUpperCase();
-            if (cls.includes('PH D') || cls.includes('PH.D')) return false;
+            if (cls.includes('PH D') || cls.includes('PH.D') || cls.includes('RESEARCH') || cls.includes('SCHOLAR')) return false;
             return isYearEligibleServer(cls, p);
           });
 
@@ -1596,7 +1685,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
 
         booths.forEach(b => {
           const bClasses = (Array.isArray(b.classes) ? b.classes : safeJsonParse(b.classes, [])).map(c => String(c).trim().toUpperCase());
-          const boothStudents = students.filter(s => isStudentInBoothServer(s, bClasses));
+          const boothStudents = students.filter(s => isStudentInBoothServer(s, bClasses, b.boothNumber));
           const targetStudents = boothStudents.filter(s => {
             const sDept = String(s.Dept || '').trim().toUpperCase().replace(/[-\s]/g, ' ');
             const sCls  = String(s.CLASS || '').trim().toUpperCase().replace(/[-\s]/g, ' ');
@@ -1604,13 +1693,38 @@ All students are directed to strictly adhere to the University Code of Conduct, 
           });
 
           if (targetStudents.length > 0) {
+            const regAssocStudents = targetStudents.filter(s => {
+              const c = String(s.CLASS || '').toUpperCase();
+              const sl = String(s['Nominal Roll Serial Number'] || '').toUpperCase();
+              return !c.includes('RESEARCH') && !c.includes('SCHOLAR') && !c.includes('PHD') && !sl.startsWith('RS');
+            });
+            const rsAssocStudents = targetStudents.filter(s => {
+              const c = String(s.CLASS || '').toUpperCase();
+              const sl = String(s['Nominal Roll Serial Number'] || '').toUpperCase();
+              return c.includes('RESEARCH') || c.includes('SCHOLAR') || c.includes('PHD') || sl.startsWith('RS');
+            });
+
             const count = targetStudents.length;
+            const regCount = regAssocStudents.length;
+            const rsCount = rsAssocStudents.length;
             const start = assocSl;
             const end = start + count - 1;
             const bookData = calcBooks(count, start, 'A', abCount);
             abCount = bookData.nextCounter;
 
-            const data = { post: p.post, booth: b.boothNumber, count, start, end, books: bookData.books, bookIds: bookData.ids };
+            const data = { 
+              post: p.post, 
+              booth: b.boothNumber, 
+              count, 
+              regCount,
+              rsCount,
+              start, 
+              end, 
+              books: bookData.books, 
+              bookIds: bookData.ids,
+              reserveSlipsRange: rsCount > 0 ? `A${start + regCount} - A${end}` : null,
+              hasReserves: rsCount > 0
+            };
             assocResults.push(data);
             boothMap[b.boothNumber].assocs.push(data);
             assocSl += count;
@@ -1629,10 +1743,16 @@ All students are directed to strictly adhere to the University Code of Conduct, 
         }
       });
 
+      const totalRegularGeneral = genPartsResults[0]?.results?.reduce((acc, r) => acc + (r.regCount !== undefined ? r.regCount : r.count), 0) || 0;
+      const totalRSReservesGeneral = genPartsResults[0]?.results?.reduce((acc, r) => acc + (r.rsCount || 0), 0) || 0;
+
       const plan = {
         isSplit,
         bookSize: standard,
         mergeRemainders: enableMerge,
+        accommodatesResearchScholars: true,
+        totalRegularVoters: totalRegularGeneral,
+        totalResearchScholarsReserves: totalRSReservesGeneral,
         general: genPartsResults[0] || { results: [], total: 0 },
         generalParts: genPartsResults,
         reps: { results: repResults, total: repSl - 1 },
@@ -1641,6 +1761,14 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       };
 
       await setSetting('ballotPlan', JSON.stringify(plan));
+      return plan;
+    };
+
+    if (action === 'adminGenerateBallotPlan') {
+      const plan = await generateBallotPlanInternal({
+        bookSize: body.bookSize,
+        mergeRemainders: body.mergeRemainders
+      });
       return jsonOut(res, { ok: true, plan });
     }
 
@@ -2628,9 +2756,24 @@ All students are directed to strictly adhere to the University Code of Conduct, 
                 CASE WHEN admission_no ~ '^[0-9]+$' THEN CAST(admission_no AS BIGINT) ELSE 999999 END ASC
             ) as new_serial
           FROM nominal_roll
+          WHERE NOT (UPPER(class) LIKE '%RESEARCH%' OR UPPER(class) LIKE '%SCHOLAR%' OR UPPER(class) ~ 'PH\.?\s*D' OR split_part(serial_number, '_', 1) ~ '^RS')
         )
         UPDATE nominal_roll SET serial_number = CAST(renumbered.new_serial AS VARCHAR)
-        FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial
+        FROM renumbered WHERE nominal_roll.serial_number = renumbered.old_serial;
+
+        WITH renumbered_rs AS (
+          SELECT serial_number as old_serial,
+            'RS' || (ROW_NUMBER() OVER (
+              ORDER BY 
+                LOWER(TRIM(dept)) ASC,
+                LOWER(TRIM(name)) ASC,
+                name ASC
+            )) as new_rs_serial
+          FROM nominal_roll
+          WHERE (UPPER(class) LIKE '%RESEARCH%' OR UPPER(class) LIKE '%SCHOLAR%' OR UPPER(class) ~ 'PH\.?\s*D' OR split_part(serial_number, '_', 1) ~ '^RS')
+        )
+        UPDATE nominal_roll SET serial_number = renumbered_rs.new_rs_serial
+        FROM renumbered_rs WHERE nominal_roll.serial_number = renumbered_rs.old_serial;
       `;
 
       // Step 3: Automatically remap candidate, proposer, and seconder serial numbers in existing nominations
@@ -2857,6 +3000,127 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       await setSetting('draftRollPublished', 'true');
       await setSetting('finalRollOverride', 'FORCE_CLOSED');
       return jsonOut(res, { ok: true, isRollFinalized: 'false' });
+    }
+
+    if (action === 'adminToggleResearchScholars') {
+      const currentSetting = await getSetting('include_research_scholars');
+      const isCurrentlyEnabled = currentSetting === 'true';
+      const shouldEnable = body.enabled !== undefined ? !!body.enabled : !isCurrentlyEnabled;
+
+      if (shouldEnable) {
+        // 1. Persist setting
+        await setSetting('include_research_scholars', 'true');
+
+        // 2. Query existing roll to prevent duplicate insertions
+        const existingRoll = await sql`SELECT serial_number, admission_no FROM nominal_roll`;
+        const existingAdms = new Set(existingRoll.map(r => String(r.admission_no || '').trim().toUpperCase()));
+        const existingSerials = new Set(existingRoll.map(r => String(r.serial_number || '').trim().toUpperCase()));
+
+        // Statutory roster of 21 Research Scholars with Special Serial Numbers RS1..RS21
+        const scholars = [
+          { serial_number: 'RS1', name: 'THUSHARA N C', class: 'RESEARCH SCHOLAR', admission_no: '24007', dept: 'Economics' },
+          { serial_number: 'RS2', name: 'SNEHA H', class: 'RESEARCH SCHOLAR', admission_no: '24904', dept: 'Economics' },
+          { serial_number: 'RS3', name: 'GAYATHRI V', class: 'RESEARCH SCHOLAR', admission_no: '21895', dept: 'Geography' },
+          { serial_number: 'RS4', name: 'RAHANA K V', class: 'RESEARCH SCHOLAR', admission_no: '24901', dept: 'Geography' },
+          { serial_number: 'RS5', name: 'SELSHA S', class: 'RESEARCH SCHOLAR', admission_no: '22907', dept: 'Mathematics' },
+          { serial_number: 'RS6', name: 'SOORYADAS M', class: 'RESEARCH SCHOLAR', admission_no: '24005', dept: 'Mathematics' },
+          { serial_number: 'RS7', name: 'RARI B', class: 'RESEARCH SCHOLAR', admission_no: '25880', dept: 'Mathematics' },
+          { serial_number: 'RS8', name: 'AISWARYA', class: 'RESEARCH SCHOLAR', admission_no: '21076', dept: 'Music' },
+          { serial_number: 'RS9', name: 'ANJALAI N P', class: 'RESEARCH SCHOLAR', admission_no: '22916', dept: 'Music' },
+          { serial_number: 'RS10', name: 'DEVIKA', class: 'RESEARCH SCHOLAR', admission_no: '24902', dept: 'Music' },
+          { serial_number: 'RS11', name: 'VARSHA', class: 'RESEARCH SCHOLAR', admission_no: '24009', dept: 'Music' },
+          { serial_number: 'RS12', name: 'SAKUNTHALAMANI.P', class: 'RESEARCH SCHOLAR', admission_no: '248/2020', dept: 'Tamil' },
+          { serial_number: 'RS13', name: 'ANUSUYA R', class: 'RESEARCH SCHOLAR', admission_no: '884/2021', dept: 'Tamil' },
+          { serial_number: 'RS14', name: 'PETER PAUL L', class: 'RESEARCH SCHOLAR', admission_no: '21894', dept: 'Tamil' },
+          { serial_number: 'RS15', name: 'JOTHILAKSHMY L', class: 'RESEARCH SCHOLAR', admission_no: '21898', dept: 'Tamil' },
+          { serial_number: 'RS16', name: 'PRIYANKA T', class: 'RESEARCH SCHOLAR', admission_no: '21896', dept: 'Tamil' },
+          { serial_number: 'RS17', name: 'RAMYA RANI M', class: 'RESEARCH SCHOLAR', admission_no: '22913', dept: 'Tamil' },
+          { serial_number: 'RS18', name: 'RANJINI K', class: 'RESEARCH SCHOLAR', admission_no: '22914', dept: 'Tamil' },
+          { serial_number: 'RS19', name: 'SANTHIYA. S', class: 'RESEARCH SCHOLAR', admission_no: '24909', dept: 'Tamil' },
+          { serial_number: 'RS20', name: 'VELANKANNI Y', class: 'RESEARCH SCHOLAR', admission_no: '24008', dept: 'Tamil' },
+          { serial_number: 'RS21', name: 'NISHA A', class: 'RESEARCH SCHOLAR', admission_no: '24012', dept: 'Tamil' }
+        ];
+
+        let addedCount = 0;
+        for (const s of scholars) {
+          if (!existingAdms.has(String(s.admission_no).trim().toUpperCase()) && !existingSerials.has(s.serial_number)) {
+            await sql`
+              INSERT INTO nominal_roll (serial_number, name, class, admission_no, dept)
+              VALUES (${s.serial_number}, ${s.name}, ${s.class}, ${s.admission_no}, ${s.dept})
+              ON CONFLICT (serial_number) DO UPDATE SET name = ${s.name}, class = ${s.class}, admission_no = ${s.admission_no}, dept = ${s.dept}
+            `;
+            addedCount++;
+          }
+        }
+
+        // 3. Attach Research Scholars to corresponding Booths
+        const boothsDataRaw = await getSetting('booths_data');
+        const booths = safeJsonParse(boothsDataRaw, []);
+        let boothsUpdated = false;
+
+        if (booths.length > 0) {
+          const rsDepts = ['Economics', 'Geography', 'Mathematics', 'Music', 'Tamil'];
+          for (const dept of rsDepts) {
+            const rsKey = `RESEARCH SCHOLAR - ${dept}`;
+            const isAssigned = booths.some(b => Array.isArray(b.classes) && b.classes.includes(rsKey));
+            if (!isAssigned) {
+              let targetBooth = booths.find(b => Array.isArray(b.classes) && b.classes.some(c => {
+                const u = String(c).toUpperCase();
+                return (u.includes('MA') || u.includes('MSC') || u.includes('MCOM') || u.includes('PG')) && u.includes(dept.toUpperCase());
+              }));
+              if (!targetBooth) {
+                targetBooth = booths.find(b => Array.isArray(b.classes) && b.classes.some(c => String(c).toUpperCase().includes(dept.toUpperCase())));
+              }
+              if (targetBooth) {
+                if (!Array.isArray(targetBooth.classes)) targetBooth.classes = [];
+                targetBooth.classes.push(rsKey);
+                boothsUpdated = true;
+              }
+            }
+          }
+          if (boothsUpdated) {
+            await setSetting('booths_data', JSON.stringify(booths));
+          }
+        }
+
+        // 4. Auto-regenerate Master Ballot Plan so booklet packaging & counts match
+        await generateBallotPlanInternal();
+
+        return jsonOut(res, { ok: true, enabled: true, addedCount, message: 'Research scholars successfully added to electoral roll and booth allotments.' });
+      } else {
+        // Disabled: remove RS addendum
+        await setSetting('include_research_scholars', 'false');
+
+        // Delete from nominal roll
+        await sql`
+          DELETE FROM nominal_roll 
+          WHERE UPPER(serial_number) LIKE 'RS%' 
+             OR UPPER(class) LIKE '%RESEARCH%SCHOLAR%'
+             OR UPPER(class) ~ 'PH\\.?\\s*D'
+        `;
+
+        // Remove from booths_data
+        const boothsDataRaw = await getSetting('booths_data');
+        const booths = safeJsonParse(boothsDataRaw, []);
+        let boothsUpdated = false;
+        if (booths.length > 0) {
+          booths.forEach(b => {
+            if (Array.isArray(b.classes)) {
+              const beforeLen = b.classes.length;
+              b.classes = b.classes.filter(c => !String(c).toUpperCase().startsWith('RESEARCH SCHOLAR'));
+              if (b.classes.length !== beforeLen) boothsUpdated = true;
+            }
+          });
+          if (boothsUpdated) {
+            await setSetting('booths_data', JSON.stringify(booths));
+          }
+        }
+
+        // Regenerate ballot plan
+        await generateBallotPlanInternal();
+
+        return jsonOut(res, { ok: true, enabled: false, message: 'Research scholars addendum removed from electoral roll and booth allotments.' });
+      }
     }
 
     if (action === 'submitRollCorrection') {

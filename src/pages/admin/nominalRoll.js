@@ -43,6 +43,12 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
   const isUnpublished = !isFinal && !isDraft;
   let students = [...nominalRoll];
   students.sort((a, b) => compareSl(a, b));
+  const rsStudents = nominalRoll.filter(s => {
+    const c = String(s['CLASS'] || s['class'] || '').toUpperCase();
+    const sl = String(s['Nominal Roll Serial Number'] || s['serial_number'] || '').toUpperCase();
+    return c.includes('RESEARCH') || c.includes('SCHOLAR') || c.includes('PHD') || sl.startsWith('RS');
+  });
+  const isRSActive = rsStudents.length > 0 || settings.includeResearchScholars === true;
   let filterText = '';
   let selectedDept = '';
   let selectedClass = '';
@@ -332,6 +338,32 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
             ${isFinal ? `
               <button id="btnUnfinalizeBanner" class="btn bg-rose-500/20 text-rose-300 border border-rose-500/50 hover:bg-rose-500/30 text-xs py-2 px-3">🔓 Unfinalize Roll</button>
             ` : ''}
+          </div>
+        </div>
+
+        <!-- Court Addendum: Research Scholars (Ph.D.) Voting Rights Banner -->
+        <div class="glass rounded-xl p-4 border ${isRSActive ? 'border-amber-500/40 bg-amber-500/10' : 'border-white/10 bg-white/5'} flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-lg">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">${isRSActive ? '⚖️' : '🎓'}</span>
+            <div>
+              <div class="font-bold text-sm flex items-center gap-2 ${isRSActive ? 'text-amber-300' : 'text-slate-300'}">
+                Court Addendum: Research Scholars (Ph.D.) Voting Rights
+                <span class="badge ${isRSActive ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-slate-700/60 text-slate-400 border border-white/10'} text-[10px] py-0.5 px-2">
+                  ${isRSActive ? `ACTIVE (${rsStudents.length || 21} Scholars: RS1–RS21)` : 'EXCLUDED (Lyngdoh Default)'}
+                </span>
+              </div>
+              <div class="text-slate-400 text-xs mt-0.5">
+                ${isRSActive
+                  ? '21 Ph.D. Scholars are included as an Addendum (Special Sl. Nos. RS1–RS21). They vote for General Union Posts & Department Associations in their department booths, with existing 1..1887 serial numbers preserved.'
+                  : 'Pursuant to court orders, Research Scholars can be permitted to vote for General Posts & Department Associations. Add them as an Addendum (Special Sl. Nos. RS1–RS21) without altering existing student serial numbers.'}
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button id="btnToggleResearchScholars" class="btn btn-sm ${isRSActive ? 'btn-secondary border-rose-500/40 text-rose-300 hover:bg-rose-500/20' : 'btn-primary bg-amber-600 hover:bg-amber-500 text-white font-bold shadow-md shadow-amber-900/40'} flex items-center gap-1.5">
+              <span>${isRSActive ? '🚫' : '⚖️'}</span>
+              <span>${isRSActive ? 'Remove Research Scholars Addendum' : 'Add Research Scholars (Court Order)'}</span>
+            </button>
           </div>
         </div>
 
@@ -1248,6 +1280,28 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
     };
     if (main.querySelector('#btnUnpublishDraft')) main.querySelector('#btnUnpublishDraft').onclick = handleUnpublishDraft;
     if (main.querySelector('#btnUnpublishDraftTop')) main.querySelector('#btnUnpublishDraftTop').onclick = handleUnpublishDraft;
+
+    // Toggle Court Addendum: Research Scholars (Ph.D.)
+    const btnToggleRS = main.querySelector('#btnToggleResearchScholars');
+    if (btnToggleRS) {
+      btnToggleRS.onclick = async (e) => {
+        const confirmMsg = isRSActive
+          ? '⚠️ CONFIRM REMOVAL\n\nAre you sure you want to remove the 21 Research Scholars addendum from the electoral roll and booth allotments?'
+          : '⚖️ CONFIRM COURT ADDENDUM\n\nThis will add 21 Ph.D. Research Scholars to the electoral roll as an Addendum with special serial numbers RS1 to RS21.\n\n• Existing serial numbers (1 to 1887) will NOT be changed.\n• Scholars will be assigned to their corresponding department booths.\n• They can vote for General Posts & Department Associations.\n• Ballot booklet calculations and numbers will be updated automatically.\n\nProceed?';
+
+        if (!confirm(confirmMsg)) return;
+
+        setLoading(e.target, true, isRSActive ? 'Removing Scholars...' : 'Adding Scholars...');
+        try {
+          const res = await api.adminToggleResearchScholars(pwd, !isRSActive);
+          showToast(res.message || 'Updated Research Scholars status successfully!', 'success');
+          await reloadRollData(main, pwd);
+        } catch (err) {
+          showToast(err.message, 'error');
+          setLoading(e.target, false, isRSActive ? '🚫 Remove Research Scholars Addendum' : '⚖️ Add Research Scholars (Court Order)');
+        }
+      };
+    }
 
     // Corrections Panel Toggle
     const togglePanel = main.querySelector('#toggleCorrectionsPanel');

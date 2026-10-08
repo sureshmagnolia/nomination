@@ -483,7 +483,7 @@ export function executeRollPrint({
 
   const watermark = isFinal ? 'FINAL NOMINAL ROLL' : 'DRAFT NOMINAL ROLL';
   const timestamp = new Date().toLocaleString();
-  const formatSl = (raw) => isDraft ? `D${raw}` : raw;
+  const formatSl = (raw) => isDraft ? (/^RS/i.test(String(raw).trim()) ? raw : `D${raw}`) : raw;
 
   let bodyContent = '';
 

@@ -1469,6 +1469,10 @@ export function recalculateBallotPlanBooks(rawPlan, bookSize = 50, enableMerge =
         s.end = end;
         s.books = bookData.books;
         s.bookIds = bookData.ids;
+        if (s.rsCount > 0) {
+          const reg = s.regCount !== undefined ? s.regCount : (count - s.rsCount);
+          s.reserveSlipsRange = `${gp.shortCode}${start + reg} - ${gp.shortCode}${end}`;
+        }
         partSl += count;
       });
       gp.total = partSl - 1;
@@ -1485,6 +1489,10 @@ export function recalculateBallotPlanBooks(rawPlan, bookSize = 50, enableMerge =
       s.end = end;
       s.books = bookData.books;
       s.bookIds = bookData.ids;
+      if (s.rsCount > 0) {
+        const reg = s.regCount !== undefined ? s.regCount : (count - s.rsCount);
+        s.reserveSlipsRange = `G${start + reg} - G${end}`;
+      }
       genSl += count;
     });
     plan.general.total = genSl - 1;
@@ -1528,6 +1536,10 @@ export function recalculateBallotPlanBooks(rawPlan, bookSize = 50, enableMerge =
       s.end = end;
       s.books = bookData.books;
       s.bookIds = bookData.ids;
+      if (s.rsCount > 0) {
+        const reg = s.regCount !== undefined ? s.regCount : (count - s.rsCount);
+        s.reserveSlipsRange = `A${start + reg} - A${end}`;
+      }
       assocSl += count;
     });
     plan.assocs.total = assocSl - 1;
@@ -1603,6 +1615,14 @@ export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}
         ${isSplitPlan ? '<br><strong>Note:</strong> General Union posts are split into <strong>' + masterPlan.generalParts.length + ' separate ballot papers</strong> with distinct series numbering and booklet prefixes.' : ''}
       </div>
 
+      <!-- Statutory Notice for Court Addendum / Reserves -->
+      <div style="margin-bottom: 20px; padding: 10px 14px; background: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px; font-size: 11.5px; color: #92400e; line-height: 1.45;">
+        <strong>⚖️ COURT ADDENDUM &amp; CONTINGENCY BALLOT PLANNING:</strong><br>
+        This Master Ballot Plan accommodates 21 Ph.D. Research Scholars across the 5 department booths (Economics, Geography, Mathematics, Music, Tamil) as contingency allocations. 
+        If the University formally decides to permit Research Scholars to vote, Presiding Officers issue these allocated ballot serials to verified scholars on the Court Addendum roll.
+        If excluded by University decision, these extra ballots remain unissued and act as official <strong>Booth Reserve Ballots</strong> without disrupting standard serial numbers or packaging.
+      </div>
+
       <!-- 1. General Ballots -->
       ${isSplitPlan ? `
         <!-- Split General Parts Tables -->
@@ -1631,10 +1651,16 @@ export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}
                 ${part.results.map(s => `
                   <tr>
                     <td style="border: 1px solid #e2e8f0; padding: 7px 8px; font-weight: 600;">Booth ${s.booth}</td>
-                    <td style="border: 1px solid #e2e8f0; padding: 7px 8px; text-align: center;">${s.count}</td>
+                    <td style="border: 1px solid #e2e8f0; padding: 7px 8px; text-align: center;">
+                      ${s.count}
+                      ${s.rsCount > 0 ? `<div style="font-size:9.5px; color:#d97706; font-weight:600;">(${s.regCount || (s.count - s.rsCount)} Reg + ${s.rsCount} RS)</div>` : ''}
+                    </td>
                     <td style="border: 1px solid #e2e8f0; padding: 7px 8px; text-align: center; font-weight: bold; color: #1e293b;">${part.shortCode}-${s.start}</td>
                     <td style="border: 1px solid #e2e8f0; padding: 7px 8px; text-align: center; font-weight: bold; color: #1e293b;">${part.shortCode}-${s.end}</td>
-                    <td style="border: 1px solid #e2e8f0; padding: 3px 6px;">${renderBooksHtml(s.books)}</td>
+                    <td style="border: 1px solid #e2e8f0; padding: 3px 6px;">
+                      ${renderBooksHtml(s.books)}
+                      ${s.rsCount > 0 ? `<div style="font-size:9.5px; color:#b45309; margin-top:2px;">⚖️ RS Reserve Range: <strong>${s.reserveSlipsRange}</strong></div>` : ''}
+                    </td>
                   </tr>
                 `).join('')}
                 <tr style="background: #f1f5f9; font-weight: bold; border-top: 1.5px solid #0f172a;">
@@ -1668,10 +1694,16 @@ export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}
               ${(masterPlan.general?.results || []).map(s => `
                 <tr>
                   <td style="border: 1px solid #e2e8f0; padding: 7px 8px; font-weight: 600;">Booth ${s.booth}</td>
-                  <td style="border: 1px solid #e2e8f0; padding: 7px 8px; text-align: center;">${s.count}</td>
+                  <td style="border: 1px solid #e2e8f0; padding: 7px 8px; text-align: center;">
+                    ${s.count}
+                    ${s.rsCount > 0 ? `<div style="font-size:9.5px; color:#d97706; font-weight:600;">(${s.regCount || (s.count - s.rsCount)} Reg + ${s.rsCount} RS)</div>` : ''}
+                  </td>
                   <td style="border: 1px solid #e2e8f0; padding: 7px 8px; text-align: center; font-weight: bold; color: #1e293b;">G${s.start}</td>
                   <td style="border: 1px solid #e2e8f0; padding: 7px 8px; text-align: center; font-weight: bold; color: #1e293b;">G${s.end}</td>
-                  <td style="border: 1px solid #e2e8f0; padding: 3px 6px;">${renderBooksHtml(s.books || s.bookHtml)}</td>
+                  <td style="border: 1px solid #e2e8f0; padding: 3px 6px;">
+                    ${renderBooksHtml(s.books || s.bookHtml)}
+                    ${s.rsCount > 0 ? `<div style="font-size:9.5px; color:#b45309; margin-top:2px;">⚖️ RS Reserve Range: <strong>${s.reserveSlipsRange}</strong></div>` : ''}
+                  </td>
                 </tr>
               `).join('')}
               <tr style="background: #f1f5f9; font-weight: bold; border-top: 1.5px solid #0f172a;">
@@ -1791,10 +1823,16 @@ export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}
               <tr>
                 <td style="border: 1px solid #e2e8f0; padding: 6px 8px; font-weight: 600;">${esc(s.post)}</td>
                 <td style="border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center;">Booth ${s.booth}</td>
-                <td style="border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center;">${s.count}</td>
+                <td style="border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center;">
+                  ${s.count}
+                  ${s.rsCount > 0 ? `<div style="font-size:9.5px; color:#d97706; font-weight:600;">(${s.regCount || (s.count - s.rsCount)} Reg + ${s.rsCount} RS)</div>` : ''}
+                </td>
                 <td style="border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center; font-weight: bold; color: #1e293b;">A${s.start}</td>
                 <td style="border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center; font-weight: bold; color: #1e293b;">A${s.end}</td>
-                <td style="border: 1px solid #e2e8f0; padding: 3px 6px;">${renderBooksHtml(s.books || s.bookHtml)}</td>
+                <td style="border: 1px solid #e2e8f0; padding: 3px 6px;">
+                  ${renderBooksHtml(s.books || s.bookHtml)}
+                  ${s.rsCount > 0 ? `<div style="font-size:9.5px; color:#b45309; margin-top:2px;">⚖️ RS Reserve Range: <strong>${s.reserveSlipsRange}</strong></div>` : ''}
+                </td>
               </tr>
             `).join('')}
             <tr style="background: #f1f5f9; font-weight: bold; border-top: 1.5px solid #0f172a;">

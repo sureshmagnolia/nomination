@@ -524,17 +524,20 @@ export function showToast(message, type = 'info') {
   setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 400); }, 3500);
 }
 
-// ─── Electoral Roll Serial Parsing & Natural Alphanumeric Comparison (supports 1, 2, 124a, 124b, D10) ─────
+// ─── Electoral Roll Serial Parsing & Natural Alphanumeric Comparison (supports 1, 2, 124a, 124b, D10, RS1..RS21) ─────
 export function parseSl(s) {
   const raw = String(s?.['Nominal Roll Serial Number'] || s?.serial_number || s?.SL_NO || s?.['SL. NO'] || '').trim();
-  const digits = raw.replace(/^D/i, '').replace(/[^0-9]/g, '');
-  const num = parseInt(digits, 10);
+  const isRS = /^RS-?/i.test(raw);
+  const digits = raw.replace(/^D/i, '').replace(/^RS-?/i, '').replace(/[^0-9]/g, '');
+  const baseNum = parseInt(digits, 10);
+  const num = isNaN(baseNum) ? 999999999 : (isRS ? 100000000 + baseNum : baseNum);
   const suffixMatch = raw.match(/[a-zA-Z]+$/);
-  const suffix = suffixMatch ? suffixMatch[0].toLowerCase() : '';
+  const suffix = isRS ? '' : (suffixMatch ? suffixMatch[0].toLowerCase() : '');
   return {
-    num: isNaN(num) ? 999999999 : num,
+    num,
     suffix,
-    raw: raw.toLowerCase()
+    raw: raw.toLowerCase(),
+    isRS
   };
 }
 

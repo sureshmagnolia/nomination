@@ -805,6 +805,16 @@ export const api = {
     return { ok: true };
   },
 
+  adminToggleResearchScholars: async (password, enabled) => {
+    const res = await post({ action: 'adminToggleResearchScholars', password, enabled });
+    invalidateCache('getNominalRoll');
+    invalidateCache('adminGetBooths');
+    invalidateCache('adminGetBallotPlan');
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    return res;
+  },
+
   adminPublishDraftRoll: async (password) => {
     const res = await post({ action: 'adminPublishDraftRoll', password });
     invalidateCache('getSettings');

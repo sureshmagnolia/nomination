@@ -4,7 +4,7 @@
  */
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast, setLoading, getStudentYearLevel, compareClassesByYearOrder } from '../../utils.js';
+import { esc, showToast, setLoading, getStudentYearLevel, compareClassesByYearOrder, compareSl } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 
 export async function renderAdminBooths(container) {
@@ -46,7 +46,7 @@ export async function renderAdminBooths(container) {
       return;
     }
 
-    renderBoothsUI(container.querySelector('#adminMain'), pwd, nominalRoll, booths, locations, posts, resolvedNominations, plan, settings);
+    renderBoothsUI(container.querySelector('#adminMain'), pwd, nominalRoll, booths, locations, posts, resolvedNominations, plan, settings, container);
   } catch (e) {
     container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
   }
@@ -69,10 +69,18 @@ export const isStudentInBoothCheck = (s, boothClasses) => {
   return boothClasses.includes(key) || boothClasses.includes(raw);
 };
 
-function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations, posts, nominations, plan, settings) {
+function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations, posts, nominations, plan, settings, container) {
   // Helper for identifying distinct class key (e.g. Research Scholars by Dept)
   const getStudentClassKey = getStudentClassKeyBooth;
   const isStudentInBooth = isStudentInBoothCheck;
+
+  // Check if Research Scholars are present or enabled in settings
+  const rsCount = nominalRoll.filter(s => {
+    const c = String(s['CLASS'] || s['class'] || '').toUpperCase();
+    const sl = String(s['Nominal Roll Serial Number'] || s['serial_number'] || s['Sl'] || '').toUpperCase();
+    return c.includes('RESEARCH') || c.includes('SCHOLAR') || c.includes('PHD') || sl.startsWith('RS');
+  }).length;
+  const isRSActive = rsCount > 0 || settings.includeResearchScholars === true;
 
   // 1. Process Nominal Roll to get classes and sizes
   const classStats = {};
@@ -1582,6 +1590,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             <button id="btnAutoAllot" class="btn btn-secondary" title="Action: Analyzes voter loads and automatically distributes classes evenly. Offers multiple allotment strategies ranging from 0-1 department splits up to high-uniformity multi-split plans for approximately equal voters across all booths.&#10;Prerequisite: Set the total booth count first and ensure the Nominal Roll has been imported.">⚡ Auto Allot</button>
             <a href="#/admin/officials" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white" title="Action: Opens the Election Officials Team Builder to allot Presiding Officers, Polling Officers, and Peons to booths.&#10;Prerequisite: Configure booths and assign room locations first so polling stations exist for staffing.">👥 Allot Officials (Team Builder)</a>
             <button id="btnManageLocations" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white" title="Action: Opens Location Manager to add, rename, or delete campus rooms and halls for polling booths.&#10;Prerequisite: Have your list of room numbers / hall names ready.">📍 Manage Locations</button>
+            <button id="btnToggleRSBooths" class="btn btn-secondary ${isRSActive ? 'border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20' : 'border-amber-500/40 text-amber-300 hover:bg-amber-500/20'} flex items-center gap-1.5" title="Court Order: Add or remove Research Scholars (RS1–RS21) across department booths & ballot plan">
+              <span>⚖️</span>
+              <span>${isRSActive ? 'Court Addendum Active (RS1–RS21)' : 'Add Research Scholars (Court Order)'}</span>
+            </button>
             <button id="btnSaveBooths" class="btn btn-primary" title="Action: Saves all assigned room locations and class-to-booth allocations to the database.&#10;Prerequisite: Assign room locations and ensure all classes are allocated to booths before saving.">💾 Save Configuration</button>
             <button id="btnRegenPlan" class="btn btn-primary border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 px-4" title="Action: Calculates voter counts, generates official ballot slip serial ranges (G, R, A), bundles 50-slip books, and freezes the Master Plan.&#10;Prerequisite: Click '💾 Save Configuration' first to ensure your latest booth and class allocations are saved in the database.">🔄 Finalize Master Plan</button>
             <button id="btnPrintRolls" class="btn btn-secondary" title="Action: Generates official printable Marked Copies of the Electoral Roll for each booth with voter details and ballot checkboxes.&#10;Prerequisite: Complete class allotments, save configuration, and click '🔄 Finalize Master Plan' first.">🖨️ Print Marked Copy (Electoral Rolls)</button>
@@ -1589,6 +1601,22 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
           </div>
         </div>
         <div id="printArea" class="hidden"></div>
+
+        <!-- Court Addendum Status Banner -->
+        ${isRSActive ? `
+          <div class="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3.5 text-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-sm">
+            <div class="flex items-center gap-2.5">
+              <span class="text-xl">⚖️</span>
+              <div>
+                <strong class="text-emerald-300">Court Addendum Active:</strong>
+                <span class="text-slate-300 ml-1">21 Ph.D. Research Scholars (RS1–RS21) are allotted across 5 department booths (Economics, Geography, Mathematics, Music, Tamil). Ballot ranges are planned to accommodate them; if scholars are excluded by the University, the extra ballots act as official Booth Reserves. Existing 1..1887 serial numbers are unchanged.</span>
+              </div>
+            </div>
+            <button id="btnToggleRSBoothsBanner" class="btn btn-xs btn-secondary border-rose-500/40 text-rose-300 hover:bg-rose-500/20 whitespace-nowrap">
+              Exclude Scholars
+            </button>
+          </div>
+        ` : ''}
 
         <!-- Department Integrity & Counting Notice Banner -->
         ${currentSplitDepts.length > 0 ? `
@@ -2209,6 +2237,32 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       }
     });
 
+    const handleToggleRS = async (btn) => {
+      const isCurrentlyActive = isRSActive;
+      const confirmMsg = isCurrentlyActive
+        ? 'Are you sure you want to EXCLUDE Research Scholars from the election?\n\nTheir records (RS1–RS21) will be removed from the nominal roll and booths, and the Master Ballot Plan will be automatically recalculated for 1,887 regular students.'
+        : 'Are you sure you want to INCLUDE Research Scholars per Court Order?\n\n21 scholars will be appended as serials RS1–RS21 across 5 department booths (Economics, Geography, Mathematics, Music, Tamil) and the Master Ballot Plan will be automatically recalculated with extra ballots allocated as reserves if excluded.';
+      if (!confirm(confirmMsg)) return;
+
+      const defaultText = btn.innerHTML;
+      setLoading(btn, true, 'Updating...');
+      try {
+        const res = await api.adminToggleResearchScholars(pwd, !isCurrentlyActive);
+        showToast(res.message || 'Updated Research Scholars status successfully!', 'success');
+        if (container) {
+          setTimeout(() => renderAdminBooths(container), 400);
+        } else {
+          location.reload();
+        }
+      } catch (err) {
+        showToast(`Failed to update: ${err.message}`, 'error');
+        setLoading(btn, false, defaultText);
+      }
+    };
+
+    main.querySelector('#btnToggleRSBooths')?.addEventListener('click', (e) => handleToggleRS(e.currentTarget));
+    main.querySelector('#btnToggleRSBoothsBanner')?.addEventListener('click', (e) => handleToggleRS(e.currentTarget));
+
     main.querySelector('#btnCloseSplitAlertModal')?.addEventListener('click', closeSplitModal);
     main.querySelector('#btnAckSplitAlertModal')?.addEventListener('click', closeSplitModal);
     main.querySelector('#splitAlertModalOverlay')?.addEventListener('click', closeSplitModal);
@@ -2417,20 +2471,34 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
       </div>`;
 
     boothClasses.forEach(cls => {
-      const classStudents = students.filter(s => String(s['CLASS']).trim() === cls.name);
-      classStudents.sort((a, b) => String(a['NAME']).localeCompare(String(b['NAME'])));
+      const isRSClass = cls.name.startsWith('RESEARCH SCHOLAR');
+      const classStudents = students.filter(s => getStudentClassKeyBooth(s) === cls.name || String(s['CLASS']).trim() === cls.name);
+      if (isRSClass) {
+        classStudents.sort((a, b) => compareSl(a, b));
+      } else {
+        classStudents.sort((a, b) => String(a['NAME']).localeCompare(String(b['NAME'])));
+      }
 
       html += `
       <div class="roll-page">
         <div class="roll-header">
           <div><strong>BOOTH ${b.boothNumber}</strong> | ${esc(b.roomName || 'No Room')}</div>
-          <div style="text-align:center; flex-grow:1; font-weight:bold; font-size:13px;">College Union Election ${esc(electionYear)} — MARKED COPY (${esc(cls.name)})</div>
+          <div style="text-align:center; flex-grow:1; font-weight:bold; font-size:13px;">
+            ${isRSClass ? `<span style="color:#b45309; text-transform:uppercase;">⚖️ COURT ADDENDUM — RESEARCH SCHOLARS (${esc(cls.dept)})</span>` : `College Union Election ${esc(electionYear)} — MARKED COPY (${esc(cls.name)})`}
+          </div>
           <div>Dept: ${esc(cls.dept)}</div>
         </div>
+        ${isRSClass ? `
+          <div style="margin: 4px 0 8px 0; padding: 5px 8px; font-size: 9px; line-height: 1.35; background: #fffbeb; border: 1px solid #fde68a; border-left: 3px solid #d97706; color: #78350f;">
+            <strong>⚖️ STATUTORY NOTICE (COURT ADDENDUM):</strong> Voting eligibility for Research Scholars is contingent upon final University notification.
+            If permitted by University, issue ballots from the booth's designated reserve range and obtain signature below.
+            If excluded by University, DO NOT issue ballots; allocated ballot papers remain as unissued Booth Reserves.
+          </div>
+        ` : ''}
         <table class="roll-table">
           <thead>
             <tr>
-              <th style="width:38px">Sl.No</th>
+              <th style="width:38px">${isRSClass ? 'Addendum Sl' : 'Sl.No'}</th>
               <th style="width:70px">Adm. No</th>
               <th>Student Name</th>
               <th style="width:160px">Class</th>
@@ -2440,7 +2508,7 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
           <tbody>
             ${classStudents.map(s => `
               <tr>
-                <td style="text-align:center; font-weight:bold;">${esc(String(s['Nominal Roll Serial Number'] || s['SL_NO'] || s['SL NO'] || s['Serial Number'] || s['serial_number'] || '–'))}</td>
+                <td style="text-align:center; font-weight:bold; ${isRSClass ? 'color:#b45309;' : ''}">${esc(String(s['Nominal Roll Serial Number'] || s['SL_NO'] || s['SL NO'] || s['Serial Number'] || s['serial_number'] || '–'))}</td>
                 <td style="font-family:monospace; font-size:9px; white-space:nowrap;">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
                 <td style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(s['NAME'])}</td>
                 <td style="font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(s['CLASS'])}</td>
@@ -2621,7 +2689,8 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
                     <td style="font-size:12px;">${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.start} - ${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.end}</td>
                     <td style="text-align:center; font-size:13px;">${gp.count}</td>
                     <td style="font-size:11px;">${esc(gp.bookIds || '-')}</td>
-                    <td style="height: 24px;"></td><td style="height: 24px;"></td><td style="height: 24px;"></td>
+                    <td style="height: 24px;"></td><td style="height: 24px;"></td>
+                    <td style="height: 24px; font-size: 10px; color: #b45309; line-height: 1.2;">${gp.rsCount > 0 ? `Includes ${gp.rsCount} RS reserves (${gp.reserveSlipsRange})` : ''}</td>
                   </tr>
                 `).join('') : (assignments.general ? `
                   <tr style="font-weight:bold;">
@@ -2629,7 +2698,8 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
                     <td style="font-size:12px;">${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.start} - ${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.end}</td>
                     <td style="text-align:center; font-size:13px;">${assignments.general.count}</td>
                     <td style="font-size:11px;">${esc(assignments.general.bookIds || '-')}</td>
-                    <td style="height: 24px;"></td><td style="height: 24px;"></td><td style="height: 24px;"></td>
+                    <td style="height: 24px;"></td><td style="height: 24px;"></td>
+                    <td style="height: 24px; font-size: 10px; color: #b45309; line-height: 1.2;">${assignments.general?.rsCount > 0 ? `Includes ${assignments.general.rsCount} RS reserves (${assignments.general.reserveSlipsRange})` : ''}</td>
                   </tr>
                 ` : '')}
                 ${assignments.reps.map(r => `
@@ -2647,7 +2717,8 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
                     <td style="font-size:12px;">A${a.start} - A${a.end}</td>
                     <td style="text-align:center; font-size:13px;">${a.count}</td>
                     <td style="font-size:11px;">${esc(a.bookIds || '-')}</td>
-                    <td style="height: 24px;"></td><td style="height: 24px;"></td><td style="height: 24px;"></td>
+                    <td style="height: 24px;"></td><td style="height: 24px;"></td>
+                    <td style="height: 24px; font-size: 10px; color: #b45309; line-height: 1.2;">${a.rsCount > 0 ? `Includes ${a.rsCount} RS reserves (${a.reserveSlipsRange})` : ''}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -2656,6 +2727,14 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
             <div style="margin-top: 5px; font-size: 11px; color: #444; background: #fffde7; padding: 4px 8px; border: 1px dashed #fbc02d;">
               <strong>Note:</strong> Total Qty should be equal to (Number of Ballots Used + Number of Ballots Returned). Please record any discrepancies in the Remarks column.
             </div>
+
+            ${(assignments.general?.rsCount > 0 || (assignments.generalParts && assignments.generalParts.some(gp => gp.rsCount > 0)) || assignments.assocs?.some(a => a.rsCount > 0)) ? `
+              <div style="margin-top: 5px; font-size: 10.5px; color: #78350f; background: #fffbeb; padding: 5px 8px; border: 1px solid #fde68a; border-left: 3px solid #d97706; line-height: 1.35;">
+                <strong>⚖️ COURT ADDENDUM / RESERVE BALLOTS DIRECTIVE:</strong> This booth includes contingency ballot allocations for Ph.D. Research Scholars.
+                If the University officially directs scholars to vote, issue ballots from the designated reserve range to verified electors on the Addendum roll.
+                If excluded by University direction, <strong>do not issue these ballots</strong>; they remain unissued and serve as official <strong>Booth Reserve Ballots</strong>.
+              </div>
+            ` : ''}
           </div>
 
           <!-- SECTION 2: ACCOUNT OF BALLOT BOX STRIP SEALS -->

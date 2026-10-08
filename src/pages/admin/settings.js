@@ -145,6 +145,35 @@ export async function renderSettings(container) {
             }).join('')}
           </div>
         </div>
+
+        <!-- Court Addendum: Research Scholars (Ph.D.) Voting Rights -->
+        <div class="mt-8 border ${settings.includeResearchScholars ? 'border-emerald-500/30 bg-emerald-950/20' : 'border-amber-500/30 bg-amber-950/20'} rounded-2xl p-6">
+          <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div class="flex items-start gap-4">
+              <div class="text-3xl">⚖️</div>
+              <div>
+                <div class="flex items-center gap-2.5 flex-wrap">
+                  <h4 class="font-bold text-white text-lg">Court Addendum: Research Scholars (Ph.D.)</h4>
+                  <span class="badge ${settings.includeResearchScholars ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-700 text-slate-300 border-white/10'} text-xs px-2.5 py-0.5 rounded-full font-mono">
+                    ${settings.includeResearchScholars ? '● Included in Roll (RS1–RS21)' : '○ Excluded from Roll'}
+                  </span>
+                </div>
+                <p class="text-slate-300 text-xs mt-1.5 leading-relaxed max-w-2xl">
+                  Per the High Court directions, Ph.D. Research Scholars are entitled to voting rights for <strong>General Union Posts</strong> and their respective <strong>Department Associations</strong> (strictly excluding Year Representatives).
+                  When included, the statutory roster of 21 verified scholars is appended as an <strong>Addendum (Serials RS1 to RS21)</strong>, automatically allotted into their department polling booths, and ballot paper serial numbers and booklets are planned to accommodate them (acting as official unissued Booth Reserves if excluded by the University). Regular student serials (1..1887) remain strictly untouched.
+                </p>
+                <div class="mt-3 flex items-center gap-2 text-[11px] text-slate-400">
+                  <span>🏛️ <strong>21 Scholars across 5 Departments:</strong> Economics (2), Geography (2), Mathematics (3), Music (4), Tamil (10).</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <button id="btnToggleResearchScholarsSettings" class="btn ${settings.includeResearchScholars ? 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/40' : 'bg-amber-600 hover:bg-amber-500 text-white font-bold shadow-lg shadow-amber-900/40'} px-5 py-2.5 whitespace-nowrap">
+                ${settings.includeResearchScholars ? 'Exclude Research Scholars' : 'Include Research Scholars'}
+              </button>
+            </div>
+          </div>
+        </div>
         
         <!-- Backup & Disaster Recovery -->
         <div class="mt-8 border border-sky-500/30 bg-sky-950/20 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -323,6 +352,26 @@ export async function renderSettings(container) {
 
         showToast(`Theme switched to "${activeObj?.name || themeId}".`, 'success');
       });
+    });
+
+    // Handle Court Addendum Toggle
+    container.querySelector('#btnToggleResearchScholarsSettings')?.addEventListener('click', async (e) => {
+      const isEnabled = settings.includeResearchScholars === true;
+      const confirmText = isEnabled
+        ? 'Are you sure you want to EXCLUDE Research Scholars? Their records (RS1–RS21) will be removed from the nominal roll and polling booths, and the Master Ballot Plan will be recalculated for standard students.'
+        : 'Are you sure you want to INCLUDE Research Scholars per Court Order? 21 scholars will be appended as serials RS1–RS21 across 5 department booths (Economics, Geography, Mathematics, Music, Tamil) and the Master Ballot Plan will be automatically recalculated with extra ballots allocated as reserves if excluded.';
+      if (!confirm(confirmText)) return;
+
+      const btn = e.currentTarget;
+      setLoading(btn, true, 'Updating...');
+      try {
+        const res = await api.adminToggleResearchScholars(pwd, !isEnabled);
+        showToast(res.message || 'Updated Research Scholars status successfully!', 'success');
+        setTimeout(() => renderSettings(container), 400);
+      } catch (err) {
+        showToast(`Failed: ${err.message}`, 'error');
+        setLoading(btn, false, isEnabled ? 'Exclude Research Scholars' : 'Include Research Scholars');
+      }
     });
 
     // Handle Factory Reset
