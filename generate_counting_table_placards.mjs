@@ -648,7 +648,7 @@ function generatePlacardsHtml() {
             </div>
             <div class="uuc-directives-grid">
               <div class="uuc-point">
-                <strong>1. REMAIN SEALED:</strong> UUC ballot packets must remain strictly locked and sealed during Stages 1, 2, and 3 until other seats are completed.
+                <strong>1. OPEN BOX &amp; PROCESS SEATS:</strong> Common ballot box and ballots may be opened for Stages 1, 2 &amp; 3, but the UUC portion must NOT be counted yet.
               </div>
               <div class="uuc-point">
                 <strong>2. CENTRAL CONSOLIDATION:</strong> Multi-seat campus quota requires simultaneous hall-wide counting across all 30 counting tables.
