@@ -577,7 +577,27 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                 </div>
               </div>
 
-              <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Counting Table Sequence Placards -->
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-rose-500/40 transition flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-rose-400 bg-rose-400/10 px-2 py-0.5 rounded border border-rose-400/20">Table Placards</span>
+                      <span class="text-[10px] font-mono text-slate-400">A4 Portrait (1-30)</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white">Counting Table Sequence Placards</h5>
+                    <p class="text-xs text-slate-400 mt-1">Official A4 table sequence sheets to paste on each table: 4-tier statutory order, strict UUC clearance directive from RO, and squad duty roster.</p>
+                  </div>
+                  <div class="flex gap-2">
+                    <button id="btnHubPrintPlacards" class="btn bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs py-2 px-3 rounded-lg flex-1 flex items-center justify-center gap-1.5 shadow-md">
+                      <span>📌</span> Print Placards
+                    </button>
+                    <a href="./Counting_Table_Sequence_Placards_A4.pdf" target="_blank" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-rose-500/30 text-rose-300 hover:bg-rose-500/20 flex items-center justify-center gap-1" title="Open 30-Page PDF">
+                      <span>📄</span> PDF
+                    </a>
+                  </div>
+                </div>
+
                 <!-- Milestone Sheets -->
                 <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-rose-500/40 transition flex flex-col justify-between space-y-3">
                   <div>
@@ -1055,6 +1075,11 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
   };
   main.querySelector('#btnHubOpenRollModal')?.addEventListener('click', handleOpenRollModal);
   main.querySelector('#btnHubQuickNominalRoll')?.addEventListener('click', handleOpenRollModal);
+
+  // Counting Table Sequence Placards (30 Tables)
+  main.querySelector('#btnHubPrintPlacards')?.addEventListener('click', () => {
+    window.open('./Counting_Table_Sequence_Placards_A4.html', '_blank');
+  });
 
   // Statutory Notices #1, #2, #3
   main.querySelector('#btnHubPrintNotice1')?.addEventListener('click', () => {

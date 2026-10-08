@@ -529,8 +529,8 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             </div>
           </div>
 
-          <!-- Row 2: Print Actions Grid (Balanced 4 Equal Columns) -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <!-- Row 2: Print Actions Grid (Balanced 5 Columns) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <!-- 1. Counting Forms -->
             <button type="button" id="btnPrintForms" class="btn btn-primary text-xs font-bold py-2.5 px-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Action: Prints statutory Form 6 Counting Sheets matching current filters (Booth, Round, Post).">
               <span>🖨️</span>
@@ -553,6 +553,12 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             <button type="button" id="btnPrintPackage" class="btn btn-secondary text-xs font-bold py-2.5 px-3.5 rounded-xl border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98] shadow-md" title="Action: Generates a complete comprehensive counting packet (Tabulation Register + Dual-Vote Tally Sheet + Table Counting Forms) for the selected post or booth.">
               <span>📑</span>
               <span id="labelPrintDossier" class="truncate">Full Post Dossier</span>
+            </button>
+
+            <!-- 5. Table Sequence Placards -->
+            <button type="button" id="btnPrintPlacards" class="btn btn-secondary text-xs font-bold py-2.5 px-3.5 rounded-xl border-rose-500/40 bg-rose-500/15 hover:bg-rose-500/25 text-rose-200 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98] shadow-md" title="Action: Opens official A4 Portrait Table Sequence Placards to paste on each counting table (Statutory Sequence, Strict UUC RO Clearance Directive, Squad details).">
+              <span>📌</span>
+              <span class="truncate">Table Placards (A4)</span>
             </button>
           </div>
 
@@ -621,6 +627,9 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                       </div>
                       <button type="button" class="btn-print-table-row w-full mt-2 py-1 px-1.5 rounded text-[9.5px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 hover:bg-sky-500 hover:text-white transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm" data-table="${bNum}" title="Print all counting forms for Table ${bNum} across all rounds">
                         <span>🖨️</span> Table ${bNum} Packet
+                      </button>
+                      <button type="button" class="btn-print-table-placard w-full mt-1.5 py-1 px-1.5 rounded text-[9.5px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm" data-table="${bNum}" title="Print Official Sequence Placard for Table ${bNum} (A4 to paste on table)">
+                        <span>📌</span> Table ${bNum} Placard
                       </button>
                     </td>
                     ${tableRow.map((post, r) => {
@@ -1261,6 +1270,23 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
 
     main.querySelector('#btnPrintPackage')?.addEventListener('click', () => {
       executePrintPackage();
+    });
+
+    main.querySelector('#btnPrintPlacards')?.addEventListener('click', () => {
+      const bNum = selBoothPrint?.value;
+      if (bNum && bNum !== 'all') {
+        window.open(`./Counting_Table_Sequence_Placards_A4.html#table-${bNum}`, '_blank');
+      } else {
+        window.open('./Counting_Table_Sequence_Placards_A4.html', '_blank');
+      }
+    });
+
+    main.querySelectorAll('.btn-print-table-placard').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const bNum = btn.dataset.table;
+        window.open(`./Counting_Table_Sequence_Placards_A4.html#table-${bNum}`, '_blank');
+      });
     });
 
     // ── 1-Click Direct Print Handlers on Matrix Table ───────────────────────
