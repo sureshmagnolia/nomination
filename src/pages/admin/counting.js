@@ -1,3 +1,4 @@
+import { printCountingTablePlacards } from '../../noticesPrinter.js';
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading, isYearEligible, sortPosts, isAssocPost, isYearRepPost, comparePosts } from '../../utils.js';
@@ -1274,18 +1275,28 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
 
     main.querySelector('#btnPrintPlacards')?.addEventListener('click', () => {
       const bNum = selBoothPrint?.value;
-      if (bNum && bNum !== 'all') {
-        window.open(`./Counting_Table_Sequence_Placards_A4.html#table-${bNum}`, '_blank');
-      } else {
-        window.open('./Counting_Table_Sequence_Placards_A4.html', '_blank');
-      }
+      printCountingTablePlacards({
+        booths: boothsList,
+        settings,
+        countingTeams,
+        nominalRoll: nominalRollList,
+        posts: postsList,
+        tableNumber: bNum && bNum !== 'all' ? bNum : null
+      });
     });
 
     main.querySelectorAll('.btn-print-table-placard').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const bNum = btn.dataset.table;
-        window.open(`./Counting_Table_Sequence_Placards_A4.html#table-${bNum}`, '_blank');
+        printCountingTablePlacards({
+          booths: boothsList,
+          settings,
+          countingTeams,
+          nominalRoll: nominalRollList,
+          posts: postsList,
+          tableNumber: bNum
+        });
       });
     });
 

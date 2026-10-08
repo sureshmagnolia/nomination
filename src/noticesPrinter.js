@@ -6,6 +6,7 @@
 
 import { esc, triggerPrint, todayFormatted } from './utils.js';
 import { CONFIG } from './config.js';
+import { OFFICIAL_COUNTING_ROSTER_BACKUP } from './data/officialCountingRoster.js';
 
 // Markdown-to-HTML formatter for notice text
 function formatMarkdown(text) {
@@ -1710,3 +1711,881 @@ export function openDepartmentClassPosterPdf() {
   }
 }
 
+
+
+/**
+ * Dynamically renders and prints Official Counting Table Sequence Placards (A4 Portrait)
+ * for the exact number of tables set in the system (e.g. 12 tables).
+ */
+export function printCountingTablePlacards(options = {}) {
+  const settings = options.settings || {};
+  const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME || 'GOVERNMENT COLLEGE CHITTUR';
+  const collegePlace = settings.collegePlace || CONFIG.COLLEGE_PLACE || 'Chittur, Palakkad';
+  const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME || 'GCC';
+  const year = settings.electionYear || new Date().getFullYear().toString();
+  const collegeLogo = settings.collegeLogo || CONFIG.COLLEGE_LOGO || '';
+
+  // Get configured booths/tables from options or fallback to OFFICIAL_COUNTING_ROSTER_BACKUP (12 tables)
+  let boothsList = Array.isArray(options.booths) && options.booths.length > 0 ? options.booths : [];
+  if (!boothsList.length) {
+    boothsList = OFFICIAL_COUNTING_ROSTER_BACKUP.map(t => ({
+      boothNumber: t.tableNumber,
+      roomName: t.roomName || `Table ${t.tableNumber}`,
+      classes: [],
+      dept: t.supervisor?.department || ''
+    }));
+  }
+
+  // Filter to single table if requested
+  const targetTable = options.tableNumber && options.tableNumber !== 'all' ? String(options.tableNumber) : null;
+  if (targetTable) {
+    boothsList = boothsList.filter(b => String(b.boothNumber || b.tableNumber) === targetTable);
+  }
+
+  if (!boothsList.length) {
+    alert('No counting tables configured in the system to print.');
+    return;
+  }
+
+  const countingTeams = Array.isArray(options.countingTeams) ? options.countingTeams : [];
+  const nominalRoll = Array.isArray(options.nominalRoll) ? options.nominalRoll : [];
+
+  // Helper to resolve official squad for a table
+  const getSquadForTable = (tableNum) => {
+    // 1. Check live countingTeams
+    const live = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(tableNum));
+    if (live) {
+      const sup = live.supervisorName || (typeof live.supervisor === 'string' ? live.supervisor : live.supervisor?.name) || 'Senior Faculty (HoD)';
+      const supDesig = live.supervisor?.designation || 'Presiding / Supervisor';
+      const supDept = live.supervisor?.department || '';
+      const asst = live.assistantName || (typeof live.assistant === 'string' ? live.assistant : live.assistant?.name) || live.countingAssistant?.name || 'Senior Staff';
+      const asstDesig = live.assistant?.designation || live.countingAssistant?.designation || 'Counting Assistant';
+      const off1 = live.countingOfficer1?.name || (Array.isArray(live.countingOfficers) && live.countingOfficers[0]?.name) || '';
+      return { sup, supDesig, supDept, asst, asstDesig, off1 };
+    }
+    // 2. Fallback to OFFICIAL_COUNTING_ROSTER_BACKUP
+    const backup = OFFICIAL_COUNTING_ROSTER_BACKUP.find(t => String(t.tableNumber) === String(tableNum));
+    if (backup) {
+      const sup = backup.supervisor?.name || 'Senior Faculty';
+      const supDesig = backup.supervisor?.designation || 'Associate Professor';
+      const supDept = backup.supervisor?.department || '';
+      const asst = backup.countingAssistant?.name || 'Senior Clerk';
+      const asstDesig = backup.countingAssistant?.designation || 'Counting Assistant';
+      const off1 = backup.countingOfficer1?.name || '';
+      return { sup, supDesig, supDept, asst, asstDesig, off1 };
+    }
+    return {
+      sup: 'Faculty Counting Supervisor',
+      supDesig: 'Associate Professor',
+      supDept: '',
+      asst: 'Staff Counting Assistant',
+      asstDesig: 'Counting Assistant',
+      off1: ''
+    };
+  };
+
+  // Helper to count voters for a booth
+  const getVoterCount = (b) => {
+    if (b.totalStudents && b.totalStudents > 0) return b.totalStudents;
+    const bClasses = Array.isArray(b.classes) ? b.classes : (typeof b.classes === 'string' ? b.classes.split(',').map(s => s.trim()) : []);
+    if (!bClasses.length || !nominalRoll.length) return 0;
+    return nominalRoll.filter(s => {
+      const c = String(s['CLASS'] || '').trim();
+      return bClasses.includes(c);
+    }).length;
+  };
+
+  const pagesHtml = boothsList.map((b, idx) => {
+    const tableNum = b.boothNumber || b.tableNumber || (idx + 1);
+    const roomName = b.roomName || b.room || `Table ${tableNum}`;
+    const squad = getSquadForTable(tableNum);
+    const voterCount = getVoterCount(b);
+    const classesList = Array.isArray(b.classes) ? b.classes : (typeof b.classes === 'string' ? b.classes.split(',').map(s => s.trim()) : []);
+    const classesDesc = classesList.length ? classesList.join(', ') : 'Allotted Electoral Cohort';
+    const deptName = b.dept || squad.supDept || 'Academic Department';
+
+    // 4 statutory stages
+    const stages = [
+      {
+        stage: 'Stage 1',
+        code: 'A-Series',
+        post: `Department Association Secretary (${deptName})`,
+        desc: 'Department Student Association',
+        target: '25-Ballot Bundles',
+        form: `Form 5 / Form 6 (Table ${tableNum})`
+      },
+      {
+        stage: 'Stage 2',
+        code: 'R-Series',
+        post: 'Class / Year Representatives (UG / PG)',
+        desc: 'Class / Cohort Representatives',
+        target: '25-Ballot Bundles',
+        form: `Form 5 / Form 6 (Table ${tableNum})`
+      },
+      {
+        stage: 'Stage 3',
+        code: 'G-Series',
+        post: 'General Union Executive Seats',
+        desc: 'Chairman, Vice Chairman, Gen. Secretary, Joint Sec., Arts Club, Student Editor, Sports',
+        target: '25-Ballot Bundles',
+        form: `Form 5 / Form 6 (Table ${tableNum})`
+      },
+      {
+        stage: 'Stage 4',
+        code: 'UUC-Series',
+        post: 'University Union Councillor (UUC)',
+        desc: 'Statutory 2-Seat Campus Quota',
+        target: 'Special Multi-Vote Tally (Count ONLY on RO Clearance)',
+        form: `Form 6-T / Form 7 (Table ${tableNum})`,
+        isUuc: true
+      }
+    ];
+
+    return `
+      <div class="placard-page ${idx < boothsList.length - 1 ? 'page-break' : ''}" id="table-${tableNum}">
+        <div class="placard-frame">
+          
+          <!-- Header -->
+          <div class="header-box">
+            <div class="header-top">
+              ${collegeLogo ? `<img src="${collegeLogo}" class="emblem-img" alt="Emblem">` : ''}
+              <div class="header-center">
+                <div class="institution-title">${esc(collegeName)}</div>
+                <div class="institution-subtitle">${esc(collegePlace)} &bull; Established Under Govt. of Kerala</div>
+                <div class="election-banner-title">COLLEGE UNION ELECTIONS ${esc(year)}</div>
+                <div class="placard-badge-title">OFFICIAL COUNTING TABLE SEQUENCE PLACARD</div>
+              </div>
+              ${collegeLogo ? `<img src="${collegeLogo}" class="emblem-img" alt="Emblem">` : ''}
+            </div>
+          </div>
+
+          <!-- Table Meta Details Banner -->
+          <div class="table-meta-grid">
+            <div class="meta-col-table">
+              <div class="meta-label">STATUTORY COUNTING TABLE</div>
+              <div class="table-giant-pill">TABLE ${tableNum}</div>
+              <div class="booth-sub-link">Corresponding Polling Booth ${tableNum}</div>
+            </div>
+            <div class="meta-col-dept">
+              <div class="meta-label">ALLOCATED VENUE &amp; ELECTORS</div>
+              <div class="meta-dept-name">${esc(deptName)}</div>
+              <div class="meta-venue-txt">📍 <strong>Venue:</strong> ${esc(roomName)}</div>
+              <div class="meta-classes-txt" title="${esc(classesDesc)}">📚 <strong>Classes:</strong> ${esc(classesDesc)}</div>
+              <div class="meta-voters-txt">👥 <strong>Electors Allotted:</strong> ${voterCount > 0 ? voterCount : 'As per Marked Roll'}</div>
+            </div>
+            <div class="meta-col-officials">
+              <div class="meta-label">TABLE OFFICIALS SQUAD</div>
+              <div class="official-row">
+                <span class="officer-role">Supervisor:</span>
+                <span class="officer-name">${esc(squad.sup)}</span>
+              </div>
+              <div class="official-sub-role">${esc(squad.supDesig)} ${squad.supDept ? `(${esc(squad.supDept)})` : ''}</div>
+              <div class="official-row" style="margin-top:2px;">
+                <span class="officer-role">Assistant:</span>
+                <span class="officer-name">${esc(squad.asst)}</span>
+              </div>
+              ${squad.off1 ? `
+                <div class="official-row" style="margin-top:2px;">
+                  <span class="officer-role">Officer 1:</span>
+                  <span class="officer-name">${esc(squad.off1)}</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+
+          <!-- Section 3: Statutory Counting Sequence -->
+          <div class="section-container">
+            <div class="section-title-bar navy-bar">
+              <span>📊 STATUTORY COUNTING SEQUENCE &amp; BUNDLING TARGETS</span>
+              <span class="section-sub-badge">STRICT STAGE-WISE ORDER</span>
+            </div>
+            <table class="stages-table">
+              <thead>
+                <tr>
+                  <th style="width: 14%;">Stage &amp; Code</th>
+                  <th style="width: 44%;">Post / Seat Title &amp; Jurisdiction</th>
+                  <th style="width: 20%;">Bundling Target</th>
+                  <th style="width: 22%;">Statutory Sheet</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${stages.map(st => `
+                  <tr class="${st.isUuc ? 'row-uuc' : ''}">
+                    <td>
+                      <span class="stage-tag ${st.isUuc ? 'tag-uuc' : ''}">${st.stage}</span>
+                      <span class="code-pill ${st.isUuc ? 'code-uuc' : ''}">${st.code}</span>
+                    </td>
+                    <td>
+                      <div class="post-title ${st.isUuc ? 'post-uuc' : ''}">${st.post}</div>
+                      <div class="tier-desc">${st.desc}</div>
+                    </td>
+                    <td>
+                      <strong>${st.target}</strong>
+                    </td>
+                    <td>
+                      <strong>${st.form}</strong>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Section 4: CRITICAL UUC STATUTORY DIRECTIVE -->
+          <div class="uuc-directive-card">
+            <div class="uuc-header">
+              <span class="uuc-alert-icon">🛑</span>
+              <span class="uuc-header-title">MANDATORY STATUTORY DIRECTIVE — RETURNING OFFICER CLEARANCE REQUIRED</span>
+              <span class="uuc-header-tag">STRICT COMPLIANCE</span>
+            </div>
+            <div class="uuc-body">
+              <div class="uuc-callout-strong">
+                DO NOT COUNT UUC BALLOTS WITHOUT EXPLICIT CLEARANCE FROM THE RETURNING OFFICER (RO).
+              </div>
+              <div class="uuc-directives-grid">
+                <div class="uuc-point">
+                  <strong>1. OPEN BOX &amp; PROCESS SEATS:</strong> Common ballot box and physical ballots may be opened for Stages 1, 2 &amp; 3, but the UUC portion must NOT be counted yet.
+                </div>
+                <div class="uuc-point">
+                  <strong>2. CENTRAL CONSOLIDATION:</strong> Multi-candidate campus quota requires simultaneous hall-wide counting across all tables under RO supervision.
+                </div>
+                <div class="uuc-point">
+                  <strong>3. AWAIT RO INSTRUCTIONS:</strong> Count and record UUC votes ONLY after receiving explicit clearance and direction from the Returning Officer.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 5: Standard Operating Protocol for Counting Table Staff -->
+          <div class="section-container">
+            <div class="section-title-bar blue-bar">
+              <span>⚙️ STANDARD OPERATING INSTRUCTIONS FOR COUNTING TABLE OFFICIALS</span>
+              <span class="section-sub-badge">STATUTORY COMPLIANCE REQUIRED</span>
+            </div>
+            <div class="rules-grid">
+              <div class="rule-card">
+                <div class="rule-num">1</div>
+                <div class="rule-txt">
+                  <strong>Seal &amp; Account Audit:</strong> Before opening ballot box, verify Strip Seal &amp; Special Tag numbers against <em>Form 2 (Ballot Paper Account)</em> in the presence of Counting Agents.
+                </div>
+              </div>
+              <div class="rule-card">
+                <div class="rule-num">2</div>
+                <div class="rule-txt">
+                  <strong>25-Ballot Standard Bundles:</strong> Unfold ballots face up, verify statutory stamp, and sort into neat bundles of exactly <strong>25 valid ballots</strong>, tied securely with paper slips.
+                </div>
+              </div>
+              <div class="rule-card">
+                <div class="rule-num">3</div>
+                <div class="rule-txt">
+                  <strong>Zero Table Rejection:</strong> Table officials have <strong>no authority to reject ballots</strong>. Put all doubtful ballots into the <em>Doubtful Tray</em> for sole adjudication by the RO.
+                </div>
+              </div>
+              <div class="rule-card">
+                <div class="rule-num">4</div>
+                <div class="rule-txt">
+                  <strong>Agent Perimeter Discipline:</strong> Counting agents must remain behind the table barrier. Agents may observe and note totals, but are <strong>strictly prohibited from touching ballots</strong>.
+                </div>
+              </div>
+              <div class="rule-card">
+                <div class="rule-num">5</div>
+                <div class="rule-txt">
+                  <strong>Sign-off &amp; Handover:</strong> Supervisor records scores in Form 6, obtains signatures of candidate agents, and personally carries the signed return to the central RO Tabulation Desk.
+                </div>
+              </div>
+              <div class="rule-card">
+                <div class="rule-num">6</div>
+                <div class="rule-txt">
+                  <strong>Secrecy &amp; Prohibitions:</strong> Mobile phones, cameras, and unauthorized pens are strictly barred at counting tables. Only green/red pens of the Supervisor are permitted for marking.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 6: Official Endorsement & Signatures Footer -->
+          <div class="footer-sign-box">
+            <div class="sign-col">
+              <div class="sign-line"></div>
+              <div class="sign-title">COUNTING ASSISTANT</div>
+              <div class="sign-sub">Signature &bull; Date &bull; Time</div>
+            </div>
+            <div class="sign-col">
+              <div class="sign-line"></div>
+              <div class="sign-title">COUNTING SUPERVISOR</div>
+              <div class="sign-sub">Signature &bull; Date &bull; Time Log</div>
+            </div>
+            <div class="sign-col">
+              <div class="sign-line"></div>
+              <div class="sign-title">COUNTING AGENT</div>
+              <div class="sign-sub">Candidate Representative</div>
+            </div>
+            <div class="sign-col ro-col">
+              <div class="sign-seal-stamp">OFFICIAL EMBOSS SEAL</div>
+              <div class="sign-line"></div>
+              <div class="sign-title">RETURNING OFFICER (RO)</div>
+              <div class="sign-sub">${esc(collegeName)}</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }).join('\n');
+
+  const w = window.open('', '_blank');
+  if (!w) {
+    alert('Pop-up was blocked. Please allow pop-ups for this site to print table placards.');
+    return;
+  }
+
+  w.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Counting Table Sequence Placards - ${esc(shortName)} Election ${esc(year)}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 4mm 5mm 4mm 5mm;
+      @bottom-right {
+        content: "Table Sequence Placard &bull; Page " counter(page) " of " counter(pages);
+        font-family: Arial, sans-serif;
+        font-size: 7pt;
+        font-weight: 700;
+        color: #475569;
+      }
+      @bottom-left {
+        content: "${esc(collegeName)} — Official Statutory Counting Placard";
+        font-family: Arial, sans-serif;
+        font-size: 7pt;
+        color: #475569;
+      }
+    }
+
+    @media print {
+      html, body {
+        width: 210mm;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .page-break {
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #e2e8f0;
+      color: #0f172a;
+      line-height: 1.25;
+      font-size: 8.5pt;
+    }
+
+    .screen-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: #0f172a;
+      color: #fff;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .topbar-btn {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 7px 14px;
+      font-weight: 700;
+      font-size: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .topbar-btn:hover { background: #1d4ed8; }
+
+    .placard-page {
+      width: 202mm;
+      height: 289mm;
+      max-height: 289mm;
+      margin: 6mm auto;
+      background: #ffffff;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-sizing: border-box;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+
+    @media print {
+      .placard-page {
+        width: 100% !important;
+        height: 289mm !important;
+        max-height: 289mm !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+      }
+    }
+
+    .placard-frame {
+      border: 2.5px solid #0f172a;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 3mm 3.5mm;
+      box-sizing: border-box;
+    }
+
+    .header-box {
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 2mm;
+      background: #f8fafc;
+      padding-top: 1mm;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .emblem-img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
+    }
+    .header-center {
+      text-align: center;
+      flex: 1;
+    }
+    .institution-title {
+      font-size: 13pt;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      color: #0f172a;
+      line-height: 1.1;
+    }
+    .institution-subtitle {
+      font-size: 7pt;
+      font-weight: 600;
+      color: #475569;
+      margin-top: 1px;
+    }
+    .election-banner-title {
+      font-size: 8.5pt;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #1e3a8a;
+      margin-top: 2px;
+    }
+    .placard-badge-title {
+      display: inline-block;
+      background: #0f172a;
+      color: #ffffff;
+      font-size: 8pt;
+      font-weight: 900;
+      letter-spacing: 1px;
+      padding: 1.5px 12px;
+      border-radius: 3px;
+      margin-top: 2.5px;
+    }
+
+    .table-meta-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 2.2fr 2.1fr;
+      gap: 6px;
+      margin-top: 2mm;
+      border: 2px solid #0f172a;
+      background: #ffffff;
+      border-radius: 4px;
+      padding: 4px;
+    }
+    .meta-col-table {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 6px;
+      border-radius: 3px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .meta-col-dept {
+      padding: 4px 6px;
+      border-right: 1px solid #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .meta-col-officials {
+      padding: 4px 6px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: #f8fafc;
+      border-radius: 3px;
+    }
+    .meta-label {
+      font-size: 5.5pt;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      margin-bottom: 1px;
+    }
+    .table-giant-pill {
+      font-size: 20pt;
+      font-weight: 900;
+      letter-spacing: 1px;
+      color: #facc15;
+      line-height: 1;
+    }
+    .booth-sub-link {
+      font-size: 6.5pt;
+      font-weight: 700;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .meta-dept-name {
+      font-size: 11pt;
+      font-weight: 900;
+      color: #0f172a;
+      line-height: 1.1;
+    }
+    .meta-venue-txt, .meta-classes-txt, .meta-voters-txt {
+      font-size: 6.8pt;
+      color: #334155;
+      margin-top: 1.5px;
+      line-height: 1.15;
+    }
+    .official-row {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      font-size: 7.2pt;
+      line-height: 1.2;
+    }
+    .officer-role {
+      font-weight: 800;
+      color: #475569;
+      width: 58px;
+      flex-shrink: 0;
+    }
+    .officer-name {
+      font-weight: 900;
+      color: #0f172a;
+    }
+    .official-sub-role {
+      font-size: 5.8pt;
+      color: #64748b;
+      margin-left: 62px;
+      line-height: 1;
+    }
+
+    .section-container {
+      margin-top: 2mm;
+    }
+    .section-title-bar {
+      color: #fff;
+      font-size: 7.2pt;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      padding: 3px 6px;
+      border-radius: 3px 3px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .navy-bar { background: #0f172a; }
+    .blue-bar { background: #1e3a8a; }
+    .section-sub-badge {
+      font-size: 5.5pt;
+      font-weight: 800;
+      background: rgba(255,255,255,0.2);
+      padding: 1px 5px;
+      border-radius: 2px;
+    }
+
+    .stages-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1.5px solid #0f172a;
+      border-top: none;
+      background: #ffffff;
+      font-size: 7pt;
+    }
+    .stages-table th {
+      background: #e2e8f0;
+      color: #0f172a;
+      font-size: 6.5pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 3px 5px;
+      border: 1px solid #cbd5e1;
+      text-align: left;
+    }
+    .stages-table td {
+      padding: 4px 5px;
+      border: 1px solid #cbd5e1;
+      vertical-align: middle;
+      line-height: 1.2;
+    }
+    .row-uuc {
+      background: #fffbeb !important;
+      border-left: 3px solid #d97706 !important;
+    }
+    .stage-tag {
+      display: inline-block;
+      font-size: 6pt;
+      font-weight: 900;
+      background: #0f172a;
+      color: #fff;
+      padding: 1px 4px;
+      border-radius: 2px;
+      margin-right: 3px;
+    }
+    .tag-uuc { background: #b45309; }
+    .code-pill {
+      font-size: 6pt;
+      font-weight: 800;
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 1px 4px;
+      border-radius: 2px;
+    }
+    .code-uuc { background: #fef3c7; color: #92400e; }
+    .post-title {
+      font-size: 7.5pt;
+      font-weight: 900;
+      color: #0f172a;
+    }
+    .post-uuc { color: #b45309; }
+    .tier-desc {
+      font-size: 5.8pt;
+      color: #64748b;
+    }
+
+    .uuc-directive-card {
+      margin-top: 2mm;
+      border: 2px solid #b91c1c;
+      background: #fff5f5;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .uuc-header {
+      background: #b91c1c;
+      color: #ffffff;
+      padding: 3px 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .uuc-alert-icon { font-size: 10pt; }
+    .uuc-header-title {
+      font-size: 7.2pt;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      flex: 1;
+    }
+    .uuc-header-tag {
+      background: #fee2e2;
+      color: #991b1b;
+      font-size: 5.5pt;
+      font-weight: 900;
+      padding: 1px 5px;
+      border-radius: 2px;
+    }
+    .uuc-body {
+      padding: 3.5px 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .uuc-callout-strong {
+      background: #fee2e2;
+      border: 1px solid #f87171;
+      border-radius: 3px;
+      padding: 4px 8px;
+      font-size: 8.5pt;
+      font-weight: 900;
+      color: #991b1b;
+      text-align: center;
+      letter-spacing: 0.3px;
+    }
+    .uuc-directives-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 4px;
+      font-size: 6.2pt;
+      line-height: 1.2;
+      color: #450a0a;
+      margin-top: 2px;
+    }
+    .uuc-point {
+      background: #ffffff;
+      border: 1px solid #fecaca;
+      border-radius: 3px;
+      padding: 2.5px 4px;
+    }
+    .uuc-point strong { color: #991b1b; }
+
+    .rules-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      border: 1.5px solid #1e3a8a;
+      border-top: none;
+      background: #fff;
+      padding: 3px;
+    }
+    .rule-card {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 3px;
+      padding: 3px 4px;
+      display: flex;
+      gap: 4px;
+      font-size: 6pt;
+      line-height: 1.18;
+    }
+    .rule-num {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #1e3a8a;
+      color: #fff;
+      font-size: 6.5pt;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.5px;
+    }
+    .rule-txt { color: #1e293b; }
+    .rule-txt strong { color: #0f172a; }
+
+    .footer-sign-box {
+      border: 1.5px solid #0f172a;
+      background: #f8fafc;
+      border-radius: 4px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1.2fr;
+      gap: 6px;
+      padding: 3.5px 6px;
+      margin-top: 1.5mm;
+    }
+    .sign-col {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+    .sign-line {
+      border-bottom: 1px dotted #475569;
+      height: 18px;
+      margin-bottom: 2px;
+    }
+    .sign-title {
+      font-size: 6.5pt;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: 0.2px;
+    }
+    .sign-sub {
+      font-size: 5.2pt;
+      color: #64748b;
+    }
+    .ro-col {
+      background: #fff;
+      border: 1px dashed #94a3b8;
+      border-radius: 3px;
+      padding: 2px 4px;
+    }
+    .sign-seal-stamp {
+      font-size: 5pt;
+      font-weight: 800;
+      color: #94a3b8;
+      letter-spacing: 0.5px;
+      margin-bottom: -1px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen Top Bar -->
+  <div class="screen-topbar no-print">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <strong style="font-size: 14px; color: #fff;">Official Counting Table Sequence Placards</strong>
+      <span style="font-size: 11px; color: #94a3b8;">${boothsList.length} Tables Configured in System &bull; A4 Portrait</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <label style="font-size: 11px; font-weight: 600; color: #cbd5e1;">Filter Table:</label>
+      <select id="selPlacardTable" style="background: #1e293b; color: #fff; border: 1px solid #475569; padding: 5px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;">
+        <option value="all">🌟 All ${boothsList.length} Tables (Batch A4)</option>
+        ${boothsList.map(b => {
+          const num = b.boothNumber || b.tableNumber;
+          return `<option value="${num}">Table ${num} &bull; ${esc(b.roomName || 'Table ' + num)}</option>`;
+        }).join('')}
+      </select>
+      <button class="topbar-btn" onclick="window.print()">
+        <span>🖨️</span> <span id="placardPrintLabel">Print All ${boothsList.length} Tables (A4)</span>
+      </button>
+      <button class="topbar-btn" style="background: #475569;" onclick="window.close()">
+        <span>✕</span> Close
+      </button>
+    </div>
+  </div>
+
+  ${pagesHtml}
+
+  <script>
+    const sel = document.getElementById('selPlacardTable');
+    const btnLabel = document.getElementById('placardPrintLabel');
+    function applyFilter(val) {
+      const pages = document.querySelectorAll('.placard-page');
+      pages.forEach(p => {
+        if (val === 'all') {
+          p.style.display = 'flex';
+        } else {
+          p.style.display = p.id === ('table-' + val) ? 'flex' : 'none';
+        }
+      });
+      if (btnLabel) {
+        btnLabel.textContent = val === 'all' ? 'Print All ${boothsList.length} Tables (A4)' : ('Print Table ' + val + ' Placard (A4)');
+      }
+    }
+    if (sel) {
+      sel.addEventListener('change', (e) => {
+        applyFilter(e.target.value);
+      });
+    }
+  </script>
+</body>
+</html>`);
+
+  w.document.close();
+  setTimeout(() => w.print(), 350);
+}

@@ -8,7 +8,7 @@ import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
 import { CONFIG } from '../../config.js';
-import { printOfficialNotice, printBoothDoorPoster, printBatchBoothDoorPosters, printCampusMasterDirectory, printBallotBoxStripSeals, openBallotBoxStripSealsPdf, printDepartmentClassDirectoryPoster, openDepartmentClassPosterPdf } from '../../noticesPrinter.js';
+import { printCountingTablePlacards, printOfficialNotice, printBoothDoorPoster, printBatchBoothDoorPosters, printCampusMasterDirectory, printBallotBoxStripSeals, openBallotBoxStripSealsPdf, printDepartmentClassDirectoryPoster, openDepartmentClassPosterPdf } from '../../noticesPrinter.js';
 import { getDefaultStatutoryNotices } from '../../noticesTemplates.js';
 import { generateAndPrintBallots, generateAndPrintBallotPressSummary, downloadBallotsExcel, openBallotSummaryConfigModal } from './ballots.js';
 import { generateAndPrintElectoralRolls, generateAndPrintBallotAccounts } from './booths.js';
@@ -33,8 +33,9 @@ async function loadAdminNoticesData(main, pwd) {
   if (!main) return;
 
   try {
-    const [noticesData, nominalRoll] = await Promise.all([
+    const [noticesData, officialsData, nominalRoll] = await Promise.all([
       api.adminGetNotices(pwd, true).catch(() => ({})),
+      api.adminGetOfficials(pwd, true).catch(() => null),
       api.getNominalRoll().catch(() => [])
     ]);
 
@@ -89,14 +90,15 @@ async function loadAdminNoticesData(main, pwd) {
       });
     });
 
-    renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts, nominalRoll, plan);
+    const countingTeams = officialsData?.countingTeams || [];
+    renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts, nominalRoll, plan, countingTeams);
   } catch (err) {
     console.error('Error loading admin notices:', err);
     main.innerHTML = `<div class="alert alert-error">❌ ${esc(err.message || 'Failed to load notices')}</div>`;
   }
 }
 
-function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts = [], nominalRoll = [], plan = null) {
+function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts = [], nominalRoll = [], plan = null, countingTeams = []) {
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
   const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
   const year = settings.electionYear || new Date().getFullYear();
@@ -583,19 +585,14 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                   <div>
                     <div class="flex items-center justify-between mb-2">
                       <span class="text-[10px] font-bold uppercase tracking-wider text-rose-400 bg-rose-400/10 px-2 py-0.5 rounded border border-rose-400/20">Table Placards</span>
-                      <span class="text-[10px] font-mono text-slate-400">A4 Portrait (1-30)</span>
+                      <span class="text-[10px] font-mono text-slate-400">A4 Portrait (${booths.length || 12} Tables)</span>
                     </div>
                     <h5 class="text-sm font-bold text-white">Counting Table Sequence Placards</h5>
                     <p class="text-xs text-slate-400 mt-1">Official A4 table sequence sheets to paste on each table: 4-tier statutory order, strict UUC clearance directive from RO, and squad duty roster.</p>
                   </div>
-                  <div class="flex gap-2">
-                    <button id="btnHubPrintPlacards" class="btn bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs py-2 px-3 rounded-lg flex-1 flex items-center justify-center gap-1.5 shadow-md">
-                      <span>📌</span> Print Placards
-                    </button>
-                    <a href="./Counting_Table_Sequence_Placards_A4.pdf" target="_blank" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-rose-500/30 text-rose-300 hover:bg-rose-500/20 flex items-center justify-center gap-1" title="Open 30-Page PDF">
-                      <span>📄</span> PDF
-                    </a>
-                  </div>
+                  <button id="btnHubPrintPlacards" class="btn bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs py-2 px-3 rounded-lg w-full flex items-center justify-center gap-1.5 shadow-md">
+                    <span>📌</span> Print Table Placards (${booths.length || 12} Tables)
+                  </button>
                 </div>
 
                 <!-- Milestone Sheets -->
@@ -1076,9 +1073,16 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
   main.querySelector('#btnHubOpenRollModal')?.addEventListener('click', handleOpenRollModal);
   main.querySelector('#btnHubQuickNominalRoll')?.addEventListener('click', handleOpenRollModal);
 
-  // Counting Table Sequence Placards (30 Tables)
+  // Counting Table Sequence Placards (Dynamic for tables configured in system)
   main.querySelector('#btnHubPrintPlacards')?.addEventListener('click', () => {
-    window.open('./Counting_Table_Sequence_Placards_A4.html', '_blank');
+    printCountingTablePlacards({
+      booths,
+      settings,
+      schedule,
+      countingTeams,
+      nominalRoll,
+      posts
+    });
   });
 
   // Statutory Notices #1, #2, #3
