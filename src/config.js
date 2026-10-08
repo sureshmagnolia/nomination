@@ -1,7 +1,4 @@
-/**
- * config.js
- * Central configuration.
- */
+import { DEFAULT_COLLEGE_LOGO } from './data/defaultEmblem.js';
 
 export const CONFIG = {
   // Point to Vercel Serverless API
@@ -10,10 +7,11 @@ export const CONFIG = {
   // Election date for age cutoff (YYYY-MM-DD)
   ELECTION_DATE: '2026-10-12',
 
-  // College name for printed forms
-  COLLEGE_NAME: 'Government Victoria College, Palakkad',
-  COLLEGE_SHORT_NAME: 'GVC',
-  COLLEGE_PLACE: 'Palakkad',
+  // College name and default emblem for printed forms & notices
+  COLLEGE_NAME: 'Government College Chittur, Palakkad',
+  COLLEGE_SHORT_NAME: 'GCC',
+  COLLEGE_PLACE: 'Chittur, Palakkad',
+  COLLEGE_LOGO: DEFAULT_COLLEGE_LOGO,
 
   // Posts are now managed dynamically via the Admin → Manage Posts page.
   // This array is used only as a fallback if the API hasn't loaded yet.

@@ -1,11 +1,12 @@
 import { writeFileSync, copyFileSync } from 'fs';
 import { resolve } from 'path';
 import { execSync } from 'child_process';
+import { DEFAULT_COLLEGE_LOGO } from './src/data/defaultEmblem.js';
 
 const collegeName = 'GOVERNMENT COLLEGE CHITTUR';
 const shortName = 'GCC';
 const year = '2026';
-const emblemPath = 'images/gcc_logo_emblem_golden_red.png';
+const emblemPath = DEFAULT_COLLEGE_LOGO;
 
 // 15 Departments of Government College Chittur with 1 UG to PG progression and realistic booth allotment
 const departmentsData = [
@@ -50,7 +51,8 @@ const departmentsData = [
       { name: '2nd B.A Economics', rank: 2, rankLabel: '2 UG', booth: 7, room: 'Room E1, Arts Block (GF)', voters: 52 },
       { name: '3rd B.A Economics', rank: 3, rankLabel: '3 UG', booth: 7, room: 'Room E1, Arts Block (GF)', voters: 50 },
       { name: '1st M.A Economics', rank: 5, rankLabel: '1 PG', booth: 8, room: 'Room E2, Arts Block (1st Floor)', voters: 20 },
-      { name: '2nd M.A Economics', rank: 6, rankLabel: '2 PG', booth: 8, room: 'Room E2, Arts Block (1st Floor)', voters: 19 }
+      { name: '2nd M.A Economics', rank: 6, rankLabel: '2 PG', booth: 8, room: 'Room E2, Arts Block (1st Floor)', voters: 19 },
+      { name: 'Research Scholars (Ph.D)', rank: 7, rankLabel: 'RS', booth: 8, room: 'Room E2, Arts Block (1st Floor)', voters: 2 }
     ]
   },
   {
@@ -83,7 +85,8 @@ const departmentsData = [
       { name: '2nd B.Sc Geography', rank: 2, rankLabel: '2 UG', booth: 13, room: 'Room G1, Geography Department Hall', voters: 38 },
       { name: '3rd B.Sc Geography', rank: 3, rankLabel: '3 UG', booth: 13, room: 'Room G1, Geography Department Hall', voters: 36 },
       { name: '1st M.Sc Geography', rank: 5, rankLabel: '1 PG', booth: 14, room: 'Room G2, GIS & Cartography Lab', voters: 15 },
-      { name: '2nd M.Sc Geography', rank: 6, rankLabel: '2 PG', booth: 14, room: 'Room G2, GIS & Cartography Lab', voters: 15 }
+      { name: '2nd M.Sc Geography', rank: 6, rankLabel: '2 PG', booth: 14, room: 'Room G2, GIS & Cartography Lab', voters: 15 },
+      { name: 'Research Scholars (Ph.D)', rank: 7, rankLabel: 'RS', booth: 14, room: 'Room G2, GIS & Cartography Lab', voters: 2 }
     ]
   },
   {
@@ -116,7 +119,8 @@ const departmentsData = [
       { name: '2nd B.Sc Mathematics', rank: 2, rankLabel: '2 UG', booth: 19, room: 'Room MATH1, Main Science Wing', voters: 45 },
       { name: '3rd B.Sc Mathematics', rank: 3, rankLabel: '3 UG', booth: 19, room: 'Room MATH1, Main Science Wing', voters: 43 },
       { name: '1st M.Sc Mathematics', rank: 5, rankLabel: '1 PG', booth: 20, room: 'Room MATH2, Ramanujan Seminar Hall', voters: 18 },
-      { name: '2nd M.Sc Mathematics', rank: 6, rankLabel: '2 PG', booth: 20, room: 'Room MATH2, Ramanujan Seminar Hall', voters: 18 }
+      { name: '2nd M.Sc Mathematics', rank: 6, rankLabel: '2 PG', booth: 20, room: 'Room MATH2, Ramanujan Seminar Hall', voters: 18 },
+      { name: 'Research Scholars (Ph.D)', rank: 7, rankLabel: 'RS', booth: 20, room: 'Room MATH2, Ramanujan Seminar Hall', voters: 3 }
     ]
   },
   {
@@ -127,7 +131,8 @@ const departmentsData = [
       { name: '2nd B.A Music', rank: 2, rankLabel: '2 UG', booth: 21, room: 'Room MUS1, Fine Arts & Music Block', voters: 30 },
       { name: '3rd B.A Music', rank: 3, rankLabel: '3 UG', booth: 21, room: 'Room MUS1, Fine Arts & Music Block', voters: 28 },
       { name: '1st M.A Music', rank: 5, rankLabel: '1 PG', booth: 22, room: 'Room MUS2, Sangeetha Sabha Hall', voters: 12 },
-      { name: '2nd M.A Music', rank: 6, rankLabel: '2 PG', booth: 22, room: 'Room MUS2, Sangeetha Sabha Hall', voters: 12 }
+      { name: '2nd M.A Music', rank: 6, rankLabel: '2 PG', booth: 22, room: 'Room MUS2, Sangeetha Sabha Hall', voters: 12 },
+      { name: 'Research Scholars (Ph.D)', rank: 7, rankLabel: 'RS', booth: 22, room: 'Room MUS2, Sangeetha Sabha Hall', voters: 4 }
     ]
   },
   {
@@ -160,7 +165,8 @@ const departmentsData = [
       { name: '2nd B.A Tamil', rank: 2, rankLabel: '2 UG', booth: 27, room: 'Room T1, South Indian Languages Wing', voters: 38 },
       { name: '3rd B.A Tamil', rank: 3, rankLabel: '3 UG', booth: 27, room: 'Room T1, South Indian Languages Wing', voters: 36 },
       { name: '1st M.A Tamil', rank: 5, rankLabel: '1 PG', booth: 28, room: 'Room T2, Sangam Literature Hall', voters: 14 },
-      { name: '2nd M.A Tamil', rank: 6, rankLabel: '2 PG', booth: 28, room: 'Room T2, Sangam Literature Hall', voters: 14 }
+      { name: '2nd M.A Tamil', rank: 6, rankLabel: '2 PG', booth: 28, room: 'Room T2, Sangam Literature Hall', voters: 14 },
+      { name: 'Research Scholars (Ph.D)', rank: 7, rankLabel: 'RS', booth: 28, room: 'Room T2, Sangam Literature Hall', voters: 10 }
     ]
   },
   {
@@ -217,7 +223,7 @@ function generateHtml() {
         <table class="dept-table">
           <thead>
             <tr>
-              <th style="width: 44%;">CLASS (1 UG &rarr; PG)</th>
+              <th style="width: 44%;">CLASS (1 UG &rarr; PG &rarr; RS)</th>
               <th style="width: 17%; text-align: center;">BOOTH NO</th>
               <th style="width: 31%;">LOCATION OF VOTING BOOTH</th>
               <th style="width: 8%; text-align: center;">VOTERS</th>
@@ -250,7 +256,7 @@ function generateHtml() {
         color: #475569;
       }
       @bottom-left {
-        content: "Government College Chittur — Department & Class Polling Directory (1 UG to PG)";
+        content: "Government College Chittur — Department & Class Polling Directory (1 UG to PG & Research Scholars)";
         font-family: 'Inter', sans-serif;
         font-size: 8pt;
         color: #475569;
@@ -539,6 +545,7 @@ function generateHtml() {
     .yr-3ug { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
     .yr-1pg { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
     .yr-2pg { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .yr-rs  { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 900; }
 
     /* Booth Badge */
     .col-booth { text-align: center; }
@@ -670,10 +677,10 @@ function generateHtml() {
       <div class="main-banner">
         <div>
           <div class="banner-title">DEPARTMENT &amp; CLASS-WISE POLLING BOOTH DIRECTORY</div>
-          <div class="banner-subtitle">Official Student Polling Station Guide &bull; Progression 1st UG through PG</div>
+          <div class="banner-subtitle">Official Student Polling Station Guide &bull; Progression 1st UG through PG &amp; Research Scholars</div>
         </div>
         <div style="text-align: right; font-size: 7.5pt; font-weight: 800; color: #fde047;">
-          15 DEPARTMENTS &bull; ${totalClasses} CLASSES &bull; 30 POLLING BOOTHS
+          15 DEPARTMENTS &bull; ${totalClasses} CLASSES &amp; COHORTS &bull; 30 POLLING BOOTHS &bull; ${totalElectors} ELECTORS
         </div>
       </div>
 
@@ -681,7 +688,7 @@ function generateHtml() {
       <div class="directive-bar">
         <div class="directive-item highlight">
           <span>👉</span>
-          <span><strong>INSTRUCTIONS FOR VOTERS:</strong> Locate your Department and Class (1 UG &rarr; PG) below to find your allotted Polling Booth Number and Room Venue.</span>
+          <span><strong>INSTRUCTIONS FOR VOTERS:</strong> Locate your Department and Class (1 UG &rarr; PG &rarr; RS) below to find your allotted Polling Booth Number and Room Venue.</span>
         </div>
         <div class="directive-item">
           <span>📅</span>

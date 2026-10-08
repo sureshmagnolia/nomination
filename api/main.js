@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { Resend } from 'resend';
 import crypto from 'crypto';
+import { DEFAULT_COLLEGE_LOGO } from './defaultEmblem.js';
 
 // Ensure DATABASE_URL is set in your Vercel project environment variables
 // If missing, use a valid placeholder format so the module doesn't crash on load
@@ -961,10 +962,10 @@ export default async function handler(req, res) {
       ]);
       const obj = {
         ...status,
-        collegeName: colName || 'Government Victoria College, Palakkad',
-        collegeShortName: colShort || 'GVC',
-        collegeLogo: colLogo || '',
-        collegePlace: colPlace || 'Palakkad',
+        collegeName: colName || 'Government College Chittur, Palakkad',
+        collegeShortName: colShort || 'GCC',
+        collegeLogo: colLogo || DEFAULT_COLLEGE_LOGO,
+        collegePlace: colPlace || 'Chittur, Palakkad',
         includeResearchScholars: incRS === 'true'
       };
       if (action === 'adminGetSettings') {
@@ -1285,10 +1286,10 @@ All students are directed to strictly adhere to the University Code of Conduct, 
         plan: safeJsonParse(ballotPlanRaw, null),
         schedule: status,
         settings: {
-          collegeName: colName || '',
-          collegeShortName: colShort || '',
+          collegeName: colName || 'Government College Chittur, Palakkad',
+          collegeShortName: colShort || 'GCC',
           electionYear: electionYearSetting || status?.electionYear || '',
-          collegeLogo: colLogo || ''
+          collegeLogo: colLogo || DEFAULT_COLLEGE_LOGO
         }
       });
     }
@@ -3043,7 +3044,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
 
         let addedCount = 0;
         for (const s of scholars) {
-          if (!existingAdms.has(String(s.admission_no).trim().toUpperCase()) && !existingSerials.has(s.serial_number)) {
+          if (!existingSerials.has(s.serial_number)) {
             await sql`
               INSERT INTO nominal_roll (serial_number, name, class, admission_no, dept)
               VALUES (${s.serial_number}, ${s.name}, ${s.class}, ${s.admission_no}, ${s.dept})
