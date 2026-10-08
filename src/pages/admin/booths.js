@@ -2484,21 +2484,14 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
         <div class="roll-header">
           <div><strong>BOOTH ${b.boothNumber}</strong> | ${esc(b.roomName || 'No Room')}</div>
           <div style="text-align:center; flex-grow:1; font-weight:bold; font-size:13px;">
-            ${isRSClass ? `<span style="color:#b45309; text-transform:uppercase;">⚖️ COURT ADDENDUM — RESEARCH SCHOLARS (${esc(cls.dept)})</span>` : `College Union Election ${esc(electionYear)} — MARKED COPY (${esc(cls.name)})`}
+            ${isRSClass ? `<span style="text-transform:uppercase;">ADDENDUM — RESEARCH SCHOLARS (${esc(cls.dept)})</span>` : `College Union Election ${esc(electionYear)} — MARKED COPY (${esc(cls.name)})`}
           </div>
           <div>Dept: ${esc(cls.dept)}</div>
         </div>
-        ${isRSClass ? `
-          <div style="margin: 4px 0 8px 0; padding: 5px 8px; font-size: 9px; line-height: 1.35; background: #fffbeb; border: 1px solid #fde68a; border-left: 3px solid #d97706; color: #78350f;">
-            <strong>⚖️ STATUTORY NOTICE (COURT ADDENDUM):</strong> Voting eligibility for Research Scholars is contingent upon final University notification.
-            If permitted by University, issue ballots from the booth's designated reserve range and obtain signature below.
-            If excluded by University, DO NOT issue ballots; allocated ballot papers remain as unissued Booth Reserves.
-          </div>
-        ` : ''}
         <table class="roll-table">
           <thead>
             <tr>
-              <th style="width:38px">${isRSClass ? 'Addendum Sl' : 'Sl.No'}</th>
+              <th style="width:38px">Sl.No</th>
               <th style="width:70px">Adm. No</th>
               <th>Student Name</th>
               <th style="width:160px">Class</th>
@@ -2508,7 +2501,7 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
           <tbody>
             ${classStudents.map(s => `
               <tr>
-                <td style="text-align:center; font-weight:bold; ${isRSClass ? 'color:#b45309;' : ''}">${esc(String(s['Nominal Roll Serial Number'] || s['SL_NO'] || s['SL NO'] || s['Serial Number'] || s['serial_number'] || '–'))}</td>
+                <td style="text-align:center; font-weight:bold;">${esc(String(s['Nominal Roll Serial Number'] || s['SL_NO'] || s['SL NO'] || s['Serial Number'] || s['serial_number'] || '–'))}</td>
                 <td style="font-family:monospace; font-size:9px; white-space:nowrap;">${esc(s['ADMISION NO'] || s['ADMISSION NO'] || '–')}</td>
                 <td style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(s['NAME'])}</td>
                 <td style="font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(s['CLASS'])}</td>
@@ -2690,7 +2683,7 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
                     <td style="text-align:center; font-size:13px;">${gp.count}</td>
                     <td style="font-size:11px;">${esc(gp.bookIds || '-')}</td>
                     <td style="height: 24px;"></td><td style="height: 24px;"></td>
-                    <td style="height: 24px; font-size: 10px; color: #b45309; line-height: 1.2;">${gp.rsCount > 0 ? `Includes ${gp.rsCount} RS reserves (${gp.reserveSlipsRange})` : ''}</td>
+                    <td style="height: 24px;"></td>
                   </tr>
                 `).join('') : (assignments.general ? `
                   <tr style="font-weight:bold;">
@@ -2699,7 +2692,7 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
                     <td style="text-align:center; font-size:13px;">${assignments.general.count}</td>
                     <td style="font-size:11px;">${esc(assignments.general.bookIds || '-')}</td>
                     <td style="height: 24px;"></td><td style="height: 24px;"></td>
-                    <td style="height: 24px; font-size: 10px; color: #b45309; line-height: 1.2;">${assignments.general?.rsCount > 0 ? `Includes ${assignments.general.rsCount} RS reserves (${assignments.general.reserveSlipsRange})` : ''}</td>
+                    <td style="height: 24px;"></td>
                   </tr>
                 ` : '')}
                 ${assignments.reps.map(r => `
@@ -2718,7 +2711,7 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
                     <td style="text-align:center; font-size:13px;">${a.count}</td>
                     <td style="font-size:11px;">${esc(a.bookIds || '-')}</td>
                     <td style="height: 24px;"></td><td style="height: 24px;"></td>
-                    <td style="height: 24px; font-size: 10px; color: #b45309; line-height: 1.2;">${a.rsCount > 0 ? `Includes ${a.rsCount} RS reserves (${a.reserveSlipsRange})` : ''}</td>
+                    <td style="height: 24px;"></td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -2727,14 +2720,6 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
             <div style="margin-top: 5px; font-size: 11px; color: #444; background: #fffde7; padding: 4px 8px; border: 1px dashed #fbc02d;">
               <strong>Note:</strong> Total Qty should be equal to (Number of Ballots Used + Number of Ballots Returned). Please record any discrepancies in the Remarks column.
             </div>
-
-            ${(assignments.general?.rsCount > 0 || (assignments.generalParts && assignments.generalParts.some(gp => gp.rsCount > 0)) || assignments.assocs?.some(a => a.rsCount > 0)) ? `
-              <div style="margin-top: 5px; font-size: 10.5px; color: #78350f; background: #fffbeb; padding: 5px 8px; border: 1px solid #fde68a; border-left: 3px solid #d97706; line-height: 1.35;">
-                <strong>⚖️ COURT ADDENDUM / RESERVE BALLOTS DIRECTIVE:</strong> This booth includes contingency ballot allocations for Ph.D. Research Scholars.
-                If the University officially directs scholars to vote, issue ballots from the designated reserve range to verified electors on the Addendum roll.
-                If excluded by University direction, <strong>do not issue these ballots</strong>; they remain unissued and serve as official <strong>Booth Reserve Ballots</strong>.
-              </div>
-            ` : ''}
           </div>
 
           <!-- SECTION 2: ACCOUNT OF BALLOT BOX STRIP SEALS -->
