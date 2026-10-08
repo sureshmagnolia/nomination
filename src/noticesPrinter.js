@@ -1911,25 +1911,18 @@ export function printCountingTablePlacards(options = {}) {
                 <div class="institution-title">${esc(collegeName)}</div>
                 <div class="institution-subtitle">${esc(collegePlace)} &bull; Established Under Govt. of Kerala</div>
                 <div class="election-banner-title">COLLEGE UNION ELECTIONS ${esc(year)}</div>
-                <div class="placard-badge-title">OFFICIAL COUNTING TABLE SEQUENCE PLACARD</div>
+                <div class="placard-badge-title">COUNTING SEQUENCE</div>
               </div>
               ${collegeLogo ? `<img src="${collegeLogo}" class="emblem-img" alt="Emblem">` : ''}
             </div>
           </div>
 
-          <!-- Table Meta Details Banner -->
+          <!-- Table Meta Details Banner (Table Number & Officials Squad only) -->
           <div class="table-meta-grid">
             <div class="meta-col-table">
               <div class="meta-label">STATUTORY COUNTING TABLE</div>
               <div class="table-giant-pill">TABLE ${tableNum}</div>
-              <div class="booth-sub-link">Polling Booth ${tableNum} &bull; ${totalTableRounds} Rounds Total</div>
-            </div>
-            <div class="meta-col-dept">
-              <div class="meta-label">VENUE ALLOCATION &amp; ELECTORS</div>
-              <div class="meta-dept-name">${esc(deptName)}</div>
-              <div class="meta-venue-txt">📍 <strong>Venue:</strong> ${esc(roomName)}</div>
-              <div class="meta-classes-txt" title="${esc(classesDesc)}">📚 <strong>Classes:</strong> ${esc(classesDesc)}</div>
-              <div class="meta-voters-txt">👥 <strong>Electors Allotted:</strong> ${voterCount > 0 ? voterCount : 'As per Marked Roll'}</div>
+              <div class="booth-sub-link">Polling Booth ${tableNum} &bull; ${totalTableRounds} Scheduled Rounds</div>
             </div>
             <div class="meta-col-officials">
               <div class="meta-label">TABLE OFFICIALS SQUAD</div>
@@ -1938,12 +1931,12 @@ export function printCountingTablePlacards(options = {}) {
                 <span class="officer-name">${esc(squad.sup)}</span>
               </div>
               <div class="official-sub-role">${esc(squad.supDesig)} ${squad.supDept ? `(${esc(squad.supDept)})` : ''}</div>
-              <div class="official-row" style="margin-top:2px;">
+              <div class="official-row" style="margin-top:4px;">
                 <span class="officer-role">Assistant:</span>
                 <span class="officer-name">${esc(squad.asst)}</span>
               </div>
               ${squad.off1 ? `
-                <div class="official-row" style="margin-top:2px;">
+                <div class="official-row" style="margin-top:4px;">
                   <span class="officer-role">Officer 1:</span>
                   <span class="officer-name">${esc(squad.off1)}</span>
                 </div>
@@ -1951,43 +1944,39 @@ export function printCountingTablePlacards(options = {}) {
             </div>
           </div>
 
-          <!-- Section 3: EXACT TABLE ROUND-BY-ROUND COUNTING SEQUENCE -->
+          <!-- Section 3: EXACT TABLE ROUND-BY-ROUND COUNTING SEQUENCE (2 Clean Columns: Round & Form, Post Title) -->
           <div class="section-container">
             <div class="section-title-bar navy-bar">
-              <span>📋 TABLE COUNTING SEQUENCE &bull; ROUND 1 TO UUC (AS SET IN MATRIX)</span>
+              <span>📋 TABLE COUNTING SEQUENCE &bull; ROUND 1 TO UUC</span>
               <span class="section-sub-badge">${totalTableRounds} SCHEDULED ROUNDS</span>
             </div>
             <table class="rounds-sequence-table">
               <thead>
                 <tr>
-                  <th style="width: 14%;">Round &amp; Form</th>
-                  <th style="width: 44%;">Election Post / Contesting Seat Title</th>
-                  <th style="width: 22%;">Bundling Target</th>
-                  <th style="width: 20%;">Audit Verification</th>
+                  <th style="width: 26%; text-align: center;">Round &amp; Form Serial</th>
+                  <th style="width: 74%;">Election Post / Contesting Seat Title</th>
                 </tr>
               </thead>
               <tbody>
                 ${tableRounds.map(r => {
                   if (r.isGap) {
                     return `
-                      <tr class="row-standby" style="background: #f8fafc; color: #64748b;">
-                        <td class="col-round">
-                          <span class="round-badge" style="background: #64748b; font-size: 5.5pt;">${esc(r.roundNum)}</span>
-                          <span class="serial-tag" style="color: #94a3b8;">—</span>
+                      <tr class="row-standby">
+                        <td class="col-round text-center">
+                          <span class="round-badge badge-standby">${esc(r.roundNum)}</span>
+                          <span class="serial-tag" style="background:#e2e8f0; border-color:#cbd5e1; color:#64748b;">—</span>
                         </td>
                         <td class="col-post">
-                          <div style="font-size: 6.2pt; color: #475569; font-style: italic;">
+                          <div class="standby-post-title">
                             ⏸️ ${esc(r.postName)}
                           </div>
                         </td>
-                        <td class="col-target" style="color: #94a3b8; font-size: 6pt;">—</td>
-                        <td class="col-audit" style="color: #94a3b8; font-size: 5.5pt; text-align: center;">Standby Interval</td>
                       </tr>
                     `;
                   }
                   return `
                     <tr class="${r.isUuc ? 'row-uuc' : ''}">
-                      <td class="col-round">
+                      <td class="col-round text-center">
                         <span class="round-badge ${r.isUuc ? 'badge-uuc' : ''}">${esc(r.roundNum)}</span>
                         <span class="serial-tag">${esc(r.serial)}</span>
                       </td>
@@ -1997,18 +1986,6 @@ export function printCountingTablePlacards(options = {}) {
                         </div>
                         ${r.isUuc ? '<div class="uuc-sub-note">⚠️ AWAIT RETURNING OFFICER CLEARANCE BEFORE COUNTING</div>' : ''}
                       </td>
-                      <td class="col-target">
-                        ${r.isUuc 
-                          ? '<strong class="txt-uuc-target">Special Dual-Seat Tally</strong><div class="target-sub">RO Clearance Only</div>' 
-                          : '<strong>25-Ballot Bundles</strong><div class="target-sub">+ Doubtful Tray</div>'
-                        }
-                      </td>
-                      <td class="col-audit">
-                        <div class="audit-grid">
-                          <span class="audit-box">[ ] Counted</span>
-                          <span class="audit-box">Sign: _____</span>
-                        </div>
-                      </td>
                     </tr>
                   `;
                 }).join('')}
@@ -2016,100 +1993,10 @@ export function printCountingTablePlacards(options = {}) {
             </table>
           </div>
 
-          <!-- Section 4: CRITICAL UUC STATUTORY DIRECTIVE -->
-          <div class="uuc-directive-card">
-            <div class="uuc-header">
-              <span class="uuc-alert-icon">🛑</span>
-              <span class="uuc-header-title">MANDATORY STATUTORY DIRECTIVE — RETURNING OFFICER CLEARANCE REQUIRED</span>
-              <span class="uuc-header-tag">STRICT COMPLIANCE</span>
-            </div>
-            <div class="uuc-body">
-              <div class="uuc-callout-strong">
-                DO NOT COUNT UUC BALLOTS WITHOUT EXPLICIT CLEARANCE FROM THE RETURNING OFFICER (RO).
-              </div>
-              <div class="uuc-directives-grid">
-                <div class="uuc-point">
-                  <strong>1. OPEN BOX &amp; PROCESS SEATS:</strong> Common ballot box and physical ballots may be opened for earlier rounds, but the UUC portion must NOT be counted yet.
-                </div>
-                <div class="uuc-point">
-                  <strong>2. CENTRAL CONSOLIDATION:</strong> Multi-candidate campus quota requires simultaneous hall-wide counting across all tables under RO supervision.
-                </div>
-                <div class="uuc-point">
-                  <strong>3. AWAIT RO INSTRUCTIONS:</strong> Count and record UUC votes ONLY after receiving explicit clearance and direction from the Returning Officer.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Section 5: Standard Operating Protocol for Counting Table Staff -->
-          <div class="section-container">
-            <div class="section-title-bar blue-bar">
-              <span>⚙️ STANDARD OPERATING INSTRUCTIONS FOR COUNTING TABLE OFFICIALS</span>
-              <span class="section-sub-badge">STATUTORY COMPLIANCE REQUIRED</span>
-            </div>
-            <div class="rules-grid">
-              <div class="rule-card">
-                <div class="rule-num">1</div>
-                <div class="rule-txt">
-                  <strong>Seal &amp; Account Audit:</strong> Before opening ballot box, verify Strip Seal &amp; Special Tag numbers against <em>Form 2</em> in front of Agents.
-                </div>
-              </div>
-              <div class="rule-card">
-                <div class="rule-num">2</div>
-                <div class="rule-txt">
-                  <strong>25-Ballot Bundles:</strong> Unfold ballots face up, verify statutory stamp, sort into neat bundles of exactly <strong>25 valid ballots</strong> tied with paper slips.
-                </div>
-              </div>
-              <div class="rule-card">
-                <div class="rule-num">3</div>
-                <div class="rule-txt">
-                  <strong>Zero Table Rejection:</strong> Table officials have <strong>no authority to reject ballots</strong>. Put all doubtful ballots into Doubtful Tray for RO.
-                </div>
-              </div>
-              <div class="rule-card">
-                <div class="rule-num">4</div>
-                <div class="rule-txt">
-                  <strong>Agent Perimeter:</strong> Agents must remain behind barrier. Agents may observe and record totals, but are <strong>strictly barred from touching ballots</strong>.
-                </div>
-              </div>
-              <div class="rule-card">
-                <div class="rule-num">5</div>
-                <div class="rule-txt">
-                  <strong>Sign-off &amp; Handover:</strong> Supervisor records scores in Form 6, obtains signatures of candidate agents, and personally carries signed return to RO Desk.
-                </div>
-              </div>
-              <div class="rule-card">
-                <div class="rule-num">6</div>
-                <div class="rule-txt">
-                  <strong>Hall Discipline:</strong> Mobile phones and unauthorized pens barred at tables. Only green/red pens of the Supervisor permitted for markings.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Section 6: Official Endorsement & Signatures Footer -->
-          <div class="footer-sign-box">
-            <div class="sign-col">
-              <div class="sign-line"></div>
-              <div class="sign-title">COUNTING ASSISTANT</div>
-              <div class="sign-sub">Signature &bull; Date &bull; Time</div>
-            </div>
-            <div class="sign-col">
-              <div class="sign-line"></div>
-              <div class="sign-title">COUNTING SUPERVISOR</div>
-              <div class="sign-sub">Signature &bull; Date &bull; Time Log</div>
-            </div>
-            <div class="sign-col">
-              <div class="sign-line"></div>
-              <div class="sign-title">COUNTING AGENT</div>
-              <div class="sign-sub">Candidate Representative</div>
-            </div>
-            <div class="sign-col ro-col">
-              <div class="sign-seal-stamp">OFFICIAL EMBOSS SEAL</div>
-              <div class="sign-line"></div>
-              <div class="sign-title">RETURNING OFFICER (RO)</div>
-              <div class="sign-sub">${esc(collegeName)}</div>
-            </div>
+          <!-- Prominent Statutory UUC Directive Callout Banner -->
+          <div class="uuc-callout-banner">
+            <span class="uuc-callout-icon">🛑</span>
+            <span class="uuc-callout-text">DO NOT COUNT UUC BALLOTS WITHOUT EXPLICIT CLEARANCE FROM THE RETURNING OFFICER (RO).</span>
           </div>
 
         </div>
@@ -2297,346 +2184,331 @@ export function printCountingTablePlacards(options = {}) {
 
     .table-meta-grid {
       display: grid;
-      grid-template-columns: 1.25fr 2.3fr 2.15fr;
-      gap: 5px;
-      margin-top: 1.5mm;
-      border: 1.5px solid #0f172a;
+      grid-template-columns: 1.15fr 1.85fr;
+      gap: 8px;
+      margin-top: 2.5mm;
+      border: 2px solid #0f172a;
       background: #ffffff;
-      border-radius: 4px;
-      padding: 3.5px;
+      border-radius: 6px;
+      padding: 6px;
     }
     .meta-col-table {
       background: #0f172a;
       color: #ffffff;
-      padding: 5px;
-      border-radius: 3px;
+      padding: 8px 12px;
+      border-radius: 4px;
       text-align: center;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
     }
-    .meta-col-dept {
-      padding: 3px 5px;
-      border-right: 1px solid #cbd5e1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
+    .meta-label {
+      font-size: 6.5pt;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .table-giant-pill {
+      font-size: 24pt;
+      font-weight: 900;
+      letter-spacing: 1px;
+      color: #facc15;
+      line-height: 1.1;
+    }
+    .booth-sub-link {
+      font-size: 7.5pt;
+      font-weight: 700;
+      color: #94a3b8;
+      margin-top: 3px;
     }
     .meta-col-officials {
-      padding: 3px 5px;
+      padding: 6px 12px;
       display: flex;
       flex-direction: column;
       justify-content: center;
       background: #f8fafc;
-      border-radius: 3px;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
     }
-    .meta-label {
-      font-size: 5.2pt;
-      font-weight: 800;
-      letter-spacing: 0.4px;
-      color: #94a3b8;
-      text-transform: uppercase;
-      margin-bottom: 0.5px;
-    }
-    .table-giant-pill {
-      font-size: 18pt;
-      font-weight: 900;
-      letter-spacing: 0.5px;
-      color: #facc15;
-      line-height: 1;
-    }
-    .booth-sub-link {
-      font-size: 6.2pt;
-      font-weight: 700;
-      color: #94a3b8;
-      margin-top: 1.5px;
-    }
-    .meta-dept-name {
-      font-size: 10pt;
-      font-weight: 900;
-      color: #0f172a;
-      line-height: 1.1;
-    }
-    .meta-venue-txt, .meta-classes-txt, .meta-voters-txt {
-      font-size: 6.5pt;
-      color: #334155;
-      margin-top: 1px;
-      line-height: 1.15;
+    .meta-col-officials .meta-label {
+      color: #64748b;
     }
     .official-row {
       display: flex;
       align-items: baseline;
-      gap: 3px;
-      font-size: 6.8pt;
-      line-height: 1.15;
+      gap: 6px;
+      font-size: 8.5pt;
+      line-height: 1.25;
     }
     .officer-role {
       font-weight: 800;
       color: #475569;
-      width: 55px;
+      width: 72px;
       flex-shrink: 0;
     }
     .officer-name {
       font-weight: 900;
       color: #0f172a;
+      font-size: 9pt;
     }
     .official-sub-role {
-      font-size: 5.5pt;
+      font-size: 7pt;
       color: #64748b;
-      margin-left: 58px;
-      line-height: 1;
+      margin-left: 78px;
+      line-height: 1.1;
     }
 
     .section-container {
-      margin-top: 1.5mm;
+      margin-top: 3mm;
+      flex: 1;
     }
     .section-title-bar {
       color: #fff;
-      font-size: 6.8pt;
+      font-size: 8pt;
       font-weight: 900;
-      letter-spacing: 0.4px;
-      padding: 2.5px 5px;
-      border-radius: 3px 3px 0 0;
+      letter-spacing: 0.5px;
+      padding: 4px 8px;
+      border-radius: 4px 4px 0 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .navy-bar { background: #0f172a; }
-    .blue-bar { background: #1e3a8a; }
     .section-sub-badge {
-      font-size: 5.2pt;
+      font-size: 6.5pt;
       font-weight: 800;
       background: rgba(255,255,255,0.2);
-      padding: 1px 4px;
-      border-radius: 2px;
+      padding: 1.5px 6px;
+      border-radius: 3px;
     }
 
     .rounds-sequence-table {
       width: 100%;
       border-collapse: collapse;
-      border: 1.5px solid #0f172a;
+      border: 2px solid #0f172a;
       border-top: none;
       background: #ffffff;
-      font-size: 6.8pt;
+      font-size: 9.5pt;
     }
     .rounds-sequence-table th {
       background: #e2e8f0;
       color: #0f172a;
-      font-size: 6.2pt;
-      font-weight: 800;
+      font-size: 8pt;
+      font-weight: 900;
       text-transform: uppercase;
-      padding: 2.5px 4px;
+      padding: 5px 8px;
       border: 1px solid #cbd5e1;
-      text-align: left;
+      letter-spacing: 0.3px;
     }
     .rounds-sequence-table td {
-      padding: 2.5px 4px;
+      padding: 5px 8px;
       border: 1px solid #cbd5e1;
       vertical-align: middle;
-      line-height: 1.15;
+      line-height: 1.2;
+    }
+    .rounds-sequence-table tbody tr:nth-child(even) {
+      background: #f8fafc;
     }
     .row-uuc {
       background: #fffbeb !important;
-      border-left: 3px solid #d97706 !important;
+      border-left: 4px solid #d97706 !important;
     }
     .col-round {
       white-space: nowrap;
     }
+    .text-center { text-align: center; }
     .round-badge {
       display: inline-block;
-      font-size: 6pt;
+      font-size: 8pt;
       font-weight: 900;
       background: #0f172a;
       color: #fff;
-      padding: 1px 4px;
-      border-radius: 2px;
-      margin-right: 3px;
+      padding: 2px 7px;
+      border-radius: 3px;
+      margin-right: 5px;
+      letter-spacing: 0.2px;
     }
     .badge-uuc { background: #b45309; }
+    .badge-standby { background: #64748b; }
     .serial-tag {
-      font-size: 6pt;
-      font-weight: 800;
+      font-size: 8.5pt;
+      font-weight: 900;
       color: #0369a1;
       font-family: monospace;
+      background: #e0f2fe;
+      padding: 1.5px 6px;
+      border-radius: 3px;
+      border: 1px solid #bae6fd;
     }
     .post-title {
-      font-size: 7pt;
+      font-size: 9.5pt;
       font-weight: 900;
       color: #0f172a;
-    }
-    .post-uuc { color: #b45309; }
-    .uuc-sub-note {
-      font-size: 5.5pt;
-      font-weight: 800;
-      color: #b91c1c;
       letter-spacing: 0.2px;
     }
-    .txt-uuc-target {
+    .post-uuc {
       color: #b45309;
+      font-size: 10.5pt;
     }
-    .target-sub {
-      font-size: 5.5pt;
-      color: #64748b;
-    }
-    .audit-grid {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 4px;
-      font-size: 5.8pt;
-      color: #475569;
-    }
-    .audit-box {
-      font-family: monospace;
-    }
-
-    .uuc-directive-card {
-      margin-top: 1.5mm;
-      border: 1.5px solid #b91c1c;
-      background: #fff5f5;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .uuc-header {
-      background: #b91c1c;
-      color: #ffffff;
-      padding: 2.5px 5px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 5px;
-    }
-    .uuc-alert-icon { font-size: 9pt; }
-    .uuc-header-title {
-      font-size: 6.8pt;
+    .uuc-sub-note {
+      font-size: 7pt;
       font-weight: 900;
-      letter-spacing: 0.4px;
-      flex: 1;
+      color: #b91c1c;
+      letter-spacing: 0.3px;
+      margin-top: 2px;
     }
-    .uuc-header-tag {
-      background: #fee2e2;
-      color: #991b1b;
-      font-size: 5.2pt;
-      font-weight: 900;
-      padding: 1px 4px;
-      border-radius: 2px;
-    }
-    .uuc-body {
-      padding: 3px 5px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .uuc-callout-strong {
-      background: #fee2e2;
-      border: 1px solid #f87171;
-      border-radius: 3px;
-      padding: 3px 6px;
+    .standby-post-title {
       font-size: 8pt;
-      font-weight: 900;
-      color: #991b1b;
-      text-align: center;
-      letter-spacing: 0.2px;
+      color: #475569;
+      font-style: italic;
     }
-    .uuc-directives-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 3px;
-      font-size: 5.8pt;
-      line-height: 1.15;
-      color: #450a0a;
-      margin-top: 1.5px;
+    .row-standby {
+      background: #f1f5f9 !important;
     }
-    .uuc-point {
-      background: #ffffff;
-      border: 1px solid #fecaca;
-      border-radius: 3px;
-      padding: 2px 3.5px;
-    }
-    .uuc-point strong { color: #991b1b; }
 
-    .rules-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 3px;
-      border: 1.5px solid #1e3a8a;
-      border-top: none;
-      background: #fff;
-      padding: 2.5px;
-    }
-    .rule-card {
-      background: #f8fafc;
-      border: 1px solid #cbd5e1;
-      border-radius: 3px;
-      padding: 2.5px 3.5px;
-      display: flex;
-      gap: 3px;
-      font-size: 5.8pt;
-      line-height: 1.15;
-    }
-    .rule-num {
-      width: 13px;
-      height: 13px;
-      border-radius: 50%;
-      background: #1e3a8a;
-      color: #fff;
-      font-size: 6pt;
-      font-weight: 900;
+    .uuc-callout-banner {
+      margin-top: 3mm;
+      background: #fee2e2;
+      border: 2px solid #b91c1c;
+      border-radius: 6px;
+      padding: 8px 14px;
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0;
-      margin-top: 0.5px;
+      gap: 10px;
+      box-shadow: 0 2px 6px rgba(185, 28, 28, 0.15);
     }
-    .rule-txt { color: #1e293b; }
-    .rule-txt strong { color: #0f172a; }
-
-    .footer-sign-box {
-      border: 1.5px solid #0f172a;
-      background: #f8fafc;
-      border-radius: 4px;
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1.2fr;
-      gap: 5px;
-      padding: 3px 5px;
-      margin-top: 1.5mm;
+    .uuc-callout-icon {
+      font-size: 16pt;
+      line-height: 1;
     }
-    .sign-col {
+    .uuc-callout-text {
+      font-size: 10.5pt;
+      font-weight: 900;
+      color: #991b1b;
+      letter-spacing: 0.3px;
       text-align: center;
+    }
+
+    .screen-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: #0f172a;
+      color: #fff;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .topbar-btn {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      font-weight: 700;
+      font-size: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .topbar-btn:hover { background: #1d4ed8; }
+
+    .placard-page {
+      width: 202mm;
+      height: 289mm;
+      max-height: 289mm;
+      margin: 4mm auto;
+      background: #ffffff;
+      padding: 0;
       display: flex;
       flex-direction: column;
-      justify-content: flex-end;
+      overflow: hidden;
+      box-sizing: border-box;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
     }
-    .sign-line {
-      border-bottom: 1px dotted #475569;
-      height: 15px;
-      margin-bottom: 1.5px;
+
+    @media print {
+      .placard-page {
+        width: 100% !important;
+        height: 289mm !important;
+        max-height: 289mm !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+      }
     }
-    .sign-title {
-      font-size: 6.2pt;
+
+    .placard-frame {
+      border: 2px solid #0f172a;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 2.5mm 3.5mm;
+      box-sizing: border-box;
+    }
+
+    .header-box {
+      border-bottom: 1.5px solid #0f172a;
+      padding-bottom: 1.5mm;
+      background: #f8fafc;
+      padding-top: 0.5mm;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .emblem-img {
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
+    }
+    .header-center {
+      text-align: center;
+      flex: 1;
+    }
+    .institution-title {
+      font-size: 12pt;
       font-weight: 900;
+      letter-spacing: 0.3px;
       color: #0f172a;
-      letter-spacing: 0.2px;
+      line-height: 1.1;
     }
-    .sign-sub {
-      font-size: 5pt;
-      color: #64748b;
+    .institution-subtitle {
+      font-size: 6.8pt;
+      font-weight: 600;
+      color: #475569;
+      margin-top: 0.5px;
     }
-    .ro-col {
-      background: #fff;
-      border: 1px dashed #94a3b8;
-      border-radius: 3px;
-      padding: 1.5px 3.5px;
-    }
-    .sign-seal-stamp {
-      font-size: 4.8pt;
+    .election-banner-title {
+      font-size: 8pt;
       font-weight: 800;
-      color: #94a3b8;
-      letter-spacing: 0.5px;
-      margin-bottom: -1px;
+      letter-spacing: 0.8px;
+      color: #1e3a8a;
+      margin-top: 1px;
     }
-  </style>
+    .placard-badge-title {
+      display: inline-block;
+      background: #0f172a;
+      color: #ffffff;
+      font-size: 7.5pt;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      padding: 1px 10px;
+      border-radius: 3px;
+      margin-top: 1.5px;
+    }
+
+      </style>
 </head>
 <body>
 
