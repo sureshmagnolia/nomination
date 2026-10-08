@@ -1717,6 +1717,7 @@ export function openDepartmentClassPosterPdf() {
  * Dynamically renders and prints Official Counting Table Sequence Placards (A4 Portrait)
  * for the exact number of tables set in the system (e.g. 12 tables).
  */
+
 export function printCountingTablePlacards(options = {}) {
   const settings = options.settings || {};
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME || 'GOVERNMENT COLLEGE CHITTUR';
@@ -1725,51 +1726,60 @@ export function printCountingTablePlacards(options = {}) {
   const year = settings.electionYear || new Date().getFullYear().toString();
   const collegeLogo = settings.collegeLogo || CONFIG.COLLEGE_LOGO || '';
 
-  // Get configured booths/tables from options or fallback to OFFICIAL_COUNTING_ROSTER_BACKUP (12 tables)
-  let boothsList = Array.isArray(options.booths) && options.booths.length > 0 ? options.booths : [];
-  if (!boothsList.length) {
-    boothsList = OFFICIAL_COUNTING_ROSTER_BACKUP.map(t => ({
-      boothNumber: t.tableNumber,
-      roomName: t.roomName || `Table ${t.tableNumber}`,
-      classes: [],
-      dept: t.supervisor?.department || ''
-    }));
-  }
+  // All configured booths/tables
+  const allBooths = Array.isArray(options.booths) && options.booths.length > 0
+    ? options.booths
+    : OFFICIAL_COUNTING_ROSTER_BACKUP.map(t => ({
+        boothNumber: t.tableNumber,
+        roomName: t.roomName || `Table ${t.tableNumber}`,
+        classes: [],
+        dept: t.supervisor?.department || ''
+      }));
 
-  // Filter to single table if requested
+  // Target tables to print
+  let boothsList = [...allBooths];
   const targetTable = options.tableNumber && options.tableNumber !== 'all' ? String(options.tableNumber) : null;
   if (targetTable) {
     boothsList = boothsList.filter(b => String(b.boothNumber || b.tableNumber) === targetTable);
   }
 
   if (!boothsList.length) {
-    alert('No counting tables configured in the system to print.');
+    alert('No counting tables found to print.');
     return;
   }
 
+  const rawMatrix = options.matrix || options.countingMatrixData || options.savedMatrix || null;
+  const matrix = Array.isArray(rawMatrix) 
+    ? rawMatrix 
+    : (Array.isArray(rawMatrix?.matrix) ? rawMatrix.matrix : null);
+  const formSerials = (options.formSerials && typeof options.formSerials === 'object') 
+    ? options.formSerials 
+    : (rawMatrix?.formSerials || {});
+  const roundLabels = Array.isArray(options.roundLabels) 
+    ? options.roundLabels 
+    : (Array.isArray(rawMatrix?.roundLabels) ? rawMatrix.roundLabels : null);
   const countingTeams = Array.isArray(options.countingTeams) ? options.countingTeams : [];
   const nominalRoll = Array.isArray(options.nominalRoll) ? options.nominalRoll : [];
+  const postsList = Array.isArray(options.posts) ? options.posts : [];
 
   // Helper to resolve official squad for a table
   const getSquadForTable = (tableNum) => {
-    // 1. Check live countingTeams
     const live = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(tableNum));
     if (live) {
       const sup = live.supervisorName || (typeof live.supervisor === 'string' ? live.supervisor : live.supervisor?.name) || 'Senior Faculty (HoD)';
-      const supDesig = live.supervisor?.designation || 'Presiding / Supervisor';
+      const supDesig = live.supervisor?.designation || 'Counting Supervisor';
       const supDept = live.supervisor?.department || '';
       const asst = live.assistantName || (typeof live.assistant === 'string' ? live.assistant : live.assistant?.name) || live.countingAssistant?.name || 'Senior Staff';
       const asstDesig = live.assistant?.designation || live.countingAssistant?.designation || 'Counting Assistant';
       const off1 = live.countingOfficer1?.name || (Array.isArray(live.countingOfficers) && live.countingOfficers[0]?.name) || '';
       return { sup, supDesig, supDept, asst, asstDesig, off1 };
     }
-    // 2. Fallback to OFFICIAL_COUNTING_ROSTER_BACKUP
     const backup = OFFICIAL_COUNTING_ROSTER_BACKUP.find(t => String(t.tableNumber) === String(tableNum));
     if (backup) {
       const sup = backup.supervisor?.name || 'Senior Faculty';
       const supDesig = backup.supervisor?.designation || 'Associate Professor';
       const supDept = backup.supervisor?.department || '';
-      const asst = backup.countingAssistant?.name || 'Senior Clerk';
+      const asst = backup.countingAssistant?.name || 'Senior Staff';
       const asstDesig = backup.countingAssistant?.designation || 'Counting Assistant';
       const off1 = backup.countingOfficer1?.name || '';
       return { sup, supDesig, supDept, asst, asstDesig, off1 };
@@ -1795,8 +1805,16 @@ export function printCountingTablePlacards(options = {}) {
     }).length;
   };
 
+  const isUucPost = (p) => {
+    if (!p) return false;
+    const str = String(typeof p === 'string' ? p : (p.post || p.name || '')).toUpperCase();
+    return str.includes('UUC') || str.includes('UNIVERSITY UNION COUNCILLOR') || str.includes('COUNCILLOR');
+  };
+
   const pagesHtml = boothsList.map((b, idx) => {
     const tableNum = b.boothNumber || b.tableNumber || (idx + 1);
+    const origT = allBooths.findIndex(booth => String(booth.boothNumber || booth.tableNumber) === String(tableNum));
+    const tIndex = origT >= 0 ? origT : idx;
     const roomName = b.roomName || b.room || `Table ${tableNum}`;
     const squad = getSquadForTable(tableNum);
     const voterCount = getVoterCount(b);
@@ -1804,42 +1822,82 @@ export function printCountingTablePlacards(options = {}) {
     const classesDesc = classesList.length ? classesList.join(', ') : 'Allotted Electoral Cohort';
     const deptName = b.dept || squad.supDept || 'Academic Department';
 
-    // 4 statutory stages
-    const stages = [
-      {
-        stage: 'Stage 1',
-        code: 'A-Series',
-        post: `Department Association Secretary (${deptName})`,
-        desc: 'Department Student Association',
-        target: '25-Ballot Bundles',
-        form: `Form 5 / Form 6 (Table ${tableNum})`
-      },
-      {
-        stage: 'Stage 2',
-        code: 'R-Series',
-        post: 'Class / Year Representatives (UG / PG)',
-        desc: 'Class / Cohort Representatives',
-        target: '25-Ballot Bundles',
-        form: `Form 5 / Form 6 (Table ${tableNum})`
-      },
-      {
-        stage: 'Stage 3',
-        code: 'G-Series',
-        post: 'General Union Executive Seats',
-        desc: 'Chairman, Vice Chairman, Gen. Secretary, Joint Sec., Arts Club, Student Editor, Sports',
-        target: '25-Ballot Bundles',
-        form: `Form 5 / Form 6 (Table ${tableNum})`
-      },
-      {
-        stage: 'Stage 4',
-        code: 'UUC-Series',
-        post: 'University Union Councillor (UUC)',
-        desc: 'Statutory 2-Seat Campus Quota',
-        target: 'Special Multi-Vote Tally (Count ONLY on RO Clearance)',
-        form: `Form 6-T / Form 7 (Table ${tableNum})`,
-        isUuc: true
-      }
-    ];
+    // Build the exact round-by-round sequence for this table from Counting Matrix
+    const tableRounds = [];
+    const matrixRow = (matrix && Array.isArray(matrix[tIndex])) ? matrix[tIndex] : null;
+
+    if (matrixRow && matrixRow.length > 0) {
+      let prevRoundNum = 0;
+      matrixRow.forEach((post, rIdx) => {
+        const curRoundNum = rIdx + 1;
+        if (!post) return;
+
+        // If there was an idle gap in the matrix between earlier rounds and UUC / next post
+        if (prevRoundNum > 0 && curRoundNum > prevRoundNum + 1) {
+          const gapStart = prevRoundNum + 1;
+          const gapEnd = curRoundNum - 1;
+          const gapLabel = gapStart === gapEnd ? `Round ${gapStart}` : `Rounds ${gapStart}–${gapEnd}`;
+          tableRounds.push({
+            isGap: true,
+            roundNum: gapLabel,
+            roundLabel: gapLabel,
+            postName: 'Table Standby & Reconciliation (No seat allotted for this table &bull; Await RO call for next round)',
+            serial: '—',
+            isUuc: false
+          });
+        }
+        prevRoundNum = curRoundNum;
+
+        const pName = String(typeof post === 'string' ? post : (post.post || post.name || '')).trim();
+        if (!pName) return;
+        const isUuc = isUucPost(pName);
+        const rLabel = (roundLabels && roundLabels[rIdx]) ? roundLabels[rIdx] : `Round ${curRoundNum}`;
+        const rawSerial = (formSerials && (formSerials[`${tIndex}-${rIdx}`] || formSerials[`${tableNum}-${curRoundNum}`])) || '';
+        const serial = rawSerial ? (String(rawSerial).startsWith('#') ? rawSerial : `#${rawSerial}`) : `#${tableNum}-${curRoundNum}`;
+
+        tableRounds.push({
+          isGap: false,
+          roundNum: `Round ${curRoundNum}`,
+          roundNumVal: curRoundNum,
+          roundLabel: rLabel,
+          postName: pName,
+          serial,
+          isUuc
+        });
+      });
+    }
+
+    // Fallback: If matrix not saved yet, build statutory rounds dynamically
+    if (!tableRounds.length && postsList.length > 0) {
+      const uuc = postsList.filter(p => isUucPost(p));
+      const nonUuc = postsList.filter(p => !isUucPost(p));
+      let rCounter = 1;
+      nonUuc.forEach(p => {
+        const pName = String(p?.post || p?.name || p).trim();
+        tableRounds.push({
+          roundNum: rCounter,
+          roundLabel: `Round ${rCounter}`,
+          postName: pName,
+          serial: `${tableNum}-${rCounter}`,
+          isUuc: false
+        });
+        rCounter++;
+      });
+      uuc.forEach(p => {
+        const pName = String(p?.post || p?.name || p).trim();
+        tableRounds.push({
+          roundNum: rCounter,
+          roundLabel: `Round ${rCounter} (UUC)`,
+          postName: pName,
+          serial: `${tableNum}-${rCounter}`,
+          isUuc: true
+        });
+        rCounter++;
+      });
+    }
+
+    // Total rounds count for this table
+    const totalTableRounds = tableRounds.length;
 
     return `
       <div class="placard-page ${idx < boothsList.length - 1 ? 'page-break' : ''}" id="table-${tableNum}">
@@ -1864,10 +1922,10 @@ export function printCountingTablePlacards(options = {}) {
             <div class="meta-col-table">
               <div class="meta-label">STATUTORY COUNTING TABLE</div>
               <div class="table-giant-pill">TABLE ${tableNum}</div>
-              <div class="booth-sub-link">Corresponding Polling Booth ${tableNum}</div>
+              <div class="booth-sub-link">Polling Booth ${tableNum} &bull; ${totalTableRounds} Rounds Total</div>
             </div>
             <div class="meta-col-dept">
-              <div class="meta-label">ALLOCATED VENUE &amp; ELECTORS</div>
+              <div class="meta-label">VENUE ALLOCATION &amp; ELECTORS</div>
               <div class="meta-dept-name">${esc(deptName)}</div>
               <div class="meta-venue-txt">📍 <strong>Venue:</strong> ${esc(roomName)}</div>
               <div class="meta-classes-txt" title="${esc(classesDesc)}">📚 <strong>Classes:</strong> ${esc(classesDesc)}</div>
@@ -1893,40 +1951,67 @@ export function printCountingTablePlacards(options = {}) {
             </div>
           </div>
 
-          <!-- Section 3: Statutory Counting Sequence -->
+          <!-- Section 3: EXACT TABLE ROUND-BY-ROUND COUNTING SEQUENCE -->
           <div class="section-container">
             <div class="section-title-bar navy-bar">
-              <span>📊 STATUTORY COUNTING SEQUENCE &amp; BUNDLING TARGETS</span>
-              <span class="section-sub-badge">STRICT STAGE-WISE ORDER</span>
+              <span>📋 TABLE COUNTING SEQUENCE &bull; ROUND 1 TO UUC (AS SET IN MATRIX)</span>
+              <span class="section-sub-badge">${totalTableRounds} SCHEDULED ROUNDS</span>
             </div>
-            <table class="stages-table">
+            <table class="rounds-sequence-table">
               <thead>
                 <tr>
-                  <th style="width: 14%;">Stage &amp; Code</th>
-                  <th style="width: 44%;">Post / Seat Title &amp; Jurisdiction</th>
-                  <th style="width: 20%;">Bundling Target</th>
-                  <th style="width: 22%;">Statutory Sheet</th>
+                  <th style="width: 14%;">Round &amp; Form</th>
+                  <th style="width: 44%;">Election Post / Contesting Seat Title</th>
+                  <th style="width: 22%;">Bundling Target</th>
+                  <th style="width: 20%;">Audit Verification</th>
                 </tr>
               </thead>
               <tbody>
-                ${stages.map(st => `
-                  <tr class="${st.isUuc ? 'row-uuc' : ''}">
-                    <td>
-                      <span class="stage-tag ${st.isUuc ? 'tag-uuc' : ''}">${st.stage}</span>
-                      <span class="code-pill ${st.isUuc ? 'code-uuc' : ''}">${st.code}</span>
-                    </td>
-                    <td>
-                      <div class="post-title ${st.isUuc ? 'post-uuc' : ''}">${st.post}</div>
-                      <div class="tier-desc">${st.desc}</div>
-                    </td>
-                    <td>
-                      <strong>${st.target}</strong>
-                    </td>
-                    <td>
-                      <strong>${st.form}</strong>
-                    </td>
-                  </tr>
-                `).join('')}
+                ${tableRounds.map(r => {
+                  if (r.isGap) {
+                    return `
+                      <tr class="row-standby" style="background: #f8fafc; color: #64748b;">
+                        <td class="col-round">
+                          <span class="round-badge" style="background: #64748b; font-size: 5.5pt;">${esc(r.roundNum)}</span>
+                          <span class="serial-tag" style="color: #94a3b8;">—</span>
+                        </td>
+                        <td class="col-post">
+                          <div style="font-size: 6.2pt; color: #475569; font-style: italic;">
+                            ⏸️ ${esc(r.postName)}
+                          </div>
+                        </td>
+                        <td class="col-target" style="color: #94a3b8; font-size: 6pt;">—</td>
+                        <td class="col-audit" style="color: #94a3b8; font-size: 5.5pt; text-align: center;">Standby Interval</td>
+                      </tr>
+                    `;
+                  }
+                  return `
+                    <tr class="${r.isUuc ? 'row-uuc' : ''}">
+                      <td class="col-round">
+                        <span class="round-badge ${r.isUuc ? 'badge-uuc' : ''}">${esc(r.roundNum)}</span>
+                        <span class="serial-tag">${esc(r.serial)}</span>
+                      </td>
+                      <td class="col-post">
+                        <div class="post-title ${r.isUuc ? 'post-uuc' : ''}">
+                          ${r.isUuc ? '🛑 ' : ''}${esc(r.postName)}
+                        </div>
+                        ${r.isUuc ? '<div class="uuc-sub-note">⚠️ AWAIT RETURNING OFFICER CLEARANCE BEFORE COUNTING</div>' : ''}
+                      </td>
+                      <td class="col-target">
+                        ${r.isUuc 
+                          ? '<strong class="txt-uuc-target">Special Dual-Seat Tally</strong><div class="target-sub">RO Clearance Only</div>' 
+                          : '<strong>25-Ballot Bundles</strong><div class="target-sub">+ Doubtful Tray</div>'
+                        }
+                      </td>
+                      <td class="col-audit">
+                        <div class="audit-grid">
+                          <span class="audit-box">[ ] Counted</span>
+                          <span class="audit-box">Sign: _____</span>
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
               </tbody>
             </table>
           </div>
@@ -1944,7 +2029,7 @@ export function printCountingTablePlacards(options = {}) {
               </div>
               <div class="uuc-directives-grid">
                 <div class="uuc-point">
-                  <strong>1. OPEN BOX &amp; PROCESS SEATS:</strong> Common ballot box and physical ballots may be opened for Stages 1, 2 &amp; 3, but the UUC portion must NOT be counted yet.
+                  <strong>1. OPEN BOX &amp; PROCESS SEATS:</strong> Common ballot box and physical ballots may be opened for earlier rounds, but the UUC portion must NOT be counted yet.
                 </div>
                 <div class="uuc-point">
                   <strong>2. CENTRAL CONSOLIDATION:</strong> Multi-candidate campus quota requires simultaneous hall-wide counting across all tables under RO supervision.
@@ -1966,37 +2051,37 @@ export function printCountingTablePlacards(options = {}) {
               <div class="rule-card">
                 <div class="rule-num">1</div>
                 <div class="rule-txt">
-                  <strong>Seal &amp; Account Audit:</strong> Before opening ballot box, verify Strip Seal &amp; Special Tag numbers against <em>Form 2 (Ballot Paper Account)</em> in the presence of Counting Agents.
+                  <strong>Seal &amp; Account Audit:</strong> Before opening ballot box, verify Strip Seal &amp; Special Tag numbers against <em>Form 2</em> in front of Agents.
                 </div>
               </div>
               <div class="rule-card">
                 <div class="rule-num">2</div>
                 <div class="rule-txt">
-                  <strong>25-Ballot Standard Bundles:</strong> Unfold ballots face up, verify statutory stamp, and sort into neat bundles of exactly <strong>25 valid ballots</strong>, tied securely with paper slips.
+                  <strong>25-Ballot Bundles:</strong> Unfold ballots face up, verify statutory stamp, sort into neat bundles of exactly <strong>25 valid ballots</strong> tied with paper slips.
                 </div>
               </div>
               <div class="rule-card">
                 <div class="rule-num">3</div>
                 <div class="rule-txt">
-                  <strong>Zero Table Rejection:</strong> Table officials have <strong>no authority to reject ballots</strong>. Put all doubtful ballots into the <em>Doubtful Tray</em> for sole adjudication by the RO.
+                  <strong>Zero Table Rejection:</strong> Table officials have <strong>no authority to reject ballots</strong>. Put all doubtful ballots into Doubtful Tray for RO.
                 </div>
               </div>
               <div class="rule-card">
                 <div class="rule-num">4</div>
                 <div class="rule-txt">
-                  <strong>Agent Perimeter Discipline:</strong> Counting agents must remain behind the table barrier. Agents may observe and note totals, but are <strong>strictly prohibited from touching ballots</strong>.
+                  <strong>Agent Perimeter:</strong> Agents must remain behind barrier. Agents may observe and record totals, but are <strong>strictly barred from touching ballots</strong>.
                 </div>
               </div>
               <div class="rule-card">
                 <div class="rule-num">5</div>
                 <div class="rule-txt">
-                  <strong>Sign-off &amp; Handover:</strong> Supervisor records scores in Form 6, obtains signatures of candidate agents, and personally carries the signed return to the central RO Tabulation Desk.
+                  <strong>Sign-off &amp; Handover:</strong> Supervisor records scores in Form 6, obtains signatures of candidate agents, and personally carries signed return to RO Desk.
                 </div>
               </div>
               <div class="rule-card">
                 <div class="rule-num">6</div>
                 <div class="rule-txt">
-                  <strong>Secrecy &amp; Prohibitions:</strong> Mobile phones, cameras, and unauthorized pens are strictly barred at counting tables. Only green/red pens of the Supervisor are permitted for marking.
+                  <strong>Hall Discipline:</strong> Mobile phones and unauthorized pens barred at tables. Only green/red pens of the Supervisor permitted for markings.
                 </div>
               </div>
             </div>
@@ -2091,8 +2176,8 @@ export function printCountingTablePlacards(options = {}) {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: #e2e8f0;
       color: #0f172a;
-      line-height: 1.25;
-      font-size: 8.5pt;
+      line-height: 1.2;
+      font-size: 8pt;
     }
 
     .screen-topbar {
@@ -2101,7 +2186,7 @@ export function printCountingTablePlacards(options = {}) {
       z-index: 1000;
       background: #0f172a;
       color: #fff;
-      padding: 10px 20px;
+      padding: 8px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -2111,7 +2196,7 @@ export function printCountingTablePlacards(options = {}) {
       background: #2563eb;
       color: #fff;
       border: none;
-      padding: 7px 14px;
+      padding: 6px 14px;
       font-weight: 700;
       font-size: 12px;
       border-radius: 6px;
@@ -2126,7 +2211,7 @@ export function printCountingTablePlacards(options = {}) {
       width: 202mm;
       height: 289mm;
       max-height: 289mm;
-      margin: 6mm auto;
+      margin: 4mm auto;
       background: #ffffff;
       padding: 0;
       display: flex;
@@ -2147,20 +2232,20 @@ export function printCountingTablePlacards(options = {}) {
     }
 
     .placard-frame {
-      border: 2.5px solid #0f172a;
+      border: 2px solid #0f172a;
       height: 100%;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 3mm 3.5mm;
+      padding: 2.5mm 3.5mm;
       box-sizing: border-box;
     }
 
     .header-box {
-      border-bottom: 2px solid #0f172a;
-      padding-bottom: 2mm;
+      border-bottom: 1.5px solid #0f172a;
+      padding-bottom: 1.5mm;
       background: #f8fafc;
-      padding-top: 1mm;
+      padding-top: 0.5mm;
     }
     .header-top {
       display: flex;
@@ -2169,8 +2254,8 @@ export function printCountingTablePlacards(options = {}) {
       gap: 8px;
     }
     .emblem-img {
-      width: 48px;
-      height: 48px;
+      width: 44px;
+      height: 44px;
       object-fit: contain;
       filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
     }
@@ -2179,51 +2264,51 @@ export function printCountingTablePlacards(options = {}) {
       flex: 1;
     }
     .institution-title {
-      font-size: 13pt;
+      font-size: 12pt;
       font-weight: 900;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.3px;
       color: #0f172a;
       line-height: 1.1;
     }
     .institution-subtitle {
-      font-size: 7pt;
+      font-size: 6.8pt;
       font-weight: 600;
       color: #475569;
-      margin-top: 1px;
+      margin-top: 0.5px;
     }
     .election-banner-title {
-      font-size: 8.5pt;
+      font-size: 8pt;
       font-weight: 800;
-      letter-spacing: 1px;
+      letter-spacing: 0.8px;
       color: #1e3a8a;
-      margin-top: 2px;
+      margin-top: 1px;
     }
     .placard-badge-title {
       display: inline-block;
       background: #0f172a;
       color: #ffffff;
-      font-size: 8pt;
+      font-size: 7.5pt;
       font-weight: 900;
-      letter-spacing: 1px;
-      padding: 1.5px 12px;
+      letter-spacing: 0.8px;
+      padding: 1px 10px;
       border-radius: 3px;
-      margin-top: 2.5px;
+      margin-top: 1.5px;
     }
 
     .table-meta-grid {
       display: grid;
-      grid-template-columns: 1.3fr 2.2fr 2.1fr;
-      gap: 6px;
-      margin-top: 2mm;
-      border: 2px solid #0f172a;
+      grid-template-columns: 1.25fr 2.3fr 2.15fr;
+      gap: 5px;
+      margin-top: 1.5mm;
+      border: 1.5px solid #0f172a;
       background: #ffffff;
       border-radius: 4px;
-      padding: 4px;
+      padding: 3.5px;
     }
     .meta-col-table {
       background: #0f172a;
       color: #ffffff;
-      padding: 6px;
+      padding: 5px;
       border-radius: 3px;
       text-align: center;
       display: flex;
@@ -2232,14 +2317,14 @@ export function printCountingTablePlacards(options = {}) {
       align-items: center;
     }
     .meta-col-dept {
-      padding: 4px 6px;
+      padding: 3px 5px;
       border-right: 1px solid #cbd5e1;
       display: flex;
       flex-direction: column;
       justify-content: center;
     }
     .meta-col-officials {
-      padding: 4px 6px;
+      padding: 3px 5px;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -2247,49 +2332,49 @@ export function printCountingTablePlacards(options = {}) {
       border-radius: 3px;
     }
     .meta-label {
-      font-size: 5.5pt;
+      font-size: 5.2pt;
       font-weight: 800;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
       color: #94a3b8;
       text-transform: uppercase;
-      margin-bottom: 1px;
+      margin-bottom: 0.5px;
     }
     .table-giant-pill {
-      font-size: 20pt;
+      font-size: 18pt;
       font-weight: 900;
-      letter-spacing: 1px;
+      letter-spacing: 0.5px;
       color: #facc15;
       line-height: 1;
     }
     .booth-sub-link {
-      font-size: 6.5pt;
+      font-size: 6.2pt;
       font-weight: 700;
       color: #94a3b8;
-      margin-top: 2px;
+      margin-top: 1.5px;
     }
     .meta-dept-name {
-      font-size: 11pt;
+      font-size: 10pt;
       font-weight: 900;
       color: #0f172a;
       line-height: 1.1;
     }
     .meta-venue-txt, .meta-classes-txt, .meta-voters-txt {
-      font-size: 6.8pt;
+      font-size: 6.5pt;
       color: #334155;
-      margin-top: 1.5px;
+      margin-top: 1px;
       line-height: 1.15;
     }
     .official-row {
       display: flex;
       align-items: baseline;
-      gap: 4px;
-      font-size: 7.2pt;
-      line-height: 1.2;
+      gap: 3px;
+      font-size: 6.8pt;
+      line-height: 1.15;
     }
     .officer-role {
       font-weight: 800;
       color: #475569;
-      width: 58px;
+      width: 55px;
       flex-shrink: 0;
     }
     .officer-name {
@@ -2297,21 +2382,21 @@ export function printCountingTablePlacards(options = {}) {
       color: #0f172a;
     }
     .official-sub-role {
-      font-size: 5.8pt;
+      font-size: 5.5pt;
       color: #64748b;
-      margin-left: 62px;
+      margin-left: 58px;
       line-height: 1;
     }
 
     .section-container {
-      margin-top: 2mm;
+      margin-top: 1.5mm;
     }
     .section-title-bar {
       color: #fff;
-      font-size: 7.2pt;
+      font-size: 6.8pt;
       font-weight: 900;
-      letter-spacing: 0.5px;
-      padding: 3px 6px;
+      letter-spacing: 0.4px;
+      padding: 2.5px 5px;
       border-radius: 3px 3px 0 0;
       display: flex;
       justify-content: space-between;
@@ -2320,42 +2405,45 @@ export function printCountingTablePlacards(options = {}) {
     .navy-bar { background: #0f172a; }
     .blue-bar { background: #1e3a8a; }
     .section-sub-badge {
-      font-size: 5.5pt;
+      font-size: 5.2pt;
       font-weight: 800;
       background: rgba(255,255,255,0.2);
-      padding: 1px 5px;
+      padding: 1px 4px;
       border-radius: 2px;
     }
 
-    .stages-table {
+    .rounds-sequence-table {
       width: 100%;
       border-collapse: collapse;
       border: 1.5px solid #0f172a;
       border-top: none;
       background: #ffffff;
-      font-size: 7pt;
+      font-size: 6.8pt;
     }
-    .stages-table th {
+    .rounds-sequence-table th {
       background: #e2e8f0;
       color: #0f172a;
-      font-size: 6.5pt;
+      font-size: 6.2pt;
       font-weight: 800;
       text-transform: uppercase;
-      padding: 3px 5px;
+      padding: 2.5px 4px;
       border: 1px solid #cbd5e1;
       text-align: left;
     }
-    .stages-table td {
-      padding: 4px 5px;
+    .rounds-sequence-table td {
+      padding: 2.5px 4px;
       border: 1px solid #cbd5e1;
       vertical-align: middle;
-      line-height: 1.2;
+      line-height: 1.15;
     }
     .row-uuc {
       background: #fffbeb !important;
       border-left: 3px solid #d97706 !important;
     }
-    .stage-tag {
+    .col-round {
+      white-space: nowrap;
+    }
+    .round-badge {
       display: inline-block;
       font-size: 6pt;
       font-weight: 900;
@@ -2365,30 +2453,47 @@ export function printCountingTablePlacards(options = {}) {
       border-radius: 2px;
       margin-right: 3px;
     }
-    .tag-uuc { background: #b45309; }
-    .code-pill {
+    .badge-uuc { background: #b45309; }
+    .serial-tag {
       font-size: 6pt;
       font-weight: 800;
-      background: #e0f2fe;
       color: #0369a1;
-      padding: 1px 4px;
-      border-radius: 2px;
+      font-family: monospace;
     }
-    .code-uuc { background: #fef3c7; color: #92400e; }
     .post-title {
-      font-size: 7.5pt;
+      font-size: 7pt;
       font-weight: 900;
       color: #0f172a;
     }
     .post-uuc { color: #b45309; }
-    .tier-desc {
-      font-size: 5.8pt;
+    .uuc-sub-note {
+      font-size: 5.5pt;
+      font-weight: 800;
+      color: #b91c1c;
+      letter-spacing: 0.2px;
+    }
+    .txt-uuc-target {
+      color: #b45309;
+    }
+    .target-sub {
+      font-size: 5.5pt;
       color: #64748b;
+    }
+    .audit-grid {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      font-size: 5.8pt;
+      color: #475569;
+    }
+    .audit-box {
+      font-family: monospace;
     }
 
     .uuc-directive-card {
-      margin-top: 2mm;
-      border: 2px solid #b91c1c;
+      margin-top: 1.5mm;
+      border: 1.5px solid #b91c1c;
       background: #fff5f5;
       border-radius: 4px;
       overflow: hidden;
@@ -2396,29 +2501,29 @@ export function printCountingTablePlacards(options = {}) {
     .uuc-header {
       background: #b91c1c;
       color: #ffffff;
-      padding: 3px 6px;
+      padding: 2.5px 5px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 6px;
+      gap: 5px;
     }
-    .uuc-alert-icon { font-size: 10pt; }
+    .uuc-alert-icon { font-size: 9pt; }
     .uuc-header-title {
-      font-size: 7.2pt;
+      font-size: 6.8pt;
       font-weight: 900;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
       flex: 1;
     }
     .uuc-header-tag {
       background: #fee2e2;
       color: #991b1b;
-      font-size: 5.5pt;
+      font-size: 5.2pt;
       font-weight: 900;
-      padding: 1px 5px;
+      padding: 1px 4px;
       border-radius: 2px;
     }
     .uuc-body {
-      padding: 3.5px 6px;
+      padding: 3px 5px;
       display: flex;
       flex-direction: column;
       gap: 2px;
@@ -2427,56 +2532,56 @@ export function printCountingTablePlacards(options = {}) {
       background: #fee2e2;
       border: 1px solid #f87171;
       border-radius: 3px;
-      padding: 4px 8px;
-      font-size: 8.5pt;
+      padding: 3px 6px;
+      font-size: 8pt;
       font-weight: 900;
       color: #991b1b;
       text-align: center;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.2px;
     }
     .uuc-directives-grid {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
-      gap: 4px;
-      font-size: 6.2pt;
-      line-height: 1.2;
+      gap: 3px;
+      font-size: 5.8pt;
+      line-height: 1.15;
       color: #450a0a;
-      margin-top: 2px;
+      margin-top: 1.5px;
     }
     .uuc-point {
       background: #ffffff;
       border: 1px solid #fecaca;
       border-radius: 3px;
-      padding: 2.5px 4px;
+      padding: 2px 3.5px;
     }
     .uuc-point strong { color: #991b1b; }
 
     .rules-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 4px;
+      gap: 3px;
       border: 1.5px solid #1e3a8a;
       border-top: none;
       background: #fff;
-      padding: 3px;
+      padding: 2.5px;
     }
     .rule-card {
       background: #f8fafc;
       border: 1px solid #cbd5e1;
       border-radius: 3px;
-      padding: 3px 4px;
+      padding: 2.5px 3.5px;
       display: flex;
-      gap: 4px;
-      font-size: 6pt;
-      line-height: 1.18;
+      gap: 3px;
+      font-size: 5.8pt;
+      line-height: 1.15;
     }
     .rule-num {
-      width: 14px;
-      height: 14px;
+      width: 13px;
+      height: 13px;
       border-radius: 50%;
       background: #1e3a8a;
       color: #fff;
-      font-size: 6.5pt;
+      font-size: 6pt;
       font-weight: 900;
       display: flex;
       align-items: center;
@@ -2493,8 +2598,8 @@ export function printCountingTablePlacards(options = {}) {
       border-radius: 4px;
       display: grid;
       grid-template-columns: 1fr 1fr 1fr 1.2fr;
-      gap: 6px;
-      padding: 3.5px 6px;
+      gap: 5px;
+      padding: 3px 5px;
       margin-top: 1.5mm;
     }
     .sign-col {
@@ -2505,27 +2610,27 @@ export function printCountingTablePlacards(options = {}) {
     }
     .sign-line {
       border-bottom: 1px dotted #475569;
-      height: 18px;
-      margin-bottom: 2px;
+      height: 15px;
+      margin-bottom: 1.5px;
     }
     .sign-title {
-      font-size: 6.5pt;
+      font-size: 6.2pt;
       font-weight: 900;
       color: #0f172a;
       letter-spacing: 0.2px;
     }
     .sign-sub {
-      font-size: 5.2pt;
+      font-size: 5pt;
       color: #64748b;
     }
     .ro-col {
       background: #fff;
       border: 1px dashed #94a3b8;
       border-radius: 3px;
-      padding: 2px 4px;
+      padding: 1.5px 3.5px;
     }
     .sign-seal-stamp {
-      font-size: 5pt;
+      font-size: 4.8pt;
       font-weight: 800;
       color: #94a3b8;
       letter-spacing: 0.5px;
@@ -2539,7 +2644,7 @@ export function printCountingTablePlacards(options = {}) {
   <div class="screen-topbar no-print">
     <div style="display: flex; align-items: center; gap: 12px;">
       <strong style="font-size: 14px; color: #fff;">Official Counting Table Sequence Placards</strong>
-      <span style="font-size: 11px; color: #94a3b8;">${boothsList.length} Tables Configured in System &bull; A4 Portrait</span>
+      <span style="font-size: 11px; color: #94a3b8;">${boothsList.length} Tables Configured in System &bull; Round-by-Round from Matrix</span>
     </div>
     <div style="display: flex; align-items: center; gap: 10px;">
       <label style="font-size: 11px; font-weight: 600; color: #cbd5e1;">Filter Table:</label>

@@ -13,6 +13,7 @@ import { getDefaultStatutoryNotices } from '../../noticesTemplates.js';
 import { generateAndPrintBallots, generateAndPrintBallotPressSummary, downloadBallotsExcel, openBallotSummaryConfigModal } from './ballots.js';
 import { generateAndPrintElectoralRolls, generateAndPrintBallotAccounts } from './booths.js';
 import { openPrintRollModal } from '../../rollPrinter.js';
+import { getCountingMeta } from '../../offlineStorage.js';
 
 
 export async function renderAdminNotices(container) {
@@ -33,9 +34,10 @@ async function loadAdminNoticesData(main, pwd) {
   if (!main) return;
 
   try {
-    const [noticesData, officialsData, nominalRoll] = await Promise.all([
+    const [noticesData, officialsData, countingMatrixData, nominalRoll] = await Promise.all([
       api.adminGetNotices(pwd, true).catch(() => ({})),
       api.adminGetOfficials(pwd, true).catch(() => null),
+      api.adminGetCountingMatrix(pwd, true).catch(() => null),
       api.getNominalRoll().catch(() => [])
     ]);
 
@@ -91,14 +93,23 @@ async function loadAdminNoticesData(main, pwd) {
     });
 
     const countingTeams = officialsData?.countingTeams || [];
-    renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts, nominalRoll, plan, countingTeams);
+    let finalCountingMatrix = countingMatrixData;
+    if (!finalCountingMatrix || !Array.isArray(finalCountingMatrix.matrix)) {
+      try {
+        const cachedMeta = await getCountingMeta();
+        if (cachedMeta?.savedMatrix?.matrix) {
+          finalCountingMatrix = cachedMeta.savedMatrix;
+        }
+      } catch (_) {}
+    }
+    renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts, nominalRoll, plan, countingTeams, finalCountingMatrix);
   } catch (err) {
     console.error('Error loading admin notices:', err);
     main.innerHTML = `<div class="alert alert-error">❌ ${esc(err.message || 'Failed to load notices')}</div>`;
   }
 }
 
-function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts = [], nominalRoll = [], plan = null, countingTeams = []) {
+function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts = [], nominalRoll = [], plan = null, countingTeams = [], countingMatrixData = null) {
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
   const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
   const year = settings.electionYear || new Date().getFullYear();
@@ -935,10 +946,10 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
   `;
 
   // Attach event handlers
-  attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts, nominalRoll, plan, countingTeams);
+  attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts, nominalRoll, plan, countingTeams, countingMatrixData);
 }
 
-function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts = [], nominalRoll = [], plan = null, countingTeams = []) {
+function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts = [], nominalRoll = [], plan = null, countingTeams = [], countingMatrixData = null) {
   const ballotPlan = plan || settings?.ballotPlan || null;
   // Navigation Tabs: Master Print vs Posters vs Notices vs Index
   const tabMaster = main.querySelector('#adminTabMasterPrint');
@@ -1073,7 +1084,7 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
   main.querySelector('#btnHubOpenRollModal')?.addEventListener('click', handleOpenRollModal);
   main.querySelector('#btnHubQuickNominalRoll')?.addEventListener('click', handleOpenRollModal);
 
-  // Counting Table Sequence Placards (Dynamic for tables configured in system)
+  // Counting Table Sequence Placards (Dynamic round-by-round from counting matrix)
   main.querySelector('#btnHubPrintPlacards')?.addEventListener('click', () => {
     printCountingTablePlacards({
       booths,
@@ -1081,7 +1092,11 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
       schedule,
       countingTeams,
       nominalRoll,
-      posts
+      posts,
+      matrix: countingMatrixData?.matrix,
+      formSerials: countingMatrixData?.formSerials,
+      roundLabels: countingMatrixData?.roundLabels,
+      totalRounds: countingMatrixData?.totalRounds
     });
   });
 

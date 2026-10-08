@@ -1281,6 +1281,10 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         countingTeams,
         nominalRoll: nominalRollList,
         posts: postsList,
+        matrix: currentSavedMatrix?.matrix,
+        formSerials: currentSavedMatrix?.formSerials,
+        roundLabels: currentSavedMatrix?.roundLabels,
+        totalRounds: currentSavedMatrix?.totalRounds,
         tableNumber: bNum && bNum !== 'all' ? bNum : null
       });
     });
@@ -1295,6 +1299,10 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
           countingTeams,
           nominalRoll: nominalRollList,
           posts: postsList,
+          matrix: currentSavedMatrix?.matrix,
+          formSerials: currentSavedMatrix?.formSerials,
+          roundLabels: currentSavedMatrix?.roundLabels,
+          totalRounds: currentSavedMatrix?.totalRounds,
           tableNumber: bNum
         });
       });
