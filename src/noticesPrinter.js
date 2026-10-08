@@ -1879,7 +1879,7 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       background: #f1f5f9;
       color: #0f172a;
       line-height: 1.25;
-      font-size: 9pt;
+      font-size: 11pt;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -1938,19 +1938,19 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       flex: 1;
     }
     .inst-name {
-      font-size: 18pt;
+      font-size: 24pt;
       font-weight: 900;
       color: #0f172a;
       letter-spacing: 0.5px;
       text-transform: uppercase;
     }
     .inst-sub {
-      font-size: 9pt;
+      font-size: 11pt;
       font-weight: 600;
       color: #475569;
     }
     .election-title {
-      font-size: 11pt;
+      font-size: 14pt;
       font-weight: 800;
       color: #1e3a8a;
       letter-spacing: 1px;
@@ -1960,43 +1960,43 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       display: inline-block;
       background: #0f172a;
       color: #facc15;
-      font-size: 11pt;
+      font-size: 14pt;
       font-weight: 900;
-      padding: 3px 18px;
+      padding: 6px 24px;
       border-radius: 4px;
       letter-spacing: 1px;
-      margin-top: 5px;
+      margin-top: 8px;
       text-transform: uppercase;
     }
     .poster-sub-note {
-      font-size: 8pt;
+      font-size: 10pt;
       font-weight: 700;
       color: #dc2626;
-      margin-top: 4px;
+      margin-top: 6px;
       letter-spacing: 0.3px;
     }
 
     /* Meta Info Bar */
     .meta-bar {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
       background: #0f172a;
       color: #fff;
-      padding: 6px 12px;
-      margin-top: 8px;
-      border-radius: 4px;
+      padding: 10px 16px;
+      margin-top: 12px;
+      border-radius: 6px;
       text-align: center;
     }
     .meta-item strong {
       display: block;
-      font-size: 7pt;
+      font-size: 9pt;
       color: #94a3b8;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     .meta-item span {
-      font-size: 10pt;
+      font-size: 12pt;
       font-weight: 800;
       color: #fde047;
     }
@@ -2004,9 +2004,9 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
     /* Department Cards Grid */
     .depts-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 10px;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      margin-top: 16px;
     }
     .dept-card {
       border: 1.5px solid #0f172a;
@@ -2025,40 +2025,40 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       justify-content: space-between;
     }
     .dept-title {
-      font-size: 10pt;
+      font-size: 14pt;
       font-weight: 900;
       letter-spacing: 0.5px;
       text-transform: uppercase;
     }
     .dept-badge {
       background: rgba(255,255,255,0.2);
-      font-size: 7pt;
+      font-size: 10pt;
       font-weight: 800;
-      padding: 1.5px 6px;
-      border-radius: 3px;
+      padding: 2.5px 8px;
+      border-radius: 4px;
     }
 
     /* Class Table inside card */
     .dept-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 8.5pt;
+      font-size: 12pt;
     }
     .dept-table th {
       background: #e2e8f0;
       color: #0f172a;
-      font-size: 7.5pt;
+      font-size: 11pt;
       font-weight: 800;
       text-transform: uppercase;
-      padding: 3.5px 6px;
+      padding: 6px 10px;
       border-bottom: 1px solid #cbd5e1;
       text-align: left;
     }
     .dept-table td {
-      padding: 4px 6px;
+      padding: 8px 10px;
       border-bottom: 1px solid #e2e8f0;
       vertical-align: middle;
-      line-height: 1.2;
+      line-height: 1.3;
     }
     .dept-table tr:nth-child(even) td {
       background: #f8fafc;
@@ -2066,23 +2066,16 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
     .col-class {
       font-weight: 800;
       color: #0f172a;
-      width: 38%;
+      width: 45%;
     }
     .col-booth {
-      width: 22%;
+      width: 20%;
       text-align: center;
     }
     .col-venue {
-      width: 28%;
+      width: 35%;
       color: #334155;
-      font-size: 8pt;
-    }
-    .col-voters {
-      width: 12%;
-      text-align: right;
-      font-weight: 800;
-      color: #0369a1;
-      font-family: monospace;
+      font-size: 11pt;
     }
 
     .booth-tag {
@@ -2090,9 +2083,9 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       background: #0f172a;
       color: #fde047;
       font-weight: 900;
-      font-size: 8pt;
-      padding: 1.5px 6px;
-      border-radius: 3px;
+      font-size: 10pt;
+      padding: 3px 8px;
+      border-radius: 4px;
       letter-spacing: 0.2px;
       white-space: nowrap;
     }
@@ -2168,10 +2161,6 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
         <strong>Polling Booths</strong>
         <span>${boothsList.length} Physical Booths</span>
       </div>
-      <div class="meta-item">
-        <strong>Total Electors</strong>
-        <span>${totalElectors} Registered Students</span>
-      </div>
     </div>
 
     <!-- Departments & Classes Grid -->
@@ -2183,7 +2172,7 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
           <div class="dept-card">
             <div class="dept-card-header">
               <span class="dept-title">${esc(deptName)}</span>
-              <span class="dept-badge">${deptElectors} Voters &bull; ${classKeys.length} Classes</span>
+              <span class="dept-badge">${classKeys.length} Classes</span>
             </div>
             <table class="dept-table">
               <thead>
@@ -2191,12 +2180,10 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
                   <th class="col-class">Class / Cohort (1 UG &rarr; PG)</th>
                   <th class="col-booth">Booth No.</th>
                   <th class="col-venue">Room Venue</th>
-                  <th class="col-voters">Voters</th>
                 </tr>
               </thead>
               <tbody>
                 ${classKeys.map(cName => {
-                  const stat = classStats[cName];
                   const boothInfo = classToBoothMap[cName];
                   return `
                     <tr>
@@ -2210,7 +2197,6 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
                       <td class="col-venue">
                         ${boothInfo ? esc(boothInfo.roomName) : '—'}
                       </td>
-                      <td class="col-voters">${stat?.count || '0'}</td>
                     </tr>
                   `;
                 }).join('')}

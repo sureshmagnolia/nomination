@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Union Election Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9; /* slate-100 */
+        }
+        /* --- Rolling Counter Styles --- */
+        .rolling-counter-container {
+            display: flex;
+            gap: 1px;
+        }
+        .digit-container {
+            position: relative;
+            width: 1em;
+            height: 1.5em; /* Controls the 'window' height */
+            font-size: 1.25rem; /* Controls the number size */
+            line-height: 1.5em;
+            font-weight: 700;
+            text-align: center;
+            color: white;
+            background: #2c3e50;
+            border-radius: 0.2em;
+            overflow: hidden;
+        }
+        .reel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            transition: transform 1s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Bouncy transition */
+        }
+        .reel span {
+            height: 1.5em; /* Must match container height */
+            line-height: 1.5em; /* Must match container height */
+        }
+        /* --- End Rolling Counter Styles --- */
+    </style>
+</head>
+<body class="p-4 sm:p-6 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="mb-6 text-center">
+            <img src="https://i.postimg.cc/x936TsGZ/blue-EMBLEM.png" alt="College Logo" class="mx-auto h-20 w-20 mb-4">
+            <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">GOVERNMENT VICTORIA COLLEGE PALAKKAD</h1>
+            <h2 class="text-lg sm:text-xl md:text-2xl font-semibold text-sky-700">UNION ELECTION 2025 - COUNTING TRENDS DASHBOARD</h2>
+        </header>
+
+        <!-- Sub-header -->
+        <div class="mb-8 text-center bg-white p-4 rounded-xl shadow-md">
+            <div class="flex justify-center items-center gap-4 mb-2">
+                <div class="text-slate-500 text-sm">Next update in: <span id="countdown" class="font-bold text-sky-600">--:--</span></div>
+                <!-- Loading Spinner SVG -->
+                <svg id="loading-spinner" class="animate-spin h-5 w-5 text-sky-600 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                 <div class="text-sm text-slate-400">| Last Updated: <span id="last-updated-time" class="font-medium text-slate-500">Never</span></div>
+            </div>
+            <p class="text-xs text-slate-400">The Trends Shown in this Dashboard is for reference purpose only and is subjected to change. The final result is entirely based on the declaration made by the Returning Officer at the end of counting session.</p>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <main id="dashboard-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+             <!-- Skeletons for initial page load -->
+            <div class="skeleton-card bg-white p-6 rounded-xl shadow-md animate-pulse">
+                <div class="h-6 bg-slate-200 rounded w-3/4 mb-4"></div><div class="space-y-4 mt-6"><div class="h-10 bg-slate-200 rounded w-full"></div><div class="h-10 bg-slate-200 rounded w-full"></div></div>
+            </div>
+             <div class="skeleton-card bg-white p-6 rounded-xl shadow-md animate-pulse hidden md:block">
+                <div class="h-6 bg-slate-200 rounded w-3/4 mb-4"></div><div class="space-y-4 mt-6"><div class="h-10 bg-slate-200 rounded w-full"></div><div class="h-10 bg-slate-200 rounded w-full"></div></div>
+            </div>
+             <div class="skeleton-card bg-white p-6 rounded-xl shadow-md animate-pulse hidden xl:block">
+                <div class="h-6 bg-slate-200 rounded w-3/4 mb-4"></div><div class="space-y-4 mt-6"><div class="h-10 bg-slate-200 rounded w-full"></div><div class="h-10 bg-slate-200 rounded w-full"></div></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const webAppUrl = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLhouBNuWNFrgHYQ7t_z3SvgkK8bXsfTwkPkU3O5hrbsRn0292HdYvXHegji7BeYkyZ6kRWuz0ws1ib58JAdfyaUFOyWgPNO9vF9MoZ_GFPKH8ILTzZOzGeQKAXuYGPogMY6VZuDjkpO3jgYib3jAp2oPUHhgut1s45OF0IFEmeUnFf3D_Lx8CbpMeGdQxMRukQvTMd5KwHC2cpmsfuJ8bzpXm_aECMBtmsVvyuZ8QXwQLG7yE37h33ZB46WdbuXjsqB6nTfL-ix08IVDVD5-Yjqye1LIQ&lib=Ms_x4NOs0cwbCDf4FxlYek8Uyr_nnwrQ6';
+        const updateInterval = 300000; // 5 minutes
+
+        const dashboardContainer = document.getElementById('dashboard-container');
+        const countdownElement = document.getElementById('countdown');
+        const lastUpdatedElement = document.getElementById('last-updated-time');
+        const loadingSpinner = document.getElementById('loading-spinner');
+
+        const postOrder = [
+            "THE CHAIRMAN", "THE VICE CHAIRMAN", "THE SECRETARY", "THE JOINT SECRETARY", 
+            "THE CHIEF STUDENT EDITOR", "THE SECRETARY FINE ARTS", "THE GENERAL CAPTAIN FOR SPORTS AND GAMES", 
+            "THE UNIVERSITY UNION COUNCILLOR", "I UG REPRESENTATIVE", "II UG REPRESENTATIVE", 
+            "III UG REPRESENTATIVE", "PG REPRESENTATIVE", "ASSOCIATION SECRETARY BOTANY", 
+            "ASSOCIATION SECRETARY CHEMISTRY", "ASSOCIATION SECRETARY COMMERCE", 
+            "ASSOCIATION SECRETARY COMPUTER SCIENCE", "ASSOCIATION SECRETARY ECONOMICS", 
+            "ASSOCIATION SECRETARY ENGLISH", "ASSOCIATION SECRETARY HINDI", 
+            "ASSOCIATION SECRETARY HISTORY", "ASSOCIATION SECRETARY MALAYALAM", 
+            "ASSOCIATION SECRETARY MATHEMATICS", "ASSOCIATION SECRETARY PHYSICS", 
+            "ASSOCIATION SECRETARY PSYCHOLOGY", "ASSOCIATION SECRETARY SANSKRIT", 
+            "ASSOCIATION SECRETARY TAMIL", "ASSOCIATION SECRETARY ZOOLOGY"
+        ];
+
+        const colors = [
+            { bg: 'bg-sky-100', border: 'border-sky-500', text: 'text-sky-800', leadBg: 'bg-sky-500' },
+            { bg: 'bg-emerald-100', border: 'border-emerald-500', text: 'text-emerald-800', leadBg: 'bg-emerald-500' },
+            { bg: 'bg-amber-100', border: 'border-amber-500', text: 'text-amber-800', leadBg: 'bg-amber-500' },
+            { bg: 'bg-indigo-100', border: 'border-indigo-500', text: 'text-indigo-800', leadBg: 'bg-indigo-500' },
+            { bg: 'bg-rose-100', border: 'border-rose-500', text: 'text-rose-800', leadBg: 'bg-rose-500' },
+            { bg: 'bg-teal-100', border: 'border-teal-500', text: 'text-teal-800', leadBg: 'bg-teal-500' },
+        ];
+        
+        let previousData = {};
+        let isAnimating = false;
+
+        function processRawData(rawData) {
+            const finalData = {};
+            for (const postName in rawData) {
+                const postData = rawData[postName];
+                const candidateTotals = {};
+                if (Array.isArray(postData.candidates)) {
+                    postData.candidates.forEach(candidate => {
+                        const name = candidate.name ? candidate.name.replace(/\s+/g, ' ').trim() : '';
+                        if (!name) return;
+                        const votes = candidate.votes || 0;
+                        if (candidateTotals[name]) {
+                            candidateTotals[name].votes += votes;
+                        } else {
+                            candidateTotals[name] = { name: name, votes: votes };
+                        }
+                    });
+                }
+                finalData[postName] = { candidates: Object.values(candidateTotals) };
+            }
+            return finalData;
+        }
+
+        async function fetchAndDisplayData() {
+            if (isAnimating) return;
+            loadingSpinner.classList.remove('hidden');
+            isAnimating = true;
+
+            try {
+                const response = await fetch(webAppUrl);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const rawData = await response.json();
+                
+                if (typeof rawData !== 'object' || rawData === null || Array.isArray(rawData)) {
+                    throw new Error("Invalid data format received.");
+                }
+                
+                const processedData = processRawData(rawData);
+                await renderDashboard(processedData, previousData);
+                previousData = JSON.parse(JSON.stringify(processedData));
+                lastUpdatedElement.textContent = new Date().toLocaleTimeString();
+
+            } catch (error) {
+                console.error("Failed to fetch or process data:", error);
+                dashboardContainer.innerHTML = `<div class="md:col-span-3 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg"><p class="font-bold">Error:</p><p>${error.message}</p></div>`;
+            } finally {
+                loadingSpinner.classList.add('hidden');
+                isAnimating = false;
+            }
+        }
+
+        async function renderDashboard(data, oldData) {
+            const isFirstLoad = Object.keys(oldData).length === 0;
+            const sortedPostNames = postOrder.filter(p => data[p]);
+
+            if (isFirstLoad) {
+                dashboardContainer.innerHTML = '';
+                if (sortedPostNames.length === 0) {
+                     dashboardContainer.innerHTML = `<div class="md:col-span-3 bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-lg"><p class="font-bold">Awaiting Data</p><p>No election data found yet.</p></div>`;
+                     return;
+                }
+            }
+            
+            const animationPromises = [];
+
+            sortedPostNames.forEach(postName => {
+                const updateCard = async () => {
+                    const postData = data[postName];
+                    postData.candidates.sort((a, b) => b.votes - a.votes);
+                    const color = colors[postOrder.indexOf(postName) % colors.length];
+                    const cardId = `card-${postName.replace(/\s+/g, '-')}`;
+                    let card = document.getElementById(cardId);
+
+                    if (!card) {
+                        card = document.createElement('div');
+                        card.id = cardId;
+                        card.className = `p-5 rounded-xl shadow-lg border-t-4 ${color.bg} ${color.border}`;
+                        card.innerHTML = `
+                            <h2 class="text-2xl font-bold ${color.text} mb-2">${postName}</h2>
+                            <div class="flex justify-end text-xs font-semibold text-slate-500 pr-3 pb-1"><div>Votes</div></div>
+                            <div class="candidates-container space-y-2"></div>
+                            <div class="total-row flex items-center justify-between p-3 mt-4 border-t-2 border-slate-300/70">
+                                <div class="font-bold text-lg text-slate-700">Total</div>
+                                <div class="rolling-counter-container"></div>
+                            </div>`;
+                        dashboardContainer.appendChild(card);
+                    }
+
+                    const candidatesContainer = card.querySelector('.candidates-container');
+                    
+                    // Sync DOM rows with data
+                    while (candidatesContainer.children.length < postData.candidates.length) {
+                        const row = document.createElement('div');
+                        row.className = 'candidate-row flex items-center justify-between p-3 rounded-lg';
+                        row.innerHTML = `<div class="flex items-center space-x-3"><div class="rank font-bold ${color.text} text-lg w-6 text-center"></div><div class="name font-medium text-slate-700 break-words"></div></div><div class="flex items-center space-x-4"><div class="lead-container"></div><div class="rolling-counter-container"></div></div>`;
+                        candidatesContainer.appendChild(row);
+                    }
+                    while (candidatesContainer.children.length > postData.candidates.length) {
+                        candidatesContainer.removeChild(candidatesContainer.lastChild);
+                    }
+
+                    const oldPostData = oldData[postName] || { candidates: [] };
+                    const candidateRows = card.querySelectorAll('.candidate-row');
+                    
+                    for (let i = 0; i < postData.candidates.length; i++) {
+                        const candidate = postData.candidates[i];
+                        const row = candidateRows[i];
+                        const oldCandidate = oldPostData.candidates.find(c => c.name === candidate.name) || { votes: 0 };
+                        
+                        row.querySelector('.rank').textContent = i + 1;
+                        row.querySelector('.name').textContent = candidate.name;
+
+                        let lead = 0;
+                        if (postName === "THE UNIVERSITY UNION COUNCILLOR") {
+                             if (i < 2 && postData.candidates[2]) { lead = candidate.votes - postData.candidates[2].votes; }
+                        } else {
+                            if (i === 0 && postData.candidates[1]) { lead = candidate.votes - postData.candidates[1].votes; }
+                        }
+                        const isLeading = (postName === "THE UNIVERSITY UNION COUNCILLOR" && i < 2 && candidate.votes > 0) || (i === 0 && candidate.votes > 0);
+                        row.className = `candidate-row flex items-center justify-between p-3 rounded-lg ${isLeading ? 'bg-white/80 shadow-sm' : ''}`;
+                        row.querySelector('.lead-container').innerHTML = isLeading && lead > 0 ? `<div class="flex items-baseline gap-1.5 text-white px-3 py-1 rounded-full ${color.leadBg}"><span class="font-semibold text-xs">Lead</span><span class="font-bold text-base">${lead.toLocaleString()}</span></div>` : '';
+                        
+                        const counterContainer = row.querySelector('.rolling-counter-container');
+                        await updateRollingCounter(counterContainer, oldCandidate.votes, candidate.votes, isFirstLoad);
+                    }
+
+                    const totalVotes = postData.candidates.reduce((sum, c) => sum + c.votes, 0);
+                    const oldTotalVotes = oldPostData.candidates.reduce((sum, c) => sum + c.votes, 0);
+                    const totalContainer = card.querySelector('.total-row .rolling-counter-container');
+                    await updateRollingCounter(totalContainer, oldTotalVotes, totalVotes, isFirstLoad);
+                };
+                animationPromises.push(updateCard());
+            });
+
+            await Promise.all(animationPromises);
+        }
+        
+        function updateRollingCounter(container, oldValue, newValue, isFirstLoad = false) {
+            return new Promise(resolve => {
+                const oldValueToUse = isFirstLoad ? 0 : oldValue;
+                
+                const oldValueStr = String(oldValueToUse);
+                const newValueStr = String(newValue);
+                const digitHeight = parseFloat(getComputedStyle(document.documentElement).fontSize) * 1.25 * 1.5; // 1.25rem * 1.5em
+
+                const maxLength = Math.max(oldValueStr.length, newValueStr.length);
+                const newValuePadded = newValueStr.padStart(maxLength, '0');
+                
+                while (container.children.length < maxLength) {
+                    const digitContainer = document.createElement('div');
+                    digitContainer.className = 'digit-container';
+                    const reel = document.createElement('div');
+                    reel.className = 'reel';
+                    for (let i = 0; i <= 9; i++) {
+                        const span = document.createElement('span');
+                        span.textContent = i;
+                        reel.appendChild(span);
+                    }
+                    digitContainer.appendChild(reel);
+                    container.appendChild(digitContainer);
+                }
+                 while (container.children.length > maxLength && maxLength > 0) {
+                    container.removeChild(container.firstChild);
+                }
+
+                const digitContainers = container.children;
+                for (let i = 0; i < digitContainers.length; i++) {
+                    const reel = digitContainers[i].querySelector('.reel');
+                    const targetDigit = parseInt(newValuePadded[i]);
+                    const transformY = -targetDigit * digitHeight;
+
+                    // Set initial position without transition for a clean start
+                    reel.style.transition = 'none';
+                    if(!isFirstLoad) {
+                         const oldDigit = parseInt(oldValueStr.padStart(maxLength, '0')[i]) || 0;
+                         reel.style.transform = `translateY(${-oldDigit * digitHeight}px)`;
+                    } else {
+                         reel.style.transform = `translateY(0px)`;
+                    }
+                    
+                    // Force browser to apply the initial state before adding the transition
+                    setTimeout(() => {
+                        reel.style.transition = `transform ${1 + i * 0.1}s cubic-bezier(0.68, -0.55, 0.27, 1.55)`;
+                        reel.style.transform = `translateY(${transformY}px)`;
+                    }, 50);
+                }
+                
+                setTimeout(resolve, 1200); // Resolve after the longest possible animation
+            });
+        }
+
+        function startCountdown() {
+            let timeLeft = updateInterval / 1000;
+            const timer = setInterval(() => {
+                if (timeLeft <= 0) {
+                    timeLeft = updateInterval / 1000;
+                }
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                countdownElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchAndDisplayData();
+            setInterval(fetchAndDisplayData, updateInterval);
+            startCountdown();
+        });
+
+    </script>
+</body>
+</html>
+

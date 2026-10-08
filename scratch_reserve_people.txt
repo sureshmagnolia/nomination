@@ -1,0 +1,627 @@
+Lab Assistant(8 Yrs TBHG)
+383741
+Booth 10 (Polling Assistant)
+Venue: Booth 10
+8
+LT.DR.RIJULAL.G
+Reserve Official
+Chemistry
+Asso.Prof.
+619605
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+8
+LT.DR.RIJULAL.G
+Reserve Official
+Chemistry
+Asso.Prof.
+619605
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+9
+DEEPA MUKUNDAN
+Chemistry
+Asst.Prof.
+
+====================
+
+Asst.Prof.
+575153
+Table 3 (Counting Officer 1)
+Venue: Table 3
+18
+ANOOP P
+Reserve Official
+Commerce
+Asst.Prof.
+752200
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+18
+ANOOP P
+Reserve Official
+Commerce
+Asst.Prof.
+752200
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+19
+DR,NAZEEM S.T.
+Reserve Official
+Commerce
+
+====================
+
+Asst.Prof.
+752200
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+19
+DR,NAZEEM S.T.
+Reserve Official
+Commerce
+Asst.Prof.
+408118
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+19
+DR,NAZEEM S.T.
+Reserve Official
+Commerce
+Asst.Prof.
+408118
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+20
+VIPIN V.
+Commerce
+Asst.Prof.
+
+====================
+
+Professor
+596364
+Booth 6 (Presiding Officer)
+Venue: Booth 6
+25
+Dr.JISHA KK
+Reserve Official
+Economics
+Asso.Prof.
+596299
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+25
+Dr.JISHA KK
+Reserve Official
+Economics
+Asso.Prof.
+596299
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+26
+NAGARAJ S
+Economics
+Asso.Prof.
+
+====================
+
+Asso.Prof.
+663952
+Booth 5 (Polling Officer)
+Venue: Booth 5
+33
+DR.SREEJITH.M.NAIR
+Reserve Official
+Electronics
+Professor
+663971
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+33
+DR.SREEJITH.M.NAIR
+Reserve Official
+Electronics
+Professor
+663971
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+34
+Dr.ANISH KUMAR M.S.
+Reserve Official
+Electronics
+
+====================
+
+Professor
+663971
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+34
+Dr.ANISH KUMAR M.S.
+Reserve Official
+Electronics
+Asst.Prof.
+836176
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+34
+Dr.ANISH KUMAR M.S.
+Reserve Official
+Electronics
+Asst.Prof.
+836176
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+35
+SREEJITH S
+Electronics
+Asst.Prof.
+
+====================
+
+Guest Lecturer
+–
+Booth 11 (Polling Officer)
+Venue: Booth 11
+42
+Suresh P
+Reserve Official
+Geography
+Asst.Prof.
+616638
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+42
+Suresh P
+Reserve Official
+Geography
+Asst.Prof.
+616638
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+43
+Dr Jayarajan K
+Geography
+Asso.Prof.
+
+====================
+
+Asst.Prof.
+693594
+Booth 6 (Polling Officer)
+Venue: Booth 6
+46
+VINEESH V
+Reserve Official
+Geography
+Asst.Prof.
+822303
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+46
+VINEESH V
+Reserve Official
+Geography
+Asst.Prof.
+822303
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+47
+PRATHAPAN N
+Geography
+Asst.Prof.
+
+====================
+
+Asst.Prof.
+452949
+Table 12 (Counting Officer 1)
+Venue: Table 12
+48
+Dr.RESHMA C.U.
+Reserve Official
+Geography
+Asst.Prof.
+915232
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+48
+Dr.RESHMA C.U.
+Reserve Official
+Geography
+Asst.Prof.
+915232
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+49
+HABEEB RAHMAN -M
+Geography
+Lab Assistant(8 Yrs TBHG)
+
+====================
+
+Lab Assistant(8 Yrs TBHG)
+383588
+Booth 9 (Polling Assistant)
+Venue: Booth 9
+50
+Dr. SHALBI MOHANAN
+Reserve Official
+Hindi
+Asst.Prof.
+706653
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+50
+Dr. SHALBI MOHANAN
+Reserve Official
+Hindi
+Asst.Prof.
+706653
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+51
+ARUNDHATHI MOHAN
+Hindi
+Asst.Prof.
+
+====================
+
+Asst.Prof.
+426854
+Booth 11 (Polling Officer)
+Venue: Booth 11
+55
+JIYA THARIYAN.P
+Reserve Official
+History
+Guest Lecturer
+–
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+55
+JIYA THARIYAN.P
+Reserve Official
+History
+Guest Lecturer
+–
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+56
+SATHEESH-K.M
+Library
+UGC Librarian
+
+====================
+
+Asst.Prof.
+412809
+Booth 10 (Polling Officer)
+Venue: Booth 10
+62
+SHARJA N
+Reserve Official
+Malayalam
+Asst.Prof.
+867584
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+62
+SHARJA N
+Reserve Official
+Malayalam
+Asst.Prof.
+867584
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+63
+SREEDEVI.P.S
+Malayalam
+Asst.Prof.
+
+====================
+
+Asst.Prof.
+807009
+Table 9 (Counting Officer 1)
+Venue: Table 9
+69
+SOWMYA C
+Reserve Official
+Mathematics
+Asst.Prof.
+927070
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+69
+SOWMYA C
+Reserve Official
+Mathematics
+Asst.Prof.
+927070
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+70
+SARATHKUMAR N S
+Mathematics
+Asst.Prof.
+
+====================
+
+Asst.Prof.
+866556
+Table 9 (Counting Officer 2)
+Venue: Table 9
+72
+SREEJA.K.T
+Reserve Official
+Music
+Asso.Prof.
+619695
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+72
+SREEJA.K.T
+Reserve Official
+Music
+Asso.Prof.
+619695
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+73
+VIMAL MENON .J
+Reserve Official
+Music
+
+====================
+
+Asso.Prof.
+619695
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+73
+VIMAL MENON .J
+Reserve Official
+Music
+Asst. Prof.
+739103
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+73
+VIMAL MENON .J
+Reserve Official
+Music
+Asst. Prof.
+739103
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+74
+SAVITHRI.N.V
+Music
+Asst.Prof.
+
+====================
+
+Asst.Prof.
+682335
+Booth 9 (Polling Officer)
+Venue: Booth 9
+82
+BHOOMI. J. N
+Reserve Official
+Philosophy
+Guest Lecturer
+–
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+82
+BHOOMI. J. N
+Reserve Official
+Philosophy
+Guest Lecturer
+–
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+83
+KAMYA RAGO. G.R
+Reserve Official
+Philosophy
+
+====================
+
+Guest Lecturer
+–
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+83
+KAMYA RAGO. G.R
+Reserve Official
+Philosophy
+Guest Lecturer
+–
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+83
+KAMYA RAGO. G.R
+Reserve Official
+Philosophy
+Guest Lecturer
+–
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+84
+JAGANNADHAN.C
+Physical Education
+Asso.Prof.
+
+====================
+
+Asso.Prof.
+619613
+Booth 5 (Presiding Officer)
+Venue: Booth 5
+87
+RAMABADRAN.C.D
+Reserve Official
+Physics
+Asst.Prof.
+446580
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+87
+RAMABADRAN.C.D
+Reserve Official
+Physics
+Asst.Prof.
+446580
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+88
+BIJU.K.P
+Physics
+Asst.Prof.
+
+====================
+
+Lab Assistant
+728588
+Booth 8 (Polling Assistant)
+Venue: Booth 8
+93
+PRASANTH.P.V
+Reserve Official
+Political Science
+Asst.Prof.
+225231
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+93
+PRASANTH.P.V
+Reserve Official
+Political Science
+Asst.Prof.
+225231
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+--- PAGE 7 ---
+SL #
+NAME OF OFFICIAL
+
+====================
+
+DESIGNATION
+PEN #
+DUTY ASSIGNED & STATION
+SIGNATURE
+94
+DR NADIA MOIDEEN
+Reserve Official
+Psychology
+Asst.Prof.
+973543
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+94
+DR NADIA MOIDEEN
+Reserve Official
+Psychology
+Asst.Prof.
+973543
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+95
+DR.SAJEESH C.S.
+Reserve Official
+Sanskrit
+
+====================
+
+Asst.Prof.
+973543
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+95
+DR.SAJEESH C.S.
+Reserve Official
+Sanskrit
+Ass.Prof.
+835274
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+
+====================
+
+95
+DR.SAJEESH C.S.
+Reserve Official
+Sanskrit
+Ass.Prof.
+835274
+Reserve Duty (Standby)
+Station: Central Control Room (Reserve Pool)
+96
+MAYA. M
+Sanskrit
+Guest Lecturer

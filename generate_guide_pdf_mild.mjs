@@ -1,0 +1,1372 @@
+import { writeFileSync, existsSync, copyFileSync } from 'fs';
+import { resolve } from 'path';
+import { execSync } from 'child_process';
+
+const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Nomination Preparation &amp; Scrutiny Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Malayalam:wght@400;500;600;700;800&family=Noto+Sans+Tamil:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 6mm 10mm 6mm 10mm;
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: 'Inter', sans-serif;
+        font-size: 7.5pt;
+        color: #64748b;
+        font-weight: 600;
+      }
+      @bottom-left {
+        content: "College Union Election • Official Nomination & Scrutiny Guide";
+        font-family: 'Inter', sans-serif;
+        font-size: 7pt;
+        color: #64748b;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: 'Inter', 'Noto Sans Malayalam', 'Noto Sans Tamil', sans-serif;
+      font-size: 7.4pt;
+      line-height: 1.28;
+      color: #0f172a;
+      background: #ffffff;
+    }
+
+    .page-break {
+      page-break-after: always;
+      break-after: page;
+    }
+
+    .avoid-break {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    /* Synchronized Trilingual Typography */
+    .txt-en {
+      color: #0f172a;
+      font-weight: 600;
+      line-height: 1.28;
+    }
+
+    .txt-ml {
+      color: #1e3a8a;
+      font-family: 'Noto Sans Malayalam', sans-serif;
+      font-size: 6.8pt;
+      line-height: 1.28;
+      margin-top: 1px;
+    }
+
+    .txt-ta {
+      color: #7c2d12;
+      font-family: 'Noto Sans Tamil', sans-serif;
+      font-size: 6.6pt;
+      line-height: 1.28;
+      margin-top: 1px;
+    }
+
+    /* Header */
+    .doc-header {
+      border-bottom: 2px solid #1e3a8a;
+      padding-bottom: 3px;
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .doc-badge {
+      display: inline-block;
+      background: #1e3a8a;
+      color: #ffffff;
+      font-size: 6.1pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 1.5px 5px;
+      border-radius: 3px;
+      margin-bottom: 2px;
+    }
+
+    .main-title {
+      font-size: 11.5pt;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.15;
+    }
+
+    .sub-lang-title {
+      font-size: 9pt;
+      font-weight: 700;
+      line-height: 1.22;
+      margin-top: 1px;
+    }
+
+    .title-ml {
+      color: #1e3a8a;
+      font-family: 'Noto Sans Malayalam', sans-serif;
+    }
+
+    .title-ta {
+      color: #7c2d12;
+      font-family: 'Noto Sans Tamil', sans-serif;
+      font-size: 8.5pt;
+    }
+
+    .sub-title {
+      font-size: 6.6pt;
+      color: #475569;
+      margin-top: 1px;
+    }
+
+    .right-col {
+      text-align: right;
+      font-size: 6.8pt;
+      color: #1e293b;
+      line-height: 1.22;
+      border-left: 2px solid #e2e8f0;
+      padding-left: 7px;
+    }
+
+    /* Alert & Directives Boxes */
+    .alert-box {
+      border-radius: 4px;
+      padding: 4px 7px;
+      margin-bottom: 3px;
+      border-left: 3.5px solid;
+    }
+
+    .alert-red { background: #fef2f2; border-color: #dc2626; color: #991b1b; }
+    .alert-amber { background: #fffbeb; border-color: #d97706; color: #92400e; }
+    .alert-blue { background: #eff6ff; border-color: #2563eb; color: #1e40af; }
+
+    .alert-title {
+      font-size: 7.5pt;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 2px;
+    }
+
+    /* Section Headers */
+    .sec-title {
+      background: #f1f5f9;
+      border-left: 3.5px solid #1e3a8a;
+      padding: 2.5px 5px;
+      margin: 3px 0 2px 0;
+      font-weight: 800;
+      font-size: 7.5pt;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sec-title-multi {
+      font-size: 6.9pt;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    /* Tables */
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2px 0;
+      font-size: 6.8pt;
+    }
+
+    table.data-table th {
+      background: #1e3a8a;
+      color: #ffffff;
+      text-align: left;
+      padding: 2.5px 4.5px;
+      font-weight: 700;
+      font-size: 6.6pt;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      border: 1px solid #1e3a8a;
+    }
+
+    table.data-table td {
+      border: 1px solid #cbd5e1;
+      padding: 2.5px 4.5px;
+      vertical-align: top;
+      line-height: 1.25;
+    }
+
+    table.data-table tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    table.data-table.compact-table td {
+      padding: 2px 4px;
+      line-height: 1.22;
+      font-size: 6.6pt;
+    }
+
+    table.data-table.compact-table th {
+      padding: 2px 4px;
+      font-size: 6.4pt;
+    }
+
+    /* Badges */
+    .badge-chip {
+      display: inline-block;
+      padding: 1px 3.5px;
+      border-radius: 2.5px;
+      font-size: 6pt;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .badge-chip.green { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .badge-chip.red { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .badge-chip.blue { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+    .badge-chip.amber { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+
+    /* Grid Layout */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      margin: 2px 0;
+    }
+
+    .card {
+      border: 1.2px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 4px 6px;
+      background: #ffffff;
+    }
+
+    .card.blue-card { border-color: #93c5fd; background: #f8fafc; }
+    .card.green-card { border-color: #86efac; background: #f0fdf4; }
+
+    .card-title {
+      font-size: 7.3pt;
+      font-weight: 800;
+      color: #0f172a;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 1.5px;
+      margin-bottom: 2.5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    ol.step-list {
+      padding-left: 11px;
+      margin: 1.5px 0;
+    }
+
+    ol.step-list li {
+      margin-bottom: 1.5px;
+      font-size: 6.8pt;
+      line-height: 1.25;
+    }
+
+    /* Checklist */
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 3.5px;
+      margin-bottom: 2px;
+      font-size: 6.7pt;
+      line-height: 1.2;
+    }
+
+    .check-box {
+      width: 9px;
+      height: 9px;
+      border: 1.4px solid #334155;
+      border-radius: 2px;
+      margin-top: 1px;
+      flex-shrink: 0;
+    }
+
+    /* Specimen Paper Styles */
+    .specimen-paper {
+      border: 1.8px solid #334155;
+      border-radius: 5px;
+      padding: 6px 10px;
+      background: #ffffff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      margin-top: 2px;
+    }
+
+    .specimen-header {
+      border-bottom: 1.2px solid #1e3a8a;
+      padding-bottom: 2.5px;
+      margin-bottom: 3.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .specimen-block {
+      border: 1px solid #cbd5e1;
+      border-radius: 3.5px;
+      padding: 3.5px 6px;
+      margin-bottom: 3.5px;
+      background: #f8fafc;
+    }
+
+    .specimen-block-title {
+      font-size: 7.1pt;
+      font-weight: 800;
+      color: #1e3a8a;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 1.5px;
+      margin-bottom: 2.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .specimen-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px 8px;
+      font-size: 6.8pt;
+    }
+
+    .officer-footer {
+      margin-top: 3px;
+      border-top: 1.2px solid #94a3b8;
+      padding-top: 2.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 6.4pt;
+      color: #334155;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== PAGE 1 ==================== -->
+  <div class="doc-header">
+    <div class="left-col">
+      <span class="doc-badge">Statutory Compliance Manual</span>
+      <h1 class="main-title">NOMINATION PREPARATION &amp; SCRUTINY GUIDE</h1>
+      <h2 class="sub-lang-title title-ml">വിദ്യാർത്ഥികൾക്കുള്ള നോമിനേഷൻ സമർപ്പണ സമഗ്ര മാർഗ്ഗരേഖ</h2>
+      <h3 class="sub-lang-title title-ta">மாணவர்களுக்கான வேட்புமனு தயாரிப்பு மற்றும் பரிசீலனை வழிகாட்டி</h3>
+      <p class="sub-title">College Union Elections 2026–2027 • Calicut University Election Statutes &amp; Lyngdoh Committee Norms</p>
+    </div>
+    <div class="right-col">
+      <strong>OFFICE OF THE RETURNING OFFICER</strong><br>
+      College Union Election Cell<br>
+      Mandatory Scrutiny Directives
+    </div>
+  </div>
+
+  <!-- UNIFIED CRITICAL STATUTORY DIRECTIVES -->
+  <div class="alert-box alert-red avoid-break">
+    <div class="alert-title" style="color: #991b1b; margin-bottom: 2px;">
+      <span>⚖️</span>
+      <span>MANDATORY STATUTORY DIRECTIVES • നിർബന്ധിത നിർദ്ദേശങ്ങൾ • கட்டாய உத்தரவுகள்</span>
+    </div>
+    
+    <!-- Rule 1: All 3 Sign Before RO -->
+    <div style="border-bottom: 1px dashed #fca5a5; padding-bottom: 2.5px; margin-bottom: 2.5px;">
+      <div class="txt-en" style="color: #991b1b; font-size: 7.2pt;">
+        <strong>1. In-Person Signing Before RO Only:</strong> "Candidate, Proposer, and Seconder — ALL 3 must appear in person and sign before the Returning Officer (RO) or designated representative only."
+      </div>
+      <div class="txt-ml" style="font-size: 6.9pt; font-weight: 700; color: #991b1b;">
+        "സ്ഥാനാർത്ഥി, നിർദ്ദേശകൻ, പിന്താങ്ങുന്നയാൾ എന്നീ 3 പേരും വരണാധികാരിയുടെയോ അദ്ദേഹത്തിന്റെ പ്രതിനിധിയുടെയോ മുന്നിൽ നേരിട്ട് ഹാജരായി മാത്രമേ ഒപ്പിടാൻ പാടുള്ളൂ."
+      </div>
+      <div class="txt-ta" style="font-size: 6.7pt; font-weight: 700; color: #7c2d12;">
+        "வேட்பாளர், முன்மொழிபவர் மற்றும் வழிமொழிபவர் ஆகிய மூவரும் தேர்தல் நடத்தும் அலுவலர் (RO) அல்லது அவரது பிரதிநிதியின் முன்னிலையில் மட்டுமே நேரில் ஆஜராகி கையொப்பமிட வேண்டும்."
+      </div>
+    </div>
+
+    <!-- Rule 2: Online Entry Alone is Not Enough -->
+    <div style="border-bottom: 1px dashed #fca5a5; padding-bottom: 2.5px; margin-bottom: 2.5px;">
+      <div class="txt-en" style="font-size: 7pt; color: #991b1b;">
+        <strong>2. Online Entry Alone is NOT a Nomination:</strong> You must print the generated paper form, sign before the RO, attach the HoD Certificate (Page 2) with official department seal &amp; Date of Birth proof, and physically deliver it before the deadline bell.
+      </div>
+      <div class="txt-ml" style="font-size: 6.8pt; color: #991b1b;">
+        ഓൺലൈൻ രജിസ്ട്രേഷൻ കൊണ്ട് മാത്രം നോമിനേഷൻ ആകില്ല. പ്രിന്റെടുത്ത് വരണാധികാരിയുടെ മുന്നിൽ ഒപ്പുകൾ രേഖപ്പെടുത്തി, HoD സീലും SSLC പകർപ്പും സഹിതം നേരിട്ട് ഓഫീസിൽ സമർപ്പിക്കണം.
+      </div>
+      <div class="txt-ta" style="font-size: 6.6pt; color: #7c2d12;">
+        ஆன்லைன் பதிவு மட்டும் போதாது. படிவத்தை அச்சிட்டு, தேர்தல் அலுவலர் முன் கையொப்பமிட்டு, துறைத்தலைவர் (HoD) முத்திரையுடன் கூடிய சான்றிதழ் மற்றும் பிறந்த தேதி சான்றுடன் நேரில் சமர்ப்பிக்க வேண்டும்.
+      </div>
+    </div>
+
+    <!-- Rule 3: Zero Tolerance on Overwriting -->
+    <div>
+      <div class="txt-en" style="font-size: 7pt; color: #991b1b;">
+        <strong>3. Zero Tolerance on Corrections / Whitener:</strong> Any strike-out, erasure, overwriting, or correction fluid results in immediate summary rejection. Discard and reprint if an error occurs.
+      </div>
+      <div class="txt-ml" style="font-size: 6.8pt; color: #991b1b;">
+        വെട്ടിത്തിരുത്തലുകളോ വൈറ്റ്നറോ ഒട്ടുമേ പാടില്ല. ചെറിയൊരു തെറ്റുണ്ടായാൽ പോലും ഫോം തള്ളപ്പെടും; പുതിയ ഫോം പ്രിന്റ് ചെയ്ത് സമർപ്പിക്കുക.
+      </div>
+      <div class="txt-ta" style="font-size: 6.6pt; color: #7c2d12;">
+        அடித்தல், திருத்துதல் அல்லது ஒயிட்னர் (Whitener) உபயோகிக்கக் கூடாது. ஏதேனும் பிழை இருப்பின் படிவம் உடனடியாக நிராகரிக்கப்படும்.
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: MANDATORY SUPPORTING DOCUMENTS -->
+  <div class="sec-title avoid-break">
+    <span>1. MANDATORY SUPPORTING DOCUMENTS</span>
+    <span class="sec-title-multi">നിർബന്ധിത രേഖകൾ • கட்டாய ஆவணங்கள்</span>
+  </div>
+
+  <table class="data-table avoid-break">
+    <thead>
+      <tr>
+        <th style="width: 25%;">Required Document</th>
+        <th style="width: 42%;">Approved Formats &amp; Details</th>
+        <th style="width: 33%;">Scrutiny Verification Rule</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <strong style="color:#0f172a;">1. Date of Birth Proof</strong><br>
+          <span class="txt-ml" style="display:block;">ജനനത്തീയതി തെളിയിക്കുന്ന രേഖ</span>
+          <span class="txt-ta" style="display:block;">பிறந்த தேதி சான்று</span>
+          <span class="badge-chip red" style="margin-top:2px;">Strictly Mandatory</span>
+        </td>
+        <td>
+          <div class="txt-en">
+            • <strong>SSLC Book / 10th Certificate</strong> (Page with Name &amp; DOB)<br>
+            • <strong>Birth Certificate</strong> issued by Local Body / Corporation<br>
+            • <strong>Passport copy</strong> or <strong>Aadhaar Card</strong> (with full DD/MM/YYYY)
+          </div>
+          <div class="txt-ml">SSLC ബുക്കിലെ ജനനത്തീയതിയുള്ള പേജ് അല്ലെങ്കിൽ ജനന സർട്ടിഫിക്കറ്റ്.</div>
+          <div class="txt-ta">10-ஆம் வகுப்பு மதிப்பெண் சான்றிதழ் அல்லது பிறப்புச் சான்றிதழ் நகல்.</div>
+        </td>
+        <td>
+          <div class="txt-en">
+            <strong>Self-attested copy must be attached</strong> to nomination form. Original to be shown during scrutiny if requested. Must satisfy Lyngdoh age limits:<br>
+            • <strong>UG</strong> — Age Limit: 22 so Must be born on or after <strong>September 29, 2004</strong>.<br>
+            • <strong>PG</strong> — Age Limit: 25 Must be born on or after <strong>September 29, 2001</strong>.
+          </div>
+          <div class="txt-ml">സ്വയം സാക്ഷ്യപ്പെടുത്തിയ പകർപ്പ് നിർബന്ധം. പ്രായപരിധി നിബന്ധനകൾ പാലിച്ചിരിക്കണം.</div>
+          <div class="txt-ta">சுய கையொப்பமிட்ட நகல் இணைக்கப்பட வேண்டும். வயது வரம்பிற்குள் இருக்க வேண்டும்.</div>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong style="color:#0f172a;">2. Attendance &amp; Arrears Clearance</strong><br>
+          <span class="txt-ml" style="display:block;">ഹാജരും അരിയറും സംബന്ധിച്ച സാക്ഷ്യപത്രം</span>
+          <span class="txt-ta" style="display:block;">வருகைப்பதிவு &amp; அரியர் சான்றிதழ்</span>
+          <span class="badge-chip green" style="margin-top:2px;">Page 2 of Form</span>
+        </td>
+        <td>
+          <div class="txt-en">
+            • Statutory certificate on <strong>Page 2</strong> of nomination paper.<br>
+            • Signed by <strong>Head of Department (HoD)</strong> with official <strong>Department Rubber Stamp / Office Seal</strong>.
+          </div>
+          <div class="txt-ml">പത്രികയുടെ പേജ് 2-ൽ HoD-യുടെ ഒപ്പും വകുപ്പ് ഔദ്യോഗിക സീലും നിർബന്ധം.</div>
+          <div class="txt-ta">படிவத்தின் பக்கம் 2-ல் துறைத்தலைவர் கையொப்பம் மற்றும் முத்திரை அவசியம்.</div>
+        </td>
+        <td>
+          <div class="txt-en">
+            Mandatorily certifies that candidate has <strong>minimum 75% attendance</strong> and <strong>no academic backlogs/arrears</strong> as required under University election rules.
+          </div>
+          <div class="txt-ml">75% ഹാജരും നിലവിൽ അരിയറുകൾ ഇല്ലെന്നും സാക്ഷ്യപ്പെടുത്തുന്നു.</div>
+          <div class="txt-ta">75% வருகை மற்றும் அரியர் இல்லை என்பதை உறுதிப்படுத்துகிறது.</div>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong style="color:#0f172a;">3. College Student Identity Proof</strong><br>
+          <span class="txt-ml" style="display:block;">കോളേജ് തിരിച്ചറിയൽ രേഖ</span>
+          <span class="txt-ta" style="display:block;">கல்லூரி அடையாள அட்டை</span>
+          <span class="badge-chip blue" style="margin-top:2px;">Active Student Status</span>
+        </td>
+        <td>
+          <div class="txt-en">
+            • <strong>Official College Student ID Card</strong><br>
+            • Current academic year fee receipt or admission slip (if ID card not yet issued)
+          </div>
+          <div class="txt-ml">കോളേജ് തിരിച്ചറിയൽ കാർഡ് അല്ലെങ്കിൽ ഫീസ് രസീത്.</div>
+          <div class="txt-ta">கல்லூரி அடையாள அட்டை அல்லது கட்டண ரசீது நகல்.</div>
+        </td>
+        <td>
+          <div class="txt-en">
+            Authenticates active regular student status and confirms the candidate's <strong>Admission Number</strong> matching the published Electoral Roll.
+          </div>
+          <div class="txt-ml">അഡ്മിഷൻ നമ്പറും വോട്ടർപട്ടികയിലെ വിവരങ്ങളും ഒത്തുനോക്കുന്നു.</div>
+          <div class="txt-ta">வாக்காளர் பட்டியலில் உள்ள சேர்க்கை எண்ணை சரிபார்க்கிறது.</div>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong style="color:#0f172a;">4. Security Deposit Receipt</strong><br>
+          <span class="txt-ml" style="display:block;">സെക്യൂരിറ്റി ഡെപ്പോസിറ്റ് രസീത്</span>
+          <span class="txt-ta" style="display:block;">பாதுகாப்பு வைப்புத்தொகை ரசீது</span>
+          <span class="badge-chip amber" style="margin-top:2px;">Major Posts Only</span>
+        </td>
+        <td>
+          <div class="txt-en">
+            • <strong>Original Chalan / College Fee Receipt</strong> of Rs. 50/-
+          </div>
+          <div class="txt-ml">50 രൂപ അടച്ച അസ്സൽ രസീത്.</div>
+          <div class="txt-ta">ரூ.50 செலுத்திய அசல் ரசீது.</div>
+        </td>
+        <td>
+          <div class="txt-en">
+            Mandatory for major posts (Chairperson, Vice Chairperson, Secretary, Joint Secretary, U.U. Councillors, Sec. Fine Arts, Chief Student Editor, General Captain). Must accompany the nomination.
+          </div>
+          <div class="txt-ml">പ്രധാന തസ്തികകൾക്ക് പത്രികയോടൊപ്പം നിർബന്ധമായും സമർപ്പിക്കണം.</div>
+          <div class="txt-ta">முக்கிய பதவிகளுக்கு வேட்புமனுவுடன் கட்டாயம் இணைக்கப்பட வேண்டும்.</div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 2: ROLES & ENDORSEMENT RULES -->
+  <div class="sec-title avoid-break">
+    <span>2. NOMINATION ROLES &amp; ENDORSEMENT RESTRICTIONS</span>
+    <span class="sec-title-multi">പ്രധാന നിബന്ധനകൾ • முக்கிய விதிமுறைகள்</span>
+  </div>
+
+  <div class="grid-2 avoid-break">
+    <div class="card blue-card">
+      <div class="card-title">
+        <span>Three Distinct Bona-Fide Electors</span>
+        <span class="badge-chip blue">Voter Roll Mandatory</span>
+      </div>
+      <div style="font-size: 6.9pt; line-height: 1.3;">
+        <p>• <strong>Candidate:</strong> Contesting student (സ്ഥാനാർത്ഥി / வேட்பாளர்).</p>
+        <p>• <strong>Proposer:</strong> Registered voter who proposes (നിർദ്ദേശകൻ / முன்மொழிபவர்).</p>
+        <p>• <strong>Seconder:</strong> Registered voter who seconds (പിന്താങ്ങുന്നയാൾ / வழிமொழிபவர்).</p>
+        <div class="txt-ml" style="margin-top: 2.5px; font-weight: 700;">
+          മൂന്നുപേരും കോളേജിലെ അന്തിമ വോട്ടർപട്ടികയിൽ (Nominal Roll) ഉൾപ്പെട്ട regular വിദ്യാർത്ഥികളായിരിക്കണം.
+        </div>
+        <div class="txt-ta" style="font-weight: 700;">
+          மூவரும் கல்லூரியின் இறுதி வாக்காளர் பட்டியலில் இடம்பெற்ற மாணவ/மாணவியராக இருத்தல் வேண்டும்.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>Endorsement Rules &amp; Limits</span>
+        <span class="badge-chip red">Strict Scrutiny</span>
+      </div>
+      <div style="font-size: 6.9pt; line-height: 1.3;">
+        <p>• <strong>No Self-Endorsement:</strong> Candidate cannot propose or second own nomination.</p>
+        <p>• <strong>Proposer ≠ Seconder:</strong> Proposer and Seconder must be two different voters.</p>
+        <div style="margin-top: 2px; padding-top: 2px; border-top: 1px dashed #cbd5e1;">
+          <p style="font-weight: 700; color: #b91c1c;">
+            • Single Endorsement Limit for Same Post:
+          </p>
+          <div class="txt-en" style="font-size: 6.7pt;">
+            An elector can sign as Proposer or Seconder for <strong>only ONE candidate for any given post</strong> (e.g. Chairperson). If an elector signs for multiple candidates for the same post, <strong>both nominations will be invalidated</strong>.
+          </div>
+          <div class="txt-ml" style="font-size: 6.5pt;">
+            ഒരേ തസ്തികയിലേക്ക് (ഉദാ: ചെയർപേഴ്സൺ) ഒന്നിൽക്കൂടുതൽ സ്ഥാനാർത്ഥികൾക്കായി ഒരാൾ ഒപ്പിട്ടു നൽകിയാൽ രണ്ട് നോമിനേഷനുകളും സ്ക്രൂട്ടിനിയിൽ തള്ളിപ്പോകും.
+          </div>
+          <div class="txt-ta" style="font-size: 6.4pt;">
+            ஒரே பதவிக்கு (உதா: தலைவர்) ஒன்றுக்கும் மேற்பட்ட வேட்பாளர்களுக்கு ஒருவர் கையொப்பமிட்டால் இரு மனுக்களும் தள்ளுபடி செய்யப்படும்.
+          </div>
+          
+          <div style="margin-top: 2px; padding: 2px 4px; background: #ecfdf5; border-radius: 3px; border: 1px solid #a7f3d0; font-size: 6.4pt;">
+            <div class="txt-en" style="color: #065f46; font-size: 6.5pt;">
+              <strong>✓ Permitted for Different Posts:</strong> An elector can endorse candidates for different posts (e.g. Chairperson for Candidate A, and General Secretary for Candidate B).
+            </div>
+            <div class="txt-ml" style="color: #065f46; font-size: 6.3pt;">
+              വ്യത്യസ്ത തസ്തികകളിലേക്ക് ഒപ്പിട്ടു നൽകുന്നതിൽ തടസ്സമില്ല (ഉദാ: ഒരാൾക്ക് ചെയർപേഴ്സണായും മറ്റൊരാൾക്ക് ജനറൽ സെക്രട്ടറിയായും ഒപ്പിടാം).
+            </div>
+            <div class="txt-ta" style="color: #065f46; font-size: 6.2pt;">
+              வெவ்வேறு பதவிகளுக்கு கையொப்பமிடலாம் (உதா: ஒருவருக்கு தலைவராகவும் மற்றொருவருக்கு பொதுச்செயலாளராகவும் கையொப்பமிடலாம்).
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 2 ==================== -->
+  <div class="page-break"></div>
+
+  <div class="doc-header">
+    <div class="left-col">
+      <span class="doc-badge">Submission Workflow &amp; Post Rules</span>
+      <h2 class="main-title" style="font-size: 11.5pt;">SUBMISSION WORKFLOW &amp; STATUTORY POST RULES</h2>
+      <h3 class="sub-lang-title title-ml" style="font-size: 9pt;">സമർപ്പണ രീതികളും പോസ്റ്റ് തിരിച്ചുള്ള പ്രത്യേക നിബന്ധനകളും</h3>
+      <h4 class="sub-lang-title title-ta" style="font-size: 8.5pt;">விண்ணப்ப சமர்ப்பிக்கும் முறைகள் மற்றும் பதவி வாரியான விதிமுறைகள்</h4>
+    </div>
+    <div class="right-col">
+      PART II: METHODS &amp; POST RULES<br>
+      College Union Election
+    </div>
+  </div>
+
+  <!-- SECTION 3: TWO SUBMISSION METHODS -->
+  <div class="sec-title avoid-break">
+    <span>3. TWO SUBMISSION METHODS (ONLINE PORTAL VS MANUAL PAPER)</span>
+    <span class="sec-title-multi">തയ്യാറാക്കേണ്ട രണ്ട് രീതികൾ • இரண்டு முறைகள்</span>
+  </div>
+
+  <div class="grid-2 avoid-break">
+    <div class="card green-card">
+      <div class="card-title">
+        <span>METHOD A: Online Portal (Recommended)</span>
+        <span class="badge-chip green">Automated &amp; Error-Free</span>
+      </div>
+      <ol class="step-list">
+        <li><strong>Lookup Nominal Roll:</strong> Open <code>/nominal-roll</code> to find official Serial Numbers (Sl. No.) of Candidate, Proposer, and Seconder.</li>
+        <li><strong>Open Nomination Portal:</strong> Go to <code>/nominate</code> and select Post. Dynamic badges display gender/dept/year rules.</li>
+        <li><strong>Enter Candidate Details:</strong> Type Candidate Serial Number &amp; Admission No. for two-factor verification. Auto-populates dept.</li>
+        <li><strong>Enter DOB &amp; Endorsers:</strong> Select DOB, gender, and enter Proposer &amp; Seconder serial numbers. Instant validation runs.</li>
+        <li><strong>PRINT FORM, SIGN &amp; COLLECT RECEIPT:</strong> Click <strong>🖨️ Print Form</strong>. All 3 must <strong>appear together before the Returning Officer</strong> to affix ink signatures. Attach HoD seal &amp; SSLC copy. <strong>Collect RO Receipt:</strong> The Returning Officer will verify, sign, stamp, and tear off the bottom Acknowledgement Slip and hand it to the candidate as official proof of submission.</li>
+      </ol>
+      <div style="margin-top: 2.5px;">
+        <div class="txt-ml" style="font-weight: 700; font-size: 6.7pt;">
+          പ്രിന്റെടുത്ത് 3 പേരും വരണാധികാരിയുടെ മുന്നിൽ ഹാജരായി ഒപ്പിടുക; വരണാധികാരി ഒപ്പിട്ടു നൽകുന്ന രസീത് (Acknowledgement Slip) കൈപ്പറ്റുക.
+        </div>
+        <div class="txt-ta" style="font-weight: 700; font-size: 6.5pt;">
+          படிவத்தை அச்சிட்டு மூவரும் தேர்தல் அலுவலர் முன் ஆஜராகி கையொப்பமிடவும்; அலுவலர் வழங்கும் ஒப்புகைச் சீட்டை (Receipt) பெற்றுக்கொள்ளவும்.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>METHOD B: Manual Paper Filling</span>
+        <span class="badge-chip amber">Strict Handwriting Rules</span>
+      </div>
+      <ol class="step-list">
+        <li><strong>Print Blank Form:</strong> Download official Blank Nomination Form from portal or College Election Office.</li>
+        <li><strong>Pen &amp; Ink:</strong> Fill neatly using <strong>Black or Blue Ballpoint Pen</strong> only. No gel pens or pencils.</li>
+        <li><strong>BLOCK LETTERS ONLY:</strong> Write strictly in clear block capital letters to avoid reading ambiguity.</li>
+        <li><strong>NO CORRECTIONS:</strong> Please avoid strike-outs, overwriting, erasures, or whitener permitted. Reprint if error occurs.</li>
+        <li><strong>Sign Before RO &amp; Collect Receipt:</strong> Proposer, Seconder, and Candidate must <strong>sign in the physical presence of the Returning Officer</strong>. Attach HoD certificate. Ensure you collect the signed &amp; stamped tear-off Acknowledgement Slip from the RO.</li>
+      </ol>
+      <div style="margin-top: 2.5px;">
+        <div class="txt-ml" style="font-weight: 700; font-size: 6.7pt;">
+          വെട്ടിത്തിരുത്തലുകൾ ഇല്ലാതെ പൂരിപ്പിച്ച്, വരണാധികാരിയുടെ മുന്നിൽ ഒപ്പിട്ട് രസീത് സ്ലിപ്പ് കൈപ്പറ്റുക.
+        </div>
+        <div class="txt-ta" style="font-weight: 700; font-size: 6.5pt;">
+          எந்த திருத்தமும் இன்றி எழுதி, தேர்தல் அலுவலர் முன் கையொப்பமிட்டு ஒப்புகைச் சீட்டை பெற்றுக்கொள்ளவும்.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: STATUTORY RULES & POST RESTRICTIONS -->
+  <div class="sec-title avoid-break" style="margin-top: 3px;">
+    <span>4. STATUTORY RULES &amp; POST RESTRICTIONS</span>
+    <span class="sec-title-multi">പോസ്റ്റ് തിരിച്ചുള്ള നിബന്ധനകൾ • பதவி வாரியான விதிமுறைகள்</span>
+  </div>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width: 25%;">Category / Post</th>
+        <th style="width: 45%;">Statutory Restriction &amp; Eligibility Norms</th>
+        <th style="width: 30%;">Scrutiny Verification Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <strong style="color:#0f172a;">Age Limits (Lyngdoh)</strong><br>
+          <span class="txt-ml" style="display:block;">പ്രായപരിധി (ലിംഗ്ദോ)</span>
+          <span class="txt-ta" style="display:block;">வயது வரம்பு</span>
+          <span class="badge-chip blue" style="margin-top:2px;">Lyngdoh Norms</span>
+        </td>
+        <td>
+          <div class="txt-en">
+            • Under-Graduate (UG): Maximum <strong>22 Years</strong><br>
+            • Post-Graduate (PG): Maximum <strong>25 Years</strong><br>
+            • Research Scholars: <strong>Barred</strong> from contesting
+          </div>
+          <div class="txt-ml">ഡിഗ്രി: പരമാവധി 22 വയസ്സ്; പി.ജി: 25 വയസ്സ്. റിസർച്ച് സ്കോളർമാർക്ക് അർഹതയില്ല.</div>
+          <div class="txt-ta">இளங்கலை: அதிகபட்சம் 22 வயது; முதுகலை: 25 வயது. ஆராய்ச்சி மாணவர்கள் போட்டியிட முடியாது.</div>
+        </td>
+        <td>
+          <div class="txt-en">Verified against attached Date of Birth proof. Disqualified if age exceeds limit on cutoff date.</div>
+          <div class="txt-ml">ജനനത്തീയതി രേഖ പരിശോധിച്ച് പ്രായം കണക്കാക്കും.</div>
+          <div class="txt-ta">பிறந்த தேதி சான்றிதழ் அடிப்படையில் சரிபார்க்கப்படும்.</div>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong style="color:#0f172a;">Vice Chairperson &amp; Joint Secretary</strong><br>
+          <span class="txt-ml" style="display:block;">വൈസ് ചെയർപേഴ്സൺ &amp; ജോയിന്റ് സെക്രട്ടറി</span>
+          <span class="txt-ta" style="display:block;">துணைத் தலைவர் &amp; இணைச் செயலாளர்</span>
+          <span class="badge-chip red" style="margin-top:2px;">Women Reservation</span>
+        </td>
+        <td>
+          <div class="txt-en">
+            Statutorily reserved <strong>exclusively for female students</strong> under election bylaws.
+          </div>
+          <div class="txt-ml">വനിതാ വിദ്യാർത്ഥികൾക്കായി മാത്രം സംവരണം ചെയ്തിട്ടുള്ള തസ്തികകൾ.</div>
+          <div class="txt-ta">மாணவிகளுக்கு மட்டுமே பிரத்யேகமாக ஒதுக்கப்பட்ட பதவிகள்.</div>
+        </td>
+        <td>
+          <div class="txt-en">Male candidates filing for these posts will be rejected summarily during scrutiny.</div>
+          <div class="txt-ml">ആൺകുട്ടികൾ അപേക്ഷിച്ചാൽ പത്രിക തള്ളപ്പെടും.</div>
+          <div class="txt-ta">மாணவர்கள் விண்ணப்பித்தால் உடனடியாக நிராகரிக்கப்படும்.</div>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong style="color:#0f172a;">Association Secretaries</strong><br>
+          <span class="txt-ml" style="display:block;">അസോസിയേഷൻ സെക്രട്ടറിമാർ</span>
+          <span class="txt-ta" style="display:block;">துறை அசோசியேஷன் செயலாளர்கள்</span>
+          <span class="badge-chip amber" style="margin-top:2px;">Department Discipline</span>
+        </td>
+        <td>
+          <div class="txt-en">
+            Candidate, Proposer, and Seconder must <strong>all belong to the exact same department/discipline</strong>.
+          </div>
+          <div class="txt-ml">സ്ഥാനാർത്ഥിയും നിർദ്ദേശകനും പിന്താങ്ങുന്നയാളും ഒരേ ഡിപ്പാർട്ട്മെന്റിൽ നിന്നുള്ളവരായിരിക്കണം.</div>
+          <div class="txt-ta">வேட்பாளர், முன்மொழிபவர், வழிமொழிபவர் மூவரும் ஒரே துறையைச் சேர்ந்தவராக இருக்க வேண்டும்.</div>
+        </td>
+        <td>
+          <div class="txt-en">Cross-department endorsers invalidate the nomination immediately.</div>
+          <div class="txt-ml">ഡിപ്പാർട്ട്മെന്റ് വ്യത്യാസമുണ്ടായാൽ പത്രിക അസാധുവാകും.</div>
+          <div class="txt-ta">துறை பொருந்தாவிடில் மனு தள்ளுபடி செய்யப்படும்.</div>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong style="color:#0f172a;">Class / Year Representatives</strong><br>
+          <span class="txt-ml" style="display:block;">ക്ലാസ്സ് പ്രതിനിധികൾ</span>
+          <span class="txt-ta" style="display:block;">வகுப்பு / ஆண்டு பிரதிநிதிகள்</span>
+          <span class="badge-chip green" style="margin-top:2px;">Year-Level Match</span>
+        </td>
+        <td>
+          <div class="txt-en">
+            Only regular students belonging to that specific year-level (I UG, II UG, III UG, PG) can contest, propose, and second.
+          </div>
+          <div class="txt-ml">അതത് വർഷത്തിലെ (1st UG, 2nd UG, 3rd UG, PG) വിദ്യാർത്ഥികൾക്ക് മാത്രമേ അവകാശമുള്ളൂ.</div>
+          <div class="txt-ta">குறிப்பிட்ட அந்தந்த ஆண்டைச் சேர்ந்த மாணவர்களுக்கே போட்டியிடவும் வாக்களிக்கவும் உரிமை உண்டு.</div>
+        </td>
+        <td>
+          <div class="txt-en">Cross-year electors render the nomination void.</div>
+          <div class="txt-ml">മറ്റ് വർഷങ്ങളിലെ വിദ്യാർത്ഥികൾ ഒപ്പിട്ടാൽ തള്ളും.</div>
+          <div class="txt-ta">வேறு ஆண்டு மாணவர்கள் கையொப்பமிட்டால் செல்லாது.</div>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong style="color:#0f172a;">Chief Student Editor</strong><br>
+          <span class="txt-ml" style="display:block;">സ്റ്റുഡന്റ് എഡിറ്റർ (മാഗസിൻ)</span>
+          <span class="txt-ta" style="display:block;">மாணவர் இதழாசிரியர்</span>
+          <span class="badge-chip red" style="margin-top:2px;">Final Year Barred</span>
+        </td>
+        <td>
+          <div class="txt-en">
+            <strong>Final-year students are barred</strong> from contesting for Student Editor (Magazine Editor).
+          </div>
+          <div class="txt-ml">സ്റ്റുഡന്റ് എഡിറ്റർ (മാഗസിൻ എഡിറ്റർ) സ്ഥാനത്തേക്ക് അവസാന വർഷ വിദ്യാർത്ഥികൾക്ക് മത്സരിക്കാൻ വിലക്കുണ്ട്.</div>
+          <div class="txt-ta">மாணவர் பதிப்பாசிரியர் (மேகசின் எடிட்டர்) பதவிக்கு இறுதி ஆண்டு மாணவர்கள் போட்டியிடத் தடை விதிக்கப்பட்டுள்ளது.</div>
+        </td>
+        <td>
+          <div class="txt-en">Only junior-year students eligible to contest.</div>
+          <div class="txt-ml">ജൂനിയർ ബാച്ചുകളിലെ വിദ്യാർത്ഥികൾക്ക് മാത്രം അർഹത.</div>
+          <div class="txt-ta">இளைய ஆண்டு மாணவர்கள் மட்டுமே போட்டியிட முடியும்.</div>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong style="color:#0f172a;">Contest Opportunity Limits</strong><br>
+          <span class="txt-ml" style="display:block;">മത്സരിക്കാനുള്ള അവസരങ്ങൾ</span>
+          <span class="txt-ta" style="display:block;">போட்டியிடும் வாய்ப்புகள்</span>
+          <span class="badge-chip blue" style="margin-top:2px;">Lyngdoh Norms</span>
+        </td>
+        <td>
+          <div class="txt-en">
+            A candidate has only <strong>ONE opportunity</strong> to contest for an Office Bearer post, and <strong>TWO opportunities</strong> for an Executive Member post.
+          </div>
+          <div class="txt-ml">ഓഫീസ് ബെയറർ സ്ഥാനത്തേക്ക് ഒരു തവണയും, എക്സിക്യൂട്ടീവ് അംഗമായി രണ്ട് തവണയും മാത്രമേ ഒരാൾക്ക് മത്സരിക്കാൻ അവസരമുള്ളൂ.</div>
+          <div class="txt-ta">ஒரு மாணவர் அலுவலகப் பொறுப்பாளர் பதவிக்கு ஒரு முறையும், செயற்குழு உறுப்பினர் பதவிக்கு இரு முறையும் மட்டுமே போட்டியிட முடியும்.</div>
+        </td>
+        <td>
+          <div class="txt-en">Verified against previous election records. Exceeding the limit results in rejection.</div>
+          <div class="txt-ml">മുൻ വർഷങ്ങളിലെ രേഖകൾ പരിശോധിച്ച് ഉറപ്പുവരുത്തും.</div>
+          <div class="txt-ta">முந்தைய தேர்தல் ஆவணங்கள் சரிபார்க்கப்படும்.</div>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong style="color:#0f172a;">Security Deposit (Rs. 50/-)</strong><br>
+          <span class="txt-ml" style="display:block;">സെക്യൂരിറ്റി ഡെപ്പോസിറ്റ്</span>
+          <span class="txt-ta" style="display:block;">பாதுகாப்பு வைப்புத்தொகை</span>
+          <span class="badge-chip amber" style="margin-top:2px;">Major Posts Only</span>
+        </td>
+        <td>
+          <div class="txt-en">
+            A security deposit of <strong>Rs. 50/-</strong> is mandatory for the following posts: <strong>Chairperson, Vice Chairperson, Secretary, Joint Secretary, U.U. Councillors, Sec. Fine Arts, Chief Student Editor, and General Captain</strong>. Refundable if nomination is validly withdrawn or candidate secures at least 20% of polled votes.
+          </div>
+          <div class="txt-ml">ചെയർപേഴ്സൺ, വൈസ് ചെയർപേഴ്സൺ, സെക്രട്ടറി, ജോയിന്റ് സെക്രട്ടറി, യൂണിവേഴ്സിറ്റി യൂണിയൻ കൗൺസിലർമാർ, ഫൈൻ ആർട്സ് സെക്രട്ടറി, സ്റ്റുഡന്റ് എഡിറ്റർ, ജനറൽ ക്യാപ്റ്റൻ എന്നിവർക്ക് 50 രൂപ സെക്യൂരിറ്റി ഡെപ്പോസിറ്റ് നിർബന്ധമാണ്. പത്രിക പിൻവലിക്കുകയോ 20% വോട്ട് നേടുകയോ ചെയ്താൽ തിരികെ ലഭിക്കും.</div>
+          <div class="txt-ta">தலைவர், துணைத் தலைவர், செயலாளர், இணைச் செயலாளர், பல்கலைக்கழக யூனியன் கவுன்சிலர்கள், கவின் கலைச் செயலாளர், மாணவர் இதழாசிரியர், பொதுக் கேப்டன் ஆகிய பதவிகளுக்கு ரூ.50 பாதுகாப்பு வைப்புத்தொகை கட்டாயம். வேட்புமனுவை திரும்பப் பெற்றாலோ அல்லது 20% வாக்குகளைப் பெற்றாலோ திரும்ப வழங்கப்படும்.</div>
+        </td>
+        <td>
+          <div class="txt-en">Receipt of deposit must be verified. Forfeited deposits go to the College Union Fund.</div>
+          <div class="txt-ml">ഡെപ്പോസിറ്റ് അടച്ച രസീത് പരിശോധിക്കും.</div>
+          <div class="txt-ta">வைப்புத்தொகை செலுத்திய ரசீது சரிபார்க்கப்படும்.</div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="alert-box alert-amber avoid-break" style="margin-top: 3px; padding: 3px 6px;">
+    <div class="txt-en">
+      <strong style="color: #92400e;">⚠️ STATUTORY IN-PERSON PRESENCE:</strong> In both methods, the printed hard-copy paper with original ink signatures, HoD certificate with seal, and Date of Birth proof must be physically delivered by hand to the Returning Officer before the statutory deadline bell.
+    </div>
+    <div class="txt-ml" style="font-size: 6.7pt; margin-top: 1px;">
+      രണ്ട് രീതികളിലും, അസ്സൽ ഒപ്പുകൾ, HoD സീൽ, ജനനത്തീയതി രേഖ എന്നിവ സഹിതമുള്ള ഹാർഡ് കോപ്പി നിശ്ചിത സമയത്തിന് മുൻപായി വരണാധികാരിയുടെ മുന്നിൽ നേരിട്ടെത്തി കൈമാറണം.
+    </div>
+    <div class="txt-ta" style="font-size: 6.5pt;">
+      இரண்டு முறைகளிலும், அசல் கையொப்பங்கள், துறைத்தலைவர் முத்திரை மற்றும் பிறந்த தேதி சான்றுடன் கூடிய அச்சுப் படிவத்தை குறித்த நேரத்திற்குள் தேர்தல் அலுவலரிடம் நேரில் சமர்ப்பிக்க வேண்டும்.
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 3 ==================== -->
+  <div class="page-break"></div>
+
+  <div class="doc-header">
+    <div class="left-col">
+      <span class="doc-badge">Statutory Scrutiny Standards</span>
+      <h2 class="main-title" style="font-size: 11.5pt;">SCRUTINY STANDARDS, REJECTION PITFALLS &amp; CHECKLIST</h2>
+      <h3 class="sub-lang-title title-ml" style="font-size: 9pt;">നോമിനേഷൻ തള്ളപ്പെടാനുള്ള കാരണങ്ങളും ഫൈനൽ ചെക്ക്‌ലിസ്റ്റും</h3>
+      <h4 class="sub-lang-title title-ta" style="font-size: 8.5pt;">வேட்புமனு நிராகரிப்புக்கான காரணங்கள் மற்றும் சரிபார்ப்பு பட்டியல்</h4>
+    </div>
+    <div class="right-col">
+      PART III: STATUTORY SCRUTINY<br>
+      College Union Election
+    </div>
+  </div>
+
+  <!-- SECTION 5: TOP REASONS FOR NOMINATION REJECTION -->
+  <div class="sec-title avoid-break">
+    <span>5. TOP 9 REASONS FOR NOMINATION REJECTION</span>
+    <span class="sec-title-multi">തള്ളപ്പെടാനുള്ള പ്രധാന കാരണങ്ങൾ • முக்கிய நிராகரிப்பு காரணங்கள்</span>
+  </div>
+
+  <table class="data-table compact-table avoid-break">
+    <thead>
+      <tr>
+        <th style="width: 5%;">#</th>
+        <th style="width: 43%;">Disqualification Pitfall</th>
+        <th style="width: 52%;">Statutory Reason &amp; Impact</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="text-align: center; font-weight: bold; color: #b91c1c;">1</td>
+        <td>
+          <div class="txt-en">Online Form Filled but Not Submitted to RO</div>
+          <div class="txt-ml">ഓൺലൈനിൽ നൽകി പ്രിന്റ് ഓഫീസിൽ നൽകാതിരിക്കൽ</div>
+          <div class="txt-ta">படிவத்தை தேர்தல் அலுவலகத்தில் நேரில் சமர்ப்பிக்காமை</div>
+        </td>
+        <td>
+          <div class="txt-en">Online submission alone is not filing. Hard copy with original ink signatures must be handed over in person.</div>
+          <div class="txt-ml">ഓൺലൈൻ എൻട്രി കൊണ്ട് മാത്രമായില്ല; അസ്സൽ ഒപ്പുകളുള്ള പ്രിന്റ് നേരിട്ട് സമർപ്പിച്ചില്ലെങ്കിൽ തള്ളപ്പെടും.</div>
+          <div class="txt-ta">ஆன்லைன் பதிவு மட்டுமே செல்லாது; அசல் கையொப்பமிட்ட தாளை நேரில் சமர்ப்பிக்காவிடில் தள்ளுபடி செய்யப்படும்.</div>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center; font-weight: bold; color: #b91c1c;">2</td>
+        <td>
+          <div class="txt-en">Missing Date of Birth Proof / Age Bar Exceeded</div>
+          <div class="txt-ml">ജനനത്തീയതി രേഖ ഇല്ലായ്മ / പ്രായപരിധി കവിയൽ</div>
+          <div class="txt-ta">பிறந்த தேதி சான்று இன்மை / வயது வரம்பு மீறல்</div>
+        </td>
+        <td>
+          <div class="txt-en">Failure to attach SSLC Book copy, or candidate age exceeding 22 (UG) / 25 (PG) as of cutoff date.</div>
+          <div class="txt-ml">SSLC പകർപ്പ് വെയ്ക്കാതിരിക്കുകയോ പ്രായപരിധി (ഡിഗ്രി 22, പി.ജി 25) കവിയുകയോ ചെയ്താൽ നിരസിക്കും.</div>
+          <div class="txt-ta">SSLC நகல் இணைக்கப்படாவிட்டாலோ அல்லது வயது வரம்பு மீறினாலோ உடனடியாக நிராகரிக்கப்படும்.</div>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center; font-weight: bold; color: #b91c1c;">3</td>
+        <td>
+          <div class="txt-en">Missing HoD Clearance / Seal (Arrears &amp; Attendance)</div>
+          <div class="txt-ml">ഹാജർ/അരിയർ സർട്ടിഫിക്കറ്റ് അല്ലെങ്കിൽ HoD സീൽ ഇല്ലായ്മ</div>
+          <div class="txt-ta">துறைத்தலைவர் சான்றிதழ் / அலுவலக முத்திரை இன்மை</div>
+        </td>
+        <td>
+          <div class="txt-en">Page 2 certificate incomplete, candidate having arrears, &lt;75% attendance, or missing HoD stamp.</div>
+          <div class="txt-ml">അരിയറുകൾ ഉള്ളവർ, 75% ഹാജരില്ലാത്തവർ, HoD സീലില്ലാത്തവർ എന്നിവരുടെ പത്രിക അസാധുവാകും.</div>
+          <div class="txt-ta">அரியர் உள்ளவர்கள், 75% வருகை இல்லாதவர்கள் மற்றும் HoD முத்திரை இல்லாத மனுக்கள் தள்ளுபடி செய்யப்படும்.</div>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center; font-weight: bold; color: #b91c1c;">4</td>
+        <td>
+          <div class="txt-en">Overwriting or Correction Fluid (Whitener)</div>
+          <div class="txt-ml">വെട്ടിത്തിരുത്തലുകൾ / വൈറ്റ്നർ ഉപയോഗം</div>
+          <div class="txt-ta">படிவத்தில் அடித்தல் திருத்துதல் / ஒயிட்னர் உபயோகம்</div>
+        </td>
+        <td>
+          <div class="txt-en">Zero tolerance. Any correction, scratch-out, or white fluid results in immediate summary rejection.</div>
+          <div class="txt-ml">വെട്ടിത്തിരുത്തലുകളോ വൈറ്റ്നറോ കണ്ടാൽ സ്ക്രൂട്ടിനിയിൽ പത്രിക ഒരു ദാക്ഷിണ്യവുമില്ലാതെ തള്ളും.</div>
+          <div class="txt-ta">அடித்தல், திருத்துதல் அல்லது ஒயிட்னர் பயன்படுத்தினால் எவ்வித பாரபட்சமுமின்றி நிராகரிக்கப்படும்.</div>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center; font-weight: bold; color: #b91c1c;">5</td>
+        <td>
+          <div class="txt-en">Wrong Electoral Roll Serial Number</div>
+          <div class="txt-ml">തെറ്റായ വോട്ടർ ക്രമനമ്പർ രേഖപ്പെടുത്തൽ</div>
+          <div class="txt-ta">தவறான வாக்காளர் வரிசை எண் பதிவு செய்தல்</div>
+        </td>
+        <td>
+          <div class="txt-en">Writing admission or class roll number instead of official Nominal Roll Serial Number.</div>
+          <div class="txt-ml">അന്തിമ വോട്ടർപട്ടികയിലെ ക്രമനമ്പറിന് പകരം അഡ്മിഷൻ നമ്പറോ ക്ലാസ്സ് നമ്പറോ എഴുതിയാൽ തള്ളപ്പെടും.</div>
+          <div class="txt-ta">வாக்காளர் பட்டியலில் உள்ள சரியான வரிசை எண்ணிற்கு பதிலாக வேறு எண் எழுதினால் மனு செல்லாது.</div>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center; font-weight: bold; color: #b91c1c;">6</td>
+        <td>
+          <div class="txt-en">Proposer / Seconder Department Mismatch</div>
+          <div class="txt-ml">ഡിപ്പാർട്ട്മെന്റ് മാറി ഒപ്പിടൽ</div>
+          <div class="txt-ta">அசோசியேஷன் பதவிக்கு துறை பொருந்தாமை</div>
+        </td>
+        <td>
+          <div class="txt-en">For Association Secretary, proposer or seconder belongs to another discipline/dept.</div>
+          <div class="txt-ml">അസോസിയേഷൻ തസ്തികകളിൽ മറ്റ് ഡിപ്പാർട്ട്മെന്റുകളിലെ വോട്ടർമാർ ഒപ്പിട്ടാൽ നോമിനേഷൻ അസാധുവാകും.</div>
+          <div class="txt-ta">துறை செயலாளர் பதவிக்கு பிற துறையைச் சேர்ந்த மாணவர்கள் கையொப்பமிட்டால் மனு தள்ளுபடி செய்யப்படும்.</div>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center; font-weight: bold; color: #b91c1c;">7</td>
+        <td>
+          <div class="txt-en">Signatures Affixed Outside RO Presence / Proxy</div>
+          <div class="txt-ml">വരണാധികാരിയുടെ മുന്നിലല്ലാതെ ഒപ്പിടൽ / ആൾമാറാട്ടം</div>
+          <div class="txt-ta">தேர்தல் அலுவலர் முன்னிலையன்றி கையொப்பமிடுதல்</div>
+        </td>
+        <td>
+          <div class="txt-en">Candidate, Proposer, or Seconder failed to sign directly before the Returning Officer. Pre-signed forms rejected.</div>
+          <div class="txt-ml">3 പേരും വരണാധികാരിയുടെ മുന്നിൽ നേരിട്ട് ഹാജരായി ഒപ്പിടാത്തതോ നേരത്തെ ഒപ്പിട്ടു കൊണ്ടുവന്നതോ ആയ ഫോമുകൾ തള്ളും.</div>
+          <div class="txt-ta">மூவரும் தேர்தல் அலுவலர் முன்னிலையில் நேரில் ஆஜராகி கையொப்பமிட வேண்டும். முன்பே கையொப்பமிட்டவை நிராகரிக்கப்படும்.</div>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center; font-weight: bold; color: #b91c1c;">8</td>
+        <td>
+          <div class="txt-en">Missing Security Deposit Receipt</div>
+          <div class="txt-ml">സെക്യൂരിറ്റി ഡെപ്പോസിറ്റ് രസീത് ഇല്ലായ്മ</div>
+          <div class="txt-ta">பாதுகாப்பு வைப்புத்தொகை ரசீது இன்மை</div>
+        </td>
+        <td>
+          <div class="txt-en">Please attach the Rs. 50/- Chalan/Receipt for major posts will invalidate the nomination.</div>
+          <div class="txt-ml">പ്രധാന തസ്തികകൾക്ക് 50 രൂപ അടച്ച രസീത് പത്രികയോടൊപ്പം ഇല്ലെങ്കിൽ തള്ളും.</div>
+          <div class="txt-ta">முக்கிய பதவிகளுக்கு ரூ.50 ரசீது இணைக்கப்படாவிட்டால் மனு செல்லாது.</div>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: center; font-weight: bold; color: #b91c1c;">9</td>
+        <td>
+          <div class="txt-en">Late Physical Delivery Past Deadline Bell</div>
+          <div class="txt-ml">നിശ്ചിത സമയത്തിന് ശേഷം ഹാജരാക്കൽ</div>
+          <div class="txt-ta">குறிப்பிட்ட நேரத்திற்குப் பின் தாமதமாக சமர்ப்பித்தல்</div>
+        </td>
+        <td>
+          <div class="txt-en">Handing in nomination paper after deadline bell. Cannot be accepted under any circumstances.</div>
+          <div class="txt-ml">നിശ്ചിത സമയപരിധിക്ക് ശേഷം സമർപ്പിക്കുന്ന പത്രികകൾ ഒരു കാരണവശാലും സ്വീകരിക്കില്ല.</div>
+          <div class="txt-ta">கடைசி நேர மணி ஒலித்த பிறகு கொண்டுவரப்படும் எந்தவொரு வேட்புமனுவும் ஏற்றுக்கொள்ளப்பட மாட்டாது.</div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 6: FINAL CHECKLIST -->
+  <div class="sec-title avoid-break" style="margin-top: 3px;">
+    <span>6. PRE-SUBMISSION 10-POINT CHECKLIST</span>
+    <span class="sec-title-multi">പേപ്പർ സമർപ്പിക്കുന്നതിന് മുൻപുള്ള 10 കാര്യങ്ങൾ • இறுதி சரிபார்ப்பு</span>
+  </div>
+
+  <div class="grid-2 avoid-break" style="margin-top: 1.5px;">
+    <div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <div class="txt-en"><strong>1. Nominal Roll Check:</strong> Exact Serial Numbers verified from published voter list.</div>
+          <div class="txt-ml">ഔദ്യോഗിക വോട്ടർപട്ടികയിലെ ക്രമനമ്പർ ശരിയായി രേഖപ്പെടുത്തി.</div>
+          <div class="txt-ta">வாக்காளர் பட்டியலின் வரிசை எண் சரியாக சரிபார்க்கப்பட்டது.</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <div class="txt-en"><strong>2. Age Verification:</strong> Candidate meets Lyngdoh limit (UG ≤ 22, PG ≤ 25).</div>
+          <div class="txt-ml">സ്ഥാനാർത്ഥിക്ക് പ്രായപരിധി കവിഞ്ഞിട്ടില്ല.</div>
+          <div class="txt-ta">வேட்பாளர் வயது வரம்பிற்குள் உள்ளார்.</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <div class="txt-en"><strong>3. Gender Compliance:</strong> Female candidate for Vice Chairperson &amp; Joint Secretary.</div>
+          <div class="txt-ml">വനിതാ സംവരണ തസ്തികകളിലേക്ക് വനിതകൾ മാത്രം.</div>
+          <div class="txt-ta">மகளிர் இடஒதுக்கீடு பதவிகளுக்கு மாணவிகள் மட்டுமே.</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <div class="txt-en"><strong>4. Dept Match:</strong> Proposer &amp; Seconder from same dept for Association posts.</div>
+          <div class="txt-ml">അസോസിയേഷൻ തസ്തികകൾക്ക് 3 പേരും ഒരേ ഡിപ്പാർട്ട്മെന്റ്.</div>
+          <div class="txt-ta">அசோசியேஷன் பதவிக்கு மூவரும் ஒரே துறையைச் சேர்ந்தவர்.</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <div class="txt-en"><strong>5. Single Endorsement:</strong> Endorsers haven't signed other forms for this post.</div>
+          <div class="txt-ml">ഈ പോസ്റ്റിലേക്ക് മറ്റ് ആർക്കും ഇവർ ഒപ്പിട്ടു നൽകിയിട്ടില്ല.</div>
+          <div class="txt-ta">இப்பதவிக்கு வேறு எவருக்கும் இவர்கள் கையொப்பமிடவில்லை.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <div class="txt-en"><strong>6. In-Person Signing:</strong> All 3 signed before the RO / designated representative.</div>
+          <div class="txt-ml">3 പേരും വരണാധികാരിയുടെ മുന്നിൽ നേരിട്ടെത്തി ഒപ്പിട്ടു.</div>
+          <div class="txt-ta">மூவரும் தேர்தல் அலுவலர் முன்னிலையில் நேரில் கையொப்பமிட்டனர்.</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <div class="txt-en"><strong>7. HoD Certificate:</strong> Signed by HoD on Page 2 with <strong>Department Rubber Stamp</strong>.</div>
+          <div class="txt-ml">പേജ് 2-ൽ HoD ഒപ്പും വകുപ്പ് ഔദ്യോഗിക സീലും വാങ്ങി.</div>
+          <div class="txt-ta">துறைத்தலைவர் கையொப்பம் மற்றும் முத்திரை பெறப்பட்டது.</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <div class="txt-en"><strong>8. Enclosures Attached:</strong> Self-attested SSLC copy (DOB) and College ID attached.</div>
+          <div class="txt-ml">SSLC പകർപ്പും കോളേജ് ഐഡി പകർപ്പും ഒപ്പം ചേർത്തു.</div>
+          <div class="txt-ta">SSLC நகல் மற்றும் அடையாள அட்டை நகல் இணைக்கப்பட்டது.</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <div class="txt-en"><strong>9. Form Condition:</strong> Absolutely NO whitener, NO scratches, NO overwriting.</div>
+          <div class="txt-ml">യാതൊരു വെട്ടിത്തിരുത്തലുകളോ വൈറ്റ്നറോ ഇല്ല.</div>
+          <div class="txt-ta">எந்த அடித்தலும் திருத்தமும் ஒயிட்னரும் இல்லை.</div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-box"></div>
+        <div>
+          <div class="txt-en"><strong>10. Physical Hand-in &amp; RO Receipt:</strong> Handed over in person to RO before bell and collected signed tear-off Acknowledgement Slip.</div>
+          <div class="txt-ml">നിശ്ചിത സമയത്തിന് മുൻപ് വരണാധികാരിക്ക് നേരിട്ട് നൽകി ഒപ്പിട്ട രസീത് കൈപ്പറ്റി.</div>
+          <div class="txt-ta">நேரத்திற்கு முன்பாக தேர்தல் அலுவலரிடம் வழங்கி கையொப்பமிட்ட ஒப்புகைச் சீட்டு பெறப்பட்டது.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="officer-footer avoid-break">
+    <div>
+      <strong>Published by Authority:</strong> Returning Officer &amp; Scrutiny Committee • College Union Election Cell
+    </div>
+    <div style="text-align: right; white-space: nowrap;">
+      <em>Strict statutory compliance mandatory • Late submissions rejected without appeal.</em>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 4: SAMPLE NOMINATION ==================== -->
+  <div class="page-break"></div>
+
+  <div class="doc-header">
+    <div class="left-col">
+      <span class="doc-badge" style="background:#047857;">Official Specimen Prototype</span>
+      <h2 class="main-title" style="font-size: 11.5pt;">SAMPLE NOMINATION PAPER</h2>
+      <h3 class="sub-lang-title title-ml" style="font-size: 9pt;">മാതൃകാ നാമനിർദ്ദേശ പത്രിക</h3>
+      <h4 class="sub-lang-title title-ta" style="font-size: 8.5pt;">மாதிரி வேட்புமனு படிவம்</h4>
+    </div>
+    <div class="right-col">
+      SPECIMEN FOR SCRUTINY GUIDANCE<br>
+      College Union Election
+    </div>
+  </div>
+
+  <div class="alert-box alert-blue avoid-break" style="padding: 2.5px 5px; margin-bottom: 3px;">
+    <div class="txt-en" style="font-size: 6.9pt; color: #1e40af;">
+      <strong>ℹ️ ILLUSTRATIVE SPECIMEN FOR STUDENTS:</strong> Exact reproduction of a valid Nomination Paper generated by the Election Portal. Notice the candidate, proposer, seconder blocks, ink signatures before the RO, and the bottom tear-off RO Acknowledgement Slip returned to candidate.
+    </div>
+    <div class="txt-ml" style="font-size: 6.7pt; color: #1e40af;">
+      വിദ്യാർത്ഥികൾക്കുള്ള മാതൃകാ പത്രിക: സ്ഥാനാർത്ഥി, നിർദ്ദേശകൻ, പിന്താങ്ങുന്നയാൾ എന്നിവരുടെ വിവരങ്ങൾ, വരണാധികാരിക്ക് മുന്നിലെ ഒപ്പുകൾ, താഴെയുള്ള ഒപ്പിട്ട രസീത് സ്ലിപ്പ് എന്നിവ ഇതിൽ കാണാം.
+    </div>
+    <div class="txt-ta" style="font-size: 6.5pt; color: #1e40af;">
+      மாணவர்களுக்கான மாதிரி படிவம்: வேட்பாளர், முன்மொழிபவர், வழிமொழிபவர் விபரங்கள், தேர்தல் அலுவலர் முன் கையொப்பம் மற்றும் கீழேயுள்ள ஒப்புகைச் சீட்டு எவ்வாறு அமைய வேண்டும் என்பதை இதில் காணலாம்.
+    </div>
+  </div>
+
+  <!-- ACTUAL FORM CONTAINER -->
+  <div class="specimen-paper avoid-break">
+    
+    <!-- Top Form Header -->
+    <div class="specimen-header">
+      <div>
+        <p style="font-weight: 800; font-size: 9.2pt; color: #1e3a8a; text-transform: uppercase;">GOVERNMENT COLLEGE CHITTUR</p>
+        <p style="font-size: 7pt; color: #475569;">College Union Election 2026–2027</p>
+      </div>
+      <div style="text-align: right;">
+        <span class="badge-chip green" style="font-size: 6.6pt; padding: 1.5px 6px;">STATUS: VALID</span>
+        <p style="font-size: 6.6pt; color: #64748b; margin-top: 1px;">Generated: 29 / 09 / 2026</p>
+        <p style="font-family: monospace; font-size: 6.6pt; color: #334155;">Ref ID: NOM-2026-CH-0142</p>
+      </div>
+    </div>
+
+    <div style="background: #1e3a8a; color: #ffffff; text-align: center; font-weight: 800; font-size: 8.8pt; padding: 3px; border-radius: 3px; margin-bottom: 5px; letter-spacing: 0.8px;">
+      NOMINATION PAPER
+    </div>
+
+    <p style="font-size: 8pt; margin-bottom: 5px;">
+      <span style="font-weight: 700; color: #475569; width: 120px; display: inline-block;">Post Applied For:</span> 
+      <strong style="color: #1e3a8a; font-size: 8.5pt;">CHAIRPERSON</strong>
+    </p>
+
+    <!-- Candidate Block -->
+    <div class="specimen-block" style="margin-bottom: 4px;">
+      <div class="specimen-block-title">
+        <span>CANDIDATE DETAILS</span>
+        <span class="badge-chip blue">Electoral Roll Sl. #142</span>
+      </div>
+      <div class="specimen-grid">
+        <p>Name: <strong style="font-size: 7.5pt;">RAHANA K. P.</strong></p>
+        <p>Admission No: <strong style="color: #1e3a8a; font-family: monospace;">18452</strong></p>
+        <p>Class: <strong>III B.A. English</strong></p>
+        <p>Dept: <strong>English</strong></p>
+        <p>Gender: <strong>Female</strong></p>
+        <p>Date of Birth: <strong>14 / 05 / 2005</strong></p>
+        <p style="grid-column: span 2;">Age as on Notification Date: <strong style="color: #15803d;">21 Years (Eligible: UG ≤ 22)</strong></p>
+      </div>
+    </div>
+
+    <!-- Proposer & Seconder 2-Col -->
+    <div class="grid-2" style="margin: 0 0 4px 0;">
+      <!-- Proposer Block -->
+      <div class="specimen-block" style="margin-bottom: 0;">
+        <div class="specimen-block-title">
+          <span>PROPOSER DETAILS</span>
+          <span class="badge-chip blue">Electoral Roll Sl. #89</span>
+        </div>
+        <div style="font-size: 7pt; line-height: 1.35;">
+          <p>Name: <strong>JITHIN RAJ</strong></p>
+          <p>Admission No: <strong style="font-family: monospace; color: #1e3a8a;">19104</strong></p>
+          <p>Class: <strong>II B.Com</strong></p>
+          <p>Dept: <strong>Commerce</strong></p>
+          <div style="margin-top: 3px; padding-top: 2.5px; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; align-items: flex-end;">
+            <span>Date: 29 / 09 / 2026</span>
+            <span style="font-weight: 700; color: #1e3a8a; font-style: italic;">[Signed before RO: Jithin Raj]</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seconder Block -->
+      <div class="specimen-block" style="margin-bottom: 0;">
+        <div class="specimen-block-title">
+          <span>SECONDER DETAILS</span>
+          <span class="badge-chip blue">Electoral Roll Sl. #210</span>
+        </div>
+        <div style="font-size: 7pt; line-height: 1.35;">
+          <p>Name: <strong>SNEHA MENON</strong></p>
+          <p>Admission No: <strong style="font-family: monospace; color: #1e3a8a;">20311</strong></p>
+          <p>Class: <strong>I B.Sc Physics</strong></p>
+          <p>Dept: <strong>Physics</strong></p>
+          <div style="margin-top: 3px; padding-top: 2.5px; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; align-items: flex-end;">
+            <span>Date: 29 / 09 / 2026</span>
+            <span style="font-weight: 700; color: #1e3a8a; font-style: italic;">[Signed before RO: Sneha Menon]</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Candidate Consent Declaration -->
+    <div class="specimen-block" style="background: #ffffff; border-color: #94a3b8; text-align: center; padding: 6px 10px; margin-bottom: 4px;">
+      <h4 style="font-size: 7.8pt; font-weight: 800; color: #0f172a; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px;">Consent of Candidate</h4>
+      <p style="font-size: 7.3pt; color: #334155; line-height: 1.35; margin-bottom: 4px;">
+        "I agree, if elected, to serve on the body to which I am proposed as a candidate."
+      </p>
+      <div style="display: flex; justify-content: space-around; align-items: flex-end; margin-top: 4px; padding-top: 3px; border-top: 1px solid #e2e8f0; font-size: 7.2pt;">
+        <div>
+          <span style="font-weight: 700; color: #1e3a8a; font-style: italic; font-size: 7.8pt;">[Signed: Rahana K. P.]</span><br>
+          <span style="font-size: 6.4pt; color: #475569;">Signature of Candidate</span>
+        </div>
+        <div>
+          <span style="font-weight: 700; color: #0f172a;">29 / 09 / 2026</span><br>
+          <span style="font-size: 6.4pt; color: #475569;">Date</span>
+        </div>
+      </div>
+      <p style="font-size: 6.5pt; color: #64748b; font-style: italic; margin-top: 2.5px;">
+        (To be signed in front of the Returning Officer)
+      </p>
+      <div style="text-align: right; margin-top: 1px;">
+        <span style="font-family: monospace; font-size: 6.4pt; color: #64748b;">Ref ID: NOM-2026-CH-0142</span>
+      </div>
+    </div>
+
+    <!-- Tear-off Dotted Line -->
+    <div style="position: relative; margin: 8px 0 5px 0; text-align: center;">
+      <div style="border-top: 1.5px dashed #475569; width: 100%; position: absolute; top: 50%;"></div>
+      <span style="position: relative; background: #ffffff; padding: 0 10px; font-size: 6.8pt; color: #334155; font-family: monospace; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+        ✂ Tear-off Acknowledgement Slip (To be signed &amp; returned to Candidate by Returning Officer) ✂
+      </span>
+    </div>
+
+    <!-- RO Acknowledgement Slip -->
+    <div class="specimen-block" style="background: #f8fafc; border: 1.5px solid #64748b; padding: 6px 10px; margin-bottom: 0;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #cbd5e1; padding-bottom: 2.5px; margin-bottom: 3px;">
+        <div>
+          <p style="font-weight: 800; font-size: 7.6pt; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">RECEIPT / ACKNOWLEDGEMENT SLIP</p>
+          <p style="font-size: 6.6pt; color: #475569;">GOVERNMENT COLLEGE CHITTUR • College Union Election 2026–2027</p>
+        </div>
+        <div style="text-align: right; font-family: monospace; font-size: 6.6pt; color: #475569;">
+          <span class="badge-chip green" style="font-size: 6.2pt; padding: 1px 4px;">OFFICIALLY RECEIVED</span><br>
+          Ref ID: <strong style="color: #1e3a8a;">NOM-2026-CH-0142</strong>
+        </div>
+      </div>
+      <p style="font-size: 7pt; color: #1e293b; line-height: 1.35; margin-bottom: 4px;">
+        Received the nomination paper of <strong>RAHANA K. P.</strong> (Nominal Roll Sl. #<strong>142</strong>, Admission No: <strong>18452</strong>, Class: <strong>III B.A. English</strong>) for the post of <strong>CHAIRPERSON</strong> on <strong>29 / 09 / 2026</strong> at <strong>11:30 AM</strong>.
+      </p>
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; font-size: 6.8pt; color: #334155; padding-top: 2px;">
+        <div>
+          <p>Candidate: <strong style="color: #0f172a;">RAHANA K. P.</strong></p>
+          <p style="font-style: italic; font-size: 6.2pt; color: #64748b;">(Keep this receipt safely as official statutory proof of submission)</p>
+        </div>
+        <div style="text-align: center; border: 1px dashed #64748b; padding: 2px 8px; border-radius: 3px; font-size: 6pt; background: #ffffff;">
+          <strong>[ RO OFFICE SEAL ]</strong><br>
+          Election Cell
+        </div>
+        <div style="text-align: right;">
+          <p style="font-style: italic; color: #1e3a8a; font-weight: 700; font-size: 7.4pt;">[Signed: Returning Officer]</p>
+          <p style="font-weight: 700; font-size: 6.5pt; color: #0f172a;">Signature &amp; Seal of Returning Officer</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="officer-footer avoid-break">
+    <div>
+      <strong>OFFICE OF THE RETURNING OFFICER</strong><br>
+      College Union Election Scrutiny Committee
+    </div>
+    <div style="text-align: right;">
+      <em>Strict statutory verification applies to all nominations.<br>
+      Specimen for guidance only • Ensure exact compliance.</em>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 5: HOD CERTIFICATE ==================== -->
+  <div class="page-break"></div>
+
+  <div class="doc-header">
+    <div class="left-col">
+      <span class="doc-badge" style="background:#047857;">Official Specimen Prototype</span>
+      <h2 class="main-title" style="font-size: 11.5pt;">SAMPLE HOD CERTIFICATE</h2>
+      <h3 class="sub-lang-title title-ml" style="font-size: 9pt;">മാതൃകാ എച്ച്.ഒ.ഡി സാക്ഷ്യപത്രം</h3>
+      <h4 class="sub-lang-title title-ta" style="font-size: 8.5pt;">மாதிரி துறைத் தலைவர் சான்றிதழ்</h4>
+    </div>
+    <div class="right-col">
+      PAGE 2 ATTACHMENT TO NOMINATION<br>
+      College Union Election
+    </div>
+  </div>
+
+  <!-- EXACT PORTAL HOD CERTIFICATE SPECIMEN -->
+  <div class="specimen-paper avoid-break" style="padding: 32px 36px; min-height: 520px; border: 1.5px solid #334155; border-radius: 6px; background: #ffffff; margin-top: 14px;">
+    
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1.2px solid #cbd5e1; padding-bottom: 14px; margin-bottom: 25px;">
+      <div>
+        <p style="font-weight: 800; font-size: 11.5pt; color: #1e3a8a; text-transform: uppercase; margin: 0;">GOVERNMENT COLLEGE CHITTUR</p>
+        <p style="font-size: 8.5pt; color: #475569; margin: 3px 0 0 0;">College Union Election 2026–2027</p>
+      </div>
+      <div style="text-align: right; font-size: 8pt; color: #475569;">
+        <p style="margin: 0; font-weight: 600;">Supporting Document</p>
+        <p style="font-family: monospace; font-size: 8pt; color: #334155; margin: 3px 0 0 0;">Ref ID: <strong>NOM-2026-CH-0142</strong></p>
+      </div>
+    </div>
+
+    <h2 style="text-align: center; font-weight: 800; font-size: 13pt; color: #0f172a; text-transform: uppercase; text-decoration: underline; margin: 40px 0 35px 0; letter-spacing: 0.5px;">
+      Certificate from Head of Department
+    </h2>
+
+    <div style="margin: 35px 0; font-size: 10.5pt; line-height: 2.1; color: #1e293b; text-align: justify;">
+      <p style="margin: 0;">
+        This is to certify that <strong style="font-size: 11pt; color: #0f172a;">RAHANA K. P.</strong> (Admission No: <strong style="font-family: monospace; font-size: 10.5pt; color: #0f172a;">18452</strong>, Nominal Roll Sl. No: <strong style="font-family: monospace; font-size: 10.5pt; color: #0f172a;">142</strong>), a student of <strong style="font-size: 11pt; color: #0f172a;">III B.A. English</strong> class in this department, has no academic arrears and maintains the necessary minimum attendance as prescribed by the University election rules and bylaws to contest in the College Union Election 2026–2027.
+      </p>
+      
+      <div style="display: flex; justify-content: space-between; margin-top: 130px; font-size: 9.5pt; color: #334155;">
+        <div style="line-height: 2.2;">
+          <p style="margin: 0;">Date: ______ / ______ / 2026</p>
+          <p style="margin: 0;">Place: ____________________</p>
+        </div>
+        <div style="text-align: center; line-height: 1.8;">
+          <p style="color: #64748b; margin: 0 0 4px 0;">_______________________</p>
+          <p style="font-weight: 700; color: #0f172a; font-size: 10.5pt; margin: 0;">Name &amp; Signature of the HoD</p>
+          <p style="color: #334155; margin: 0;">Department of _________________</p>
+          <p style="font-size: 8.5pt; font-style: italic; color: #64748b; margin: 6px 0 0 0;">(Office Seal)</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="officer-footer avoid-break">
+    <div>
+      <strong>OFFICE OF THE RETURNING OFFICER</strong><br>
+      College Union Election Scrutiny Committee
+    </div>
+    <div style="text-align: right; max-width: 440px;">
+      Strict statutory verification applies to all nominations. Specimen for guidance only • Ensure original physical signatures before the Returning Officer.
+    </div>
+  </div>
+
+</body>
+</html>
+`;
+
+const htmlPath = resolve('Nomination_Guide_Bilingual_Mild.html');
+const newPdfPath = resolve('Nomination_Guide_Malayalam_English_Mild_Updated.pdf');
+const pdfRootPath = resolve('Nomination_Guide_Malayalam_English_Mild.pdf');
+const brainPdfPath = resolve('C:/Users/sures/.gemini/antigravity-ide/brain/942913a8-84db-439e-acef-89fd10c86365', 'Nomination_Guide_Malayalam_English_Mild.pdf');
+const curBrainPath = resolve('C:/Users/sures/.gemini/antigravity-ide/brain/2deabfa3-64cf-40c0-9566-66c04df04f89', 'Nomination_Guide_Malayalam_English_Mild.pdf');
+const workspacePdfPath = resolve('d:/ESP32Radio', 'Nomination_Guide_Malayalam_English_Mild.pdf');
+
+writeFileSync(htmlPath, htmlContent, 'utf-8');
+console.log('Written HTML to ' + htmlPath);
+
+const chromePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const command = `"${chromePath}" --headless=new --disable-gpu --run-all-compositor-stages-before-draw --no-pdf-header-footer "--print-to-pdf=${newPdfPath}" "file:///${htmlPath.replace(/\\/g, '/')}"`;
+
+console.log('Running Chrome Headless PDF generator to: ' + newPdfPath);
+execSync(command);
+
+if (existsSync(newPdfPath)) {
+  console.log('Successfully created updated PDF at: ' + newPdfPath);
+  
+  try { copyFileSync(newPdfPath, curBrainPath); console.log('Copied to current brain: ' + curBrainPath); } catch (e) { console.error('Brain copy error:', e.message); }
+  try { copyFileSync(newPdfPath, workspacePdfPath); console.log('Copied to workspace: ' + workspacePdfPath); } catch (e) { console.error('Workspace copy error:', e.message); }
+  try { copyFileSync(newPdfPath, brainPdfPath); console.log('Copied to prev brain: ' + brainPdfPath); } catch (e) { console.error('Prev brain copy error:', e.message); }
+  try { copyFileSync(newPdfPath, pdfRootPath); console.log('Copied to root scratch: ' + pdfRootPath); } catch (e) { console.warn('Root scratch copy note:', e.message); }
+} else {
+  console.error('PDF creation failed!');
+}

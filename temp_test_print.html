@@ -1,0 +1,319 @@
+
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Blank Nomination Paper - GVC Election 2026</title>
+        <style>
+          @page { size: A4 portrait; margin: 5mm 8mm; }
+          * { box-sizing: border-box; }
+          body {
+            font-family: Arial, sans-serif;
+            color: black !important;
+            background: white !important;
+            font-size: 9.5pt;
+            line-height: 1.35;
+            margin: 0;
+            padding: 0;
+          }
+          /* Reset dark theme classes to clean B&W for printing */
+          * { color: black !important; background: transparent !important; border-color: #333 !important; }
+          .print-paper { width: 100%; margin: 0 auto; padding: 8px 12px; position: relative; }
+          .watermark-global {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 450px;
+            height: 450px;
+            opacity: 0.1;
+            pointer-events: none;
+            z-index: -1;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+          }
+          .border { border: 1px solid #333; }
+          .border-b { border-bottom: 1px solid #333; }
+          .border-y { border-top: 1px solid #333; border-bottom: 1px solid #333; }
+          .border-t { border-top: 1px solid #333; }
+          .rounded-lg, .rounded-xl { border-radius: 4px; }
+          .p-8 { padding: 1.25rem 1.5rem; }
+          .p-4 { padding: 0.85rem 1rem; }
+          .p-3 { padding: 0.65rem 0.85rem; }
+          .p-3.5 { padding: 11px 15px 13px 15px; }
+          .p-2.5 { padding: 0.5rem 0.65rem; }
+          .p-2 { padding: 0.35rem 0.5rem; }
+          .pt-6 { padding-top: 1.25rem; }
+          .pb-0.5 { padding-bottom: 0.125rem; }
+          .pb-1 { padding-bottom: 0.25rem; }
+          .pb-1.5 { padding-bottom: 0.35rem; }
+          .pb-2 { padding-bottom: 0.5rem; }
+          .pb-3 { padding-bottom: 0.75rem; }
+          .mt-1 { margin-top: 0.25rem; }
+          .mt-2 { margin-top: 0.5rem; }
+          .mt-3 { margin-top: 0.75rem; }
+          .mt-3.5 { margin-top: 0.85rem; }
+          .mt-4 { margin-top: 1rem; }
+          .mt-6 { margin-top: 1.25rem; }
+          .mb-1 { margin-bottom: 0.25rem; }
+          .mb-1.5 { margin-bottom: 0.35rem; }
+          .mb-2 { margin-bottom: 0.5rem; }
+          .space-y-4 > * + * { margin-top: 0.85rem; }
+          .space-y-3 > * + * { margin-top: 0.8rem; }
+          .space-y-2.5 > * + * { margin-top: 0.7rem; }
+          .space-y-2 > * + * { margin-top: 0.55rem; }
+          .space-y-1 > * + * { margin-top: 0.25rem; }
+          .flex { display: flex; }
+          .flex-1 { flex: 1 1 0%; }
+          .shrink-0 { flex-shrink: 0; }
+          .justify-between { justify-content: space-between; }
+          .justify-around { justify-content: space-around; }
+          .items-start { align-items: flex-start; }
+          .items-center { align-items: center; }
+          .items-baseline { align-items: baseline; }
+          .text-center { text-align: center; }
+          .text-right { text-align: right; }
+          .text-xs { font-size: 0.82rem; }
+          .text-sm { font-size: 0.92rem; }
+          .text-base { font-size: 1rem; }
+          .text-lg { font-size: 1.15rem; }
+          .text-xl { font-size: 1.25rem; }
+          .text-3xl { font-size: 1.875rem; }
+          .font-bold { font-weight: bold; }
+          .font-semibold { font-weight: 600; }
+          .font-mono { font-family: monospace; }
+          .uppercase { text-transform: uppercase; }
+          .tracking-wide { letter-spacing: 0.025em; }
+          .tracking-widest { letter-spacing: 0.08em; }
+          .w-40 { width: 10rem; }
+          .w-36 { width: 9rem; }
+          .inline-block { display: inline-block; }
+          .grid { display: grid; }
+          .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+          .col-span-2 { grid-column: span 2; }
+          .gap-2 { gap: 0.5rem; }
+          .gap-2.5 { gap: 0.625rem; }
+          .gap-3 { gap: 0.75rem; }
+          .gap-x-3 { column-gap: 0.75rem; }
+          .gap-x-4 { column-gap: 1rem; }
+          .gap-x-6 { column-gap: 1.5rem; }
+          .gap-x-8 { column-gap: 2rem; }
+          .gap-y-1 { row-gap: 0.25rem; }
+          .gap-y-1.5 { row-gap: 0.375rem; }
+          .gap-y-2 { row-gap: 0.5rem; }
+          .gap-y-2.5 { row-gap: 0.65rem; }
+          .gap-y-3 { row-gap: 0.82rem; }
+          .italic { font-style: italic; }
+          .badge { border: 1px solid #000; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+          .dotted-line { display: inline-block; border-bottom: 1.5px dotted #000 !important; height: 24px; vertical-align: bottom; }
+          h2, h3, p { margin: 0; }
+          @media print {
+            .print-paper { page-break-inside: avoid !important; break-inside: avoid !important; }
+          }
+        </style>
+      </head>
+      <body>
+        
+        
+  <div class="print-paper border border-slate-700 rounded-xl p-4 bg-slate-900 text-slate-200 space-y-2">
+    <div class="flex justify-between items-start text-sm pb-1 border-b border-white/10">
+      <div>
+        
+        <p class="font-bold text-white text-base">Government Victoria College, Palakkad</p>
+        <p class="text-slate-400 text-xs">College Union Election 2026</p>
+      </div>
+      <div class="text-right space-y-0.5">
+        <p class="text-slate-400 text-xs">Date: _____ / _____ / 202___</p>
+        <span class="badge border border-slate-500 font-mono text-[10px] px-2 py-0.2">NOMINATION PAPER</span>
+      </div>
+    </div>
+    <h2 class="text-center font-bold text-base text-white border-y border-white/10 py-1 uppercase tracking-wider">NOMINATION PAPER</h2>
+    
+    <div class="text-xs flex items-baseline">
+      <span class="font-bold text-white shrink-0">Post Applied For:</span> 
+      <span class="dotted-line" style="flex:1;display:inline-block;border-bottom:1.5px dotted #000;height:24px;vertical-align:bottom;margin-left:8px;"></span>
+    </div>
+
+    <div class="space-y-2">
+      <!-- Candidate Details -->
+      <div class="glass rounded-lg p-2.5 text-xs space-y-1.5 border border-white/10">
+        <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-1">
+          <h3 class="font-bold text-white uppercase text-[11px] tracking-wider">Candidate Details</h3>
+          <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-[10px] px-2 py-0.5">
+            Electoral Roll Sl. #: <span class="dotted-line" style="display:inline-block;width:80px;height:16px;border-bottom:1.5px dotted #000;margin-left:4px;">&nbsp;</span>
+          </span>
+        </div>
+        <div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+          <div class="col-span-2 flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Name:</span>
+            <span class="dotted-line" style="flex:1;display:inline-block;border-bottom:1.5px dotted #000;height:24px;vertical-align:bottom;margin-left:8px;"></span>
+          </div>
+          <div class="flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Admission No:</span>
+            <span class="dotted-line" style="flex:1;display:inline-block;border-bottom:1.5px dotted #000;height:24px;vertical-align:bottom;margin-left:8px;"></span>
+          </div>
+          <div class="flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Class:</span>
+            <span class="dotted-line" style="flex:1;display:inline-block;border-bottom:1.5px dotted #000;height:24px;vertical-align:bottom;margin-left:8px;"></span>
+          </div>
+          <div class="flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Dept:</span>
+            <span class="dotted-line" style="flex:1;display:inline-block;border-bottom:1.5px dotted #000;height:24px;vertical-align:bottom;margin-left:8px;"></span>
+          </div>
+          <div class="flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Gender:</span>
+            <span class="dotted-line" style="flex:1;display:inline-block;border-bottom:1.5px dotted #000;height:24px;vertical-align:bottom;margin-left:8px;"></span>
+          </div>
+          <div class="col-span-2 flex items-baseline">
+            <span class="text-slate-400 font-semibold shrink-0">Date of Birth (DD / MM / YYYY):</span>
+            <span class="dotted-line" style="width:200px;display:inline-block;border-bottom:1.5px dotted #000;height:20px;margin-left:8px;"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5">
+        <!-- Proposer Details -->
+        <div class="glass rounded-lg p-2.5 text-xs space-y-1.5 border border-white/10">
+          <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-1">
+            <h3 class="font-bold text-white uppercase text-[11px] tracking-wider">Proposer Details</h3>
+            <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-[10px] px-1.5 py-0.2">
+              Roll Sl. #: <span class="dotted-line" style="display:inline-block;width:55px;height:15px;border-bottom:1.5px dotted #000;margin-left:2px;">&nbsp;</span>
+            </span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <div class="flex items-baseline">
+              <span class="text-slate-400 font-semibold shrink-0">Name:</span>
+              <span class="dotted-line" style="flex:1;display:inline-block;border-bottom:1.5px dotted #000;height:16px;vertical-align:bottom;margin-left:4px;"></span>
+            </div>
+            <div class="flex items-baseline">
+              <span class="text-slate-400 font-semibold shrink-0">Adm No:</span>
+              <span class="dotted-line" style="flex:1;display:inline-block;border-bottom:1.5px dotted #000;height:16px;vertical-align:bottom;margin-left:4px;"></span>
+            </div>
+            <div class="flex items-baseline">
+              <span class="text-slate-400 font-semibold shrink-0">Class &amp; Dept:</span>
+              <span class="dotted-line" style="flex:1;display:inline-block;border-bottom:1.5px dotted #000;height:16px;vertical-align:bottom;margin-left:4px;"></span>
+            </div>
+          </div>
+          <div class="flex justify-between mt-2 pt-1 text-slate-500 text-[10px] border-t border-white/5">
+            <span>Date: ___/___/202___</span>
+            <span>Sign: <span class="dotted-line" style="width:85px;border-bottom:1.5px solid #000;height:16px;margin-left:2px;">&nbsp;</span></span>
+          </div>
+        </div>
+
+        <!-- Seconder Details -->
+        <div class="glass rounded-lg p-2.5 text-xs space-y-1.5 border border-white/10">
+          <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-1">
+            <h3 class="font-bold text-white uppercase text-[11px] tracking-wider">Seconder Details</h3>
+            <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono font-bold text-[10px] px-1.5 py-0.2">
+              Roll Sl. #: <span class="dotted-line" style="display:inline-block;width:55px;height:15px;border-bottom:1.5px dotted #000;margin-left:2px;">&nbsp;</span>
+            </span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <div class="flex items-baseline">
+              <span class="text-slate-400 font-semibold shrink-0">Name:</span>
+              <span class="dotted-line" style="flex:1;display:inline-block;border-bottom:1.5px dotted #000;height:16px;vertical-align:bottom;margin-left:4px;"></span>
+            </div>
+            <div class="flex items-baseline">
+              <span class="text-slate-400 font-semibold shrink-0">Adm No:</span>
+              <span class="dotted-line" style="flex:1;display:inline-block;border-bottom:1.5px dotted #000;height:16px;vertical-align:bottom;margin-left:4px;"></span>
+            </div>
+            <div class="flex items-baseline">
+              <span class="text-slate-400 font-semibold shrink-0">Class &amp; Dept:</span>
+              <span class="dotted-line" style="flex:1;display:inline-block;border-bottom:1.5px dotted #000;height:16px;vertical-align:bottom;margin-left:4px;"></span>
+            </div>
+          </div>
+          <div class="flex justify-between mt-2 pt-1 text-slate-500 text-[10px] border-t border-white/5">
+            <span>Date: ___/___/202___</span>
+            <span>Sign: <span class="dotted-line" style="width:85px;border-bottom:1.5px solid #000;height:16px;margin-left:2px;">&nbsp;</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Consent of Candidate -->
+    <div class="border-t border-white/10 pt-2 text-center space-y-1">
+      <h3 class="font-bold text-white uppercase text-xs tracking-wider">Consent of Candidate</h3>
+      <p class="text-xs text-slate-400">"I agree, if elected, to serve on the body to which I am proposed as a candidate."</p>
+      <div class="flex justify-around mt-1.5 text-xs text-slate-400">
+        <span><strong>Signature of Candidate:</strong> <span class="dotted-line" style="width:180px;border-bottom:1.5px solid #000;height:18px;margin-left:4px;">&nbsp;</span></span>
+        <span><strong>Date:</strong> _____ / _____ / 202___</span>
+      </div>
+      <p class="text-[10px] text-slate-500 italic mt-0.5">(To be signed in front of the Returning Officer)</p>
+    </div>
+
+    <!-- Tear-off Dotted Line -->
+    <div class="relative my-2 text-center">
+      <div class="border-t-2 border-dashed border-slate-500 w-full absolute top-1/2"></div>
+      <span class="relative bg-slate-900 px-3 text-[9px] text-slate-400 font-mono uppercase tracking-wider">
+        ✂ Tear-off Acknowledgement Slip (To be signed &amp; returned to Candidate by Returning Officer) ✂
+      </span>
+    </div>
+
+    <!-- RO Acknowledgement Slip -->
+    <div class="border border-white/20 rounded-lg p-2.5 bg-white/[0.03] space-y-1 text-xs">
+      <div class="flex justify-between items-start border-b border-white/10 pb-0.5">
+        <div>
+          <p class="font-bold text-white text-xs uppercase tracking-wide">RECEIPT / ACKNOWLEDGEMENT SLIP</p>
+          <p class="text-[10px] text-slate-400">Government Victoria College, Palakkad • College Union Election 2026</p>
+        </div>
+        <div class="text-right font-mono text-[10px] text-slate-400">
+          <p>Receipt No: _________________</p>
+        </div>
+      </div>
+      <div class="text-slate-300 text-[11px] leading-snug space-y-0.5">
+        <p>Received nomination paper of Candidate: <span class="dotted-line" style="width:230px;height:15px;">&nbsp;</span> (Roll Sl. #: <span class="dotted-line" style="width:60px;height:15px;">&nbsp;</span>, Adm No: <span class="dotted-line" style="width:70px;height:15px;">&nbsp;</span>)</p>
+        <p>for the post of: <span class="dotted-line" style="width:250px;height:15px;">&nbsp;</span> on _____ / _____ / 202___ at _____ : _____ AM/PM.</p>
+      </div>
+      <div class="flex justify-between items-end pt-1 text-[10px] text-slate-400">
+        <div>
+          <p class="italic text-[9px] text-slate-500">(To be handed over to the candidate as official proof of submission)</p>
+        </div>
+        <div class="text-right">
+          <p class="text-slate-500 mb-0.5">_________________________________________</p>
+          <p class="font-bold text-white text-[10px]">Signature &amp; Seal of Returning Officer</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="print-paper border border-slate-700 rounded-xl p-8 bg-slate-900 text-slate-200 space-y-4" style="page-break-before: always; margin-top: 20px;">
+    <div class="flex justify-between items-start text-sm border-b border-white/10 pb-4">
+      <div>
+        
+        <p class="font-bold text-white text-base">Government Victoria College, Palakkad</p>
+        <p class="text-slate-400">College Union Election 2026</p>
+      </div>
+      <div class="text-right text-xs text-slate-400">
+        <p>Supporting Document</p>
+      </div>
+    </div>
+    
+    <h2 class="text-center font-bold text-xl text-white py-3 uppercase underline" style="margin-top:20px;margin-bottom:20px;">Certificate from Head of Department</h2>
+    
+    <div class="my-6 text-base leading-relaxed space-y-6 text-slate-300">
+      <p class="text-justify" style="line-height: 1.8;">
+        This is to certify that <strong class="text-white">....................................................................</strong> (Admission No: <strong class="text-white">.......................</strong>, Nominal Roll Sl. No: <strong class="text-white">.......................</strong>), a student of <strong class="text-white">.............................................</strong> class in this department, has no academic arrears and maintains the necessary minimum attendance as prescribed by the University election rules and bylaws to contest in the College Union Election 2026.
+      </p>
+      
+      <div class="flex justify-between text-sm text-slate-400" style="margin-top: 80px;">
+        <div class="space-y-3">
+          <p>Date: ______ / ______ / 2026</p>
+          <p>Place: ____________________</p>
+        </div>
+        <div class="text-center space-y-2">
+          <p>_______________________</p>
+          <p class="font-bold text-white">Name & Signature of the HoD</p>
+          <p>Department of _________________</p>
+          <p class="text-xs italic">(Office Seal)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+        <script>
+          window.onload = function() {
+            setTimeout(function() { window.print(); }, 200);
+          };
+        </script>
+      </body>
+    </html>
+  
