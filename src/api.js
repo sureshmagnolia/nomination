@@ -746,6 +746,13 @@ export const api = {
     return res;
   },
 
+  adminSaveBallotPackagingConfig: async (password, { bindingMode, bookSize, mergeRemainders }) => {
+    const res = await bgPost({ action: 'adminSaveBallotPackagingConfig', password, bindingMode, bookSize, mergeRemainders });
+    updateCache({ action: 'adminGetBallotPlan', password }, res.plan);
+    invalidateCache('adminGetSettings');
+    return res;
+  },
+
   adminGetBallotPlan: (password) => get({ action: 'adminGetBallotPlan', password }),
   
   adminGetBallotConfig: (password) => get({ action: 'adminGetBallotConfig', password }),

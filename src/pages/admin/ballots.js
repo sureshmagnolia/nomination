@@ -38,19 +38,36 @@ export async function renderAdminBallots(container) {
   let posts = [];
   let ballotConfig = null;
   let plan = null;
+  let serverSettings = {};
 
   try {
-    const [fetchedPosts, fetchedConfig, fetchedPlan] = await Promise.all([
+    const [fetchedPosts, fetchedConfig, fetchedPlan, fetchedSettings] = await Promise.all([
       api.adminGetPosts(pwd).catch(() => []),
       api.adminGetBallotConfig(pwd).catch(() => null),
-      api.adminGetBallotPlan(pwd).catch(() => null)
+      api.adminGetBallotPlan(pwd).catch(() => null),
+      api.adminGetSettings(pwd).catch(() => ({}))
     ]);
     posts = sortPosts(fetchedPosts);
     ballotConfig = fetchedConfig;
     plan = fetchedPlan;
+    serverSettings = fetchedSettings || {};
   } catch (err) {
     console.warn('Error fetching initial ballot data:', err);
   }
+
+  // Persistent Packaging Setup from Server Settings (Database-backed)
+  let currentBindingMode = serverSettings.ballot_binding_mode || plan?.config?.bindingMode || localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
+  let currentBookSize = Number(serverSettings.ballot_book_size) > 0 
+    ? Number(serverSettings.ballot_book_size) 
+    : (plan?.config?.bookSize || parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10));
+  let currentMerge = serverSettings.ballot_merge_remainders !== undefined 
+    ? serverSettings.ballot_merge_remainders 
+    : (plan?.config?.mergeRemainders !== undefined ? plan.config.mergeRemainders : (localStorage.getItem('gcc_ballot_merge_remainders') !== 'false'));
+
+  // Keep localStorage synced for instant client responsiveness
+  localStorage.setItem('gcc_ballot_binding_mode', currentBindingMode);
+  localStorage.setItem('gcc_ballot_book_size', String(currentBookSize));
+  localStorage.setItem('gcc_ballot_merge_remainders', currentMerge ? 'true' : 'false');
 
   const isAssoc = isAssocPostCheck;
   const isUUC = isUUCPostCheck;
@@ -390,6 +407,129 @@ export async function renderAdminBallots(container) {
           </div>
         </div>
 
+        <!-- Ballot Booklet Packaging Setup Panel (Printing Press Rules) -->
+        <div class="glass p-6 rounded-2xl border border-purple-500/30 space-y-6 bg-gradient-to-b from-purple-950/20 via-slate-900/60 to-transparent shadow-xl">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/10 pb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl text-purple-300">
+                📦
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                  Ballot Booklet Packaging Setup
+                  <span class="text-[11px] font-normal text-purple-300 bg-purple-500/20 px-2.5 py-0.5 rounded-full border border-purple-500/30">Printing Press Configuration</span>
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">
+                  Configure booklet binding rules for the printing press. <strong>This choice is permanently remembered in the system database across all devices.</strong>
+                </p>
+              </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              <span id="badgeActivePackagingMode" class="text-xs px-3 py-1.5 rounded-xl border bg-purple-500/20 text-purple-200 border-purple-500/40 font-mono font-bold flex items-center gap-1.5 shadow-sm">
+                <span>${currentBindingMode === 'definite' ? '📦' : '✂️'}</span>
+                ${currentBindingMode === 'definite' ? 'Definite Sets (' + currentBookSize + ' slips/book)' : 'Precise Books (' + currentBookSize + ' max slips)'}
+              </span>
+            </div>
+          </div>
+
+          <!-- Strategy Selection Cards -->
+          <div class="space-y-3">
+            <label class="text-xs font-semibold text-slate-300 block">
+              1. Book Binding Strategy for Printing Press:
+            </label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Definite Option -->
+              <label class="flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${currentBindingMode === 'definite' ? 'bg-purple-950/50 border-purple-500 text-purple-100 ring-1 ring-purple-500/50 shadow-lg shadow-purple-950/30' : 'bg-slate-900/60 border-white/10 hover:border-white/20'}" id="labelPageModeDefinite">
+                <input type="radio" name="pageBindingMode" value="definite" class="mt-1 accent-purple-500 w-4 h-4 cursor-pointer" ${currentBindingMode === 'definite' ? 'checked' : ''} />
+                <div class="space-y-1 flex-1">
+                  <div class="text-xs font-bold text-white flex items-center justify-between">
+                    <span class="flex items-center gap-1.5"><span>📦</span> Definite Sets (Uniform Books)</span>
+                    <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-semibold">Recommended for Press</span>
+                  </div>
+                  <p class="text-[11px] text-slate-400 leading-relaxed">
+                    Every booklet is printed in identical fixed batches (e.g. exactly 50 slips/book). Each booth receives full books rounded up. Surplus slips act as official Presiding Officer (PrO) Booth Reserves. Clean serial boundaries for the printer with zero partial sheet cutting.
+                  </p>
+                </div>
+              </label>
+
+              <!-- Precise Option -->
+              <label class="flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${currentBindingMode === 'precise' ? 'bg-purple-950/50 border-purple-500 text-purple-100 ring-1 ring-purple-500/50 shadow-lg shadow-purple-950/30' : 'bg-slate-900/60 border-white/10 hover:border-white/20'}" id="labelPageModePrecise">
+                <input type="radio" name="pageBindingMode" value="precise" class="mt-1 accent-purple-500 w-4 h-4 cursor-pointer" ${currentBindingMode === 'precise' ? 'checked' : ''} />
+                <div class="space-y-1 flex-1">
+                  <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span>✂️</span> Precise / Tailored Books
+                  </div>
+                  <p class="text-[11px] text-slate-400 leading-relaxed">
+                    Total ballots strictly match voter count. Last booklet in each booth contains the exact remainder (e.g. 50 + 32 slips). Zero surplus ballots, but requires manual odd-sheet collation and custom stitch counts by the printer.
+                  </p>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Booklet Size Selection -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-semibold text-slate-300 block">
+                2. Default Slips per Booklet (Stitched Book Size):
+              </label>
+              <span class="text-[11px] text-slate-400">Configured size: <strong class="text-purple-300" id="labelCurrentSizeVal">${currentBookSize} slips/book</strong></span>
+            </div>
+
+            <!-- Presets Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <button type="button" data-pagesize="25" class="page-size-preset-btn p-3 rounded-xl border text-center transition-all ${currentBookSize === 25 ? 'bg-purple-500/25 border-purple-500 text-purple-200 font-bold shadow-md shadow-purple-500/20' : 'bg-slate-900/70 border-white/10 hover:border-purple-500/40'}">
+                <div class="text-base font-bold text-white">25 Slips</div>
+                <div class="text-[10px] text-slate-400 mt-0.5">Compact / Small</div>
+              </button>
+              <button type="button" data-pagesize="50" class="page-size-preset-btn p-3 rounded-xl border text-center transition-all ${currentBookSize === 50 ? 'bg-purple-500/25 border-purple-500 text-purple-200 font-bold shadow-md shadow-purple-500/20' : 'bg-slate-900/70 border-white/10 hover:border-purple-500/40'}">
+                <div class="text-base font-bold text-white">50 Slips</div>
+                <div class="text-[10px] text-purple-300 mt-0.5">Official Standard</div>
+              </button>
+              <button type="button" data-pagesize="100" class="page-size-preset-btn p-3 rounded-xl border text-center transition-all ${currentBookSize === 100 ? 'bg-purple-500/25 border-purple-500 text-purple-200 font-bold shadow-md shadow-purple-500/20' : 'bg-slate-900/70 border-white/10 hover:border-purple-500/40'}">
+                <div class="text-base font-bold text-white">100 Slips</div>
+                <div class="text-[10px] text-slate-400 mt-0.5">Jumbo / High Vol</div>
+              </button>
+              <div class="bg-slate-900/70 border border-white/10 p-2.5 rounded-xl flex flex-col justify-center gap-1">
+                <div class="text-[10px] font-semibold text-slate-400">Custom Size:</div>
+                <input type="number" id="inputPageCustomSize" min="5" max="500" value="${![25, 50, 100].includes(currentBookSize) ? currentBookSize : ''}" placeholder="e.g. 20, 40" class="input input-sm w-full bg-slate-950 border-white/10 text-xs text-white" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Smart Remainder Merging (Visible when Precise) -->
+          <div id="containerPageMergeOption" class="pt-1" style="${currentBindingMode === 'definite' ? 'display: none;' : ''}">
+            <label class="flex items-start gap-3 p-3.5 rounded-xl bg-slate-900/50 border border-white/10 cursor-pointer hover:bg-slate-900/80 transition-colors">
+              <input type="checkbox" id="chkPageMerge" class="mt-0.5 accent-purple-500 w-4 h-4 cursor-pointer" ${currentMerge ? 'checked' : ''} />
+              <div class="space-y-0.5">
+                <div class="text-xs font-semibold text-white">Smart Remainder Merging (Recommended for Precise Mode)</div>
+                <p class="text-[11px] text-slate-400 leading-relaxed">
+                  When remaining ballots for a booth are small (≤30% of booklet size), merge them into the last booklet instead of creating a tiny partial book (e.g. 62 voters become 1 book of 62 instead of 50 + 12).
+                </p>
+              </div>
+            </label>
+          </div>
+
+          <!-- Action Bar: Save to Server + Summary Report + Excel -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-white/10">
+            <div class="flex items-center gap-2">
+              <button id="btnGenSummaryPage" class="btn btn-secondary py-2.5 px-4 text-xs flex items-center gap-1.5 border-purple-500/30 text-purple-200 hover:bg-purple-600 hover:text-white transition-all" title="View printable summary breakdown for the printing press">
+                <span>📑</span> View Press Breakdown Report
+              </button>
+              <button id="btnExcelSummaryPage" class="btn btn-secondary py-2.5 px-3 text-xs flex items-center gap-1.5 border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white transition-all" title="Download Excel packaging summary">
+                <span>📊</span> Excel Summary
+              </button>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button id="btnSavePackagingConfig" class="btn btn-primary py-2.5 px-6 text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/30 flex items-center gap-2 transition-all">
+                💾 Save Packaging Setup (Server)
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Ballot Generation Action Cards -->
         <div>
           <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -659,9 +799,9 @@ export async function renderAdminBallots(container) {
           setLoading(btnSaveConfig, true, defaultText);
           showToast('Saving ballot selection & calculating Master Plan...', 'info');
           await api.adminSaveBallotConfig(pwd, currentConfig);
-          const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
-          const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
-          const savedMode = localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
+          const savedSize = currentBookSize || parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
+          const savedMerge = currentMerge !== undefined ? currentMerge : (localStorage.getItem('gcc_ballot_merge_remainders') !== 'false');
+          const savedMode = currentBindingMode || localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
           const res = await api.adminGenerateBallotPlan(pwd, {
             bookSize: savedSize,
             mergeRemainders: savedMerge,
@@ -685,9 +825,9 @@ export async function renderAdminBallots(container) {
         try {
           setLoading(btnRegenPlanTop, true, defaultText);
           showToast('Calculating and saving Master Plan on server...', 'info');
-          const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
-          const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
-          const savedMode = localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
+          const savedSize = currentBookSize || parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
+          const savedMerge = currentMerge !== undefined ? currentMerge : (localStorage.getItem('gcc_ballot_merge_remainders') !== 'false');
+          const savedMode = currentBindingMode || localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
           await api.adminGenerateBallotPlan(pwd, {
             bookSize: savedSize,
             mergeRemainders: savedMerge,
@@ -701,6 +841,125 @@ export async function renderAdminBallots(container) {
           setLoading(btnRegenPlanTop, false, defaultText);
         }
       };
+    }
+
+    // Ballot Booklet Packaging Setup Event Handlers
+    const radioPageDefinite = main.querySelector('input[name="pageBindingMode"][value="definite"]');
+    const radioPagePrecise = main.querySelector('input[name="pageBindingMode"][value="precise"]');
+    const labelPageDefinite = main.querySelector('#labelPageModeDefinite');
+    const labelPagePrecise = main.querySelector('#labelPageModePrecise');
+    const containerPageMerge = main.querySelector('#containerPageMergeOption');
+
+    const updatePageBindingModeUI = (mode) => {
+      currentBindingMode = mode;
+      if (mode === 'definite') {
+        if (labelPageDefinite) labelPageDefinite.className = 'flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all bg-purple-950/50 border-purple-500 text-purple-100 ring-1 ring-purple-500/50 shadow-lg shadow-purple-950/30';
+        if (labelPagePrecise) labelPagePrecise.className = 'flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all bg-slate-900/60 border-white/10 hover:border-white/20';
+        if (containerPageMerge) containerPageMerge.style.display = 'none';
+      } else {
+        if (labelPagePrecise) labelPagePrecise.className = 'flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all bg-purple-950/50 border-purple-500 text-purple-100 ring-1 ring-purple-500/50 shadow-lg shadow-purple-950/30';
+        if (labelPageDefinite) labelPageDefinite.className = 'flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all bg-slate-900/60 border-white/10 hover:border-white/20';
+        if (containerPageMerge) containerPageMerge.style.display = '';
+      }
+      const badge = main.querySelector('#badgeActivePackagingMode');
+      if (badge) {
+        badge.innerHTML = `<span>${mode === 'definite' ? '📦' : '✂️'}</span> ${mode === 'definite' ? 'Definite Sets (' + currentBookSize + ' slips/book)' : 'Precise Books (' + currentBookSize + ' max slips)'}`;
+      }
+    };
+
+    if (radioPageDefinite) radioPageDefinite.onchange = () => updatePageBindingModeUI('definite');
+    if (radioPagePrecise) radioPagePrecise.onchange = () => updatePageBindingModeUI('precise');
+
+    const chkPageMerge = main.querySelector('#chkPageMerge');
+    if (chkPageMerge) {
+      chkPageMerge.onchange = () => {
+        currentMerge = chkPageMerge.checked;
+      };
+    }
+
+    const pageSizeBtns = main.querySelectorAll('.page-size-preset-btn');
+    const inputCustomSize = main.querySelector('#inputPageCustomSize');
+    pageSizeBtns.forEach(btn => {
+      btn.onclick = () => {
+        const sz = parseInt(btn.dataset.pagesize, 10);
+        currentBookSize = sz;
+        if (inputCustomSize) inputCustomSize.value = '';
+        pageSizeBtns.forEach(b => {
+          const s = parseInt(b.dataset.pagesize, 10);
+          b.className = `page-size-preset-btn p-3 rounded-xl border text-center transition-all ${s === sz ? 'bg-purple-500/25 border-purple-500 text-purple-200 font-bold shadow-md shadow-purple-500/20' : 'bg-slate-900/70 border-white/10 hover:border-purple-500/40'}`;
+        });
+        const lbl = main.querySelector('#labelCurrentSizeVal');
+        if (lbl) lbl.textContent = `${sz} slips/book`;
+        const badge = main.querySelector('#badgeActivePackagingMode');
+        if (badge) {
+          badge.innerHTML = `<span>${currentBindingMode === 'definite' ? '📦' : '✂️'}</span> ${currentBindingMode === 'definite' ? 'Definite Sets (' + sz + ' slips/book)' : 'Precise Books (' + sz + ' max slips)'}`;
+        }
+      };
+    });
+
+    if (inputCustomSize) {
+      inputCustomSize.oninput = () => {
+        const val = parseInt(inputCustomSize.value, 10);
+        if (!isNaN(val) && val >= 5) {
+          currentBookSize = val;
+          pageSizeBtns.forEach(b => {
+            b.className = 'page-size-preset-btn p-3 rounded-xl border text-center transition-all bg-slate-900/70 border-white/10 hover:border-purple-500/40';
+          });
+          const lbl = main.querySelector('#labelCurrentSizeVal');
+          if (lbl) lbl.textContent = `${val} slips/book`;
+          const badge = main.querySelector('#badgeActivePackagingMode');
+          if (badge) {
+            badge.innerHTML = `<span>${currentBindingMode === 'definite' ? '📦' : '✂️'}</span> ${currentBindingMode === 'definite' ? 'Definite Sets (' + val + ' slips/book)' : 'Precise Books (' + val + ' max slips)'}`;
+          }
+        }
+      };
+    }
+
+    const btnSavePackagingConfig = main.querySelector('#btnSavePackagingConfig');
+    if (btnSavePackagingConfig) {
+      btnSavePackagingConfig.onclick = async () => {
+        let finalSize = currentBookSize;
+        if (inputCustomSize && inputCustomSize.value) {
+          const val = parseInt(inputCustomSize.value, 10);
+          if (isNaN(val) || val < 5 || val > 500) {
+            showToast('Please enter a valid booklet size between 5 and 500 slips.', 'error');
+            inputCustomSize.focus();
+            return;
+          }
+          finalSize = val;
+        }
+        const defaultText = btnSavePackagingConfig.innerHTML;
+        try {
+          setLoading(btnSavePackagingConfig, true, 'Saving setup...');
+          showToast(`Saving packaging setup (${finalSize} slips/book, ${currentBindingMode}) to server database...`, 'info');
+          const res = await api.adminSaveBallotPackagingConfig(pwd, {
+            bindingMode: currentBindingMode,
+            bookSize: finalSize,
+            mergeRemainders: currentMerge
+          });
+          if (res?.plan) plan = res.plan;
+          currentBookSize = finalSize;
+          localStorage.setItem('gcc_ballot_binding_mode', currentBindingMode);
+          localStorage.setItem('gcc_ballot_book_size', String(finalSize));
+          localStorage.setItem('gcc_ballot_merge_remainders', currentMerge ? 'true' : 'false');
+          showToast('✅ Ballot Booklet Packaging setup permanently saved to server & Master Plan updated!', 'success');
+          renderUI();
+        } catch (err) {
+          showToast(`Failed to save packaging setup: ${err.message}`, 'error');
+        } finally {
+          setLoading(btnSavePackagingConfig, false, defaultText);
+        }
+      };
+    }
+
+    const btnGenSummaryPage = main.querySelector('#btnGenSummaryPage');
+    if (btnGenSummaryPage) {
+      btnGenSummaryPage.onclick = () => generateAndPrintBallotPressSummary(pwd, currentBookSize, currentMerge, currentBindingMode);
+    }
+
+    const btnExcelSummaryPage = main.querySelector('#btnExcelSummaryPage');
+    if (btnExcelSummaryPage) {
+      btnExcelSummaryPage.onclick = () => downloadBallotsExcel(pwd, 'summary');
     }
 
     // Summary Report
@@ -903,9 +1162,9 @@ export async function downloadBallotsExcel(pwd, filterType = 'all', overrideConf
     };
 
     let plan = rawPlan;
-    const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
-    const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
-    const savedMode = localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
+    const savedSize = Number(settings.ballot_book_size) > 0 ? Number(settings.ballot_book_size) : parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
+    const savedMerge = settings.ballot_merge_remainders !== undefined ? settings.ballot_merge_remainders : (localStorage.getItem('gcc_ballot_merge_remainders') !== 'false');
+    const savedMode = settings.ballot_binding_mode || localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
     if (!plan) {
       const genRes = await api.adminGenerateBallotPlan(pwd, {
         bookSize: savedSize,
@@ -933,13 +1192,14 @@ export async function downloadBallotsExcel(pwd, filterType = 'all', overrideConf
   }
 }
 
-export function openBallotSummaryConfigModal(pwd) {
+export async function openBallotSummaryConfigModal(pwd) {
   const existingModal = document.getElementById('modalBallotSummaryConfig');
   if (existingModal) existingModal.remove();
 
-  const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
-  const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
-  const savedMode = localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
+  const settings = await api.adminGetSettings(pwd).catch(() => ({}));
+  const savedSize = Number(settings.ballot_book_size) > 0 ? Number(settings.ballot_book_size) : parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
+  const savedMerge = settings.ballot_merge_remainders !== undefined ? settings.ballot_merge_remainders : (localStorage.getItem('gcc_ballot_merge_remainders') !== 'false');
+  const savedMode = settings.ballot_binding_mode || localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
   let currentSelectedSize = [25, 50, 100].includes(savedSize) ? savedSize : 'custom';
   let customValue = ![25, 50, 100].includes(savedSize) ? savedSize : '';
   let currentBindingMode = savedMode;
@@ -1052,6 +1312,9 @@ export function openBallotSummaryConfigModal(pwd) {
           <span>📊</span> Export to Excel
         </button>
         <div class="flex items-center gap-2">
+          <button type="button" id="btnModalSaveServer" class="btn btn-secondary py-2 px-3 text-xs border-purple-500/40 text-purple-300 hover:bg-purple-600 hover:text-white font-bold flex items-center gap-1.5" title="Save this packaging setup permanently to the database">
+            <span>💾</span> Save Setup
+          </button>
           <button type="button" id="btnModalCancel" class="btn btn-secondary py-2 px-3 text-xs">
             Cancel
           </button>
@@ -1145,6 +1408,29 @@ export function openBallotSummaryConfigModal(pwd) {
     return { finalSize, finalMerge, finalMode };
   };
 
+  const btnModalSaveServer = modal.querySelector('#btnModalSaveServer');
+  if (btnModalSaveServer) {
+    btnModalSaveServer.onclick = async () => {
+      const cfg = getModalConfigValues();
+      if (!cfg) return;
+      localStorage.setItem('gcc_ballot_book_size', String(cfg.finalSize));
+      localStorage.setItem('gcc_ballot_merge_remainders', cfg.finalMerge ? 'true' : 'false');
+      localStorage.setItem('gcc_ballot_binding_mode', cfg.finalMode);
+      showToast(`Saving packaging setup (${cfg.finalSize} slips/book, ${cfg.finalMode}) to server...`, 'info');
+      try {
+        await api.adminSaveBallotPackagingConfig(pwd, {
+          bindingMode: cfg.finalMode,
+          bookSize: cfg.finalSize,
+          mergeRemainders: cfg.finalMerge
+        });
+        showToast('✅ Packaging setup permanently saved to server database & Master Plan recalculated!', 'success');
+        closeModal();
+      } catch (err) {
+        showToast(`Failed to save setup: ${err.message}`, 'error');
+      }
+    };
+  }
+
   modal.querySelector('#btnModalExcel').onclick = async () => {
     const cfg = getModalConfigValues();
     if (!cfg) return;
@@ -1153,7 +1439,7 @@ export function openBallotSummaryConfigModal(pwd) {
     localStorage.setItem('gcc_ballot_binding_mode', cfg.finalMode);
     closeModal();
     showToast(`Saving Packaging Plan (${cfg.finalSize} ballots/book, ${cfg.finalMode}) to server...`, 'info');
-    await api.adminGenerateBallotPlan(pwd, { 
+    await api.adminSaveBallotPackagingConfig(pwd, { 
       bookSize: cfg.finalSize, 
       mergeRemainders: cfg.finalMerge, 
       bindingMode: cfg.finalMode 
@@ -1168,6 +1454,12 @@ export function openBallotSummaryConfigModal(pwd) {
     localStorage.setItem('gcc_ballot_merge_remainders', cfg.finalMerge ? 'true' : 'false');
     localStorage.setItem('gcc_ballot_binding_mode', cfg.finalMode);
     closeModal();
+    showToast(`Applying Packaging Plan (${cfg.finalSize} slips/book, ${cfg.finalMode})...`, 'info');
+    await api.adminSaveBallotPackagingConfig(pwd, { 
+      bookSize: cfg.finalSize, 
+      mergeRemainders: cfg.finalMerge, 
+      bindingMode: cfg.finalMode 
+    }).catch(() => null);
     await generateAndPrintBallotPressSummary(pwd, cfg.finalSize, cfg.finalMerge, cfg.finalMode);
   };
 }
@@ -2115,18 +2407,19 @@ export function buildBallotPressSummaryHtml(masterPlan, settings = {}, schedule 
 
 export async function generateAndPrintBallotPressSummary(pwd, customBookSize = null, customMerge = null, customMode = null) {
   try {
-    const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
-    const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
-    const savedMode = localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
+    const [schedule, settings] = await Promise.all([
+      api.getPublicSchedule(),
+      api.adminGetSettings(pwd).catch(() => ({}))
+    ]);
+
+    const savedSize = Number(settings.ballot_book_size) > 0 ? Number(settings.ballot_book_size) : parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
+    const savedMerge = settings.ballot_merge_remainders !== undefined ? settings.ballot_merge_remainders : (localStorage.getItem('gcc_ballot_merge_remainders') !== 'false');
+    const savedMode = settings.ballot_binding_mode || localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
     const bookSize = customBookSize || savedSize || 50;
     const mergeRemainders = customMerge !== null ? customMerge : savedMerge;
     const bindingMode = customMode || savedMode || 'definite';
 
     showToast(`Calculating Master Plan (${bookSize} ballots/book, ${bindingMode})...`, 'info');
-    const [schedule, settings] = await Promise.all([
-      api.getPublicSchedule(),
-      api.adminGetSettings(pwd).catch(() => ({}))
-    ]);
     
     // Generate or refresh Master Plan with requested book size, merge setting, and binding mode
     const genRes = await api.adminGenerateBallotPlan(pwd, { bookSize, mergeRemainders, bindingMode }).catch(() => null);

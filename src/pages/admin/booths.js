@@ -2226,10 +2226,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       const defaultText = '🔄 Finalize Master Plan';
       try {
         setLoading(btn, true, defaultText);
-        showToast('Calculating and saving Master Plan on server...', 'info');
-        const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
-        const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
-        const savedMode = localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
+        const savedSettings = await api.adminGetSettings(pwd).catch(() => ({}));
+        const savedSize = Number(savedSettings.ballot_book_size) > 0 ? Number(savedSettings.ballot_book_size) : parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
+        const savedMerge = savedSettings.ballot_merge_remainders !== undefined ? savedSettings.ballot_merge_remainders : (localStorage.getItem('gcc_ballot_merge_remainders') !== 'false');
+        const savedMode = savedSettings.ballot_binding_mode || localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
         await api.adminGenerateBallotPlan(pwd, {
           bookSize: savedSize,
           mergeRemainders: savedMerge,
@@ -2605,11 +2605,10 @@ export async function generateAndPrintElectoralRolls(pwd) {
       api.adminGetBallotPlan(pwd).catch(() => null),
       api.adminGetSettings(pwd).catch(() => ({}))
     ]);
-
     if (!plan) {
-      const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
-      const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
-      const savedMode = localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
+      const savedSize = Number(settings.ballot_book_size) > 0 ? Number(settings.ballot_book_size) : parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
+      const savedMerge = settings.ballot_merge_remainders !== undefined ? settings.ballot_merge_remainders : (localStorage.getItem('gcc_ballot_merge_remainders') !== 'false');
+      const savedMode = settings.ballot_binding_mode || localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
       const genRes = await api.adminGenerateBallotPlan(pwd, {
         bookSize: savedSize,
         mergeRemainders: savedMerge,
@@ -3211,9 +3210,9 @@ export async function generateAndPrintBallotAccounts(pwd) {
     ]);
 
     if (!plan) {
-      const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
-      const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
-      const savedMode = localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
+      const savedSize = Number(settings.ballot_book_size) > 0 ? Number(settings.ballot_book_size) : parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
+      const savedMerge = settings.ballot_merge_remainders !== undefined ? settings.ballot_merge_remainders : (localStorage.getItem('gcc_ballot_merge_remainders') !== 'false');
+      const savedMode = settings.ballot_binding_mode || localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
       const genRes = await api.adminGenerateBallotPlan(pwd, {
         bookSize: savedSize,
         mergeRemainders: savedMerge,

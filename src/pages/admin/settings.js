@@ -146,6 +146,95 @@ export async function renderSettings(container) {
           </div>
         </div>
 
+        <!-- Printing Press Ballot Booklet Packaging Setup -->
+        <div class="glass rounded-2xl p-8 space-y-6 border border-purple-500/20">
+          <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h4 class="font-bold text-white text-lg flex items-center gap-2">
+                <span>📦</span> Ballot Booklet Packaging Setup (Printing Press)
+              </h4>
+              <p class="text-slate-400 text-xs mt-1">Configure whether the press binds in uniform fixed sets (e.g. 50 slips/book) or precise voter counts, and set default slips per book.</p>
+            </div>
+            <div id="settingsActivePackagingBadge" class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 text-xs px-3 py-1 font-mono">
+              ${(settings.ballot_binding_mode || 'definite') === 'definite' ? '● Definite Sets (' + (settings.ballot_book_size || 50) + ' slips/book)' : '✂️ Precise Books (' + (settings.ballot_book_size || 50) + ' slips/book)'}
+            </div>
+          </div>
+
+          <div class="space-y-5">
+            <!-- Strategy Selection -->
+            <div>
+              <label class="text-xs text-slate-400 uppercase tracking-wider block mb-2">Book Binding Strategy for Printing Press</label>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label class="flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${(settings.ballot_binding_mode || 'definite') === 'definite' ? 'bg-purple-950/40 border-purple-500 text-purple-100 ring-1 ring-purple-500/50' : 'bg-slate-900/60 border-white/10 hover:border-white/20'}" id="settingsLabelModeDefinite">
+                  <input type="radio" name="settingsBindingMode" value="definite" class="mt-1 accent-purple-500 w-4 h-4 cursor-pointer" ${(settings.ballot_binding_mode || 'definite') === 'definite' ? 'checked' : ''} />
+                  <div class="space-y-1">
+                    <div class="text-xs font-bold text-white flex items-center justify-between">
+                      <span>📦 Definite Sets (Uniform Books)</span>
+                      <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-semibold">Recommended for Press</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 leading-snug">
+                      Uniform fixed batch booklets (e.g. 50 slips/book). Full books rounded up per booth. Surplus slips act as official Booth Reserves. Clean serial boundaries for the printer.
+                    </p>
+                  </div>
+                </label>
+
+                <label class="flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${settings.ballot_binding_mode === 'precise' ? 'bg-purple-950/40 border-purple-500 text-purple-100 ring-1 ring-purple-500/50' : 'bg-slate-900/60 border-white/10 hover:border-white/20'}" id="settingsLabelModePrecise">
+                  <input type="radio" name="settingsBindingMode" value="precise" class="mt-1 accent-purple-500 w-4 h-4 cursor-pointer" ${settings.ballot_binding_mode === 'precise' ? 'checked' : ''} />
+                  <div class="space-y-1">
+                    <div class="text-xs font-bold text-white">✂️ Precise / Tailored Books</div>
+                    <p class="text-[11px] text-slate-400 leading-snug">
+                      Total ballots strictly match voter count. Last booklet contains the exact remainder. Requires manual sheet collation and custom stitch counts by the printer.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Size Selection -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-xs text-slate-400 uppercase tracking-wider block">Default Slips per Book (Booklet Size)</label>
+                <span class="text-[11px] text-purple-300 font-semibold" id="settingsCurrentSizeLabel">${settings.ballot_book_size || 50} slips/book</span>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <button type="button" data-settings-size="25" class="settings-size-btn p-3 rounded-xl border text-center transition-all ${(settings.ballot_book_size || 50) === 25 ? 'bg-purple-500/25 border-purple-500 text-purple-200 font-bold shadow-md shadow-purple-500/20' : 'bg-slate-900/70 border-white/10 hover:border-purple-500/40'}">
+                  <div class="text-sm font-bold text-white">25 Slips</div>
+                  <div class="text-[10px] text-slate-400 mt-0.5">Compact</div>
+                </button>
+                <button type="button" data-settings-size="50" class="settings-size-btn p-3 rounded-xl border text-center transition-all ${(settings.ballot_book_size || 50) === 50 ? 'bg-purple-500/25 border-purple-500 text-purple-200 font-bold shadow-md shadow-purple-500/20' : 'bg-slate-900/70 border-white/10 hover:border-purple-500/40'}">
+                  <div class="text-sm font-bold text-white">50 Slips</div>
+                  <div class="text-[10px] text-purple-300 mt-0.5">Official Standard</div>
+                </button>
+                <button type="button" data-settings-size="100" class="settings-size-btn p-3 rounded-xl border text-center transition-all ${(settings.ballot_book_size || 50) === 100 ? 'bg-purple-500/25 border-purple-500 text-purple-200 font-bold shadow-md shadow-purple-500/20' : 'bg-slate-900/70 border-white/10 hover:border-purple-500/40'}">
+                  <div class="text-sm font-bold text-white">100 Slips</div>
+                  <div class="text-[10px] text-slate-400 mt-0.5">Jumbo</div>
+                </button>
+                <div class="bg-slate-900/70 border border-white/10 p-2.5 rounded-xl flex flex-col justify-center gap-1">
+                  <div class="text-[10px] font-semibold text-slate-400">Custom Size:</div>
+                  <input type="number" id="settingsCustomSize" min="5" max="500" value="${![25, 50, 100].includes(settings.ballot_book_size || 50) ? (settings.ballot_book_size || 50) : ''}" placeholder="e.g. 20, 40" class="input input-sm w-full bg-slate-950 border-white/10 text-xs text-white" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Smart Remainder Merging (Shown in Precise Mode) -->
+            <div id="settingsContainerMerge" style="${(settings.ballot_binding_mode || 'definite') === 'definite' ? 'display: none;' : ''}">
+              <label class="flex items-start gap-3 p-3.5 rounded-xl bg-slate-900/50 border border-white/10 cursor-pointer hover:bg-slate-900/80 transition-colors">
+                <input type="checkbox" id="settingsChkMerge" class="mt-0.5 accent-purple-500 w-4 h-4 cursor-pointer" ${settings.ballot_merge_remainders !== false ? 'checked' : ''} />
+                <div class="space-y-0.5">
+                  <div class="text-xs font-semibold text-white">Smart Remainder Merging (for Precise Mode)</div>
+                  <p class="text-[11px] text-slate-400 leading-relaxed">
+                    Merge remainders ≤30% into previous booklet to avoid tiny partial books.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <button id="btnSavePackagingSettings" class="btn btn-primary w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2">
+              💾 Save Ballot Booklet Packaging Setup
+            </button>
+          </div>
+        </div>
+
         <!-- Court Addendum: Research Scholars (Ph.D.) Voting Rights -->
         <div class="mt-8 border ${settings.includeResearchScholars ? 'border-emerald-500/30 bg-emerald-950/20' : 'border-amber-500/30 bg-amber-950/20'} rounded-2xl p-6">
           <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -354,8 +443,118 @@ export async function renderSettings(container) {
       });
     });
 
+    // Handle Packaging Setup
+    let settingsMode = settings.ballot_binding_mode || 'definite';
+    let settingsSize = Number(settings.ballot_book_size) > 0 ? Number(settings.ballot_book_size) : 50;
+    let settingsMerge = settings.ballot_merge_remainders !== false;
+
+    const radioSetDefinite = container.querySelector('input[name="settingsBindingMode"][value="definite"]');
+    const radioSetPrecise = container.querySelector('input[name="settingsBindingMode"][value="precise"]');
+    const labelSetDefinite = container.querySelector('#settingsLabelModeDefinite');
+    const labelSetPrecise = container.querySelector('#settingsLabelModePrecise');
+    const containerSetMerge = container.querySelector('#settingsContainerMerge');
+    const badgeSetPackaging = container.querySelector('#settingsActivePackagingBadge');
+
+    const updateSettingsModeUI = (mode) => {
+      settingsMode = mode;
+      if (mode === 'definite') {
+        if (labelSetDefinite) labelSetDefinite.className = 'flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all bg-purple-950/40 border-purple-500 text-purple-100 ring-1 ring-purple-500/50';
+        if (labelSetPrecise) labelSetPrecise.className = 'flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all bg-slate-900/60 border-white/10 hover:border-white/20';
+        if (containerSetMerge) containerSetMerge.style.display = 'none';
+      } else {
+        if (labelSetPrecise) labelSetPrecise.className = 'flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all bg-purple-950/40 border-purple-500 text-purple-100 ring-1 ring-purple-500/50';
+        if (labelSetDefinite) labelSetDefinite.className = 'flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all bg-slate-900/60 border-white/10 hover:border-white/20';
+        if (containerSetMerge) containerSetMerge.style.display = '';
+      }
+      if (badgeSetPackaging) {
+        badgeSetPackaging.textContent = `${mode === 'definite' ? '● Definite Sets (' + settingsSize + ' slips/book)' : '✂️ Precise Books (' + settingsSize + ' slips/book)'}`;
+      }
+    };
+
+    if (radioSetDefinite) radioSetDefinite.onchange = () => updateSettingsModeUI('definite');
+    if (radioSetPrecise) radioSetPrecise.onchange = () => updateSettingsModeUI('precise');
+
+    const chkSetMerge = container.querySelector('#settingsChkMerge');
+    if (chkSetMerge) {
+      chkSetMerge.onchange = () => {
+        settingsMerge = chkSetMerge.checked;
+      };
+    }
+
+    const setSizeBtns = container.querySelectorAll('.settings-size-btn');
+    const inputSetCustomSize = container.querySelector('#settingsCustomSize');
+    const lblSetCurrentSize = container.querySelector('#settingsCurrentSizeLabel');
+
+    setSizeBtns.forEach(btn => {
+      btn.onclick = () => {
+        const sz = parseInt(btn.dataset.settingsSize, 10);
+        settingsSize = sz;
+        if (inputSetCustomSize) inputSetCustomSize.value = '';
+        setSizeBtns.forEach(b => {
+          const s = parseInt(b.dataset.settingsSize, 10);
+          b.className = `settings-size-btn p-3 rounded-xl border text-center transition-all ${s === sz ? 'bg-purple-500/25 border-purple-500 text-purple-200 font-bold shadow-md shadow-purple-500/20' : 'bg-slate-900/70 border-white/10 hover:border-purple-500/40'}`;
+        });
+        if (lblSetCurrentSize) lblSetCurrentSize.textContent = `${sz} slips/book`;
+        if (badgeSetPackaging) {
+          badgeSetPackaging.textContent = `${settingsMode === 'definite' ? '● Definite Sets (' + sz + ' slips/book)' : '✂️ Precise Books (' + sz + ' slips/book)'}`;
+        }
+      };
+    });
+
+    if (inputSetCustomSize) {
+      inputSetCustomSize.oninput = () => {
+        const val = parseInt(inputSetCustomSize.value, 10);
+        if (!isNaN(val) && val >= 5) {
+          settingsSize = val;
+          setSizeBtns.forEach(b => {
+            b.className = 'settings-size-btn p-3 rounded-xl border text-center transition-all bg-slate-900/70 border-white/10 hover:border-purple-500/40';
+          });
+          if (lblSetCurrentSize) lblSetCurrentSize.textContent = `${val} slips/book`;
+          if (badgeSetPackaging) {
+            badgeSetPackaging.textContent = `${settingsMode === 'definite' ? '● Definite Sets (' + val + ' slips/book)' : '✂️ Precise Books (' + val + ' slips/book)'}`;
+          }
+        }
+      };
+    }
+
+    const btnSavePackagingSettings = container.querySelector('#btnSavePackagingSettings');
+    if (btnSavePackagingSettings) {
+      btnSavePackagingSettings.onclick = async () => {
+        let finalSize = settingsSize;
+        if (inputSetCustomSize && inputSetCustomSize.value) {
+          const val = parseInt(inputSetCustomSize.value, 10);
+          if (isNaN(val) || val < 5 || val > 500) {
+            showToast('Please enter a valid booklet size between 5 and 500 slips.', 'error');
+            inputSetCustomSize.focus();
+            return;
+          }
+          finalSize = val;
+        }
+
+        const defaultText = btnSavePackagingSettings.innerHTML;
+        try {
+          setLoading(btnSavePackagingSettings, true, 'Saving...');
+          showToast(`Saving packaging setup (${finalSize} slips/book, ${settingsMode}) to database...`, 'info');
+          await api.adminSaveBallotPackagingConfig(pwd, {
+            bindingMode: settingsMode,
+            bookSize: finalSize,
+            mergeRemainders: settingsMerge
+          });
+          localStorage.setItem('gcc_ballot_binding_mode', settingsMode);
+          localStorage.setItem('gcc_ballot_book_size', String(finalSize));
+          localStorage.setItem('gcc_ballot_merge_remainders', settingsMerge ? 'true' : 'false');
+          showToast('✅ Ballot Booklet Packaging setup permanently saved & Master Plan updated!', 'success');
+        } catch (err) {
+          showToast(`Failed: ${err.message}`, 'error');
+        } finally {
+          setLoading(btnSavePackagingSettings, false, defaultText);
+        }
+      };
+    }
+
     // Handle Court Addendum Toggle
     container.querySelector('#btnToggleResearchScholarsSettings')?.addEventListener('click', async (e) => {
+      const isEnabled = !!settings.includeResearchScholars;
       const confirmText = isEnabled
         ? 'Are you sure you want to EXCLUDE Research Scholars?\n\nTheir records (RS1–RS18) will be removed from the nominal roll and polling booths.\n\nThe Master Ballot Plan (1,905 General / 1,097 Assoc) remains locked and intact, with extra scholar ballots serving as official Booth Reserves.'
         : 'Are you sure you want to INCLUDE Research Scholars per Court Order?\n\n18 scholars will be appended as serials RS1–RS18 across 5 department booths (Economics, Geography, Mathematics, Music, Tamil) and assigned to vote for General Posts & Department Associations.';

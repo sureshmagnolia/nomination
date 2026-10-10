@@ -953,12 +953,15 @@ export default async function handler(req, res) {
 
     if (action === 'getSettings' || action === 'adminGetSettings') {
       const status = await getFullElectionStatus();
-      const [colName, colShort, colLogo, colPlace, incRS] = await Promise.all([
+      const [colName, colShort, colLogo, colPlace, incRS, bindingMode, bookSize, mergeRem] = await Promise.all([
         getSetting('collegeName'),
         getSetting('collegeShortName'),
         getSetting('collegeLogo'),
         getSetting('collegePlace'),
-        getSetting('include_research_scholars')
+        getSetting('include_research_scholars'),
+        getSetting('ballot_binding_mode'),
+        getSetting('ballot_book_size'),
+        getSetting('ballot_merge_remainders')
       ]);
       const obj = {
         ...status,
@@ -966,7 +969,10 @@ export default async function handler(req, res) {
         collegeShortName: colShort || 'GCC',
         collegeLogo: colLogo || DEFAULT_COLLEGE_LOGO,
         collegePlace: colPlace || 'Chittur, Palakkad',
-        includeResearchScholars: incRS === 'true'
+        includeResearchScholars: incRS === 'true',
+        ballot_binding_mode: bindingMode || 'definite',
+        ballot_book_size: Number(bookSize) > 0 ? Number(bookSize) : 50,
+        ballot_merge_remainders: mergeRem !== 'false'
       };
       if (action === 'adminGetSettings') {
         const rows = await sql`SELECT value FROM settings WHERE key = 'adminEmail'`;
@@ -2156,7 +2162,25 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       if (body.electionYear !== undefined) await setSetting('electionYear', body.electionYear);
       if (body.collegeLogo !== undefined) await setSetting('collegeLogo', body.collegeLogo);
       if (body.collegePlace !== undefined) await setSetting('collegePlace', body.collegePlace);
+      if (body.ballot_binding_mode !== undefined) await setSetting('ballot_binding_mode', body.ballot_binding_mode);
+      if (body.ballot_book_size !== undefined) await setSetting('ballot_book_size', String(body.ballot_book_size));
+      if (body.ballot_merge_remainders !== undefined) await setSetting('ballot_merge_remainders', String(body.ballot_merge_remainders));
       return jsonOut(res, { ok: true });
+    }
+
+    if (action === 'adminSaveBallotPackagingConfig') {
+      const mode = (body.bindingMode === 'precise' || body.bindingMode === 'definite') ? body.bindingMode : 'definite';
+      const size = Number(body.bookSize) > 0 ? Number(body.bookSize) : 50;
+      const merge = body.mergeRemainders !== false && body.mergeRemainders !== 'false';
+      await setSetting('ballot_binding_mode', mode);
+      await setSetting('ballot_book_size', String(size));
+      await setSetting('ballot_merge_remainders', merge ? 'true' : 'false');
+      const plan = await generateBallotPlanInternal({
+        bindingMode: mode,
+        bookSize: size,
+        mergeRemainders: merge
+      });
+      return jsonOut(res, { ok: true, plan, bindingMode: mode, bookSize: size, mergeRemainders: merge });
     }
 
     if (action === 'submitNomination') {
