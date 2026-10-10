@@ -2438,24 +2438,18 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
               </tr>
               <tr>
                 <td style="text-align: center; font-weight: bold;">2</td>
-                <td style="font-weight: 600;">Number of Strip Seals Used</td>
+                <td style="font-weight: 600;">Number and Sl. Number of Strip Seals Used</td>
                 <td style="text-align: center; height: 22px;"></td>
                 <td style="height: 22px;"></td>
               </tr>
               <tr>
                 <td style="text-align: center; font-weight: bold;">3</td>
-                <td style="font-weight: 600;">Sl. Number(s) of Strip Seals Used</td>
-                <td style="text-align: center; height: 22px; color: #888;">—</td>
-                <td style="height: 22px;"></td>
-              </tr>
-              <tr>
-                <td style="text-align: center; font-weight: bold;">4</td>
                 <td style="font-weight: 600;">Number and Sl. Number of Strip Seals Returned (Unused)</td>
                 <td style="text-align: center; height: 22px;"></td>
                 <td style="height: 22px;"></td>
               </tr>
               <tr>
-                <td style="text-align: center; font-weight: bold;">5</td>
+                <td style="text-align: center; font-weight: bold;">4</td>
                 <td style="font-weight: 600;">Number and Sl. Number of Strip Seals Damaged (if any)</td>
                 <td style="text-align: center; height: 22px;"></td>
                 <td style="height: 22px;"></td>
@@ -2754,24 +2748,18 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
               </tr>
               <tr>
                 <td class="text-center font-bold">2</td>
-                <td class="font-semibold">Number of Strip Seals Used</td>
+                <td class="font-semibold">Number and Sl. Number of Strip Seals Used</td>
                 <td class="col-fill text-center"></td>
                 <td class="col-fill"></td>
               </tr>
               <tr>
                 <td class="text-center font-bold">3</td>
-                <td class="font-semibold">Sl. Number(s) of Strip Seals Used</td>
-                <td class="text-center text-muted">&mdash;</td>
-                <td class="col-fill"></td>
-              </tr>
-              <tr>
-                <td class="text-center font-bold">4</td>
                 <td class="font-semibold">Number and Sl. Number of Strip Seals Returned (Unused)</td>
                 <td class="col-fill text-center"></td>
                 <td class="col-fill"></td>
               </tr>
               <tr>
-                <td class="text-center font-bold">5</td>
+                <td class="text-center font-bold">4</td>
                 <td class="font-semibold">Number and Sl. Number of Strip Seals Damaged (if any)</td>
                 <td class="col-fill text-center"></td>
                 <td class="col-fill"></td>
