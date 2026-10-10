@@ -164,7 +164,7 @@ export async function renderAdminBallots(container) {
               Ballot Planning &amp; Printing
             </h2>
             <p class="text-slate-400 mt-1 text-sm">
-              Select which posts to split in ballots, configure paper formats, and generate print-ready ballots &amp; PO accounts.
+              Select which posts to split in ballots, configure paper formats, and generate print-ready ballots &amp; PrO accounts.
             </p>
           </div>
           <div class="flex items-center gap-3">
@@ -1245,7 +1245,7 @@ export function buildBallotsSheetHtml({ postsData = [], candidatesResponse, sche
           <h2>COLLEGE UNION ELECTION ${year}</h2>
           <h3>${esc(partTitle.toUpperCase())}</h3>
         </div>
-        <div class="meta-row"><div>SL.NO. ${prefix}____________</div><div>Signature of PRO</div></div>
+        <div class="meta-row"><div>SL.NO. ${prefix}____________</div><div>Signature of PrO</div></div>
         <div class="instr-box">MARK THE VOTER'S CHOICE WITH THE MARKING SEAL IN THE SPACE PROVIDED</div>
         <div class="ballot-grid">
           <div class="ballot-col">${col1Html}</div>
@@ -1315,7 +1315,7 @@ export function buildBallotsSheetHtml({ postsData = [], candidatesResponse, sche
             <h2 style="font-size: 14px; margin: 2px 0; font-weight: bold;">COLLEGE UNION ELECTION ${year}</h2>
             <h3 style="font-size: 15px; margin-top: 5px; font-weight: bold;">BALLOT PAPER (${prefix})</h3>
           </div>
-          <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ${prefix}____________</div><div>PRO Sign</div></div>
+          <div class="meta-row" style="font-size: 12px;"><div>SL.NO. ${prefix}____________</div><div>PrO Sign</div></div>
           <div class="post-box">
             <div class="post-title">${esc(p.post.toUpperCase())}</div>
             ${pCands.map((c, i) => `

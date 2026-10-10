@@ -427,7 +427,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             <p class="text-slate-400 text-sm mt-0.5">${T} tables · ${totalRounds} rounds · ${postsList.length} posts total · ${allFormsList.length} counting forms</p>
           </div>
           <div class="flex gap-2 flex-wrap items-center">
-            <button id="btnOpenBpaModal" class="btn btn-secondary border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500 hover:text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm" title="Action: Enter or auto-detect actual ballots polled in box (Ballot Paper Account / Form 5 / PO Diary) per table to calibrate UUC 25-ballot batches and expected vote totals.">
+            <button id="btnOpenBpaModal" class="btn btn-secondary border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500 hover:text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm" title="Action: Enter or auto-detect actual ballots polled in box (Ballot Paper Account / Form 5 / PrO Diary) per table to calibrate UUC 25-ballot batches and expected vote totals.">
               <span>🗳️</span> Ballot Paper Account ${tablesWithPolledCount > 0 ? `<span class="badge bg-emerald-500/30 text-emerald-200 border border-emerald-500/50 text-[10px] py-0 px-1 font-mono">${tablesWithPolledCount}/${T} Polled</span>` : ''}
             </button>
             <a href="#/admin/officials" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold flex items-center gap-1.5" title="Action: Opens the Election Officials Team Builder to allot Counting Supervisors and Counting Assistants to tables.&#10;Prerequisite: Configure booths/tables and upload staff rosters first.">
@@ -820,7 +820,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
               <div class="flex items-center gap-2.5">
                 <span class="text-2xl">🗳️</span>
                 <div>
-                  <h3 class="font-bold text-white text-base">Ballot Paper Account &amp; Table Turnout (Form 5 / PO Diary)</h3>
+                  <h3 class="font-bold text-white text-base">Ballot Paper Account &amp; Table Turnout (Form 5 / PrO Diary)</h3>
                   <p class="text-xs text-slate-400">Set physical ballots polled per table to calibrate UUC 25-ballot milestone targets &amp; Form 6-T tally sheets.</p>
                 </div>
               </div>

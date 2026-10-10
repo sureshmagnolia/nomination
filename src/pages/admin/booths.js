@@ -2364,7 +2364,7 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
 
         <!-- 2. BALLOTS & BOOKS ACCOUNT -->
         <div style="margin-bottom: 12px;">
-          <h4 style="border-bottom: 2px solid #000; padding-bottom: 2px; font-size: 13px; margin: 0 0 5px 0; text-transform: uppercase;">2. Ballots &amp; Books Account (To be filled by PO)</h4>
+          <h4 style="border-bottom: 2px solid #000; padding-bottom: 2px; font-size: 13px; margin: 0 0 5px 0; text-transform: uppercase;">2. Ballots &amp; Books Account (To be filled by PrO)</h4>
           <table class="stats-table" style="font-size: 11px;">
             <thead>
               <tr>
@@ -2419,7 +2419,7 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
 
         <!-- 3. ACCOUNT OF BALLOT BOX STRIP SEALS -->
         <div style="margin-bottom: 12px;">
-          <h4 style="border-bottom: 2px solid #000; padding-bottom: 2px; font-size: 13px; margin: 0 0 5px 0; text-transform: uppercase;">3. Account of Ballot Box Strip Seals (To be filled by PO)</h4>
+          <h4 style="border-bottom: 2px solid #000; padding-bottom: 2px; font-size: 13px; margin: 0 0 5px 0; text-transform: uppercase;">3. Account of Ballot Box Strip Seals (To be filled by PrO)</h4>
           <table class="stats-table" style="font-size: 11px;">
             <thead>
               <tr>
@@ -2735,7 +2735,7 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
 
         <!-- SECTION 2: ACCOUNT OF BALLOT BOX STRIP SEALS -->
         <div class="account-section">
-          <h4 class="section-heading">2. Account of Ballot Box Strip Seals (To be filled by PO)</h4>
+          <h4 class="section-heading">2. Account of Ballot Box Strip Seals (To be filled by PrO)</h4>
           <table class="account-table table-seals">
             <thead>
               <tr>
@@ -2782,7 +2782,7 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
 
         <!-- SECTION 3: ACCOUNT OF VOTES -->
         <div class="account-section">
-          <h4 class="section-heading">3. Account of Votes (To be filled by PO)</h4>
+          <h4 class="section-heading">3. Account of Votes (To be filled by PrO)</h4>
           <table class="account-table table-votes">
             <thead>
               <tr>

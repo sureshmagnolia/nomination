@@ -410,7 +410,7 @@ export function exportBallotsToExcel({
 
     r++;
     ensureRow(r)[0] = `SL.NO. ${prefix}____________`;
-    ensureRow(r)[4] = `Signature of PRO`;
+    ensureRow(r)[4] = `Signature of PrO`;
     merges.push({ s: { r, c: 0 }, e: { r, c: 3 } });
     merges.push({ s: { r, c: 4 }, e: { r, c: 6 } });
 
@@ -589,7 +589,7 @@ export function exportBallotsToExcel({
 
         r++;
         ensureRow(r)[0] = `SL.NO. ${prefix}____________`;
-        ensureRow(r)[2] = `PRO Sign`;
+        ensureRow(r)[2] = `PrO Sign`;
         merges.push({ s: { r, c: 0 }, e: { r, c: 1 } });
 
         r++;

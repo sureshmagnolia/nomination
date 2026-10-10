@@ -571,7 +571,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     // 7. Polling Duty
     const pDuty = getPollingAssignment(fName);
     if (pDuty) {
-      flags.push(`🗳️ Booth ${pDuty.boothNumber} (${pDuty.role === 'Presiding Officer' ? 'PRO' : 'PO'})`);
+      flags.push(`🗳️ Booth ${pDuty.boothNumber} (${pDuty.role === 'Presiding Officer' ? 'PrO' : 'PO'})`);
     }
 
     // 8. Counting Duty
@@ -3239,7 +3239,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         ${pollingTeams.map((pt, ptIdx) => {
                           const tNum = pt.teamNumber || (ptIdx + 1);
                           const isCur = pt.boothNumber === b.boothNumber;
-                          const poName = pt.presidingOfficer?.name ? `PO: ${pt.presidingOfficer.name}` : (pt.coreInCharge?.name ? `Core: ${pt.coreInCharge.name}` : 'Unassigned');
+                          const poName = pt.presidingOfficer?.name ? `PrO: ${pt.presidingOfficer.name}` : (pt.coreInCharge?.name ? `Core: ${pt.coreInCharge.name}` : 'Unassigned');
                           return `<option value="${tNum}" ${isCur ? 'selected' : ''}>Team ${tNum} (${poName}) ${isCur ? '✓ [Current]' : ''}</option>`;
                         }).join('')}
                       </select>
@@ -4732,7 +4732,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <select id="selectTargetSwapBooth" class="w-full bg-slate-800 border border-amber-500/40 rounded-lg p-2.5 text-xs text-white font-bold focus:outline-none">
               ${otherBooths.map(ob => {
                 const oTeam = pollingTeams.find(t => t.boothNumber === ob.boothNumber);
-                const poName = oTeam?.presidingOfficer?.name ? `PO: ${oTeam.presidingOfficer.name}` : 'Unassigned';
+                const poName = oTeam?.presidingOfficer?.name ? `PrO: ${oTeam.presidingOfficer.name}` : 'Unassigned';
                 return `<option value="${ob.boothNumber}">Booth ${ob.boothNumber} (${esc(ob.roomName || `Booth ${ob.boothNumber}`)}) — Team ${oTeam?.teamNumber || ob.boothNumber} (${poName})</option>`;
               }).join('')}
             </select>
@@ -4770,7 +4770,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </div>
           <div class="overflow-y-auto space-y-3 flex-1 pr-1">
             <div class="text-[11px] text-amber-200/90 bg-amber-950/40 p-2.5 rounded-lg border border-amber-500/30">
-              💡 Select which Formed Team (PO, PO1, PO2, PA) is stationed at each Booth. Choosing a team automatically swaps with its current station.
+              💡 Select which Formed Team (PrO, PO1, PO2, PA) is stationed at each Booth. Choosing a team automatically swaps with its current station.
             </div>
             <div class="divide-y divide-white/10">
               ${booths.map(b => {
@@ -4787,7 +4787,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         ${pollingTeams.map((pt, ptIdx) => {
                           const tNum = pt.teamNumber || (ptIdx + 1);
                           const isSel = tNum === curTeamNum;
-                          const poName = pt.presidingOfficer?.name ? `PO: ${pt.presidingOfficer.name}` : 'Unassigned';
+                          const poName = pt.presidingOfficer?.name ? `PrO: ${pt.presidingOfficer.name}` : 'Unassigned';
                           return `<option value="${tNum}" ${isSel ? 'selected' : ''}>Team ${tNum} (${poName})</option>`;
                         }).join('')}
                       </select>
