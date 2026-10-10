@@ -2646,168 +2646,177 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
     html += `
     <div class="page-break">
       <div class="account-page">
-        <div>
-          <div class="header">
-            ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:48px;max-width:130px;margin:0 auto 5px auto;display:block;object-fit:contain" alt="College Logo">` : ''}
-            <div class="college-name">${esc(collegeName)}</div>
-            <div class="title">College Union Election ${esc(electionYear)} — Ballots &amp; Books Account</div>
+        
+        <!-- Header -->
+        <div class="account-header">
+          ${collegeLogo ? `<img src="${collegeLogo}" class="college-logo-img" alt="Emblem">` : ''}
+          <div class="college-name">${esc(collegeName)}</div>
+          <div class="account-doc-title">COLLEGE UNION ELECTION ${esc(electionYear)} &mdash; BALLOTS &amp; BOOKS ACCOUNT</div>
+        </div>
+        
+        <!-- Booth Details Banner -->
+        <div class="booth-meta-banner">
+          <div class="meta-booth-id">
+            <span class="meta-label">BOOTH NUMBER:</span>
+            <span class="meta-booth-val">${b.boothNumber}</span>
           </div>
+          <div class="meta-location">
+            <span class="meta-label">LOCATION / VENUE:</span>
+            <span class="meta-venue-val">${esc(b.roomName || 'UNSPECIFIED')}</span>
+          </div>
+        </div>
+
+        <!-- SECTION 1: BALLOTS & BOOKS ACCOUNT -->
+        <div class="account-section">
+          <h4 class="section-heading">1. Ballots &amp; Books Account</h4>
+          <table class="account-table table-ballots">
+            <thead>
+              <tr>
+                <th style="width:24%;">Ballot Category</th>
+                <th style="width:18%;">Serial Range</th>
+                <th style="width:11%; text-align:center;">Total Qty</th>
+                <th style="width:15%;">Book IDs</th>
+                <th style="width:11%; text-align:center;">No. Used</th>
+                <th style="width:11%; text-align:center;">No. Returned</th>
+                <th style="width:10%;">Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(assignments.generalParts && assignments.generalParts.length > 1) ? assignments.generalParts.map(gp => `
+                <tr class="row-general">
+                  <td class="col-cat">${esc(gp.title || 'General Union Posts')}</td>
+                  <td class="col-serial">${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.start} - ${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.end}</td>
+                  <td class="col-qty text-center">${gp.count}</td>
+                  <td class="col-books">${esc(gp.bookIds || '-')}</td>
+                  <td class="col-fill"></td>
+                  <td class="col-fill"></td>
+                  <td class="col-fill"></td>
+                </tr>
+              `).join('') : (assignments.general ? `
+                <tr class="row-general">
+                  <td class="col-cat">${esc(assignments.general.title || 'General Union Posts')}</td>
+                  <td class="col-serial">${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.start} - ${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.end}</td>
+                  <td class="col-qty text-center">${assignments.general.count}</td>
+                  <td class="col-books">${esc(assignments.general.bookIds || '-')}</td>
+                  <td class="col-fill"></td>
+                  <td class="col-fill"></td>
+                  <td class="col-fill"></td>
+                </tr>
+              ` : '')}
+              ${assignments.reps.map(r => `
+                <tr>
+                  <td class="col-cat">${esc(r.post)}</td>
+                  <td class="col-serial">R${r.start} - R${r.end}</td>
+                  <td class="col-qty text-center">${r.count}</td>
+                  <td class="col-books">${esc(r.bookIds || '-')}</td>
+                  <td class="col-fill"></td>
+                  <td class="col-fill"></td>
+                  <td class="col-fill"></td>
+                </tr>
+              `).join('')}
+              ${assignments.assocs.map(a => `
+                <tr>
+                  <td class="col-cat">${esc(a.post)}</td>
+                  <td class="col-serial">A${a.start} - A${a.end}</td>
+                  <td class="col-qty text-center">${a.count}</td>
+                  <td class="col-books">${esc(a.bookIds || '-')}</td>
+                  <td class="col-fill"></td>
+                  <td class="col-fill"></td>
+                  <td class="col-fill"></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
           
-          <div style="font-size: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; background: #f9f9f9; padding: 7px 10px; border: 1px solid #ddd;">
-            <div><strong>BOOTH NUMBER:</strong> <span style="font-size: 20px; font-weight: bold; margin-left: 8px;">${b.boothNumber}</span></div>
-            <div style="text-align: right;"><strong>LOCATION / VENUE:</strong> ${esc(b.roomName || 'UNSPECIFIED')}</div>
-          </div>
-
-          <!-- SECTION 1: BALLOTS & BOOKS ACCOUNT -->
-          <div style="margin-bottom: 12px;">
-            <h4 style="margin: 0 0 5px 0; font-size: 13px; text-transform: uppercase; border-bottom: 1.5px solid #000; padding-bottom: 2px;">
-              1. Ballots &amp; Books Account
-            </h4>
-            <table class="stats-table" style="font-size: 12px;">
-              <thead>
-                <tr>
-                  <th style="width:24%; font-size:11px;">Ballot Category</th>
-                  <th style="width:18%; font-size:11px;">Serial Range</th>
-                  <th style="width:10%; text-align:center; font-size:11px;">Total Qty</th>
-                  <th style="width:16%; font-size:11px;">Book IDs</th>
-                  <th style="width:11%; text-align:center; font-size:11px;">No. Used</th>
-                  <th style="width:11%; text-align:center; font-size:11px;">No. Returned</th>
-                  <th style="font-size:11px;">Remarks</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${(assignments.generalParts && assignments.generalParts.length > 1) ? assignments.generalParts.map(gp => `
-                  <tr style="font-weight:bold;">
-                    <td style="font-size:12px;">${esc(gp.title || 'General Union Posts')}</td>
-                    <td style="font-size:12px;">${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.start} - ${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.end}</td>
-                    <td style="text-align:center; font-size:13px;">${gp.count}</td>
-                    <td style="font-size:11px;">${esc(gp.bookIds || '-')}</td>
-                    <td style="height: 24px;"></td><td style="height: 24px;"></td>
-                    <td style="height: 24px;"></td>
-                  </tr>
-                `).join('') : (assignments.general ? `
-                  <tr style="font-weight:bold;">
-                    <td style="font-size:12px;">${esc(assignments.general.title || 'General Union Posts')}</td>
-                    <td style="font-size:12px;">${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.start} - ${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.end}</td>
-                    <td style="text-align:center; font-size:13px;">${assignments.general.count}</td>
-                    <td style="font-size:11px;">${esc(assignments.general.bookIds || '-')}</td>
-                    <td style="height: 24px;"></td><td style="height: 24px;"></td>
-                    <td style="height: 24px;"></td>
-                  </tr>
-                ` : '')}
-                ${assignments.reps.map(r => `
-                  <tr>
-                    <td style="font-size:12px; font-weight:bold;">${esc(r.post)}</td>
-                    <td style="font-size:12px;">R${r.start} - R${r.end}</td>
-                    <td style="text-align:center; font-size:13px;">${r.count}</td>
-                    <td style="font-size:11px;">${esc(r.bookIds || '-')}</td>
-                    <td style="height: 24px;"></td><td style="height: 24px;"></td><td style="height: 24px;"></td>
-                  </tr>
-                `).join('')}
-                ${assignments.assocs.map(a => `
-                  <tr>
-                    <td style="font-size:12px; font-weight:bold;">${esc(a.post)}</td>
-                    <td style="font-size:12px;">A${a.start} - A${a.end}</td>
-                    <td style="text-align:center; font-size:13px;">${a.count}</td>
-                    <td style="font-size:11px;">${esc(a.bookIds || '-')}</td>
-                    <td style="height: 24px;"></td><td style="height: 24px;"></td>
-                    <td style="height: 24px;"></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-            
-            <div style="margin-top: 5px; font-size: 11px; color: #444; background: #fffde7; padding: 4px 8px; border: 1px dashed #fbc02d;">
-              <strong>Note:</strong> Total Qty should be equal to (Number of Ballots Used + Number of Ballots Returned). Please record any discrepancies in the Remarks column.
-            </div>
-          </div>
-
-          <!-- SECTION 2: ACCOUNT OF BALLOT BOX STRIP SEALS -->
-          <div style="margin-bottom: 12px;">
-            <h4 style="margin: 0 0 5px 0; font-size: 13px; text-transform: uppercase; border-bottom: 1.5px solid #000; padding-bottom: 2px;">
-              2. Account of Ballot Box Strip Seals (To be filled by PO)
-            </h4>
-            <table class="stats-table" style="font-size: 12px;">
-              <thead>
-                <tr>
-                  <th style="width: 5%; text-align: center; font-size: 11px;">Sl.</th>
-                  <th style="width: 47%; font-size: 11px;">Item / Description</th>
-                  <th style="width: 18%; text-align: center; font-size: 11px;">Number (Count)</th>
-                  <th style="width: 30%; font-size: 11px;">Serial Number(s)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style="text-align: center; font-weight: bold;">1</td>
-                  <td style="font-weight: 600;">Number of Strip Seals Issued</td>
-                  <td style="text-align: center; height: 26px;"></td>
-                  <td style="height: 26px;"></td>
-                </tr>
-                <tr>
-                  <td style="text-align: center; font-weight: bold;">2</td>
-                  <td style="font-weight: 600;">Number of Strip Seals Used</td>
-                  <td style="text-align: center; height: 26px;"></td>
-                  <td style="height: 26px;"></td>
-                </tr>
-                <tr>
-                  <td style="text-align: center; font-weight: bold;">3</td>
-                  <td style="font-weight: 600;">Sl. Number(s) of Strip Seals Used</td>
-                  <td style="text-align: center; height: 26px; color: #888;">—</td>
-                  <td style="height: 26px;"></td>
-                </tr>
-                <tr>
-                  <td style="text-align: center; font-weight: bold;">4</td>
-                  <td style="font-weight: 600;">Number and Sl. Number of Strip Seals Returned (Unused)</td>
-                  <td style="text-align: center; height: 26px;"></td>
-                  <td style="height: 26px;"></td>
-                </tr>
-                <tr>
-                  <td style="text-align: center; font-weight: bold;">5</td>
-                  <td style="font-weight: 600;">Number and Sl. Number of Strip Seals Damaged (if any)</td>
-                  <td style="text-align: center; height: 26px;"></td>
-                  <td style="height: 26px;"></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- SECTION 3: ACCOUNT OF VOTES -->
-          <div style="margin-bottom: 10px;">
-            <h4 style="margin: 0 0 5px 0; font-size: 13px; text-transform: uppercase; border-bottom: 1.5px solid #000; padding-bottom: 2px;">
-              3. Account of Votes (To be filled by PO)
-            </h4>
-            <table class="stats-table" style="font-size: 12px;">
-              <thead>
-                <tr>
-                  <th style="width:35%; font-size:11px;">Name of Post</th>
-                  <th style="width:18%; text-align:center; font-size:11px;">Total Voters Assigned</th>
-                  <th style="width:20%; text-align:center; font-size:11px;">No. of Votes Recorded</th>
-                  <th style="width:27%; font-size:11px;">Remarks</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${allBoothPosts.map(p => `
-                  <tr>
-                    <td style="font-size: 12px; font-weight: bold;">${esc(p.name)}</td>
-                    <td style="text-align:center; font-weight:bold; font-size:13px;">${p.count}</td>
-                    <td style="height: 24px;"></td>
-                    <td style="height: 24px;"></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
+          <div class="account-note-box">
+            <strong>Note:</strong> Total Qty should be equal to (Number of Ballots Used + Number of Ballots Returned). Please record any discrepancies in the Remarks column.
           </div>
         </div>
 
-        <div class="footer" style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 15px; padding: 0 10px;">
-          <div style="font-size: 11px; color: #444;">
-            <div><strong>Date:</strong> ________________________</div>
-            <div style="margin-top: 4px;"><strong>Polling Station / Booth:</strong> ${b.boothNumber}</div>
+        <!-- SECTION 2: ACCOUNT OF BALLOT BOX STRIP SEALS -->
+        <div class="account-section">
+          <h4 class="section-heading">2. Account of Ballot Box Strip Seals (To be filled by PO)</h4>
+          <table class="account-table table-seals">
+            <thead>
+              <tr>
+                <th style="width: 6%; text-align: center;">Sl.</th>
+                <th style="width: 46%;">Item / Description</th>
+                <th style="width: 18%; text-align: center;">Number (Count)</th>
+                <th style="width: 30%;">Serial Number(s)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="text-center font-bold">1</td>
+                <td class="font-semibold">Number of Strip Seals Issued</td>
+                <td class="col-fill text-center"></td>
+                <td class="col-fill"></td>
+              </tr>
+              <tr>
+                <td class="text-center font-bold">2</td>
+                <td class="font-semibold">Number of Strip Seals Used</td>
+                <td class="col-fill text-center"></td>
+                <td class="col-fill"></td>
+              </tr>
+              <tr>
+                <td class="text-center font-bold">3</td>
+                <td class="font-semibold">Sl. Number(s) of Strip Seals Used</td>
+                <td class="text-center text-muted">&mdash;</td>
+                <td class="col-fill"></td>
+              </tr>
+              <tr>
+                <td class="text-center font-bold">4</td>
+                <td class="font-semibold">Number and Sl. Number of Strip Seals Returned (Unused)</td>
+                <td class="col-fill text-center"></td>
+                <td class="col-fill"></td>
+              </tr>
+              <tr>
+                <td class="text-center font-bold">5</td>
+                <td class="font-semibold">Number and Sl. Number of Strip Seals Damaged (if any)</td>
+                <td class="col-fill text-center"></td>
+                <td class="col-fill"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- SECTION 3: ACCOUNT OF VOTES -->
+        <div class="account-section">
+          <h4 class="section-heading">3. Account of Votes (To be filled by PO)</h4>
+          <table class="account-table table-votes">
+            <thead>
+              <tr>
+                <th style="width:36%;">Name of Post</th>
+                <th style="width:20%; text-align:center;">Total Voters Assigned</th>
+                <th style="width:22%; text-align:center;">No. of Votes Recorded</th>
+                <th style="width:22%;">Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${allBoothPosts.map(p => `
+                <tr>
+                  <td class="col-post-title">${esc(p.name)}</td>
+                  <td class="col-voters-assigned text-center">${p.count}</td>
+                  <td class="col-fill"></td>
+                  <td class="col-fill"></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Footer / Signature -->
+        <div class="account-footer">
+          <div class="footer-meta">
+            <div class="date-field"><strong>Date:</strong> ________________________</div>
+            <div class="booth-field"><strong>Polling Station / Booth:</strong> ${b.boothNumber}</div>
           </div>
-          <div class="sig-line" style="border-top: 1.5px solid #000; padding-top: 6px; width: 220px; text-align: center; font-size: 12px; font-weight: bold;">
-            Signature of Presiding Officer
+          <div class="sig-block">
+            <div class="sig-line-bar"></div>
+            <div class="sig-title">Signature of Presiding Officer</div>
           </div>
         </div>
+
       </div>
     </div>`;
   });
@@ -2821,42 +2830,341 @@ export function triggerBallotAccountPrint(html) {
     return;
   }
   printWin.document.write(`
+    <!DOCTYPE html>
     <html>
       <head>
         <title>Ballot Accounts - Booth Wise</title>
         <style>
           @page {
-            margin: 10mm 12mm 14mm 12mm;
+            size: A4 portrait;
+            margin: 6mm 8mm 6mm 8mm;
             @bottom-right {
               content: "Page " counter(page) " of " counter(pages);
-              font-family: sans-serif;
-              font-size: 8.5pt;
+              font-family: Arial, sans-serif;
+              font-size: 7.5pt;
               font-weight: bold;
-              color: #374151;
+              color: #000000;
             }
             @bottom-left {
               content: "College Union Election — Ballot Paper Account";
-              font-family: sans-serif;
-              font-size: 8pt;
-              color: #6b7280;
+              font-family: Arial, sans-serif;
+              font-size: 7.5pt;
+              color: #000000;
             }
           }
-          * { box-sizing: border-box; }
-          body { font-family: sans-serif; color: #333; margin: 0; padding: 0; }
-          .page-break { page-break-after: always; break-after: page; }
-          .account-page { padding: 14px 18px; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; border: 1.5px solid #333; margin: 0 auto; min-height: 260mm; position: relative; }
-          .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; }
-          .college-name { font-size: 18px; font-weight: bold; margin-bottom: 2px; }
-          .title { font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; }
-          .stats-table { width: 99.5%; margin: 0 auto; border-collapse: collapse; border: 1.5px solid #000; }
-          .stats-table th, .stats-table td { border: 1px solid #000; padding: 4px 6px; text-align: left; font-size: 11px; }
-          .stats-table th { background: #f2f2f2; font-size: 10.5px; text-transform: uppercase; font-weight: bold; }
-          .footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 15px; padding: 0 10px; }
-          .sig-line { border-top: 1.5px solid #000; padding-top: 6px; width: 220px; text-align: center; font-size: 12px; font-weight: bold; }
-          @media print { .no-print { display: none; } .page-break { page-break-after: always; break-after: page; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: #000000 !important; border-color: #000000 !important; } }
+
+          * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+          }
+
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #000000;
+            background: #e2e8f0;
+            line-height: 1.25;
+            font-size: 8.5pt;
+          }
+
+          .screen-topbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: #000000;
+            color: #ffffff;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          }
+          .topbar-btn {
+            background: #000000;
+            color: #ffffff;
+            border: 1.5px solid #ffffff;
+            padding: 6px 14px;
+            font-weight: 700;
+            font-size: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .topbar-btn:hover { background: #333333; }
+
+          .page-break {
+            page-break-after: always;
+            break-after: page;
+            display: flex;
+            justify-content: center;
+            margin: 6mm auto;
+          }
+
+          .account-page {
+            width: 194mm;
+            height: 283mm;
+            min-height: 283mm;
+            max-height: 283mm;
+            background: #ffffff;
+            padding: 5mm 6mm 4mm 6mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-sizing: border-box;
+            border: 2px solid #000000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+          }
+
+          @media print {
+            html, body {
+              width: 210mm;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #ffffff !important;
+              color: #000000 !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .no-print { display: none !important; }
+            .page-break {
+              page-break-after: always !important;
+              break-after: page !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              height: 283mm !important;
+              max-height: 283mm !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              display: block !important;
+            }
+            .account-page {
+              width: 100% !important;
+              height: 100% !important;
+              min-height: 283mm !important;
+              max-height: 283mm !important;
+              border: 2px solid #000000 !important;
+              box-shadow: none !important;
+              padding: 5mm 6mm 4mm 6mm !important;
+              display: flex !important;
+              flex-direction: column !important;
+              justify-content: space-between !important;
+            }
+          }
+
+          .account-header {
+            text-align: center;
+            border-bottom: 2px solid #000000;
+            padding-bottom: 5px;
+            flex-shrink: 0;
+          }
+          .college-logo-img {
+            max-height: 44px;
+            max-width: 120px;
+            margin: 0 auto 3px auto;
+            display: block;
+            object-fit: contain;
+          }
+          .college-name {
+            font-size: 15pt;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            color: #000000;
+            line-height: 1.15;
+          }
+          .account-doc-title {
+            font-size: 10pt;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #000000;
+            margin-top: 2px;
+          }
+
+          .booth-meta-banner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid #000000;
+            background: #ffffff;
+            padding: 6px 12px;
+            flex-shrink: 0;
+          }
+          .meta-booth-id {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+          }
+          .meta-location {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            text-align: right;
+          }
+          .meta-label {
+            font-size: 9.5pt;
+            font-weight: 900;
+            letter-spacing: 0.3px;
+            color: #000000;
+          }
+          .meta-booth-val {
+            font-size: 17pt;
+            font-weight: 900;
+            color: #000000;
+            line-height: 1;
+          }
+          .meta-venue-val {
+            font-size: 10.5pt;
+            font-weight: 700;
+            color: #000000;
+          }
+
+          .account-section {
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+          }
+          .section-heading {
+            font-size: 11pt;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            border-bottom: 2px solid #000000;
+            padding-bottom: 2px;
+            margin-bottom: 4px;
+            color: #000000;
+          }
+
+          .account-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1.5px solid #000000;
+            background: #ffffff;
+            color: #000000;
+          }
+          .account-table th {
+            background: #f4f4f5;
+            color: #000000;
+            border: 1.5px solid #000000;
+            padding: 6px 6px;
+            font-size: 9.5pt;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+          }
+          .account-table td {
+            border: 1.5px solid #000000;
+            padding: 6px 7px;
+            color: #000000;
+            vertical-align: middle;
+            font-size: 10pt;
+          }
+
+          .table-ballots td.col-fill {
+            height: 36px;
+          }
+          .table-seals td.col-fill {
+            height: 33px;
+          }
+          .table-votes td.col-fill {
+            height: 38px;
+          }
+
+          .col-cat {
+            font-weight: 700;
+            font-size: 10pt;
+          }
+          .row-general .col-cat {
+            font-weight: 900;
+          }
+          .col-serial {
+            font-size: 10pt;
+            font-weight: 600;
+            font-family: monospace;
+          }
+          .col-qty {
+            font-size: 11pt;
+            font-weight: 900;
+          }
+          .col-books {
+            font-size: 9pt;
+            font-weight: 600;
+          }
+
+          .col-post-title {
+            font-weight: 800;
+            font-size: 10.5pt;
+          }
+          .col-voters-assigned {
+            font-weight: 900;
+            font-size: 12pt;
+          }
+
+          .text-center { text-align: center; }
+          .text-muted { color: #555555; }
+          .font-bold { font-weight: 900; }
+          .font-semibold { font-weight: 700; }
+
+          .account-note-box {
+            margin-top: 4px;
+            font-size: 8.5pt;
+            color: #000000;
+            background: #ffffff;
+            padding: 5px 8px;
+            border: 1.5px dashed #000000;
+            line-height: 1.25;
+          }
+
+          .account-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 2px 10px 2px 10px;
+            flex-shrink: 0;
+          }
+          .footer-meta {
+            font-size: 10pt;
+            color: #000000;
+            line-height: 1.6;
+          }
+          .sig-block {
+            text-align: center;
+            width: 240px;
+          }
+          .sig-line-bar {
+            border-top: 2px solid #000000;
+            margin-bottom: 5px;
+            width: 100%;
+          }
+          .sig-title {
+            font-size: 10.5pt;
+            font-weight: 900;
+            color: #000000;
+          }
         </style>
       </head>
-      <body>${html}</body>
+      <body>
+        <div class="screen-topbar no-print">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <strong style="font-size: 14px; color: #fff;">Ballots &amp; Books Account (Form 2)</strong>
+            <span style="font-size: 11px; color: #cbd5e1;">A4 Portrait &bull; Print Ready</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button class="topbar-btn" onclick="window.print()">
+              <span>🖨️</span> Print All Booths (A4)
+            </button>
+            <button class="topbar-btn" style="background: #333333; border: 1.5px solid #666;" onclick="window.close()">
+              <span>✕</span> Close
+            </button>
+          </div>
+        </div>
+
+        ${html}
+      </body>
     </html>
   `);
   printWin.document.close();
