@@ -2319,35 +2319,51 @@ export function printCountingTablePlacards(options = {}) {
   const nominalRoll = Array.isArray(options.nominalRoll) ? options.nominalRoll : [];
   const postsList = Array.isArray(options.posts) ? options.posts : [];
 
-  // Helper to resolve official squad for a table
+  // Helper to resolve squad for a table
   const getSquadForTable = (tableNum) => {
     const live = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(tableNum));
     if (live) {
-      const sup = live.supervisorName || (typeof live.supervisor === 'string' ? live.supervisor : live.supervisor?.name) || 'Senior Faculty (HoD)';
-      const supDesig = live.supervisor?.designation || 'Counting Supervisor';
+      const sup = live.supervisorName || (typeof live.supervisor === 'string' ? live.supervisor : live.supervisor?.name) || 'Senior Faculty';
+      const supDesig = live.supervisor?.designation || '';
       const supDept = live.supervisor?.department || '';
-      const asst = live.assistantName || (typeof live.assistant === 'string' ? live.assistant : live.assistant?.name) || live.countingAssistant?.name || 'Senior Staff';
-      const asstDesig = live.assistant?.designation || live.countingAssistant?.designation || 'Counting Assistant';
-      const off1 = live.countingOfficer1?.name || (Array.isArray(live.countingOfficers) && live.countingOfficers[0]?.name) || '';
-      return { sup, supDesig, supDept, asst, asstDesig, off1 };
+      const asst = live.assistantName || (typeof live.assistant === 'string' ? live.assistant : live.assistant?.name) || live.countingAssistant?.name || 'Staff';
+      const asstDesig = live.assistant?.designation || live.countingAssistant?.designation || '';
+      
+      const officers = [];
+      if (Array.isArray(live.countingOfficers)) {
+        live.countingOfficers.forEach(o => {
+          const n = String(typeof o === 'string' ? o : (o?.name || '')).trim();
+          if (n && !officers.includes(n)) officers.push(n);
+        });
+      }
+      [live.countingOfficer1, live.countingOfficer2, live.countingOfficer3].forEach(o => {
+        const n = String(typeof o === 'string' ? o : (o?.name || '')).trim();
+        if (n && !officers.includes(n)) officers.push(n);
+      });
+      return { sup, supDesig, supDept, officers, asst, asstDesig };
     }
     const backup = OFFICIAL_COUNTING_ROSTER_BACKUP.find(t => String(t.tableNumber) === String(tableNum));
     if (backup) {
       const sup = backup.supervisor?.name || 'Senior Faculty';
       const supDesig = backup.supervisor?.designation || 'Associate Professor';
       const supDept = backup.supervisor?.department || '';
-      const asst = backup.countingAssistant?.name || 'Senior Staff';
-      const asstDesig = backup.countingAssistant?.designation || 'Counting Assistant';
-      const off1 = backup.countingOfficer1?.name || '';
-      return { sup, supDesig, supDept, asst, asstDesig, off1 };
+      const asst = backup.countingAssistant?.name || 'Staff';
+      const asstDesig = backup.countingAssistant?.designation || '';
+      
+      const officers = [];
+      [backup.countingOfficer1, backup.countingOfficer2, backup.countingOfficer3].forEach(o => {
+        const n = String(typeof o === 'string' ? o : (o?.name || '')).trim();
+        if (n && !officers.includes(n)) officers.push(n);
+      });
+      return { sup, supDesig, supDept, officers, asst, asstDesig };
     }
     return {
       sup: 'Faculty Counting Supervisor',
       supDesig: 'Associate Professor',
       supDept: '',
+      officers: [],
       asst: 'Staff Counting Assistant',
-      asstDesig: 'Counting Assistant',
-      off1: ''
+      asstDesig: ''
     };
   };
 
@@ -2474,30 +2490,30 @@ export function printCountingTablePlacards(options = {}) {
             </div>
           </div>
 
-          <!-- Table Meta Details Banner (Table Number & Officials Squad only) -->
+          <!-- Table Details Banner (Table Number & Squad) -->
           <div class="table-meta-grid">
             <div class="meta-col-table">
-              <div class="meta-label">STATUTORY COUNTING TABLE</div>
+              <div class="meta-label">COUNTING TABLE</div>
               <div class="table-giant-pill">TABLE ${tableNum}</div>
               <div class="booth-sub-link">Polling Booth ${tableNum} &bull; ${totalTableRounds} Scheduled Rounds</div>
             </div>
             <div class="meta-col-officials">
-              <div class="meta-label">TABLE OFFICIALS SQUAD</div>
+              <div class="meta-label">TABLE SQUAD</div>
               <div class="official-row">
                 <span class="officer-role">Supervisor:</span>
                 <span class="officer-name">${esc(squad.sup)}</span>
               </div>
-              <div class="official-sub-role">${esc(squad.supDesig)} ${squad.supDept ? `(${esc(squad.supDept)})` : ''}</div>
+              ${squad.supDesig ? `<div class="official-sub-role">${esc(squad.supDesig)} ${squad.supDept ? `(${esc(squad.supDept)})` : ''}</div>` : ''}
+              ${squad.officers && squad.officers.length ? `
+                <div class="official-row" style="margin-top:4px;">
+                  <span class="officer-role">Officers:</span>
+                  <span class="officer-name">${squad.officers.map(esc).join(', ')}</span>
+                </div>
+              ` : ''}
               <div class="official-row" style="margin-top:4px;">
                 <span class="officer-role">Assistant:</span>
                 <span class="officer-name">${esc(squad.asst)}</span>
               </div>
-              ${squad.off1 ? `
-                <div class="official-row" style="margin-top:4px;">
-                  <span class="officer-role">Officer 1:</span>
-                  <span class="officer-name">${esc(squad.off1)}</span>
-                </div>
-              ` : ''}
             </div>
           </div>
 
@@ -2577,14 +2593,14 @@ export function printCountingTablePlacards(options = {}) {
       size: A4 portrait;
       margin: 4mm 5mm 4mm 5mm;
       @bottom-right {
-        content: "Table Sequence Placard &bull; Page " counter(page) " of " counter(pages);
+        content: "Table Sequence Placard • Page " counter(page) " of " counter(pages);
         font-family: Arial, sans-serif;
         font-size: 7pt;
         font-weight: 700;
         color: #000000;
       }
       @bottom-left {
-        content: "${esc(collegeName)} — Official Statutory Counting Placard";
+        content: "${esc(collegeName)} — Counting Table Placard";
         font-family: Arial, sans-serif;
         font-size: 7pt;
         color: #000000;
@@ -2681,8 +2697,8 @@ export function printCountingTablePlacards(options = {}) {
       height: 100%;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      padding: 2.5mm 3.5mm;
+      justify-content: flex-start;
+      padding: 3mm 4mm;
       box-sizing: border-box;
     }
 
@@ -2691,6 +2707,7 @@ export function printCountingTablePlacards(options = {}) {
       padding-bottom: 1.5mm;
       background: #ffffff;
       padding-top: 0.5mm;
+      flex-shrink: 0;
     }
     .header-top {
       display: flex;
@@ -2742,18 +2759,19 @@ export function printCountingTablePlacards(options = {}) {
 
     .table-meta-grid {
       display: grid;
-      grid-template-columns: 1.15fr 1.85fr;
-      gap: 8px;
+      grid-template-columns: 1fr 1.6fr;
+      gap: 10px;
       margin-top: 2.5mm;
       border: 2.5px solid #000000;
       background: #ffffff;
       border-radius: 4px;
-      padding: 6px;
+      padding: 8px 12px;
+      flex-shrink: 0;
     }
     .meta-col-table {
       background: #000000;
       color: #ffffff;
-      padding: 8px 12px;
+      padding: 10px 14px;
       border-radius: 3px;
       text-align: center;
       display: flex;
@@ -2762,7 +2780,7 @@ export function printCountingTablePlacards(options = {}) {
       align-items: center;
     }
     .meta-col-table .meta-label {
-      font-size: 7pt;
+      font-size: 7.5pt;
       font-weight: 900;
       letter-spacing: 0.8px;
       color: #ffffff;
@@ -2770,21 +2788,21 @@ export function printCountingTablePlacards(options = {}) {
       margin-bottom: 2px;
     }
     .table-giant-pill {
-      font-size: 26pt;
+      font-size: 28pt;
       font-weight: 900;
       letter-spacing: 1.5px;
       color: #ffffff;
       line-height: 1.05;
     }
     .booth-sub-link {
-      font-size: 7.5pt;
+      font-size: 8pt;
       font-weight: 700;
       color: #ffffff;
-      margin-top: 3px;
+      margin-top: 4px;
       opacity: 0.95;
     }
     .meta-col-officials {
-      padding: 6px 12px;
+      padding: 8px 14px;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -2793,49 +2811,53 @@ export function printCountingTablePlacards(options = {}) {
       border: 1.5px solid #000000;
     }
     .meta-col-officials .meta-label {
-      font-size: 7pt;
+      font-size: 7.5pt;
       font-weight: 900;
       letter-spacing: 0.5px;
       color: #000000;
       text-transform: uppercase;
-      margin-bottom: 2px;
+      margin-bottom: 3px;
     }
     .official-row {
       display: flex;
       align-items: baseline;
-      gap: 6px;
-      font-size: 8.5pt;
-      line-height: 1.25;
+      gap: 8px;
+      font-size: 9.5pt;
+      line-height: 1.35;
       color: #000000;
     }
     .officer-role {
       font-weight: 900;
       color: #000000;
-      width: 74px;
+      width: 76px;
       flex-shrink: 0;
     }
     .officer-name {
       font-weight: 900;
       color: #000000;
-      font-size: 9pt;
+      font-size: 10pt;
     }
     .official-sub-role {
-      font-size: 7pt;
+      font-size: 7.5pt;
       color: #333333;
-      margin-left: 80px;
-      line-height: 1.1;
+      margin-left: 84px;
+      line-height: 1.15;
     }
 
     .section-container {
       margin-top: 3mm;
+      margin-bottom: 2.5mm;
       flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
     .section-title-bar {
       color: #ffffff;
-      font-size: 8pt;
+      font-size: 8.5pt;
       font-weight: 900;
       letter-spacing: 0.5px;
-      padding: 4px 8px;
+      padding: 5px 10px;
       border-radius: 3px 3px 0 0;
       display: flex;
       justify-content: space-between;
@@ -2843,40 +2865,44 @@ export function printCountingTablePlacards(options = {}) {
       background: #000000;
       border: 2px solid #000000;
       border-bottom: none;
+      flex-shrink: 0;
     }
     .section-sub-badge {
-      font-size: 6.5pt;
+      font-size: 7pt;
       font-weight: 900;
       background: #ffffff;
       color: #000000;
-      padding: 1.5px 6px;
+      padding: 2px 7px;
       border-radius: 2px;
     }
 
     .rounds-sequence-table {
       width: 100%;
+      flex: 1;
+      height: 100%;
       border-collapse: collapse;
       border: 2px solid #000000;
       border-top: none;
       background: #ffffff;
-      font-size: 9.5pt;
+      font-size: 11pt;
       color: #000000;
     }
     .rounds-sequence-table th {
       background: #f4f4f5;
       color: #000000;
-      font-size: 8pt;
+      font-size: 9pt;
       font-weight: 900;
       text-transform: uppercase;
-      padding: 5px 8px;
+      padding: 7px 10px;
       border: 1.5px solid #000000;
       letter-spacing: 0.3px;
+      height: 1px;
     }
     .rounds-sequence-table td {
-      padding: 5px 8px;
-      border: 1px solid #000000;
+      padding: 7px 12px;
+      border: 1.5px solid #000000;
       vertical-align: middle;
-      line-height: 1.2;
+      line-height: 1.25;
       color: #000000;
     }
     .rounds-sequence-table tbody tr:nth-child(even) {
@@ -2893,20 +2919,20 @@ export function printCountingTablePlacards(options = {}) {
     .text-center { text-align: center; }
     .round-badge {
       display: inline-block;
-      font-size: 8pt;
+      font-size: 9pt;
       font-weight: 900;
       background: #000000;
       color: #ffffff;
-      padding: 2px 7px;
-      border-radius: 3px;
-      margin-right: 5px;
+      padding: 3px 9px;
+      border-radius: 4px;
+      margin-right: 6px;
       letter-spacing: 0.2px;
-      border: 1px solid #000000;
+      border: 1.5px solid #000000;
     }
     .badge-uuc {
       background: #000000;
       color: #ffffff;
-      border: 1px solid #000000;
+      border: 1.5px solid #000000;
     }
     .badge-standby {
       background: #ffffff;
@@ -2914,37 +2940,37 @@ export function printCountingTablePlacards(options = {}) {
       border: 1.5px solid #000000;
     }
     .serial-tag {
-      font-size: 8.5pt;
+      font-size: 10pt;
       font-weight: 900;
       color: #000000;
       font-family: monospace;
       background: #ffffff;
-      padding: 1.5px 6px;
-      border-radius: 3px;
+      padding: 2.5px 8px;
+      border-radius: 4px;
       border: 1.5px solid #000000;
     }
     .post-title {
-      font-size: 9.5pt;
+      font-size: 11pt;
       font-weight: 900;
       color: #000000;
       letter-spacing: 0.2px;
     }
     .post-uuc {
       color: #000000;
-      font-size: 10.5pt;
+      font-size: 12.5pt;
       font-weight: 900;
       text-transform: uppercase;
     }
     .uuc-sub-note {
-      font-size: 7.5pt;
+      font-size: 8pt;
       font-weight: 900;
       color: #000000;
-      letter-spacing: 0.5px;
-      margin-top: 2px;
+      letter-spacing: 0.4px;
+      margin-top: 3px;
       text-transform: uppercase;
     }
     .standby-post-title {
-      font-size: 8pt;
+      font-size: 9.5pt;
       color: #333333;
       font-style: italic;
     }
@@ -2953,24 +2979,25 @@ export function printCountingTablePlacards(options = {}) {
     }
 
     .uuc-callout-banner {
-      margin-top: 3mm;
+      margin-top: auto;
       background: #ffffff;
       border: 2.5px solid #000000;
       border-radius: 4px;
-      padding: 7px 12px;
+      padding: 8px 14px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
+      flex-shrink: 0;
     }
     .uuc-callout-icon {
-      font-size: 13pt;
+      font-size: 14pt;
       font-weight: 900;
       color: #000000;
       line-height: 1;
     }
     .uuc-callout-text {
-      font-size: 10pt;
+      font-size: 10.5pt;
       font-weight: 900;
       color: #000000;
       letter-spacing: 0.4px;
@@ -2984,7 +3011,7 @@ export function printCountingTablePlacards(options = {}) {
   <!-- Screen Top Bar -->
   <div class="screen-topbar no-print">
     <div style="display: flex; align-items: center; gap: 12px;">
-      <strong style="font-size: 14px; color: #fff;">Official Counting Table Sequence Placards</strong>
+      <strong style="font-size: 14px; color: #fff;">Counting Table Sequence Placards</strong>
       <span style="font-size: 11px; color: #cbd5e1;">${boothsList.length} Tables Configured in System &bull; Round-by-Round from Matrix</span>
     </div>
     <div style="display: flex; align-items: center; gap: 10px;">

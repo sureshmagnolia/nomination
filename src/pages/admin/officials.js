@@ -3317,7 +3317,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         <div class="p-2.5 rounded-lg bg-indigo-950/40 border border-indigo-500/30 space-y-1.5 transition-all">
                           <div class="flex items-center justify-between mb-0.5">
                             <label class="text-[11px] font-bold text-indigo-300 flex items-center gap-1">
-                              <span>👤</span> Polling Officer 3 <span class="text-[10px] text-indigo-400 font-normal">(Additional · Optional)</span>
+                              <span>👤</span> Polling Officer <span class="text-[10px] text-indigo-400 font-normal">(Additional · Optional)</span>
                             </label>
                             <div class="flex items-center gap-1.5">
                               ${team.pollingOfficer3 ? `<span class="text-[10px] font-mono text-indigo-200 bg-indigo-500/20 px-1.5 py-0.2 rounded border border-indigo-500/30">Rank #${team.pollingOfficer3.seniority}</span>` : ''}
@@ -3536,7 +3536,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         <div class="p-2.5 rounded-lg bg-purple-950/40 border border-purple-500/30 space-y-1.5 transition-all">
                           <div class="flex items-center justify-between mb-0.5">
                             <label class="text-[11px] font-bold text-purple-300 flex items-center gap-1">
-                              <span>👤</span> Counting Officer 3 <span class="text-[10px] text-purple-400 font-normal">(Additional · Optional)</span>
+                              <span>👤</span> Counting Officer <span class="text-[10px] text-purple-400 font-normal">(Additional · Optional)</span>
                             </label>
                             <div class="flex items-center gap-1.5">
                               ${team.countingOfficer3 ? `<span class="text-[10px] font-mono text-purple-200 bg-purple-500/20 px-1.5 py-0.2 rounded border border-purple-500/30">Rank #${team.countingOfficer3.seniority}</span>` : ''}
