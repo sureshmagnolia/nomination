@@ -709,10 +709,12 @@ export function exportBallotsToExcel({
   // 4. PRINTING PRESS SERIAL & BOOKLET PACKAGING PLAN
   // ─────────────────────────────────────────────────────────────────────────────
   if (masterPlan && (filterType === 'all' || filterType === 'summary')) {
+    const isDefiniteMode = masterPlan.bindingMode === 'definite';
     const planRows = [
       [collegeName.toUpperCase()],
       [`COLLEGE UNION ELECTION ${year} — BALLOT SERIAL NUMBERS & PACKAGING PLAN`],
       [`Official Printing Press Specification & Booth Allocation Schedule`],
+      [`Packaging Strategy: ${isDefiniteMode ? 'Definite Sets (Uniform Full Books with PrO Reserves)' : 'Precise / Tailored Books'} | Booklet Size: ${masterPlan.bookSize || 50} Ballots/Book`],
       [`Generated: ${new Date().toLocaleString('en-IN')}`],
       []
     ];
@@ -722,6 +724,8 @@ export function exportBallotsToExcel({
       'Post / Description',
       'Booth No.',
       'Allotted Voters',
+      'Total Ballots',
+      'Reserve Slips',
       'Serial From',
       'Serial To',
       'Booklet Breakdown',
@@ -730,17 +734,31 @@ export function exportBallotsToExcel({
     planRows.push(planHeaders);
 
     let grandTotalVoters = 0;
+    let grandTotalBallots = 0;
+    let grandTotalReserves = 0;
 
     // General Union Parts
     if (masterPlan.isSplit && Array.isArray(masterPlan.generalParts)) {
       masterPlan.generalParts.forEach((part, pIdx) => {
+        let partVoters = 0;
+        let partReserves = 0;
         (part.results || []).forEach(s => {
-          grandTotalVoters += (s.count || 0);
+          const vCount = s.voterCount !== undefined ? s.voterCount : (s.count || 0);
+          const tCount = s.count || 0;
+          const rCount = s.reserveCount || 0;
+          const rStr = rCount > 0 ? `${rCount} (${s.reserveSlipsRange || ''})` : (s.rsCount > 0 ? `${s.rsCount} RS (${s.reserveSlipsRange || ''})` : '0');
+          grandTotalVoters += vCount;
+          grandTotalBallots += tCount;
+          grandTotalReserves += rCount;
+          partVoters += vCount;
+          partReserves += rCount;
           planRows.push([
             `General Part ${pIdx + 1} (${part.shortCode})`,
             part.title,
             `Booth ${s.booth}`,
-            s.count || 0,
+            vCount,
+            tCount,
+            rStr,
             `${part.shortCode}-${s.start}`,
             `${part.shortCode}-${s.end}`,
             formatBooksText(s.books),
@@ -751,7 +769,9 @@ export function exportBallotsToExcel({
           `SUBTOTAL PART ${pIdx + 1}`,
           part.title,
           'All Booths',
+          partVoters,
           part.total || 0,
+          partReserves > 0 ? `${partReserves} Reserves` : '0',
           `${part.shortCode}-1`,
           `${part.shortCode}-${part.total || 0}`,
           '—',
@@ -760,13 +780,25 @@ export function exportBallotsToExcel({
         planRows.push([]);
       });
     } else if (masterPlan.general) {
+      let genVoters = 0;
+      let genReserves = 0;
       (masterPlan.general.results || []).forEach(s => {
-        grandTotalVoters += (s.count || 0);
+        const vCount = s.voterCount !== undefined ? s.voterCount : (s.count || 0);
+        const tCount = s.count || 0;
+        const rCount = s.reserveCount || 0;
+        const rStr = rCount > 0 ? `${rCount} (${s.reserveSlipsRange || ''})` : (s.rsCount > 0 ? `${s.rsCount} RS (${s.reserveSlipsRange || ''})` : '0');
+        grandTotalVoters += vCount;
+        grandTotalBallots += tCount;
+        grandTotalReserves += rCount;
+        genVoters += vCount;
+        genReserves += rCount;
         planRows.push([
           'General Union (G)',
           'General Union Posts (Main)',
           `Booth ${s.booth}`,
-          s.count || 0,
+          vCount,
+          tCount,
+          rStr,
           `G${s.start}`,
           `G${s.end}`,
           formatBooksText(s.books),
@@ -777,7 +809,9 @@ export function exportBallotsToExcel({
         'SUBTOTAL GENERAL',
         'All General Union Posts',
         'All Booths',
+        genVoters,
         masterPlan.general.total || 0,
+        genReserves > 0 ? `${genReserves} Reserves` : '0',
         'G1',
         `G${masterPlan.general.total || 0}`,
         '—',
@@ -788,13 +822,25 @@ export function exportBallotsToExcel({
 
     // Year Representatives
     if (masterPlan.reps && Array.isArray(masterPlan.reps.results)) {
+      let repVoters = 0;
+      let repReserves = 0;
       masterPlan.reps.results.forEach(s => {
-        grandTotalVoters += (s.count || 0);
+        const vCount = s.voterCount !== undefined ? s.voterCount : (s.count || 0);
+        const tCount = s.count || 0;
+        const rCount = s.reserveCount || 0;
+        const rStr = rCount > 0 ? `${rCount} (${s.reserveSlipsRange || ''})` : '0';
+        grandTotalVoters += vCount;
+        grandTotalBallots += tCount;
+        grandTotalReserves += rCount;
+        repVoters += vCount;
+        repReserves += rCount;
         planRows.push([
           'Year Representative (R)',
           s.post,
           `Booth ${s.booth}`,
-          s.count || 0,
+          vCount,
+          tCount,
+          rStr,
           `R${s.start}`,
           `R${s.end}`,
           formatBooksText(s.books),
@@ -805,7 +851,9 @@ export function exportBallotsToExcel({
         'SUBTOTAL YEAR REPS',
         'All Contested Cohorts',
         'All Contested Booths',
+        repVoters,
         masterPlan.reps.total || 0,
+        repReserves > 0 ? `${repReserves} Reserves` : '0',
         'R1',
         `R${masterPlan.reps.total || 0}`,
         '—',
@@ -816,14 +864,26 @@ export function exportBallotsToExcel({
 
     // Departmental Associations
     if (masterPlan.assocs && Array.isArray(masterPlan.assocs.results)) {
+      let assocVoters = 0;
+      let assocReserves = 0;
       const sortedAssocs = [...masterPlan.assocs.results].sort((a, b) => String(a.post || '').localeCompare(String(b.post || '')));
       sortedAssocs.forEach(s => {
-        grandTotalVoters += (s.count || 0);
+        const vCount = s.voterCount !== undefined ? s.voterCount : (s.count || 0);
+        const tCount = s.count || 0;
+        const rCount = s.reserveCount || 0;
+        const rStr = rCount > 0 ? `${rCount} (${s.reserveSlipsRange || ''})` : (s.rsCount > 0 ? `${s.rsCount} RS (${s.reserveSlipsRange || ''})` : '0');
+        grandTotalVoters += vCount;
+        grandTotalBallots += tCount;
+        grandTotalReserves += rCount;
+        assocVoters += vCount;
+        assocReserves += rCount;
         planRows.push([
           'Association Secretary (A)',
           s.post,
           `Booth ${s.booth}`,
-          s.count || 0,
+          vCount,
+          tCount,
+          rStr,
           `A${s.start}`,
           `A${s.end}`,
           formatBooksText(s.books),
@@ -834,7 +894,9 @@ export function exportBallotsToExcel({
         'SUBTOTAL ASSOCIATIONS',
         'All Departments',
         'All Contested Booths',
+        assocVoters,
         masterPlan.assocs.total || 0,
+        assocReserves > 0 ? `${assocReserves} Reserves` : '0',
         'A1',
         `A${masterPlan.assocs.total || 0}`,
         '—',
@@ -849,6 +911,8 @@ export function exportBallotsToExcel({
       'Combined Election Printing Schedule',
       'All Sections',
       grandTotalVoters,
+      grandTotalBallots,
+      grandTotalReserves > 0 ? `${grandTotalReserves} Reserves` : '0',
       '—',
       '—',
       '—',
@@ -860,7 +924,9 @@ export function exportBallotsToExcel({
       { wch: 26 }, // Series
       { wch: 36 }, // Post
       { wch: 14 }, // Booth
-      { wch: 16 }, // Allotted
+      { wch: 15 }, // Allotted Voters
+      { wch: 15 }, // Total Ballots
+      { wch: 22 }, // Reserve Slips
       { wch: 16 }, // Sl From
       { wch: 16 }, // Sl To
       { wch: 40 }, // Booklet Breakdown

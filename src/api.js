@@ -740,7 +740,8 @@ export const api = {
   adminGenerateBallotPlan: async (password, options = {}) => {
     const bookSize = typeof options === 'object' && options ? options.bookSize : (typeof options === 'number' ? options : null);
     const mergeRemainders = typeof options === 'object' && options && 'mergeRemainders' in options ? options.mergeRemainders : undefined;
-    const res = await bgPost({ action: 'adminGenerateBallotPlan', password, bookSize, mergeRemainders });
+    const bindingMode = typeof options === 'object' && options ? options.bindingMode : undefined;
+    const res = await bgPost({ action: 'adminGenerateBallotPlan', password, bookSize, mergeRemainders, bindingMode });
     updateCache({ action: 'adminGetBallotPlan', password }, res.plan);
     return res;
   },

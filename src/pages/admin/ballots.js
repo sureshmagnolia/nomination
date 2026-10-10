@@ -659,7 +659,14 @@ export async function renderAdminBallots(container) {
           setLoading(btnSaveConfig, true, defaultText);
           showToast('Saving ballot selection & calculating Master Plan...', 'info');
           await api.adminSaveBallotConfig(pwd, currentConfig);
-          const res = await api.adminGenerateBallotPlan(pwd);
+          const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
+          const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
+          const savedMode = localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
+          const res = await api.adminGenerateBallotPlan(pwd, {
+            bookSize: savedSize,
+            mergeRemainders: savedMerge,
+            bindingMode: savedMode
+          });
           plan = res.plan;
           showToast('Ballot selection saved & Master Plan finalized!', 'success');
           renderUI();
@@ -678,7 +685,14 @@ export async function renderAdminBallots(container) {
         try {
           setLoading(btnRegenPlanTop, true, defaultText);
           showToast('Calculating and saving Master Plan on server...', 'info');
-          await api.adminGenerateBallotPlan(pwd);
+          const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
+          const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
+          const savedMode = localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
+          await api.adminGenerateBallotPlan(pwd, {
+            bookSize: savedSize,
+            mergeRemainders: savedMerge,
+            bindingMode: savedMode
+          });
           plan = await api.adminGetBallotPlan(pwd).catch(() => null);
           showToast('Master Plan finalized successfully!', 'success');
         } catch (err) {
@@ -889,14 +903,19 @@ export async function downloadBallotsExcel(pwd, filterType = 'all', overrideConf
     };
 
     let plan = rawPlan;
+    const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
+    const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
+    const savedMode = localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
     if (!plan) {
-      const genRes = await api.adminGenerateBallotPlan(pwd).catch(() => null);
+      const genRes = await api.adminGenerateBallotPlan(pwd, {
+        bookSize: savedSize,
+        mergeRemainders: savedMerge,
+        bindingMode: savedMode
+      }).catch(() => null);
       plan = genRes?.plan || null;
     }
 
-    const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
-    const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
-    const activePlan = plan ? recalculateBallotPlanBooks(plan, savedSize, savedMerge) : null;
+    const activePlan = plan ? recalculateBallotPlanBooks(plan, savedSize, savedMerge, savedMode) : null;
 
     const fileName = exportBallotsToExcel({
       postsData,
@@ -920,8 +939,10 @@ export function openBallotSummaryConfigModal(pwd) {
 
   const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
   const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
+  const savedMode = localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
   let currentSelectedSize = [25, 50, 100].includes(savedSize) ? savedSize : 'custom';
   let customValue = ![25, 50, 100].includes(savedSize) ? savedSize : '';
+  let currentBindingMode = savedMode;
 
   const modal = document.createElement('div');
   modal.id = 'modalBallotSummaryConfig';
@@ -940,6 +961,39 @@ export function openBallotSummaryConfigModal(pwd) {
           </div>
         </div>
         <button id="btnModalClose" class="text-slate-400 hover:text-white text-lg px-2 py-1 rounded-lg hover:bg-white/5 transition-colors">✕</button>
+      </div>
+
+      <!-- Packaging Strategy (Definite Uniform vs Precise Tailored) -->
+      <div class="space-y-2">
+        <label class="text-xs font-semibold text-slate-300 block">
+          Book Binding Strategy for Printing Press:
+        </label>
+        <div class="grid grid-cols-1 gap-2.5">
+          <label class="flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${currentBindingMode === 'definite' ? 'bg-purple-950/40 border-purple-500 text-purple-100 ring-1 ring-purple-500/50' : 'bg-slate-800/60 border-white/10 hover:border-white/20'}" id="labelModeDefinite">
+            <input type="radio" name="bindingModeRadio" value="definite" class="mt-0.5 accent-purple-500 w-4 h-4 cursor-pointer" ${currentBindingMode === 'definite' ? 'checked' : ''} />
+            <div class="space-y-0.5 flex-1">
+              <div class="text-xs font-bold text-white flex items-center justify-between">
+                <span class="flex items-center gap-1.5"><span>📦</span> Definite Sets (Uniform Books)</span>
+                <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-semibold">Recommended for Press</span>
+              </div>
+              <p class="text-[11px] text-slate-400 leading-snug">
+                Every book is printed in uniform batches (e.g. exactly 50 slips/book). Each booth receives full books rounded up. Surplus slips act as official Presiding Officer (PrO) Booth Reserves. Clean serial boundaries for the printer.
+              </p>
+            </div>
+          </label>
+
+          <label class="flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${currentBindingMode === 'precise' ? 'bg-purple-950/40 border-purple-500 text-purple-100 ring-1 ring-purple-500/50' : 'bg-slate-800/60 border-white/10 hover:border-white/20'}" id="labelModePrecise">
+            <input type="radio" name="bindingModeRadio" value="precise" class="mt-0.5 accent-purple-500 w-4 h-4 cursor-pointer" ${currentBindingMode === 'precise' ? 'checked' : ''} />
+            <div class="space-y-0.5 flex-1">
+              <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>✂️</span> Precise / Tailored Books
+              </div>
+              <p class="text-[11px] text-slate-400 leading-snug">
+                Total ballots strictly match voter count. Last booklet in each booth contains the exact remainder (e.g. 50 + 32 slips). Zero surplus ballots, but requires manual odd-sheet collation by the printer.
+              </p>
+            </div>
+          </label>
+        </div>
       </div>
 
       <!-- Presets & Size -->
@@ -979,16 +1033,18 @@ export function openBallotSummaryConfigModal(pwd) {
         </div>
       </div>
 
-      <!-- Smart Remainder Merging Option -->
-      <label class="flex items-start gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/10 cursor-pointer hover:bg-slate-800/70 transition-colors">
-        <input type="checkbox" id="chkModalMerge" class="mt-0.5 accent-purple-500 w-4 h-4 cursor-pointer" ${savedMerge ? 'checked' : ''} />
-        <div class="space-y-0.5">
-          <div class="text-xs font-semibold text-white">Smart Remainder Merging (Recommended)</div>
-          <p class="text-[11px] text-slate-400 leading-relaxed">
-            When remaining ballots for a booth are small (≤30% of booklet size), merge them into the last booklet instead of creating a tiny partial book (e.g. 62 voters become 1 book of 62 instead of 50 + 12).
-          </p>
-        </div>
-      </label>
+      <!-- Smart Remainder Merging Option (Shown in Precise Mode) -->
+      <div id="containerMergeOption" style="${currentBindingMode === 'definite' ? 'display: none;' : ''}">
+        <label class="flex items-start gap-3 p-3 rounded-xl bg-slate-800/40 border border-white/10 cursor-pointer hover:bg-slate-800/70 transition-colors">
+          <input type="checkbox" id="chkModalMerge" class="mt-0.5 accent-purple-500 w-4 h-4 cursor-pointer" ${savedMerge ? 'checked' : ''} />
+          <div class="space-y-0.5">
+            <div class="text-xs font-semibold text-white">Smart Remainder Merging (Recommended)</div>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              When remaining ballots for a booth are small (≤30% of booklet size), merge them into the last booklet instead of creating a tiny partial book (e.g. 62 voters become 1 book of 62 instead of 50 + 12).
+            </p>
+          </div>
+        </label>
+      </div>
 
       <!-- Footer Buttons -->
       <div class="flex items-center justify-between pt-3 border-t border-white/10">
@@ -1011,7 +1067,28 @@ export function openBallotSummaryConfigModal(pwd) {
 
   const customInput = modal.querySelector('#inputModalCustomSize');
   const chkMerge = modal.querySelector('#chkModalMerge');
+  const containerMerge = modal.querySelector('#containerMergeOption');
   const presetButtons = modal.querySelectorAll('.preset-size-btn');
+  const radioDefinite = modal.querySelector('input[value="definite"]');
+  const radioPrecise = modal.querySelector('input[value="precise"]');
+  const labelDefinite = modal.querySelector('#labelModeDefinite');
+  const labelPrecise = modal.querySelector('#labelModePrecise');
+
+  const updateBindingModeUI = (mode) => {
+    currentBindingMode = mode;
+    if (mode === 'definite') {
+      labelDefinite.className = 'flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all bg-purple-950/40 border-purple-500 text-purple-100 ring-1 ring-purple-500/50';
+      labelPrecise.className = 'flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all bg-slate-800/60 border-white/10 hover:border-white/20';
+      if (containerMerge) containerMerge.style.display = 'none';
+    } else {
+      labelPrecise.className = 'flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all bg-purple-950/40 border-purple-500 text-purple-100 ring-1 ring-purple-500/50';
+      labelDefinite.className = 'flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all bg-slate-800/60 border-white/10 hover:border-white/20';
+      if (containerMerge) containerMerge.style.display = '';
+    }
+  };
+
+  if (radioDefinite) radioDefinite.onchange = () => updateBindingModeUI('definite');
+  if (radioPrecise) radioPrecise.onchange = () => updateBindingModeUI('precise');
 
   const updatePresetHighlight = () => {
     presetButtons.forEach(btn => {
@@ -1064,7 +1141,8 @@ export function openBallotSummaryConfigModal(pwd) {
       finalSize = currentSelectedSize;
     }
     const finalMerge = chkMerge.checked;
-    return { finalSize, finalMerge };
+    const finalMode = currentBindingMode;
+    return { finalSize, finalMerge, finalMode };
   };
 
   modal.querySelector('#btnModalExcel').onclick = async () => {
@@ -1072,9 +1150,14 @@ export function openBallotSummaryConfigModal(pwd) {
     if (!cfg) return;
     localStorage.setItem('gcc_ballot_book_size', String(cfg.finalSize));
     localStorage.setItem('gcc_ballot_merge_remainders', cfg.finalMerge ? 'true' : 'false');
+    localStorage.setItem('gcc_ballot_binding_mode', cfg.finalMode);
     closeModal();
-    showToast(`Saving Packaging Plan (${cfg.finalSize} ballots/book) to server...`, 'info');
-    await api.adminGenerateBallotPlan(pwd, { bookSize: cfg.finalSize, mergeRemainders: cfg.finalMerge }).catch(() => null);
+    showToast(`Saving Packaging Plan (${cfg.finalSize} ballots/book, ${cfg.finalMode}) to server...`, 'info');
+    await api.adminGenerateBallotPlan(pwd, { 
+      bookSize: cfg.finalSize, 
+      mergeRemainders: cfg.finalMerge, 
+      bindingMode: cfg.finalMode 
+    }).catch(() => null);
     await downloadBallotsExcel(pwd, 'summary');
   };
 
@@ -1083,8 +1166,9 @@ export function openBallotSummaryConfigModal(pwd) {
     if (!cfg) return;
     localStorage.setItem('gcc_ballot_book_size', String(cfg.finalSize));
     localStorage.setItem('gcc_ballot_merge_remainders', cfg.finalMerge ? 'true' : 'false');
+    localStorage.setItem('gcc_ballot_binding_mode', cfg.finalMode);
     closeModal();
-    await generateAndPrintBallotPressSummary(pwd, cfg.finalSize, cfg.finalMerge);
+    await generateAndPrintBallotPressSummary(pwd, cfg.finalSize, cfg.finalMerge, cfg.finalMode);
   };
 }
 
@@ -1378,7 +1462,7 @@ export async function generateAndPrintBallots(pwd, filterType = 'all', overrideC
   }
 }
 
-export function calcBooksHelper(count, start, prefix, currentGlobalBookCount, customBookPrefix, standard, enableMerge) {
+export function calcBooksHelper(count, start, prefix, currentGlobalBookCount, customBookPrefix, standard, enableMerge, bindingMode = 'definite') {
   if (!count || count <= 0) return { books: [], ids: '-', count: 0, nextCounter: currentGlobalBookCount };
   let current = start;
   let books = [];
@@ -1402,28 +1486,36 @@ export function calcBooksHelper(count, start, prefix, currentGlobalBookCount, cu
     return { id, range };
   };
 
-  const threshold = enableMerge ? Math.max(5, Math.round(standard * 0.3)) : 0;
-
-  if (count <= (standard + threshold)) {
-    books.push({ qty: 1, size: count, items: [createRange(count)] });
+  if (bindingMode === 'definite') {
+    const numBooks = Math.ceil(count / standard);
+    let items = [];
+    for (let i = 0; i < numBooks; i++) {
+      items.push(createRange(standard));
+    }
+    books.push({ qty: numBooks, size: standard, items });
   } else {
-    const fullBooks = Math.floor(count / standard);
-    const remainder = count % standard;
-    if (remainder === 0) {
-      let items = [];
-      for (let i = 0; i < fullBooks; i++) items.push(createRange(standard));
-      books.push({ qty: fullBooks, size: standard, items });
-    } else if (remainder <= threshold) {
-      let items = [];
-      for (let i = 0; i < fullBooks - 1; i++) items.push(createRange(standard));
-      if (items.length > 0) books.push({ qty: fullBooks - 1, size: standard, items });
-      const lastSize = standard + remainder;
-      books.push({ qty: 1, size: lastSize, items: [createRange(lastSize)] });
+    const threshold = enableMerge ? Math.max(5, Math.round(standard * 0.3)) : 0;
+    if (count <= (standard + threshold)) {
+      books.push({ qty: 1, size: count, items: [createRange(count)] });
     } else {
-      let items = [];
-      for (let i = 0; i < fullBooks; i++) items.push(createRange(standard));
-      books.push({ qty: fullBooks, size: standard, items });
-      books.push({ qty: 1, size: remainder, items: [createRange(remainder)] });
+      const fullBooks = Math.floor(count / standard);
+      const remainder = count % standard;
+      if (remainder === 0) {
+        let items = [];
+        for (let i = 0; i < fullBooks; i++) items.push(createRange(standard));
+        books.push({ qty: fullBooks, size: standard, items });
+      } else if (remainder <= threshold) {
+        let items = [];
+        for (let i = 0; i < fullBooks - 1; i++) items.push(createRange(standard));
+        if (items.length > 0) books.push({ qty: fullBooks - 1, size: standard, items });
+        const lastSize = standard + remainder;
+        books.push({ qty: 1, size: lastSize, items: [createRange(lastSize)] });
+      } else {
+        let items = [];
+        for (let i = 0; i < fullBooks; i++) items.push(createRange(standard));
+        books.push({ qty: fullBooks, size: standard, items });
+        books.push({ qty: 1, size: remainder, items: [createRange(remainder)] });
+      }
     }
   }
 
@@ -1451,49 +1543,84 @@ export const getRepCohortGroup = (postName) => {
   return { key: p, title: postName, short: postName, rank: 5 };
 };
 
-export function recalculateBallotPlanBooks(rawPlan, bookSize = 50, enableMerge = true) {
+export function recalculateBallotPlanBooks(rawPlan, bookSize = 50, enableMerge = true, bindingMode = null) {
   const plan = JSON.parse(JSON.stringify(rawPlan || {}));
   const standard = Number(bookSize) > 0 ? Number(bookSize) : 50;
+  const mode = bindingMode || plan.bindingMode || 'definite';
+  plan.bindingMode = mode;
+  plan.bookSize = standard;
 
   // 1. General
   if (plan.isSplit && Array.isArray(plan.generalParts)) {
     plan.generalParts.forEach(gp => {
       let partSl = 1, partBookCount = 0;
       (gp.results || []).forEach(s => {
-        const count = s.count || 0;
+        const voterCount = s.voterCount !== undefined ? s.voterCount : (s.count || 0);
+        let allocatedCount = voterCount;
+        let reserveCount = 0;
+
+        if (mode === 'definite') {
+          const numBooks = voterCount > 0 ? Math.ceil(voterCount / standard) : 0;
+          allocatedCount = numBooks * standard;
+          reserveCount = allocatedCount - voterCount;
+        }
+
         const start = partSl;
-        const end = start + count - 1;
-        const bookData = calcBooksHelper(count, start, gp.shortCode, partBookCount, gp.bookPrefix, standard, enableMerge);
+        const end = allocatedCount > 0 ? start + allocatedCount - 1 : start;
+        const bookData = calcBooksHelper(allocatedCount, start, gp.shortCode, partBookCount, gp.bookPrefix, standard, enableMerge, mode);
         partBookCount = bookData.nextCounter;
+        s.count = allocatedCount;
+        s.voterCount = voterCount;
+        s.reserveCount = reserveCount;
         s.start = start;
         s.end = end;
         s.books = bookData.books;
         s.bookIds = bookData.ids;
-        if (s.rsCount > 0) {
-          const reg = s.regCount !== undefined ? s.regCount : (count - s.rsCount);
+        if (mode === 'definite' && reserveCount > 0) {
+          s.reserveSlipsRange = `${gp.shortCode}${start + voterCount} - ${gp.shortCode}${end}`;
+        } else if (s.rsCount > 0) {
+          const reg = s.regCount !== undefined ? s.regCount : (voterCount - s.rsCount);
           s.reserveSlipsRange = `${gp.shortCode}${start + reg} - ${gp.shortCode}${end}`;
+        } else {
+          s.reserveSlipsRange = null;
         }
-        partSl += count;
+        partSl += allocatedCount;
       });
       gp.total = partSl - 1;
     });
   } else if (plan.general) {
     let genSl = 1, gbCount = 0;
     (plan.general.results || []).forEach(s => {
-      const count = s.count || 0;
+      const voterCount = s.voterCount !== undefined ? s.voterCount : (s.count || 0);
+      let allocatedCount = voterCount;
+      let reserveCount = 0;
+
+      if (mode === 'definite') {
+        const numBooks = voterCount > 0 ? Math.ceil(voterCount / standard) : 0;
+        allocatedCount = numBooks * standard;
+        reserveCount = allocatedCount - voterCount;
+      }
+
       const start = genSl;
-      const end = start + count - 1;
-      const bookData = calcBooksHelper(count, start, 'G', gbCount, 'GB', standard, enableMerge);
+      const end = allocatedCount > 0 ? start + allocatedCount - 1 : start;
+      const bookData = calcBooksHelper(allocatedCount, start, 'G', gbCount, 'GB', standard, enableMerge, mode);
       gbCount = bookData.nextCounter;
+      s.count = allocatedCount;
+      s.voterCount = voterCount;
+      s.reserveCount = reserveCount;
       s.start = start;
       s.end = end;
       s.books = bookData.books;
       s.bookIds = bookData.ids;
-      if (s.rsCount > 0) {
-        const reg = s.regCount !== undefined ? s.regCount : (count - s.rsCount);
+      if (mode === 'definite' && reserveCount > 0) {
+        s.reserveSlipsRange = `G${start + voterCount} - G${end}`;
+      } else if (s.rsCount > 0) {
+        const reg = s.regCount !== undefined ? s.regCount : (voterCount - s.rsCount);
         s.reserveSlipsRange = `G${start + reg} - G${end}`;
+      } else {
+        s.reserveSlipsRange = null;
       }
-      genSl += count;
+      genSl += allocatedCount;
     });
     plan.general.total = genSl - 1;
   }
@@ -1509,16 +1636,31 @@ export function recalculateBallotPlanBooks(rawPlan, bookSize = 50, enableMerge =
 
     let repSl = 1, rbCount = 0;
     plan.reps.results.forEach(s => {
-      const count = s.count || 0;
+      const voterCount = s.voterCount !== undefined ? s.voterCount : (s.count || 0);
+      let allocatedCount = voterCount;
+      let reserveCount = 0;
+
+      if (mode === 'definite') {
+        const numBooks = voterCount > 0 ? Math.ceil(voterCount / standard) : 0;
+        allocatedCount = numBooks * standard;
+        reserveCount = allocatedCount - voterCount;
+      }
+
       const start = repSl;
-      const end = start + count - 1;
-      const bookData = calcBooksHelper(count, start, 'R', rbCount, 'RB', standard, enableMerge);
+      const end = allocatedCount > 0 ? start + allocatedCount - 1 : start;
+      const bookData = calcBooksHelper(allocatedCount, start, 'R', rbCount, 'RB', standard, enableMerge, mode);
       rbCount = bookData.nextCounter;
+      s.count = allocatedCount;
+      s.voterCount = voterCount;
+      s.reserveCount = reserveCount;
       s.start = start;
       s.end = end;
       s.books = bookData.books;
       s.bookIds = bookData.ids;
-      repSl += count;
+      if (mode === 'definite' && reserveCount > 0) {
+        s.reserveSlipsRange = `R${start + voterCount} - R${end}`;
+      }
+      repSl += allocatedCount;
     });
     plan.reps.total = repSl - 1;
   }
@@ -1527,20 +1669,36 @@ export function recalculateBallotPlanBooks(rawPlan, bookSize = 50, enableMerge =
   if (plan.assocs && Array.isArray(plan.assocs.results)) {
     let assocSl = 1, abCount = 0;
     plan.assocs.results.forEach(s => {
-      const count = s.count || 0;
+      const voterCount = s.voterCount !== undefined ? s.voterCount : (s.count || 0);
+      let allocatedCount = voterCount;
+      let reserveCount = 0;
+
+      if (mode === 'definite') {
+        const numBooks = voterCount > 0 ? Math.ceil(voterCount / standard) : 0;
+        allocatedCount = numBooks * standard;
+        reserveCount = allocatedCount - voterCount;
+      }
+
       const start = assocSl;
-      const end = start + count - 1;
-      const bookData = calcBooksHelper(count, start, 'A', abCount, 'AB', standard, enableMerge);
+      const end = allocatedCount > 0 ? start + allocatedCount - 1 : start;
+      const bookData = calcBooksHelper(allocatedCount, start, 'A', abCount, 'AB', standard, enableMerge, mode);
       abCount = bookData.nextCounter;
+      s.count = allocatedCount;
+      s.voterCount = voterCount;
+      s.reserveCount = reserveCount;
       s.start = start;
       s.end = end;
       s.books = bookData.books;
       s.bookIds = bookData.ids;
-      if (s.rsCount > 0) {
-        const reg = s.regCount !== undefined ? s.regCount : (count - s.rsCount);
+      if (mode === 'definite' && reserveCount > 0) {
+        s.reserveSlipsRange = `A${start + voterCount} - A${end}`;
+      } else if (s.rsCount > 0) {
+        const reg = s.regCount !== undefined ? s.regCount : (voterCount - s.rsCount);
         s.reserveSlipsRange = `A${start + reg} - A${end}`;
+      } else {
+        s.reserveSlipsRange = null;
       }
-      assocSl += count;
+      assocSl += allocatedCount;
     });
     plan.assocs.total = assocSl - 1;
   }
@@ -1566,10 +1724,11 @@ export const renderBooksHtml = (booksOrHtml) => {
   `;
 };
 
-export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}, bookSize = 50, enableMerge = true) {
+export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}, bookSize = 50, enableMerge = true, bindingMode = null) {
   const year = settings.electionYear || schedule.electionYear || new Date().getFullYear().toString();
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
   const collegeLogo = settings.collegeLogo || '';
+  const mode = bindingMode || masterPlan.bindingMode || 'definite';
 
   const isSplitPlan = !!(masterPlan.isSplit && Array.isArray(masterPlan.generalParts) && masterPlan.generalParts.length > 1);
 
@@ -1606,21 +1765,22 @@ export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}
         <h2 style="margin: 0; font-size: 18px; color: #1e293b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">${esc(collegeName)}</h2>
         <h1 style="margin: 6px 0 0 0; font-size: 21px; color: #0f172a; font-weight: 800;">College Union Election ${year} — Ballot Printing Summary</h1>
         <div style="margin-top: 6px; font-size: 12px; color: #64748b; font-weight: 500;">
-          Specification: <strong>${bookSize} Ballots per Book</strong> ${enableMerge ? '(Smart Remainder Merging ≤30% Active)' : '(Exact Split)'}
+          Specification: <strong>${bookSize} Ballots per Book</strong> — <strong>${mode === 'definite' ? '📦 Definite Sets (Uniform Books with PrO Reserves)' : (enableMerge ? '✂️ Precise / Tailored Books (Smart Remainder Merging ≤30% Active)' : '✂️ Precise / Tailored Books (Exact Split)')}</strong>
         </div>
       </div>
 
       <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 25px; font-size: 12.5px; line-height: 1.5; color: #334155;">
-        This document provides the sequential serial number ranges and booklet packaging breakdown for printing press execution.
+        This document provides sequential serial number ranges and booklet packaging breakdown for printing press execution.
+        ${mode === 'definite' ? '<br><strong>Printing Press Standard:</strong> All booklets are bound in uniform definite sets of <strong>' + bookSize + ' slips/book</strong>. Any unissued remainder slips act as official Presiding Officer (PrO) Booth Reserves.' : ''}
         ${isSplitPlan ? '<br><strong>Note:</strong> General Union posts are split into <strong>' + masterPlan.generalParts.length + ' separate ballot papers</strong> with distinct series numbering and booklet prefixes.' : ''}
       </div>
 
       <!-- Statutory Notice for Court Addendum / Reserves -->
       <div style="margin-bottom: 20px; padding: 10px 14px; background: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px; font-size: 11.5px; color: #92400e; line-height: 1.45;">
-        <strong>⚖️ COURT ADDENDUM &amp; CONTINGENCY BALLOT PLANNING:</strong><br>
-        This Master Ballot Plan accommodates 21 Ph.D. Research Scholars across the 5 department booths (Economics, Geography, Mathematics, Music, Tamil) as contingency allocations. 
-        If the University formally decides to permit Research Scholars to vote, Presiding Officers issue these allocated ballot serials to verified scholars on the Court Addendum roll.
-        If excluded by University decision, these extra ballots remain unissued and act as official <strong>Booth Reserve Ballots</strong> without disrupting standard serial numbers or packaging.
+        <strong>⚖️ CONTINGENCY BALLOT &amp; BOOTH RESERVE PLANNING:</strong><br>
+        ${mode === 'definite' 
+          ? 'Booklets are printed in uniform full sets. Any surplus slips within a booth act as official <strong>Presiding Officer (PrO) Booth Reserves</strong>. In addition, 21 Ph.D. Research Scholars are accommodated across the 5 department booths (Economics, Geography, Mathematics, Music, Tamil) as contingency allocations.'
+          : 'This Master Ballot Plan accommodates 21 Ph.D. Research Scholars across the 5 department booths (Economics, Geography, Mathematics, Music, Tamil) as contingency allocations. If unissued, extra ballots act as official <strong>Booth Reserve Ballots</strong> without disrupting packaging.'}
       </div>
 
       <!-- 1. General Ballots -->
@@ -1641,9 +1801,9 @@ export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}
               <thead>
                 <tr style="background: #f8fafc; border-bottom: 1.5px solid #0f172a;">
                   <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left; width: 14%;">Booth No</th>
-                  <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 10%;">Voters</th>
-                  <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 14%;">Sl No From</th>
-                  <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 14%;">Sl No To</th>
+                  <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 12%;">Ballots / Voters</th>
+                  <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 13%;">Sl No From</th>
+                  <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 13%;">Sl No To</th>
                   <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left; width: 48%;">Book Breakdowns</th>
                 </tr>
               </thead>
@@ -1652,14 +1812,14 @@ export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}
                   <tr>
                     <td style="border: 1px solid #e2e8f0; padding: 7px 8px; font-weight: 600;">Booth ${s.booth}</td>
                     <td style="border: 1px solid #e2e8f0; padding: 7px 8px; text-align: center;">
-                      ${s.count}
-                      ${s.rsCount > 0 ? `<div style="font-size:9.5px; color:#d97706; font-weight:600;">(${s.regCount || (s.count - s.rsCount)} Reg + ${s.rsCount} RS)</div>` : ''}
+                      <div style="font-weight: 700; font-size: 12px; color: #0f172a;">${s.count}</div>
+                      ${s.reserveCount > 0 ? `<div style="font-size:9.5px; color:#4f46e5; font-weight:600;">(${s.voterCount} V + ${s.reserveCount} Res)</div>` : (s.rsCount > 0 ? `<div style="font-size:9.5px; color:#d97706; font-weight:600;">(${s.regCount || (s.count - s.rsCount)} Reg + ${s.rsCount} RS)</div>` : `<div style="font-size:9px; color:#64748b;">${s.voterCount || s.count} Voters</div>`)}
                     </td>
                     <td style="border: 1px solid #e2e8f0; padding: 7px 8px; text-align: center; font-weight: bold; color: #1e293b;">${part.shortCode}-${s.start}</td>
                     <td style="border: 1px solid #e2e8f0; padding: 7px 8px; text-align: center; font-weight: bold; color: #1e293b;">${part.shortCode}-${s.end}</td>
                     <td style="border: 1px solid #e2e8f0; padding: 3px 6px;">
                       ${renderBooksHtml(s.books)}
-                      ${s.rsCount > 0 ? `<div style="font-size:9.5px; color:#b45309; margin-top:2px;">⚖️ RS Reserve Range: <strong>${s.reserveSlipsRange}</strong></div>` : ''}
+                      ${s.reserveCount > 0 ? `<div style="font-size:9.5px; color:#4f46e5; margin-top:2px;">📦 PrO Reserve Slips: <strong>${s.reserveSlipsRange}</strong> (${s.reserveCount} slips)</div>` : (s.rsCount > 0 ? `<div style="font-size:9.5px; color:#b45309; margin-top:2px;">⚖️ RS Reserve Range: <strong>${s.reserveSlipsRange}</strong></div>` : '')}
                     </td>
                   </tr>
                 `).join('')}
@@ -1684,9 +1844,9 @@ export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}
             <thead>
               <tr style="background: #f8fafc; border-bottom: 1.5px solid #0f172a;">
                 <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left; width: 14%;">Booth No</th>
-                <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 10%;">Voters</th>
-                <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 14%;">Sl No From</th>
-                <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 14%;">Sl No To</th>
+                <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 12%;">Ballots / Voters</th>
+                <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 13%;">Sl No From</th>
+                <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 13%;">Sl No To</th>
                 <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left; width: 48%;">Book Breakdowns</th>
               </tr>
             </thead>
@@ -1695,14 +1855,14 @@ export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}
                 <tr>
                   <td style="border: 1px solid #e2e8f0; padding: 7px 8px; font-weight: 600;">Booth ${s.booth}</td>
                   <td style="border: 1px solid #e2e8f0; padding: 7px 8px; text-align: center;">
-                    ${s.count}
-                    ${s.rsCount > 0 ? `<div style="font-size:9.5px; color:#d97706; font-weight:600;">(${s.regCount || (s.count - s.rsCount)} Reg + ${s.rsCount} RS)</div>` : ''}
+                    <div style="font-weight: 700; font-size: 12px; color: #0f172a;">${s.count}</div>
+                    ${s.reserveCount > 0 ? `<div style="font-size:9.5px; color:#4f46e5; font-weight:600;">(${s.voterCount} V + ${s.reserveCount} Res)</div>` : (s.rsCount > 0 ? `<div style="font-size:9.5px; color:#d97706; font-weight:600;">(${s.regCount || (s.count - s.rsCount)} Reg + ${s.rsCount} RS)</div>` : `<div style="font-size:9px; color:#64748b;">${s.voterCount || s.count} Voters</div>`)}
                   </td>
                   <td style="border: 1px solid #e2e8f0; padding: 7px 8px; text-align: center; font-weight: bold; color: #1e293b;">G${s.start}</td>
                   <td style="border: 1px solid #e2e8f0; padding: 7px 8px; text-align: center; font-weight: bold; color: #1e293b;">G${s.end}</td>
                   <td style="border: 1px solid #e2e8f0; padding: 3px 6px;">
                     ${renderBooksHtml(s.books || s.bookHtml)}
-                    ${s.rsCount > 0 ? `<div style="font-size:9.5px; color:#b45309; margin-top:2px;">⚖️ RS Reserve Range: <strong>${s.reserveSlipsRange}</strong></div>` : ''}
+                    ${s.reserveCount > 0 ? `<div style="font-size:9.5px; color:#4f46e5; margin-top:2px;">📦 PrO Reserve Slips: <strong>${s.reserveSlipsRange}</strong> (${s.reserveCount} slips)</div>` : (s.rsCount > 0 ? `<div style="font-size:9.5px; color:#b45309; margin-top:2px;">⚖️ RS Reserve Range: <strong>${s.reserveSlipsRange}</strong></div>` : '')}
                   </td>
                 </tr>
               `).join('')}
@@ -1764,9 +1924,9 @@ export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}
                   <thead>
                     <tr style="background: #f8fafc; border-bottom: 1.5px solid #0f172a;">
                       <th style="border: 1px solid #cbd5e1; padding: 7px 8px; text-align: left; width: 14%;">Booth No</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 7px 8px; text-align: center; width: 10%;">Voters</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 7px 8px; text-align: center; width: 14%;">Sl No From</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 7px 8px; text-align: center; width: 14%;">Sl No To</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 7px 8px; text-align: center; width: 12%;">Ballots / Voters</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 7px 8px; text-align: center; width: 13%;">Sl No From</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 7px 8px; text-align: center; width: 13%;">Sl No To</th>
                       <th style="border: 1px solid #cbd5e1; padding: 7px 8px; text-align: left; width: 48%;">Book Breakdowns</th>
                     </tr>
                   </thead>
@@ -1774,10 +1934,16 @@ export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}
                     ${cGroup.items.map(s => `
                       <tr>
                         <td style="border: 1px solid #e2e8f0; padding: 6px 8px; font-weight: 600;">Booth ${s.booth}</td>
-                        <td style="border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center;">${s.count}</td>
+                        <td style="border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center;">
+                          <div style="font-weight: 700; font-size: 12px; color: #0f172a;">${s.count}</div>
+                          ${s.reserveCount > 0 ? `<div style="font-size:9.5px; color:#047857; font-weight:600;">(${s.voterCount} V + ${s.reserveCount} Res)</div>` : `<div style="font-size:9px; color:#64748b;">${s.voterCount || s.count} Voters</div>`}
+                        </td>
                         <td style="border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center; font-weight: bold; color: #1e293b;">R${s.start}</td>
                         <td style="border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center; font-weight: bold; color: #1e293b;">R${s.end}</td>
-                        <td style="border: 1px solid #e2e8f0; padding: 3px 6px;">${renderBooksHtml(s.books || s.bookHtml)}</td>
+                        <td style="border: 1px solid #e2e8f0; padding: 3px 6px;">
+                          ${renderBooksHtml(s.books || s.bookHtml)}
+                          ${s.reserveCount > 0 ? `<div style="font-size:9.5px; color:#047857; margin-top:2px;">📦 PrO Reserve Slips: <strong>${s.reserveSlipsRange}</strong> (${s.reserveCount} slips)</div>` : ''}
+                        </td>
                       </tr>
                     `).join('')}
                     <tr style="background: #f1f5f9; font-weight: bold; border-top: 1.5px solid #0f172a;">
@@ -1796,7 +1962,7 @@ export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}
           <!-- Grand Total for Year Representatives -->
           <div style="background: #ecfdf5; border: 1.5px solid #10b981; border-radius: 6px; padding: 10px 16px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: bold; color: #065f46;">
             <span>TOTAL ALL YEAR REPRESENTATIVES (I UG + II UG + III UG + PG)</span>
-            <span>Voters: ${masterPlan.reps?.total || 0} (R1 to R${masterPlan.reps?.total || 0})</span>
+            <span>Total Ballots: ${masterPlan.reps?.total || 0} (R1 to R${masterPlan.reps?.total || 0})</span>
             <span>Total Packaging: ${totalRepBooksCount} Books (${firstRepBookId || '-'} to ${lastRepBookId || '-'})</span>
           </div>
         `}
@@ -1812,9 +1978,9 @@ export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}
             <tr style="background: #f8fafc; border-bottom: 1.5px solid #0f172a;">
               <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left; width: 25%;">Association Post</th>
               <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 9%;">Booth</th>
-              <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 9%;">Voters</th>
-              <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 13%;">From</th>
-              <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 13%;">To</th>
+              <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 11%;">Ballots / Voters</th>
+              <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 12%;">From</th>
+              <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; width: 12%;">To</th>
               <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left; width: 31%;">Book Breakdowns</th>
             </tr>
           </thead>
@@ -1824,14 +1990,14 @@ export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}
                 <td style="border: 1px solid #e2e8f0; padding: 6px 8px; font-weight: 600;">${esc(s.post)}</td>
                 <td style="border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center;">Booth ${s.booth}</td>
                 <td style="border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center;">
-                  ${s.count}
-                  ${s.rsCount > 0 ? `<div style="font-size:9.5px; color:#d97706; font-weight:600;">(${s.regCount || (s.count - s.rsCount)} Reg + ${s.rsCount} RS)</div>` : ''}
+                  <div style="font-weight: 700; font-size: 12px; color: #0f172a;">${s.count}</div>
+                  ${s.reserveCount > 0 ? `<div style="font-size:9.5px; color:#b45309; font-weight:600;">(${s.voterCount} V + ${s.reserveCount} Res)</div>` : (s.rsCount > 0 ? `<div style="font-size:9.5px; color:#d97706; font-weight:600;">(${s.regCount || (s.count - s.rsCount)} Reg + ${s.rsCount} RS)</div>` : `<div style="font-size:9px; color:#64748b;">${s.voterCount || s.count} Voters</div>`)}
                 </td>
                 <td style="border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center; font-weight: bold; color: #1e293b;">A${s.start}</td>
                 <td style="border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center; font-weight: bold; color: #1e293b;">A${s.end}</td>
                 <td style="border: 1px solid #e2e8f0; padding: 3px 6px;">
                   ${renderBooksHtml(s.books || s.bookHtml)}
-                  ${s.rsCount > 0 ? `<div style="font-size:9.5px; color:#b45309; margin-top:2px;">⚖️ RS Reserve Range: <strong>${s.reserveSlipsRange}</strong></div>` : ''}
+                  ${s.reserveCount > 0 ? `<div style="font-size:9.5px; color:#b45309; margin-top:2px;">📦 PrO Reserve Slips: <strong>${s.reserveSlipsRange}</strong> (${s.reserveCount} slips)</div>` : (s.rsCount > 0 ? `<div style="font-size:9.5px; color:#b45309; margin-top:2px;">⚖️ RS Reserve Range: <strong>${s.reserveSlipsRange}</strong></div>` : '')}
                 </td>
               </tr>
             `).join('')}
@@ -1872,10 +2038,11 @@ export function buildSummaryContentHtml(masterPlan, settings = {}, schedule = {}
   `;
 }
 
-export function buildBallotPressSummaryHtml(masterPlan, settings = {}, schedule = {}, defaultBookSize = 50, defaultMerge = true) {
+export function buildBallotPressSummaryHtml(masterPlan, settings = {}, schedule = {}, defaultBookSize = 50, defaultMerge = true, defaultMode = null) {
   const activeBookSize = Number(defaultBookSize) > 0 ? Number(defaultBookSize) : 50;
-  const activePlan = recalculateBallotPlanBooks(masterPlan, activeBookSize, defaultMerge);
-  const initialContent = buildSummaryContentHtml(activePlan, settings, schedule, activeBookSize, defaultMerge);
+  const activeMode = defaultMode || masterPlan.bindingMode || 'definite';
+  const activePlan = recalculateBallotPlanBooks(masterPlan, activeBookSize, defaultMerge, activeMode);
+  const initialContent = buildSummaryContentHtml(activePlan, settings, schedule, activeBookSize, defaultMerge, activeMode);
 
   return `
     <div style="min-height: 100vh; background: #f8fafc;">
@@ -1890,12 +2057,21 @@ export function buildBallotPressSummaryHtml(masterPlan, settings = {}, schedule 
             <div>
               <div style="font-weight: 800; font-size: 13.5px; color: #ffffff; letter-spacing: 0.3px;">Official Printing Press Summary &amp; Serial Ledger</div>
               <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; margin-top: 3px;">
+                <span style="background: rgba(147, 51, 234, 0.25); color: #e9d5ff; padding: 2px 9px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(147, 51, 234, 0.4);">
+                  ${activeMode === 'definite' ? '📦 Definite Sets (Uniform Books)' : '✂️ Precise / Tailored Books'}
+                </span>
                 <span style="background: rgba(99,102,241,0.25); color: #c7d2fe; padding: 2px 9px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(99,102,241,0.4);">
                   📦 Stitched Booklets: ${activeBookSize} Ballots / Book
                 </span>
-                <span style="background: rgba(16,185,129,0.2); color: #a7f3d0; padding: 2px 9px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(16,185,129,0.3);">
-                  ${defaultMerge ? '✔ Smart Remainder Merge (≤30%) Active' : 'Strict Size Partition'}
-                </span>
+                ${activeMode === 'precise' ? `
+                  <span style="background: rgba(16,185,129,0.2); color: #a7f3d0; padding: 2px 9px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(16,185,129,0.3);">
+                    ${defaultMerge ? '✔ Smart Remainder Merge (≤30%) Active' : 'Strict Size Partition'}
+                  </span>
+                ` : `
+                  <span style="background: rgba(16,185,129,0.2); color: #a7f3d0; padding: 2px 9px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(16,185,129,0.3);">
+                    ✔ Clean Book Boundaries + PrO Reserves
+                  </span>
+                `}
                 <span style="color: #94a3b8; font-size: 10.5px;">(Saved in Master Ballot Plan)</span>
               </div>
             </div>
@@ -1937,28 +2113,30 @@ export function buildBallotPressSummaryHtml(masterPlan, settings = {}, schedule 
   `;
 }
 
-export async function generateAndPrintBallotPressSummary(pwd, customBookSize = null, customMerge = null) {
+export async function generateAndPrintBallotPressSummary(pwd, customBookSize = null, customMerge = null, customMode = null) {
   try {
     const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
     const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
+    const savedMode = localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
     const bookSize = customBookSize || savedSize || 50;
     const mergeRemainders = customMerge !== null ? customMerge : savedMerge;
+    const bindingMode = customMode || savedMode || 'definite';
 
-    showToast(`Calculating Master Plan (${bookSize} ballots/book)...`, 'info');
+    showToast(`Calculating Master Plan (${bookSize} ballots/book, ${bindingMode})...`, 'info');
     const [schedule, settings] = await Promise.all([
       api.getPublicSchedule(),
       api.adminGetSettings(pwd).catch(() => ({}))
     ]);
     
-    // Generate or refresh Master Plan with requested book size and merge setting
-    const genRes = await api.adminGenerateBallotPlan(pwd, { bookSize, mergeRemainders }).catch(() => null);
+    // Generate or refresh Master Plan with requested book size, merge setting, and binding mode
+    const genRes = await api.adminGenerateBallotPlan(pwd, { bookSize, mergeRemainders, bindingMode }).catch(() => null);
     let masterPlan = genRes?.plan || await api.adminGetBallotPlan(pwd).catch(() => null);
 
     if (!masterPlan) {
       throw new Error('Master Ballot Plan could not be generated. Please ensure nominations and booths are configured.');
     }
 
-    const reportHtml = buildBallotPressSummaryHtml(masterPlan, settings, schedule, bookSize, mergeRemainders);
+    const reportHtml = buildBallotPressSummaryHtml(masterPlan, settings, schedule, bookSize, mergeRemainders, bindingMode);
     triggerBallotPrint(reportHtml, 'Ballot Printing Summary - College Union Election');
   } catch (err) {
     showToast(err.message, 'error');

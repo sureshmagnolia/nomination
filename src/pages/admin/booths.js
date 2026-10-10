@@ -2227,7 +2227,14 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
       try {
         setLoading(btn, true, defaultText);
         showToast('Calculating and saving Master Plan on server...', 'info');
-        await api.adminGenerateBallotPlan(pwd);
+        const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
+        const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
+        const savedMode = localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
+        await api.adminGenerateBallotPlan(pwd, {
+          bookSize: savedSize,
+          mergeRemainders: savedMerge,
+          bindingMode: savedMode
+        });
         showToast('Master Plan finalized successfully! You can now print documents.', 'success');
         plan = await api.adminGetBallotPlan(pwd).catch(() => null);
       } catch (err) {
@@ -2382,7 +2389,10 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
                 <tr style="font-weight:bold">
                   <td style="font-size:11px;">${esc(gp.title || 'General Union Posts')}</td>
                   <td style="font-size:11px;">${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.start} - ${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.end}</td>
-                  <td style="text-align:center; font-size:12px;">${gp.count}</td>
+                  <td style="text-align:center; font-size:12px;">
+                    ${gp.count}
+                    ${gp.reserveCount > 0 ? `<div style="font-size:9px; color:#4f46e5; font-weight:bold;">(${gp.voterCount} V + ${gp.reserveCount} Res)</div>` : (gp.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${gp.regCount || (gp.count - gp.rsCount)} Reg + ${gp.rsCount} RS)</div>` : '')}
+                  </td>
                   <td style="font-size:10px;">${gp.bookIds}</td>
                   <td style="height: 20px;"></td><td style="height: 20px;"></td><td style="height: 20px;"></td>
                 </tr>
@@ -2390,7 +2400,10 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
                 <tr style="font-weight:bold">
                   <td style="font-size:11px;">${esc(assignments.general.title || 'General Union Posts')}</td>
                   <td style="font-size:11px;">${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.start} - ${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.end}</td>
-                  <td style="text-align:center; font-size:12px;">${assignments.general.count}</td>
+                  <td style="text-align:center; font-size:12px;">
+                    ${assignments.general.count}
+                    ${assignments.general.reserveCount > 0 ? `<div style="font-size:9px; color:#4f46e5; font-weight:bold;">(${assignments.general.voterCount} V + ${assignments.general.reserveCount} Res)</div>` : (assignments.general.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${assignments.general.regCount || (assignments.general.count - assignments.general.rsCount)} Reg + ${assignments.general.rsCount} RS)</div>` : '')}
+                  </td>
                   <td style="font-size:10px;">${assignments.general.bookIds}</td>
                   <td style="height: 20px;"></td><td style="height: 20px;"></td><td style="height: 20px;"></td>
                 </tr>
@@ -2399,7 +2412,10 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
                 <tr>
                   <td style="font-size:11px; font-weight:bold;">${esc(r.post)}</td>
                   <td style="font-size:11px;">R${r.start} - R${r.end}</td>
-                  <td style="text-align:center; font-size:12px;">${r.count}</td>
+                  <td style="text-align:center; font-size:12px;">
+                    ${r.count}
+                    ${r.reserveCount > 0 ? `<div style="font-size:9px; color:#047857; font-weight:bold;">(${r.voterCount} V + ${r.reserveCount} Res)</div>` : ''}
+                  </td>
                   <td style="font-size:10px;">${r.bookIds}</td>
                   <td style="height: 20px;"></td><td style="height: 20px;"></td><td style="height: 20px;"></td>
                 </tr>
@@ -2408,7 +2424,10 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
                 <tr>
                   <td style="font-size:11px; font-weight:bold;">${esc(a.post)}</td>
                   <td style="font-size:11px;">A${a.start} - A${a.end}</td>
-                  <td style="text-align:center; font-size:12px;">${a.count}</td>
+                  <td style="text-align:center; font-size:12px;">
+                    ${a.count}
+                    ${a.reserveCount > 0 ? `<div style="font-size:9px; color:#b45309; font-weight:bold;">(${a.voterCount} V + ${a.reserveCount} Res)</div>` : (a.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${a.regCount || (a.count - a.rsCount)} Reg + ${a.rsCount} RS)</div>` : '')}
+                  </td>
                   <td style="font-size:10px;">${a.bookIds}</td>
                   <td style="height: 20px;"></td><td style="height: 20px;"></td><td style="height: 20px;"></td>
                 </tr>
@@ -2588,7 +2607,14 @@ export async function generateAndPrintElectoralRolls(pwd) {
     ]);
 
     if (!plan) {
-      const genRes = await api.adminGenerateBallotPlan(pwd).catch(() => null);
+      const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
+      const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
+      const savedMode = localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
+      const genRes = await api.adminGenerateBallotPlan(pwd, {
+        bookSize: savedSize,
+        mergeRemainders: savedMerge,
+        bindingMode: savedMode
+      }).catch(() => null);
       plan = genRes?.plan || null;
     }
 
@@ -2680,7 +2706,10 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
                 <tr class="row-general">
                   <td class="col-cat">${esc(gp.title || 'General Union Posts')}</td>
                   <td class="col-serial">${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.start} - ${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.end}</td>
-                  <td class="col-qty text-center">${gp.count}</td>
+                  <td class="col-qty text-center">
+                    ${gp.count}
+                    ${gp.reserveCount > 0 ? `<div style="font-size:9px; color:#4f46e5; font-weight:bold;">(${gp.voterCount} V + ${gp.reserveCount} Res)</div>` : (gp.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${gp.regCount || (gp.count - gp.rsCount)} Reg + ${gp.rsCount} RS)</div>` : '')}
+                  </td>
                   <td class="col-books">${esc(gp.bookIds || '-')}</td>
                   <td class="col-fill"></td>
                   <td class="col-fill"></td>
@@ -2690,7 +2719,10 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
                 <tr class="row-general">
                   <td class="col-cat">${esc(assignments.general.title || 'General Union Posts')}</td>
                   <td class="col-serial">${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.start} - ${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.end}</td>
-                  <td class="col-qty text-center">${assignments.general.count}</td>
+                  <td class="col-qty text-center">
+                    ${assignments.general.count}
+                    ${assignments.general.reserveCount > 0 ? `<div style="font-size:9px; color:#4f46e5; font-weight:bold;">(${assignments.general.voterCount} V + ${assignments.general.reserveCount} Res)</div>` : (assignments.general.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${assignments.general.regCount || (assignments.general.count - assignments.general.rsCount)} Reg + ${assignments.general.rsCount} RS)</div>` : '')}
+                  </td>
                   <td class="col-books">${esc(assignments.general.bookIds || '-')}</td>
                   <td class="col-fill"></td>
                   <td class="col-fill"></td>
@@ -2701,7 +2733,10 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
                 <tr>
                   <td class="col-cat">${esc(r.post)}</td>
                   <td class="col-serial">R${r.start} - R${r.end}</td>
-                  <td class="col-qty text-center">${r.count}</td>
+                  <td class="col-qty text-center">
+                    ${r.count}
+                    ${r.reserveCount > 0 ? `<div style="font-size:9px; color:#047857; font-weight:bold;">(${r.voterCount} V + ${r.reserveCount} Res)</div>` : ''}
+                  </td>
                   <td class="col-books">${esc(r.bookIds || '-')}</td>
                   <td class="col-fill"></td>
                   <td class="col-fill"></td>
@@ -2712,7 +2747,10 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
                 <tr>
                   <td class="col-cat">${esc(a.post)}</td>
                   <td class="col-serial">A${a.start} - A${a.end}</td>
-                  <td class="col-qty text-center">${a.count}</td>
+                  <td class="col-qty text-center">
+                    ${a.count}
+                    ${a.reserveCount > 0 ? `<div style="font-size:9px; color:#b45309; font-weight:bold;">(${a.voterCount} V + ${a.reserveCount} Res)</div>` : (a.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${a.regCount || (a.count - a.rsCount)} Reg + ${a.rsCount} RS)</div>` : '')}
+                  </td>
                   <td class="col-books">${esc(a.bookIds || '-')}</td>
                   <td class="col-fill"></td>
                   <td class="col-fill"></td>
@@ -3173,7 +3211,14 @@ export async function generateAndPrintBallotAccounts(pwd) {
     ]);
 
     if (!plan) {
-      const genRes = await api.adminGenerateBallotPlan(pwd).catch(() => null);
+      const savedSize = parseInt(localStorage.getItem('gcc_ballot_book_size') || '50', 10);
+      const savedMerge = localStorage.getItem('gcc_ballot_merge_remainders') !== 'false';
+      const savedMode = localStorage.getItem('gcc_ballot_binding_mode') || 'definite';
+      const genRes = await api.adminGenerateBallotPlan(pwd, {
+        bookSize: savedSize,
+        mergeRemainders: savedMerge,
+        bindingMode: savedMode
+      }).catch(() => null);
       plan = genRes?.plan || null;
     }
 

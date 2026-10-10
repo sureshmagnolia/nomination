@@ -1454,18 +1454,25 @@ All students are directed to strictly adhere to the University Code of Conduct, 
 
       const savedBookSizeSetting = await getSetting('ballot_book_size');
       const savedMergeSetting = await getSetting('ballot_merge_remainders');
+      const savedBindingModeSetting = await getSetting('ballot_binding_mode');
 
       const standard = Number(opts.bookSize !== undefined ? opts.bookSize : body.bookSize) > 0
         ? Number(opts.bookSize !== undefined ? opts.bookSize : body.bookSize)
         : (Number(savedBookSizeSetting) > 0 ? Number(savedBookSizeSetting) : 50);
+
+      const reqBindingMode = opts.bindingMode !== undefined ? opts.bindingMode : body.bindingMode;
+      const bindingMode = (reqBindingMode === 'definite' || reqBindingMode === 'precise')
+        ? reqBindingMode
+        : (savedBindingModeSetting === 'precise' ? 'precise' : 'definite');
 
       const reqMerge = opts.mergeRemainders !== undefined ? opts.mergeRemainders : body.mergeRemainders;
       const enableMerge = reqMerge !== undefined
         ? (reqMerge !== false && reqMerge !== 'false')
         : (savedMergeSetting !== 'false' && savedMergeSetting !== false);
 
-      const threshold = enableMerge ? Math.max(5, Math.round(standard * 0.3)) : 0;
+      const threshold = (bindingMode === 'precise' && enableMerge) ? Math.max(5, Math.round(standard * 0.3)) : 0;
 
+      await setSetting('ballot_binding_mode', bindingMode);
       await setSetting('ballot_book_size', String(standard));
       await setSetting('ballot_merge_remainders', enableMerge ? 'true' : 'false');
 
@@ -1493,26 +1500,35 @@ All students are directed to strictly adhere to the University Code of Conduct, 
           return { id, range };
         };
 
-        if (count <= (standard + threshold)) {
-          books.push({ qty: 1, size: count, items: [createRange(count)] });
+        if (bindingMode === 'definite') {
+          const numBooks = Math.ceil(count / standard);
+          let items = [];
+          for (let i = 0; i < numBooks; i++) {
+            items.push(createRange(standard));
+          }
+          books.push({ qty: numBooks, size: standard, items });
         } else {
-          const fullBooks = Math.floor(count / standard);
-          const remainder = count % standard;
-          if (remainder === 0) {
-            let items = [];
-            for (let i = 0; i < fullBooks; i++) items.push(createRange(standard));
-            books.push({ qty: fullBooks, size: standard, items });
-          } else if (remainder <= threshold) {
-            let items = [];
-            for (let i = 0; i < fullBooks - 1; i++) items.push(createRange(standard));
-            if (items.length > 0) books.push({ qty: fullBooks - 1, size: standard, items });
-            const lastSize = standard + remainder;
-            books.push({ qty: 1, size: lastSize, items: [createRange(lastSize)] });
+          if (count <= (standard + threshold)) {
+            books.push({ qty: 1, size: count, items: [createRange(count)] });
           } else {
-            let items = [];
-            for (let i = 0; i < fullBooks; i++) items.push(createRange(standard));
-            books.push({ qty: fullBooks, size: standard, items });
-            books.push({ qty: 1, size: remainder, items: [createRange(remainder)] });
+            const fullBooks = Math.floor(count / standard);
+            const remainder = count % standard;
+            if (remainder === 0) {
+              let items = [];
+              for (let i = 0; i < fullBooks; i++) items.push(createRange(standard));
+              books.push({ qty: fullBooks, size: standard, items });
+            } else if (remainder <= threshold) {
+              let items = [];
+              for (let i = 0; i < fullBooks - 1; i++) items.push(createRange(standard));
+              if (items.length > 0) books.push({ qty: fullBooks - 1, size: standard, items });
+              const lastSize = standard + remainder;
+              books.push({ qty: 1, size: lastSize, items: [createRange(lastSize)] });
+            } else {
+              let items = [];
+              for (let i = 0; i < fullBooks; i++) items.push(createRange(standard));
+              books.push({ qty: fullBooks, size: standard, items });
+              books.push({ qty: 1, size: remainder, items: [createRange(remainder)] });
+            }
           }
         }
 
@@ -1593,11 +1609,36 @@ All students are directed to strictly adhere to the University Code of Conduct, 
 
           const regCount = regStudents.length;
           const rsCount = rsStudents.length;
-          const count = boothStudents.length;
+          const voterCount = boothStudents.length;
+
+          let allocatedCount = voterCount;
+          let reserveCount = 0;
+
+          if (bindingMode === 'definite') {
+            const numBooks = voterCount > 0 ? Math.ceil(voterCount / standard) : 0;
+            allocatedCount = numBooks * standard;
+            reserveCount = allocatedCount - voterCount;
+          }
+
+          const count = allocatedCount;
           const start = partSl;
-          const end = start + count - 1;
-          const bookData = calcBooks(count, start, gp.shortCode, partBookCount, gp.bookPrefix);
+          const end = allocatedCount > 0 ? start + allocatedCount - 1 : start;
+          const bookData = calcBooks(allocatedCount, start, gp.shortCode, partBookCount, gp.bookPrefix);
           partBookCount = bookData.nextCounter;
+
+          const formatSlipGeneral = (num) => {
+            if (gp.shortCode === 'G' || gp.shortCode === 'R' || gp.shortCode === 'A') {
+              return `${gp.shortCode}${num}`;
+            }
+            return `${gp.shortCode}-${num}`;
+          };
+
+          let reserveSlipsRange = null;
+          if (bindingMode === 'definite' && reserveCount > 0) {
+            reserveSlipsRange = `${formatSlipGeneral(start + voterCount)} - ${formatSlipGeneral(end)}`;
+          } else if (rsCount > 0) {
+            reserveSlipsRange = `${formatSlipGeneral(start + regCount)} - ${formatSlipGeneral(end)}`;
+          }
 
           const data = {
             partId: gp.id,
@@ -1605,19 +1646,21 @@ All students are directed to strictly adhere to the University Code of Conduct, 
             title: gp.title,
             prefix: gp.shortCode,
             booth: b.boothNumber,
-            count,
+            count: allocatedCount,
+            voterCount,
             regCount,
             rsCount,
+            reserveCount,
             start,
             end,
             books: bookData.books,
             bookIds: bookData.ids,
-            reserveSlipsRange: rsCount > 0 ? `${gp.shortCode}${start + regCount} - ${gp.shortCode}${end}` : null,
-            hasReserves: rsCount > 0
+            reserveSlipsRange,
+            hasReserves: (reserveCount > 0) || (rsCount > 0)
           };
           partBoothResults.push(data);
           boothMap[b.boothNumber].generalParts.push(data);
-          partSl += count;
+          partSl += allocatedCount;
         });
 
         const partSummary = {
@@ -1653,16 +1696,40 @@ All students are directed to strictly adhere to the University Code of Conduct, 
           });
 
           if (targetStudents.length > 0) {
-            const count = targetStudents.length;
+            const voterCount = targetStudents.length;
+            let allocatedCount = voterCount;
+            let reserveCount = 0;
+            if (bindingMode === 'definite') {
+              const numBooks = Math.ceil(voterCount / standard);
+              allocatedCount = numBooks * standard;
+              reserveCount = allocatedCount - voterCount;
+            }
+
             const start = repSl;
-            const end = start + count - 1;
-            const bookData = calcBooks(count, start, 'R', rbCount);
+            const end = start + allocatedCount - 1;
+            const bookData = calcBooks(allocatedCount, start, 'R', rbCount);
             rbCount = bookData.nextCounter;
 
-            const data = { post: p.post, booth: b.boothNumber, count, start, end, books: bookData.books, bookIds: bookData.ids };
+            const reserveSlipsRange = (bindingMode === 'definite' && reserveCount > 0)
+              ? `R${start + voterCount} - R${end}`
+              : null;
+
+            const data = { 
+              post: p.post, 
+              booth: b.boothNumber, 
+              count: allocatedCount, 
+              voterCount,
+              reserveCount,
+              start, 
+              end, 
+              books: bookData.books, 
+              bookIds: bookData.ids,
+              reserveSlipsRange,
+              hasReserves: reserveCount > 0
+            };
             repResults.push(data);
             boothMap[b.boothNumber].reps.push(data);
-            repSl += count;
+            repSl += allocatedCount;
           }
         });
       });
@@ -1702,30 +1769,48 @@ All students are directed to strictly adhere to the University Code of Conduct, 
               return c.includes('RESEARCH') || c.includes('SCHOLAR') || c.includes('PHD') || sl.startsWith('RS');
             });
 
-            const count = targetStudents.length;
+            const voterCount = targetStudents.length;
             const regCount = regAssocStudents.length;
             const rsCount = rsAssocStudents.length;
+
+            let allocatedCount = voterCount;
+            let reserveCount = 0;
+            if (bindingMode === 'definite') {
+              const numBooks = Math.ceil(voterCount / standard);
+              allocatedCount = numBooks * standard;
+              reserveCount = allocatedCount - voterCount;
+            }
+
             const start = assocSl;
-            const end = start + count - 1;
-            const bookData = calcBooks(count, start, 'A', abCount);
+            const end = start + allocatedCount - 1;
+            const bookData = calcBooks(allocatedCount, start, 'A', abCount);
             abCount = bookData.nextCounter;
+
+            let reserveSlipsRange = null;
+            if (bindingMode === 'definite' && reserveCount > 0) {
+              reserveSlipsRange = `A${start + voterCount} - A${end}`;
+            } else if (rsCount > 0) {
+              reserveSlipsRange = `A${start + regCount} - A${end}`;
+            }
 
             const data = { 
               post: p.post, 
               booth: b.boothNumber, 
-              count, 
+              count: allocatedCount, 
+              voterCount,
               regCount,
               rsCount,
+              reserveCount,
               start, 
               end, 
               books: bookData.books, 
               bookIds: bookData.ids,
-              reserveSlipsRange: rsCount > 0 ? `A${start + regCount} - A${end}` : null,
-              hasReserves: rsCount > 0
+              reserveSlipsRange,
+              hasReserves: (reserveCount > 0) || (rsCount > 0)
             };
             assocResults.push(data);
             boothMap[b.boothNumber].assocs.push(data);
-            assocSl += count;
+            assocSl += allocatedCount;
           }
         });
       });
@@ -1746,6 +1831,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
 
       const plan = {
         isSplit,
+        bindingMode,
         bookSize: standard,
         mergeRemainders: enableMerge,
         accommodatesResearchScholars: true,
@@ -1764,6 +1850,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
 
     if (action === 'adminGenerateBallotPlan') {
       const plan = await generateBallotPlanInternal({
+        bindingMode: body.bindingMode,
         bookSize: body.bookSize,
         mergeRemainders: body.mergeRemainders
       });
