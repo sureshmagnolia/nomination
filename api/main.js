@@ -1366,19 +1366,17 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       });
 
       if (shouldAccommodateRS && !hasRSRows) {
-        // Statutory roster of 21 Research Scholars (RS1–RS21) to accommodate in ballot planning
+        // Verified roster of 18 Research Scholars present in roll to accommodate in ballot planning as contingency reserves
         const statutoryScholars = [
           { 'Nominal Roll Serial Number': 'RS1', NAME: 'THUSHARA N C', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24007', Dept: 'Economics' },
           { 'Nominal Roll Serial Number': 'RS2', NAME: 'SNEHA H', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24904', Dept: 'Economics' },
           { 'Nominal Roll Serial Number': 'RS3', NAME: 'GAYATHRI V', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '21895', Dept: 'Geography' },
           { 'Nominal Roll Serial Number': 'RS4', NAME: 'RAHANA K V', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24901', Dept: 'Geography' },
           { 'Nominal Roll Serial Number': 'RS5', NAME: 'SELSHA S', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '22907', Dept: 'Mathematics' },
-          { 'Nominal Roll Serial Number': 'RS6', NAME: 'SOORYADAS M', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24005', Dept: 'Mathematics' },
           { 'Nominal Roll Serial Number': 'RS7', NAME: 'RARI B', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '25880', Dept: 'Mathematics' },
           { 'Nominal Roll Serial Number': 'RS8', NAME: 'AISWARYA', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '21076', Dept: 'Music' },
           { 'Nominal Roll Serial Number': 'RS9', NAME: 'ANJALAI N P', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '22916', Dept: 'Music' },
           { 'Nominal Roll Serial Number': 'RS10', NAME: 'DEVIKA', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24902', Dept: 'Music' },
-          { 'Nominal Roll Serial Number': 'RS11', NAME: 'VARSHA', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24009', Dept: 'Music' },
           { 'Nominal Roll Serial Number': 'RS12', NAME: 'SAKUNTHALAMANI.P', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '248/2020', Dept: 'Tamil' },
           { 'Nominal Roll Serial Number': 'RS13', NAME: 'ANUSUYA R', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '884/2021', Dept: 'Tamil' },
           { 'Nominal Roll Serial Number': 'RS14', NAME: 'PETER PAUL L', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '21894', Dept: 'Tamil' },
@@ -1387,7 +1385,6 @@ All students are directed to strictly adhere to the University Code of Conduct, 
           { 'Nominal Roll Serial Number': 'RS17', NAME: 'RAMYA RANI M', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '22913', Dept: 'Tamil' },
           { 'Nominal Roll Serial Number': 'RS18', NAME: 'RANJINI K', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '22914', Dept: 'Tamil' },
           { 'Nominal Roll Serial Number': 'RS19', NAME: 'SANTHIYA. S', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24909', Dept: 'Tamil' },
-          { 'Nominal Roll Serial Number': 'RS20', NAME: 'VELANKANNI Y', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24008', Dept: 'Tamil' },
           { 'Nominal Roll Serial Number': 'RS21', NAME: 'NISHA A', CLASS: 'RESEARCH SCHOLAR', 'ADMISION NO': '24012', Dept: 'Tamil' }
         ];
         students = [...students, ...statutoryScholars];
@@ -3117,10 +3114,15 @@ All students are directed to strictly adhere to the University Code of Conduct, 
           }
         }
 
-        // Regenerate ballot plan
-        await generateBallotPlanInternal();
+        // Master Ballot Plan is already printed and locked (Total 1905 General, 1097 Assoc).
+        // Extra ballots allocated for scholars remain locked as official unissued Booth Reserves.
+        // We DO NOT regenerate the ballot plan on exclusion.
 
-        return jsonOut(res, { ok: true, enabled: false, message: 'Research scholars addendum removed from electoral roll and booth allotments.' });
+        return jsonOut(res, { 
+          ok: true, 
+          enabled: false, 
+          message: 'Research scholars addendum removed from electoral roll and booth allotments. Master Ballot Plan preserved with ballots acting as Booth Reserves.' 
+        });
       }
     }
 
