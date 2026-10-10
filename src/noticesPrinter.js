@@ -1826,13 +1826,13 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
         font-family: Arial, sans-serif;
         font-size: 8pt;
         font-weight: 700;
-        color: #475569;
+        color: #000000;
       }
       @bottom-left {
         content: "${esc(collegeName)} — Official Department & Class Polling Directory";
         font-family: Arial, sans-serif;
         font-size: 8pt;
-        color: #475569;
+        color: #000000;
       }
     }
 
@@ -1842,6 +1842,7 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
         margin: 0 !important;
         padding: 0 !important;
         background: #ffffff !important;
+        color: #000000 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
@@ -1855,8 +1856,8 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: #f1f5f9;
-      color: #0f172a;
+      background: #ffffff;
+      color: #000000;
       line-height: 1.25;
       font-size: 11pt;
       -webkit-font-smoothing: antialiased;
@@ -1866,7 +1867,7 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       position: sticky;
       top: 0;
       z-index: 1000;
-      background: #0f172a;
+      background: #000000;
       color: #fff;
       padding: 10px 20px;
       display: flex;
@@ -1875,9 +1876,9 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
     .topbar-btn {
-      background: #f59e0b;
-      color: #0f172a;
-      border: none;
+      background: #000000;
+      color: #ffffff;
+      border: 1.5px solid #ffffff;
       padding: 7px 16px;
       font-weight: 800;
       font-size: 13px;
@@ -1887,20 +1888,20 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       align-items: center;
       gap: 6px;
     }
-    .topbar-btn:hover { background: #d97706; color: #fff; }
+    .topbar-btn:hover { background: #333333; color: #fff; }
 
     .poster-container {
       max-width: 1200px;
       margin: 15px auto;
       background: #ffffff;
-      border: 3px solid #0f172a;
+      border: 3px solid #000000;
       padding: 12px 16px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      box-shadow: none;
     }
 
     /* Header */
     .header-box {
-      border-bottom: 2px solid #0f172a;
+      border-bottom: 2.5px solid #000000;
       padding-bottom: 8px;
       display: flex;
       align-items: center;
@@ -1911,6 +1912,7 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       width: 65px;
       height: 65px;
       object-fit: contain;
+      filter: grayscale(100%);
     }
     .header-center {
       text-align: center;
@@ -1919,26 +1921,26 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
     .inst-name {
       font-size: 24pt;
       font-weight: 900;
-      color: #0f172a;
+      color: #000000;
       letter-spacing: 0.5px;
       text-transform: uppercase;
     }
     .inst-sub {
       font-size: 11pt;
-      font-weight: 600;
-      color: #475569;
+      font-weight: 700;
+      color: #000000;
     }
     .election-title {
       font-size: 14pt;
-      font-weight: 800;
-      color: #1e3a8a;
+      font-weight: 900;
+      color: #000000;
       letter-spacing: 1px;
       margin-top: 3px;
     }
     .poster-main-badge {
       display: inline-block;
-      background: #0f172a;
-      color: #facc15;
+      background: #000000;
+      color: #ffffff;
       font-size: 14pt;
       font-weight: 900;
       padding: 6px 24px;
@@ -1946,11 +1948,12 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       letter-spacing: 1px;
       margin-top: 8px;
       text-transform: uppercase;
+      border: 1.5px solid #000000;
     }
     .poster-sub-note {
       font-size: 10pt;
-      font-weight: 700;
-      color: #dc2626;
+      font-weight: 800;
+      color: #000000;
       margin-top: 6px;
       letter-spacing: 0.3px;
     }
@@ -1960,24 +1963,25 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 12px;
-      background: #0f172a;
-      color: #fff;
+      background: #000000;
+      color: #ffffff;
       padding: 10px 16px;
       margin-top: 12px;
-      border-radius: 6px;
+      border-radius: 4px;
       text-align: center;
+      border: 1.5px solid #000000;
     }
     .meta-item strong {
       display: block;
       font-size: 9pt;
-      color: #94a3b8;
+      color: #e2e8f0;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     .meta-item span {
       font-size: 12pt;
-      font-weight: 800;
-      color: #fde047;
+      font-weight: 900;
+      color: #ffffff;
     }
 
     /* Department Cards Grid */
@@ -1988,33 +1992,37 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       margin-top: 16px;
     }
     .dept-card {
-      border: 1.5px solid #0f172a;
-      border-radius: 5px;
+      border: 2px solid #000000;
+      border-radius: 4px;
       overflow: hidden;
-      background: #fff;
+      background: #ffffff;
       display: flex;
       flex-direction: column;
     }
     .dept-card-header {
-      background: #1e3a8a;
+      background: #000000;
       color: #ffffff;
-      padding: 5px 10px;
+      padding: 6px 12px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      border-bottom: 2px solid #000000;
     }
     .dept-title {
       font-size: 14pt;
       font-weight: 900;
       letter-spacing: 0.5px;
       text-transform: uppercase;
+      color: #ffffff;
     }
     .dept-badge {
-      background: rgba(255,255,255,0.2);
+      background: #ffffff;
+      color: #000000;
       font-size: 10pt;
-      font-weight: 800;
+      font-weight: 900;
       padding: 2.5px 8px;
-      border-radius: 4px;
+      border-radius: 3px;
+      border: 1px solid #000000;
     }
 
     /* Class Table inside card */
@@ -2022,44 +2030,47 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       width: 100%;
       border-collapse: collapse;
       font-size: 12pt;
+      color: #000000;
     }
     .dept-table th {
-      background: #e2e8f0;
-      color: #0f172a;
+      background: #f4f4f5;
+      color: #000000;
       font-size: 11pt;
-      font-weight: 800;
+      font-weight: 900;
       text-transform: uppercase;
       padding: 6px 10px;
-      border-bottom: 1px solid #cbd5e1;
+      border-bottom: 2px solid #000000;
       text-align: left;
     }
     .dept-table td {
       padding: 8px 10px;
-      border-bottom: 1px solid #e2e8f0;
+      border-bottom: 1px solid #000000;
       vertical-align: middle;
       line-height: 1.3;
+      color: #000000;
     }
     .dept-table tr:nth-child(even) td {
-      background: #f8fafc;
+      background: #fafafa;
     }
     .col-class {
-      font-weight: 800;
-      color: #0f172a;
+      font-weight: 900;
+      color: #000000;
       width: 38%;
       font-size: 13pt;
       padding: 10px 14px;
-      border-right: 1.5px solid #cbd5e1;
+      border-right: 2px solid #000000;
     }
     .col-destination {
       width: 62%;
       background: #ffffff;
       padding: 12px 16px;
       vertical-align: middle;
+      color: #000000;
     }
     .venue-main {
       font-size: 15pt;
       font-weight: 900;
-      color: #0f172a;
+      color: #000000;
       line-height: 1.25;
       letter-spacing: 0.3px;
       text-transform: uppercase;
@@ -2076,40 +2087,41 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
     }
     .booth-tag {
       display: inline-block;
-      background: #1e3a8a;
-      color: #fde047;
+      background: #000000;
+      color: #ffffff;
       font-weight: 900;
       font-size: 11pt;
       padding: 3.5px 12px;
-      border-radius: 4px;
+      border-radius: 3px;
       letter-spacing: 0.5px;
       white-space: nowrap;
       text-transform: uppercase;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      border: 1.5px solid #000000;
     }
     .booth-unassigned {
-      background: #fee2e2;
-      color: #991b1b;
-      border: 1px dashed #f87171;
+      background: #ffffff;
+      color: #000000;
+      border: 1.5px dashed #000000;
     }
 
     /* Footer Directives */
     .poster-footer {
       margin-top: 10px;
-      border-top: 2px solid #0f172a;
+      border-top: 2px solid #000000;
       padding-top: 8px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       font-size: 7.5pt;
-      color: #475569;
+      color: #000000;
     }
     .footer-stamp {
-      border: 1px dashed #94a3b8;
+      border: 1.5px dashed #000000;
       padding: 4px 10px;
       border-radius: 4px;
       font-weight: 700;
       text-align: center;
+      color: #000000;
     }
   </style>
 </head>
@@ -2119,13 +2131,13 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
   <div class="screen-topbar no-print">
     <div style="display: flex; align-items: center; gap: 12px;">
       <strong style="font-size: 14px; color: #fff;">Department &amp; Class Polling Directory Poster</strong>
-      <span style="font-size: 11px; color: #94a3b8;">${sortedDepts.length} Departments &bull; ${totalClasses} Classes &bull; ${boothsList.length} Booths (Live Data)</span>
+      <span style="font-size: 11px; color: #cbd5e1;">${sortedDepts.length} Departments &bull; ${totalClasses} Classes &bull; ${boothsList.length} Booths (Live Data)</span>
     </div>
     <div style="display: flex; align-items: center; gap: 10px;">
       <button class="topbar-btn" onclick="window.print()">
         <span>🖨️</span> Print Directory Poster (A3 / A4)
       </button>
-      <button class="topbar-btn" style="background: #475569; color: #fff;" onclick="window.close()">
+      <button class="topbar-btn" style="background: #333333; color: #fff; border: 1.5px solid #666;" onclick="window.close()">
         <span>✕</span> Close
       </button>
     </div>
@@ -2140,7 +2152,7 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
         <div class="inst-sub">${esc(collegePlace)} &bull; Established Under Govt. of Kerala</div>
         <div class="election-title">COLLEGE UNION ELECTIONS ${esc(year)}</div>
         <div class="poster-main-badge">DEPARTMENT &amp; CLASS-WISE POLLING DIRECTORY</div>
-        <div class="poster-sub-note">📢 OFFICIAL NOTICE BOARD &amp; ENTRY GATE GUIDE &bull; ALLOTTED POLLING BOOTHS &amp; ROOM VENUES</div>
+        <div class="poster-sub-note">OFFICIAL NOTICE BOARD &amp; ENTRY GATE GUIDE &bull; ALLOTTED POLLING BOOTHS &amp; ROOM VENUES</div>
       </div>
       ${collegeLogo ? `<img src="${collegeLogo}" class="emblem-img" alt="Emblem">` : ''}
     </div>
@@ -2211,7 +2223,7 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
                           <td class="col-destination" rowspan="${span}">
                             ${g.boothInfo ? `
                               <div class="venue-main">
-                                <span class="venue-icon">🏛️</span> ${esc(g.boothInfo.roomName)}
+                                ${esc(g.boothInfo.roomName)}
                               </div>
                               <div class="booth-tag-container">
                                 <span class="booth-tag">POLLING BOOTH ${g.boothInfo.boothNumber}</span>
@@ -2237,7 +2249,7 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       <div></div>
       <div class="footer-stamp">
         RETURNING OFFICER (RO)<br>
-        <span style="font-size: 6.5pt; color: #64748b;">${esc(collegeName)}</span>
+        <span style="font-size: 6.5pt; color: #000000;">${esc(collegeName)}</span>
       </div>
     </div>
   </div>
@@ -2386,7 +2398,7 @@ export function printCountingTablePlacards(options = {}) {
             isGap: true,
             roundNum: gapLabel,
             roundLabel: gapLabel,
-            postName: 'Table Standby & Reconciliation (No seat allotted for this table &bull; Await RO call for next round)',
+            postName: 'Table Standby & Reconciliation (No seat allotted for this table • Await RO call for next round)',
             serial: '—',
             isUuc: false
           });
@@ -2492,7 +2504,7 @@ export function printCountingTablePlacards(options = {}) {
           <!-- Section 3: EXACT TABLE ROUND-BY-ROUND COUNTING SEQUENCE (2 Clean Columns: Round & Form, Post Title) -->
           <div class="section-container">
             <div class="section-title-bar navy-bar">
-              <span>📋 TABLE COUNTING SEQUENCE &bull; ROUND 1 TO UUC</span>
+              <span>TABLE COUNTING SEQUENCE &bull; ROUND 1 TO UUC</span>
               <span class="section-sub-badge">${totalTableRounds} SCHEDULED ROUNDS</span>
             </div>
             <table class="rounds-sequence-table">
@@ -2509,11 +2521,11 @@ export function printCountingTablePlacards(options = {}) {
                       <tr class="row-standby">
                         <td class="col-round text-center">
                           <span class="round-badge badge-standby">${esc(r.roundNum)}</span>
-                          <span class="serial-tag" style="background:#e2e8f0; border-color:#cbd5e1; color:#64748b;">—</span>
+                          <span class="serial-tag" style="background:#ffffff; border-color:#000000; color:#000000;">—</span>
                         </td>
                         <td class="col-post">
                           <div class="standby-post-title">
-                            ⏸️ ${esc(r.postName)}
+                            ⏸ ${esc(r.postName)}
                           </div>
                         </td>
                       </tr>
@@ -2527,9 +2539,9 @@ export function printCountingTablePlacards(options = {}) {
                       </td>
                       <td class="col-post">
                         <div class="post-title ${r.isUuc ? 'post-uuc' : ''}">
-                          ${r.isUuc ? '🛑 ' : ''}${esc(r.postName)}
+                          ${r.isUuc ? '★ ' : ''}${esc(r.postName)}
                         </div>
-                        ${r.isUuc ? '<div class="uuc-sub-note">⚠️ AWAIT RETURNING OFFICER CLEARANCE BEFORE COUNTING</div>' : ''}
+                        ${r.isUuc ? '<div class="uuc-sub-note">⚠ AWAIT RETURNING OFFICER CLEARANCE BEFORE COUNTING</div>' : ''}
                       </td>
                     </tr>
                   `;
@@ -2540,7 +2552,7 @@ export function printCountingTablePlacards(options = {}) {
 
           <!-- Prominent Statutory UUC Directive Callout Banner -->
           <div class="uuc-callout-banner">
-            <span class="uuc-callout-icon">🛑</span>
+            <span class="uuc-callout-icon">⚠</span>
             <span class="uuc-callout-text">DO NOT COUNT UUC BALLOTS WITHOUT EXPLICIT CLEARANCE FROM THE RETURNING OFFICER (RO).</span>
           </div>
 
@@ -2569,13 +2581,13 @@ export function printCountingTablePlacards(options = {}) {
         font-family: Arial, sans-serif;
         font-size: 7pt;
         font-weight: 700;
-        color: #475569;
+        color: #000000;
       }
       @bottom-left {
         content: "${esc(collegeName)} — Official Statutory Counting Placard";
         font-family: Arial, sans-serif;
         font-size: 7pt;
-        color: #475569;
+        color: #000000;
       }
     }
 
@@ -2585,6 +2597,7 @@ export function printCountingTablePlacards(options = {}) {
         margin: 0 !important;
         padding: 0 !important;
         background: #ffffff !important;
+        color: #000000 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
@@ -2607,7 +2620,7 @@ export function printCountingTablePlacards(options = {}) {
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: #e2e8f0;
-      color: #0f172a;
+      color: #000000;
       line-height: 1.2;
       font-size: 8pt;
     }
@@ -2616,7 +2629,7 @@ export function printCountingTablePlacards(options = {}) {
       position: sticky;
       top: 0;
       z-index: 1000;
-      background: #0f172a;
+      background: #000000;
       color: #fff;
       padding: 8px 16px;
       display: flex;
@@ -2625,9 +2638,9 @@ export function printCountingTablePlacards(options = {}) {
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
     .topbar-btn {
-      background: #2563eb;
+      background: #000000;
       color: #fff;
-      border: none;
+      border: 1.5px solid #ffffff;
       padding: 6px 14px;
       font-weight: 700;
       font-size: 12px;
@@ -2637,7 +2650,7 @@ export function printCountingTablePlacards(options = {}) {
       align-items: center;
       gap: 6px;
     }
-    .topbar-btn:hover { background: #1d4ed8; }
+    .topbar-btn:hover { background: #333333; }
 
     .placard-page {
       width: 202mm;
@@ -2664,7 +2677,7 @@ export function printCountingTablePlacards(options = {}) {
     }
 
     .placard-frame {
-      border: 2px solid #0f172a;
+      border: 2.5px solid #000000;
       height: 100%;
       display: flex;
       flex-direction: column;
@@ -2674,9 +2687,9 @@ export function printCountingTablePlacards(options = {}) {
     }
 
     .header-box {
-      border-bottom: 1.5px solid #0f172a;
+      border-bottom: 2px solid #000000;
       padding-bottom: 1.5mm;
-      background: #f8fafc;
+      background: #ffffff;
       padding-top: 0.5mm;
     }
     .header-top {
@@ -2689,7 +2702,7 @@ export function printCountingTablePlacards(options = {}) {
       width: 44px;
       height: 44px;
       object-fit: contain;
-      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
+      filter: grayscale(100%);
     }
     .header-center {
       text-align: center;
@@ -2699,30 +2712,30 @@ export function printCountingTablePlacards(options = {}) {
       font-size: 12pt;
       font-weight: 900;
       letter-spacing: 0.3px;
-      color: #0f172a;
+      color: #000000;
       line-height: 1.1;
     }
     .institution-subtitle {
       font-size: 6.8pt;
-      font-weight: 600;
-      color: #475569;
+      font-weight: 700;
+      color: #000000;
       margin-top: 0.5px;
     }
     .election-banner-title {
-      font-size: 8pt;
-      font-weight: 800;
+      font-size: 8.5pt;
+      font-weight: 900;
       letter-spacing: 0.8px;
-      color: #1e3a8a;
+      color: #000000;
       margin-top: 1px;
     }
     .placard-badge-title {
       display: inline-block;
-      background: #0f172a;
+      background: #000000;
       color: #ffffff;
       font-size: 7.5pt;
       font-weight: 900;
       letter-spacing: 0.8px;
-      padding: 1px 10px;
+      padding: 1.5px 12px;
       border-radius: 3px;
       margin-top: 1.5px;
     }
@@ -2732,54 +2745,60 @@ export function printCountingTablePlacards(options = {}) {
       grid-template-columns: 1.15fr 1.85fr;
       gap: 8px;
       margin-top: 2.5mm;
-      border: 2px solid #0f172a;
+      border: 2.5px solid #000000;
       background: #ffffff;
-      border-radius: 6px;
+      border-radius: 4px;
       padding: 6px;
     }
     .meta-col-table {
-      background: #0f172a;
+      background: #000000;
       color: #ffffff;
       padding: 8px 12px;
-      border-radius: 4px;
+      border-radius: 3px;
       text-align: center;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
     }
-    .meta-label {
-      font-size: 6.5pt;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      color: #94a3b8;
+    .meta-col-table .meta-label {
+      font-size: 7pt;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      color: #ffffff;
       text-transform: uppercase;
       margin-bottom: 2px;
     }
     .table-giant-pill {
-      font-size: 24pt;
+      font-size: 26pt;
       font-weight: 900;
-      letter-spacing: 1px;
-      color: #facc15;
-      line-height: 1.1;
+      letter-spacing: 1.5px;
+      color: #ffffff;
+      line-height: 1.05;
     }
     .booth-sub-link {
       font-size: 7.5pt;
       font-weight: 700;
-      color: #94a3b8;
+      color: #ffffff;
       margin-top: 3px;
+      opacity: 0.95;
     }
     .meta-col-officials {
       padding: 6px 12px;
       display: flex;
       flex-direction: column;
       justify-content: center;
-      background: #f8fafc;
-      border-radius: 4px;
-      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      border-radius: 3px;
+      border: 1.5px solid #000000;
     }
     .meta-col-officials .meta-label {
-      color: #64748b;
+      font-size: 7pt;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      color: #000000;
+      text-transform: uppercase;
+      margin-bottom: 2px;
     }
     .official-row {
       display: flex;
@@ -2787,22 +2806,23 @@ export function printCountingTablePlacards(options = {}) {
       gap: 6px;
       font-size: 8.5pt;
       line-height: 1.25;
+      color: #000000;
     }
     .officer-role {
-      font-weight: 800;
-      color: #475569;
-      width: 72px;
+      font-weight: 900;
+      color: #000000;
+      width: 74px;
       flex-shrink: 0;
     }
     .officer-name {
       font-weight: 900;
-      color: #0f172a;
+      color: #000000;
       font-size: 9pt;
     }
     .official-sub-role {
       font-size: 7pt;
-      color: #64748b;
-      margin-left: 78px;
+      color: #333333;
+      margin-left: 80px;
       line-height: 1.1;
     }
 
@@ -2811,55 +2831,61 @@ export function printCountingTablePlacards(options = {}) {
       flex: 1;
     }
     .section-title-bar {
-      color: #fff;
+      color: #ffffff;
       font-size: 8pt;
       font-weight: 900;
       letter-spacing: 0.5px;
       padding: 4px 8px;
-      border-radius: 4px 4px 0 0;
+      border-radius: 3px 3px 0 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      background: #000000;
+      border: 2px solid #000000;
+      border-bottom: none;
     }
-    .navy-bar { background: #0f172a; }
     .section-sub-badge {
       font-size: 6.5pt;
-      font-weight: 800;
-      background: rgba(255,255,255,0.2);
+      font-weight: 900;
+      background: #ffffff;
+      color: #000000;
       padding: 1.5px 6px;
-      border-radius: 3px;
+      border-radius: 2px;
     }
 
     .rounds-sequence-table {
       width: 100%;
       border-collapse: collapse;
-      border: 2px solid #0f172a;
+      border: 2px solid #000000;
       border-top: none;
       background: #ffffff;
       font-size: 9.5pt;
+      color: #000000;
     }
     .rounds-sequence-table th {
-      background: #e2e8f0;
-      color: #0f172a;
+      background: #f4f4f5;
+      color: #000000;
       font-size: 8pt;
       font-weight: 900;
       text-transform: uppercase;
       padding: 5px 8px;
-      border: 1px solid #cbd5e1;
+      border: 1.5px solid #000000;
       letter-spacing: 0.3px;
     }
     .rounds-sequence-table td {
       padding: 5px 8px;
-      border: 1px solid #cbd5e1;
+      border: 1px solid #000000;
       vertical-align: middle;
       line-height: 1.2;
+      color: #000000;
     }
     .rounds-sequence-table tbody tr:nth-child(even) {
-      background: #f8fafc;
+      background: #fafafa;
     }
     .row-uuc {
-      background: #fffbeb !important;
-      border-left: 4px solid #d97706 !important;
+      background: #ffffff !important;
+      border-top: 2.5px solid #000000 !important;
+      border-bottom: 2.5px solid #000000 !important;
     }
     .col-round {
       white-space: nowrap;
@@ -2869,191 +2895,89 @@ export function printCountingTablePlacards(options = {}) {
       display: inline-block;
       font-size: 8pt;
       font-weight: 900;
-      background: #0f172a;
-      color: #fff;
+      background: #000000;
+      color: #ffffff;
       padding: 2px 7px;
       border-radius: 3px;
       margin-right: 5px;
       letter-spacing: 0.2px;
+      border: 1px solid #000000;
     }
-    .badge-uuc { background: #b45309; }
-    .badge-standby { background: #64748b; }
+    .badge-uuc {
+      background: #000000;
+      color: #ffffff;
+      border: 1px solid #000000;
+    }
+    .badge-standby {
+      background: #ffffff;
+      color: #000000;
+      border: 1.5px solid #000000;
+    }
     .serial-tag {
       font-size: 8.5pt;
       font-weight: 900;
-      color: #0369a1;
+      color: #000000;
       font-family: monospace;
-      background: #e0f2fe;
+      background: #ffffff;
       padding: 1.5px 6px;
       border-radius: 3px;
-      border: 1px solid #bae6fd;
+      border: 1.5px solid #000000;
     }
     .post-title {
       font-size: 9.5pt;
       font-weight: 900;
-      color: #0f172a;
+      color: #000000;
       letter-spacing: 0.2px;
     }
     .post-uuc {
-      color: #b45309;
+      color: #000000;
       font-size: 10.5pt;
+      font-weight: 900;
+      text-transform: uppercase;
     }
     .uuc-sub-note {
-      font-size: 7pt;
+      font-size: 7.5pt;
       font-weight: 900;
-      color: #b91c1c;
-      letter-spacing: 0.3px;
+      color: #000000;
+      letter-spacing: 0.5px;
       margin-top: 2px;
+      text-transform: uppercase;
     }
     .standby-post-title {
       font-size: 8pt;
-      color: #475569;
+      color: #333333;
       font-style: italic;
     }
     .row-standby {
-      background: #f1f5f9 !important;
+      background: #f4f4f5 !important;
     }
 
     .uuc-callout-banner {
       margin-top: 3mm;
-      background: #fee2e2;
-      border: 2px solid #b91c1c;
-      border-radius: 6px;
-      padding: 8px 14px;
+      background: #ffffff;
+      border: 2.5px solid #000000;
+      border-radius: 4px;
+      padding: 7px 12px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
-      box-shadow: 0 2px 6px rgba(185, 28, 28, 0.15);
     }
     .uuc-callout-icon {
-      font-size: 16pt;
+      font-size: 13pt;
+      font-weight: 900;
+      color: #000000;
       line-height: 1;
     }
     .uuc-callout-text {
-      font-size: 10.5pt;
+      font-size: 10pt;
       font-weight: 900;
-      color: #991b1b;
-      letter-spacing: 0.3px;
+      color: #000000;
+      letter-spacing: 0.4px;
       text-align: center;
+      text-transform: uppercase;
     }
-
-    .screen-topbar {
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      background: #0f172a;
-      color: #fff;
-      padding: 8px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-    .topbar-btn {
-      background: #2563eb;
-      color: #fff;
-      border: none;
-      padding: 6px 14px;
-      font-weight: 700;
-      font-size: 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .topbar-btn:hover { background: #1d4ed8; }
-
-    .placard-page {
-      width: 202mm;
-      height: 289mm;
-      max-height: 289mm;
-      margin: 4mm auto;
-      background: #ffffff;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      box-sizing: border-box;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-    }
-
-    @media print {
-      .placard-page {
-        width: 100% !important;
-        height: 289mm !important;
-        max-height: 289mm !important;
-        margin: 0 !important;
-        box-shadow: none !important;
-      }
-    }
-
-    .placard-frame {
-      border: 2px solid #0f172a;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 2.5mm 3.5mm;
-      box-sizing: border-box;
-    }
-
-    .header-box {
-      border-bottom: 1.5px solid #0f172a;
-      padding-bottom: 1.5mm;
-      background: #f8fafc;
-      padding-top: 0.5mm;
-    }
-    .header-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-    }
-    .emblem-img {
-      width: 44px;
-      height: 44px;
-      object-fit: contain;
-      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
-    }
-    .header-center {
-      text-align: center;
-      flex: 1;
-    }
-    .institution-title {
-      font-size: 12pt;
-      font-weight: 900;
-      letter-spacing: 0.3px;
-      color: #0f172a;
-      line-height: 1.1;
-    }
-    .institution-subtitle {
-      font-size: 6.8pt;
-      font-weight: 600;
-      color: #475569;
-      margin-top: 0.5px;
-    }
-    .election-banner-title {
-      font-size: 8pt;
-      font-weight: 800;
-      letter-spacing: 0.8px;
-      color: #1e3a8a;
-      margin-top: 1px;
-    }
-    .placard-badge-title {
-      display: inline-block;
-      background: #0f172a;
-      color: #ffffff;
-      font-size: 7.5pt;
-      font-weight: 900;
-      letter-spacing: 0.8px;
-      padding: 1px 10px;
-      border-radius: 3px;
-      margin-top: 1.5px;
-    }
-
-      </style>
+  </style>
 </head>
 <body>
 
@@ -3061,11 +2985,11 @@ export function printCountingTablePlacards(options = {}) {
   <div class="screen-topbar no-print">
     <div style="display: flex; align-items: center; gap: 12px;">
       <strong style="font-size: 14px; color: #fff;">Official Counting Table Sequence Placards</strong>
-      <span style="font-size: 11px; color: #94a3b8;">${boothsList.length} Tables Configured in System &bull; Round-by-Round from Matrix</span>
+      <span style="font-size: 11px; color: #cbd5e1;">${boothsList.length} Tables Configured in System &bull; Round-by-Round from Matrix</span>
     </div>
     <div style="display: flex; align-items: center; gap: 10px;">
       <label style="font-size: 11px; font-weight: 600; color: #cbd5e1;">Filter Table:</label>
-      <select id="selPlacardTable" style="background: #1e293b; color: #fff; border: 1px solid #475569; padding: 5px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;">
+      <select id="selPlacardTable" style="background: #000000; color: #fff; border: 1.5px solid #666; padding: 5px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;">
         <option value="all">🌟 All ${boothsList.length} Tables (Batch A4)</option>
         ${boothsList.map(b => {
           const num = b.boothNumber || b.tableNumber;
@@ -3075,7 +2999,7 @@ export function printCountingTablePlacards(options = {}) {
       <button class="topbar-btn" onclick="window.print()">
         <span>🖨️</span> <span id="placardPrintLabel">Print All ${boothsList.length} Tables (A4)</span>
       </button>
-      <button class="topbar-btn" style="background: #475569;" onclick="window.close()">
+      <button class="topbar-btn" style="background: #333333; border: 1.5px solid #666;" onclick="window.close()">
         <span>✕</span> Close
       </button>
     </div>
