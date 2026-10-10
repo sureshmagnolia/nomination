@@ -233,80 +233,80 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
 
               <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- Press Summary -->
-                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3">
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3 min-w-0">
                   <div>
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">Master Docket</span>
-                      <span class="text-[10px] font-mono text-slate-400">A4 Portrait</span>
+                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20 whitespace-nowrap">Master Docket</span>
+                      <span class="text-[10px] font-mono text-slate-400 whitespace-nowrap">A4 Portrait</span>
                     </div>
                     <h5 class="text-sm font-bold text-white">Printing Press Summary &amp; Serial Ledger</h5>
                     <p class="text-xs text-slate-400 mt-1">Full serial ranges (e.g. G1001-G2500), book numbers, total quantities per booth, and color-coded paper stocks for delivery to the printer.</p>
                   </div>
-                  <div class="flex gap-2">
-                    <button id="btnHubPressSummary" class="btn bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-2 px-3 rounded-lg flex-1 flex items-center justify-center gap-1.5 shadow-md">
-                      <span>🖨️</span> Print Summary
+                  <div class="flex items-center gap-2 w-full pt-1">
+                    <button id="btnHubPressSummary" class="btn bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-2 px-3 rounded-lg flex-1 min-w-0 flex items-center justify-center gap-1.5 shadow-md">
+                      <span>🖨️</span> <span class="truncate">Print Summary</span>
                     </button>
-                    <button id="btnHubExcelPressSummary" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white flex items-center justify-center gap-1" title="Download Packaging Plan in Excel (.xlsx)">
+                    <button id="btnHubExcelPressSummary" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white flex items-center justify-center gap-1 shrink-0 whitespace-nowrap" title="Download Packaging Plan in Excel (.xlsx)">
                       <span>📊</span> Excel
                     </button>
                   </div>
                 </div>
 
                 <!-- General Ballots -->
-                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3">
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3 min-w-0">
                   <div>
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 bg-indigo-400/10 px-2 py-0.5 rounded border border-indigo-400/20">Executive Posts</span>
-                      <span class="text-[10px] font-mono text-slate-400">A3 / Split</span>
+                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 bg-indigo-400/10 px-2 py-0.5 rounded border border-indigo-400/20 whitespace-nowrap">Executive Posts</span>
+                      <span class="text-[10px] font-mono text-slate-400 whitespace-nowrap">A3 / Split</span>
                     </div>
                     <h5 class="text-sm font-bold text-white">General Union Ballot Papers</h5>
                     <p class="text-xs text-slate-400 mt-1">Chairman, Vice-Chairman, General Secretary, Joint Secretary, UUC, Arts Club, Student Editor, and Sports with counterfoils.</p>
                   </div>
-                  <div class="flex gap-2">
-                    <button id="btnHubPrintGeneral" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg flex-1 flex items-center justify-center gap-1.5 hover:bg-white/10">
-                      <span>🖨️</span> Print General
+                  <div class="flex items-center gap-2 w-full pt-1">
+                    <button id="btnHubPrintGeneral" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg flex-1 min-w-0 flex items-center justify-center gap-1.5 hover:bg-white/10">
+                      <span>🖨️</span> <span class="truncate">Print General</span>
                     </button>
-                    <button id="btnHubExcelGeneral" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white flex items-center justify-center gap-1" title="Download General Ballots in Excel (.xlsx)">
+                    <button id="btnHubExcelGeneral" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white flex items-center justify-center gap-1 shrink-0 whitespace-nowrap" title="Download General Ballots in Excel (.xlsx)">
                       <span>📊</span> Excel
                     </button>
                   </div>
                 </div>
 
                 <!-- Year Rep Ballots -->
-                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3">
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3 min-w-0">
                   <div>
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">Class Batches</span>
-                      <span class="text-[10px] font-mono text-slate-400">A5 Portrait</span>
+                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20 whitespace-nowrap">Class Batches</span>
+                      <span class="text-[10px] font-mono text-slate-400 whitespace-nowrap">A5 Portrait</span>
                     </div>
                     <h5 class="text-sm font-bold text-white">Year Representative Ballots</h5>
                     <p class="text-xs text-slate-400 mt-1">Year-wise representative voting slips for I DC, II DC, III DC, I PG, II PG, and Research Scholars across all allotted booths.</p>
                   </div>
-                  <div class="flex gap-2">
-                    <button id="btnHubPrintRep" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg flex-1 flex items-center justify-center gap-1.5 hover:bg-white/10">
-                      <span>🖨️</span> Print Year Rep
+                  <div class="flex items-center gap-2 w-full pt-1">
+                    <button id="btnHubPrintRep" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg flex-1 min-w-0 flex items-center justify-center gap-1.5 hover:bg-white/10">
+                      <span>🖨️</span> <span class="truncate">Print Year Rep</span>
                     </button>
-                    <button id="btnHubExcelRep" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white flex items-center justify-center gap-1" title="Download Year Rep Ballots in Excel (.xlsx)">
+                    <button id="btnHubExcelRep" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white flex items-center justify-center gap-1 shrink-0 whitespace-nowrap" title="Download Year Rep Ballots in Excel (.xlsx)">
                       <span>📊</span> Excel
                     </button>
                   </div>
                 </div>
 
                 <!-- Association Ballots -->
-                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3">
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3 min-w-0">
                   <div>
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-[10px] font-bold uppercase tracking-wider text-purple-400 bg-purple-400/10 px-2 py-0.5 rounded border border-purple-400/20">Departments</span>
-                      <span class="text-[10px] font-mono text-slate-400">A5 Portrait</span>
+                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-purple-400 bg-purple-400/10 px-2 py-0.5 rounded border border-purple-400/20 whitespace-nowrap">Departments</span>
+                      <span class="text-[10px] font-mono text-slate-400 whitespace-nowrap">A5 Portrait</span>
                     </div>
                     <h5 class="text-sm font-bold text-white">Subject Association Ballots</h5>
                     <p class="text-xs text-slate-400 mt-1">Department-specific Association Secretary ballots distributed strictly to eligible major students with book ID tracking.</p>
                   </div>
-                  <div class="flex gap-2">
-                    <button id="btnHubPrintAssoc" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg flex-1 flex items-center justify-center gap-1.5 hover:bg-white/10">
-                      <span>🖨️</span> Print Assoc.
+                  <div class="flex items-center gap-2 w-full pt-1">
+                    <button id="btnHubPrintAssoc" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg flex-1 min-w-0 flex items-center justify-center gap-1.5 hover:bg-white/10">
+                      <span>🖨️</span> <span class="truncate">Print Assoc.</span>
                     </button>
-                    <button id="btnHubExcelAssoc" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white flex items-center justify-center gap-1" title="Download Association Ballots in Excel (.xlsx)">
+                    <button id="btnHubExcelAssoc" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white flex items-center justify-center gap-1 shrink-0 whitespace-nowrap" title="Download Association Ballots in Excel (.xlsx)">
                       <span>📊</span> Excel
                     </button>
                   </div>
@@ -332,13 +332,13 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                 </a>
               </div>
 
-              <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+              <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 <!-- Marked Electoral Rolls -->
-                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-emerald-500/40 transition flex flex-col justify-between space-y-3">
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-emerald-500/40 transition flex flex-col justify-between space-y-3 min-w-0">
                   <div>
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">Voter Signature Roll</span>
-                      <span class="text-[10px] font-mono text-slate-400">A4 Portrait</span>
+                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20 whitespace-nowrap">Voter Signature Roll</span>
+                      <span class="text-[10px] font-mono text-slate-400 whitespace-nowrap">A4 Portrait</span>
                     </div>
                     <h5 class="text-sm font-bold text-white">Marked Copy of Electoral Rolls</h5>
                     <p class="text-xs text-slate-400 mt-1">Official booth-wise register with Sl.No, Admission No, Name, Class, and signature column with Booth Facing Sheet.</p>
@@ -349,11 +349,11 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                 </div>
 
                 <!-- Ballots & Books Account (Form 2) -->
-                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-emerald-500/40 transition flex flex-col justify-between space-y-3">
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-emerald-500/40 transition flex flex-col justify-between space-y-3 min-w-0">
                   <div>
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">Form 2 Statutory</span>
-                      <span class="text-[10px] font-mono text-slate-400">A4 Portrait</span>
+                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20 whitespace-nowrap">Form 2 Statutory</span>
+                      <span class="text-[10px] font-mono text-slate-400 whitespace-nowrap">A4 Portrait</span>
                     </div>
                     <h5 class="text-sm font-bold text-white">Ballots &amp; Books Account</h5>
                     <p class="text-xs text-slate-400 mt-1">Statutory account of ballot papers received, issued to electors, and returned unused or cancelled in sealed covers.</p>
@@ -364,11 +364,11 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                 </div>
 
                 <!-- Batch Polling Booth Door Posters -->
-                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-emerald-500/40 transition flex flex-col justify-between space-y-3">
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-emerald-500/40 transition flex flex-col justify-between space-y-3 min-w-0">
                   <div>
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 bg-indigo-400/10 px-2 py-0.5 rounded border border-indigo-400/20">Public Display</span>
-                      <span class="text-[10px] font-mono text-slate-400">Batch A4</span>
+                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 bg-indigo-400/10 px-2 py-0.5 rounded border border-indigo-400/20 whitespace-nowrap">Public Display</span>
+                      <span class="text-[10px] font-mono text-slate-400 whitespace-nowrap">Batch A4</span>
                     </div>
                     <h5 class="text-sm font-bold text-white">Booth Door Posters (All Booths)</h5>
                     <p class="text-xs text-slate-400 mt-1">High-visibility posters for classroom doors specifying booth numbers, venues, and allotted departments/classes.</p>
@@ -379,31 +379,31 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                 </div>
 
                 <!-- Ballot Box Aperture Strip Seals -->
-                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3">
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3 min-w-0">
                   <div>
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">Aperture Seal</span>
-                      <span class="text-[10px] font-mono text-slate-400">A3 Land. (30 Nos)</span>
+                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20 whitespace-nowrap">Aperture Seal</span>
+                      <span class="text-[10px] font-mono text-slate-400 whitespace-nowrap">A3 Land. (30 Nos)</span>
                     </div>
                     <h5 class="text-sm font-bold text-white">Ballot Box Strip Seals (30 Nos)</h5>
                     <p class="text-xs text-slate-400 mt-1">Aperture seals (8 cm &times; 40 cm) with Golden Emblem, serials 001–030, drop slit target, and Presiding Officer/Agent sign boxes.</p>
                   </div>
-                  <div class="flex gap-2">
-                    <button id="btnHubPrintStripSeals" class="btn bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-2 px-3 rounded-lg flex-1 flex items-center justify-center gap-1.5 shadow-md">
-                      <span>🖨️</span> Print Seals
+                  <div class="flex items-center gap-2 w-full pt-1">
+                    <button id="btnHubPrintStripSeals" class="btn bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-2 px-3 rounded-lg flex-1 min-w-0 flex items-center justify-center gap-1.5 shadow-md">
+                      <span>🖨️</span> <span class="truncate">Print Seals</span>
                     </button>
-                    <button id="btnHubPdfStripSeals" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-amber-500/30 text-amber-300 hover:bg-amber-500/20 flex items-center justify-center gap-1" title="Open PDF in new tab">
+                    <button id="btnHubPdfStripSeals" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-amber-500/30 text-amber-300 hover:bg-amber-500/20 flex items-center justify-center gap-1 shrink-0 whitespace-nowrap" title="Open PDF in new tab">
                       <span>📄</span> PDF
                     </button>
                   </div>
                 </div>
 
                 <!-- Campus Master Directory -->
-                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-emerald-500/40 transition flex flex-col justify-between space-y-3">
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-emerald-500/40 transition flex flex-col justify-between space-y-3 min-w-0">
                   <div>
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-[10px] font-bold uppercase tracking-wider text-sky-400 bg-sky-400/10 px-2 py-0.5 rounded border border-sky-400/20">Notice Board</span>
-                      <span class="text-[10px] font-mono text-slate-400">A4 / Banner</span>
+                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-sky-400 bg-sky-400/10 px-2 py-0.5 rounded border border-sky-400/20 whitespace-nowrap">Notice Board</span>
+                      <span class="text-[10px] font-mono text-slate-400 whitespace-nowrap">A4 / Banner</span>
                     </div>
                     <h5 class="text-sm font-bold text-white">Campus Master Directory</h5>
                     <p class="text-xs text-slate-400 mt-1">Complete alphabetical class-to-booth guide for college notice boards, entry gates, and help desks.</p>
@@ -414,20 +414,20 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                 </div>
 
                 <!-- Department & Class-wise Polling Directory Poster (1 UG to PG) -->
-                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3">
+                <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3 min-w-0">
                   <div>
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">Gate &amp; Dept Poster</span>
-                      <span class="text-[10px] font-mono text-slate-400">A3 / A4 (1 UG&rarr;PG)</span>
+                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20 whitespace-nowrap">Gate &amp; Dept Poster</span>
+                      <span class="text-[10px] font-mono text-slate-400 whitespace-nowrap">A3 / A4 (1 UG&rarr;PG)</span>
                     </div>
                     <h5 class="text-sm font-bold text-white">Dept &amp; Class Polling Directory</h5>
                     <p class="text-xs text-slate-400 mt-1">Structured by Department in academic sequence (1 UG to PG) with Booth No. &amp; Room venue location.</p>
                   </div>
-                  <div class="flex gap-2">
-                    <button id="btnHubPrintDeptClassPoster" class="btn bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-2 px-3 rounded-lg flex-1 flex items-center justify-center gap-1.5 shadow-md">
-                      <span>🖨️</span> Print Poster
+                  <div class="flex items-center gap-2 w-full pt-1">
+                    <button id="btnHubPrintDeptClassPoster" class="btn bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-2 px-3 rounded-lg flex-1 min-w-0 flex items-center justify-center gap-1.5 shadow-md">
+                      <span>🖨️</span> <span class="truncate">Print Poster</span>
                     </button>
-                    <button id="btnHubPdfDeptClassPoster" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-amber-500/30 text-amber-300 hover:bg-amber-500/20 flex items-center justify-center gap-1" title="Open PDF in new tab">
+                    <button id="btnHubPdfDeptClassPoster" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-amber-500/30 text-amber-300 hover:bg-amber-500/20 flex items-center justify-center gap-1 shrink-0 whitespace-nowrap" title="Open PDF in new tab">
                       <span>📄</span> PDF
                     </button>
                   </div>
