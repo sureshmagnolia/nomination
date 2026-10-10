@@ -4,7 +4,7 @@
  * Individual Polling Booth Door Posters, and Campus Master Directory Posters.
  */
 
-import { esc, triggerPrint, todayFormatted } from './utils.js';
+import { esc, triggerPrint, todayFormatted, compareClassesByYearOrder } from './utils.js';
 import { CONFIG } from './config.js';
 import { OFFICIAL_COUNTING_ROSTER_BACKUP } from './data/officialCountingRoster.js';
 
@@ -1792,28 +1792,7 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
     });
   });
 
-  // 3. Academic Year-wise ordering helper (1 UG -> 2 UG -> 3 UG -> 1 PG -> 2 PG -> RS)
-  const getWeight = (name) => {
-    const u = String(name).toUpperCase();
-    if (u.includes('1ST YEAR') || /^\s*(1|1ST|I)\b/.test(u) || /\b1ST\b/.test(u) || u.includes('I UG') || u.includes('1_UG')) return 1;
-    if (u.includes('2ND YEAR') || /^\s*(2|2ND|II)\b/.test(u) || /\b2ND\b/.test(u) || u.includes('II UG') || u.includes('2_UG')) return 2;
-    if (u.includes('3RD YEAR') || /^\s*(3|3RD|III)\b/.test(u) || /\b3RD\b/.test(u) || u.includes('III UG') || u.includes('3_UG')) return 3;
-    const isPG = ['MA', 'MSC', 'MCOM', 'M.SC', 'M.COM', 'M.A', 'PG'].some(pg => u.includes(pg));
-    if (isPG) {
-      if (u.includes('1ST') || /^\s*(1|1ST|I)\b/.test(u) || u.includes('I PG') || u.includes('PREVIOUS')) return 4;
-      if (u.includes('2ND') || /^\s*(2|2ND|II)\b/.test(u) || u.includes('II PG') || u.includes('FINAL')) return 5;
-      return 6;
-    }
-    if (u.includes('RESEARCH') || u.includes('SCHOLAR') || u.includes('PHD')) return 7;
-    return 8;
-  };
-
-  const sortClasses = (cA, cB) => {
-    const wA = getWeight(cA);
-    const wB = getWeight(cB);
-    if (wA !== wB) return wA - wB;
-    return cA.localeCompare(cB);
-  };
+  const sortClasses = (cA, cB) => compareClassesByYearOrder(cA, cB);
 
   const sortedDepts = Object.keys(deptMap).sort((a, b) => a.localeCompare(b));
   const totalClasses = Object.keys(classStats).length;
@@ -2066,28 +2045,47 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
     .col-class {
       font-weight: 800;
       color: #0f172a;
-      width: 45%;
+      width: 38%;
+      font-size: 13pt;
+      padding: 10px 14px;
+      border-right: 1.5px solid #cbd5e1;
     }
-    .col-booth {
-      width: 20%;
-      text-align: center;
+    .col-destination {
+      width: 62%;
+      background: #ffffff;
+      padding: 12px 16px;
+      vertical-align: middle;
     }
-    .col-venue {
-      width: 35%;
-      color: #334155;
-      font-size: 11pt;
+    .venue-main {
+      font-size: 15pt;
+      font-weight: 900;
+      color: #0f172a;
+      line-height: 1.25;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
     }
-
+    .venue-icon {
+      font-size: 13pt;
+      margin-right: 2px;
+    }
+    .booth-tag-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
     .booth-tag {
       display: inline-block;
-      background: #0f172a;
+      background: #1e3a8a;
       color: #fde047;
       font-weight: 900;
-      font-size: 10pt;
-      padding: 3px 8px;
+      font-size: 11pt;
+      padding: 3.5px 12px;
       border-radius: 4px;
-      letter-spacing: 0.2px;
+      letter-spacing: 0.5px;
       white-space: nowrap;
+      text-transform: uppercase;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
     }
     .booth-unassigned {
       background: #fee2e2;
@@ -2168,6 +2166,26 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       ${sortedDepts.map(deptName => {
         const classKeys = Array.from(deptMap[deptName] || []).sort(sortClasses);
         const deptElectors = classKeys.reduce((sum, cn) => sum + (classStats[cn]?.count || 0), 0);
+        
+        // Group consecutive adjacent classes that share the exact same booth & room venue
+        const groups = [];
+        classKeys.forEach(cName => {
+          const boothInfo = classToBoothMap[cName];
+          const bNum = boothInfo?.boothNumber;
+          const rName = boothInfo?.roomName;
+          const key = boothInfo ? `${bNum}____${rName}` : '__unassigned';
+          const lastGroup = groups[groups.length - 1];
+          if (lastGroup && lastGroup.key === key) {
+            lastGroup.classes.push(cName);
+          } else {
+            groups.push({
+              key,
+              boothInfo,
+              classes: [cName]
+            });
+          }
+        });
+
         return `
           <div class="dept-card">
             <div class="dept-card-header">
@@ -2177,28 +2195,35 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
             <table class="dept-table">
               <thead>
                 <tr>
-                  <th class="col-class">Class / Cohort (1 UG &rarr; PG)</th>
-                  <th class="col-booth">Booth No.</th>
-                  <th class="col-venue">Room Venue</th>
+                  <th class="col-class">CLASS / COHORT (1 UG &rarr; PG)</th>
+                  <th class="col-destination">ALLOTTED ROOM VENUE &amp; POLLING BOOTH</th>
                 </tr>
               </thead>
               <tbody>
-                ${classKeys.map(cName => {
-                  const boothInfo = classToBoothMap[cName];
-                  return `
-                    <tr>
-                      <td class="col-class">${esc(cName)}</td>
-                      <td class="col-booth">
-                        ${boothInfo 
-                          ? `<span class="booth-tag">Booth ${boothInfo.boothNumber}</span>`
-                          : '<span class="booth-tag booth-unassigned">Not Allotted</span>'
-                        }
-                      </td>
-                      <td class="col-venue">
-                        ${boothInfo ? esc(boothInfo.roomName) : '—'}
-                      </td>
-                    </tr>
-                  `;
+                ${groups.map(g => {
+                  return g.classes.map((cName, idx) => {
+                    const isFirst = idx === 0;
+                    const span = g.classes.length;
+                    return `
+                      <tr>
+                        <td class="col-class">${esc(cName)}</td>
+                        ${isFirst ? `
+                          <td class="col-destination" rowspan="${span}">
+                            ${g.boothInfo ? `
+                              <div class="venue-main">
+                                <span class="venue-icon">🏛️</span> ${esc(g.boothInfo.roomName)}
+                              </div>
+                              <div class="booth-tag-container">
+                                <span class="booth-tag">POLLING BOOTH ${g.boothInfo.boothNumber}</span>
+                              </div>
+                            ` : `
+                              <span class="booth-tag booth-unassigned">Not Allotted</span>
+                            `}
+                          </td>
+                        ` : ''}
+                      </tr>
+                    `;
+                  }).join('');
                 }).join('')}
               </tbody>
             </table>
@@ -2209,9 +2234,7 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
 
     <!-- Footer -->
     <div class="poster-footer">
-      <div>
-        <strong>STATUTORY DIRECTIVE:</strong> Electors must report to their allotted polling booth strictly during polling hours. Late arrivals will not be admitted.
-      </div>
+      <div></div>
       <div class="footer-stamp">
         RETURNING OFFICER (RO)<br>
         <span style="font-size: 6.5pt; color: #64748b;">${esc(collegeName)}</span>
