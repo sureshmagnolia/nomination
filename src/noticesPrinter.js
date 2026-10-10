@@ -564,7 +564,7 @@ export function printBatchBoothDoorPosters(boothsList, settings = {}, schedule =
             </div>
             <div class="rule-row">
               <span class="rule-icon">✍️</span>
-              <span><strong>MARKING PROCEDURE:</strong> Place arrow cross mark only in designated candidate column using official booth pen. Placing Tick mark, Finger Prints etc on the ballot will make it invalid.</span>
+              <span><strong>MARKING PROCEDURE:</strong> Place arrow cross mark only in designated candidate column. Placing Tick mark, Finger Prints etc on the ballot will make it invalid.</span>
             </div>
           </div>
 
