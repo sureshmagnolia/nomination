@@ -1286,9 +1286,8 @@ function renderNominalRollUI(main, pwd, nominalRoll, settings, corrections = [])
     if (btnToggleRS) {
       btnToggleRS.onclick = async (e) => {
         const confirmMsg = isRSActive
-          ? '⚠️ CONFIRM REMOVAL\n\nAre you sure you want to remove the 21 Research Scholars addendum from the electoral roll and booth allotments?'
-          : '⚖️ CONFIRM COURT ADDENDUM\n\nThis will add 21 Ph.D. Research Scholars to the electoral roll as an Addendum with special serial numbers RS1 to RS21.\n\n• Existing serial numbers (1 to 1887) will NOT be changed.\n• Scholars will be assigned to their corresponding department booths.\n• They can vote for General Posts & Department Associations.\n• Ballot booklet calculations and numbers will be updated automatically.\n\nProceed?';
-
+          ? '⚠️ CONFIRM REMOVAL\n\nAre you sure you want to remove the Research Scholars addendum from the electoral roll and booth allotments?\n\nThe Master Ballot Plan remains locked and intact, with extra ballots acting as official Booth Reserves.'
+          : '⚖️ CONFIRM COURT ADDENDUM\n\nThis will add Research Scholars to the electoral roll as an Addendum with special serial numbers RS1 to RS18.\n\n• Existing serial numbers (1 to 1887) will NOT be changed.\n• Scholars will be assigned to their corresponding department booths.\n• They can vote for General Posts & Department Associations.\n\nProceed?';
         if (!confirm(confirmMsg)) return;
 
         setLoading(e.target, true, isRSActive ? 'Removing Scholars...' : 'Adding Scholars...');

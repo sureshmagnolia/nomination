@@ -356,10 +356,9 @@ export async function renderSettings(container) {
 
     // Handle Court Addendum Toggle
     container.querySelector('#btnToggleResearchScholarsSettings')?.addEventListener('click', async (e) => {
-      const isEnabled = settings.includeResearchScholars === true;
       const confirmText = isEnabled
-        ? 'Are you sure you want to EXCLUDE Research Scholars? Their records (RS1–RS21) will be removed from the nominal roll and polling booths, and the Master Ballot Plan will be recalculated for standard students.'
-        : 'Are you sure you want to INCLUDE Research Scholars per Court Order? 21 scholars will be appended as serials RS1–RS21 across 5 department booths (Economics, Geography, Mathematics, Music, Tamil) and the Master Ballot Plan will be automatically recalculated with extra ballots allocated as reserves if excluded.';
+        ? 'Are you sure you want to EXCLUDE Research Scholars?\n\nTheir records (RS1–RS18) will be removed from the nominal roll and polling booths.\n\nThe Master Ballot Plan (1,905 General / 1,097 Assoc) remains locked and intact, with extra scholar ballots serving as official Booth Reserves.'
+        : 'Are you sure you want to INCLUDE Research Scholars per Court Order?\n\n18 scholars will be appended as serials RS1–RS18 across 5 department booths (Economics, Geography, Mathematics, Music, Tamil) and assigned to vote for General Posts & Department Associations.';
       if (!confirm(confirmText)) return;
 
       const btn = e.currentTarget;

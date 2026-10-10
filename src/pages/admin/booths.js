@@ -2240,8 +2240,8 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     const handleToggleRS = async (btn) => {
       const isCurrentlyActive = isRSActive;
       const confirmMsg = isCurrentlyActive
-        ? 'Are you sure you want to EXCLUDE Research Scholars from the election?\n\nTheir records (RS1–RS21) will be removed from the nominal roll and booths, and the Master Ballot Plan will be automatically recalculated for 1,887 regular students.'
-        : 'Are you sure you want to INCLUDE Research Scholars per Court Order?\n\n21 scholars will be appended as serials RS1–RS21 across 5 department booths (Economics, Geography, Mathematics, Music, Tamil) and the Master Ballot Plan will be automatically recalculated with extra ballots allocated as reserves if excluded.';
+        ? 'Are you sure you want to EXCLUDE Research Scholars from the election?\n\nTheir records (RS1–RS18) will be removed from the nominal roll and booths.\n\nThe Master Ballot Plan remains locked and intact, with extra ballots acting as official Booth Reserves.'
+        : 'Are you sure you want to INCLUDE Research Scholars per Court Order?\n\nScholars will be appended as serials RS1–RS18 across 5 department booths (Economics, Geography, Mathematics, Music, Tamil).';
       if (!confirm(confirmMsg)) return;
 
       const defaultText = btn.innerHTML;
