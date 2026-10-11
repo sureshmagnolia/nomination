@@ -59,7 +59,7 @@ css_shared = """
     min-height: 420mm;
     max-height: 420mm;
     margin: 20px auto;
-    padding: 6mm 8mm;
+    padding: 4.5mm 7mm;
     background: #ffffff;
     box-shadow: 0 10px 35px rgba(0,0,0,0.3);
     overflow: hidden;
@@ -95,7 +95,7 @@ css_shared = """
     border: 3.5px solid #0f172a;
     outline: 2px solid #d97706;
     outline-offset: -5px;
-    padding: 6mm 7.5mm;
+    padding: 4.5mm 6.5mm;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -109,14 +109,14 @@ css_shared = """
     align-items: center;
     justify-content: space-between;
     border-bottom: 2.5px solid #0f172a;
-    padding-bottom: 6px;
-    margin-bottom: 6px;
+    padding-bottom: 3.5px;
+    margin-bottom: 3.5px;
     gap: 14px;
   }
 
   .header-logo {
-    width: 78px;
-    height: 78px;
+    width: 68px;
+    height: 68px;
     object-fit: contain;
     flex-shrink: 0;
   }
@@ -127,7 +127,7 @@ css_shared = """
   }
 
   .college-title-en {
-    font-size: 21pt;
+    font-size: 19pt;
     font-weight: 900;
     letter-spacing: 1.2px;
     color: #0f172a;
@@ -144,9 +144,9 @@ css_shared = """
   }
 
   .election-badge-title {
-    font-size: 14pt;
+    font-size: 12.5pt;
     font-weight: 900;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
     color: #991b1b;
     margin-top: 2px;
     text-transform: uppercase;
@@ -162,8 +162,8 @@ css_shared = """
   }
 
   .header-badge-box {
-    width: 84px;
-    height: 78px;
+    width: 74px;
+    height: 68px;
     border: 2px dashed #0f172a;
     border-radius: 6px;
     display: flex;
@@ -186,8 +186,8 @@ css_shared = """
     background: #0f172a;
     color: #ffffff;
     border-radius: 5px;
-    padding: 7px 12px;
-    margin-bottom: 7px;
+    padding: 5px 10px;
+    margin-bottom: 5px;
     align-items: center;
   }
 
@@ -208,9 +208,9 @@ css_shared = """
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 5px 12px;
+    padding: 3.5px 10px;
     border-radius: 4px;
-    margin-bottom: 6px;
+    margin-bottom: 3.5px;
   }
   .sec-title-main {
     font-size: 10.2pt;
@@ -232,17 +232,17 @@ css_shared = """
   .guidelines-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 6.5px;
-    margin-bottom: 8px;
+    gap: 4px;
+    margin-bottom: 4px;
   }
 
   .guide-card {
     border-radius: 5px;
-    padding: 6.5px 8.5px;
+    padding: 4.5px 7px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 86px;
+    min-height: 68px;
   }
   .guide-card-head {
     display: flex;
@@ -312,14 +312,14 @@ css_shared = """
   .marking-guide-container {
     display: flex;
     flex-direction: column;
-    gap: 7.5px;
+    gap: 4px;
     flex: 1;
   }
 
   /* Valid Votes Section */
   .valid-section-wrap {
     border-radius: 5px;
-    padding: 7px 11px;
+    padding: 5px 8px;
   }
   .valid-header-badge {
     display: flex;
@@ -347,10 +347,41 @@ css_shared = """
     gap: 10px;
   }
 
+  /* UUC Dual-Vote Section */
+  .uuc-section-wrap {
+    border-radius: 5px;
+    padding: 6px 10px;
+  }
+  .uuc-header-badge {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    padding-bottom: 3.5px;
+    border-bottom: 1.5px solid;
+  }
+  .uuc-title {
+    font-size: 9.6pt;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+  }
+  .uuc-title-sub {
+    font-size: 7.4pt;
+    font-weight: 800;
+  }
+  .uuc-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 7.5px;
+  }
+
   /* Invalid Votes Section */
   .invalid-section-wrap {
     border-radius: 5px;
-    padding: 7px 11px;
+    padding: 5px 8px;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -385,7 +416,7 @@ css_shared = """
   /* Ballot Card Design */
   .ballot-example-card {
     border-radius: 4px;
-    padding: 6.5px 8.5px;
+    padding: 4.5px 7px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -424,7 +455,7 @@ css_shared = """
   }
   .ballot-graphic-row {
     display: flex;
-    height: 33px;
+    height: 25px;
     align-items: center;
     position: relative;
   }
@@ -454,6 +485,28 @@ css_shared = """
     justify-content: center;
   }
 
+  /* UUC Graphic 3-Row Compact Styles */
+  .ballot-box-graphic.uuc-graphic {
+    width: 104px;
+    flex-shrink: 0;
+  }
+  .ballot-graphic-row.uuc-row {
+    height: 18px;
+  }
+  .ballot-cand-col.uuc-cand {
+    width: 56%;
+    padding: 0 4.5px;
+    font-size: 7.2pt;
+    font-weight: 900;
+  }
+  .ballot-cand-col.uuc-cand .cand-sub {
+    font-size: 5.8pt;
+    font-weight: 700;
+  }
+  .ballot-mark-col.uuc-mark {
+    width: 44%;
+  }
+
   /* Stamp marks */
   .ballot-mark-col .stamp-svg {
     position: absolute;
@@ -471,7 +524,7 @@ css_shared = """
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 21pt;
+    font-size: 19pt;
     font-weight: 900;
     font-family: Arial, sans-serif !important;
     line-height: 1;
@@ -533,7 +586,7 @@ css_shared = """
   /* Golden Rule Warning Card */
   .golden-rule-card {
     border-radius: 4px;
-    padding: 7px 9px;
+    padding: 5px 7px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -570,8 +623,8 @@ css_shared = """
     align-items: center;
     justify-content: flex-start;
     border-top: 2px solid #0f172a;
-    padding-top: 6px;
-    margin-top: 5px;
+    padding-top: 3.5px;
+    margin-top: 3.5px;
     font-size: 7.6pt;
   }
   .footer-authority {
@@ -656,6 +709,52 @@ css_shared = """
   .theme-color .ballot-reason-desc.valid-desc .reason-en { color: #15803d; }
   .theme-color .ballot-reason-desc.valid-desc .reason-ml { color: #166534; }
   .theme-color .ballot-reason-desc.valid-desc .reason-ta { color: #14532d; }
+
+  /* UUC Section in Color */
+  .theme-color .uuc-section-wrap {
+    background: #f0f7ff;
+    border: 2px solid #2563eb;
+  }
+  .theme-color .uuc-header-badge {
+    border-color: #2563eb;
+    color: #1d4ed8;
+  }
+  .theme-color .uuc-title { color: #1e40af; }
+  .theme-color .uuc-title-sub { color: #1d4ed8; }
+  .theme-color .ballot-example-card.uuc-card {
+    background: #ffffff;
+    border: 1.5px solid #93c5fd;
+  }
+  .theme-color .ballot-box-graphic.uuc-graphic {
+    border: 1.5px solid #2563eb;
+  }
+  .theme-color .ballot-box-graphic.uuc-graphic .ballot-graphic-row {
+    border-bottom: 1.5px solid #2563eb;
+  }
+  .theme-color .ballot-box-graphic.uuc-graphic .ballot-graphic-row:last-child {
+    border-bottom: none;
+  }
+  .theme-color .ballot-box-graphic.uuc-graphic .ballot-cand-col {
+    border-right: 1.5px solid #2563eb;
+    color: #0f172a;
+    background: #f8fafc;
+  }
+  .theme-color .ballot-box-graphic.uuc-graphic .ballot-cand-col .cand-sub { color: #475569; }
+  .theme-color .ballot-box-graphic.uuc-graphic.invalid-graphic {
+    border: 1.5px solid #dc2626;
+  }
+  .theme-color .ballot-box-graphic.uuc-graphic.invalid-graphic .ballot-graphic-row {
+    border-bottom: 1.5px solid #dc2626;
+  }
+  .theme-color .ballot-box-graphic.uuc-graphic.invalid-graphic .ballot-cand-col {
+    border-right: 1.5px solid #dc2626;
+  }
+  .theme-color .ballot-reason-desc.uuc-desc .reason-en { color: #1e40af; }
+  .theme-color .ballot-reason-desc.uuc-desc .reason-ml { color: #1d4ed8; }
+  .theme-color .ballot-reason-desc.uuc-desc .reason-ta { color: #1e3a8a; }
+  .theme-color .ballot-reason-desc.uuc-desc.invalid-desc .reason-en { color: #b91c1c; }
+  .theme-color .ballot-reason-desc.uuc-desc.invalid-desc .reason-ml { color: #991b1b; }
+  .theme-color .ballot-reason-desc.uuc-desc.invalid-desc .reason-ta { color: #7f1d1d; }
 
   /* Invalid Section in Color */
   .theme-color .invalid-section-wrap {
@@ -803,6 +902,52 @@ css_shared = """
   .theme-bw .ballot-reason-desc.valid-desc .reason-en { color: #000000 !important; }
   .theme-bw .ballot-reason-desc.valid-desc .reason-ml { color: #000000 !important; }
   .theme-bw .ballot-reason-desc.valid-desc .reason-ta { color: #000000 !important; }
+
+  /* UUC Section in B&W */
+  .theme-bw .uuc-section-wrap {
+    background: #ffffff !important;
+    border: 2.5px solid #000000 !important;
+  }
+  .theme-bw .uuc-header-badge {
+    border-bottom: 2px solid #000000 !important;
+    color: #000000 !important;
+  }
+  .theme-bw .uuc-title { color: #000000 !important; }
+  .theme-bw .uuc-title-sub { color: #000000 !important; }
+  .theme-bw .ballot-example-card.uuc-card {
+    background: #ffffff !important;
+    border: 1.5px solid #000000 !important;
+  }
+  .theme-bw .ballot-box-graphic.uuc-graphic {
+    border: 1.5px solid #000000 !important;
+  }
+  .theme-bw .ballot-box-graphic.uuc-graphic .ballot-graphic-row {
+    border-bottom: 1.5px solid #000000 !important;
+  }
+  .theme-bw .ballot-box-graphic.uuc-graphic .ballot-graphic-row:last-child {
+    border-bottom: none;
+  }
+  .theme-bw .ballot-box-graphic.uuc-graphic .ballot-cand-col {
+    border-right: 1.5px solid #000000 !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+  }
+  .theme-bw .ballot-box-graphic.uuc-graphic .ballot-cand-col .cand-sub { color: #000000 !important; }
+  .theme-bw .ballot-box-graphic.uuc-graphic.invalid-graphic {
+    border: 1.5px solid #000000 !important;
+  }
+  .theme-bw .ballot-box-graphic.uuc-graphic.invalid-graphic .ballot-graphic-row {
+    border-bottom: 1.5px solid #000000 !important;
+  }
+  .theme-bw .ballot-box-graphic.uuc-graphic.invalid-graphic .ballot-cand-col {
+    border-right: 1.5px solid #000000 !important;
+  }
+  .theme-bw .ballot-reason-desc.uuc-desc .reason-en,
+  .theme-bw .ballot-reason-desc.uuc-desc .reason-ml,
+  .theme-bw .ballot-reason-desc.uuc-desc .reason-ta { color: #000000 !important; }
+  .theme-bw .ballot-reason-desc.uuc-desc.invalid-desc .reason-en,
+  .theme-bw .ballot-reason-desc.uuc-desc.invalid-desc .reason-ml,
+  .theme-bw .ballot-reason-desc.uuc-desc.invalid-desc .reason-ta { color: #000000 !important; }
 
   /* Invalid Section in B&W */
   .theme-bw .invalid-section-wrap {
@@ -1211,7 +1356,7 @@ def generate_poster_html_content(theme_class="theme-color", is_interactive=True)
             <!-- Valid 1 -->
             <div class="ballot-example-card valid-card">
               <div class="ballot-example-head">
-                <span class="ballot-id-title">Valid Example 1: Single Candidate Marked</span>
+                <span class="ballot-id-title">Valid Example 1: Single-Seat Posts &ndash; 1 Candidate Marked</span>
                 <span class="ballot-tag tag-valid">✔ VALID VOTE</span>
               </div>
               <div class="ballot-content-flex">
@@ -1234,9 +1379,9 @@ def generate_poster_html_content(theme_class="theme-color", is_interactive=True)
                   </div>
                 </div>
                 <div class="ballot-reason-desc valid-desc">
-                  <div class="reason-en">The arrow cross stamp is clearly placed against one candidate only.</div>
-                  <div class="reason-ml ml">ഒരേ പോസ്റ്റിലേക്ക് മത്സരിക്കുന്ന രണ്ടു സ്ഥാനാർത്ഥികളിൽ ഒരാൾക്ക് മാത്രം വ്യക്തമായി രേഖപ്പെടുത്തിയിരിക്കുന്നു.</div>
-                  <div class="reason-ta ta">ஒரு வேட்பாளருக்கு எதிராக மட்டுமே முத்திரை தெளிவாக குறிக்கப்பட்டுள்ளதால் செல்லுபடியாகும்.</div>
+                  <div class="reason-en">The arrow cross stamp is clearly placed against one candidate only for a single-seat post (Chairman, Secretary, etc.).</div>
+                  <div class="reason-ml ml">ഒറ്റ സീറ്റ് പോസ്റ്റുകളിൽ (ചെയർമാൻ, സെക്രട്ടറി മുതലായവ) ഒരാൾക്ക് മാത്രം വ്യക്തമായി വോട്ട് രേഖപ്പെടുത്തിയിരിക്കുന്നു.</div>
+                  <div class="reason-ta ta">ஒற்றை பதவிக்கு (தலைவர், செயலாளர்) ஒரு வேட்பாளருக்கு எதிராக மட்டுமே முத்திரை தெளிவாக இடப்பட்டுள்ளது.</div>
                 </div>
               </div>
             </div>
@@ -1276,6 +1421,186 @@ def generate_poster_html_content(theme_class="theme-color", is_interactive=True)
           </div>
         </div>
 
+        <!-- ================= UUC DUAL-VOTE SPECIAL SECTION ================= -->
+        <div class="uuc-section-wrap">
+          <div class="uuc-header-badge">
+            <div class="uuc-title">
+              <span>⭐</span>
+              <span>University Union Councillor (UUC) &ndash; Dual-Seat Post Rules (പരമാവധി 2 വോട്ടുകൾ &bull; அதிகபட்சம் 2 வாக்குகள்)</span>
+            </div>
+            <div class="uuc-title-sub">Statutory Quota: Up to 2 votes for distinct candidates &bull; 2 Seats (രണ്ടു സീറ്റുകൾ)</div>
+          </div>
+
+          <div class="uuc-grid">
+            <!-- UUC Case 1: 2 Votes Marked -->
+            <div class="ballot-example-card uuc-card">
+              <div class="ballot-example-head">
+                <span class="ballot-id-title">UUC Case 1: 2 Candidates Marked</span>
+                <span class="ballot-tag tag-valid">✔ 2 VALID VOTES</span>
+              </div>
+              <div class="ballot-content-flex">
+                <div class="ballot-box-graphic uuc-graphic">
+                  <div class="ballot-graphic-row uuc-row">
+                    <div class="ballot-cand-col uuc-cand">
+                      <span>ANAS</span>
+                      <span class="cand-sub ml">അനസ്</span>
+                    </div>
+                    <div class="ballot-mark-col uuc-mark">
+                      {get_stamp_svg(size=20)}
+                    </div>
+                  </div>
+                  <div class="ballot-graphic-row uuc-row">
+                    <div class="ballot-cand-col uuc-cand">
+                      <span>FATHIMA</span>
+                      <span class="cand-sub ml">ഫാത്തിമ</span>
+                    </div>
+                    <div class="ballot-mark-col uuc-mark">
+                      {get_stamp_svg(size=20)}
+                    </div>
+                  </div>
+                  <div class="ballot-graphic-row uuc-row">
+                    <div class="ballot-cand-col uuc-cand">
+                      <span>KAVYA</span>
+                      <span class="cand-sub ml">കാവ്യ</span>
+                    </div>
+                    <div class="ballot-mark-col uuc-mark"></div>
+                  </div>
+                </div>
+                <div class="ballot-reason-desc uuc-desc">
+                  <div class="reason-en">Voter marked <strong>2 distinct candidates</strong> for UUC. Both votes are <strong>VALID</strong> (1 vote each to Anas &amp; Fathima).</div>
+                  <div class="reason-ml ml">UUC-ൽ <strong>2 വ്യത്യസ്ത സ്ഥാനാർത്ഥികൾക്ക്</strong> വോട്ട് ചെയ്യാം. രണ്ടും <strong>സാധുവായ വോട്ടുകൾ</strong> (ഓരോ വോട്ട് വീതം).</div>
+                  <div class="reason-ta ta">UUC பதவிக்கு <strong>2 வெவ்வேறு வேட்பாளர்களுக்கு</strong> வாக்களிக்கலாம். இரண்டும் <strong>செல்லுபடியாகும்</strong> (தலா 1 வாக்கு).</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- UUC Case 2: 1 Vote Marked (Single Vote / Undervote) -->
+            <div class="ballot-example-card uuc-card">
+              <div class="ballot-example-head">
+                <span class="ballot-id-title">UUC Case 2: 1 Candidate Marked</span>
+                <span class="ballot-tag tag-valid">✔ 1 VALID + 1 UNCAST</span>
+              </div>
+              <div class="ballot-content-flex">
+                <div class="ballot-box-graphic uuc-graphic">
+                  <div class="ballot-graphic-row uuc-row">
+                    <div class="ballot-cand-col uuc-cand">
+                      <span>ANAS</span>
+                      <span class="cand-sub ml">അനസ്</span>
+                    </div>
+                    <div class="ballot-mark-col uuc-mark">
+                      {get_stamp_svg(size=20)}
+                    </div>
+                  </div>
+                  <div class="ballot-graphic-row uuc-row">
+                    <div class="ballot-cand-col uuc-cand">
+                      <span>FATHIMA</span>
+                      <span class="cand-sub ml">ഫാത്തിമ</span>
+                    </div>
+                    <div class="ballot-mark-col uuc-mark"></div>
+                  </div>
+                  <div class="ballot-graphic-row uuc-row">
+                    <div class="ballot-cand-col uuc-cand">
+                      <span>KAVYA</span>
+                      <span class="cand-sub ml">കാവ്യ</span>
+                    </div>
+                    <div class="ballot-mark-col uuc-mark"></div>
+                  </div>
+                </div>
+                <div class="ballot-reason-desc uuc-desc">
+                  <div class="reason-en">Voting for only 1 candidate in UUC is <strong>VALID</strong> for that candidate (1 Valid + 1 Exhausted). <strong>Ballot is NOT rejected!</strong></div>
+                  <div class="reason-ml ml">UUC-ൽ <strong>ഒരാൾക്ക് മാത്രം</strong> വോട്ട് ചെയ്താലും ആ വോട്ട് <strong>സാധുവാണ്</strong> (1 സാധു + 1 ഒഴിവ്/അസാധു). ബാലറ്റ് തള്ളില്ല!</div>
+                  <div class="reason-ta ta">UUC-ல் <strong>ஒருவருக்கு மட்டும்</strong> வாக்களித்தாலும் அது <strong>செல்லும்</strong> (1 செல்லும் + 1 செல்லாது). சீட்டு தள்ளப்படாது!</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- UUC Case 3: More Than 2 Marked (>2) -->
+            <div class="ballot-example-card uuc-card">
+              <div class="ballot-example-head">
+                <span class="ballot-id-title">UUC Case 3: More Than 2 Marked (&gt;2)</span>
+                <span class="ballot-tag tag-invalid">✖ REJECTED (&gt;2)</span>
+              </div>
+              <div class="ballot-content-flex">
+                <div class="ballot-box-graphic uuc-graphic invalid-graphic">
+                  <div class="ballot-graphic-row uuc-row">
+                    <div class="ballot-cand-col uuc-cand">
+                      <span>ANAS</span>
+                      <span class="cand-sub ml">അനസ്</span>
+                    </div>
+                    <div class="ballot-mark-col uuc-mark">
+                      {get_stamp_svg(size=20)}
+                    </div>
+                  </div>
+                  <div class="ballot-graphic-row uuc-row">
+                    <div class="ballot-cand-col uuc-cand">
+                      <span>FATHIMA</span>
+                      <span class="cand-sub ml">ഫാത്തിമ</span>
+                    </div>
+                    <div class="ballot-mark-col uuc-mark">
+                      {get_stamp_svg(size=20)}
+                    </div>
+                  </div>
+                  <div class="ballot-graphic-row uuc-row">
+                    <div class="ballot-cand-col uuc-cand">
+                      <span>KAVYA</span>
+                      <span class="cand-sub ml">കാവ്യ</span>
+                    </div>
+                    <div class="ballot-mark-col uuc-mark">
+                      {get_stamp_svg(size=20)}
+                    </div>
+                  </div>
+                </div>
+                <div class="ballot-reason-desc uuc-desc invalid-desc">
+                  <div class="reason-en">Marking more than 2 candidates (&gt;2) exceeds the legal quota. All votes for UUC are <strong>INVALID &amp; REJECTED</strong>!</div>
+                  <div class="reason-ml ml">UUC-ൽ അനുവദിച്ച 2 വോട്ടിൽ കൂടുതൽ <strong>(&gt;2)</strong> സ്ഥാനാർത്ഥികൾക്ക് വോട്ട് ചെയ്താൽ UUC വോട്ടുകൾ <strong>പൂർണ്ണമായി അസാധുവാകും</strong>!</div>
+                  <div class="reason-ta ta">UUC பதவிக்கு അനുവദിക്കപ്പെട്ട 2 வாக்குகளுக்கு மேல் <strong>(&gt;2)</strong> வாக்களித்தால் அனைத்து வாக்குகளும் <strong>செல்லாது</strong>!</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- UUC Case 4: Same Candidate Marked Twice -->
+            <div class="ballot-example-card uuc-card">
+              <div class="ballot-example-head">
+                <span class="ballot-id-title">UUC Case 4: Same Candidate Marked Twice</span>
+                <span class="ballot-tag tag-valid">✔ 1 VALID VOTE ONLY</span>
+              </div>
+              <div class="ballot-content-flex">
+                <div class="ballot-box-graphic uuc-graphic">
+                  <div class="ballot-graphic-row uuc-row">
+                    <div class="ballot-cand-col uuc-cand">
+                      <span>ANAS</span>
+                      <span class="cand-sub ml">അനസ്</span>
+                    </div>
+                    <div class="ballot-mark-col uuc-mark" style="display:flex;gap:2px;align-items:center;justify-content:center;padding:0 1px;">
+                      {get_stamp_svg(size=17)}
+                      {get_stamp_svg(size=17)}
+                    </div>
+                  </div>
+                  <div class="ballot-graphic-row uuc-row">
+                    <div class="ballot-cand-col uuc-cand">
+                      <span>FATHIMA</span>
+                      <span class="cand-sub ml">ഫാത്തിമ</span>
+                    </div>
+                    <div class="ballot-mark-col uuc-mark"></div>
+                  </div>
+                  <div class="ballot-graphic-row uuc-row">
+                    <div class="ballot-cand-col uuc-cand">
+                      <span>KAVYA</span>
+                      <span class="cand-sub ml">കാവ്യ</span>
+                    </div>
+                    <div class="ballot-mark-col uuc-mark"></div>
+                  </div>
+                </div>
+                <div class="ballot-reason-desc uuc-desc">
+                  <div class="reason-en">Placing 2 stamps for the same candidate counts as <strong>1 valid vote only</strong>. (Cumulative/double voting is not permitted).</div>
+                  <div class="reason-ml ml">ഒരേ സ്ഥാനാർത്ഥിക്ക് 2 തവണ മുദ്ര വെച്ചാൽ <strong>1 വോട്ട് മാത്രമേ</strong> ലഭിക്കൂ (ഇരട്ട വോട്ട് ലഭിക്കില്ല).</div>
+                  <div class="reason-ta ta">ஒரே வேட்பாளருக்கு 2 முறை முத்திரை இட்டாலும் <strong>1 வாக்காக மட்டுமே</strong> கணக்கிடப்படும்.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- INVALID VOTES -->
         <div class="invalid-section-wrap">
           <div class="invalid-header-badge">
@@ -1290,7 +1615,7 @@ def generate_poster_html_content(theme_class="theme-color", is_interactive=True)
             <!-- Invalid 1 -->
             <div class="ballot-example-card invalid-card">
               <div class="ballot-example-head">
-                <span class="ballot-id-title">Invalid 1: Multiple Candidates</span>
+                <span class="ballot-id-title">Invalid 1: Single-Seat Posts &ndash; Multiple Marked</span>
                 <span class="ballot-tag tag-invalid">✖ REJECTED</span>
               </div>
               <div class="ballot-content-flex">
