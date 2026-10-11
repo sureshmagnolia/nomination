@@ -941,75 +941,52 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     return `
       <tr class="${isExcluded ? 'bg-red-950/25 opacity-75' : 'hover:bg-white/[0.04]'} transition-colors border-b border-white/5">
-        <td class="text-center whitespace-nowrap">
-          <span class="inline-flex items-center justify-center min-w-[34px] px-2 py-0.5 rounded-full font-mono font-bold text-xs ${f.seniority <= 15 ? 'bg-amber-500/15 text-amber-300 border border-amber-500/35 shadow-sm' : 'bg-white/5 text-slate-300 border border-white/10'}">
+        <td class="w-12 text-center py-2.5 px-2 whitespace-nowrap">
+          <span class="inline-flex items-center justify-center min-w-[32px] px-1.5 py-0.5 rounded-full font-mono font-bold text-xs ${f.seniority <= 15 ? 'bg-amber-500/15 text-amber-300 border border-amber-500/35 shadow-sm' : 'bg-white/5 text-slate-300 border border-white/10'}">
             #${f.seniority}
           </span>
         </td>
-        <td class="whitespace-nowrap">
-          <div class="flex flex-col">
-            <span class="font-bold text-white text-[13px] tracking-wide">${esc(f.name)}</span>
-            ${renderSubtlePhone(f.phone || f.mobile)}
+        <td class="w-[28%] py-2.5 px-3">
+          <div class="font-bold text-white text-[13px] tracking-wide leading-snug">${esc(f.name)}</div>
+          <div class="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400 flex-wrap">
+            <span class="font-mono bg-white/5 px-1.5 py-0.2 rounded border border-white/10 text-slate-300 text-[10px] font-semibold">PEN: ${f.pen || '–'}</span>
+            ${f.phone || f.mobile ? `<span class="text-emerald-400 font-mono text-[10.5px] flex items-center gap-0.5">📱 ${esc(f.phone || f.mobile)}</span>` : ''}
           </div>
         </td>
-        <td class="text-center whitespace-nowrap">
-          <span class="font-mono text-[11px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-300 font-semibold tracking-wide">
-            ${f.pen || '–'}
-          </span>
+        <td class="w-[24%] py-2.5 px-3">
+          <div class="text-slate-200 font-medium text-xs leading-snug">${esc(f.designation || '–')}</div>
+          <div class="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400 flex-wrap">
+            ${f.department ? `<span class="inline-flex items-center gap-1 text-[10.5px] font-normal text-indigo-300 bg-indigo-950/40 border border-indigo-500/20 px-1.5 py-0.2 rounded">🏛️ ${esc(f.department)}</span>` : ''}
+            ${f.joiningDate ? `<span class="inline-flex items-center gap-1 text-[10px] font-mono text-slate-400">📅 ${esc(f.joiningDate)}</span>` : ''}
+          </div>
         </td>
-        <td class="whitespace-nowrap">
-          <div class="text-slate-200 font-medium text-xs">${esc(f.designation || '–')}</div>
-          ${f.department ? `
-            <span class="inline-flex items-center gap-1 text-[10.5px] font-normal text-indigo-300 bg-indigo-950/40 border border-indigo-500/20 px-1.5 py-0.2 rounded mt-0.5">
-              <span>🏛️</span> ${esc(f.department)}
-            </span>
-          ` : ''}
-        </td>
-        <td class="font-mono text-xs whitespace-nowrap text-slate-300">
-          ${f.joiningDate ? `
-            <span class="inline-flex items-center gap-1.5 text-slate-300 bg-slate-900/60 border border-white/5 px-2 py-0.5 rounded whitespace-nowrap">
-              <span class="text-slate-400">📅</span>
-              <span>${esc(f.joiningDate)}</span>
-            </span>
-          ` : '<span class="text-slate-500">–</span>'}
-        </td>
-        <td class="whitespace-nowrap">
+        <td class="w-[30%] py-2.5 px-3">
           <div class="flex items-center gap-1.5 flex-wrap">
-            ${isRoMan ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">👑 Returning Officer</span>` : ''}
-            ${isAroMan ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">⚖️ ARO</span>` : ''}
-            ${isCoreMan ? `<span class="badge bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">⭐ Core Committee</span>` : ''}
-            ${isObs ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">⚖️ Observer</span>` : ''}
-            ${isDisc ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">🛡️ Discipline</span>` : ''}
-            ${isGriev ? `<span class="badge bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">🤝 Grievance</span>` : ''}
-            ${pDuty ? `<span class="badge bg-blue-500/20 text-blue-200 border border-blue-500/35 text-[10px] font-semibold whitespace-nowrap shadow-sm">🗳️ Booth ${pDuty.boothNumber} (${pDuty.role})</span>` : ''}
-            ${cDuty ? `<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/35 text-[10px] font-semibold whitespace-nowrap shadow-sm">📊 Table ${cDuty.tableNumber} (${cDuty.role})</span>` : ''}
-            ${pDuty && cDuty ? `<span class="badge bg-amber-500/25 text-amber-300 border border-amber-500/50 text-[10px] font-bold whitespace-nowrap shadow-sm">⚠️ Double Duty</span>` : ''}
-            ${!isPosted ? (isExcluded ? `<span class="text-slate-500 text-xs">–</span>` : `<span class="badge bg-slate-800 text-slate-300 border border-white/10 text-[10px] font-medium whitespace-nowrap" title="Standby Duty at Central Control Room">📋 Reserve Pool</span>`) : ''}
+            ${isRoMan ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[10px] font-bold shadow-sm">👑 Returning Officer</span>` : ''}
+            ${isAroMan ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[10px] font-bold shadow-sm">⚖️ ARO</span>` : ''}
+            ${isCoreMan ? `<span class="badge bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-bold shadow-sm">⭐ Core Committee</span>` : ''}
+            ${isObs ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold shadow-sm">⚖️ Observer</span>` : ''}
+            ${isDisc ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold shadow-sm">🛡️ Discipline</span>` : ''}
+            ${isGriev ? `<span class="badge bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-bold shadow-sm">🤝 Grievance</span>` : ''}
+            ${pDuty ? `<span class="badge bg-blue-500/20 text-blue-200 border border-blue-500/35 text-[10px] font-semibold shadow-sm">🗳️ Booth ${pDuty.boothNumber} (${pDuty.role})</span>` : ''}
+            ${cDuty ? `<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/35 text-[10px] font-semibold shadow-sm">📊 Table ${cDuty.tableNumber} (${cDuty.role})</span>` : ''}
+            ${pDuty && cDuty ? `<span class="badge bg-amber-500/25 text-amber-300 border border-amber-500/50 text-[10px] font-bold shadow-sm">⚠️ Double Duty</span>` : ''}
+            ${isExcluded ? `
+              <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold shadow-sm" title="${esc(f.exclusionReason || 'Excluded from election duties')}">
+                ⛔ Excluded${f.exclusionReason ? `: ${esc(f.exclusionReason)}` : ''}
+              </span>
+            ` : (isPosted ? `
+              <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold shadow-sm">
+                ✓ Posted
+              </span>
+            ` : `
+              <span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-medium shadow-sm" title="Not posted · Standby in Reserve Pool">
+                📋 Reserve Pool
+              </span>
+            `)}
           </div>
         </td>
-        <td class="text-center whitespace-nowrap">
-          ${isExcluded ? `
-            <div class="inline-flex flex-col items-center">
-              <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm" title="${esc(f.exclusionReason || 'Excluded from election duties')}">
-                ⛔ Excluded
-              </span>
-              ${f.exclusionReason ? `
-                <span class="text-[9.5px] text-rose-300/80 font-normal max-w-[125px] truncate block text-center mt-0.5" title="${esc(f.exclusionReason)}">
-                  ${esc(f.exclusionReason)}
-                </span>
-              ` : ''}
-            </div>
-          ` : (isPosted ? `
-            <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold whitespace-nowrap shadow-sm">
-              ✓ Posted
-            </span>
-          ` : `
-            <span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-semibold whitespace-nowrap shadow-sm" title="Not posted · Standby in Reserve Pool">
-              📋 Reserve
-            </span>
-          `)}
-        </td>
-        <td class="text-right whitespace-nowrap">
+        <td class="w-[18%] py-2.5 px-3 text-right whitespace-nowrap">
           <div class="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
             <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 btn-edit-fac text-indigo-300 hover:text-white hover:bg-indigo-600/30 border-indigo-500/30 inline-flex items-center gap-1 font-semibold whitespace-nowrap transition-all shadow-sm" data-name="${esc(f.name)}" data-pen="${esc(f.pen || '')}" title="Edit faculty member details">
               <span>✏️</span> <span>Edit</span>
@@ -1037,65 +1014,49 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     return `
       <tr class="${isExcluded ? 'bg-red-950/25 opacity-75' : 'hover:bg-white/[0.04]'} transition-colors border-b border-white/5">
-        <td class="text-center whitespace-nowrap">
-          <span class="inline-flex items-center justify-center min-w-[30px] px-2 py-0.5 rounded-full font-mono text-xs bg-white/5 text-slate-300 border border-white/10 font-medium">
+        <td class="w-12 text-center py-2.5 px-2 whitespace-nowrap">
+          <span class="inline-flex items-center justify-center min-w-[30px] px-1.5 py-0.5 rounded-full font-mono text-xs bg-white/5 text-slate-300 border border-white/10 font-medium">
             ${idx + 1}
           </span>
         </td>
-        <td class="whitespace-nowrap">
-          <div class="flex flex-col">
-            <span class="font-bold text-white text-[13px] tracking-wide">${esc(nt.name)}</span>
-            ${renderSubtlePhone(nt.phone || nt.mobile)}
+        <td class="w-[28%] py-2.5 px-3">
+          <div class="font-bold text-white text-[13px] tracking-wide leading-snug">${esc(nt.name)}</div>
+          <div class="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400 flex-wrap">
+            <span class="font-mono bg-white/5 px-1.5 py-0.2 rounded border border-white/10 text-slate-300 text-[10px] font-semibold">PEN: ${nt.pen || '–'}</span>
+            ${nt.phone || nt.mobile ? `<span class="text-emerald-400 font-mono text-[10.5px] flex items-center gap-0.5">📱 ${esc(nt.phone || nt.mobile)}</span>` : ''}
           </div>
         </td>
-        <td class="whitespace-nowrap">
-          <div class="text-slate-200 font-medium text-xs">${esc(nt.designation || 'Staff')}</div>
+        <td class="w-[24%] py-2.5 px-3">
+          <div class="text-slate-200 font-medium text-xs leading-snug">${esc(nt.designation || 'Staff')}</div>
           ${nt.department ? `
-            <span class="inline-flex items-center gap-1 text-[10.5px] font-normal text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 px-1.5 py-0.2 rounded mt-0.5">
-              <span>🏛️</span> ${esc(nt.department)}
-            </span>
+            <div class="mt-0.5">
+              <span class="inline-flex items-center gap-1 text-[10.5px] font-normal text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 px-1.5 py-0.2 rounded">🏛️ ${esc(nt.department)}</span>
+            </div>
           ` : ''}
         </td>
-        <td class="text-center whitespace-nowrap">
-          <span class="font-mono text-[11px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-300 font-semibold tracking-wide">
-            ${nt.pen || '–'}
-          </span>
-        </td>
-        <td class="whitespace-nowrap">
-          <div class="flex items-center gap-1 flex-wrap">
-            ${isObs ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">⚖️ Observer</span>` : ''}
-            ${isDisc ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">🛡️ Discipline</span>` : ''}
-            ${isGriev ? `<span class="badge bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">🤝 Grievance</span>` : ''}
-            ${asstDuty.polling ? `<span class="badge bg-blue-500/20 text-blue-200 border border-blue-500/35 text-[10px] font-semibold whitespace-nowrap shadow-sm">🗳️ Booth ${asstDuty.polling.boothNumber}</span>` : ''}
-            ${!isPosted ? (isExcluded ? '<span class="text-slate-500 text-xs">–</span>' : '<span class="badge bg-slate-800 text-slate-300 border border-white/10 text-[10px] font-medium whitespace-nowrap" title="Standby Duty at Central Control Room">📋 Reserve Pool</span>') : ''}
+        <td class="w-[30%] py-2.5 px-3">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            ${isObs ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold shadow-sm">⚖️ Observer</span>` : ''}
+            ${isDisc ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold shadow-sm">🛡️ Discipline</span>` : ''}
+            ${isGriev ? `<span class="badge bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-bold shadow-sm">🤝 Grievance</span>` : ''}
+            ${asstDuty.polling ? `<span class="badge bg-blue-500/20 text-blue-200 border border-blue-500/35 text-[10px] font-semibold shadow-sm">🗳️ Booth ${asstDuty.polling.boothNumber}</span>` : ''}
+            ${asstDuty.counting ? `<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/35 text-[10px] font-semibold shadow-sm">📊 Table ${asstDuty.counting.tableNumber}</span>` : ''}
+            ${isExcluded ? `
+              <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold shadow-sm" title="${esc(nt.exclusionReason || 'Excluded from election duties')}">
+                ⛔ Excluded${nt.exclusionReason ? `: ${esc(nt.exclusionReason)}` : ''}
+              </span>
+            ` : (isPosted ? `
+              <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold shadow-sm">
+                ✓ Posted
+              </span>
+            ` : `
+              <span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-medium shadow-sm" title="Not posted · Standby in Reserve Pool">
+                📋 Reserve Pool
+              </span>
+            `)}
           </div>
         </td>
-        <td class="whitespace-nowrap">
-          ${asstDuty.counting ? `<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/35 text-[10px] font-semibold whitespace-nowrap shadow-sm">📊 Table ${asstDuty.counting.tableNumber}</span>` : '<span class="text-slate-500 text-xs">–</span>'}
-        </td>
-        <td class="text-center whitespace-nowrap">
-          ${isExcluded ? `
-            <div class="inline-flex flex-col items-center">
-              <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm" title="${esc(nt.exclusionReason || 'Excluded from election duties')}">
-                ⛔ Excluded
-              </span>
-              ${nt.exclusionReason ? `
-                <span class="text-[9.5px] text-rose-300/80 font-normal max-w-[125px] truncate block text-center mt-0.5" title="${esc(nt.exclusionReason)}">
-                  ${esc(nt.exclusionReason)}
-                </span>
-              ` : ''}
-            </div>
-          ` : (isPosted ? `
-            <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold whitespace-nowrap shadow-sm">
-              ✓ Posted
-            </span>
-          ` : `
-            <span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-semibold whitespace-nowrap shadow-sm" title="Not posted · Standby in Reserve Pool">
-              📋 Reserve
-            </span>
-          `)}
-        </td>
-        <td class="text-right whitespace-nowrap">
+        <td class="w-[18%] py-2.5 px-3 text-right whitespace-nowrap">
           <div class="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
             <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 btn-edit-nt text-emerald-300 hover:text-white hover:bg-emerald-600/30 border-emerald-500/30 font-semibold inline-flex items-center gap-1 whitespace-nowrap transition-all shadow-sm" data-name="${esc(nt.name)}" data-pen="${esc(nt.pen || '')}" title="Edit staff member details">
               <span>✏️</span> <span>Edit</span>
@@ -1511,7 +1472,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     if (faculty.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" class="text-center py-12 text-slate-400">
+          <td colspan="5" class="text-center py-12 text-slate-400">
             <div class="space-y-3 max-w-md mx-auto">
               <span class="text-4xl block">📋</span>
               <h5 class="text-white font-bold text-sm">Teaching Faculty Roster is Empty</h5>
@@ -1565,7 +1526,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     if (filtered.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" class="text-center py-8 text-slate-400">
+          <td colspan="5" class="text-center py-8 text-slate-400">
             No teaching staff found matching "<strong>${esc(facultySearch)}</strong>".
           </td>
         </tr>
@@ -1584,7 +1545,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     if (nonTeaching.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" class="text-center py-12 text-slate-400">
+          <td colspan="5" class="text-center py-12 text-slate-400">
             <div class="space-y-3 max-w-md mx-auto">
               <span class="text-4xl block">🤝</span>
               <h5 class="text-white font-bold text-sm">Non-Teaching Staff Roster is Empty</h5>
@@ -1637,7 +1598,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     if (filtered.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" class="text-center py-8 text-slate-400">
+          <td colspan="5" class="text-center py-8 text-slate-400">
             No non-teaching staff found matching "<strong>${esc(nonTeachingSearch)}</strong>".
           </td>
         </tr>
@@ -3745,18 +3706,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
           <!-- Faculty Table -->
           <div class="glass rounded-xl overflow-hidden border border-white/10 shadow-lg">
-            <div class="overflow-x-auto max-h-[640px] overflow-y-auto custom-scrollbar">
+            <div class="max-h-[640px] overflow-y-auto custom-scrollbar">
               <table class="data-table roster-table text-xs w-full">
                 <thead class="sticky top-0 bg-slate-900/95 backdrop-blur z-10 border-b border-white/10 shadow-sm">
                   <tr>
-                    <th class="w-16 text-center">Seniority #</th>
-                    <th class="min-w-[180px]">Faculty Member</th>
-                    <th class="w-24 text-center">PEN</th>
-                    <th class="min-w-[160px]">Designation & Dept</th>
-                    <th class="w-32 whitespace-nowrap">Joining Date</th>
-                    <th class="min-w-[180px]">Assigned Duty</th>
-                    <th class="w-28 text-center">Status</th>
-                    <th class="text-right whitespace-nowrap pr-3">Action</th>
+                    <th class="w-12 text-center py-2.5 px-2">#</th>
+                    <th class="w-[28%] text-left py-2.5 px-3">Faculty Member</th>
+                    <th class="w-[24%] text-left py-2.5 px-3">Designation & Dept</th>
+                    <th class="w-[30%] text-left py-2.5 px-3">Assigned Duty & Status</th>
+                    <th class="w-[18%] text-right py-2.5 px-3 whitespace-nowrap pr-3">Action</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-white/5" id="facultyTableBody">
@@ -3764,7 +3722,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     if (faculty.length === 0) {
                       return `
                         <tr>
-                          <td colspan="8" class="text-center py-12 text-slate-400">
+                          <td colspan="5" class="text-center py-12 text-slate-400">
                             <div class="space-y-3 max-w-md mx-auto">
                               <span class="text-4xl block">📋</span>
                               <h5 class="text-white font-bold text-sm">Teaching Faculty Roster is Empty</h5>
@@ -3811,7 +3769,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                       return true;
                     });
                     if (filtered.length === 0) {
-                      return `<tr><td colspan="8" class="text-center py-8 text-slate-400">No teaching staff found matching "<strong>${esc(facultySearch)}</strong>".</td></tr>`;
+                      return `<tr><td colspan="5" class="text-center py-8 text-slate-400">No teaching staff found matching "<strong>${esc(facultySearch)}</strong>".</td></tr>`;
                     }
                     filtered.sort(compareOfficials);
                     return filtered.map(getFacultyRowHtml).join('');
@@ -3884,18 +3842,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
           <!-- Non-Teaching Staff Table -->
           <div class="glass rounded-xl overflow-hidden border border-white/10 shadow-lg">
-            <div class="overflow-x-auto max-h-[640px] overflow-y-auto custom-scrollbar">
+            <div class="max-h-[640px] overflow-y-auto custom-scrollbar">
               <table class="data-table roster-table text-xs w-full">
                 <thead class="sticky top-0 bg-slate-900/95 backdrop-blur z-10 border-b border-white/10 shadow-sm">
                   <tr>
-                    <th class="w-14 text-center">#</th>
-                    <th class="min-w-[180px]">Staff Name</th>
-                    <th class="min-w-[160px]">Designation & Dept</th>
-                    <th class="w-24 text-center">PEN</th>
-                    <th class="min-w-[160px]">Assigned Polling</th>
-                    <th class="min-w-[160px]">Assigned Counting</th>
-                    <th class="w-28 text-center">Status</th>
-                    <th class="text-right whitespace-nowrap pr-3">Action</th>
+                    <th class="w-12 text-center py-2.5 px-2">#</th>
+                    <th class="w-[28%] text-left py-2.5 px-3">Staff Member</th>
+                    <th class="w-[24%] text-left py-2.5 px-3">Designation & Dept</th>
+                    <th class="w-[30%] text-left py-2.5 px-3">Assigned Duty & Status</th>
+                    <th class="w-[18%] text-right py-2.5 px-3 whitespace-nowrap pr-3">Action</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-white/5" id="nonTeachingTableBody">
@@ -3903,7 +3858,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     if (nonTeaching.length === 0) {
                       return `
                         <tr>
-                          <td colspan="8" class="text-center py-12 text-slate-400">
+                          <td colspan="5" class="text-center py-12 text-slate-400">
                             <div class="space-y-3 max-w-md mx-auto">
                               <span class="text-4xl block">🤝</span>
                               <h5 class="text-white font-bold text-sm">Non-Teaching Staff Roster is Empty</h5>
@@ -3949,7 +3904,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                       return true;
                     });
                     if (filtered.length === 0) {
-                      return `<tr><td colspan="8" class="text-center py-8 text-slate-400">No non-teaching staff found matching "<strong>${esc(nonTeachingSearch)}</strong>".</td></tr>`;
+                      return `<tr><td colspan="5" class="text-center py-8 text-slate-400">No non-teaching staff found matching "<strong>${esc(nonTeachingSearch)}</strong>".</td></tr>`;
                     }
                     filtered.sort(compareOfficials);
                     return filtered.map(getNonTeachingRowHtml).join('');

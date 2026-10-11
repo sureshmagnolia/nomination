@@ -393,19 +393,20 @@ select.field option {
 
 /* Sleek, Compact Executive Roster Table */
 .roster-table {
+  width: 100% !important;
+  table-layout: auto;
   border-collapse: separate;
   border-spacing: 0;
 }
 .roster-table th {
-  padding: 0.65rem 0.85rem !important;
+  padding: 0.65rem 0.75rem !important;
   font-size: 0.7rem !important;
   font-weight: 700 !important;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  white-space: nowrap;
 }
 .roster-table td {
-  padding: 0.5rem 0.85rem !important;
+  padding: 0.5rem 0.75rem !important;
   font-size: 0.8rem !important;
   vertical-align: middle;
 }
