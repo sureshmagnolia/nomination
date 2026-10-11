@@ -20,21 +20,32 @@ export function formatMatrixPostName(pn) {
   if (!pn) return '';
   let s = String(pn).trim();
   s = s.replace(/^THE\s+/i, '');
+
   const prefixRegex = /^ASSOCIATION\s+SECRETARY\s*(FOR\s*|\s*-\s*|\s*:\s*|\s+OF\s*)?/i;
   if (prefixRegex.test(s)) {
     const dept = s.replace(prefixRegex, '').trim();
     return `Sec: ${dept}`;
   }
+
+  // Exact matches from GCC Election config
+  if (/^Chairperson$/i.test(s) || /^Chairman$/i.test(s)) return 'Chairperson';
+  if (/^Vice\s+Chairperson$/i.test(s) || /^Vice\s+Chairman$/i.test(s)) return 'Vice Chair';
+  if (/^General\s+Captain/i.test(s)) return 'General Captain';
+  if (/^Chief\s+Student\s+Editor$/i.test(s)) return 'Student Editor';
+  if (/^Secretary\s+Fine\s+Arts$/i.test(s) || /^Fine\s+Arts\s+Secretary$/i.test(s)) return 'Fine Arts Sec';
+  if (/^Joint\s+Secretary$/i.test(s)) return 'Joint Sec';
+  if (/^General\s+Secretary$/i.test(s)) return 'General Sec';
+  if (/^Secretary$/i.test(s)) return 'Secretary';
+  if (/^Arts\s+Club\s+Secretary$/i.test(s)) return 'Arts Sec';
+  if (/^Student\s+Editor$/i.test(s) || /^Magazine\s+Editor$/i.test(s)) return 'Editor';
+  if (/^University\s+Union\s+Councillor$/i.test(s) || /^UUC\b/i.test(s)) return 'UUC';
+
+  // Year Representatives
   if (/^I\s+UG\s+Representative$/i.test(s)) return 'I UG Rep';
   if (/^II\s+UG\s+Representative$/i.test(s)) return 'II UG Rep';
   if (/^III\s+UG\s+Representative$/i.test(s)) return 'III UG Rep';
   if (/^PG\s+Representative$/i.test(s)) return 'PG Rep';
-  if (/^University\s+Union\s+Councillor$/i.test(s) || /UUC/i.test(s)) return 'UUC';
-  if (/^General\s+Secretary$/i.test(s)) return 'Gen. Sec';
-  if (/^Arts\s+Club\s+Secretary$/i.test(s)) return 'Arts Sec';
-  if (/^Student\s+Editor$/i.test(s) || /^Magazine\s+Editor$/i.test(s)) return 'Editor';
-  if (/^Vice\s+Chairman$/i.test(s)) return 'Vice Chair';
-  if (/^Chairman$/i.test(s)) return 'Chairman';
+
   return s;
 }
 
@@ -704,7 +715,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                             ` : ''}
                           </div>
                         </div>
-                        <div class="badge ${isPostUuc ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30' : 'badge-valid'} block text-left truncate cursor-pointer hover:underline text-[8.5px] px-1 py-0.5" data-quick-post="${esc(pn)}" title="${esc(pn)} (Click to filter print options)">
+                        <div class="matrix-post-pill ${isPostUuc ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'} cursor-pointer hover:brightness-125" data-quick-post="${esc(pn)}" title="${esc(pn)} (Click to filter print options)">
                           ${esc(displayPn)}
                         </div>
                       </td>`;
