@@ -414,6 +414,31 @@ select.field option {
   transition: background-color 0.15s ease;
 }
 
+/* High-Density 100% Viewport Matrix Table for Counting & Allocation */
+.matrix-table {
+  width: 100% !important;
+  table-layout: auto;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.matrix-table th {
+  padding: 0.45rem 0.35rem !important;
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.matrix-table td {
+  padding: 0.35rem 0.35rem !important;
+  font-size: 0.75rem !important;
+  line-height: 1.25 !important;
+  vertical-align: top;
+}
+.matrix-table tr {
+  transition: background-color 0.15s ease;
+}
+
 /* Badges */
 .badge {
   display: inline-flex;

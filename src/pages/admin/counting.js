@@ -604,16 +604,16 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             </div>
             <span class="text-[11px] text-slate-500 font-mono">Form Serials: #1 .. #${T * totalRounds}</span>
           </div>
-          <div class="overflow-x-auto">
-            <table class="data-table text-xs">
+          <div class="w-full overflow-x-auto">
+            <table class="data-table matrix-table text-xs w-full">
               <thead><tr>
-                <th class="w-44">Table &amp; Supervisor</th>
+                <th class="w-[130px] max-w-[145px] text-left">Table &amp; Supervisor</th>
                 ${roundLabels.map((l, r) => `
                   <th class="text-center align-middle">
-                    <div class="flex flex-col items-center gap-1 py-0.5">
-                      <span class="font-bold">${esc(l)}</span>
-                      <button type="button" class="btn-print-round-header px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500 hover:text-white transition-all cursor-pointer shadow-sm" data-round="${r + 1}" title="Print all counting forms for ${esc(l)} across all tables">
-                        🖨️ All ${esc(l)}
+                    <div class="flex flex-col items-center gap-0.5">
+                      <span class="font-bold text-[10.5px] whitespace-nowrap">${esc(l)}</span>
+                      <button type="button" class="btn-print-round-header px-1.5 py-0.5 rounded text-[8.5px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500 hover:text-white transition-all cursor-pointer shadow-sm whitespace-nowrap" data-round="${r + 1}" title="Print all counting forms for ${esc(l)} across all tables">
+                        🖨️ All
                       </button>
                     </div>
                   </th>
@@ -630,55 +630,54 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                     : Array.from({ length: totalRounds }, () => null);
                   return `
                   <tr>
-                    <td class="font-bold text-indigo-300 whitespace-nowrap bg-black/15">
-                      <div class="flex items-center justify-between gap-1.5">
-                        <div class="flex items-center gap-1.5">
-                          <span class="text-sm">🪑</span>
-                          <span>Table ${bNum}</span>
-                        </div>
+                    <td class="font-bold text-indigo-300 bg-black/15 align-top p-1.5 w-[130px] max-w-[145px]">
+                      <div class="flex items-center justify-between gap-1">
+                        <span class="text-[11px] font-bold text-indigo-300 whitespace-nowrap">🪑 Table ${bNum}</span>
                         ${eff.isActual 
-                          ? `<span class="badge bg-emerald-500/20 text-emerald-300 font-mono text-[9px] px-1.5 py-0.5 border border-emerald-500/40" title="Ballot Paper Account: ${eff.count} ballots in box (${eff.source === 'deduced' ? 'Auto-deduced from ' + eff.deducedPost : 'Manual Entry'}). Allotted: ${eff.allotted}">🗳️ ${eff.count} Polled</span>` 
-                          : (eff.allotted > 0 ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[9px] px-1.5 py-0.5 border border-indigo-500/30" title="${eff.allotted} registered electors allotted (Turnout unknown)">${eff.allotted} Allotted</span>` : '')
+                          ? `<span class="badge bg-emerald-500/20 text-emerald-300 font-mono text-[8.5px] px-1 py-0.2 border border-emerald-500/40 shrink-0" title="Ballot Paper Account: ${eff.count} ballots in box (${eff.source === 'deduced' ? 'Auto-deduced from ' + eff.deducedPost : 'Manual Entry'}). Allotted: ${eff.allotted}">🗳️ ${eff.count}</span>` 
+                          : (eff.allotted > 0 ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[8.5px] px-1 py-0.2 border border-indigo-500/30 shrink-0" title="${eff.allotted} registered electors allotted (Turnout unknown)">${eff.allotted}</span>` : '')
                         }
                       </div>
-                      <div class="text-[10px] text-slate-500 font-normal italic mt-0.5 truncate max-w-[140px]" title="Supervisor: ${esc(supName || 'Unassigned')}">
-                        ${supName ? `👤 ${esc(supName)}` : '<span class="text-amber-400/80">⚠️ No supervisor</span>'}
+                      <div class="text-[9.5px] text-slate-400 font-normal italic mt-0.5 truncate max-w-[130px]" title="Supervisor: ${esc(supName || 'Unassigned')}">
+                        ${supName ? `👤 ${esc(supName)}` : '<span class="text-amber-400/80">⚠️ None</span>'}
                       </div>
                       ${supInfo.phone ? `
-                        <div class="text-[11px] text-slate-400 font-mono font-normal flex items-center gap-1 mt-0.5 tracking-tight opacity-90 select-all" title="Supervisor Phone: ${esc(supInfo.phone)}">
-                          <span>📱</span><span>${esc(supInfo.phone)}</span>
+                        <div class="text-[9.5px] text-slate-500 font-mono font-normal truncate mt-0.5 opacity-90 select-all" title="Supervisor Phone: ${esc(supInfo.phone)}">
+                          📱 ${esc(supInfo.phone)}
                         </div>
                       ` : ''}
-                      <button type="button" class="btn-print-table-row w-full mt-2 py-1 px-1.5 rounded text-[9.5px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 hover:bg-sky-500 hover:text-white transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm" data-table="${bNum}" title="Print all counting forms for Table ${bNum} across all rounds">
-                        <span>🖨️</span> Table ${bNum} Packet
-                      </button>
-                      <button type="button" class="btn-print-table-placard w-full mt-1.5 py-1 px-1.5 rounded text-[9.5px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm" data-table="${bNum}" title="Print Official Sequence Placard for Table ${bNum} (A4 to paste on table)">
-                        <span>📌</span> Table ${bNum} Placard
-                      </button>
+                      <div class="grid grid-cols-2 gap-1 mt-1.5">
+                        <button type="button" class="btn-print-table-row py-1 px-1 rounded text-[8.5px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 hover:bg-sky-500 hover:text-white transition-all flex items-center justify-center gap-0.5 cursor-pointer shadow-sm truncate" data-table="${bNum}" title="Print all counting forms for Table ${bNum} across all rounds">
+                          <span>🖨️</span> Packet
+                        </button>
+                        <button type="button" class="btn-print-table-placard py-1 px-1 rounded text-[8.5px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center gap-0.5 cursor-pointer shadow-sm truncate" data-table="${bNum}" title="Print Official Sequence Placard for Table ${bNum} (A4 to paste on table)">
+                          <span>📌</span> Placard
+                        </button>
+                      </div>
                     </td>
                     ${tableRow.map((post, r) => {
-                      if (!post) return '<td class="align-top py-2.5 min-w-[110px] text-slate-600">–</td>';
+                      if (!post) return '<td class="align-top p-1 text-center text-slate-600 border-l border-white/5">–</td>';
                       const pn = pName(post);
                       const isPostUuc = isUuc(pn);
                       const serial = formSerials[`${t}-${r}`] || `${bNum}-${r + 1}`;
                       const batches = isPostUuc ? getUucBatchesForVoterCount(eff.count) : [];
                       const batchSummary = isPostUuc ? getUucBatchesSummaryText(batches, eff.count) : '';
                       return `
-                      <td class="align-top py-2.5 min-w-[125px]">
-                        <div class="flex items-center justify-between gap-1 mb-1">
-                          <span class="text-[10px] text-slate-400 font-mono font-bold">#${esc(serial)}</span>
-                          <div class="flex items-center gap-1">
-                            <button type="button" class="btn-print-matrix-cell px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-white/10 text-slate-200 hover:bg-indigo-600 hover:text-white border border-white/20 transition-all cursor-pointer shadow-sm" data-table="${bNum}" data-round="${r + 1}" data-post="${esc(pn)}" title="Print single Counting Form #${esc(serial)} (Table ${bNum}, Round ${r + 1}: ${esc(pn)})">
+                      <td class="align-top p-1 border-l border-white/5">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                          <span class="text-[9.5px] text-slate-400 font-mono font-bold shrink-0">#${esc(serial)}</span>
+                          <div class="flex items-center gap-0.5 shrink-0">
+                            <button type="button" class="btn-print-matrix-cell px-1 py-0.5 rounded text-[8.5px] font-bold bg-white/10 text-slate-200 hover:bg-indigo-600 hover:text-white border border-white/20 transition-all cursor-pointer shadow-sm whitespace-nowrap" data-table="${bNum}" data-round="${r + 1}" data-post="${esc(pn)}" title="Print single Counting Form #${esc(serial)} (Table ${bNum}, Round ${r + 1}: ${esc(pn)})">
                               🖨️ Form
                             </button>
                             ${isPostUuc ? `
-                              <button type="button" class="print-single-uuc-btn px-1.5 py-0.5 rounded text-[9px] font-bold ${eff.isActual ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'} hover:brightness-110 transition-all cursor-pointer shadow-sm" data-table="${bNum}" title="Print UUC Tally Sheet for Table ${bNum} (${eff.count} ${eff.isActual ? 'actual ballots in box' : 'allotted electors'}: ${batchSummary})">
-                                🧮 ${eff.count ? `${eff.count}b` : '2-Seat'}
+                              <button type="button" class="print-single-uuc-btn px-1 py-0.5 rounded text-[8px] font-bold ${eff.isActual ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'} hover:brightness-110 transition-all cursor-pointer shadow-sm whitespace-nowrap" data-table="${bNum}" title="Print UUC Tally Sheet for Table ${bNum} (${eff.count} ${eff.isActual ? 'actual ballots in box' : 'allotted electors'}: ${batchSummary})">
+                                🧮 ${eff.count ? `${eff.count}b` : '2-St'}
                               </button>
                             ` : ''}
                           </div>
                         </div>
-                        <div class="badge ${isPostUuc ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30' : 'badge-valid'} block text-left truncate cursor-pointer hover:underline" data-quick-post="${esc(pn)}" title="Click to filter print options to ${esc(pn)}">
+                        <div class="badge ${isPostUuc ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30' : 'badge-valid'} block text-left truncate cursor-pointer hover:underline text-[9px] px-1 py-0.5" data-quick-post="${esc(pn)}" title="Click to filter print options to ${esc(pn)}">
                           ${esc(pn)}
                         </div>
                       </td>`;
