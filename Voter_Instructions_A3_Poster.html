@@ -85,22 +85,15 @@
   .poster-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     border-bottom: 2.5px solid #0f172a;
-    padding-bottom: 3.5px;
+    padding-bottom: 4px;
     margin-bottom: 3.5px;
-    gap: 14px;
-  }
-
-  .header-logo {
-    width: 68px;
-    height: 68px;
-    object-fit: contain;
-    flex-shrink: 0;
+    text-align: center;
   }
 
   .header-center {
-    flex: 1;
+    width: 100%;
     text-align: center;
   }
 
@@ -138,23 +131,6 @@
     text-transform: uppercase;
     margin-top: 1px;
   }
-
-  .header-badge-box {
-    width: 74px;
-    height: 68px;
-    border: 2px dashed #0f172a;
-    border-radius: 6px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 4px;
-    background: #f8fafc;
-    flex-shrink: 0;
-  }
-  .header-badge-box .badge-icon { font-size: 20pt; line-height: 1; }
-  .header-badge-box .badge-txt { font-size: 7pt; font-weight: 800; color: #0f172a; margin-top: 3px; text-transform: uppercase; line-height: 1.1; }
 
   /* ---------------- SCHEDULE & DIRECTIVE BANNER ---------------- */
   .schedule-banner {
@@ -800,18 +776,10 @@
   .theme-bw .poster-header {
     border-bottom-color: #000000 !important;
   }
-  .theme-bw .header-logo {
-    filter: grayscale(100%) contrast(150%) !important;
-  }
   .theme-bw .college-title-en { color: #000000 !important; }
   .theme-bw .college-title-sub { color: #000000 !important; }
   .theme-bw .election-badge-title { color: #000000 !important; }
   .theme-bw .poster-doc-title { color: #000000 !important; }
-  .theme-bw .header-badge-box {
-    border-color: #000000 !important;
-    background: #ffffff !important;
-  }
-  .theme-bw .header-badge-box .badge-txt { color: #000000 !important; }
 
   .theme-bw .schedule-banner {
     background: #000000 !important;
@@ -1105,16 +1073,11 @@
 
       <!-- ================= HEADER ================= -->
       <header class="poster-header">
-        <div style="width: 74px; flex-shrink: 0;" aria-hidden="true"></div>
         <div class="header-center">
           <h1 class="college-title-en">GOVERNMENT COLLEGE CHITTUR, PALAKKAD</h1>
           <div class="college-title-sub ml ta">ഗവൺമെന്റ് കോളേജ് ചിറ്റൂർ, പാലക്കാട് &bull; அரசினர் கலைக்கல்லூரி சித்தூர், பாலக்காடு</div>
           <div class="election-badge-title">COLLEGE UNION ELECTION &ndash; 2026</div>
           <div class="poster-doc-title">VOTER INSTRUCTIONS &amp; BALLOT MARKING GUIDE</div>
-        </div>
-        <div class="header-badge-box">
-          <div class="badge-icon">🗳️</div>
-          <div class="badge-txt">POLLING DAY GUIDE</div>
         </div>
       </header>
 
