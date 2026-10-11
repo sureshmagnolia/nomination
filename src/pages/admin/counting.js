@@ -2806,21 +2806,6 @@ export function printCountingMatrixA4Landscape(options = {}) {
       text-align: right;
     }
 
-    /* Statutory Order Summary Strip */
-    .statutory-strip {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border: 1px solid #000000;
-      padding: 1px 4px;
-      margin-top: 1mm;
-      font-size: 5.8pt;
-      line-height: 1.15;
-      background: #ffffff;
-      color: #000000;
-      font-weight: 600;
-    }
-
     /* Matrix Table */
     .matrix-tbl {
       width: 100%;
@@ -2951,53 +2936,6 @@ export function printCountingMatrixA4Landscape(options = {}) {
       color: #666666;
       font-size: 6.5pt;
     }
-
-    /* Footer & Statutory Authentication */
-    .matrix-footer {
-      flex-shrink: 0;
-      border-top: 1.5px solid #000000;
-      padding-top: 1.2mm;
-      margin-top: 0.8mm;
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 10px;
-    }
-    .sig-block {
-      flex-shrink: 0;
-      width: 56mm;
-      text-align: center;
-      font-size: 6.5pt;
-      line-height: 1.2;
-    }
-    .sig-rule {
-      border-bottom: 1px solid #000000;
-      margin-bottom: 1.2mm;
-      height: 5mm;
-    }
-    .sig-title {
-      font-weight: 800;
-      text-transform: uppercase;
-      font-size: 6.6pt;
-    }
-    .sig-desc {
-      font-size: 5.5pt;
-      color: #000000;
-    }
-    .cert-block {
-      flex: 1;
-      text-align: center;
-      padding: 0 3mm;
-      font-size: 5.5pt;
-      line-height: 1.2;
-    }
-    .cert-heading {
-      font-weight: 900;
-      font-size: 6pt;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-      margin-bottom: 0.5px;
-    }
   </style>
 </head>
 <body>
@@ -3033,10 +2971,6 @@ export function printCountingMatrixA4Landscape(options = {}) {
             <div><strong>Generated:</strong> ${genDate}</div>
           </div>
         </div>
-      </div>
-      <div class="statutory-strip">
-        <span>★ <strong>STATUTORY ORDER:</strong> Round 1: Department Associations ➔ Rotated General Union Posts ➔ Final Round: University Union Councillor (UUC Dual-Vote)</span>
-        <span><strong>NOTATION:</strong> <strong>#Num</strong> = Form 6 Serial No. • Counting table supervisors must complete rounds strictly in order</span>
       </div>
     </header>
 
@@ -3103,25 +3037,6 @@ export function printCountingMatrixA4Landscape(options = {}) {
         }).join('')}
       </tbody>
     </table>
-
-    <footer class="matrix-footer">
-      <div class="sig-block">
-        <div class="sig-rule"></div>
-        <div class="sig-title">Assistant Returning Officer (ARO)</div>
-        <div class="sig-desc">Counting Hall Verification • Signature &amp; Date</div>
-      </div>
-      <div class="cert-block">
-        <div class="cert-heading">Statutory Verification Certificate</div>
-        <div class="cert-text">
-          Certified that this Table × Round Counting Allocation Matrix has been statutorily finalized under the College Union Election Bye-Laws. Form 6 serial numbers are uniquely assigned to prevent duplicate ballot issuance. Strict sequential round counting without skipping is legally mandated.
-        </div>
-      </div>
-      <div class="sig-block">
-        <div class="sig-rule"></div>
-        <div class="sig-title">Returning Officer (RO)</div>
-        <div class="sig-desc">College Union Elections • Official Seal</div>
-      </div>
-    </footer>
   </div>
 
   <script>
