@@ -73,6 +73,7 @@ export function renderAdminLayout(container, activeSection, contentHtml) {
         ${navItem('withdrawals', '↩️', 'Withdrawals',       activeSection)}
         ${navItem('publish',     '📢', 'Publish Lists',      activeSection)}
         ${navItem('booths',      '🏫', 'Polling Booths',     activeSection)}
+        ${navItem('voter-lookup','🔍', 'Voter Booth Lookup', activeSection)}
         ${navItem('officials',   '👥', 'Election Officials', activeSection)}
         ${navItem('ballots',     '🗳️', 'Ballot Printing',    activeSection)}
         ${navItem('notices',     '🖨️', 'Notices, Posters & Prints', activeSection)}

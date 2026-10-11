@@ -13,8 +13,28 @@ import { api } from '../api.js';
 import { esc, showToast, compareSl } from '../utils.js';
 import { CONFIG } from '../config.js';
 import { getStudentClassKeyBooth, isStudentInBoothCheck } from './admin/booths.js';
+import { renderAdminLayout, getAdminPassword } from './admin/layout.js';
 
 export async function renderBoothSearch(container, options = {}) {
+  const isEmbedInAdmin = Boolean(options && options.adminMode);
+  const adminPwd = getAdminPassword() || localStorage.getItem('adminPwd') || sessionStorage.getItem('adminPassword') || '';
+  const isAdmin = Boolean(adminPwd) || isEmbedInAdmin;
+
+  // If accessed directly from the Admin Sidebar (/admin/voter-lookup)
+  if (isEmbedInAdmin) {
+    if (!adminPwd) return; // getAdminPassword redirects to /admin if unauthenticated
+    renderAdminLayout(container, 'voter-lookup', `
+      <div class="text-center py-16">
+        <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
+        <p class="text-slate-400 mt-4 text-sm font-medium">Loading voter booth lookup tool...</p>
+      </div>
+    `);
+    const mainEl = container.querySelector('#adminMain');
+    await loadAndRenderSearch(mainEl, adminPwd, true, true);
+    return;
+  }
+
+  // Standalone page (/find-booth)
   container.innerHTML = `
     <div class="text-center py-20">
       <span class="spinner" style="width:2.5rem;height:2.5rem;border-width:4px;"></span>
@@ -22,9 +42,10 @@ export async function renderBoothSearch(container, options = {}) {
     </div>
   `;
 
-  const adminPwd = sessionStorage.getItem('adminPassword') || '';
-  const isAdmin = Boolean(adminPwd) || Boolean(options && options.adminMode);
+  await loadAndRenderSearch(container, adminPwd, isAdmin, false);
+}
 
+async function loadAndRenderSearch(targetContainer, adminPwd, isAdmin, isEmbedInAdmin) {
   try {
     const [settings, nominalRoll, boothPayload] = await Promise.all([
       api.getSettings().catch(() => ({})),
@@ -38,15 +59,15 @@ export async function renderBoothSearch(container, options = {}) {
 
     // 1. If not admin and not published, render the exact requested security lock screen
     if (!isAdmin && !isPublished) {
-      renderLockedScreen(container, settings);
+      renderLockedScreen(targetContainer, settings);
       return;
     }
 
     const booths = Array.isArray(boothPayload.booths) ? boothPayload.booths : (Array.isArray(boothPayload) ? boothPayload : []);
-    renderSearchInterface(container, settings, nominalRoll, booths, isAdmin, isPublished, adminPwd);
+    renderSearchInterface(targetContainer, settings, nominalRoll, booths, isAdmin, isPublished, isEmbedInAdmin);
   } catch (err) {
     console.error('Error rendering booth search:', err);
-    container.innerHTML = `
+    targetContainer.innerHTML = `
       <div class="max-w-md mx-auto my-12 p-6 glass rounded-2xl border border-rose-500/20 text-center space-y-4">
         <div class="text-3xl">⚠️</div>
         <h3 class="text-lg font-bold text-white">Unable to Load Booth Search</h3>
@@ -108,9 +129,8 @@ function renderLockedScreen(container, settings) {
 /**
  * Live Search Interface (Used by Public when Live & Admin 24/7)
  */
-function renderSearchInterface(container, settings, nominalRoll, booths, isAdmin, isPublished, adminPwd) {
+function renderSearchInterface(container, settings, nominalRoll, booths, isAdmin, isPublished, isEmbedInAdmin) {
   const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
-  const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
   const year = settings.electionYear || new Date().getFullYear();
 
   const students = Array.isArray(nominalRoll) ? [...nominalRoll] : [];
@@ -122,13 +142,14 @@ function renderSearchInterface(container, settings, nominalRoll, booths, isAdmin
   )).sort((a, b) => a.localeCompare(b));
 
   container.innerHTML = `
-    <div class="page-enter min-h-screen flex flex-col pb-16">
-      <!-- Header -->
+    <div class="page-enter ${isEmbedInAdmin ? 'space-y-6' : 'min-h-screen flex flex-col pb-16'}">
+      ${!isEmbedInAdmin ? `
+      <!-- Standalone Header -->
       <header class="glass sticky top-0 z-40 border-b border-white/10">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
           <div class="flex items-center gap-3">
             <button data-nav="${isAdmin ? '/admin/booths' : '/'}" class="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs">
-              <span>←</span> <span>${isAdmin ? 'Booths Manager' : 'Home'}</span>
+              <span>←</span> <span>${isAdmin ? 'Admin Panel' : 'Home'}</span>
             </button>
             <div class="hidden sm:block h-5 w-px bg-white/10"></div>
             <div>
@@ -142,10 +163,10 @@ function renderSearchInterface(container, settings, nominalRoll, booths, isAdmin
           <div class="flex items-center gap-2">
             ${isAdmin ? `
               <span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs px-2.5 py-1 font-semibold flex items-center gap-1.5">
-                <span>🛡️</span> <span>Official View</span>
+                <span>🛡️</span> <span>Official Master View</span>
                 <span class="text-[10px] text-slate-400 font-mono">(${isPublished ? 'Public: Live' : 'Public: Locked'})</span>
               </span>
-              <a href="#/admin/publish" class="btn btn-secondary btn-xs">Publish Controls</a>
+              <a href="#/admin/publish" class="btn btn-secondary btn-xs">Publish Settings</a>
             ` : `
               <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs px-2.5 py-1 font-medium flex items-center gap-1">
                 <span>🟢</span> <span>Search Active</span>
@@ -154,12 +175,34 @@ function renderSearchInterface(container, settings, nominalRoll, booths, isAdmin
           </div>
         </div>
       </header>
+      ` : `
+      <!-- Embedded Admin Header -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <h3 class="text-xl font-bold text-white">Voter Booth Lookup</h3>
+            <span class="badge ${isPublished ? 'badge-valid' : 'bg-slate-700 text-slate-300'} text-xs">
+              ${isPublished ? '🟢 Public Search: Live' : '🔒 Public Search: Locked'}
+            </span>
+          </div>
+          <p class="text-slate-400 text-sm">Instant always-on lookup to locate any student's allotted polling booth and physical room.</p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <a href="#/admin/publish" class="btn btn-primary btn-sm flex items-center gap-1.5">
+            <span>📢</span> ${isPublished ? 'Manage Visibility' : 'Publish to Students'}
+          </a>
+          <a href="#/admin/booths" class="btn btn-secondary btn-sm flex items-center gap-1.5">
+            <span>⚙️</span> Manage Allotments
+          </a>
+        </div>
+      </div>
+      `}
 
-      <!-- Main Container -->
-      <main class="flex-1 max-w-4xl mx-auto px-4 sm:px-6 pt-8 pb-12 w-full space-y-6">
+      <!-- Main Search Area -->
+      <main class="${isEmbedInAdmin ? 'space-y-6' : 'flex-1 max-w-4xl mx-auto px-4 sm:px-6 pt-8 pb-12 w-full space-y-6'}">
         
         <!-- Admin Notice Banner if public is still locked -->
-        ${(isAdmin && !isPublished) ? `
+        ${(isAdmin && !isPublished && !isEmbedInAdmin) ? `
           <div class="p-3.5 rounded-xl border border-amber-500/30 bg-amber-950/30 text-xs text-amber-200 flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
               <span class="text-base">🔒</span>
@@ -169,7 +212,8 @@ function renderSearchInterface(container, settings, nominalRoll, booths, isAdmin
           </div>
         ` : ''}
 
-        <!-- Page Intro Hero -->
+        <!-- Page Intro Hero (Only on Standalone page) -->
+        ${!isEmbedInAdmin ? `
         <div class="text-center space-y-2">
           <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             Locate Your Polling Room &amp; Booth
@@ -178,6 +222,7 @@ function renderSearchInterface(container, settings, nominalRoll, booths, isAdmin
             Search with your <strong>Name</strong>, <strong>Roll Serial Number</strong> (e.g. 104), <strong>Admission Number</strong>, or filter by your <strong>Class</strong>.
           </p>
         </div>
+        ` : ''}
 
         <!-- Search Controls Box -->
         <div class="glass rounded-2xl p-4 sm:p-6 border border-white/10 shadow-xl space-y-4">
