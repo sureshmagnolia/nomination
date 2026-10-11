@@ -583,8 +583,8 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             </div>
           </div>
 
-          <!-- Row 2: Print Actions Grid (Balanced 5 Columns) -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <!-- Row 2: Print Actions Grid (Balanced 6 Columns) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
             <!-- 1. Counting Forms -->
             <button type="button" id="btnPrintForms" class="btn btn-primary text-xs font-bold py-2.5 px-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]" title="Action: Prints statutory Form 6 Counting Sheets matching current filters (Booth, Round, Post).">
               <span>🖨️</span>
@@ -614,6 +614,12 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
               <span>📌</span>
               <span class="truncate">Table Placards (A4)</span>
             </button>
+
+            <!-- 6. Table × Round Matrix Chart (1-Page A4 Landscape B&W) -->
+            <button type="button" id="btnPrintMatrixLandscapeBar" class="btn btn-secondary text-xs font-bold py-2.5 px-3.5 rounded-xl border-purple-500/40 bg-purple-500/15 hover:bg-purple-500/25 text-purple-200 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98] shadow-md" title="Action: Prints the entire Table × Round Allocation Matrix on 1 Landscape A4 page in pure Black & White.">
+              <span>🖨️</span>
+              <span class="truncate">Matrix (1-Page A4)</span>
+            </button>
           </div>
 
           <!-- Bottom Status & Hints Bar -->
@@ -639,7 +645,13 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
               <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Table × Round Allocation Matrix</h4>
               <p class="text-[11px] text-slate-400 mt-0.5">Click any <strong>🖨️ Form</strong> button for 1-click printing, or click round/table headers to print entire batches.</p>
             </div>
-            <span class="text-[11px] text-slate-500 font-mono">Form Serials: #1 .. #${T * totalRounds}</span>
+            <div class="flex items-center gap-3">
+              <span class="text-[11px] text-slate-500 font-mono hidden sm:inline">Form Serials: #1 .. #${T * totalRounds}</span>
+              <button type="button" id="btnPrintMatrixLandscape" class="btn btn-secondary text-xs font-bold py-1 px-3 rounded-lg border-indigo-400/40 text-indigo-300 hover:bg-indigo-600 hover:text-white flex items-center gap-1.5 shadow-sm transition-all cursor-pointer" title="Print the entire Table × Round Allocation Matrix chart on 1 Landscape A4 page in pure Black & White">
+                <span>🖨️</span>
+                <span>Print Matrix (1-Page A4)</span>
+              </button>
+            </div>
           </div>
           <div class="matrix-container w-full">
             <table class="data-table matrix-table text-xs w-full">
@@ -1348,6 +1360,25 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         tableNumber: bNum && bNum !== 'all' ? bNum : null
       });
     });
+
+    // ── 1-Page Landscape A4 Pure Black & White Matrix Printing ───────────────
+    const handlePrintMatrixChart = () => {
+      printCountingMatrixA4Landscape({
+        matrix: currentSavedMatrix?.matrix,
+        formSerials: currentSavedMatrix?.formSerials,
+        roundLabels: currentSavedMatrix?.roundLabels,
+        totalRounds: currentSavedMatrix?.totalRounds,
+        booths: boothsList,
+        countingTeams,
+        nominalRoll: nominalRollList,
+        settings,
+        tablePolledBallots,
+        allResults,
+        getEffectiveVoterCountForTable
+      });
+    };
+    main.querySelector('#btnPrintMatrixLandscape')?.addEventListener('click', handlePrintMatrixChart);
+    main.querySelector('#btnPrintMatrixLandscapeBar')?.addEventListener('click', handlePrintMatrixChart);
 
     main.querySelectorAll('.btn-print-table-placard').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -2508,5 +2539,607 @@ export function buildUucTallySheetHtml(tableNum, roundNum, serial, candidates, c
       * Working tally sheet for Table Counting Officers. ${isActualBallotsKnown ? `Ballots in box as per Ballot Paper Account: <strong>${numVoters}</strong> (${esc(batchesSummary)}${allottedElectors ? `, Allotted: ${allottedElectors}` : ''}).` : `Allotted: ${numVoters || 'General'} electors (${esc(batchesSummary)}).`} Verify each batch milestone before opening the next. Transfer final verified totals directly onto official Counting Form (Form 6). No signatures required.
     </div>
   </div>`;
+}
+
+/**
+ * Formats and prints the complete Table × Round Allocation Matrix
+ * strictly fit onto 1 Landscape A4 page in pure black and white (monochrome).
+ * Includes statutory header, unique Form 6 serial numbers, supervisor assignments,
+ * ballot counts, and statutory Returning Officer authentication.
+ */
+export function printCountingMatrixA4Landscape(options = {}) {
+  const matrix = Array.isArray(options.matrix) ? options.matrix : [];
+  if (!matrix.length) {
+    alert('No counting matrix available to print. Please generate the counting matrix first.');
+    return;
+  }
+  const formSerials = options.formSerials || {};
+  const totalRounds = Number(options.totalRounds) || (matrix[0] ? matrix[0].length : 0);
+  const roundLabels = Array.isArray(options.roundLabels) && options.roundLabels.length === totalRounds
+    ? options.roundLabels
+    : Array.from({ length: totalRounds }, (_, i) => `Round ${i + 1}`);
+  const booths = Array.isArray(options.booths) ? options.booths : [];
+  const T = booths.length || matrix.length;
+  const countingTeams = Array.isArray(options.countingTeams) ? options.countingTeams : [];
+  const nominalRoll = Array.isArray(options.nominalRoll) ? options.nominalRoll : [];
+  const settings = options.settings || {};
+  const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME || 'GOVERNMENT COLLEGE CHITTUR';
+  const collegePlace = settings.collegePlace || CONFIG.COLLEGE_PLACE || 'Chittur, Palakkad';
+  const electionYear = settings.electionYear || new Date().getFullYear().toString();
+  const collegeLogo = settings.collegeLogo || CONFIG.COLLEGE_LOGO || '';
+  const tablePolledBallots = options.tablePolledBallots || {};
+  const allResults = Array.isArray(options.allResults) ? options.allResults : [];
+
+  const getEffectiveVoterCount = (tableNum) => {
+    if (typeof options.getEffectiveVoterCountForTable === 'function') {
+      return options.getEffectiveVoterCountForTable(tableNum);
+    }
+    const b = booths.find(booth => Number(booth?.boothNumber) === Number(tableNum)) || booths[Number(tableNum) - 1];
+    const allotted = getBoothVoterCount(b, nominalRoll);
+    const sTable = String(tableNum);
+    const manual = parseInt(tablePolledBallots[sTable], 10);
+    if (!isNaN(manual) && manual > 0) {
+      return { count: manual, isActual: true, source: 'manual', allotted };
+    }
+    const deduced = deduceBallotsFromResults(allResults, tableNum);
+    if (deduced && deduced.ballots > 0) {
+      return { count: deduced.ballots, isActual: true, source: 'deduced', allotted };
+    }
+    return { count: allotted, isActual: false, source: 'allotted', allotted };
+  };
+
+  const pName = p => String(p?.post || p?.name || '');
+  const now = new Date();
+  const genDate = `${now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
+  const roundColWidthPercent = ((100 - 8.8) / Math.max(totalRounds, 1)).toFixed(3);
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Counting Allocation Matrix — ${esc(collegeName)} (${esc(electionYear)})</title>
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 4mm 5mm;
+    }
+    @media print {
+      html, body {
+        width: 297mm !important;
+        height: 210mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        overflow: hidden !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .screen-topbar {
+        display: none !important;
+      }
+      .matrix-print-page {
+        width: 287mm !important;
+        height: 202mm !important;
+        max-height: 202mm !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        page-break-after: avoid !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        overflow: hidden !important;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background: #334155;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #000000;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Screen Preview Navigation Bar (Hidden in Print) */
+    .screen-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 9999;
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1.5px solid #334155;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .topbar-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .topbar-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .topbar-badge {
+      font-size: 10px;
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1px solid #475569;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .topbar-btn {
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 5px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+    .btn-print {
+      background: #ffffff;
+      color: #000000;
+      border: 1.5px solid #ffffff;
+    }
+    .btn-print:hover {
+      background: #e2e8f0;
+    }
+    .btn-close {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #475569;
+    }
+    .btn-close:hover {
+      background: #334155;
+      color: #ffffff;
+    }
+
+    /* Print Page Container (Strict 1-Page Landscape Fit) */
+    .matrix-print-page {
+      width: 287mm;
+      height: 202mm;
+      max-height: 202mm;
+      margin: 6mm auto;
+      background: #ffffff;
+      padding: 2.2mm 3.2mm;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+      border: 1px solid #cbd5e1;
+    }
+
+    /* Header */
+    .matrix-header {
+      flex-shrink: 0;
+      border-bottom: 1.5px solid #000000;
+      padding-bottom: 1.2mm;
+      margin-bottom: 0.8mm;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .header-logo-box {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .college-logo-img {
+      max-width: 36px;
+      max-height: 36px;
+      object-fit: contain;
+      filter: grayscale(100%) contrast(150%);
+    }
+    .header-titles {
+      flex: 1;
+      text-align: center;
+      line-height: 1.15;
+    }
+    .inst-name {
+      font-size: 11pt;
+      font-weight: 900;
+      letter-spacing: 0.4px;
+      color: #000000;
+      text-transform: uppercase;
+    }
+    .inst-place {
+      font-size: 7.2pt;
+      font-weight: 600;
+      color: #000000;
+      margin-top: 0.5px;
+    }
+    .sched-title {
+      font-size: 8.2pt;
+      font-weight: 900;
+      letter-spacing: 0.3px;
+      color: #000000;
+      margin-top: 1px;
+    }
+    .sched-sub {
+      font-size: 6.5pt;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      color: #000000;
+      text-transform: uppercase;
+      margin-top: 0.5px;
+    }
+    .header-meta {
+      flex-shrink: 0;
+      text-align: right;
+    }
+    .meta-box {
+      border: 1px solid #000000;
+      padding: 1.5px 5px;
+      font-size: 6pt;
+      line-height: 1.25;
+      background: #ffffff;
+      color: #000000;
+      text-align: right;
+    }
+
+    /* Statutory Order Summary Strip */
+    .statutory-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid #000000;
+      padding: 1px 4px;
+      margin-top: 1mm;
+      font-size: 5.8pt;
+      line-height: 1.15;
+      background: #ffffff;
+      color: #000000;
+      font-weight: 600;
+    }
+
+    /* Matrix Table */
+    .matrix-tbl {
+      width: 100%;
+      flex: 1;
+      table-layout: fixed;
+      border-collapse: collapse;
+      border: 1.5px solid #000000;
+      margin: 0.8mm 0;
+      background: #ffffff;
+    }
+    .matrix-tbl th,
+    .matrix-tbl td {
+      border: 1px solid #000000;
+      padding: 1px 1px;
+      vertical-align: middle;
+      text-align: center;
+      box-sizing: border-box;
+      background: #ffffff !important;
+      color: #000000 !important;
+      overflow: hidden;
+    }
+    .matrix-tbl thead th {
+      border-bottom: 1.5px solid #000000;
+      font-size: 6.5pt;
+      font-weight: 800;
+      line-height: 1.15;
+      padding: 1.2px 1px;
+    }
+    .th-table {
+      width: 24mm !important;
+      max-width: 24mm !important;
+      min-width: 24mm !important;
+      text-align: left !important;
+      padding-left: 2px !important;
+    }
+    .th-round {
+      width: ${roundColWidthPercent}%;
+    }
+    .rh-num {
+      font-size: 6.8pt;
+      font-weight: 900;
+      display: block;
+      line-height: 1;
+    }
+    .rh-lbl {
+      font-size: 5.5pt;
+      font-weight: 700;
+      display: block;
+      margin-top: 0.5px;
+      line-height: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Table Rows */
+    .td-table-info {
+      width: 24mm !important;
+      max-width: 24mm !important;
+      min-width: 24mm !important;
+      text-align: left !important;
+      padding: 1px 2px !important;
+      line-height: 1.1;
+    }
+    .tbl-top-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2px;
+    }
+    .tbl-title {
+      font-size: 7.2pt;
+      font-weight: 900;
+      color: #000000;
+    }
+    .tbl-ballot-badge {
+      font-size: 5.5pt;
+      font-weight: 800;
+      font-family: monospace;
+      border: 0.8px solid #000000;
+      padding: 0 1.5px;
+      border-radius: 1px;
+      line-height: 1.1;
+    }
+    .tbl-sup-name {
+      font-size: 5.3pt;
+      font-style: italic;
+      color: #000000;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 0.5px;
+      display: block;
+      max-width: 22mm;
+    }
+
+    /* Cell Content */
+    .cell-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.05;
+      padding: 0.5px;
+    }
+    .cell-serial {
+      font-family: monospace;
+      font-size: 6.8pt;
+      font-weight: 900;
+      display: block;
+      line-height: 1;
+      margin-bottom: 0.5px;
+    }
+    .cell-post-name {
+      font-size: 6.1pt;
+      font-weight: 700;
+      line-height: 1.05;
+      display: block;
+      word-break: break-word;
+      hyphens: auto;
+      text-align: center;
+    }
+    .cell-uuc .cell-post-name {
+      font-weight: 900;
+      text-decoration: underline;
+    }
+    .cell-empty {
+      color: #666666;
+      font-size: 6.5pt;
+    }
+
+    /* Footer & Statutory Authentication */
+    .matrix-footer {
+      flex-shrink: 0;
+      border-top: 1.5px solid #000000;
+      padding-top: 1.2mm;
+      margin-top: 0.8mm;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .sig-block {
+      flex-shrink: 0;
+      width: 56mm;
+      text-align: center;
+      font-size: 6.5pt;
+      line-height: 1.2;
+    }
+    .sig-rule {
+      border-bottom: 1px solid #000000;
+      margin-bottom: 1.2mm;
+      height: 5mm;
+    }
+    .sig-title {
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 6.6pt;
+    }
+    .sig-desc {
+      font-size: 5.5pt;
+      color: #000000;
+    }
+    .cert-block {
+      flex: 1;
+      text-align: center;
+      padding: 0 3mm;
+      font-size: 5.5pt;
+      line-height: 1.2;
+    }
+    .cert-heading {
+      font-weight: 900;
+      font-size: 6pt;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 0.5px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Screen Preview Header (Hidden in Print) -->
+  <div class="screen-topbar no-print">
+    <div class="topbar-info">
+      <span class="topbar-title">🖨️ Table × Round Allocation Matrix</span>
+      <span class="topbar-badge">1 Landscape A4 Page • Pure B&amp;W Monochrome</span>
+    </div>
+    <div class="topbar-actions">
+      <button type="button" class="topbar-btn btn-print" onclick="window.print()">🖨️ Print (A4 Landscape)</button>
+      <button type="button" class="topbar-btn btn-close" onclick="window.close()">✖ Close Preview</button>
+    </div>
+  </div>
+
+  <!-- A4 Landscape Single Sheet -->
+  <div class="matrix-print-page">
+    <header class="matrix-header">
+      <div class="header-top">
+        <div class="header-logo-box">
+          ${collegeLogo ? `<img src="${esc(collegeLogo)}" class="college-logo-img" alt="Emblem" />` : '<div style="font-size:16pt;">🏛️</div>'}
+        </div>
+        <div class="header-titles">
+          <h1 class="inst-name">${esc(collegeName.toUpperCase())}</h1>
+          <div class="inst-place">${esc(collegePlace)}</div>
+          <h2 class="sched-title">COLLEGE UNION ELECTIONS ${esc(electionYear)} — COUNTING ALLOCATION MATRIX</h2>
+          <div class="sched-sub">SCHEDULE OF COUNTING TABLES, ROUNDS &amp; FORM 6 SERIAL NUMBERS (STATUTORY ALLOCATION)</div>
+        </div>
+        <div class="header-meta">
+          <div class="meta-box">
+            <div><strong>Tables:</strong> ${T} | <strong>Rounds:</strong> ${totalRounds}</div>
+            <div><strong>Serials:</strong> #1 .. #${T * totalRounds}</div>
+            <div><strong>Generated:</strong> ${genDate}</div>
+          </div>
+        </div>
+      </div>
+      <div class="statutory-strip">
+        <span>★ <strong>STATUTORY ORDER:</strong> Round 1: Department Associations ➔ Rotated General Union Posts ➔ Final Round: University Union Councillor (UUC Dual-Vote)</span>
+        <span><strong>NOTATION:</strong> <strong>#Num</strong> = Form 6 Serial No. • Counting table supervisors must complete rounds strictly in order</span>
+      </div>
+    </header>
+
+    <table class="matrix-tbl">
+      <thead>
+        <tr>
+          <th class="th-table">Table &amp; Officer</th>
+          ${roundLabels.map((lbl, r) => {
+            const isUucRound = isUuc(lbl);
+            const isAssocRound = r === 0;
+            const subLabel = isUucRound ? '★ UUC' : (isAssocRound ? 'Assoc' : `Round ${r + 1}`);
+            return `
+              <th class="th-round">
+                <span class="rh-num">R${r + 1}</span>
+                <span class="rh-lbl" title="${esc(lbl)}">${esc(subLabel)}</span>
+              </th>
+            `;
+          }).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${booths.map((b, t) => {
+          const bNum = b?.boothNumber || (t + 1);
+          const supInfo = getSupervisorInfoForTable(bNum, countingTeams);
+          const supName = supInfo?.name || '';
+          const eff = getEffectiveVoterCount(bNum);
+          const tableRow = Array.isArray(matrix[t]) 
+            ? matrix[t] 
+            : Array.from({ length: totalRounds }, () => null);
+
+          return `
+            <tr>
+              <td class="td-table-info">
+                <div class="tbl-top-line">
+                  <span class="tbl-title">T${bNum}</span>
+                  ${eff.isActual 
+                    ? `<span class="tbl-ballot-badge" title="Ballot Paper Account: ${eff.count} ballots in box">${eff.count}b</span>` 
+                    : (eff.allotted ? `<span class="tbl-ballot-badge" title="${eff.allotted} registered electors">${eff.allotted}v</span>` : '')
+                  }
+                </div>
+                <div class="tbl-sup-name" title="${esc(supName || 'Unassigned')}">
+                  ${supName ? esc(supName) : 'Supervisor'}
+                </div>
+              </td>
+              ${tableRow.map((post, r) => {
+                if (!post) {
+                  return '<td class="cell-empty">–</td>';
+                }
+                const rawPn = pName(post);
+                const displayPn = formatMatrixPostName(rawPn);
+                const postIsUuc = isUuc(rawPn);
+                const serial = formSerials[`${t}-${r}`] || `${bNum}-${r + 1}`;
+                return `
+                  <td class="${postIsUuc ? 'cell-uuc' : ''}">
+                    <div class="cell-content">
+                      <span class="cell-serial">#${esc(serial)}</span>
+                      <span class="cell-post-name" title="${esc(rawPn)}">${esc(displayPn)}</span>
+                    </div>
+                  </td>
+                `;
+              }).join('')}
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+
+    <footer class="matrix-footer">
+      <div class="sig-block">
+        <div class="sig-rule"></div>
+        <div class="sig-title">Assistant Returning Officer (ARO)</div>
+        <div class="sig-desc">Counting Hall Verification • Signature &amp; Date</div>
+      </div>
+      <div class="cert-block">
+        <div class="cert-heading">Statutory Verification Certificate</div>
+        <div class="cert-text">
+          Certified that this Table × Round Counting Allocation Matrix has been statutorily finalized under the College Union Election Bye-Laws. Form 6 serial numbers are uniquely assigned to prevent duplicate ballot issuance. Strict sequential round counting without skipping is legally mandated.
+        </div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-rule"></div>
+        <div class="sig-title">Returning Officer (RO)</div>
+        <div class="sig-desc">College Union Elections • Official Seal</div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 400);
+    };
+  <\/script>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) {
+    alert('Pop-up was blocked. Please allow pop-ups for this site to print the counting matrix.');
+    return;
+  }
+  w.document.write(html);
+  w.document.close();
 }
 
