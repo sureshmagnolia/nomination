@@ -135,15 +135,31 @@ export async function renderAdminCounting(container) {
   }
 }
 
-function getSupervisorNameForTable(tableNum, countingTeams) {
-  if (!Array.isArray(countingTeams)) return '';
+function getSupervisorInfoForTable(tableNum, countingTeams) {
+  if (!Array.isArray(countingTeams)) return { name: '', phone: '' };
   const team = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(tableNum));
-  if (!team) return '';
-  if (team.supervisorName) return team.supervisorName;
-  if (typeof team.supervisor === 'string') return team.supervisor;
-  if (team.supervisor && (team.supervisor.name || team.supervisor.fullName)) return team.supervisor.name || team.supervisor.fullName;
-  if (team.coreInCharge && team.coreInCharge.name) return team.coreInCharge.name;
-  return '';
+  if (!team) return { name: '', phone: '' };
+
+  let name = '';
+  let phone = team.supervisor?.phone || team.supervisor?.mobile || '';
+
+  if (team.supervisorName) name = team.supervisorName;
+  else if (typeof team.supervisor === 'string') name = team.supervisor;
+  else if (team.supervisor && (team.supervisor.name || team.supervisor.fullName)) name = team.supervisor.name || team.supervisor.fullName;
+  else if (team.coreInCharge && team.coreInCharge.name) {
+    name = team.coreInCharge.name;
+    phone = team.coreInCharge.phone || team.coreInCharge.mobile || phone;
+  }
+
+  if (phone) {
+    phone = String(phone).replace(/\.0$/, '').trim();
+  }
+
+  return { name, phone };
+}
+
+function getSupervisorNameForTable(tableNum, countingTeams) {
+  return getSupervisorInfoForTable(tableNum, countingTeams).name;
 }
 
 function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nominalRoll, settings = {}, isOffline = false, countingTeams = [], allResults = []) {
@@ -606,7 +622,8 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
               <tbody>
                 ${boothsList.map((b, t) => {
                   const bNum = b.boothNumber || (t + 1);
-                  const supName = getSupervisorNameForTable(bNum, countingTeams);
+                  const supInfo = getSupervisorInfoForTable(bNum, countingTeams);
+                  const supName = supInfo.name;
                   const eff = getEffectiveVoterCountForTable(bNum);
                   const tableRow = Array.isArray(matrix[t]) 
                     ? matrix[t] 
@@ -623,9 +640,15 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                           ? `<span class="badge bg-emerald-500/20 text-emerald-300 font-mono text-[9px] px-1.5 py-0.5 border border-emerald-500/40" title="Ballot Paper Account: ${eff.count} ballots in box (${eff.source === 'deduced' ? 'Auto-deduced from ' + eff.deducedPost : 'Manual Entry'}). Allotted: ${eff.allotted}">🗳️ ${eff.count} Polled</span>` 
                           : (eff.allotted > 0 ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[9px] px-1.5 py-0.5 border border-indigo-500/30" title="${eff.allotted} registered electors allotted (Turnout unknown)">${eff.allotted} Allotted</span>` : '')
                         }
+                      </div>
                       <div class="text-[10px] text-slate-500 font-normal italic mt-0.5 truncate max-w-[140px]" title="Supervisor: ${esc(supName || 'Unassigned')}">
                         ${supName ? `👤 ${esc(supName)}` : '<span class="text-amber-400/80">⚠️ No supervisor</span>'}
                       </div>
+                      ${supInfo.phone ? `
+                        <div class="text-[11px] text-slate-400 font-mono font-normal flex items-center gap-1 mt-0.5 tracking-tight opacity-90 select-all" title="Supervisor Phone: ${esc(supInfo.phone)}">
+                          <span>📱</span><span>${esc(supInfo.phone)}</span>
+                        </div>
+                      ` : ''}
                       <button type="button" class="btn-print-table-row w-full mt-2 py-1 px-1.5 rounded text-[9.5px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 hover:bg-sky-500 hover:text-white transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm" data-table="${bNum}" title="Print all counting forms for Table ${bNum} across all rounds">
                         <span>🖨️</span> Table ${bNum} Packet
                       </button>

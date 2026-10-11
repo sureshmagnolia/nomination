@@ -110,6 +110,36 @@ export function cleanFacultyName(raw) {
   return s.toUpperCase();
 }
 
+/**
+ * Normalizes and cleans phone/mobile numbers from form inputs or spreadsheet imports.
+ * Strips trailing decimal points from Excel numeric imports (e.g., "9876543210.0" -> "9876543210").
+ */
+export function cleanPhoneNumber(raw) {
+  if (raw === null || raw === undefined) return '';
+  let str = String(raw).trim();
+  if (!str) return '';
+  // Discard placeholder values
+  const lower = str.toLowerCase();
+  if (['na', 'n/a', 'nil', 'none', '-', '--', 'null', 'undefined'].includes(lower)) return '';
+  // Strip .0 from Excel numbers
+  str = str.replace(/\.0+$/, '');
+  // Clean whitespace inside multiple spaces
+  str = str.replace(/\s+/g, ' ').trim();
+  return str;
+}
+
+/**
+ * Renders a subtle, non-intrusive yet readable mobile number badge beneath an official's name.
+ */
+export function renderSubtlePhone(phone, isPrint = false) {
+  const p = cleanPhoneNumber(phone);
+  if (!p) return '';
+  if (isPrint) {
+    return `<span class="staff-phone" style="font-size: 8.5px; font-family: monospace; color: #475569; display: block; margin-top: 1px; font-weight: normal;">📞 ${esc(p)}</span>`;
+  }
+  return `<div class="text-[11px] text-slate-400 font-mono font-normal flex items-center gap-1 mt-0.5 tracking-tight opacity-90 select-all" title="Contact: ${esc(p)}"><span class="text-[10px] opacity-70">📱</span><span>${esc(p)}</span></div>`;
+}
+
 export async function renderAdminOfficials(container) {
   const pwd = getAdminPassword();
   if (!pwd) return;
@@ -736,14 +766,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const combo = `${name} (${pen})`;
       return (pen && pen === clean) || name === clean || combo === clean;
     });
-    if (fac) return { ...fac, type: 'Teaching Faculty', isExcluded: isPersonExcluded(fac) };
+    if (fac) return { ...fac, phone: fac.phone || fac.mobile || '', type: 'Teaching Faculty', isExcluded: isPersonExcluded(fac) };
     const nt = nonTeaching.find(n => {
       const pen = String(n.pen || '').trim().toLowerCase();
       const name = String(n.name || '').trim().toLowerCase();
       const combo = `${name} (${pen})`;
       return (pen && pen === clean) || name === clean || combo === clean;
     });
-    if (nt) return { ...nt, type: 'Non-Teaching Staff', isExcluded: isPersonExcluded(nt) };
+    if (nt) return { ...nt, phone: nt.phone || nt.mobile || '', type: 'Non-Teaching Staff', isExcluded: isPersonExcluded(nt) };
     return null;
   }
 
@@ -756,6 +786,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         coreCommittee.push({
           name: t.coreInCharge.name,
           pen: t.coreInCharge.pen || p?.pen || '',
+          phone: t.coreInCharge.phone || p?.phone || '',
           designation: t.coreInCharge.designation || p?.designation || 'Faculty',
           department: t.coreInCharge.department || p?.department || '',
           seniority: t.coreInCharge.seniority || p?.seniority || 999
@@ -914,7 +945,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           #${f.seniority}
         </td>
         <td class="font-bold text-white whitespace-nowrap">
-          ${esc(f.name)}
+          <div>${esc(f.name)}</div>
+          ${renderSubtlePhone(f.phone || f.mobile)}
         </td>
         <td class="font-mono text-slate-300">
           ${f.pen || '–'}
@@ -986,7 +1018,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           ${idx + 1}
         </td>
         <td class="font-bold text-white whitespace-nowrap">
-          ${esc(nt.name)}
+          <div>${esc(nt.name)}</div>
+          ${renderSubtlePhone(nt.phone || nt.mobile)}
         </td>
         <td class="text-slate-300">
           ${esc(nt.designation || 'Staff')}${nt.department ? `<span class="text-[10px] text-emerald-300/80 block font-normal">${esc(nt.department)}</span>` : ''}
@@ -1038,12 +1071,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
   // Downloadable CSV Templates
   const downloadFacultyTemplate = () => {
-    const csvContent = `Seniority,Name,PEN,Designation,Joining Date,Department\r\n` +
-      `1,Dr. Example Professor,100001,Professor,2005-06-01,Physics\r\n` +
-      `2,Dr. Example Associate Professor,100002,Associate Professor,2008-09-15,Chemistry\r\n` +
-      `3,Sri. Example Assistant Professor,100003,Assistant Professor,2014-02-10,Mathematics\r\n` +
-      `4,Smt. Example UGC Librarian,100004,UGC Librarian,2016-08-01,Library\r\n` +
-      `5,Example Guest Lecturer,100005,Guest Lecturer,2022-09-01,Commerce\r\n`;
+    const csvContent = `Seniority,Name,PEN,Designation,Joining Date,Department,Mobile Number\r\n` +
+      `1,Dr. Example Professor,100001,Professor,2005-06-01,Physics,9847012345\r\n` +
+      `2,Dr. Example Associate Professor,100002,Associate Professor,2008-09-15,Chemistry,9847012346\r\n` +
+      `3,Sri. Example Assistant Professor,100003,Assistant Professor,2014-02-10,Mathematics,9847012347\r\n` +
+      `4,Smt. Example UGC Librarian,100004,UGC Librarian,2016-08-01,Library,9847012348\r\n` +
+      `5,Example Guest Lecturer,100005,Guest Lecturer,2022-09-01,Commerce,9847012349\r\n`;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -1053,14 +1086,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    showToast('Downloaded Faculty Seniority CSV Template!', 'success');
+    showToast('Downloaded Faculty Seniority CSV Template (with Mobile Number)!', 'success');
   };
 
   const downloadNonTeachingTemplate = () => {
-    const csvContent = `Sl No,Staff Name,Designation,PEN,Department\r\n` +
-      `1,Sri. Example Staff One,Senior Clerk,200001,Office\r\n` +
-      `2,Smt. Example Staff Two,Office Attendant,200002,Administration\r\n` +
-      `3,Sri. Example Staff Three,Lab Assistant,200003,Physics\r\n`;
+    const csvContent = `Sl No,Staff Name,Designation,PEN,Department,Mobile Number\r\n` +
+      `1,Sri. Example Staff One,Senior Clerk,200001,Office,9447012345\r\n` +
+      `2,Smt. Example Staff Two,Office Attendant,200002,Administration,9447012346\r\n` +
+      `3,Sri. Example Staff Three,Lab Assistant,200003,Physics,9447012347\r\n`;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -1070,7 +1103,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    showToast('Downloaded Non-Teaching Staff CSV Template!', 'success');
+    showToast('Downloaded Non-Teaching Staff CSV Template (with Mobile Number)!', 'success');
   };
 
   // Reusable file import handler for Faculty (Regular Excel, CSV, or Guest Faculty)
@@ -1092,7 +1125,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         const isGuestFile = file.name.toLowerCase().includes('guest') || jsonRows.some(row => (row || []).some(cell => String(cell).toLowerCase().includes('guest')));
 
         if (isGuestFile) {
-          let nameCol = 1, deptCol = 2;
+          let nameCol = 1, deptCol = 2, phoneCol = -1;
           let startR = 1;
           for (let r = 0; r < Math.min(6, jsonRows.length); r++) {
             const rawRow = jsonRows[r] || [];
@@ -1101,6 +1134,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             row.forEach((c, i) => {
               if (c.includes('name') || c.includes('lecturer')) { nameCol = i; startR = r + 1; }
               if (c.includes('dept') || c.includes('department') || c.includes('subject') || c.includes('branch') || c.includes('discipline')) deptCol = i;
+              if (c.includes('phone') || c.includes('mobile') || c.includes('contact') || c.includes('cell')) phoneCol = i;
             });
           }
 
@@ -1111,10 +1145,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             const name = row[nameCol] !== undefined ? String(row[nameCol]).trim() : '';
             if (!name || name.toLowerCase().includes('guest') || name.toLowerCase().includes('name') || name.toLowerCase().includes('lecturer')) continue;
             const dept = row[deptCol] !== undefined ? normalizeDepartment(row[deptCol]) : '';
+            const phone = phoneCol >= 0 && row[phoneCol] !== undefined ? cleanPhoneNumber(row[phoneCol]) : '';
 
             parsedGuests.push({
               name: name,
               pen: '',
+              phone: phone,
               designation: 'Guest Lecturer',
               department: dept,
               joiningDate: '',
@@ -1148,7 +1184,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
         // Regular Faculty List Parsing (Generic for any college)
         let headerIdx = -1;
-        let seniorityCol = 0, nameCol = 1, penCol = 2, desigCol = 3, dateCol = 4, deptCol = -1;
+        let seniorityCol = 0, nameCol = 1, penCol = 2, desigCol = 3, dateCol = 4, deptCol = -1, phoneCol = -1;
         let statusCol = -1, excludeCol = -1, reasonCol = -1;
 
         for (let r = 0; r < Math.min(10, jsonRows.length); r++) {
@@ -1173,6 +1209,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               if (c.includes('desig') || c.includes('post') || c.includes('rank') || c.includes('role')) desigCol = i;
               if (c.includes('date') || c.includes('joining') || c.includes('doj')) dateCol = i;
               if (c.includes('dept') || c.includes('department') || c.includes('subject') || c.includes('branch') || c.includes('discipline')) deptCol = i;
+              if (c.includes('phone') || c.includes('mobile') || c.includes('contact') || c.includes('cell')) phoneCol = i;
               if (c.includes('status') || c.includes('avail')) statusCol = i;
               if (c.includes('exclude') || c.includes('exempt')) excludeCol = i;
               if (c.includes('reason') || c.includes('remark')) reasonCol = i;
@@ -1196,6 +1233,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           const desig = desigCol >= 0 && row[desigCol] !== undefined ? String(row[desigCol]).trim() : 'Assistant Professor';
           let dt = dateCol >= 0 && row[dateCol] !== undefined ? formatExcelDate(row[dateCol]) : '';
           let dept = deptCol >= 0 && row[deptCol] !== undefined ? normalizeDepartment(row[deptCol]) : '';
+          const phone = phoneCol >= 0 && row[phoneCol] !== undefined ? cleanPhoneNumber(row[phoneCol]) : '';
 
           const rawStatus = statusCol >= 0 && row[statusCol] !== undefined ? String(row[statusCol]).trim() : '';
           const rawExclude = excludeCol >= 0 && row[excludeCol] !== undefined ? String(row[excludeCol]).trim() : '';
@@ -1212,6 +1250,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             seniority: isNaN(rawSl) ? parsedFaculty.length + 1 : rawSl,
             name: cleanFacultyName(name),
             pen: pen,
+            phone: phone,
             designation: desig,
             department: dept,
             joiningDate: dt,
@@ -1234,8 +1273,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             const existing = faculty.find(f => (pf.pen && f.pen && String(pf.pen) === String(f.pen)) || (pf.name && f.name && pf.name.toLowerCase() === f.name.toLowerCase()));
             const isEx = pf.isExcluded || existing?.isExcluded || existing?.excluded || false;
             const exReason = pf.exclusionReason || existing?.exclusionReason || '';
+            const phone = pf.phone || existing?.phone || existing?.mobile || '';
             return {
               ...pf,
+              phone: phone,
               isExcluded: isEx,
               excluded: isEx,
               is_excluded: isEx,
@@ -1272,7 +1313,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
         // Scan for header row
         let headerIdx = -1;
-        let nameCol = 2, desigCol = 3, penCol = 1, deptCol = 4;
+        let nameCol = 2, desigCol = 3, penCol = 1, deptCol = 4, phoneCol = -1;
         let statusCol = -1, excludeCol = -1, reasonCol = -1;
 
         for (let r = 0; r < Math.min(10, jsonRows.length); r++) {
@@ -1294,6 +1335,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               if (c.includes('desig') || c.includes('post') || c.includes('cadre') || c.includes('role')) desigCol = i;
               if (c.includes('pen') || c.includes('id') || c.includes('code')) penCol = i;
               if (c.includes('dept') || c.includes('department') || c.includes('subject') || c.includes('branch') || c.includes('discipline') || c.includes('section')) deptCol = i;
+              if (c.includes('phone') || c.includes('mobile') || c.includes('contact') || c.includes('cell')) phoneCol = i;
               if (c.includes('status') || c.includes('avail')) statusCol = i;
               if (c.includes('exclude') || c.includes('exempt')) excludeCol = i;
               if (c.includes('reason') || c.includes('remark')) reasonCol = i;
@@ -1316,6 +1358,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           const desig = row[desigCol] !== undefined ? String(row[desigCol]).trim() : 'Staff';
           const pen = row[penCol] !== undefined ? String(row[penCol]).trim() : '';
           const dept = row[deptCol] !== undefined ? normalizeDepartment(row[deptCol]) : '';
+          const phone = phoneCol >= 0 && row[phoneCol] !== undefined ? cleanPhoneNumber(row[phoneCol]) : '';
 
           const rawStatus = statusCol >= 0 && row[statusCol] !== undefined ? String(row[statusCol]).trim() : '';
           const rawExclude = excludeCol >= 0 && row[excludeCol] !== undefined ? String(row[excludeCol]).trim() : '';
@@ -1334,6 +1377,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               name: name,
               designation: desig,
               pen: pen,
+              phone: phone,
               department: normalizeDepartment(dept || 'Library'),
               isExcluded: isEx,
               exclusionReason: isEx ? (rawReason || 'Excluded from Duty') : ''
@@ -1344,6 +1388,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               name: name,
               designation: desig,
               pen: pen,
+              phone: phone,
               department: dept,
               isExcluded: isEx,
               excluded: isEx,
@@ -1371,8 +1416,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             const existing = nonTeaching.find(nt => (pnt.pen && nt.pen && String(pnt.pen) === String(nt.pen)) || (pnt.name && nt.name && pnt.name.toLowerCase() === nt.name.toLowerCase()));
             const isEx = pnt.isExcluded || existing?.isExcluded || existing?.excluded || false;
             const exReason = pnt.exclusionReason || existing?.exclusionReason || '';
+            const phone = pnt.phone || existing?.phone || existing?.mobile || '';
             return {
               ...pnt,
+              phone: phone,
               isExcluded: isEx,
               excluded: isEx,
               is_excluded: isEx,
@@ -1389,6 +1436,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 seniority: faculty.length + 1,
                 name: lib.name,
                 pen: lib.pen,
+                phone: lib.phone || '',
                 designation: lib.designation,
                 department: lib.department,
                 joiningDate: '',
@@ -2016,12 +2064,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const tag = isGuestFaculty(f) ? '[Guest]' : isLibrarian(f) ? '[Librarian]' : '';
       const doubleTag = cDuty ? `[⚠️ Double Duty: Table ${cDuty.tableNumber}]` : '';
       const deptStr = (f.department || '').trim();
+      const phoneStr = (f.phone || f.mobile) ? ` · 📱 ${esc(f.phone || f.mobile)}` : '';
 
       const isDisabled = (isRoOfficial || isAroOfficial || isAllottedInPolling || isObs || isDisc || isGriev) && !isSelected;
 
       return `
         <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}>
-          ${prefix}#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${f.pen || '–'}) ${tag} ${doubleTag}
+          ${prefix}#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${f.pen || '–'}${phoneStr}) ${tag} ${doubleTag}
         </option>
       `;
     }).join('');
@@ -2065,12 +2114,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const tag = isGuestFaculty(f) ? '[Guest]' : isLibrarian(f) ? '[Librarian]' : '';
       const doubleTag = pDuty ? `[⚠️ Double Duty: Booth ${pDuty.boothNumber}]` : '';
       const deptStr = (f.department || '').trim();
+      const phoneStr = (f.phone || f.mobile) ? ` · 📱 ${esc(f.phone || f.mobile)}` : '';
 
       const isDisabled = (isRoOfficial || isAroOfficial || isAllottedInCounting || isObs || isDisc || isGriev) && !isSelected;
 
       return `
         <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}>
-          ${prefix}#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${f.pen || '–'}) ${tag} ${doubleTag}
+          ${prefix}#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${f.pen || '–'}${phoneStr}) ${tag} ${doubleTag}
         </option>
       `;
     }).join('');
@@ -2108,12 +2158,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       const doubleTag = ntAssigned.counting ? `[⚠️ Double Duty: Table ${ntAssigned.counting.tableNumber}]` : '';
       const deptStr = (nt.department || nt.section || 'Office').trim();
+      const phoneStr = (nt.phone || nt.mobile) ? ` · 📱 ${esc(nt.phone || nt.mobile)}` : '';
 
       const isDisabled = (isRoOfficial || isAroOfficial || isAllottedInPolling || isObs || isDisc || isGriev) && !isSelected;
 
       return `
         <option value="${esc(nt.name)}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}>
-          ${prefix}${esc(nt.name)} (${esc(nt.designation || 'Staff')}${deptStr ? ` · ${esc(deptStr)}` : ''}${nt.pen ? ` · PEN:${nt.pen}` : ''}) ${doubleTag}
+          ${prefix}${esc(nt.name)} (${esc(nt.designation || 'Staff')}${deptStr ? ` · ${esc(deptStr)}` : ''}${nt.pen ? ` · PEN:${nt.pen}` : ''}${phoneStr}) ${doubleTag}
         </option>
       `;
     }).join('');
@@ -2153,13 +2204,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const doubleTag = ntAssigned.polling ? `[⚠️ Double Duty: Booth ${ntAssigned.polling.boothNumber}]` : '';
       const multiTag = ntAssigned.countingTables && ntAssigned.countingTables.length > 1 ? `[${ntAssigned.countingTables.length} Tables]` : '';
       const deptStr = (nt.department || nt.section || 'Office').trim();
+      const phoneStr = (nt.phone || nt.mobile) ? ` · 📱 ${esc(nt.phone || nt.mobile)}` : '';
 
       // Note: Do NOT disable for counting table overlap - staff shortage allows same assistant on multiple tables!
       const isDisabled = (isRoOfficial || isAroOfficial || isObs || isDisc || isGriev) && !isSelected;
 
       return `
         <option value="${esc(nt.name)}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}>
-          ${prefix}${esc(nt.name)} (${esc(nt.designation || 'Staff')}${deptStr ? ` · ${esc(deptStr)}` : ''}${nt.pen ? ` · PEN:${nt.pen}` : ''}) ${multiTag} ${doubleTag}
+          ${prefix}${esc(nt.name)} (${esc(nt.designation || 'Staff')}${deptStr ? ` · ${esc(deptStr)}` : ''}${nt.pen ? ` · PEN:${nt.pen}` : ''}${phoneStr}) ${multiTag} ${doubleTag}
         </option>
       `;
     }).join('');
@@ -2597,7 +2649,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       const matches = optionsList.filter(item => {
         if (words.length === 0) return true;
-        const text = `${item.seniority || ''} ${item.name || ''} ${item.department || ''} ${item.designation || ''} ${item.pen || ''} ${item.type || ''}`.toLowerCase();
+        const text = `${item.seniority || ''} ${item.name || ''} ${item.department || ''} ${item.designation || ''} ${item.pen || ''} ${item.phone || item.mobile || ''} ${item.type || ''}`.toLowerCase();
         return words.every(w => text.includes(w));
       });
 
@@ -2618,6 +2670,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         const exclTag = item.isExcluded ? ' ⛔ [Excluded]' : '';
         const deptStr = item.department ? ` · ${esc(item.department)}` : '';
         const penStr = item.pen ? ` · PEN:${esc(item.pen)}` : '';
+        const phoneStr = (item.phone || item.mobile) ? ` · 📱 ${esc(item.phone || item.mobile)}` : '';
         const typeBadge = item.type ? `<span class="text-[10px] font-normal px-1.5 py-0.2 rounded font-mono ${item.type === 'Teaching Faculty' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}">${esc(item.type)}</span>` : '';
         const rankBadge = item.seniority && item.seniority !== 999 ? `<span class="${colors.text} font-mono text-[11px] font-bold">#${item.seniority}</span>` : '';
 
@@ -2630,7 +2683,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               ${item.disabled ? '<span class="text-[10px] text-amber-400 font-mono font-normal">🚩 [Selected in another slot]</span>' : ''}
             </div>
             <div class="text-[10px] text-slate-400 truncate mt-0.5">
-              ${esc(item.designation || (item.type === 'Non-Teaching Staff' ? 'Staff' : 'Faculty'))}${deptStr}${penStr}${exclTag}${flagStr}
+              ${esc(item.designation || (item.type === 'Non-Teaching Staff' ? 'Staff' : 'Faculty'))}${deptStr}${penStr}${phoneStr}${exclTag}${flagStr}
             </div>
           </div>
           <span class="${colors.text} text-[10px] shrink-0 font-mono font-semibold">Select ↵</span>
@@ -3265,6 +3318,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           <option value="">-- None / Not Assigned --</option>
                           ${renderPollingCoreInChargeOptions(b.boothNumber, team.coreInCharge?.name)}
                         </select>
+                        ${renderSubtlePhone(team.coreInCharge?.phone || getPerson(team.coreInCharge?.name)?.phone)}
                       </div>
 
                       <!-- Presiding Officer -->
@@ -3279,6 +3333,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           <option value="">-- Select Presiding Officer --</option>
                           ${renderPollingFacultyOptions(b.boothNumber, 'presidingOfficer', team.presidingOfficer?.name)}
                         </select>
+                        ${renderSubtlePhone(team.presidingOfficer?.phone || getPerson(team.presidingOfficer?.name)?.phone)}
                         ${pDouble ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Counting Table ${pDouble.tableNumber} (${pDouble.role})</p>` : ''}
                       </div>
 
@@ -3294,6 +3349,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           <option value="">-- Select Polling Officer --</option>
                           ${renderPollingFacultyOptions(b.boothNumber, 'pollingOfficer1', team.pollingOfficer1?.name)}
                         </select>
+                        ${renderSubtlePhone(team.pollingOfficer1?.phone || getPerson(team.pollingOfficer1?.name)?.phone)}
                         ${po1Double ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Counting Table ${po1Double.tableNumber} (${po1Double.role})</p>` : ''}
                       </div>
 
@@ -3309,6 +3365,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           <option value="">-- Select Polling Officer --</option>
                           ${renderPollingFacultyOptions(b.boothNumber, 'pollingOfficer2', team.pollingOfficer2?.name)}
                         </select>
+                        ${renderSubtlePhone(team.pollingOfficer2?.phone || getPerson(team.pollingOfficer2?.name)?.phone)}
                         ${po2Double ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Counting Table ${po2Double.tableNumber} (${po2Double.role})</p>` : ''}
                       </div>
 
@@ -3330,6 +3387,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                             <option value="">-- Select Additional Polling Officer --</option>
                             ${renderPollingFacultyOptions(b.boothNumber, 'pollingOfficer3', team.pollingOfficer3?.name)}
                           </select>
+                          ${renderSubtlePhone(team.pollingOfficer3?.phone || getPerson(team.pollingOfficer3?.name)?.phone)}
                           ${po3Double ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Counting Table ${po3Double.tableNumber} (${po3Double.role})</p>` : ''}
                         </div>
                       ` : `
@@ -3352,6 +3410,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           <option value="">-- Select Non-Teaching Staff --</option>
                           ${renderPollingNonTeachingOptions(b.boothNumber, team.pollingAssistant?.name)}
                         </select>
+                        ${renderSubtlePhone(team.pollingAssistant?.phone || getPerson(team.pollingAssistant?.name)?.phone)}
                         ${asstDouble ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Counting Table ${asstDouble.tableNumber} (Counting Assistant)</p>` : ''}
                       </div>
                     </div>
@@ -3484,6 +3543,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           <option value="">-- None / Not Assigned --</option>
                           ${renderCountingCoreInChargeOptions(b.boothNumber, team.coreInCharge?.name)}
                         </select>
+                        ${renderSubtlePhone(team.coreInCharge?.phone || getPerson(team.coreInCharge?.name)?.phone)}
                       </div>
 
                       <!-- Counting Supervisor -->
@@ -3498,6 +3558,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           <option value="">-- Select Counting Supervisor --</option>
                           ${renderCountingFacultyOptions(b.boothNumber, 'supervisor', team.supervisor?.name)}
                         </select>
+                        ${renderSubtlePhone(team.supervisor?.phone || getPerson(team.supervisor?.name)?.phone)}
                         ${supDouble ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Polling Booth ${supDouble.boothNumber} (${supDouble.role})</p>` : ''}
                       </div>
 
@@ -3513,6 +3574,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           <option value="">-- Select Counting Officer --</option>
                           ${renderCountingFacultyOptions(b.boothNumber, 'countingOfficer1', team.countingOfficer1?.name)}
                         </select>
+                        ${renderSubtlePhone(team.countingOfficer1?.phone || getPerson(team.countingOfficer1?.name)?.phone)}
                         ${co1Double ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Polling Booth ${co1Double.boothNumber} (${co1Double.role})</p>` : ''}
                       </div>
 
@@ -3528,6 +3590,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           <option value="">-- Select Counting Officer --</option>
                           ${renderCountingFacultyOptions(b.boothNumber, 'countingOfficer2', team.countingOfficer2?.name)}
                         </select>
+                        ${renderSubtlePhone(team.countingOfficer2?.phone || getPerson(team.countingOfficer2?.name)?.phone)}
                         ${co2Double ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Polling Booth ${co2Double.boothNumber} (${co2Double.role})</p>` : ''}
                       </div>
 
@@ -3549,6 +3612,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                             <option value="">-- Select Additional Counting Officer --</option>
                             ${renderCountingFacultyOptions(b.boothNumber, 'countingOfficer3', team.countingOfficer3?.name)}
                           </select>
+                          ${renderSubtlePhone(team.countingOfficer3?.phone || getPerson(team.countingOfficer3?.name)?.phone)}
                           ${co3Double ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Polling Booth ${co3Double.boothNumber} (${co3Double.role})</p>` : ''}
                         </div>
                       ` : `
@@ -3571,6 +3635,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                           <option value="">-- Select Non-Teaching Staff --</option>
                           ${renderCountingNonTeachingOptions(b.boothNumber, team.countingAssistant?.name)}
                         </select>
+                        ${renderSubtlePhone(team.countingAssistant?.phone || getPerson(team.countingAssistant?.name)?.phone)}
                         ${(() => {
                           const asstAssignment = team.countingAssistant ? getNonTeachingAssignment(team.countingAssistant.name) : null;
                           const otherTables = asstAssignment ? (asstAssignment.countingTables || []).filter(t => t !== b.boothNumber) : [];
@@ -5184,17 +5249,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const existing = document.getElementById('roAroModalContainer');
     if (existing) existing.remove();
 
-    let draftRo = roOfficer ? { ...roOfficer } : {
+    let draftRo = roOfficer ? { ...roOfficer, phone: roOfficer.phone || roOfficer.mobile || '' } : {
       name: settings?.returningOfficerName || 'Suresh P',
       pen: settings?.returningOfficerPen || '616638',
       designation: settings?.returningOfficerDesignation || 'Associate Professor',
       department: settings?.returningOfficerDepartment || 'Botany',
-      seniority: 1
+      seniority: 1,
+      phone: settings?.returningOfficerPhone || ''
     };
 
-    let draftAros = aroOfficers.map(a => ({ ...a }));
+    let draftAros = aroOfficers.map(a => ({ ...a, phone: a.phone || a.mobile || '' }));
     if (draftAros.length === 0) {
-      draftAros.push({ name: '', pen: '', designation: '', department: '', seniority: 999 });
+      draftAros.push({ name: '', pen: '', designation: '', department: '', seniority: 999, phone: '' });
     }
 
     let isChangingRo = !draftRo.name;
@@ -5247,6 +5313,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         <strong class="text-white">${esc(draftRo.name)}</strong>
                         <span class="text-slate-300 text-[11px]">(${esc(draftRo.designation || 'Faculty')} · ${esc(draftRo.department || '–')} · PEN:${esc(draftRo.pen || '–')})</span>
                       </div>
+                      ${renderSubtlePhone(draftRo.phone || roFac?.phone)}
                       <div class="text-[11px] text-yellow-400/90 font-mono">👑 Chief Election Officer (Issues official election orders &amp; notifications)</div>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0">
@@ -5282,6 +5349,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     <label class="block text-[10px] text-slate-400">PEN / Employee ID</label>
                     <input type="text" id="inputRoPen" value="${esc(draftRo.pen || '')}" class="w-full bg-black/50 border border-white/20 rounded-lg p-2 text-xs text-white font-mono" placeholder="e.g. 616638" />
                   </div>
+                  <div class="sm:col-span-2">
+                    <label class="block text-[10px] text-slate-400">Mobile / Contact Number</label>
+                    <input type="tel" id="inputRoPhone" value="${esc(draftRo.phone || '')}" class="w-full bg-black/50 border border-white/20 rounded-lg p-2 text-xs text-white font-mono" placeholder="e.g. 9876543210" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -5300,6 +5371,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <div class="space-y-3" id="aroRowsContainer">
                 ${draftAros.map((aro, idx) => {
                   const isChangingAro = !aro.name || aroChangingIndices.has(idx);
+                  const aroFac = faculty.find(f => f.name === aro.name);
                   return `
                     <div class="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-2 relative" data-aro-idx="${idx}">
                       <div class="flex items-center justify-between">
@@ -5319,6 +5391,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                               <strong class="text-white">${esc(aro.name)}</strong>
                               <span class="text-slate-300 text-[11px]">(${esc(aro.designation || 'Faculty')} · ${esc(aro.department || '–')} · PEN:${esc(aro.pen || '–')})</span>
                             </div>
+                            ${renderSubtlePhone(aro.phone || aroFac?.phone)}
                             <div class="text-[11px] text-amber-400/90 font-mono">⚖️ Assistant Returning Officer</div>
                           </div>
                           <div class="flex items-center gap-1.5 shrink-0">
@@ -5353,6 +5426,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         <div>
                           <label class="block text-[10px] text-slate-400">PEN #</label>
                           <input type="text" class="w-full bg-black/40 border border-white/15 rounded-lg p-1.5 text-xs text-white font-mono aro-pen-input" data-idx="${idx}" value="${esc(aro.pen || '')}" placeholder="PEN" />
+                        </div>
+                        <div class="sm:col-span-2">
+                          <label class="block text-[10px] text-slate-400">Mobile #</label>
+                          <input type="tel" class="w-full bg-black/40 border border-white/15 rounded-lg p-1.5 text-xs text-white font-mono aro-phone-input" data-idx="${idx}" value="${esc(aro.phone || '')}" placeholder="Mobile #" />
                         </div>
                       </div>
                     </div>
@@ -5407,7 +5484,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               pen: fac.pen || '',
               designation: fac.designation || 'Faculty',
               department: fac.department || '',
-              seniority: fac.seniority || 1
+              seniority: fac.seniority || 1,
+              phone: fac.phone || ''
             };
             isChangingRo = false;
             renderModal();
@@ -5419,9 +5497,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       modal.querySelector('#inputRoDesig').oninput = (e) => { draftRo.designation = e.target.value; };
       modal.querySelector('#inputRoDept').oninput = (e) => { draftRo.department = e.target.value; };
       modal.querySelector('#inputRoPen').oninput = (e) => { draftRo.pen = e.target.value; };
+      modal.querySelector('#inputRoPhone').oninput = (e) => { draftRo.phone = e.target.value; };
 
       modal.querySelector('#btnAddAroRow').onclick = () => {
-        draftAros.push({ name: '', pen: '', designation: '', department: '', seniority: 999 });
+        draftAros.push({ name: '', pen: '', designation: '', department: '', seniority: 999, phone: '' });
         aroChangingIndices.add(draftAros.length - 1);
         renderModal();
       };
@@ -5432,7 +5511,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           draftAros.splice(idx, 1);
           aroChangingIndices.delete(idx);
           if (draftAros.length === 0) {
-            draftAros.push({ name: '', pen: '', designation: '', department: '', seniority: 999 });
+            draftAros.push({ name: '', pen: '', designation: '', department: '', seniority: 999, phone: '' });
             aroChangingIndices.add(0);
           }
           renderModal();
@@ -5470,7 +5549,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               pen: fac.pen || '',
               designation: fac.designation || 'Faculty',
               department: fac.department || '',
-              seniority: fac.seniority || 999
+              seniority: fac.seniority || 999,
+              phone: fac.phone || ''
             };
             aroChangingIndices.delete(rowIdx);
             renderModal();
@@ -5502,6 +5582,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           draftAros[idx].pen = e.target.value;
         };
       });
+      modal.querySelectorAll('.aro-phone-input').forEach(inp => {
+        inp.oninput = (e) => {
+          const idx = parseInt(inp.dataset.idx, 10);
+          draftAros[idx].phone = e.target.value;
+        };
+      });
 
       modal.querySelector('#btnSaveRoAroModal').onclick = async () => {
         if (!draftRo.name || !draftRo.name.trim()) {
@@ -5513,7 +5599,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           pen: (draftRo.pen || '').trim(),
           designation: (draftRo.designation || 'Returning Officer').trim(),
           department: (draftRo.department || '').trim(),
-          seniority: draftRo.seniority || 1
+          seniority: draftRo.seniority || 1,
+          phone: cleanPhoneNumber(draftRo.phone)
         };
 
         const validAros = draftAros.filter(a => a.name && a.name.trim().length > 0).map(a => ({
@@ -5521,7 +5608,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           pen: (a.pen || '').trim(),
           designation: (a.designation || 'Assistant Returning Officer').trim(),
           department: (a.department || '').trim(),
-          seniority: a.seniority || 999
+          seniority: a.seniority || 999,
+          phone: cleanPhoneNumber(a.phone)
         }));
         validAros.sort(compareOfficials);
         aroOfficers = validAros;
@@ -5609,6 +5697,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                             <strong class="text-white">${esc(fac.name)}</strong>
                             <span class="text-slate-300 text-[11px]">(${esc(fac.designation || 'Faculty')} · ${esc(fac.department || '–')} · PEN:${esc(fac.pen || '–')})</span>
                           </div>
+                          ${renderSubtlePhone(fac.phone || c.phone)}
                           <div class="flex items-center gap-2 flex-wrap text-[11px]">
                             ${flagStr ? `<span class="text-cyan-400 font-mono">${flagStr}</span>` : ''}
                             ${fac.isExcluded ? `<span class="text-amber-400 font-semibold">• Excluded from Booth Duty (Eligible for Core Committee)</span>` : ''}
@@ -5652,7 +5741,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       modal.querySelector('#btnCancelCoreModal').onclick = () => modal.remove();
 
       modal.querySelector('#btnAddCoreRow').onclick = () => {
-        draftCore.push({ name: '', pen: '', department: '', designation: '', seniority: 999 });
+        draftCore.push({ name: '', pen: '', department: '', designation: '', seniority: 999, phone: '' });
         changingIndices.add(draftCore.length - 1);
         renderModal();
       };
@@ -5663,7 +5752,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           draftCore.splice(idx, 1);
           changingIndices.delete(idx);
           if (draftCore.length === 0) {
-            draftCore.push({ name: '', pen: '', department: '', designation: '', seniority: 999 });
+            draftCore.push({ name: '', pen: '', department: '', designation: '', seniority: 999, phone: '' });
             changingIndices.add(0);
           }
           renderModal();
@@ -5698,7 +5787,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               pen: selectedFac.pen || '',
               department: selectedFac.department || '',
               designation: selectedFac.designation || 'Faculty',
-              seniority: selectedFac.seniority || 999
+              seniority: selectedFac.seniority || 999,
+              phone: selectedFac.phone || ''
             };
             changingIndices.delete(rowIdx);
             renderModal();
@@ -5707,7 +5797,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       });
 
       modal.querySelector('#btnSaveCoreModal').onclick = async () => {
-        const validCore = draftCore.filter(c => c.name && c.name.trim().length > 0);
+        const validCore = draftCore.filter(c => c.name && c.name.trim().length > 0).map(c => ({
+          ...c,
+          phone: c.phone || faculty.find(f => f.name === c.name)?.phone || ''
+        }));
         validCore.sort(compareOfficials);
         coreCommittee = validCore;
         await saveAll(false);
@@ -5794,6 +5887,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                             <span class="text-[10px] font-mono px-1.5 py-0.5 rounded ${personSelected.type === 'Teaching Faculty' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}">${esc(personSelected.type)}</span>
                             <span class="text-slate-300 text-[11px]">(${esc(personSelected.designation || 'Official')} · ${esc(personSelected.department || '–')} · PEN:${esc(personSelected.pen || '–')})</span>
                           </div>
+                          ${renderSubtlePhone(personSelected.phone || obs.phone)}
                           <div class="flex items-center gap-2 flex-wrap text-[11px]">
                             ${flagStr ? `<span class="text-amber-400 font-mono">${flagStr}</span>` : ''}
                             ${personSelected.isExcluded ? `<span class="text-rose-400 font-semibold">• Excluded from Booth Duty</span>` : ''}
@@ -5837,7 +5931,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       modal.querySelector('#btnCancelObsModal').onclick = () => modal.remove();
 
       modal.querySelector('#btnAddObserverRow').onclick = () => {
-        draftObservers.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+        draftObservers.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '', phone: '' });
         obsChangingIndices.add(draftObservers.length - 1);
         renderModal();
       };
@@ -5848,7 +5942,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           draftObservers.splice(idx, 1);
           obsChangingIndices.delete(idx);
           if (draftObservers.length === 0) {
-            draftObservers.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+            draftObservers.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '', phone: '' });
             obsChangingIndices.add(0);
           }
           renderModal();
@@ -5886,7 +5980,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               department: p.department || '',
               designation: p.designation || (p.type === 'Teaching Faculty' ? 'Faculty' : 'Staff'),
               seniority: p.seniority || 999,
-              type: p.type
+              type: p.type,
+              phone: p.phone || ''
             };
             obsChangingIndices.delete(rowIdx);
             renderModal();
@@ -5895,7 +5990,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       });
 
       modal.querySelector('#btnSaveObsModal').onclick = async () => {
-        const validObs = draftObservers.filter(o => o.name && o.name.trim().length > 0);
+        const validObs = draftObservers.filter(o => o.name && o.name.trim().length > 0).map(o => ({
+          ...o,
+          phone: o.phone || getPerson(o.name)?.phone || ''
+        }));
         validObs.sort(compareOfficials);
         observers = validObs;
         await saveAll(false);
@@ -5916,7 +6014,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     let draftDiscipline = disciplineCharge.map(d => ({ ...d }));
     if (draftDiscipline.length === 0) {
-      draftDiscipline.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+      draftDiscipline.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '', phone: '' });
     }
 
     const discChangingIndices = new Set();
@@ -5982,6 +6080,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                             <span class="text-[10px] font-mono px-1.5 py-0.5 rounded ${person.type === 'Teaching Faculty' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}">${esc(person.type)}</span>
                             <span class="text-slate-300 text-[11px]">(${esc(person.designation || '–')} · ${esc(person.department || '–')} · PEN:${esc(person.pen || '–')})</span>
                           </div>
+                          ${renderSubtlePhone(person.phone || disc.phone)}
                           <div class="flex items-center gap-2 flex-wrap text-[11px]">
                             ${flagStr ? `<span class="text-rose-400 font-mono">${flagStr}</span>` : ''}
                             ${person.isExcluded ? `<span class="text-amber-400 font-semibold">• Excluded from Booth Duty</span>` : ''}
@@ -6025,7 +6124,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       modal.querySelector('#btnCancelDiscModal').onclick = () => modal.remove();
 
       modal.querySelector('#btnAddDisciplineRow').onclick = () => {
-        draftDiscipline.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+        draftDiscipline.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '', phone: '' });
         discChangingIndices.add(draftDiscipline.length - 1);
         renderModal();
       };
@@ -6036,7 +6135,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           draftDiscipline.splice(idx, 1);
           discChangingIndices.delete(idx);
           if (draftDiscipline.length === 0) {
-            draftDiscipline.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+            draftDiscipline.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '', phone: '' });
             discChangingIndices.add(0);
           }
           renderModal();
@@ -6074,7 +6173,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               department: p.department || '',
               designation: p.designation || (p.type === 'Teaching Faculty' ? 'Faculty' : 'Staff'),
               seniority: p.seniority || 999,
-              type: p.type
+              type: p.type,
+              phone: p.phone || ''
             };
             discChangingIndices.delete(rowIdx);
             renderModal();
@@ -6083,7 +6183,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       });
 
       modal.querySelector('#btnSaveDiscModal').onclick = async () => {
-        const validDisc = draftDiscipline.filter(d => d.name && d.name.trim().length > 0);
+        const validDisc = draftDiscipline.filter(d => d.name && d.name.trim().length > 0).map(d => ({
+          ...d,
+          phone: d.phone || getPerson(d.name)?.phone || ''
+        }));
         validDisc.sort(compareOfficials);
         disciplineCharge = validDisc;
         await saveAll(false);
@@ -6104,7 +6207,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     let draftGrievance = grievanceCell.map(g => ({ ...g }));
     if (draftGrievance.length === 0) {
-      draftGrievance.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+      draftGrievance.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '', phone: '' });
     }
 
     const grievChangingIndices = new Set();
@@ -6170,6 +6273,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                             <span class="text-[10px] font-mono px-1.5 py-0.5 rounded ${person.type === 'Teaching Faculty' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}">${esc(person.type)}</span>
                             <span class="text-slate-300 text-[11px]">(${esc(person.designation || '–')} · ${esc(person.department || '–')} · PEN:${esc(person.pen || '–')})</span>
                           </div>
+                          ${renderSubtlePhone(person.phone || g.phone)}
                           <div class="flex items-center gap-2 flex-wrap text-[11px]">
                             ${flagStr ? `<span class="text-blue-400 font-mono">${flagStr}</span>` : ''}
                             ${person.isExcluded ? `<span class="text-amber-400 font-semibold">• Excluded from Booth Duty</span>` : ''}
@@ -6213,7 +6317,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       modal.querySelector('#btnCancelGrievModal').onclick = () => modal.remove();
 
       modal.querySelector('#btnAddGrievanceRow').onclick = () => {
-        draftGrievance.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+        draftGrievance.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '', phone: '' });
         grievChangingIndices.add(draftGrievance.length - 1);
         renderModal();
       };
@@ -6224,7 +6328,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           draftGrievance.splice(idx, 1);
           grievChangingIndices.delete(idx);
           if (draftGrievance.length === 0) {
-            draftGrievance.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '' });
+            draftGrievance.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: '', phone: '' });
             grievChangingIndices.add(0);
           }
           renderModal();
@@ -6262,7 +6366,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               department: p.department || '',
               designation: p.designation || (p.type === 'Teaching Faculty' ? 'Faculty' : 'Staff'),
               seniority: p.seniority || 999,
-              type: p.type
+              type: p.type,
+              phone: p.phone || ''
             };
             grievChangingIndices.delete(rowIdx);
             renderModal();
@@ -6271,7 +6376,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       });
 
       modal.querySelector('#btnSaveGrievModal').onclick = async () => {
-        const validGriev = draftGrievance.filter(g => g.name && g.name.trim().length > 0);
+        const validGriev = draftGrievance.filter(g => g.name && g.name.trim().length > 0).map(g => ({
+          ...g,
+          phone: g.phone || getPerson(g.name)?.phone || ''
+        }));
         validGriev.sort(compareOfficials);
         grievanceCell = validGriev;
         await saveAll(false);
@@ -6524,6 +6632,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       if (updated.designation !== undefined) target.designation = updated.designation;
       if (updated.department !== undefined) target.department = updated.department;
       if (updated.seniority !== undefined) target.seniority = updated.seniority;
+      if (updated.phone !== undefined) target.phone = updated.phone;
     };
 
     // 1. RO
@@ -6642,6 +6751,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       designation: targetFaculty.designation || 'Assistant Professor',
       department: targetFaculty.department || '',
       joiningDate: targetFaculty.joiningDate || '',
+      phone: targetFaculty.phone || targetFaculty.mobile || '',
       isExcluded: Boolean(isPersonExcluded(targetFaculty)),
       exclusionReason: targetFaculty.exclusionReason || ''
     } : {
@@ -6651,6 +6761,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       designation: 'Assistant Professor',
       department: '',
       joiningDate: '',
+      phone: '',
       isExcluded: false,
       exclusionReason: ''
     };
@@ -6720,6 +6831,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <span class="text-[10px] text-slate-400 font-normal">Optional</span>
                 </label>
                 <input type="text" id="facInputPen" value="${esc(draft.pen)}" placeholder="e.g. 616638" class="w-full bg-slate-950/80 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 font-mono" />
+              </div>
+
+              <!-- Mobile Number -->
+              <div class="sm:col-span-2 space-y-1">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                  <span>Mobile / Phone Number</span>
+                  <span class="text-[10px] text-slate-400 font-normal">Optional</span>
+                </label>
+                <input type="tel" id="facInputPhone" value="${esc(draft.phone || '')}" placeholder="e.g. 9876543210" class="w-full bg-slate-950/80 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 font-mono" />
               </div>
 
               <!-- Designation -->
@@ -6846,6 +6966,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
         const senVal = modal.querySelector('#facInputSeniority')?.value;
         const penVal = (modal.querySelector('#facInputPen')?.value || '').trim();
+        const phoneVal = cleanPhoneNumber(modal.querySelector('#facInputPhone')?.value);
         const desigVal = (modal.querySelector('#facInputDesig')?.value || '').trim() || 'Faculty';
         const deptVal = normalizeDepartment((modal.querySelector('#facInputDept')?.value || '').trim());
         const joiningVal = (modal.querySelector('#facInputJoiningDate')?.value || '').trim();
@@ -6860,6 +6981,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             seniority: parsedSeniority,
             name: nameVal,
             pen: penVal,
+            phone: phoneVal,
             designation: desigVal,
             department: deptVal,
             joiningDate: joiningVal,
@@ -6882,6 +7004,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           targetFaculty.name = nameVal;
           targetFaculty.seniority = parsedSeniority;
           targetFaculty.pen = penVal;
+          targetFaculty.phone = phoneVal;
           targetFaculty.designation = desigVal;
           targetFaculty.department = deptVal;
           targetFaculty.joiningDate = joiningVal;
@@ -6895,6 +7018,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           cascadeUpdateOfficial(oldName, oldPen, {
             name: targetFaculty.name,
             pen: targetFaculty.pen,
+            phone: targetFaculty.phone,
             designation: targetFaculty.designation,
             department: targetFaculty.department,
             seniority: targetFaculty.seniority
@@ -6923,6 +7047,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       pen: targetStaff.pen || '',
       designation: targetStaff.designation || 'Staff',
       department: targetStaff.department || 'Office',
+      phone: targetStaff.phone || targetStaff.mobile || '',
       isExcluded: Boolean(isPersonExcluded(targetStaff)),
       exclusionReason: targetStaff.exclusionReason || ''
     } : {
@@ -6930,6 +7055,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       pen: '',
       designation: 'Senior Clerk',
       department: 'College Office',
+      phone: '',
       isExcluded: false,
       exclusionReason: ''
     };
@@ -6999,6 +7125,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <span class="text-[10px] text-slate-400 font-normal">Optional</span>
                 </label>
                 <input type="text" id="ntInputPen" value="${esc(draft.pen)}" placeholder="e.g. 654321" class="w-full bg-slate-950/80 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 font-mono" />
+              </div>
+
+              <!-- Mobile Number -->
+              <div class="sm:col-span-2 space-y-1">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                  <span>Mobile Number</span>
+                  <span class="text-[10px] text-slate-400 font-normal">Optional</span>
+                </label>
+                <input type="tel" id="ntInputPhone" value="${esc(draft.phone || '')}" placeholder="e.g. 9876543210" class="w-full bg-slate-950/80 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 font-mono" />
               </div>
 
               <!-- Department / Section -->
@@ -7100,6 +7235,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         }
 
         const penVal = (modal.querySelector('#ntInputPen')?.value || '').trim();
+        const phoneVal = cleanPhoneNumber(modal.querySelector('#ntInputPhone')?.value);
         const desigVal = (modal.querySelector('#ntInputDesig')?.value || '').trim() || 'Staff';
         const deptVal = normalizeDepartment((modal.querySelector('#ntInputDept')?.value || '').trim()) || (modal.querySelector('#ntInputDept')?.value || '').trim() || 'Office';
         const isEx = modal.querySelector('#ntInputExcluded')?.value === 'true';
@@ -7110,6 +7246,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             id: 'nt_' + Date.now(),
             name: nameVal,
             pen: penVal,
+            phone: phoneVal,
             designation: desigVal,
             department: deptVal,
             isExcluded: isEx,
@@ -7130,6 +7267,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
           targetStaff.name = nameVal;
           targetStaff.pen = penVal;
+          targetStaff.phone = phoneVal;
           targetStaff.designation = desigVal;
           targetStaff.department = deptVal;
           targetStaff.isExcluded = isEx;
@@ -7142,6 +7280,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           cascadeUpdateOfficial(oldName, oldPen, {
             name: targetStaff.name,
             pen: targetStaff.pen,
+            phone: targetStaff.phone,
             designation: targetStaff.designation,
             department: targetStaff.department
           });
@@ -7167,6 +7306,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       designation: (roOfficer.designation || 'Returning Officer').trim(),
       department: (roOfficer.department || '').trim() || '–',
       pen: (roOfficer.pen || '–').trim(),
+      phone: roOfficer.phone || roOfficer.mobile || (getPerson(roOfficer.name)?.phone) || '',
       seniority: 0,
       duty: 'Returning Officer (Overall Conduct of Election)',
       station: 'Election Office / Central Control Room',
@@ -7184,6 +7324,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           designation: (p?.designation || a.designation || 'Assistant Returning Officer').trim(),
           department: (p?.department || a.department || '').trim() || '–',
           pen: (p?.pen || a.pen || '–').trim(),
+          phone: p?.phone || a.phone || a.mobile || '',
           seniority: (p?.seniority !== undefined && p?.seniority !== null) ? p.seniority : (a.seniority || 999),
           duty: 'Assistant Returning Officer (ARO)',
           station: 'Central Control Room / Election Cell',
@@ -7224,6 +7365,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           designation: (p?.designation || c.designation || 'Faculty').trim(),
           department: (p?.department || c.department || '').trim() || '–',
           pen: (p?.pen || c.pen || '–').trim(),
+          phone: p?.phone || c.phone || c.mobile || '',
           seniority: (p?.seniority !== undefined && p?.seniority !== null) ? p.seniority : (c.seniority || 999),
           duty: dutyText,
           station: stationText,
@@ -7248,6 +7390,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           designation: (p?.designation || obs.designation || 'Faculty').trim(),
           department: (p?.department || obs.department || '').trim() || '–',
           pen: (p?.pen || obs.pen || '–').trim(),
+          phone: p?.phone || obs.phone || obs.mobile || '',
           seniority: (p?.seniority !== undefined && p?.seniority !== null) ? p.seniority : (obs.seniority || 999),
           duty: 'Election Observer',
           station: 'Central Control Room / Campus',
@@ -7270,6 +7413,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           designation: (p?.designation || disc.designation || (p?.type === 'Teaching Faculty' ? 'Faculty' : 'Staff')).trim(),
           department: (p?.department || disc.department || (p?.type === 'Teaching Faculty' ? '' : 'Office')).trim() || '–',
           pen: (p?.pen || disc.pen || '–').trim(),
+          phone: p?.phone || disc.phone || disc.mobile || '',
           seniority: (p?.seniority !== undefined && p?.seniority !== null) ? p.seniority : (disc.seniority || 999),
           duty: 'Campus Discipline Duty',
           station: 'Campus & Corridors',
@@ -7292,6 +7436,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           designation: (p?.designation || g.designation || (p?.type === 'Teaching Faculty' ? 'Faculty' : 'Staff')).trim(),
           department: (p?.department || g.department || (p?.type === 'Teaching Faculty' ? '' : 'Office')).trim() || '–',
           pen: (p?.pen || g.pen || '–').trim(),
+          phone: p?.phone || g.phone || g.mobile || '',
           seniority: (p?.seniority !== undefined && p?.seniority !== null) ? p.seniority : (g.seniority || 999),
           duty: 'Grievance Committee Member',
           station: 'Grievance Cell / Principal Office',
@@ -7360,6 +7505,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           designation: (f.designation || 'Faculty').trim(),
           department: (f.department || '').trim() || '–',
           pen: (f.pen || '–').trim(),
+          phone: f.phone || f.mobile || '',
           seniority: (f.seniority !== undefined && f.seniority !== null) ? f.seniority : 999,
           duty: duties.join(' + ') || 'Active Election Duty',
           hasDoubleDuty: !!(pDuty && cDuty),
@@ -7375,6 +7521,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           designation: (f.designation || 'Faculty').trim(),
           department: (f.department || '').trim() || '–',
           pen: (f.pen || '–').trim(),
+          phone: f.phone || f.mobile || '',
           seniority: (f.seniority !== undefined && f.seniority !== null) ? f.seniority : 999,
           duty: 'Reserve Duty (Standby)',
           hasDoubleDuty: false,
@@ -7435,6 +7582,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           designation: (nt.designation || 'Staff').trim(),
           department: (nt.department || nt.section || 'Office').trim() || 'Office',
           pen: (nt.pen || '–').trim(),
+          phone: nt.phone || nt.mobile || '',
           seniority: 9999,
           duty: duties.join(' + ') || 'Active Election Duty',
           hasDoubleDuty: !!(ntAssigned.polling && ntAssigned.counting),
@@ -7450,6 +7598,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           designation: (nt.designation || 'Staff').trim(),
           department: (nt.department || nt.section || 'Office').trim() || 'Office',
           pen: (nt.pen || '–').trim(),
+          phone: nt.phone || nt.mobile || '',
           seniority: 9999,
           duty: 'Reserve Duty (Standby Assistant)',
           hasDoubleDuty: false,
@@ -8093,6 +8242,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(obs.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(obs.name)}</span>
+                    ${renderSubtlePhone(obs.phone, true)}
                   </td>
                   ${obsHasDept ? `<td><span class="dept-badge">${esc(obs.department)}</span></td>` : ''}
                   <td>${esc(obs.designation)}</td>
@@ -8136,6 +8286,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <td class="col-center" style="font-weight: 800; font-family: monospace;">RO</td>
                 <td>
                   <span class="staff-name" style="font-size: 11px;">${esc(roData.name)}</span>
+                  ${renderSubtlePhone(roData.phone, true)}
                 </td>
                 <td><strong>👑 Returning Officer (RO)</strong></td>
                 <td>${esc(roData.designation)}${roData.department && roData.department !== '–' ? ` · <span class="dept-badge">${esc(roData.department)}</span>` : ''}</td>
@@ -8148,6 +8299,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(aro.slNo)}</td>
                 <td>
                   <span class="staff-name">${esc(aro.name)}</span>
+                  ${renderSubtlePhone(aro.phone, true)}
                 </td>
                 <td><strong>⚖️ Assistant Returning Officer (ARO)</strong></td>
                 <td>${esc(aro.designation)}${aro.department && aro.department !== '–' ? ` · <span class="dept-badge">${esc(aro.department)}</span>` : ''}</td>
@@ -8204,6 +8356,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(disc.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(disc.name)}</span>
+                    ${renderSubtlePhone(disc.phone, true)}
                   </td>
                   ${discHasDept ? `<td><span class="dept-badge">${esc(disc.department)}</span></td>` : ''}
                   <td>${esc(disc.designation)}</td>
@@ -8260,6 +8413,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(g.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(g.name)}</span>
+                    ${renderSubtlePhone(g.phone, true)}
                   </td>
                   ${grievHasDept ? `<td><span class="dept-badge">${esc(g.department)}</span></td>` : ''}
                   <td>${esc(g.designation)}</td>
@@ -8311,6 +8465,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(c.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(c.name)}</span>
+                    ${renderSubtlePhone(c.phone, true)}
                   </td>
                   ${coreHasDept ? `<td><span class="dept-badge">${esc(c.department)}</span></td>` : ''}
                   <td>${esc(c.designation)}</td>
@@ -8375,6 +8530,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${idx + 1}</td>
                   <td>
                     <span class="staff-name">${esc(p.name)}</span>
+                    ${renderSubtlePhone(p.phone, true)}
                     ${!hideStation && p.hasDoubleDuty ? `<span style="font-size: 8px; color: #000000; font-weight: bold; border: 1px solid #000000; padding: 0 3px; display: inline-block; margin-top: 1px;">⚠️ Double Duty (Polling &amp; Counting)</span>` : ''}
                     ${!hideStation && p.isReserve ? `<span style="font-size: 8px; color: #000000; font-weight: 700; border: 1px solid #000000; padding: 0 4px; display: inline-block; margin-top: 1px;">Reserve Official</span>` : ''}
                   </td>
@@ -8513,7 +8669,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               ${obsList.map(obs => `
                 <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(obs.slNo)}</td>
-                  <td><span class="staff-name">${esc(obs.name)}</span></td>
+                  <td>
+                    <span class="staff-name">${esc(obs.name)}</span>
+                    ${renderSubtlePhone(obs.phone, true)}
+                  </td>
                   ${obsHasDept ? `<td><span class="dept-badge">${esc(obs.department)}</span></td>` : ''}
                   <td>${esc(obs.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(obs.pen)}</td>
@@ -8552,7 +8711,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             ${roData ? `
               <tr>
                 <td class="col-center" style="font-weight: 800; font-family: monospace;">RO</td>
-                <td><span class="staff-name">${esc(roData.name)}</span></td>
+                <td>
+                  <span class="staff-name">${esc(roData.name)}</span>
+                  ${renderSubtlePhone(roData.phone, true)}
+                </td>
                 <td><strong>👑 Returning Officer (RO)</strong></td>
                 <td>${esc(roData.designation)}${roData.department && roData.department !== '–' ? ` · <span class="dept-badge">${esc(roData.department)}</span>` : ''}</td>
                 <td style="font-family: monospace; font-weight: 700;">${esc(roData.pen)}</td>
@@ -8562,7 +8724,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             ${aroList.map(aro => `
               <tr>
                 <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(aro.slNo)}</td>
-                <td><span class="staff-name">${esc(aro.name)}</span></td>
+                <td>
+                  <span class="staff-name">${esc(aro.name)}</span>
+                  ${renderSubtlePhone(aro.phone, true)}
+                </td>
                 <td><strong>⚖️ Assistant Returning Officer (ARO)</strong></td>
                 <td>${esc(aro.designation)}${aro.department && aro.department !== '–' ? ` · <span class="dept-badge">${esc(aro.department)}</span>` : ''}</td>
                 <td style="font-family: monospace; font-weight: 600;">${esc(aro.pen)}</td>
@@ -8618,6 +8783,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(disc.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(disc.name)}</span>
+                    ${renderSubtlePhone(disc.phone, true)}
                   </td>
                   ${discHasDept ? `<td><span class="dept-badge">${esc(disc.department)}</span></td>` : ''}
                   <td>${esc(disc.designation)}</td>
@@ -8672,6 +8838,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(g.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(g.name)}</span>
+                    ${renderSubtlePhone(g.phone, true)}
                   </td>
                   ${grievHasDept ? `<td><span class="dept-badge">${esc(g.department)}</span></td>` : ''}
                   <td>${esc(g.designation)}</td>
@@ -8718,7 +8885,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               ${coreList.map(c => `
                 <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(c.slNo)}</td>
-                  <td><span class="staff-name">${esc(c.name)}</span></td>
+                  <td>
+                    <span class="staff-name">${esc(c.name)}</span>
+                    ${renderSubtlePhone(c.phone, true)}
+                  </td>
                   ${coreHasDept ? `<td><span class="dept-badge">${esc(c.department)}</span></td>` : ''}
                   <td>${esc(c.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(c.pen)}</td>
@@ -8800,6 +8970,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     <td>
                       ${s.person && s.person.name && (!personObj?.isExcluded || s.isCore) ? `
                         <span class="staff-name">${esc(s.person.name)}</span>
+                        ${renderSubtlePhone(s.person?.phone || personObj?.phone, true)}
                       ` : (personObj?.isExcluded && !s.isCore ? '<span style="color: #000000; font-style: italic;">– Excluded Official –</span>' : '<span style="color: #000000; font-style: italic;">– Unassigned –</span>')}
                     </td>
                     <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: #000000;">
@@ -8882,6 +9053,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     <td>
                       ${s.person && s.person.name && (!personObj?.isExcluded || s.isCore) ? `
                         <span class="staff-name">${esc(s.person.name)}</span>
+                        ${renderSubtlePhone(s.person?.phone || personObj?.phone, true)}
                       ` : (personObj?.isExcluded && !s.isCore ? '<span style="color: #000000; font-style: italic;">– Excluded Official –</span>' : '<span style="color: #000000; font-style: italic;">– Unassigned –</span>')}
                     </td>
                     <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: #000000;">
@@ -8931,7 +9103,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               ${reserveList.map((r, idx) => `
                 <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${idx + 1}</td>
-                  <td><span class="staff-name">${esc(r.name)}</span></td>
+                  <td>
+                    <span class="staff-name">${esc(r.name)}</span>
+                    ${renderSubtlePhone(r.phone, true)}
+                  </td>
                   ${resHasDept ? `<td><span class="dept-badge">${esc(r.department)}</span></td>` : ''}
                   <td>${esc(r.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(r.pen)}</td>
@@ -9546,6 +9721,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     ${t.coreInCharge && t.coreInCharge.name ? `
                       <div style="margin-top: 4px; padding: 2px 5px; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 4px; font-size: 8.5px; color: #0369a1; font-weight: 700;">
                         ⭐ In-Charge: ${esc(t.coreInCharge.name)}
+                        ${renderSubtlePhone(t.coreInCharge.phone || getPerson(t.coreInCharge.name)?.phone, true)}
                         <span style="font-size: 7.5px; font-weight: normal; display: block; color: #0284c7;">(Core Committee)</span>
                       </div>
                     ` : ''}
@@ -9553,6 +9729,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>
                     ${isHeadValid ? `
                       <span class="staff-name">${esc(head.name)}</span>
+                      ${renderSubtlePhone(head.phone || getPerson(head.name)?.phone, true)}
                       <span class="staff-meta">${esc(head.designation || (isPolling ? 'Professor' : 'Supervisor'))}${head.pen ? ` · PEN: ${esc(head.pen)}` : ''}</span>
                     ` : '<span class="unassigned">– Not Assigned –</span>'}
                   </td>
@@ -9560,18 +9737,21 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     <div style="margin-bottom: 5px;">
                       ${isO1Valid ? `
                         <span class="staff-name">${isPolling ? '1. ' : ''}${esc(o1.name)}</span>
+                        ${renderSubtlePhone(o1.phone || getPerson(o1.name)?.phone, true)}
                         <span class="staff-meta" style="${isPolling ? 'margin-left: 14px;' : ''}">${esc(o1.designation || 'Faculty')}${o1.pen ? ` · PEN: ${esc(o1.pen)}` : ''}</span>
                       ` : `<span class="unassigned">${isPolling ? '1. ' : ''}– Not Assigned –</span>`}
                     </div>
                     <div style="border-top: 1px dashed #cbd5e1; padding-top: 4px;">
                       ${isO2Valid ? `
                         <span class="staff-name">${isPolling ? '2. ' : ''}${esc(o2.name)}</span>
+                        ${renderSubtlePhone(o2.phone || getPerson(o2.name)?.phone, true)}
                         <span class="staff-meta" style="${isPolling ? 'margin-left: 14px;' : ''}">${esc(o2.designation || 'Faculty')}${o2.pen ? ` · PEN: ${esc(o2.pen)}` : ''}</span>
                       ` : `<span class="unassigned">${isPolling ? '2. ' : ''}– Not Assigned –</span>`}
                     </div>
                     ${isO3Valid ? `
                       <div style="border-top: 1px dashed #cbd5e1; padding-top: 4px; margin-top: 4px;">
                         <span class="staff-name">${isPolling ? '3. ' : ''}${esc(o3.name)} <span style="font-size: 8.5px; color: #4338ca; font-weight: bold; background: #e0e7ff; padding: 1px 4px; border-radius: 3px;">Optional / Addl</span></span>
+                        ${renderSubtlePhone(o3.phone || getPerson(o3.name)?.phone, true)}
                         <span class="staff-meta" style="${isPolling ? 'margin-left: 14px;' : ''}">${esc(o3.designation || 'Faculty')}${o3.pen ? ` · PEN: ${esc(o3.pen)}` : ''}</span>
                       </div>
                     ` : ''}
@@ -9579,6 +9759,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>
                     ${isAsstValid ? `
                       <span class="staff-name">${esc(asst.name)}</span>
+                      ${renderSubtlePhone(asst.phone || getPerson(asst.name)?.phone, true)}
                       <span class="staff-meta">${esc(asst.designation || 'Staff')}${asst.pen ? ` · PEN: ${esc(asst.pen)}` : ''}</span>
                     ` : '<span class="unassigned">– Not Assigned –</span>'}
                   </td>
@@ -9639,6 +9820,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           name: t.coreInCharge.name,
           designation: t.coreInCharge.designation || 'Faculty',
           pen: t.coreInCharge.pen || '',
+          phone: t.coreInCharge.phone || getPerson(t.coreInCharge.name)?.phone || '',
           role: 'Core Committee In-Charge',
           boothNumber: num,
           venue: venue
@@ -9651,6 +9833,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           name: head.name,
           designation: head.designation || (isPolling ? 'Professor' : 'Supervisor'),
           pen: head.pen || '',
+          phone: head.phone || getPerson(head.name)?.phone || '',
           role: headRole,
           boothNumber: num,
           venue: venue
@@ -9663,6 +9846,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           name: o1.name,
           designation: o1.designation || 'Faculty',
           pen: o1.pen || '',
+          phone: o1.phone || getPerson(o1.name)?.phone || '',
           role: officerRole,
           boothNumber: num,
           venue: venue
@@ -9675,6 +9859,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           name: o2.name,
           designation: o2.designation || 'Faculty',
           pen: o2.pen || '',
+          phone: o2.phone || getPerson(o2.name)?.phone || '',
           role: officerRole,
           boothNumber: num,
           venue: venue
@@ -9687,6 +9872,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           name: o3.name,
           designation: o3.designation || 'Faculty',
           pen: o3.pen || '',
+          phone: o3.phone || getPerson(o3.name)?.phone || '',
           role: isPolling ? 'Polling Officer (Additional)' : 'Counting Officer (Additional)',
           boothNumber: num,
           venue: venue
@@ -9699,6 +9885,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           name: asst.name,
           designation: asst.designation || 'Non-Teaching Staff',
           pen: asst.pen || '',
+          phone: asst.phone || getPerson(asst.name)?.phone || '',
           role: asstRole,
           boothNumber: num,
           venue: venue
@@ -9776,6 +9963,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <!-- To Recipient -->
           <div class="slip-to-block">
             <strong>To:</strong> ${esc(p.name)}, ${esc(p.designation)} ${p.pen ? `(PEN: ${esc(p.pen)})` : ''}
+            ${p.phone ? `<span style="display: block; font-family: monospace; font-size: 9.5px; color: #475569; margin-top: 2px;">📞 ${esc(p.phone)}</span>` : ''}
           </div>
 
           <!-- Body -->

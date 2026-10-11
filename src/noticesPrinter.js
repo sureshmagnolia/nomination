@@ -2324,6 +2324,7 @@ export function printCountingTablePlacards(options = {}) {
     const live = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(tableNum));
     if (live) {
       const sup = live.supervisorName || (typeof live.supervisor === 'string' ? live.supervisor : live.supervisor?.name) || 'Senior Faculty';
+      const supPhone = live.supervisor?.phone || live.supervisor?.mobile || live.supervisorPhone || (live.coreInCharge?.phone || live.coreInCharge?.mobile || '');
       const supDesig = live.supervisor?.designation || '';
       const supDept = live.supervisor?.department || '';
       const asst = live.assistantName || (typeof live.assistant === 'string' ? live.assistant : live.assistant?.name) || live.countingAssistant?.name || 'Staff';
@@ -2340,7 +2341,7 @@ export function printCountingTablePlacards(options = {}) {
         const n = String(typeof o === 'string' ? o : (o?.name || '')).trim();
         if (n && !officers.includes(n)) officers.push(n);
       });
-      return { sup, supDesig, supDept, officers, asst, asstDesig };
+      return { sup, supPhone, supDesig, supDept, officers, asst, asstDesig };
     }
     const backup = OFFICIAL_COUNTING_ROSTER_BACKUP.find(t => String(t.tableNumber) === String(tableNum));
     if (backup) {
@@ -2503,6 +2504,7 @@ export function printCountingTablePlacards(options = {}) {
                 <span class="officer-role">Supervisor:</span>
                 <span class="officer-name">${esc(squad.sup)}</span>
               </div>
+              ${squad.supPhone ? `<div style="font-family: monospace; font-size: 8.5px; color: #475569; margin: 1px 0 2px 0;">📞 ${esc(String(squad.supPhone).replace(/\.0$/, '').trim())}</div>` : ''}
               ${squad.supDesig ? `<div class="official-sub-role">${esc(squad.supDesig)} ${squad.supDept ? `(${esc(squad.supDept)})` : ''}</div>` : ''}
               ${squad.officers && squad.officers.length ? `
                 <div class="official-row" style="margin-top:4px;">
