@@ -548,28 +548,36 @@
   .golden-rule-head {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 8pt;
+    gap: 5px;
+    font-size: 7.4pt;
     font-weight: 900;
     text-transform: uppercase;
     margin-bottom: 4px;
-    padding-bottom: 3.5px;
+    padding-bottom: 3px;
     border-bottom: 1.5px solid;
+    line-height: 1.15;
   }
   .golden-rule-body {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    font-size: 7.1pt;
-    line-height: 1.25;
+    gap: 3.5px;
   }
   .rule-line {
     display: flex;
     align-items: flex-start;
-    gap: 5px;
+    gap: 4.5px;
   }
-  .rule-line strong { font-weight: 800; }
-  .rule-bullet { font-size: 8pt; flex-shrink: 0; line-height: 1; margin-top: 1px; }
+  .rule-bullet { font-size: 7.2pt; flex-shrink: 0; line-height: 1.1; margin-top: 1px; }
+  .rule-text-group { flex: 1; line-height: 1.22; }
+  .rule-en { font-size: 6.6pt; font-weight: 700; }
+  .rule-en strong { font-weight: 800; }
+  .rule-ml { font-size: 6.1pt; font-weight: 500; opacity: 0.95; margin-top: 0.5px; }
+  .rule-ml strong { font-weight: 700; }
+  .rule-ta { font-size: 5.8pt; font-weight: 500; opacity: 0.88; margin-top: 0.5px; }
+  .rule-ta strong { font-weight: 700; }
+  .ballot-example-card .ballot-content-flex {
+    margin: auto 0;
+  }
 
   /* ---------------- FOOTER ---------------- */
   .poster-footer {
@@ -761,6 +769,9 @@
     color: #92400e;
   }
   .theme-color .rule-line strong { color: #92400e; }
+  .theme-color .rule-en { color: #78350f; }
+  .theme-color .rule-ml { color: #854d0e; }
+  .theme-color .rule-ta { color: #92400e; }
 
   /* ==============================================================
      THEME: PURE BLACK & WHITE (MONOCHROME FOR PHOTOCOPY/DUPLICATOR)
@@ -943,6 +954,9 @@
     color: #000000 !important;
   }
   .theme-bw .rule-line strong { color: #000000 !important; }
+  .theme-bw .rule-en { color: #000000 !important; }
+  .theme-bw .rule-ml { color: #000000 !important; }
+  .theme-bw .rule-ta { color: #000000 !important; }
 
   .theme-bw .poster-footer {
     border-top-color: #000000 !important;
@@ -1439,8 +1453,8 @@
                 <div class="ballot-box-graphic uuc-graphic">
                   <div class="ballot-graphic-row uuc-row">
                     <div class="ballot-cand-col uuc-cand">
-                      <span>ANAS</span>
-                      <span class="cand-sub ml">അനസ്</span>
+                      <span>GOPAL</span>
+                      <span class="cand-sub ml">ഗോപാൽ</span>
                     </div>
                     <div class="ballot-mark-col uuc-mark">
                       <svg class="stamp-svg " xmlns="http://www.w3.org/2000/svg" viewBox="-50 -50 100 100" width="20" height="20">
@@ -1512,7 +1526,7 @@
                   </div>
                 </div>
                 <div class="ballot-reason-desc uuc-desc">
-                  <div class="reason-en">Voter marked <strong>2 distinct candidates</strong> for UUC. Both votes are <strong>VALID</strong> (1 vote each to Anas &amp; Fathima).</div>
+                  <div class="reason-en">Voter marked <strong>2 distinct candidates</strong> for UUC. Both votes are <strong>VALID</strong> (1 vote each to Gopal &amp; Fathima).</div>
                   <div class="reason-ml ml">UUC-ൽ <strong>2 വ്യത്യസ്ത സ്ഥാനാർത്ഥികൾക്ക്</strong> വോട്ട് ചെയ്യാം. രണ്ടും <strong>സാധുവായ വോട്ടുകൾ</strong> (ഓരോ വോട്ട് വീതം).</div>
                   <div class="reason-ta ta">UUC பதவிக்கு <strong>2 வெவ்வேறு வேட்பாளர்களுக்கு</strong> வாக்களிக்கலாம். இரண்டும் <strong>செல்லுபடியாகும்</strong> (தலா 1 வாக்கு).</div>
                 </div>
@@ -1529,8 +1543,8 @@
                 <div class="ballot-box-graphic uuc-graphic">
                   <div class="ballot-graphic-row uuc-row">
                     <div class="ballot-cand-col uuc-cand">
-                      <span>ANAS</span>
-                      <span class="cand-sub ml">അനസ്</span>
+                      <span>GOPAL</span>
+                      <span class="cand-sub ml">ഗോപാൽ</span>
                     </div>
                     <div class="ballot-mark-col uuc-mark">
                       <svg class="stamp-svg " xmlns="http://www.w3.org/2000/svg" viewBox="-50 -50 100 100" width="20" height="20">
@@ -1593,8 +1607,8 @@
                 <div class="ballot-box-graphic uuc-graphic invalid-graphic">
                   <div class="ballot-graphic-row uuc-row">
                     <div class="ballot-cand-col uuc-cand">
-                      <span>ANAS</span>
-                      <span class="cand-sub ml">അനസ്</span>
+                      <span>GOPAL</span>
+                      <span class="cand-sub ml">ഗോപാൽ</span>
                     </div>
                     <div class="ballot-mark-col uuc-mark">
                       <svg class="stamp-svg " xmlns="http://www.w3.org/2000/svg" viewBox="-50 -50 100 100" width="20" height="20">
@@ -1955,24 +1969,40 @@
             <div class="golden-rule-card">
               <div class="golden-rule-head">
                 <span>⚠️</span>
-                <span>Statutory Warnings &bull; നിയമ മുന്നറിയിപ്പുകൾ</span>
+                <span>Statutory Warnings &bull; നിയമ മുന്നറിയിപ്പുകൾ &bull; <span class="ta" style="text-transform:none;">சட்டப்பூர்வ எச்சரிக்கைகள்</span></span>
               </div>
               <div class="golden-rule-body">
                 <div class="rule-line">
                   <span class="rule-bullet">🛑</span>
-                  <div><strong>No Erasures / Overwriting:</strong> Do not erase, overwrite, or alter the ballot paper.</div>
+                  <div class="rule-text-group">
+                    <div class="rule-en"><strong>No Erasures / Overwriting:</strong> Do not erase, overwrite, or alter the ballot paper.</div>
+                    <div class="rule-ml ml"><strong>വെട്ടിത്തിരുത്തലുകൾ അരുത്:</strong> ബാലറ്റ് പേപ്പറിൽ മായ്ക്കുകയോ തിരുത്തുകയോ ചെയ്യരുത്.</div>
+                    <div class="rule-ta ta"><strong>அழித்தல் / திருத்துதல் கூடாது:</strong> வாக்குச் சீட்டில் அழிக்கவோ திருத்தவோ கூடாது.</div>
+                  </div>
                 </div>
                 <div class="rule-line">
                   <span class="rule-bullet">🛑</span>
-                  <div><strong>No Identifying Marks:</strong> Writing your name, sign, or roll number renders ballot <strong>VOID</strong>.</div>
+                  <div class="rule-text-group">
+                    <div class="rule-en"><strong>No Identifying Marks:</strong> Writing your name, sign, or roll number renders ballot <strong>VOID</strong>.</div>
+                    <div class="rule-ml ml"><strong>തിരിച്ചറിയൽ അടയാളങ്ങൾ അരുത്:</strong> പേരോ ഒപ്പോ നമ്പറോ എഴുതിയാൽ ബാലറ്റ് <strong>അസാധുവാകും</strong>.</div>
+                    <div class="rule-ta ta"><strong>அடையாளக் குறிகள் கூடாது:</strong> பெயர், கையொப்பம், எண் எழுதினால் வாக்கு <strong>செல்லாது</strong>.</div>
+                  </div>
                 </div>
                 <div class="rule-line">
                   <span class="rule-bullet">🛑</span>
-                  <div><strong>Strict Secrecy:</strong> Never disclose or photograph your marked ballot inside the booth.</div>
+                  <div class="rule-text-group">
+                    <div class="rule-en"><strong>Strict Secrecy:</strong> Never disclose or photograph your marked ballot inside the booth.</div>
+                    <div class="rule-ml ml"><strong>രഹസ്യസ്വഭാവം കർശനമായി പാലിക്കുക:</strong> വോട്ട് രേഖപ്പെടുത്തിയത് പരസ്യമാക്കുകയോ ഫോട്ടോ എടുക്കുകയോ അരുത്.</div>
+                    <div class="rule-ta ta"><strong>வாக்கு ரகசியம் காக்க:</strong> வாக்களித்ததை பகிரவோ, பூத்தில் படம் எடுக்கவோ கூடாது.</div>
+                  </div>
                 </div>
                 <div class="rule-line">
                   <span class="rule-bullet">🛑</span>
-                  <div><strong>Never Take Ballot Out:</strong> Taking ballots outside the polling booth is a severe legal offense.</div>
+                  <div class="rule-text-group">
+                    <div class="rule-en"><strong>Never Take Ballot Out:</strong> Taking ballots outside the polling booth is a severe legal offense.</div>
+                    <div class="rule-ml ml"><strong>ബാലറ്റ് പുറത്തുകൊണ്ടുപോകരുത്:</strong> ബാലറ്റ് പേപ്പർ ബൂത്തിന് പുറത്തുകൊണ്ടുപോകുന്നത് ശിക്ഷാർഹമായ കുറ്റമാണ്.</div>
+                    <div class="rule-ta ta"><strong>வாக்குச் சீட்டை வெளியே எடுக்காதீர்:</strong> வாக்குச் சீட்டை வெளியே எடுப்பது சட்டப்படி குற்றமாகும்.</div>
+                  </div>
                 </div>
               </div>
             </div>
