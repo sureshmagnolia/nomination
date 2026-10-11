@@ -384,10 +384,55 @@ css_shared = """
   }
   .invalid-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8.5px;
-    flex: 1;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 7px;
   }
+  .invalid-grid .card-col-3 {
+    grid-column: span 2;
+  }
+  .invalid-grid .card-col-2 {
+    grid-column: span 3;
+  }
+
+  /* Statutory Warnings Banner at End */
+  .statutory-banner-wrap {
+    border-radius: 4px;
+    padding: 3.5px 7px 4.5px 7px;
+    margin-top: 4.5px;
+  }
+  .statutory-banner-head {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 7.3pt;
+    font-weight: 900;
+    text-transform: uppercase;
+    margin-bottom: 3.5px;
+    padding-bottom: 2px;
+    border-bottom: 1.5px solid;
+    line-height: 1.15;
+  }
+  .statutory-banner-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 7px;
+  }
+  .statutory-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5px;
+    line-height: 1.18;
+  }
+  .stat-head-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 3.5px;
+  }
+  .stat-bullet { font-size: 7pt; flex-shrink: 0; line-height: 1.1; margin-top: 1px; }
+  .stat-en { font-size: 6.6pt; font-weight: 700; }
+  .stat-en strong { font-weight: 800; }
+  .stat-trans { font-size: 6.1pt; font-weight: 500; opacity: 0.95; padding-left: 11px; }
+  .stat-trans.ta { font-size: 5.8pt; opacity: 0.88; }
 
   /* Ballot Card Design */
   .ballot-example-card {
@@ -781,19 +826,19 @@ css_shared = """
   .theme-color .ballot-reason-desc.invalid-desc .reason-ml { color: #991b1b; }
   .theme-color .ballot-reason-desc.invalid-desc .reason-ta { color: #7f1d1d; }
 
-  .theme-color .golden-rule-card {
+  .theme-color .statutory-banner-wrap {
     background: #fffbeb;
     border: 1.5px solid #f59e0b;
     color: #78350f;
   }
-  .theme-color .golden-rule-head {
+  .theme-color .statutory-banner-head {
     border-color: #f59e0b;
     color: #92400e;
   }
-  .theme-color .rule-line strong { color: #92400e; }
-  .theme-color .rule-en { color: #78350f; }
-  .theme-color .rule-ml { color: #854d0e; }
-  .theme-color .rule-ta { color: #92400e; }
+  .theme-color .stat-en strong { color: #92400e; }
+  .theme-color .stat-en { color: #78350f; }
+  .theme-color .stat-trans.ml { color: #854d0e; }
+  .theme-color .stat-trans.ta { color: #92400e; }
 
   /* ==============================================================
      THEME: PURE BLACK & WHITE (MONOCHROME FOR PHOTOCOPY/DUPLICATOR)
@@ -966,19 +1011,19 @@ css_shared = """
   .theme-bw .ballot-reason-desc.invalid-desc .reason-ml { color: #000000 !important; }
   .theme-bw .ballot-reason-desc.invalid-desc .reason-ta { color: #000000 !important; }
 
-  .theme-bw .golden-rule-card {
+  .theme-bw .statutory-banner-wrap {
     background: #ffffff !important;
     border: 2px dashed #000000 !important;
     color: #000000 !important;
   }
-  .theme-bw .golden-rule-head {
+  .theme-bw .statutory-banner-head {
     border-color: #000000 !important;
     color: #000000 !important;
   }
-  .theme-bw .rule-line strong { color: #000000 !important; }
-  .theme-bw .rule-en { color: #000000 !important; }
-  .theme-bw .rule-ml { color: #000000 !important; }
-  .theme-bw .rule-ta { color: #000000 !important; }
+  .theme-bw .stat-en strong { color: #000000 !important; }
+  .theme-bw .stat-en { color: #000000 !important; }
+  .theme-bw .stat-trans.ml { color: #000000 !important; }
+  .theme-bw .stat-trans.ta { color: #000000 !important; }
 
   .theme-bw .poster-footer {
     border-top-color: #000000 !important;
@@ -1398,6 +1443,186 @@ def generate_poster_html_content(theme_class="theme-color", is_interactive=True)
           </div>
         </div>
 
+        <!-- INVALID VOTES -->
+        <div class="invalid-section-wrap">
+          <div class="invalid-header-badge">
+            <div class="invalid-title">
+              <span>✖</span>
+              <span>Examples of Invalid Votes (അസാധു വോട്ടുകൾ / செல்லாத வாக்குகள்)</span>
+            </div>
+            <div class="invalid-title-sub">Rejected during counting &bull; Avoid these mistakes!</div>
+          </div>
+
+          <div class="invalid-grid">
+            <!-- Invalid 1 -->
+            <div class="ballot-example-card invalid-card card-col-3">
+              <div class="ballot-example-head">
+                <span class="ballot-id-title">Invalid 1: Single-Seat Posts &ndash; Multiple Marked</span>
+                <span class="ballot-tag tag-invalid">✖ REJECTED</span>
+              </div>
+              <div class="ballot-content-flex">
+                <div class="ballot-box-graphic invalid-graphic">
+                  <div class="ballot-graphic-row">
+                    <div class="ballot-cand-col">
+                      <span>RAHUL</span>
+                      <span class="cand-sub ml">രാഹുൽ</span>
+                    </div>
+                    <div class="ballot-mark-col">
+                      {get_stamp_svg(size=26)}
+                    </div>
+                  </div>
+                  <div class="ballot-graphic-row">
+                    <div class="ballot-cand-col">
+                      <span>PRIYA</span>
+                      <span class="cand-sub ml">പ്രിയ</span>
+                    </div>
+                    <div class="ballot-mark-col">
+                      {get_stamp_svg(size=26)}
+                    </div>
+                  </div>
+                </div>
+                <div class="ballot-reason-desc invalid-desc">
+                  <div class="reason-en">Two candidates for the same single-seat post have been voted for (Exceeds limit).</div>
+                  <div class="reason-ml ml">ഒരേ പോസ്റ്റിലേക്ക് മത്സരിക്കുന്ന രണ്ടു സ്ഥാനാർത്ഥികൾക്കും വോട്ട് ചെയ്തിരിക്കുന്നു.</div>
+                  <div class="reason-ta ta">ஒரே பதவிக்கு போட்டியிடும் இரு வேட்பாளர்களுக்கு வாக்களித்ததால் செல்லாது.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Invalid 2 -->
+            <div class="ballot-example-card invalid-card card-col-3">
+              <div class="ballot-example-head">
+                <span class="ballot-id-title">Invalid 2: Center on Dividing Line</span>
+                <span class="ballot-tag tag-invalid">✖ REJECTED</span>
+              </div>
+              <div class="ballot-content-flex">
+                <div class="ballot-box-graphic invalid-graphic">
+                  <div class="ballot-graphic-row">
+                    <div class="ballot-cand-col">
+                      <span>RAHUL</span>
+                      <span class="cand-sub ml">രാഹുൽ</span>
+                    </div>
+                    <div class="ballot-mark-col"></div>
+                  </div>
+                  <div class="ballot-graphic-row">
+                    <div class="ballot-cand-col">
+                      <span>PRIYA</span>
+                      <span class="cand-sub ml">പ്രിയ</span>
+                    </div>
+                    <div class="ballot-mark-col">
+                      {get_stamp_svg(size=26, extra_class="center-on-border")}
+                    </div>
+                  </div>
+                </div>
+                <div class="ballot-reason-desc invalid-desc">
+                  <div class="reason-en">The center point of the cross mark is exactly on the dividing line, causing ambiguity.</div>
+                  <div class="reason-ml ml">ക്രോസ്സ് മാർക്കിന്റെ സെന്റർ പോയിന്റ് കൃത്യമായി അതിർവരയിലാണ് ഉള്ളത് (അവ്യക്തത).</div>
+                  <div class="reason-ta ta">மையப் புள்ளி பிரிக்கும் கோட்டில் சரியாக இருப்பதால் எந்த வேட்பாளருக்கு என்று தெளிவற்றது.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Invalid 3 -->
+            <div class="ballot-example-card invalid-card card-col-3">
+              <div class="ballot-example-head">
+                <span class="ballot-id-title">Invalid 3: Pen Tick Mark / Star</span>
+                <span class="ballot-tag tag-invalid">✖ REJECTED</span>
+              </div>
+              <div class="ballot-content-flex">
+                <div class="ballot-box-graphic invalid-graphic">
+                  <div class="ballot-graphic-row">
+                    <div class="ballot-cand-col">
+                      <span>RAHUL</span>
+                      <span class="cand-sub ml">രാഹുൽ</span>
+                    </div>
+                    <div class="ballot-mark-col"></div>
+                  </div>
+                  <div class="ballot-graphic-row">
+                    <div class="ballot-cand-col">
+                      <span>PRIYA</span>
+                      <span class="cand-sub ml">പ്രിയ</span>
+                    </div>
+                    <div class="ballot-mark-col">
+                      <div class="tick-stamp">✓</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="ballot-reason-desc invalid-desc">
+                  <div class="reason-en">A pen or pencil was used to draw a tick mark (✓) or star instead of the arrow cross stamp.</div>
+                  <div class="reason-ml ml">ആരോ ക്രോസ്സ് മുദ്രയ്ക്ക് പകരം പേന ഉപയോഗിച്ച് ടിക്ക് മാർക്ക് / ചിഹ്നങ്ങൾ രേഖപ്പെടുത്തി.</div>
+                  <div class="reason-ta ta">முத்திரைக்கு பதிலாக பேனா மூலம் டிக் குறி இட்டதால் செல்லாது.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Invalid 4 -->
+            <div class="ballot-example-card invalid-card card-col-2">
+              <div class="ballot-example-head">
+                <span class="ballot-id-title">Invalid 4: Thumb Impression</span>
+                <span class="ballot-tag tag-invalid">✖ REJECTED</span>
+              </div>
+              <div class="ballot-content-flex">
+                <div class="ballot-box-graphic invalid-graphic">
+                  <div class="ballot-graphic-row">
+                    <div class="ballot-cand-col">
+                      <span>RAHUL</span>
+                      <span class="cand-sub ml">രാഹുൽ</span>
+                    </div>
+                    <div class="ballot-mark-col"></div>
+                  </div>
+                  <div class="ballot-graphic-row">
+                    <div class="ballot-cand-col">
+                      <span>PRIYA</span>
+                      <span class="cand-sub ml">പ്രിയ</span>
+                    </div>
+                    <div class="ballot-mark-col">
+                      <div class="thumb-stamp" style="background-image: url('{thumb_b64}');"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="ballot-reason-desc invalid-desc">
+                  <div class="reason-en">A thumb impression is recorded on the ballot instead of the arrow cross stamp.</div>
+                  <div class="reason-ml ml">ആരോ ക്രോസ്സ് മുദ്രയ്ക്ക് പകരം തമ്പ് ഇമ്പ്രഷൻ (വിരലടയാളം) രേഖപ്പെടുത്തിയിരിക്കുന്നു.</div>
+                  <div class="reason-ta ta">முத்திரைக்கு பதிலாக பெருவிரல் ரேகை பதிவு செய்யப்பட்டுள்ளதால் செல்லாது.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Invalid 5 -->
+            <div class="ballot-example-card invalid-card card-col-2">
+              <div class="ballot-example-head">
+                <span class="ballot-id-title">Invalid 5: Signature / Name</span>
+                <span class="ballot-tag tag-invalid">✖ REJECTED</span>
+              </div>
+              <div class="ballot-content-flex">
+                <div class="ballot-box-graphic invalid-graphic">
+                  <div class="ballot-graphic-row">
+                    <div class="ballot-cand-col">
+                      <span>RAHUL</span>
+                      <span class="cand-sub ml">രാഹുൽ</span>
+                    </div>
+                    <div class="ballot-mark-col">
+                      <div class="sig-stamp">Rahul</div>
+                    </div>
+                  </div>
+                  <div class="ballot-graphic-row">
+                    <div class="ballot-cand-col">
+                      <span>PRIYA</span>
+                      <span class="cand-sub ml">പ്രിയ</span>
+                    </div>
+                    <div class="ballot-mark-col"></div>
+                  </div>
+                </div>
+                <div class="ballot-reason-desc invalid-desc">
+                  <div class="reason-en">The voter has placed a signature, name, or admission number (Identifying mark).</div>
+                  <div class="reason-ml ml">ആരോ ക്രോസ്സ് മുദ്രയ്ക്ക് പകരം വോട്ടറുടെ ഒപ്പോ പേരോ നമ്പറോ രേഖപ്പെടുത്തിയിരിക്കുന്നു.</div>
+                  <div class="reason-ta ta">வாக்காளர் முத்திரைக்கு பதிலாக தனது கையொப்பத்தை வைத்துள்ளதால் செல்லாது.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- ================= UUC DUAL-VOTE SPECIAL SECTION ================= -->
         <div class="uuc-section-wrap">
           <div class="uuc-header-badge">
@@ -1537,224 +1762,44 @@ def generate_poster_html_content(theme_class="theme-color", is_interactive=True)
           </div>
         </div>
 
-        <!-- INVALID VOTES -->
-        <div class="invalid-section-wrap">
-          <div class="invalid-header-badge">
-            <div class="invalid-title">
-              <span>✖</span>
-              <span>Examples of Invalid Votes (അസാധു വോട്ടുകൾ / செல்லாத வாக்குகள்)</span>
-            </div>
-            <div class="invalid-title-sub">Rejected during counting &bull; Avoid these mistakes!</div>
+        <!-- ================= STATUTORY WARNINGS ================= -->
+        <div class="statutory-banner-wrap">
+          <div class="statutory-banner-head">
+            <span>⚠️</span>
+            <span>STATUTORY WARNINGS &bull; നിയമ മുന്നറിയിപ്പുകൾ &bull; <span class="ta" style="text-transform:none;">சட்டப்பூர்வ எச்சரிக்கைகள்</span></span>
           </div>
-
-          <div class="invalid-grid">
-            <!-- Invalid 1 -->
-            <div class="ballot-example-card invalid-card">
-              <div class="ballot-example-head">
-                <span class="ballot-id-title">Invalid 1: Single-Seat Posts &ndash; Multiple Marked</span>
-                <span class="ballot-tag tag-invalid">✖ REJECTED</span>
+          <div class="statutory-banner-grid">
+            <div class="statutory-col">
+              <div class="stat-head-row">
+                <span class="stat-bullet">🛑</span>
+                <div class="stat-en"><strong>No Erasures / Overwriting:</strong> Do not erase, overwrite, or alter the ballot paper.</div>
               </div>
-              <div class="ballot-content-flex">
-                <div class="ballot-box-graphic invalid-graphic">
-                  <div class="ballot-graphic-row">
-                    <div class="ballot-cand-col">
-                      <span>RAHUL</span>
-                      <span class="cand-sub ml">രാഹുൽ</span>
-                    </div>
-                    <div class="ballot-mark-col">
-                      {get_stamp_svg(size=26)}
-                    </div>
-                  </div>
-                  <div class="ballot-graphic-row">
-                    <div class="ballot-cand-col">
-                      <span>PRIYA</span>
-                      <span class="cand-sub ml">പ്രിയ</span>
-                    </div>
-                    <div class="ballot-mark-col">
-                      {get_stamp_svg(size=26)}
-                    </div>
-                  </div>
-                </div>
-                <div class="ballot-reason-desc invalid-desc">
-                  <div class="reason-en">Two candidates for the same single-seat post have been voted for (Exceeds limit).</div>
-                  <div class="reason-ml ml">ഒരേ പോസ്റ്റിലേക്ക് മത്സരിക്കുന്ന രണ്ടു സ്ഥാനാർത്ഥികൾക്കും വോട്ട് ചെയ്തിരിക്കുന്നു.</div>
-                  <div class="reason-ta ta">ஒரே பதவிக்கு போட்டியிடும் இரு வேட்பாளர்களுக்கு வாக்களித்ததால் செல்லாது.</div>
-                </div>
-              </div>
+              <div class="stat-trans ml"><span class="ml"><strong>വെട്ടിത്തിരുത്തലുകൾ അരുത്:</strong> മായ്ക്കുകയോ തിരുത്തുകയോ ചെയ്യരുത്.</span></div>
+              <div class="stat-trans ta"><span class="ta"><strong>அழித்தல் கூடாது:</strong> அழிக்கவோ திருத்தவோ கூடாது.</span></div>
             </div>
-
-            <!-- Invalid 2 -->
-            <div class="ballot-example-card invalid-card">
-              <div class="ballot-example-head">
-                <span class="ballot-id-title">Invalid 2: Center on Dividing Line</span>
-                <span class="ballot-tag tag-invalid">✖ REJECTED</span>
+            <div class="statutory-col">
+              <div class="stat-head-row">
+                <span class="stat-bullet">🛑</span>
+                <div class="stat-en"><strong>No Identifying Marks:</strong> Writing your name, sign, or number renders <strong>VOID</strong>.</div>
               </div>
-              <div class="ballot-content-flex">
-                <div class="ballot-box-graphic invalid-graphic">
-                  <div class="ballot-graphic-row">
-                    <div class="ballot-cand-col">
-                      <span>RAHUL</span>
-                      <span class="cand-sub ml">രാഹുൽ</span>
-                    </div>
-                    <div class="ballot-mark-col"></div>
-                  </div>
-                  <div class="ballot-graphic-row">
-                    <div class="ballot-cand-col">
-                      <span>PRIYA</span>
-                      <span class="cand-sub ml">പ്രിയ</span>
-                    </div>
-                    <div class="ballot-mark-col">
-                      {get_stamp_svg(size=26, extra_class="center-on-border")}
-                    </div>
-                  </div>
-                </div>
-                <div class="ballot-reason-desc invalid-desc">
-                  <div class="reason-en">The center point of the cross mark is exactly on the dividing line, causing ambiguity.</div>
-                  <div class="reason-ml ml">ക്രോസ്സ് മാർക്കിന്റെ സെന്റർ പോയിന്റ് കൃത്യമായി അതിർവരയിലാണ് ഉള്ളത് (അവ്യക്തത).</div>
-                  <div class="reason-ta ta">மையப் புள்ளி பிரிக்கும் கோட்டில் சரியாக இருப்பதால் எந்த வேட்பாளருக்கு என்று தெளிவற்றது.</div>
-                </div>
-              </div>
+              <div class="stat-trans ml"><span class="ml"><strong>തിരിച്ചറിയൽ അടയാളങ്ങൾ അരുത്:</strong> പേരോ ഒപ്പോ എഴുതിയാൽ <strong>അസാധുവാകും</strong>.</span></div>
+              <div class="stat-trans ta"><span class="ta"><strong>அடையாளக் குறிகள் கூடாது:</strong> பெயர், கையொப்பம் எழுதினால் <strong>செல்லாது</strong>.</span></div>
             </div>
-
-            <!-- Invalid 3 -->
-            <div class="ballot-example-card invalid-card">
-              <div class="ballot-example-head">
-                <span class="ballot-id-title">Invalid 3: Pen Tick Mark / Star</span>
-                <span class="ballot-tag tag-invalid">✖ REJECTED</span>
+            <div class="statutory-col">
+              <div class="stat-head-row">
+                <span class="stat-bullet">🛑</span>
+                <div class="stat-en"><strong>Strict Secrecy:</strong> Never disclose or photograph your marked ballot.</div>
               </div>
-              <div class="ballot-content-flex">
-                <div class="ballot-box-graphic invalid-graphic">
-                  <div class="ballot-graphic-row">
-                    <div class="ballot-cand-col">
-                      <span>RAHUL</span>
-                      <span class="cand-sub ml">രാഹുൽ</span>
-                    </div>
-                    <div class="ballot-mark-col"></div>
-                  </div>
-                  <div class="ballot-graphic-row">
-                    <div class="ballot-cand-col">
-                      <span>PRIYA</span>
-                      <span class="cand-sub ml">പ്രിയ</span>
-                    </div>
-                    <div class="ballot-mark-col">
-                      <div class="tick-stamp">✓</div>
-                    </div>
-                  </div>
-                </div>
-                <div class="ballot-reason-desc invalid-desc">
-                  <div class="reason-en">A pen or pencil was used to draw a tick mark (✓) or star instead of the arrow cross stamp.</div>
-                  <div class="reason-ml ml">ആരോ ക്രോസ്സ് മുദ്രയ്ക്ക് പകരം പേന ഉപയോഗിച്ച് ടിക്ക് മാർക്ക് / ചിഹ്നങ്ങൾ രേഖപ്പെടുത്തി.</div>
-                  <div class="reason-ta ta">முத்திரைக்கு பதிலாக பேனா மூலம் டிக் குறி இட்டதால் செல்லாது.</div>
-                </div>
-              </div>
+              <div class="stat-trans ml"><span class="ml"><strong>രഹസ്യസ്വഭാവം കാത്തുസൂക്ഷിക്കുക:</strong> വോട്ട് വെളിപ്പെടുത്തുകയോ ചിത്രം എടുക്കുകയോ അരുത്.</span></div>
+              <div class="stat-trans ta"><span class="ta"><strong>ரகசியம் காக்க:</strong> வாக்களித்ததை வெளியிடவோ, படம் எடுக்கவோ கூடாது.</span></div>
             </div>
-
-            <!-- Invalid 4 -->
-            <div class="ballot-example-card invalid-card">
-              <div class="ballot-example-head">
-                <span class="ballot-id-title">Invalid 4: Thumb Impression</span>
-                <span class="ballot-tag tag-invalid">✖ REJECTED</span>
+            <div class="statutory-col">
+              <div class="stat-head-row">
+                <span class="stat-bullet">🛑</span>
+                <div class="stat-en"><strong>Never Take Ballot Out:</strong> Taking ballots outside is a severe legal offense.</div>
               </div>
-              <div class="ballot-content-flex">
-                <div class="ballot-box-graphic invalid-graphic">
-                  <div class="ballot-graphic-row">
-                    <div class="ballot-cand-col">
-                      <span>RAHUL</span>
-                      <span class="cand-sub ml">രാഹുൽ</span>
-                    </div>
-                    <div class="ballot-mark-col"></div>
-                  </div>
-                  <div class="ballot-graphic-row">
-                    <div class="ballot-cand-col">
-                      <span>PRIYA</span>
-                      <span class="cand-sub ml">പ്രിയ</span>
-                    </div>
-                    <div class="ballot-mark-col">
-                      <div class="thumb-stamp" style="background-image: url('{thumb_b64}');"></div>
-                    </div>
-                  </div>
-                </div>
-                <div class="ballot-reason-desc invalid-desc">
-                  <div class="reason-en">A thumb impression is recorded on the ballot instead of the arrow cross stamp.</div>
-                  <div class="reason-ml ml">ആരോ ക്രോസ്സ് മുദ്രയ്ക്ക് പകരം തമ്പ് ഇമ്പ്രഷൻ (വിരലടയാളം) രേഖപ്പെടുത്തിയിരിക്കുന്നു.</div>
-                  <div class="reason-ta ta">முத்திரைக்கு பதிலாக பெருவிரல் ரேகை பதிவு செய்யப்பட்டுள்ளதால் செல்லாது.</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Invalid 5 -->
-            <div class="ballot-example-card invalid-card">
-              <div class="ballot-example-head">
-                <span class="ballot-id-title">Invalid 5: Signature / Name</span>
-                <span class="ballot-tag tag-invalid">✖ REJECTED</span>
-              </div>
-              <div class="ballot-content-flex">
-                <div class="ballot-box-graphic invalid-graphic">
-                  <div class="ballot-graphic-row">
-                    <div class="ballot-cand-col">
-                      <span>RAHUL</span>
-                      <span class="cand-sub ml">രാഹുൽ</span>
-                    </div>
-                    <div class="ballot-mark-col">
-                      <div class="sig-stamp">Rahul</div>
-                    </div>
-                  </div>
-                  <div class="ballot-graphic-row">
-                    <div class="ballot-cand-col">
-                      <span>PRIYA</span>
-                      <span class="cand-sub ml">പ്രിയ</span>
-                    </div>
-                    <div class="ballot-mark-col"></div>
-                  </div>
-                </div>
-                <div class="ballot-reason-desc invalid-desc">
-                  <div class="reason-en">The voter has placed a signature, name, or admission number (Identifying mark).</div>
-                  <div class="reason-ml ml">ആരോ ക്രോസ്സ് മുദ്രയ്ക്ക് പകരം വോട്ടറുടെ ഒപ്പോ പേരോ നമ്പറോ രേഖപ്പെടുത്തിയിരിക്കുന്നു.</div>
-                  <div class="reason-ta ta">வாக்காளர் முத்திரைக்கு பதிலாக தனது கையொப்பத்தை வைத்துள்ளதால் செல்லாது.</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Golden Rule Card -->
-            <div class="golden-rule-card">
-              <div class="golden-rule-head">
-                <span>⚠️</span>
-                <span>Statutory Warnings &bull; നിയമ മുന്നറിയിപ്പുകൾ &bull; <span class="ta" style="text-transform:none;">சட்டப்பூர்வ எச்சரிக்கைகள்</span></span>
-              </div>
-              <div class="golden-rule-body">
-                <div class="rule-line">
-                  <span class="rule-bullet">🛑</span>
-                  <div class="rule-text-group">
-                    <div class="rule-en"><strong>No Erasures / Overwriting:</strong> Do not erase, overwrite, or alter the ballot paper.</div>
-                    <div class="rule-ml ml"><strong>വെട്ടിത്തിരുത്തലുകൾ അരുത്:</strong> ബാലറ്റ് പേപ്പറിൽ മായ്ക്കുകയോ തിരുത്തുകയോ ചെയ്യരുത്.</div>
-                    <div class="rule-ta ta"><strong>அழித்தல் / திருத்துதல் கூடாது:</strong> வாக்குச் சீட்டில் அழிக்கவோ திருத்தவோ கூடாது.</div>
-                  </div>
-                </div>
-                <div class="rule-line">
-                  <span class="rule-bullet">🛑</span>
-                  <div class="rule-text-group">
-                    <div class="rule-en"><strong>No Identifying Marks:</strong> Writing your name, sign, or roll number renders ballot <strong>VOID</strong>.</div>
-                    <div class="rule-ml ml"><strong>തിരിച്ചറിയൽ അടയാളങ്ങൾ അരുത്:</strong> പേരോ ഒപ്പോ നമ്പറോ എഴുതിയാൽ ബാലറ്റ് <strong>അസാധുവാകും</strong>.</div>
-                    <div class="rule-ta ta"><strong>அடையாளக் குறிகள் கூடாது:</strong> பெயர், கையொப்பம், எண் எழுதினால் வாக்கு <strong>செல்லாது</strong>.</div>
-                  </div>
-                </div>
-                <div class="rule-line">
-                  <span class="rule-bullet">🛑</span>
-                  <div class="rule-text-group">
-                    <div class="rule-en"><strong>Strict Secrecy:</strong> Never disclose or photograph your marked ballot inside the booth.</div>
-                    <div class="rule-ml ml"><strong>രഹസ്യസ്വഭാവം കർശനമായി പാലിക്കുക:</strong> വോട്ട് രേഖപ്പെടുത്തിയത് പരസ്യമാക്കുകയോ ഫോട്ടോ എടുക്കുകയോ അരുത്.</div>
-                    <div class="rule-ta ta"><strong>வாக்கு ரகசியம் காக்க:</strong> வாக்களித்ததை பகிரவோ, பூத்தில் படம் எடுக்கவோ கூடாது.</div>
-                  </div>
-                </div>
-                <div class="rule-line">
-                  <span class="rule-bullet">🛑</span>
-                  <div class="rule-text-group">
-                    <div class="rule-en"><strong>Never Take Ballot Out:</strong> Taking ballots outside the polling booth is a severe legal offense.</div>
-                    <div class="rule-ml ml"><strong>ബാലറ്റ് പുറത്തുകൊണ്ടുപോകരുത്:</strong> ബാലറ്റ് പേപ്പർ ബൂത്തിന് പുറത്തുകൊണ്ടുപോകുന്നത് ശിക്ഷാർഹമായ കുറ്റമാണ്.</div>
-                    <div class="rule-ta ta"><strong>வாக்குச் சீட்டை வெளியே எடுக்காதீர்:</strong> வாக்குச் சீட்டை வெளியே எடுப்பது சட்டப்படி குற்றமாகும்.</div>
-                  </div>
-                </div>
-              </div>
+              <div class="stat-trans ml"><span class="ml"><strong>ബാലറ്റ് പുറത്തുകൊണ്ടുപോകരുത്:</strong> ബൂത്തിന് പുറത്തുകൊണ്ടുപോകുന്നത് ശിക്ഷാർഹമാണ്.</span></div>
+              <div class="stat-trans ta"><span class="ta"><strong>வெளியே எடுக்காதீர்:</strong> பூத்தை விட்டு வெளியே எடுப்பது குற்றமாகும்.</span></div>
             </div>
           </div>
         </div>
