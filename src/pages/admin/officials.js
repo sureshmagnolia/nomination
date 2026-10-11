@@ -940,62 +940,85 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const isPosted = isObs || isDisc || isGriev || isCoreMan || isRoMan || isAroMan || pDuty || cDuty;
 
     return `
-      <tr class="${isExcluded ? 'bg-red-950/20 opacity-70' : 'hover:bg-white/5'} transition-colors">
-        <td class="text-center font-mono font-bold ${f.seniority <= 15 ? 'text-amber-300' : 'text-slate-300'}">
-          #${f.seniority}
+      <tr class="${isExcluded ? 'bg-red-950/25 opacity-75' : 'hover:bg-white/[0.04]'} transition-colors border-b border-white/5">
+        <td class="text-center whitespace-nowrap">
+          <span class="inline-flex items-center justify-center min-w-[34px] px-2 py-0.5 rounded-full font-mono font-bold text-xs ${f.seniority <= 15 ? 'bg-amber-500/15 text-amber-300 border border-amber-500/35 shadow-sm' : 'bg-white/5 text-slate-300 border border-white/10'}">
+            #${f.seniority}
+          </span>
         </td>
-        <td class="font-bold text-white whitespace-nowrap">
-          <div>${esc(f.name)}</div>
-          ${renderSubtlePhone(f.phone || f.mobile)}
-        </td>
-        <td class="font-mono text-slate-300">
-          ${f.pen || '–'}
-        </td>
-        <td class="text-slate-300">
-          ${esc(f.designation || '–')}${f.department ? `<span class="text-[10px] text-indigo-300/80 block font-normal">${esc(f.department)}</span>` : ''}
-        </td>
-        <td class="font-mono text-slate-400">
-          ${f.joiningDate || '–'}
-        </td>
-        <td>
-          <div class="flex items-center gap-1.5 flex-wrap">
-            ${isRoMan ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[10px] font-bold">👑 Returning Officer</span>` : ''}
-            ${isAroMan ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[10px] font-bold">⚖️ ARO</span>` : ''}
-            ${isCoreMan ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">⭐ Core Committee</span>` : ''}
-            ${isObs ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">⚖️ Observer</span>` : ''}
-            ${isDisc ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold">🛡️ Discipline</span>` : ''}
-            ${isGriev ? `<span class="badge bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-bold">🤝 Grievance</span>` : ''}
-            ${pDuty ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">Booth ${pDuty.boothNumber} (${pDuty.role})</span>` : ''}
-            ${cDuty ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-semibold">Table ${cDuty.tableNumber} (${cDuty.role})</span>` : ''}
-            ${pDuty && cDuty ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">⚠️ Double Duty</span>` : ''}
-            ${!isPosted ? (isExcluded ? `<span class="text-slate-500 text-[11px]">–</span>` : `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-semibold" title="Standby Duty at Central Control Room">📋 Reserve Pool</span>`) : ''}
+        <td class="whitespace-nowrap">
+          <div class="flex flex-col">
+            <span class="font-bold text-white text-[13px] tracking-wide">${esc(f.name)}</span>
+            ${renderSubtlePhone(f.phone || f.mobile)}
           </div>
         </td>
-        <td>
-          ${isExcluded ? `
-            <span class="badge bg-red-500/20 text-red-300 border border-red-500/40 text-[10px] font-bold" title="${esc(f.exclusionReason || 'Excluded from election duties')}">
-              ⛔ Excluded${f.exclusionReason ? `: ${esc(f.exclusionReason)}` : ''}
+        <td class="text-center whitespace-nowrap">
+          <span class="font-mono text-[11px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-300 font-semibold tracking-wide">
+            ${f.pen || '–'}
+          </span>
+        </td>
+        <td class="whitespace-nowrap">
+          <div class="text-slate-200 font-medium text-xs">${esc(f.designation || '–')}</div>
+          ${f.department ? `
+            <span class="inline-flex items-center gap-1 text-[10.5px] font-normal text-indigo-300 bg-indigo-950/40 border border-indigo-500/20 px-1.5 py-0.2 rounded mt-0.5">
+              <span>🏛️</span> ${esc(f.department)}
             </span>
+          ` : ''}
+        </td>
+        <td class="font-mono text-xs whitespace-nowrap text-slate-300">
+          ${f.joiningDate ? `
+            <span class="inline-flex items-center gap-1.5 text-slate-300 bg-slate-900/60 border border-white/5 px-2 py-0.5 rounded whitespace-nowrap">
+              <span class="text-slate-400">📅</span>
+              <span>${esc(f.joiningDate)}</span>
+            </span>
+          ` : '<span class="text-slate-500">–</span>'}
+        </td>
+        <td class="whitespace-nowrap">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            ${isRoMan ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">👑 Returning Officer</span>` : ''}
+            ${isAroMan ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">⚖️ ARO</span>` : ''}
+            ${isCoreMan ? `<span class="badge bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">⭐ Core Committee</span>` : ''}
+            ${isObs ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">⚖️ Observer</span>` : ''}
+            ${isDisc ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">🛡️ Discipline</span>` : ''}
+            ${isGriev ? `<span class="badge bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">🤝 Grievance</span>` : ''}
+            ${pDuty ? `<span class="badge bg-blue-500/20 text-blue-200 border border-blue-500/35 text-[10px] font-semibold whitespace-nowrap shadow-sm">🗳️ Booth ${pDuty.boothNumber} (${pDuty.role})</span>` : ''}
+            ${cDuty ? `<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/35 text-[10px] font-semibold whitespace-nowrap shadow-sm">📊 Table ${cDuty.tableNumber} (${cDuty.role})</span>` : ''}
+            ${pDuty && cDuty ? `<span class="badge bg-amber-500/25 text-amber-300 border border-amber-500/50 text-[10px] font-bold whitespace-nowrap shadow-sm">⚠️ Double Duty</span>` : ''}
+            ${!isPosted ? (isExcluded ? `<span class="text-slate-500 text-xs">–</span>` : `<span class="badge bg-slate-800 text-slate-300 border border-white/10 text-[10px] font-medium whitespace-nowrap" title="Standby Duty at Central Control Room">📋 Reserve Pool</span>`) : ''}
+          </div>
+        </td>
+        <td class="text-center whitespace-nowrap">
+          ${isExcluded ? `
+            <div class="inline-flex flex-col items-center">
+              <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm" title="${esc(f.exclusionReason || 'Excluded from election duties')}">
+                ⛔ Excluded
+              </span>
+              ${f.exclusionReason ? `
+                <span class="text-[9.5px] text-rose-300/80 font-normal max-w-[125px] truncate block text-center mt-0.5" title="${esc(f.exclusionReason)}">
+                  ${esc(f.exclusionReason)}
+                </span>
+              ` : ''}
+            </div>
           ` : (isPosted ? `
-            <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold">
+            <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold whitespace-nowrap shadow-sm">
               ✓ Posted
             </span>
           ` : `
-            <span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-semibold" title="Not posted · Standby in Reserve Pool">
-              📋 Reserve (Standby)
+            <span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-semibold whitespace-nowrap shadow-sm" title="Not posted · Standby in Reserve Pool">
+              📋 Reserve
             </span>
           `)}
         </td>
-        <td class="text-right">
-          <div class="flex items-center justify-end gap-1.5 flex-wrap">
-            <button type="button" class="btn btn-secondary text-[11px] py-1 px-2 btn-edit-fac text-indigo-300 hover:text-white hover:bg-indigo-600/30 border-indigo-500/30 flex items-center gap-1 font-semibold" data-name="${esc(f.name)}" data-pen="${esc(f.pen || '')}" title="Edit faculty member details">
-              ✏️ Edit
+        <td class="text-right whitespace-nowrap">
+          <div class="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
+            <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 btn-edit-fac text-indigo-300 hover:text-white hover:bg-indigo-600/30 border-indigo-500/30 inline-flex items-center gap-1 font-semibold whitespace-nowrap transition-all shadow-sm" data-name="${esc(f.name)}" data-pen="${esc(f.pen || '')}" title="Edit faculty member details">
+              <span>✏️</span> <span>Edit</span>
             </button>
-            <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-core-fac ${isCoreMan ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30 font-bold' : 'text-slate-300 hover:text-amber-300 hover:border-amber-500/40'}" data-pen="${f.pen || f.name}" title="${isCoreMan ? 'Click to remove from Core Committee' : 'Assign to Core Committee (All faculty eligible)'}">
-              ${isCoreMan ? '⭐ In Core' : '➕ Core'}
+            <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-core-fac ${isCoreMan ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 hover:bg-cyan-500/30 font-bold' : 'text-slate-300 hover:text-cyan-300 hover:border-cyan-500/40'} inline-flex items-center gap-1 font-semibold whitespace-nowrap transition-all shadow-sm" data-pen="${f.pen || f.name}" title="${isCoreMan ? 'Click to remove from Core Committee' : 'Assign to Core Committee (All faculty eligible)'}">
+              <span>⭐</span> <span>${isCoreMan ? 'In Core' : 'Core'}</span>
             </button>
-            <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-exclude-fac ${isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-pen="${f.pen || f.name}">
-              ${isExcluded ? '✓ Make Available' : '⛔ Exclude'}
+            <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-exclude-fac ${isExcluded ? 'bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 border-emerald-500/30 font-semibold' : 'text-rose-300 hover:text-rose-200 hover:bg-rose-500/20 border-rose-500/30'} inline-flex items-center gap-1 whitespace-nowrap transition-all shadow-sm" data-pen="${f.pen || f.name}" title="${isExcluded ? 'Restore availability for election duty' : 'Exclude from election duty'}">
+              <span>${isExcluded ? '✓' : '⛔'}</span> <span>${isExcluded ? 'Available' : 'Exclude'}</span>
             </button>
           </div>
         </td>
@@ -1013,57 +1036,77 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const isPosted = isObs || isDisc || isGriev || asstDuty.polling || asstDuty.counting;
 
     return `
-      <tr class="${isExcluded ? 'bg-red-950/20 opacity-70' : 'hover:bg-white/5'} transition-colors">
-        <td class="text-center font-mono text-slate-400">
-          ${idx + 1}
+      <tr class="${isExcluded ? 'bg-red-950/25 opacity-75' : 'hover:bg-white/[0.04]'} transition-colors border-b border-white/5">
+        <td class="text-center whitespace-nowrap">
+          <span class="inline-flex items-center justify-center min-w-[30px] px-2 py-0.5 rounded-full font-mono text-xs bg-white/5 text-slate-300 border border-white/10 font-medium">
+            ${idx + 1}
+          </span>
         </td>
-        <td class="font-bold text-white whitespace-nowrap">
-          <div>${esc(nt.name)}</div>
-          ${renderSubtlePhone(nt.phone || nt.mobile)}
-        </td>
-        <td class="text-slate-300">
-          ${esc(nt.designation || 'Staff')}${nt.department ? `<span class="text-[10px] text-emerald-300/80 block font-normal">${esc(nt.department)}</span>` : ''}
-        </td>
-        <td class="font-mono text-slate-300">
-          ${nt.pen || '–'}
-        </td>
-        <td>
-          <div class="flex items-center gap-1 flex-wrap">
-            ${isObs ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">⚖️ Observer</span>` : ''}
-            ${isDisc ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold">🛡️ Discipline</span>` : ''}
-            ${isGriev ? `<span class="badge bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-bold">🤝 Grievance</span>` : ''}
-            ${asstDuty.polling ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-semibold">Booth ${asstDuty.polling.boothNumber}</span>` : ''}
-            ${!isPosted ? (isExcluded ? '<span class="text-slate-500">–</span>' : '<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-semibold" title="Standby Duty at Central Control Room">📋 Reserve Pool</span>') : ''}
+        <td class="whitespace-nowrap">
+          <div class="flex flex-col">
+            <span class="font-bold text-white text-[13px] tracking-wide">${esc(nt.name)}</span>
+            ${renderSubtlePhone(nt.phone || nt.mobile)}
           </div>
         </td>
-        <td>
-          ${asstDuty.counting ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-semibold">Table ${asstDuty.counting.tableNumber}</span>` : '<span class="text-slate-500">–</span>'}
-        </td>
-        <td>
-          ${isExcluded ? `
-            <span class="badge bg-red-500/20 text-red-300 border border-red-500/40 text-[10px] font-bold" title="${esc(nt.exclusionReason || 'Excluded from election duties')}">
-              ⛔ Excluded${nt.exclusionReason ? `: ${esc(nt.exclusionReason)}` : ''}
+        <td class="whitespace-nowrap">
+          <div class="text-slate-200 font-medium text-xs">${esc(nt.designation || 'Staff')}</div>
+          ${nt.department ? `
+            <span class="inline-flex items-center gap-1 text-[10.5px] font-normal text-emerald-300 bg-emerald-950/40 border border-emerald-500/20 px-1.5 py-0.2 rounded mt-0.5">
+              <span>🏛️</span> ${esc(nt.department)}
             </span>
+          ` : ''}
+        </td>
+        <td class="text-center whitespace-nowrap">
+          <span class="font-mono text-[11px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-300 font-semibold tracking-wide">
+            ${nt.pen || '–'}
+          </span>
+        </td>
+        <td class="whitespace-nowrap">
+          <div class="flex items-center gap-1 flex-wrap">
+            ${isObs ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">⚖️ Observer</span>` : ''}
+            ${isDisc ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">🛡️ Discipline</span>` : ''}
+            ${isGriev ? `<span class="badge bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm">🤝 Grievance</span>` : ''}
+            ${asstDuty.polling ? `<span class="badge bg-blue-500/20 text-blue-200 border border-blue-500/35 text-[10px] font-semibold whitespace-nowrap shadow-sm">🗳️ Booth ${asstDuty.polling.boothNumber}</span>` : ''}
+            ${!isPosted ? (isExcluded ? '<span class="text-slate-500 text-xs">–</span>' : '<span class="badge bg-slate-800 text-slate-300 border border-white/10 text-[10px] font-medium whitespace-nowrap" title="Standby Duty at Central Control Room">📋 Reserve Pool</span>') : ''}
+          </div>
+        </td>
+        <td class="whitespace-nowrap">
+          ${asstDuty.counting ? `<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/35 text-[10px] font-semibold whitespace-nowrap shadow-sm">📊 Table ${asstDuty.counting.tableNumber}</span>` : '<span class="text-slate-500 text-xs">–</span>'}
+        </td>
+        <td class="text-center whitespace-nowrap">
+          ${isExcluded ? `
+            <div class="inline-flex flex-col items-center">
+              <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold whitespace-nowrap shadow-sm" title="${esc(nt.exclusionReason || 'Excluded from election duties')}">
+                ⛔ Excluded
+              </span>
+              ${nt.exclusionReason ? `
+                <span class="text-[9.5px] text-rose-300/80 font-normal max-w-[125px] truncate block text-center mt-0.5" title="${esc(nt.exclusionReason)}">
+                  ${esc(nt.exclusionReason)}
+                </span>
+              ` : ''}
+            </div>
           ` : (isPosted ? `
-            <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold">
+            <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold whitespace-nowrap shadow-sm">
               ✓ Posted
             </span>
           ` : `
-            <span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-semibold" title="Not posted · Standby in Reserve Pool">
-              📋 Reserve (Standby)
+            <span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-semibold whitespace-nowrap shadow-sm" title="Not posted · Standby in Reserve Pool">
+              📋 Reserve
             </span>
           `)}
         </td>
-        <td class="text-right whitespace-nowrap space-x-1">
-          <button type="button" class="btn btn-secondary text-[11px] py-1 px-2 btn-edit-nt text-emerald-300 hover:text-white hover:bg-emerald-600/30 border-emerald-500/30 font-semibold inline-flex items-center gap-1" data-name="${esc(nt.name)}" data-pen="${esc(nt.pen || '')}" title="Edit staff member details">
-            ✏️ Edit
-          </button>
-          <button class="btn btn-secondary text-[11px] py-1 px-2 btn-toggle-exclude-nt ${isExcluded ? 'text-emerald-300 hover:text-emerald-200' : 'text-red-300 hover:text-red-200'}" data-name="${esc(nt.name)}">
-            ${isExcluded ? '✓ Enable' : '⛔ Exclude'}
-          </button>
-          <button class="btn btn-secondary text-[11px] py-1 px-1.5 text-red-400 hover:bg-red-500/20 btn-delete-nt" data-name="${esc(nt.name)}" title="Remove from roster">
-            🗑️
-          </button>
+        <td class="text-right whitespace-nowrap">
+          <div class="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
+            <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 btn-edit-nt text-emerald-300 hover:text-white hover:bg-emerald-600/30 border-emerald-500/30 font-semibold inline-flex items-center gap-1 whitespace-nowrap transition-all shadow-sm" data-name="${esc(nt.name)}" data-pen="${esc(nt.pen || '')}" title="Edit staff member details">
+              <span>✏️</span> <span>Edit</span>
+            </button>
+            <button type="button" class="btn btn-secondary text-[11px] py-1 px-2.5 btn-toggle-exclude-nt ${isExcluded ? 'bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 border-emerald-500/30 font-semibold' : 'text-rose-300 hover:text-rose-200 hover:bg-rose-500/20 border-rose-500/30'} inline-flex items-center gap-1 whitespace-nowrap transition-all shadow-sm" data-name="${esc(nt.name)}" title="${isExcluded ? 'Restore availability for election duty' : 'Exclude from election duty'}">
+              <span>${isExcluded ? '✓' : '⛔'}</span> <span>${isExcluded ? 'Enable' : 'Exclude'}</span>
+            </button>
+            <button type="button" class="btn btn-secondary text-[11px] py-1 px-2 text-rose-400 hover:text-white hover:bg-rose-600/30 border-rose-500/20 btn-delete-nt inline-flex items-center justify-center whitespace-nowrap transition-all shadow-sm" data-name="${esc(nt.name)}" title="Remove staff member from roster">
+              <span>🗑️</span>
+            </button>
+          </div>
         </td>
       </tr>
     `;
@@ -3701,19 +3744,19 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </div>
 
           <!-- Faculty Table -->
-          <div class="glass rounded-xl overflow-hidden border border-white/10">
-            <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
-              <table class="data-table text-xs w-full">
-                <thead class="sticky top-0 bg-slate-900/95 backdrop-blur z-10 border-b border-white/10">
+          <div class="glass rounded-xl overflow-hidden border border-white/10 shadow-lg">
+            <div class="overflow-x-auto max-h-[640px] overflow-y-auto custom-scrollbar">
+              <table class="data-table roster-table text-xs w-full">
+                <thead class="sticky top-0 bg-slate-900/95 backdrop-blur z-10 border-b border-white/10 shadow-sm">
                   <tr>
                     <th class="w-16 text-center">Seniority #</th>
-                    <th>Name</th>
-                    <th>PEN</th>
-                    <th>Designation</th>
-                    <th>Joining Date</th>
-                    <th>Assigned Duty</th>
-                    <th>Status</th>
-                    <th class="text-right">Action</th>
+                    <th class="min-w-[180px]">Faculty Member</th>
+                    <th class="w-24 text-center">PEN</th>
+                    <th class="min-w-[160px]">Designation & Dept</th>
+                    <th class="w-32 whitespace-nowrap">Joining Date</th>
+                    <th class="min-w-[180px]">Assigned Duty</th>
+                    <th class="w-28 text-center">Status</th>
+                    <th class="text-right whitespace-nowrap pr-3">Action</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-white/5" id="facultyTableBody">
@@ -3840,19 +3883,19 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </div>
 
           <!-- Non-Teaching Staff Table -->
-          <div class="glass rounded-xl overflow-hidden border border-white/10">
-            <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
-              <table class="data-table text-xs w-full">
-                <thead class="sticky top-0 bg-slate-900/95 backdrop-blur z-10 border-b border-white/10">
+          <div class="glass rounded-xl overflow-hidden border border-white/10 shadow-lg">
+            <div class="overflow-x-auto max-h-[640px] overflow-y-auto custom-scrollbar">
+              <table class="data-table roster-table text-xs w-full">
+                <thead class="sticky top-0 bg-slate-900/95 backdrop-blur z-10 border-b border-white/10 shadow-sm">
                   <tr>
-                    <th class="w-12 text-center">#</th>
-                    <th>Staff Name</th>
-                    <th>Designation</th>
-                    <th>PEN</th>
-                    <th>Assigned Polling Booth</th>
-                    <th>Assigned Counting Table</th>
-                    <th>Status</th>
-                    <th class="text-right">Action</th>
+                    <th class="w-14 text-center">#</th>
+                    <th class="min-w-[180px]">Staff Name</th>
+                    <th class="min-w-[160px]">Designation & Dept</th>
+                    <th class="w-24 text-center">PEN</th>
+                    <th class="min-w-[160px]">Assigned Polling</th>
+                    <th class="min-w-[160px]">Assigned Counting</th>
+                    <th class="w-28 text-center">Status</th>
+                    <th class="text-right whitespace-nowrap pr-3">Action</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-white/5" id="nonTeachingTableBody">

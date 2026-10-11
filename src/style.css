@@ -391,6 +391,28 @@ select.field option {
 .data-table tr:last-child td { border-bottom: none; }
 .data-table tr:hover td { background: var(--table-hover-bg) !important; }
 
+/* Sleek, Compact Executive Roster Table */
+.roster-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.roster-table th {
+  padding: 0.65rem 0.85rem !important;
+  font-size: 0.7rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.roster-table td {
+  padding: 0.5rem 0.85rem !important;
+  font-size: 0.8rem !important;
+  vertical-align: middle;
+}
+.roster-table tr {
+  transition: background-color 0.15s ease;
+}
+
 /* Badges */
 .badge {
   display: inline-flex;
