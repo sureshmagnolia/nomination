@@ -374,8 +374,8 @@ css_shared = """
   }
   .uuc-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 7.5px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8.5px;
   }
 
   /* Invalid Votes Section */
@@ -1143,7 +1143,7 @@ def generate_poster_html_content(theme_class="theme-color", is_interactive=True)
 
       <!-- ================= HEADER ================= -->
       <header class="poster-header">
-        <img src="{emblem_b64}" alt="Government College Chittur Logo" class="header-logo">
+        <div style="width: 74px; flex-shrink: 0;" aria-hidden="true"></div>
         <div class="header-center">
           <h1 class="college-title-en">GOVERNMENT COLLEGE CHITTUR, PALAKKAD</h1>
           <div class="college-title-sub ml ta">ഗവൺമെന്റ് കോളേജ് ചിറ്റൂർ, പാലക്കാട് &bull; அரசினர் கலைக்கல்லூரி சித்தூர், பாலக்காடு</div>
@@ -1478,7 +1478,7 @@ def generate_poster_html_content(theme_class="theme-color", is_interactive=True)
             <div class="ballot-example-card uuc-card">
               <div class="ballot-example-head">
                 <span class="ballot-id-title">UUC Case 2: 1 Candidate Marked</span>
-                <span class="ballot-tag tag-valid">✔ 1 VALID + 1 UNCAST</span>
+                <span class="ballot-tag tag-valid">✔ 1 VALID + 1 INVALID</span>
               </div>
               <div class="ballot-content-flex">
                 <div class="ballot-box-graphic uuc-graphic">
@@ -1507,9 +1507,9 @@ def generate_poster_html_content(theme_class="theme-color", is_interactive=True)
                   </div>
                 </div>
                 <div class="ballot-reason-desc uuc-desc">
-                  <div class="reason-en">Voting for only 1 candidate in UUC is <strong>VALID</strong> for that candidate (1 Valid + 1 Exhausted). <strong>Ballot is NOT rejected!</strong></div>
-                  <div class="reason-ml ml">UUC-ൽ <strong>ഒരാൾക്ക് മാത്രം</strong> വോട്ട് ചെയ്താലും ആ വോട്ട് <strong>സാധുവാണ്</strong> (1 സാധു + 1 ഒഴിവ്/അസാധു). ബാലറ്റ് തള്ളില്ല!</div>
-                  <div class="reason-ta ta">UUC-ல் <strong>ஒருவருக்கு மட்டும்</strong> வாக்களித்தாலும் அது <strong>செல்லும்</strong> (1 செல்லும் + 1 செல்லாது). சீட்டு தள்ளப்படாது!</div>
+                  <div class="reason-en">Voting for only 1 candidate in UUC is <strong>VALID</strong> for that candidate (1 Valid + 1 Invalid).</div>
+                  <div class="reason-ml ml">UUC-ൽ <strong>ഒരാൾക്ക് മാത്രം</strong> വോട്ട് ചെയ്താലും ആ വോട്ട് <strong>സാധുവാണ്</strong> (1 സാധു + 1 അസാധു).</div>
+                  <div class="reason-ta ta">UUC-ல் <strong>ஒருவருக்கு மட்டும்</strong> வாக்களித்தாலும் அது <strong>செல்லும்</strong> (1 செல்லும் + 1 செல்லாது).</div>
                 </div>
               </div>
             </div>
@@ -1554,47 +1554,6 @@ def generate_poster_html_content(theme_class="theme-color", is_interactive=True)
                   <div class="reason-en">Marking more than 2 candidates (&gt;2) exceeds the legal quota. All votes for UUC are <strong>INVALID &amp; REJECTED</strong>!</div>
                   <div class="reason-ml ml">UUC-ൽ അനുവദിച്ച 2 വോട്ടിൽ കൂടുതൽ <strong>(&gt;2)</strong> സ്ഥാനാർത്ഥികൾക്ക് വോട്ട് ചെയ്താൽ UUC വോട്ടുകൾ <strong>പൂർണ്ണമായി അസാധുവാകും</strong>!</div>
                   <div class="reason-ta ta">UUC பதவிக்கு അനുവദിക്കപ്പെട്ട 2 வாக்குகளுக்கு மேல் <strong>(&gt;2)</strong> வாக்களித்தால் அனைத்து வாக்குகளும் <strong>செல்லாது</strong>!</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- UUC Case 4: Same Candidate Marked Twice -->
-            <div class="ballot-example-card uuc-card">
-              <div class="ballot-example-head">
-                <span class="ballot-id-title">UUC Case 4: Same Candidate Marked Twice</span>
-                <span class="ballot-tag tag-valid">✔ 1 VALID VOTE ONLY</span>
-              </div>
-              <div class="ballot-content-flex">
-                <div class="ballot-box-graphic uuc-graphic">
-                  <div class="ballot-graphic-row uuc-row">
-                    <div class="ballot-cand-col uuc-cand">
-                      <span>ANAS</span>
-                      <span class="cand-sub ml">അനസ്</span>
-                    </div>
-                    <div class="ballot-mark-col uuc-mark" style="display:flex;gap:2px;align-items:center;justify-content:center;padding:0 1px;">
-                      {get_stamp_svg(size=17)}
-                      {get_stamp_svg(size=17)}
-                    </div>
-                  </div>
-                  <div class="ballot-graphic-row uuc-row">
-                    <div class="ballot-cand-col uuc-cand">
-                      <span>FATHIMA</span>
-                      <span class="cand-sub ml">ഫാത്തിമ</span>
-                    </div>
-                    <div class="ballot-mark-col uuc-mark"></div>
-                  </div>
-                  <div class="ballot-graphic-row uuc-row">
-                    <div class="ballot-cand-col uuc-cand">
-                      <span>KAVYA</span>
-                      <span class="cand-sub ml">കാവ്യ</span>
-                    </div>
-                    <div class="ballot-mark-col uuc-mark"></div>
-                  </div>
-                </div>
-                <div class="ballot-reason-desc uuc-desc">
-                  <div class="reason-en">Placing 2 stamps for the same candidate counts as <strong>1 valid vote only</strong>. (Cumulative/double voting is not permitted).</div>
-                  <div class="reason-ml ml">ഒരേ സ്ഥാനാർത്ഥിക്ക് 2 തവണ മുദ്ര വെച്ചാൽ <strong>1 വോട്ട് മാത്രമേ</strong> ലഭിക്കൂ (ഇരട്ട വോട്ട് ലഭിക്കില്ല).</div>
-                  <div class="reason-ta ta">ஒரே வேட்பாளருக்கு 2 முறை முத்திரை இட்டாலும் <strong>1 வாக்காக மட்டுமே</strong> கணக்கிடப்படும்.</div>
                 </div>
               </div>
             </div>
