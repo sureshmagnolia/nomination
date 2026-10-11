@@ -104,6 +104,15 @@ export async function renderHome(container) {
     resultsDesc = 'Check back when counting commences.';
   }
 
+  // 8. Polling Booth Search (Controlled by Admin Toggle)
+  const isBoothSearchLive = sets.boothSearchPublished === 'true' || schedule.boothSearchPublished === 'true';
+  const boothSearchBadge = isBoothSearchLive
+    ? `<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px]">🟢 Search Live</span>`
+    : `<span class="badge bg-slate-500/20 text-slate-400 border border-slate-500/30 text-[10px]">🔒 Locked</span>`;
+  const boothSearchDesc = isBoothSearchLive
+    ? 'Search your Name, Roll Serial Number, or Admission Number to locate your allotted polling room.'
+    : 'Polling booth allocations will be activated on the polling day.';
+
   container.innerHTML = `
     <div class="page-enter min-h-screen flex flex-col">
       <header class="glass sticky top-0 z-50 border-b border-white/10">
@@ -133,6 +142,7 @@ export async function renderHome(container) {
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           ${card('/nominal-roll', '📜', 'Nominal Roll', rollDesc, rollBadge)}
+          ${card('/find-booth',   '🏢', 'Find My Polling Booth', boothSearchDesc, boothSearchBadge)}
           ${card('/submit', '📝', 'Submit Nomination', nomDesc, nomBadge)}
           ${card('/find',   '🔍', 'Find My Nomination', 'Retrieve and print your submitted nomination form.', findBadge)}
           ${card('/withdraw', '↩️', 'Withdraw Nomination', withDesc, withBadge)}

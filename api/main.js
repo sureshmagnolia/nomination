@@ -229,7 +229,8 @@ async function getFullElectionStatus() {
     resultsOverride, resultsStart, resultsEnd, legacyResPub,
     countingActive, resultsLocked,
     electionYear, notificationDate,
-    ugDobCutoff, pgDobCutoff
+    ugDobCutoff, pgDobCutoff,
+    boothSearchPublished
   ] = await Promise.all([
     getSetting('draftRollOverride'), getSetting('draftRollStart'), getSetting('draftRollEnd'), getSetting('draftRollPublished'),
     getSetting('finalRollOverride'), getSetting('finalRollStart'), getSetting('finalRollEnd'), getSetting('isRollFinalized'),
@@ -241,7 +242,8 @@ async function getFullElectionStatus() {
     getSetting('resultsOverride'), getSetting('resultsStart'), getSetting('resultsEnd'), getSetting('resultsPublished'),
     getSetting('countingActive'), getSetting('resultsLocked'),
     getSetting('electionYear'), getSetting('notificationDate'),
-    getSetting('ugDobCutoff'), getSetting('pgDobCutoff')
+    getSetting('ugDobCutoff'), getSetting('pgDobCutoff'),
+    getSetting('boothSearchPublished')
   ]);
 
   const isFinalRollActive = evaluateStageStatus(finalRollOverride, legacyRollFinal || 'false');
@@ -319,7 +321,8 @@ async function getFullElectionStatus() {
     isResultsActive,
     resultsPublished: isResultsActive ? 'true' : 'false',
     countingActive: countingActive || 'false',
-    resultsLocked: resultsLocked || 'false'
+    resultsLocked: resultsLocked || 'false',
+    boothSearchPublished: boothSearchPublished === 'true' ? 'true' : 'false'
   };
 }
 
@@ -1158,6 +1161,15 @@ export default async function handler(req, res) {
         })),
         nominatedPosts
       });
+    }
+
+    if (action === 'getPublicBooths') {
+      const isPublished = (await getSetting('boothSearchPublished')) === 'true';
+      if (!isPublished) {
+        return jsonOut(res, { isPublished: false, booths: [] });
+      }
+      const data = await getSetting('booths_data');
+      return jsonOut(res, { isPublished: true, booths: safeJsonParse(data, []) });
     }
 
     if (action === 'adminGetBooths') {
@@ -2151,6 +2163,12 @@ All students are directed to strictly adhere to the University Code of Conduct, 
           await setSetting('resultsPublished', 'false');
           await setSetting('resultsOverride', 'FORCE_CLOSED');
         }
+      } else if (stage === 'boothSearch') {
+        if (mode === 'FORCE_OPEN') {
+          await setSetting('boothSearchPublished', 'true');
+        } else {
+          await setSetting('boothSearchPublished', 'false');
+        }
       }
 
       return jsonOut(res, { ok: true, stage, mode });
@@ -2393,6 +2411,16 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       await setSetting('finalListPublished', 'false');
       await setSetting('finalListOverride', 'FORCE_CLOSED');
       return jsonOut(res, { ok: true });
+    }
+
+    if (action === 'adminPublishBoothSearch') {
+      await setSetting('boothSearchPublished', 'true');
+      return jsonOut(res, { ok: true, boothSearchPublished: 'true' });
+    }
+
+    if (action === 'adminUnpublishBoothSearch') {
+      await setSetting('boothSearchPublished', 'false');
+      return jsonOut(res, { ok: true, boothSearchPublished: 'false' });
     }
 
     if (action === 'adminAddPost') {

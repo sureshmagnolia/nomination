@@ -502,6 +502,24 @@ export const api = {
     return res;
   },
 
+  adminPublishBoothSearch: async (password) => {
+    updateCache({ action: 'adminGetSettings', password }, old => ({...old, boothSearchPublished: 'true'}));
+    const res = await post({ action: 'adminPublishBoothSearch', password });
+    invalidateCache('getPublicBooths');
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    return res;
+  },
+
+  adminUnpublishBoothSearch: async (password) => {
+    updateCache({ action: 'adminGetSettings', password }, old => ({...old, boothSearchPublished: 'false'}));
+    const res = await post({ action: 'adminUnpublishBoothSearch', password });
+    invalidateCache('getPublicBooths');
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    return res;
+  },
+
   adminGetSettings: (password) => get({ action: 'adminGetSettings', password }),
   
   adminUpdateSettings: (password, settings) => {
@@ -566,6 +584,11 @@ export const api = {
   },
 
   // ─── Booths & Locations ───────────────────────────────────────────────────────
+
+  getPublicBooths: (bypassCache = false) => {
+    if (bypassCache) invalidateCache('getPublicBooths');
+    return get({ action: 'getPublicBooths' });
+  },
 
   adminGetBooths: (password, bypassCache = false) => {
     if (bypassCache) invalidateCache('adminGetBooths');

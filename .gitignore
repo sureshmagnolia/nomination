@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 scratch/
+test_stamp_*.py
+build_exact_stamp.py
+extract_thumb_script.py
+pdf_contents.txt

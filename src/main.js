@@ -34,6 +34,7 @@ import { renderAdminAudit }          from './pages/admin/audit.js';
 import { renderSettings }            from './pages/admin/settings.js';
 import { renderAdminBackup }         from './pages/admin/backup.js';
 import { renderAdminNotices }        from './pages/admin/notices.js';
+import { renderBoothSearch }        from './pages/boothSearch.js';
 import { initTheme }                 from './theme.js';
 
 // ─── Initialize Institutional Theme ──────────────────────────────────────────
@@ -70,6 +71,8 @@ router
   .on('/results',           render(renderResults))
   .on('/trends',            render((app) => renderResults(app, { initialTab: 'trends' })))
   .on('/nominal-roll',      render(renderNominalRoll))
+  .on('/find-booth',        render(renderBoothSearch))
+  .on('/admin/voter-lookup', render((app) => renderBoothSearch(app, { adminMode: true })))
   .on('/notices',           () => {
     const pwd = sessionStorage.getItem('adminPassword');
     router.navigate(pwd ? '/admin/notices' : '/admin');

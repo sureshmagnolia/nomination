@@ -51,6 +51,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
   const resultsPublished = settings.resultsPublished === 'true';
   const resultsLocked = settings.resultsLocked === 'true';
   const isCountingActive = settings.countingActive === 'true';
+  const isBoothSearchLive = settings.boothSearchPublished === 'true';
 
   const year = settings.electionYear || new Date().getFullYear();
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
@@ -90,7 +91,7 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
       </div>
 
       <!-- Election Pipeline Overview Bar -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <div class="glass rounded-xl p-3 border ${isRollFinal ? 'border-emerald-500/30 bg-emerald-500/10' : (isDraftRoll ? 'border-amber-500/30 bg-amber-500/10' : 'border-white/10 bg-white/5')}">
           <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">1. Nominal Roll</div>
           <div class="text-white font-bold text-sm mt-0.5">${nominalRoll.length} Voters</div>
@@ -120,6 +121,14 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
           <div class="text-white font-bold text-sm mt-0.5">${resultsLocked ? '🔒 Frozen' : (isCountingActive ? '🗳️ Counting' : '🔓 Live Entry')}</div>
           <div class="text-xs font-semibold ${resultsPublished ? 'text-emerald-400' : (isCountingActive ? 'text-amber-400' : 'text-slate-400')}">
             ${resultsPublished ? '📢 Publicly Live' : (isCountingActive ? '⚡ Counting Active' : '👁️‍🗨️ Hidden')}
+          </div>
+        </div>
+
+        <div class="glass rounded-xl p-3 border ${isBoothSearchLive ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-white/10 bg-white/5'}">
+          <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">5. Booth Search</div>
+          <div class="text-white font-bold text-sm mt-0.5">${isBoothSearchLive ? '🟢 Live' : '🔒 Locked'}</div>
+          <div class="text-xs font-semibold ${isBoothSearchLive ? 'text-emerald-400' : 'text-slate-400'}">
+            ${isBoothSearchLive ? 'Public Active' : 'Hidden from Public'}
           </div>
         </div>
       </div>
@@ -332,6 +341,46 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
             ${resultsLocked ? '🔓 Unlock Results' : '🔒 Freeze / Lock Results'}
           </button>
         </div>
+      </div>
+
+      <!-- 5. Polling Booth Search Visibility -->
+      <div class="glass rounded-xl p-6 space-y-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <h4 class="font-bold text-white text-base">🏢 Polling Booth Search Visibility</h4>
+              <span class="badge ${isBoothSearchLive ? 'badge-valid' : 'bg-slate-700 text-slate-300'} text-xs">
+                ${isBoothSearchLive ? '🟢 Live on Public Portal' : '🔒 Locked from Public'}
+              </span>
+            </div>
+            <p class="text-slate-400 text-xs mt-1">
+              Control whether voters can search their allotted polling booth and room location on the public portal (<code>#/find-booth</code>).
+              ${isBoothSearchLive ? 'Public search is active and accessible to all electors.' : 'Public search is currently locked. Officials can still access the search internally.'}
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <button data-nav="/find-booth" class="btn btn-secondary btn-sm flex items-center gap-1.5">
+              <span>🔍</span> Preview Search
+            </button>
+            <button data-nav="/admin/booths" class="btn btn-secondary btn-sm flex items-center gap-1.5">
+              <span>⚙️</span> Manage Booths
+            </button>
+          </div>
+        </div>
+
+        ${!isBoothSearchLive ? `
+        <div class="alert alert-warning text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <span>🔒 Search is currently locked. Public visitors see: <em>"Polling Booth Search is currently locked. Booth allocations will be activated on the polling day."</em></span>
+          <button id="publishBoothSearchBtn" class="btn btn-primary shrink-0">
+            📢 Publish Booth Search
+          </button>
+        </div>` : `
+        <div class="alert alert-success text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <span>✅ Polling booth search is live for all students on the public portal.</span>
+          <button id="unpublishBoothSearchBtn" class="btn btn-sm shrink-0" style="background:#dc2626;color:white;border:none;">
+            🔒 Lock Booth Search
+          </button>
+        </div>`}
       </div>
     </div>`;
 
@@ -984,6 +1033,35 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
     } catch (err) {
       showToast(`Failed: ${err.message}`, 'error');
       setLoading(btn, false, isAct ? '⏸️ Stop Counting Mode' : '⚡ Set Counting Active');
+    }
+  });
+
+  // Toggle Booth Search Public Visibility
+  main.querySelector('#publishBoothSearchBtn')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    if (!confirm('Publish Polling Booth Search to Students?\n\nVoters will immediately be able to look up their assigned polling booth and room location on the public portal.')) return;
+    setLoading(btn, true, 'Publishing...');
+    try {
+      await api.adminPublishBoothSearch(pwd);
+      showToast('📢 Polling Booth Search published to public view!', 'success');
+      await reloadPublishData(main, pwd);
+    } catch (err) {
+      showToast(`Failed: ${err.message}`, 'error');
+      setLoading(btn, false, '📢 Publish Booth Search');
+    }
+  });
+
+  main.querySelector('#unpublishBoothSearchBtn')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    if (!confirm('Lock Polling Booth Search?\n\nPublic visitors will see the locked message ("Polling Booth Search is currently locked. Booth allocations will be activated on the polling day."). Officials can continue using the search internally.')) return;
+    setLoading(btn, true, 'Locking...');
+    try {
+      await api.adminUnpublishBoothSearch(pwd);
+      showToast('🔒 Polling Booth Search locked from public view.', 'success');
+      await reloadPublishData(main, pwd);
+    } catch (err) {
+      showToast(`Failed: ${err.message}`, 'error');
+      setLoading(btn, false, '🔒 Lock Booth Search');
     }
   });
 }
