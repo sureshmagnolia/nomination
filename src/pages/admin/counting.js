@@ -13,6 +13,32 @@ export function isUuc(postName) {
 }
 
 /**
+ * Formats lengthy statutory election post names into high-density, readable badges
+ * so the matrix fits 100% viewport width without horizontal scrollbars.
+ */
+export function formatMatrixPostName(pn) {
+  if (!pn) return '';
+  let s = String(pn).trim();
+  s = s.replace(/^THE\s+/i, '');
+  const prefixRegex = /^ASSOCIATION\s+SECRETARY\s*(FOR\s*|\s*-\s*|\s*:\s*|\s+OF\s*)?/i;
+  if (prefixRegex.test(s)) {
+    const dept = s.replace(prefixRegex, '').trim();
+    return `Sec: ${dept}`;
+  }
+  if (/^I\s+UG\s+Representative$/i.test(s)) return 'I UG Rep';
+  if (/^II\s+UG\s+Representative$/i.test(s)) return 'II UG Rep';
+  if (/^III\s+UG\s+Representative$/i.test(s)) return 'III UG Rep';
+  if (/^PG\s+Representative$/i.test(s)) return 'PG Rep';
+  if (/^University\s+Union\s+Councillor$/i.test(s) || /UUC/i.test(s)) return 'UUC';
+  if (/^General\s+Secretary$/i.test(s)) return 'Gen. Sec';
+  if (/^Arts\s+Club\s+Secretary$/i.test(s)) return 'Arts Sec';
+  if (/^Student\s+Editor$/i.test(s) || /^Magazine\s+Editor$/i.test(s)) return 'Editor';
+  if (/^Vice\s+Chairman$/i.test(s)) return 'Vice Chair';
+  if (/^Chairman$/i.test(s)) return 'Chairman';
+  return s;
+}
+
+/**
  * Automatically deduces physical ballots polled at a counting table
  * by inspecting results entered for single-vote general posts (Chairman, Gen Sec, etc.).
  * Dual-vote UUC post is explicitly excluded because voters cast 2 votes on UUC ballots.
@@ -604,15 +630,15 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             </div>
             <span class="text-[11px] text-slate-500 font-mono">Form Serials: #1 .. #${T * totalRounds}</span>
           </div>
-          <div class="w-full overflow-x-auto">
+          <div class="matrix-container w-full">
             <table class="data-table matrix-table text-xs w-full">
               <thead><tr>
-                <th class="w-[130px] max-w-[145px] text-left">Table &amp; Supervisor</th>
+                <th class="w-[115px] md:w-[125px] text-left">Table &amp; Supervisor</th>
                 ${roundLabels.map((l, r) => `
-                  <th class="text-center align-middle">
+                  <th class="text-center align-middle border-l border-white/10">
                     <div class="flex flex-col items-center gap-0.5">
-                      <span class="font-bold text-[10.5px] whitespace-nowrap">${esc(l)}</span>
-                      <button type="button" class="btn-print-round-header px-1.5 py-0.5 rounded text-[8.5px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500 hover:text-white transition-all cursor-pointer shadow-sm whitespace-nowrap" data-round="${r + 1}" title="Print all counting forms for ${esc(l)} across all tables">
+                      <span class="font-bold text-[10px] truncate max-w-full" title="${esc(l)}">${esc(l)}</span>
+                      <button type="button" class="btn-print-round-header px-1 py-0.5 rounded text-[8px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500 hover:text-white transition-all cursor-pointer shadow-sm truncate max-w-full" data-round="${r + 1}" title="Print all counting forms for ${esc(l)} across all tables">
                         🖨️ All
                       </button>
                     </div>
@@ -630,27 +656,27 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                     : Array.from({ length: totalRounds }, () => null);
                   return `
                   <tr>
-                    <td class="font-bold text-indigo-300 bg-black/15 align-top p-1.5 w-[130px] max-w-[145px]">
+                    <td class="font-bold text-indigo-300 bg-black/20 align-top p-1 w-[115px] md:w-[125px]">
                       <div class="flex items-center justify-between gap-1">
-                        <span class="text-[11px] font-bold text-indigo-300 whitespace-nowrap">🪑 Table ${bNum}</span>
+                        <span class="text-[10.5px] font-bold text-indigo-300 whitespace-nowrap">🪑 T${bNum}</span>
                         ${eff.isActual 
-                          ? `<span class="badge bg-emerald-500/20 text-emerald-300 font-mono text-[8.5px] px-1 py-0.2 border border-emerald-500/40 shrink-0" title="Ballot Paper Account: ${eff.count} ballots in box (${eff.source === 'deduced' ? 'Auto-deduced from ' + eff.deducedPost : 'Manual Entry'}). Allotted: ${eff.allotted}">🗳️ ${eff.count}</span>` 
-                          : (eff.allotted > 0 ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[8.5px] px-1 py-0.2 border border-indigo-500/30 shrink-0" title="${eff.allotted} registered electors allotted (Turnout unknown)">${eff.allotted}</span>` : '')
+                          ? `<span class="badge bg-emerald-500/20 text-emerald-300 font-mono text-[8px] px-1 py-0 border border-emerald-500/40 shrink-0" title="Ballot Paper Account: ${eff.count} ballots in box (${eff.source === 'deduced' ? 'Auto-deduced from ' + eff.deducedPost : 'Manual Entry'}). Allotted: ${eff.allotted}">🗳️ ${eff.count}</span>` 
+                          : (eff.allotted > 0 ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[8px] px-1 py-0 border border-indigo-500/30 shrink-0" title="${eff.allotted} registered electors allotted (Turnout unknown)">${eff.allotted}</span>` : '')
                         }
                       </div>
-                      <div class="text-[9.5px] text-slate-400 font-normal italic mt-0.5 truncate max-w-[130px]" title="Supervisor: ${esc(supName || 'Unassigned')}">
+                      <div class="text-[9px] text-slate-400 font-normal italic mt-0.5 truncate" title="Supervisor: ${esc(supName || 'Unassigned')}">
                         ${supName ? `👤 ${esc(supName)}` : '<span class="text-amber-400/80">⚠️ None</span>'}
                       </div>
                       ${supInfo.phone ? `
-                        <div class="text-[9.5px] text-slate-500 font-mono font-normal truncate mt-0.5 opacity-90 select-all" title="Supervisor Phone: ${esc(supInfo.phone)}">
+                        <div class="text-[8.5px] text-slate-500 font-mono font-normal truncate mt-0.5 opacity-90 select-all" title="Supervisor Phone: ${esc(supInfo.phone)}">
                           📱 ${esc(supInfo.phone)}
                         </div>
                       ` : ''}
-                      <div class="grid grid-cols-2 gap-1 mt-1.5">
-                        <button type="button" class="btn-print-table-row py-1 px-1 rounded text-[8.5px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 hover:bg-sky-500 hover:text-white transition-all flex items-center justify-center gap-0.5 cursor-pointer shadow-sm truncate" data-table="${bNum}" title="Print all counting forms for Table ${bNum} across all rounds">
+                      <div class="grid grid-cols-2 gap-0.5 mt-1">
+                        <button type="button" class="btn-print-table-row py-0.5 px-0.5 rounded text-[8px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 hover:bg-sky-500 hover:text-white transition-all flex items-center justify-center gap-0.5 cursor-pointer shadow-sm truncate" data-table="${bNum}" title="Print all counting forms for Table ${bNum} across all rounds">
                           <span>🖨️</span> Packet
                         </button>
-                        <button type="button" class="btn-print-table-placard py-1 px-1 rounded text-[8.5px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center gap-0.5 cursor-pointer shadow-sm truncate" data-table="${bNum}" title="Print Official Sequence Placard for Table ${bNum} (A4 to paste on table)">
+                        <button type="button" class="btn-print-table-placard py-0.5 px-0.5 rounded text-[8px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center gap-0.5 cursor-pointer shadow-sm truncate" data-table="${bNum}" title="Print Official Sequence Placard for Table ${bNum} (A4 to paste on table)">
                           <span>📌</span> Placard
                         </button>
                       </div>
@@ -662,23 +688,24 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
                       const serial = formSerials[`${t}-${r}`] || `${bNum}-${r + 1}`;
                       const batches = isPostUuc ? getUucBatchesForVoterCount(eff.count) : [];
                       const batchSummary = isPostUuc ? getUucBatchesSummaryText(batches, eff.count) : '';
+                      const displayPn = formatMatrixPostName(pn);
                       return `
                       <td class="align-top p-1 border-l border-white/5">
-                        <div class="flex items-center justify-between gap-1 mb-0.5">
-                          <span class="text-[9.5px] text-slate-400 font-mono font-bold shrink-0">#${esc(serial)}</span>
+                        <div class="flex items-center justify-between gap-0.5 mb-0.5">
+                          <span class="text-[9px] text-slate-400 font-mono font-bold shrink-0">#${esc(serial)}</span>
                           <div class="flex items-center gap-0.5 shrink-0">
-                            <button type="button" class="btn-print-matrix-cell px-1 py-0.5 rounded text-[8.5px] font-bold bg-white/10 text-slate-200 hover:bg-indigo-600 hover:text-white border border-white/20 transition-all cursor-pointer shadow-sm whitespace-nowrap" data-table="${bNum}" data-round="${r + 1}" data-post="${esc(pn)}" title="Print single Counting Form #${esc(serial)} (Table ${bNum}, Round ${r + 1}: ${esc(pn)})">
+                            <button type="button" class="btn-print-matrix-cell px-1 py-0.5 rounded text-[8px] font-bold bg-white/10 text-slate-200 hover:bg-indigo-600 hover:text-white border border-white/20 transition-all cursor-pointer shadow-sm whitespace-nowrap" data-table="${bNum}" data-round="${r + 1}" data-post="${esc(pn)}" title="Print single Counting Form #${esc(serial)} (Table ${bNum}, Round ${r + 1}: ${esc(pn)})">
                               🖨️ Form
                             </button>
                             ${isPostUuc ? `
-                              <button type="button" class="print-single-uuc-btn px-1 py-0.5 rounded text-[8px] font-bold ${eff.isActual ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'} hover:brightness-110 transition-all cursor-pointer shadow-sm whitespace-nowrap" data-table="${bNum}" title="Print UUC Tally Sheet for Table ${bNum} (${eff.count} ${eff.isActual ? 'actual ballots in box' : 'allotted electors'}: ${batchSummary})">
+                              <button type="button" class="print-single-uuc-btn px-1 py-0.5 rounded text-[7.5px] font-bold ${eff.isActual ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'} hover:brightness-110 transition-all cursor-pointer shadow-sm whitespace-nowrap" data-table="${bNum}" title="Print UUC Tally Sheet for Table ${bNum} (${eff.count} ${eff.isActual ? 'actual ballots in box' : 'allotted electors'}: ${batchSummary})">
                                 🧮 ${eff.count ? `${eff.count}b` : '2-St'}
                               </button>
                             ` : ''}
                           </div>
                         </div>
-                        <div class="badge ${isPostUuc ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30' : 'badge-valid'} block text-left truncate cursor-pointer hover:underline text-[9px] px-1 py-0.5" data-quick-post="${esc(pn)}" title="Click to filter print options to ${esc(pn)}">
-                          ${esc(pn)}
+                        <div class="badge ${isPostUuc ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30' : 'badge-valid'} block text-left truncate cursor-pointer hover:underline text-[8.5px] px-1 py-0.5" data-quick-post="${esc(pn)}" title="${esc(pn)} (Click to filter print options)">
+                          ${esc(displayPn)}
                         </div>
                       </td>`;
                     }).join('')}

@@ -415,25 +415,42 @@ select.field option {
 }
 
 /* High-Density 100% Viewport Matrix Table for Counting & Allocation */
+.matrix-container {
+  width: 100%;
+  overflow-x: hidden;
+}
+@media (max-width: 900px) {
+  .matrix-container {
+    overflow-x: auto;
+  }
+}
+
 .matrix-table {
   width: 100% !important;
-  table-layout: auto;
-  border-collapse: separate;
-  border-spacing: 0;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+  box-sizing: border-box !important;
 }
 .matrix-table th {
-  padding: 0.45rem 0.35rem !important;
-  font-size: 0.68rem !important;
+  padding: 0.35rem 0.2rem !important;
+  font-size: 0.65rem !important;
   font-weight: 700 !important;
-  line-height: 1.2 !important;
+  line-height: 1.15 !important;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box !important;
 }
 .matrix-table td {
-  padding: 0.35rem 0.35rem !important;
-  font-size: 0.75rem !important;
-  line-height: 1.25 !important;
+  padding: 0.25rem 0.2rem !important;
+  font-size: 0.72rem !important;
+  line-height: 1.2 !important;
   vertical-align: top;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box !important;
 }
 .matrix-table tr {
   transition: background-color 0.15s ease;
