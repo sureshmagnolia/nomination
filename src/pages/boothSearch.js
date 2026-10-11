@@ -273,8 +273,7 @@ function renderSearchInterface(container, settings, nominalRoll, booths, isAdmin
             <span>ℹ️</span> <span>Important Voter Information</span>
           </div>
           <p>
-            Please carry your original <strong>College Identity Card</strong> or any valid government-issued photo ID to the polling station.
-            Voters must report to the designated room corresponding to their class allotment.
+            Please carry your original <strong>College Identity Card</strong>. Voters must report to the designated room corresponding to their class allotment.
           </p>
         </div>
       </main>
