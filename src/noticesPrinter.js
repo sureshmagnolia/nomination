@@ -1905,18 +1905,12 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       padding-bottom: 8px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 15px;
-    }
-    .emblem-img {
-      width: 65px;
-      height: 65px;
-      object-fit: contain;
-      filter: grayscale(100%);
+      justify-content: center;
+      text-align: center;
     }
     .header-center {
       text-align: center;
-      flex: 1;
+      width: 100%;
     }
     .inst-name {
       font-size: 24pt;
@@ -1939,16 +1933,16 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
     }
     .poster-main-badge {
       display: inline-block;
-      background: #000000;
-      color: #ffffff;
+      background: #ffffff;
+      color: #000000;
       font-size: 14pt;
       font-weight: 900;
-      padding: 6px 24px;
+      padding: 5px 24px;
       border-radius: 4px;
       letter-spacing: 1px;
       margin-top: 8px;
       text-transform: uppercase;
-      border: 1.5px solid #000000;
+      border: 2px solid #000000;
     }
     .poster-sub-note {
       font-size: 10pt;
@@ -1962,34 +1956,41 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
     .meta-bar {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      background: #000000;
-      color: #ffffff;
-      padding: 10px 16px;
-      margin-top: 12px;
+      gap: 0;
+      background: #ffffff;
+      color: #000000;
+      padding: 6px 0;
+      margin-top: 10px;
       border-radius: 4px;
       text-align: center;
-      border: 1.5px solid #000000;
+      border: 2px solid #000000;
+    }
+    .meta-item {
+      padding: 4px 12px;
+    }
+    .meta-item:not(:last-child) {
+      border-right: 1.5px solid #000000;
     }
     .meta-item strong {
       display: block;
       font-size: 9pt;
-      color: #e2e8f0;
+      color: #000000;
+      font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     .meta-item span {
       font-size: 12pt;
       font-weight: 900;
-      color: #ffffff;
+      color: #000000;
     }
 
     /* Department Cards Grid */
     .depts-grid {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 20px;
-      margin-top: 16px;
+      gap: 16px;
+      margin-top: 14px;
     }
     .dept-card {
       border: 2px solid #000000;
@@ -2000,8 +2001,8 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       flex-direction: column;
     }
     .dept-card-header {
-      background: #000000;
-      color: #ffffff;
+      background: #ffffff;
+      color: #000000;
       padding: 6px 12px;
       display: flex;
       align-items: center;
@@ -2013,16 +2014,16 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       font-weight: 900;
       letter-spacing: 0.5px;
       text-transform: uppercase;
-      color: #ffffff;
+      color: #000000;
     }
     .dept-badge {
       background: #ffffff;
       color: #000000;
       font-size: 10pt;
       font-weight: 900;
-      padding: 2.5px 8px;
+      padding: 2.5px 10px;
       border-radius: 3px;
-      border: 1px solid #000000;
+      border: 1.5px solid #000000;
     }
 
     /* Class Table inside card */
@@ -2033,7 +2034,7 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       color: #000000;
     }
     .dept-table th {
-      background: #f4f4f5;
+      background: #ffffff;
       color: #000000;
       font-size: 11pt;
       font-weight: 900;
@@ -2048,9 +2049,10 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
       vertical-align: middle;
       line-height: 1.3;
       color: #000000;
+      background: #ffffff;
     }
     .dept-table tr:nth-child(even) td {
-      background: #fafafa;
+      background: #ffffff;
     }
     .col-class {
       font-weight: 900;
@@ -2087,16 +2089,16 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
     }
     .booth-tag {
       display: inline-block;
-      background: #000000;
-      color: #ffffff;
+      background: #ffffff;
+      color: #000000;
       font-weight: 900;
       font-size: 11pt;
-      padding: 3.5px 12px;
+      padding: 3px 12px;
       border-radius: 3px;
       letter-spacing: 0.5px;
       white-space: nowrap;
       text-transform: uppercase;
-      border: 1.5px solid #000000;
+      border: 2px solid #000000;
     }
     .booth-unassigned {
       background: #ffffff;
@@ -2146,7 +2148,6 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
   <div class="poster-container">
     <!-- Header -->
     <div class="header-box">
-      ${collegeLogo ? `<img src="${collegeLogo}" class="emblem-img" alt="Emblem">` : ''}
       <div class="header-center">
         <div class="inst-name">${esc(collegeName)}</div>
         <div class="inst-sub">${esc(collegePlace)} &bull; Established Under Govt. of Kerala</div>
@@ -2154,7 +2155,6 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
         <div class="poster-main-badge">DEPARTMENT &amp; CLASS-WISE POLLING DIRECTORY</div>
         <div class="poster-sub-note">OFFICIAL NOTICE BOARD &amp; ENTRY GATE GUIDE &bull; ALLOTTED POLLING BOOTHS &amp; ROOM VENUES</div>
       </div>
-      ${collegeLogo ? `<img src="${collegeLogo}" class="emblem-img" alt="Emblem">` : ''}
     </div>
 
     <!-- Meta Information Bar -->
