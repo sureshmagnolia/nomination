@@ -9091,7 +9091,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <!-- SECTION 6: DEPARTMENT-WISE DUTY ROSTER -->
         <div class="section-title-box" style="margin-top: 14px;">
           <span>📋 SECTION 6: DEPARTMENT-WISE DUTY ROSTER (POLLING, COUNTING &amp; RESERVE POOL)</span>
-          <span style="font-size: 8.5px; font-weight: normal;">Attendance &amp; Duty Register · Seniority Respected</span>
+          <span style="font-size: 8.5px; font-weight: normal;">Attendance &amp; Duty Register</span>
         </div>
 
         ${personnel.length === 0 ? `
@@ -9522,7 +9522,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td style="font-family: monospace; font-weight: 600;">${esc(c.pen)}</td>
                   <td>
                     <div style="font-weight: 700; color: #000000;">${esc(c.duty)}</div>
-                    <span class="staff-meta">Station: ${esc(c.station)}</span>
                   </td>
                   ${renderMobileCell(c.phone)}
                   <td class="col-sign"></td>
@@ -9709,7 +9708,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         <!-- PART C: RESERVE POOL PERSONNEL -->
         <div class="section-title-box" style="margin-top: 14px;">
           <span>🛡️ RESERVE POOL PERSONNEL (STANDBY DUTY)</span>
-          <span style="font-size: 8.5px; font-weight: normal;">Reporting: 08:00 AM · Central Control Room</span>
+          <span style="font-size: 8.5px; font-weight: normal;">Reporting: 08:00 AM · </span>
         </div>
 
         ${reserveList.length === 0 ? `
