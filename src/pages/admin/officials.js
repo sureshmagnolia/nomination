@@ -8202,7 +8202,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
         if (rDuty) {
           const resRole = rDuty.reserveType || 'General Reserve';
-          const activeDutyNote = pDuty ? `(Active: Booth ${pDuty.boothNumber})` : (cDuty ? `(Active: Table ${cDuty.tableNumber})` : '');
           reserveList.push({
             name: f.name,
             designation: (f.designation || 'Faculty').trim(),
@@ -8210,10 +8209,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             pen: (f.pen || '–').trim(),
             phone: f.phone || f.mobile || '',
             seniority: (f.seniority !== undefined && f.seniority !== null) ? f.seniority : 999,
-            duty: resRole + (activeDutyNote ? ` ${activeDutyNote}` : ''),
+            duty: resRole,
             reserveDuty: resRole,
             reserveType: resRole,
-            activeDutyNote: activeDutyNote,
             hasDoubleDuty: isDouble,
             isReserve: true,
             station: 'Central Control Room (Reserve Pool)',
@@ -8233,7 +8231,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           duty: 'General Reserve',
           reserveDuty: 'General Reserve',
           reserveType: 'General Reserve',
-          activeDutyNote: '',
           hasDoubleDuty: false,
           isReserve: true,
           station: 'Central Control Room (Reserve Pool)',
@@ -8317,7 +8314,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
         if (rDuty) {
           const resRole = rDuty.reserveType || 'General Reserve';
-          const activeDutyNote = ntAssigned.polling ? `(Active: Booth ${ntAssigned.polling.boothNumber})` : (ntAssigned.counting ? `(Active: Table ${ntAssigned.counting.tableNumber})` : '');
           reserveList.push({
             name: nt.name,
             designation: (nt.designation || 'Staff').trim(),
@@ -8325,10 +8321,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             pen: (nt.pen || '–').trim(),
             phone: nt.phone || nt.mobile || '',
             seniority: 9999,
-            duty: resRole + (activeDutyNote ? ` ${activeDutyNote}` : ''),
+            duty: resRole,
             reserveDuty: resRole,
             reserveType: resRole,
-            activeDutyNote: activeDutyNote,
             hasDoubleDuty: isDouble,
             isReserve: true,
             station: 'Central Control Room (Reserve Pool)',
@@ -8348,7 +8343,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           duty: 'General Reserve',
           reserveDuty: 'General Reserve',
           reserveType: 'General Reserve',
-          activeDutyNote: '',
           hasDoubleDuty: false,
           isReserve: true,
           station: 'Central Control Room (Reserve Pool)',
@@ -9942,7 +9936,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td style="font-family: monospace; font-weight: 600;">${esc(r.pen)}</td>
                   <td class="col-center" style="font-weight: 700; color: #000000;">
                     ${esc(r.reserveDuty || r.reserveType || 'General Reserve')}
-                    ${r.activeDutyNote ? `<div style="font-size: 8px; font-weight: normal; color: #444; margin-top: 1px;">${esc(r.activeDutyNote)}</div>` : ''}
                   </td>
                   ${renderMobileCell(r.phone)}
                   <td class="col-sign"></td>
