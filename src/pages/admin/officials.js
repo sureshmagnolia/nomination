@@ -5980,20 +5980,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const cDuty = getCountingAssignment(f.name);
 
       let dutyTag = '';
-      let dutyCategory = 'standby';
-      if (pDuty && cDuty) {
-        dutyTag = `Booth ${pDuty.boothNumber} & Table ${cDuty.tableNumber}`;
-        dutyCategory = 'both';
-      } else if (pDuty) {
-        dutyTag = `Booth ${pDuty.boothNumber} (${pDuty.role === 'Presiding Officer' ? 'PrO' : 'PO'}) · For Counting Reserve`;
-        dutyCategory = 'polling';
-      } else if (cDuty) {
-        dutyTag = `Table ${cDuty.tableNumber} (${cDuty.role === 'Counting Supervisor' ? 'Sup' : 'CO'}) · For Polling Reserve`;
-        dutyCategory = 'counting';
-      } else {
-        dutyTag = 'Standby (No Active Duty)';
-        dutyCategory = 'standby';
-      }
+      if (pDuty && cDuty) dutyTag = `Booth ${pDuty.boothNumber} & Table ${cDuty.tableNumber}`;
+      else if (pDuty) dutyTag = `Booth ${pDuty.boothNumber} (${pDuty.role === 'Presiding Officer' ? 'PrO' : 'PO'})`;
+      else if (cDuty) dutyTag = `Table ${cDuty.tableNumber} (${cDuty.role === 'Counting Supervisor' ? 'Sup' : 'CO'})`;
+      else dutyTag = 'Standby';
 
       list.push({
         name: f.name,
@@ -6003,7 +5993,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         seniority: (f.seniority !== undefined && f.seniority !== null) ? f.seniority : 999,
         type: 'Teaching Faculty',
         dutyTag,
-        dutyCategory,
         isExcluded: isPersonExcluded(f),
         isChosenInOther,
         pDuty,
@@ -6018,20 +6007,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const ntAssigned = getNonTeachingAssignment(nt.name);
 
       let dutyTag = '';
-      let dutyCategory = 'standby';
-      if (ntAssigned.polling && ntAssigned.counting) {
-        dutyTag = `Booth ${ntAssigned.polling.boothNumber} & Counting`;
-        dutyCategory = 'both';
-      } else if (ntAssigned.polling) {
-        dutyTag = `Booth ${ntAssigned.polling.boothNumber} Asst · For Counting Reserve`;
-        dutyCategory = 'polling';
-      } else if (ntAssigned.counting) {
-        dutyTag = `Table ${ntAssigned.counting.tableNumber} Asst · For Polling Reserve`;
-        dutyCategory = 'counting';
-      } else {
-        dutyTag = 'Standby (No Active Duty)';
-        dutyCategory = 'standby';
-      }
+      if (ntAssigned.polling && ntAssigned.counting) dutyTag = `Booth ${ntAssigned.polling.boothNumber} & Counting`;
+      else if (ntAssigned.polling) dutyTag = `Booth ${ntAssigned.polling.boothNumber} Asst`;
+      else if (ntAssigned.counting) dutyTag = `Table ${ntAssigned.counting.tableNumber} Asst`;
+      else dutyTag = 'Standby';
 
       list.push({
         name: nt.name,
@@ -6041,7 +6020,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         seniority: 9999,
         type: 'Non-Teaching Staff',
         dutyTag,
-        dutyCategory,
         isExcluded: isPersonExcluded(nt),
         isChosenInOther,
         pDuty: ntAssigned.polling,
@@ -6071,54 +6049,47 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     const modal = document.createElement('div');
     modal.id = 'reserveModalContainer';
-    modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md';
     document.body.appendChild(modal);
 
     const renderModal = () => {
-      const allAvailableOfficials = getAllOfficialsForReserve(draftReserves, -1);
-      const totalFac = allAvailableOfficials.filter(o => o.type === 'Teaching Faculty').length;
-      const totalStaff = allAvailableOfficials.filter(o => o.type === 'Non-Teaching Staff').length;
-      const totalPoll = allAvailableOfficials.filter(o => o.pDuty).length;
-      const totalCount = allAvailableOfficials.filter(o => o.cDuty).length;
-      const totalStandby = allAvailableOfficials.filter(o => !o.pDuty && !o.cDuty).length;
-
       modal.innerHTML = `
-        <div class="glass border border-emerald-500/40 rounded-2xl w-full max-w-3xl bg-slate-900/95 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+        <div class="glass border border-emerald-500/40 rounded-2xl w-full max-w-3xl bg-slate-900/95 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
           <!-- Modal Header -->
-          <div class="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-emerald-950/50 via-slate-900 to-slate-900">
+          <div class="px-5 py-3.5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-emerald-950/50 via-slate-900 to-slate-900 shrink-0">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-xl shadow-inner border border-emerald-500/30">
+              <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-lg shadow-inner border border-emerald-500/30">
                 🛡️
               </div>
               <div>
-                <h4 class="font-bold text-white text-base">Reserve Officials &amp; Cross-Duty Allotment</h4>
-                <p class="text-xs text-slate-400">Allot standby personnel. Officials doing Polling duty can act as Counting reserves, and vice versa.</p>
+                <h4 class="font-bold text-white text-sm sm:text-base">Reserve Officials &amp; Cross-Duty Allotment</h4>
+                <p class="text-[11px] text-slate-400">Allot standby personnel. Polling staff can serve as Counting reserves, and vice versa.</p>
               </div>
             </div>
             <button id="btnCloseReserveModal" class="text-slate-400 hover:text-white text-2xl font-bold px-2 py-1 leading-none">&times;</button>
           </div>
 
-          <!-- Quick Action Helpers -->
-          <div class="p-3 bg-white/5 border-b border-white/10 flex items-center justify-between flex-wrap gap-2 text-xs">
+          <!-- Quick Action Helpers Toolbar (Clean & Compact) -->
+          <div class="px-4 py-2 bg-slate-950/60 border-b border-white/10 flex items-center justify-between gap-2 text-xs flex-wrap shrink-0">
             <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="text-slate-300 font-semibold text-xs mr-1">⚡ Quick Allot:</span>
-              <button type="button" id="btnQuickCrossPolling" class="btn btn-secondary border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/20 text-[11px] px-2.5 py-1 font-medium" title="Allot officials on Polling duty as Counting Reserves">
-                🗳️ Polling Staff &rarr; Counting Reserve
+              <span class="text-slate-400 font-semibold text-[11px] mr-1">⚡ Quick Allot:</span>
+              <button type="button" id="btnQuickCrossPolling" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 text-[11px] px-2 py-1 font-medium" title="Allot polling officials as counting reserves">
+                🗳️ Polling &rarr; Counting Reserve
               </button>
-              <button type="button" id="btnQuickCrossCounting" class="btn btn-secondary border-purple-500/40 text-purple-300 hover:bg-purple-500/20 text-[11px] px-2.5 py-1 font-medium" title="Allot officials on Counting duty as Polling Reserves">
-                📊 Counting Staff &rarr; Polling Reserve
+              <button type="button" id="btnQuickCrossCounting" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500/20 text-[11px] px-2 py-1 font-medium" title="Allot counting officials as polling reserves">
+                📊 Counting &rarr; Polling Reserve
               </button>
-              <button type="button" id="btnQuickAllotUnassigned" class="btn btn-secondary border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20 text-[11px] px-2.5 py-1 font-medium" title="Add all unassigned available faculty as Standby Reserves">
-                ✨ Available Faculty &rarr; Standby
+              <button type="button" id="btnQuickAllotUnassigned" class="btn btn-secondary border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 text-[11px] px-2 py-1 font-medium" title="Allot unassigned faculty as general reserves">
+                ✨ Faculty &rarr; Standby
               </button>
             </div>
-            <button type="button" id="btnAddReserveRow" class="btn btn-secondary border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20 text-xs px-3 py-1 flex items-center gap-1 font-bold">
-              ➕ Add Reserve Row
+            <button type="button" id="btnAddReserveRow" class="btn btn-secondary border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20 text-xs px-2.5 py-1 flex items-center gap-1 font-bold shrink-0">
+              ➕ Add Row
             </button>
           </div>
 
-          <!-- Modal Body -->
-          <div class="p-5 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
+          <!-- Modal Body (Scrollable rows) -->
+          <div class="p-4 overflow-y-auto space-y-3 flex-1 custom-scrollbar min-h-[220px]">
             ${draftReserves.map((res, idx) => {
               const p = res.name ? getPerson(res.name) : null;
               const pDuty = res.name ? getPollingAssignment(res.name) : null;
@@ -6126,85 +6097,54 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
               let activeNotice = '';
               if (pDuty && cDuty) {
-                activeNotice = `<span class="text-[10px] text-amber-300 bg-amber-950/40 border border-amber-500/30 px-2 py-0.5 rounded font-mono">Active in Booth ${pDuty.boothNumber} & Table ${cDuty.tableNumber}</span>`;
+                activeNotice = `<span class="text-[10px] text-amber-300 bg-amber-950/40 border border-amber-500/30 px-2 py-0.5 rounded font-mono">Booth ${pDuty.boothNumber} & Table ${cDuty.tableNumber}</span>`;
               } else if (pDuty) {
-                activeNotice = `<span class="text-[10px] text-indigo-300 bg-indigo-950/40 border border-indigo-500/30 px-2 py-0.5 rounded font-mono">Active: Polling Booth ${pDuty.boothNumber} (${pDuty.role === 'Presiding Officer' ? 'PrO' : 'PO'})</span>`;
+                activeNotice = `<span class="text-[10px] text-indigo-300 bg-indigo-950/40 border border-indigo-500/30 px-2 py-0.5 rounded font-mono">Polling: Booth ${pDuty.boothNumber} (${pDuty.role === 'Presiding Officer' ? 'PrO' : 'PO'})</span>`;
               } else if (cDuty) {
-                activeNotice = `<span class="text-[10px] text-purple-300 bg-purple-950/40 border border-purple-500/30 px-2 py-0.5 rounded font-mono">Active: Counting Table ${cDuty.tableNumber} (${cDuty.role === 'Counting Supervisor' ? 'Sup' : 'CO'})</span>`;
+                activeNotice = `<span class="text-[10px] text-purple-300 bg-purple-950/40 border border-purple-500/30 px-2 py-0.5 rounded font-mono">Counting: Table ${cDuty.tableNumber} (${cDuty.role === 'Counting Supervisor' ? 'Sup' : 'CO'})</span>`;
               } else if (res.name) {
-                activeNotice = `<span class="text-[10px] text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded font-mono">Standby Reserve (No active booth/table)</span>`;
+                activeNotice = `<span class="text-[10px] text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded font-mono">Standby Reserve</span>`;
               }
 
               return `
-                <div class="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-2.5 relative res-row-card" data-res-idx="${idx}">
+                <div class="p-3 rounded-xl border border-white/10 bg-white/5 space-y-2 relative res-row-card" data-res-idx="${idx}">
+                  <!-- Row Header -->
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
                       <span class="text-xs font-bold text-emerald-300 font-mono">🛡️ Reserve #${idx + 1}</span>
                       ${activeNotice}
                     </div>
-                    <button type="button" class="text-xs text-rose-400 hover:text-rose-200 hover:underline btn-remove-res-row flex items-center gap-1" data-idx="${idx}">
-                      <span>✖</span> Remove
-                    </button>
+                    ${draftReserves.length > 1 ? `
+                      <button type="button" class="text-xs text-rose-400 hover:text-rose-200 hover:underline btn-remove-res-row flex items-center gap-1" data-idx="${idx}">
+                        <span>✖</span> Remove
+                      </button>
+                    ` : ''}
                   </div>
 
-                  <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <!-- Searchable Official Name Combobox -->
-                    <div class="md:col-span-2">
+                  <!-- Row Form Fields -->
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 items-start">
+                    <!-- Searchable Combobox for Official Name -->
+                    <div class="md:col-span-2 relative res-search-container" data-idx="${idx}">
                       <label class="block text-[11px] text-slate-400 font-medium mb-1">Official Name (Faculty or Non-Teaching Staff)</label>
-                      <div class="relative res-combobox-wrapper" data-idx="${idx}">
-                        <!-- Combobox Trigger Button -->
-                        <button type="button" 
-                          class="w-full bg-slate-900 border border-white/15 hover:border-emerald-500/60 focus:border-emerald-500 rounded-lg px-3 py-2 text-xs text-white flex items-center justify-between gap-2 shadow-sm transition btn-res-combobox-trigger"
+                      
+                      <div class="relative">
+                        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">🔍</span>
+                        <input type="text"
+                          class="w-full bg-slate-900 border ${res.name ? 'border-emerald-500/50 text-white font-medium' : 'border-white/15 text-slate-300'} rounded-lg pl-8 pr-8 py-1.5 text-xs placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition res-search-input"
+                          placeholder="Type name, department, or PEN to search..."
+                          value="${esc(res.name || '')}"
                           data-idx="${idx}"
-                          title="Click to search and select official">
-                          <div class="flex items-center gap-2 truncate text-left min-w-0">
-                            ${res.name ? `
-                              <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
-                              <span class="font-bold text-white truncate">${esc(res.name)}</span>
-                              <span class="text-[11px] text-slate-400 truncate hidden sm:inline">(${esc(res.department || p?.department || '–')} · PEN: ${esc(res.pen || p?.pen || '–')})</span>
-                            ` : `
-                              <span class="text-slate-400 flex items-center gap-1.5 truncate">
-                                <span>🔍</span>
-                                <span>-- Select or Search Faculty / Staff as Reserve --</span>
-                              </span>
-                            `}
-                          </div>
-                          <div class="flex items-center gap-1.5 shrink-0 text-slate-400">
-                            ${res.name ? `
-                              <span class="hover:text-rose-400 hover:bg-white/10 text-xs px-1.5 py-0.5 rounded transition btn-res-clear-person" data-idx="${idx}" title="Clear Selection">✕</span>
-                            ` : ''}
-                            <span class="text-[10px] transition-transform duration-200 arrow-indicator">▼</span>
-                          </div>
-                        </button>
+                          autocomplete="off" />
+                        ${res.name ? `
+                          <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-400 text-xs btn-clear-search" data-idx="${idx}" title="Clear selection">✕</button>
+                        ` : `
+                          <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-[9px] pointer-events-none">▼</span>
+                        `}
+                      </div>
 
-                        <!-- Searchable Dropdown Popup Menu -->
-                        <div class="hidden absolute left-0 right-0 top-full mt-1.5 z-50 rounded-xl bg-slate-900/98 border border-emerald-500/50 shadow-2xl overflow-hidden backdrop-blur-xl res-combobox-menu" data-idx="${idx}">
-                          <!-- Sticky Search Input & Filter Pills -->
-                          <div class="p-2.5 border-b border-white/10 bg-slate-950/90 space-y-2 sticky top-0 z-10">
-                            <div class="relative">
-                              <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
-                              <input type="text" 
-                                class="w-full bg-slate-900 border border-white/20 rounded-lg pl-8 pr-7 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 res-search-input" 
-                                placeholder="Search official by name, dept, PEN, booth/table..." 
-                                data-idx="${idx}" 
-                                autocomplete="off" />
-                              <button type="button" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs res-search-clear" data-idx="${idx}">✕</button>
-                            </div>
-
-                            <!-- Filter Pills -->
-                            <div class="flex items-center gap-1 flex-wrap text-[10px] res-filter-bar" data-idx="${idx}">
-                              <button type="button" class="px-2 py-0.5 rounded bg-emerald-600/40 text-emerald-200 border border-emerald-500/40 font-semibold res-filter-tab active" data-filter="all">All (${allAvailableOfficials.length})</button>
-                              <button type="button" class="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 res-filter-tab" data-filter="faculty">Faculty (${totalFac})</button>
-                              <button type="button" class="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 res-filter-tab" data-filter="staff">Staff (${totalStaff})</button>
-                              <button type="button" class="px-2 py-0.5 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 res-filter-tab" data-filter="polling">Polling (${totalPoll})</button>
-                              <button type="button" class="px-2 py-0.5 rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 res-filter-tab" data-filter="counting">Counting (${totalCount})</button>
-                              <button type="button" class="px-2 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 res-filter-tab" data-filter="standby">Standby (${totalStandby})</button>
-                            </div>
-                          </div>
-
-                          <!-- Scrollable List of Officials -->
-                          <div class="max-h-60 overflow-y-auto p-1 divide-y divide-white/5 custom-scrollbar res-combobox-list" data-idx="${idx}">
-                          </div>
+                      <!-- Dropdown List Container -->
+                      <div class="hidden absolute left-0 right-0 top-full mt-1 z-50 rounded-lg bg-slate-900 border border-emerald-500/40 shadow-2xl overflow-hidden res-dropdown-menu" data-idx="${idx}">
+                        <div class="max-h-52 overflow-y-auto divide-y divide-white/5 p-1 custom-scrollbar res-dropdown-list" data-idx="${idx}">
                         </div>
                       </div>
                     </div>
@@ -6212,7 +6152,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     <!-- Reserve Duty Role Selection -->
                     <div>
                       <label class="block text-[11px] text-slate-400 font-medium mb-1">Reserve Duty Role</label>
-                      <select class="w-full bg-slate-900 border border-white/15 rounded-lg px-2.5 py-2 text-xs text-white focus:border-emerald-500 select-res-type" data-idx="${idx}">
+                      <select class="w-full bg-slate-900 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-emerald-500 select-res-type" data-idx="${idx}">
                         <option value="Counting Reserve" ${(res.reserveType || 'Counting Reserve') === 'Counting Reserve' ? 'selected' : ''}>Counting Reserve</option>
                         <option value="Polling Reserve" ${res.reserveType === 'Polling Reserve' ? 'selected' : ''}>Polling Reserve</option>
                         <option value="General Reserve" ${res.reserveType === 'General Reserve' ? 'selected' : ''}>General Reserve</option>
@@ -6220,14 +6160,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     </div>
                   </div>
 
+                  <!-- Details Chip if selected -->
                   ${p ? `
-                    <div class="flex items-center gap-3 text-[11px] text-slate-300 bg-slate-950/40 p-2 rounded-lg border border-white/5 flex-wrap">
+                    <div class="flex items-center gap-2 text-[11px] text-slate-300 bg-slate-950/50 px-2.5 py-1.5 rounded-lg border border-white/5 flex-wrap">
                       <span><strong>Designation:</strong> ${esc(p.designation || 'Faculty')}</span>
-                      <span>•</span>
+                      <span class="text-slate-600">•</span>
                       <span><strong>Dept:</strong> ${esc(p.department || p.section || '–')}</span>
-                      <span>•</span>
-                      <span><strong>PEN:</strong> ${esc(p.pen || '–')}</span>
-                      ${p.phone ? `<span>•</span><span><strong>📱</strong> ${esc(p.phone)}</span>` : '<span class="text-amber-400/80">• (Mobile absent in system - can enter while signing)</span>'}
+                      <span class="text-slate-600">•</span>
+                      <span><strong>PEN:</strong> <span class="font-mono">${esc(p.pen || '–')}</span></span>
+                      ${p.phone ? `<span class="text-slate-600">•</span><span><strong>📱</strong> ${esc(p.phone)}</span>` : '<span class="text-slate-600">•</span><span class="text-amber-400/80">(Mobile absent)</span>'}
                     </div>
                   ` : ''}
                 </div>
@@ -6236,53 +6177,42 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </div>
 
           <!-- Modal Footer -->
-          <div class="p-4 border-t border-white/10 flex items-center justify-between bg-slate-900">
+          <div class="px-5 py-3 border-t border-white/10 flex items-center justify-between bg-slate-900 shrink-0">
             <span class="text-xs text-slate-400">
-              Total Appointed Reserves: <strong>${draftReserves.filter(r => r.name).length}</strong>
+              Total Appointed Reserves: <strong class="text-white">${draftReserves.filter(r => r.name).length}</strong>
             </span>
             <div class="flex items-center gap-2">
-              <button type="button" id="btnCancelReserveModal" class="btn btn-secondary text-xs px-4 py-2">
+              <button type="button" id="btnCancelReserveModal" class="btn btn-secondary text-xs px-3.5 py-1.5">
                 Cancel
               </button>
-              <button type="button" id="btnSaveReserveModal" class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2 flex items-center gap-1.5 shadow">
-                💾 Save Reserve Allotments
+              <button type="button" id="btnSaveReserveModal" class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-1.5 flex items-center gap-1.5 shadow">
+                💾 Save Allotments
               </button>
             </div>
           </div>
         </div>
       `;
 
-      // Helper to render filtered list items inside a row's combobox
-      const renderComboboxItems = (idx, filterCategory = 'all', searchQuery = '') => {
-        const listEl = modal.querySelector(`.res-combobox-list[data-idx="${idx}"]`);
+      // Helper to render filtered list items inside a row's dropdown
+      const renderDropdownList = (idx, query = '') => {
+        const listEl = modal.querySelector(`.res-dropdown-list[data-idx="${idx}"]`);
         if (!listEl) return;
 
-        const q = (searchQuery || '').toLowerCase().trim();
+        const q = (query || '').toLowerCase().trim();
         const officials = getAllOfficialsForReserve(draftReserves, idx);
 
         const filtered = officials.filter(person => {
-          // 1. Category tab filter
-          if (filterCategory === 'faculty' && person.type !== 'Teaching Faculty') return false;
-          if (filterCategory === 'staff' && person.type !== 'Non-Teaching Staff') return false;
-          if (filterCategory === 'polling' && !person.pDuty) return false;
-          if (filterCategory === 'counting' && !person.cDuty) return false;
-          if (filterCategory === 'standby' && (person.pDuty || person.cDuty)) return false;
-
-          // 2. Search query filter (matches name, department, designation, pen, or duty tags)
-          if (q) {
-            const matchName = person.name.toLowerCase().includes(q);
-            const matchDept = person.department.toLowerCase().includes(q);
-            const matchDesig = person.designation.toLowerCase().includes(q);
-            const matchPen = String(person.pen).toLowerCase().includes(q);
-            const matchDuty = person.dutyTag.toLowerCase().includes(q);
-            if (!matchName && !matchDept && !matchDesig && !matchPen && !matchDuty) return false;
-          }
-
-          return true;
+          if (!q) return true;
+          const matchName = person.name.toLowerCase().includes(q);
+          const matchDept = person.department.toLowerCase().includes(q);
+          const matchDesig = person.designation.toLowerCase().includes(q);
+          const matchPen = String(person.pen).toLowerCase().includes(q);
+          const matchDuty = person.dutyTag.toLowerCase().includes(q);
+          return matchName || matchDept || matchDesig || matchPen || matchDuty;
         });
 
         if (filtered.length === 0) {
-          listEl.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">No matching faculty or staff found.</div>`;
+          listEl.innerHTML = `<div class="p-4 text-center text-xs text-slate-400">No matching faculty or staff found.</div>`;
           return;
         }
 
@@ -6294,58 +6224,43 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
           let dutyBadge = '';
           if (person.pDuty && person.cDuty) {
-            dutyBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">🗳️ Booth ${person.pDuty.boothNumber} & 📊 Table ${person.cDuty.tableNumber}</span>`;
+            dutyBadge = `<span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">Booth ${person.pDuty.boothNumber} & Table ${person.cDuty.tableNumber}</span>`;
           } else if (person.pDuty) {
-            dutyBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">🗳️ Booth ${person.pDuty.boothNumber} (${person.pDuty.role === 'Presiding Officer' ? 'PrO' : 'PO'}) · For Counting Reserve</span>`;
+            dutyBadge = `<span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0">🗳️ Booth ${person.pDuty.boothNumber}</span>`;
           } else if (person.cDuty) {
-            dutyBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30">📊 Table ${person.cDuty.tableNumber} (${person.cDuty.role === 'Counting Supervisor' ? 'Sup' : 'CO'}) · For Polling Reserve</span>`;
+            dutyBadge = `<span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">📊 Table ${person.cDuty.tableNumber}</span>`;
           } else {
-            dutyBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">✨ Standby (No Duty)</span>`;
-          }
-
-          if (person.isExcluded) {
-            dutyBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30">⛔ Excluded</span> ` + dutyBadge;
+            dutyBadge = `<span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">✨ Standby</span>`;
           }
 
           if (isOther) {
-            dutyBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/30 text-amber-200 border border-amber-400/40">🚩 Already in Reserves</span> ` + dutyBadge;
+            dutyBadge = `<span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-amber-500/30 text-amber-200 border border-amber-400/40 shrink-0">🚩 In Reserves</span> ` + dutyBadge;
           }
 
           return `
-            <div class="res-opt-item px-3 py-2 rounded-lg flex items-center justify-between cursor-pointer transition text-xs ${isSelected ? 'bg-emerald-600/30 border border-emerald-500/40 text-white font-bold' : isOther ? 'opacity-60 hover:opacity-100 hover:bg-white/5 text-slate-300' : 'text-slate-200 hover:bg-white/10 hover:text-white'}" 
+            <div class="px-2.5 py-1.5 rounded-md flex items-center justify-between cursor-pointer transition text-xs ${isSelected ? 'bg-emerald-600/30 border border-emerald-500/40 text-white font-bold' : isOther ? 'opacity-60 hover:opacity-100 hover:bg-white/5 text-slate-300' : 'text-slate-200 hover:bg-white/10 hover:text-white'}" 
               data-idx="${idx}" 
               data-name="${esc(person.name)}">
-              <div class="flex flex-col gap-0.5 min-w-0 pr-2">
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-white text-xs">${esc(person.name)}</span>
-                  <span class="text-[10px] text-slate-400">#${person.seniority || '–'} · ${esc(person.type === 'Teaching Faculty' ? 'Faculty' : 'Staff')}</span>
-                </div>
-                <div class="flex items-center gap-2 text-[11px] text-slate-400">
-                  <span>${esc(person.designation)}</span>
-                  <span>•</span>
-                  <span>${esc(person.department)}</span>
-                  <span>•</span>
-                  <span class="font-mono">PEN: ${esc(person.pen)}</span>
-                </div>
-                <div class="flex flex-wrap items-center gap-1.5 mt-0.5">
-                  ${dutyBadge}
-                </div>
+              <div class="flex items-center gap-2 min-w-0 pr-2">
+                <span class="font-medium text-white truncate">${esc(person.name)}</span>
+                <span class="text-[10px] text-slate-400 truncate hidden sm:inline">(${esc(person.department)} · PEN: ${esc(person.pen)})</span>
+                ${dutyBadge}
               </div>
-              ${isSelected ? '<span class="text-emerald-400 font-bold shrink-0 text-sm">✓</span>' : ''}
+              ${isSelected ? '<span class="text-emerald-400 font-bold shrink-0 text-xs">✓</span>' : ''}
             </div>
           `;
         }).join('');
 
-        listEl.querySelectorAll('.res-opt-item').forEach(item => {
-          item.addEventListener('click', (e) => {
-            e.stopPropagation();
+        listEl.querySelectorAll('[data-name]').forEach(item => {
+          item.addEventListener('mousedown', (e) => {
+            e.preventDefault();
             const chosenName = item.dataset.name;
             selectOfficialForReserve(idx, chosenName);
           });
         });
       };
 
-      // Handler when an official is selected for row idx
+      // Handler when an official is chosen
       const selectOfficialForReserve = (idx, chosenName) => {
         const p = getPerson(chosenName);
         if (p) {
@@ -6392,113 +6307,60 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         });
       });
 
-      // Combobox Triggers
-      modal.querySelectorAll('.btn-res-combobox-trigger').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const idx = parseInt(btn.dataset.idx, 10);
-          const wrapper = btn.closest('.res-combobox-wrapper');
-          const menu = wrapper?.querySelector('.res-combobox-menu');
-          const arrow = btn.querySelector('.arrow-indicator');
-          const isHidden = menu ? menu.classList.contains('hidden') : true;
+      // Search Inputs inside each row
+      modal.querySelectorAll('.res-search-input').forEach(input => {
+        const idx = parseInt(input.dataset.idx, 10);
+        const container = input.closest('.res-search-container');
+        const menu = container?.querySelector('.res-dropdown-menu');
 
-          // Close all menus first
-          modal.querySelectorAll('.res-combobox-menu').forEach(m => m.classList.add('hidden'));
-          modal.querySelectorAll('.arrow-indicator').forEach(a => a.style.transform = 'rotate(0deg)');
-          modal.querySelectorAll('.res-combobox-wrapper').forEach(w => w.style.zIndex = '');
-
-          if (isHidden && menu && wrapper) {
-            wrapper.style.zIndex = '40';
+        const openMenu = () => {
+          modal.querySelectorAll('.res-dropdown-menu').forEach(m => m.classList.add('hidden'));
+          modal.querySelectorAll('.res-search-container').forEach(c => c.style.zIndex = '');
+          if (menu && container) {
+            container.style.zIndex = '50';
             menu.classList.remove('hidden');
-            if (arrow) arrow.style.transform = 'rotate(180deg)';
-
-            const searchInput = menu.querySelector('.res-search-input');
-            const filterBar = menu.querySelector('.res-filter-bar');
-            const activeFilter = filterBar?.querySelector('.res-filter-tab.active')?.dataset.filter || 'all';
-            renderComboboxItems(idx, activeFilter, searchInput ? searchInput.value : '');
-
-            setTimeout(() => {
-              if (searchInput) {
-                searchInput.focus();
-                searchInput.select();
-              }
-            }, 40);
+            renderDropdownList(idx, input.value);
           }
+        };
+
+        input.addEventListener('focus', openMenu);
+        input.addEventListener('click', openMenu);
+
+        input.addEventListener('input', () => {
+          openMenu();
+          renderDropdownList(idx, input.value);
+        });
+
+        // Press Enter to pick first match
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const listEl = menu?.querySelector('.res-dropdown-list');
+            const firstItem = listEl?.querySelector('[data-name]');
+            if (firstItem) {
+              selectOfficialForReserve(idx, firstItem.dataset.name);
+            }
+          } else if (e.key === 'Escape') {
+            if (menu) menu.classList.add('hidden');
+            if (container) container.style.zIndex = '';
+          }
+        });
+
+        input.addEventListener('blur', () => {
+          // Delay closing slightly so clicks on items register
+          setTimeout(() => {
+            if (menu) menu.classList.add('hidden');
+            if (container) container.style.zIndex = '';
+          }, 200);
         });
       });
 
-      // Clear selection button on trigger
-      modal.querySelectorAll('.btn-res-clear-person').forEach(btn => {
+      // Clear button on search input
+      modal.querySelectorAll('.btn-clear-search').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           const idx = parseInt(btn.dataset.idx, 10);
           selectOfficialForReserve(idx, '');
-        });
-      });
-
-      // Search inputs inside menus
-      modal.querySelectorAll('.res-search-input').forEach(input => {
-        input.addEventListener('input', (e) => {
-          const idx = parseInt(input.dataset.idx, 10);
-          const menu = input.closest('.res-combobox-menu');
-          const clearBtn = menu?.querySelector('.res-search-clear');
-          if (clearBtn) {
-            if (input.value) clearBtn.classList.remove('hidden');
-            else clearBtn.classList.add('hidden');
-          }
-          const filterBar = menu?.querySelector('.res-filter-bar');
-          const activeFilter = filterBar?.querySelector('.res-filter-tab.active')?.dataset.filter || 'all';
-          renderComboboxItems(idx, activeFilter, input.value);
-        });
-
-        // Press Enter to select the first matching result
-        input.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            const idx = parseInt(input.dataset.idx, 10);
-            const listEl = modal.querySelector(`.res-combobox-list[data-idx="${idx}"]`);
-            const firstItem = listEl?.querySelector('.res-opt-item');
-            if (firstItem) {
-              firstItem.click();
-            }
-          }
-        });
-      });
-
-      // Clear search query button
-      modal.querySelectorAll('.res-search-clear').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const idx = parseInt(btn.dataset.idx, 10);
-          const menu = btn.closest('.res-combobox-menu');
-          const input = menu?.querySelector('.res-search-input');
-          if (input) {
-            input.value = '';
-            btn.classList.add('hidden');
-            const filterBar = menu?.querySelector('.res-filter-bar');
-            const activeFilter = filterBar?.querySelector('.res-filter-tab.active')?.dataset.filter || 'all';
-            renderComboboxItems(idx, activeFilter, '');
-            input.focus();
-          }
-        });
-      });
-
-      // Category filter tabs
-      modal.querySelectorAll('.res-filter-tab').forEach(tab => {
-        tab.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const filterBar = tab.parentElement;
-          const idx = parseInt(filterBar.dataset.idx, 10);
-          filterBar.querySelectorAll('.res-filter-tab').forEach(t => {
-            t.classList.remove('active', 'bg-emerald-600/40', 'text-emerald-200', 'font-semibold');
-            t.classList.add('bg-white/5', 'text-slate-300');
-          });
-          tab.classList.remove('bg-white/5', 'text-slate-300');
-          tab.classList.add('active', 'bg-emerald-600/40', 'text-emerald-200', 'font-semibold');
-
-          const menu = tab.closest('.res-combobox-menu');
-          const searchInput = menu?.querySelector('.res-search-input');
-          renderComboboxItems(idx, tab.dataset.filter, searchInput ? searchInput.value : '');
         });
       });
 
@@ -6510,20 +6372,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         });
       });
 
-      // Close dropdowns on click outside or Escape
+      // Close dropdowns when clicking outside
       modal.addEventListener('click', (e) => {
-        if (!e.target.closest('.res-combobox-wrapper')) {
-          modal.querySelectorAll('.res-combobox-menu').forEach(m => m.classList.add('hidden'));
-          modal.querySelectorAll('.arrow-indicator').forEach(a => a.style.transform = 'rotate(0deg)');
-          modal.querySelectorAll('.res-combobox-wrapper').forEach(w => w.style.zIndex = '');
-        }
-      });
-
-      modal.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          modal.querySelectorAll('.res-combobox-menu').forEach(m => m.classList.add('hidden'));
-          modal.querySelectorAll('.arrow-indicator').forEach(a => a.style.transform = 'rotate(0deg)');
-          modal.querySelectorAll('.res-combobox-wrapper').forEach(w => w.style.zIndex = '');
+        if (!e.target.closest('.res-search-container')) {
+          modal.querySelectorAll('.res-dropdown-menu').forEach(m => m.classList.add('hidden'));
+          modal.querySelectorAll('.res-search-container').forEach(c => c.style.zIndex = '');
         }
       });
 
