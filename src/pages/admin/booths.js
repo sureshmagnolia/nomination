@@ -2834,14 +2834,30 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
         </div>
 
         <!-- Footer / Signature -->
-        <div class="account-footer">
-          <div class="footer-meta">
-            <div class="date-field"><strong>Date:</strong> ________________________</div>
-            <div class="booth-field"><strong>Polling Station / Booth:</strong> ${b.boothNumber}</div>
+        <div class="account-footer-container">
+          <div class="account-footer">
+            <div class="footer-meta">
+              <div class="date-field"><strong>Date:</strong> ________________________</div>
+              <div class="booth-field"><strong>Polling Station / Booth:</strong> ${b.boothNumber}</div>
+            </div>
+            <div class="sig-block">
+              <div class="sig-line-bar"></div>
+              <div class="sig-title">Signature of Presiding Officer</div>
+            </div>
           </div>
-          <div class="sig-block">
-            <div class="sig-line-bar"></div>
-            <div class="sig-title">Signature of Presiding Officer</div>
+
+          <!-- Space for Signatures of Polling Agents Below Presiding Officer -->
+          <div class="agents-sig-container">
+            <div class="agents-header">
+              <span class="agents-title">Signatures of Polling Agents:</span>
+              <span class="agents-hint">(With Name of Candidate / Organization)</span>
+            </div>
+            <div class="agents-grid">
+              <div class="agent-box"><span class="agent-num">1.</span> <span class="agent-line">_______________________________</span></div>
+              <div class="agent-box"><span class="agent-num">2.</span> <span class="agent-line">_______________________________</span></div>
+              <div class="agent-box"><span class="agent-num">3.</span> <span class="agent-line">_______________________________</span></div>
+              <div class="agent-box"><span class="agent-num">4.</span> <span class="agent-line">_______________________________</span></div>
+            </div>
           </div>
         </div>
 
@@ -3093,13 +3109,13 @@ export function triggerBallotAccountPrint(html) {
           }
 
           .table-ballots td.col-fill {
-            height: 36px;
+            height: 26px;
           }
           .table-seals td.col-fill {
-            height: 33px;
+            height: 24px;
           }
           .table-votes td.col-fill {
-            height: 38px;
+            height: 26px;
           }
 
           .col-cat {
@@ -3138,26 +3154,35 @@ export function triggerBallotAccountPrint(html) {
           .font-semibold { font-weight: 700; }
 
           .account-note-box {
-            margin-top: 4px;
-            font-size: 8.5pt;
+            margin-top: 3px;
+            font-size: 8pt;
             color: #000000;
             background: #ffffff;
-            padding: 5px 8px;
+            padding: 4px 6px;
             border: 1.5px dashed #000000;
-            line-height: 1.25;
+            line-height: 1.2;
           }
 
+          .account-footer-container {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            padding: 2px 6px 1px 6px;
+            flex-shrink: 0;
+            border-top: 1.5px solid #000000;
+            margin-top: 2px;
+          }
           .account-footer {
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            padding: 2px 10px 2px 10px;
+            padding: 1px 0;
             flex-shrink: 0;
           }
           .footer-meta {
-            font-size: 10pt;
+            font-size: 9pt;
             color: #000000;
-            line-height: 1.6;
+            line-height: 1.5;
           }
           .sig-block {
             text-align: center;
@@ -3165,13 +3190,56 @@ export function triggerBallotAccountPrint(html) {
           }
           .sig-line-bar {
             border-top: 2px solid #000000;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
             width: 100%;
           }
           .sig-title {
-            font-size: 10.5pt;
+            font-size: 10pt;
             font-weight: 900;
             color: #000000;
+          }
+
+          .agents-sig-container {
+            border-top: 1px dashed #000000;
+            padding-top: 3px;
+            margin-top: 1px;
+          }
+          .agents-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 2px;
+          }
+          .agents-title {
+            font-size: 8.5pt;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: #000000;
+          }
+          .agents-hint {
+            font-size: 7.5pt;
+            font-weight: normal;
+            color: #444444;
+          }
+          .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+          }
+          .agent-box {
+            font-size: 8pt;
+            color: #000000;
+            display: flex;
+            align-items: baseline;
+            gap: 3px;
+            white-space: nowrap;
+          }
+          .agent-num {
+            font-weight: 700;
+          }
+          .agent-line {
+            letter-spacing: -0.5px;
           }
         </style>
       </head>
