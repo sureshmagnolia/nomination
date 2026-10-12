@@ -3397,7 +3397,7 @@ export async function generateAndPrintPresidingOfficerInstructions(pwd) {
     ]);
 
     const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME || 'Government College Chittur';
-    const year = settings.electionYear || schedule.electionYear || new Date().getFullYear();
+    const year = settings.electionYear || schedule.electionYear || 2026;
 
     const printWin = window.open('', '_blank');
     if (!printWin) {
@@ -3421,7 +3421,7 @@ export async function generateAndPrintPresidingOfficerInstructions(pwd) {
                 font-weight: bold;
               }
               @bottom-left {
-                content: "Office of the Returning Officer — Presiding Officer Handbook";
+                content: "Office of the Returning Officer — Guidelines for Teachers & Staff";
                 font-family: Arial, sans-serif;
                 font-size: 7.5pt;
               }
@@ -3462,7 +3462,7 @@ export async function generateAndPrintPresidingOfficerInstructions(pwd) {
         <body>
           <div class="screen-topbar no-print">
             <div style="display: flex; align-items: center; gap: 12px;">
-              <strong style="font-size: 14px; color: #fff;">Presiding Officer Handbook &mdash; ${year}</strong>
+              <strong style="font-size: 14px; color: #fff;">Presiding Officer Handbook &mdash; 15/10/2026</strong>
               <span style="font-size: 11px; color: #94a3b8;">A4 Portrait &bull; Print Ready</span>
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
@@ -3478,230 +3478,243 @@ export async function generateAndPrintPresidingOfficerInstructions(pwd) {
             </div>
           </div>
 
-          <!-- PAGE 1: Timeline, Material Collection & Booth Setup -->
+          <!-- PAGE 1: Timeline, Team Structure & Booth Setup -->
           <div class="guide-page">
             <div class="header-banner">
               <div class="col-title">${collegeName}</div>
-              <div class="elect-title">COLLEGE UNION ELECTIONS ${year}</div>
-              <div class="doc-title">OFFICE OF THE RETURNING OFFICER &bull; INSTRUCTIONS FOR PRESIDING OFFICERS</div>
-              <div class="meta-bar">Ref: GCC/CUE/${year}/PrO-GUIDE-01 &bull; Polling Hours: 09:30 AM &ndash; 01:00 PM</div>
+              <div class="elect-title">COLLEGE UNION ELECTION &ndash; 2026</div>
+              <div class="doc-title">PROCEDURES &amp; GUIDELINES FOR PRESIDING OFFICERS &amp; POLLING TEAMS</div>
+              <div class="meta-bar">Polling Date: 15/10/2026 (Thursday) &bull; Reporting: 08:30 AM &bull; Polling Hours: 09:30 AM &ndash; 12:30 PM</div>
             </div>
 
             <div class="note-box">
-              <strong>Note for Presiding Officers:</strong> These instructions provide a clear, step-by-step workflow for conducting the poll, maintaining complete ballot secrecy, issuing the correct ballot papers to each student, and properly accounting and sealing materials at the close of voting.
+              <strong>Objective:</strong> Promoting a Free, Fair, Transparent, and Orderly Election. These guidelines provide the exact step-by-step procedures for material collection, booth setup, ballot issuance rules, polling conduct, sealing protocols, and post-poll material return.
             </div>
 
-            <div class="sec-h">1. Polling Day Operational Schedule</div>
+            <div class="sec-h">1. Polling Schedule &amp; Team Structure</div>
             <table class="data-table">
               <thead>
                 <tr>
                   <th style="width:25%;">Time Window</th>
                   <th style="width:25%;">Stage</th>
-                  <th style="width:50%;">Key Responsibilities</th>
+                  <th style="width:50%;">Key Responsibility</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><strong>08:00 AM – 08:45 AM</strong></td>
-                  <td>Material Collection</td>
-                  <td>Collect polling kit from Central Distribution Counter (Auditorium). Inspect items against the checklist.</td>
+                  <td><strong>08:30 AM</strong></td>
+                  <td>Reporting &amp; Material Collection</td>
+                  <td>Report at College Auditorium Central Counter. Collect and verify polling kit against checklist.</td>
                 </tr>
                 <tr>
                   <td><strong>08:45 AM – 09:15 AM</strong></td>
                   <td>Booth Preparation</td>
-                  <td>Set up voting compartment for privacy. Affix door posters. Show empty ballot box to polling agents; lock and seal with wax.</td>
+                  <td>Set up voting compartment for privacy. Affix door notices. Show empty box to agents; lock and seal with cloth &amp; wax.</td>
                 </tr>
                 <tr>
                   <td><strong>09:30 AM</strong></td>
-                  <td>Poll Opens</td>
-                  <td>Open the polling booth promptly at 09:30 AM and commence voting.</td>
+                  <td>Commencement of Poll</td>
+                  <td>Open polling station promptly at 09:30 AM. Read secrecy notice and begin voting.</td>
                 </tr>
                 <tr>
-                  <td><strong>09:30 AM – 01:00 PM</strong></td>
+                  <td><strong>09:30 AM – 12:30 PM</strong></td>
                   <td>Voting Hours</td>
-                  <td>Verify student photo ID, mark roll, issue correct ballots, and ensure ballots are dropped secretly into the box.</td>
+                  <td>Verify student photo ID, sign &amp; issue correct ballots, and monitor secret deposit into ballot box.</td>
                 </tr>
                 <tr>
-                  <td><strong>01:00 PM onwards</strong></td>
-                  <td>Close of Poll &amp; Sealing</td>
-                  <td>Distribute numbered tokens back-to-front to students in queue at 01:00 PM. After last voter, seal box slit, prepare 2 copies of Ballot Paper Account, and seal all covers.</td>
+                  <td><strong>12:30 PM onwards</strong></td>
+                  <td>Close of Poll &amp; Return of Materials</td>
+                  <td>Distribute tokens back-to-front to students in queue at 12:30 PM. Seal slit, prepare Form PRO-1, and return materials at Auditorium.</td>
                 </tr>
               </tbody>
             </table>
 
+            <div class="sec-sub">Officers in Polling Booth (4 Members per Booth)</div>
+            <p class="rule-item"><strong>1. Presiding Officer (PrO):</strong> Booth charge &amp; signing the ballots. Responsible for secrecy, box sealing, Form PRO-1, and material return.</p>
+            <p class="rule-item"><strong>2. First Polling Officer (Polling Officer 1):</strong> Reads student name &amp; admission number loudly. Identifies student (College ID Card). Obtains student signature, rounds off serial number, and crosses entry in red pen.</p>
+            <p class="rule-item"><strong>3. Second Polling Officer (Polling Officer 2):</strong> Issues ballots (White General ballot, Colour Year Rep ballot, Colour Dept Association ballot). Records roll serial number on counterfoils and pre-folds ballots.</p>
+            <p class="rule-item"><strong>4. Polling Assistant:</strong> In charge of voting desk supplies: manages stamp ink pad, Arrow Cross mark rubber stamps, and ensures voter drops folded ballots into the ballot box.</p>
+
             <div class="sec-h">2. Material Collection Checklist (Verify at Distribution Counter)</div>
             <div class="checklist-grid">
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Marked Copies of Electoral Roll</strong> (2 sets) &amp; Working Copy</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Paper Books</strong> (General, Year Reps, Dept Associations)</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Box with Padlock &amp; Key</strong> (with Key Envelope)</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>White cloth for wrapping lock</strong> &amp; Paper Strip Seal for box mouth</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Red Sealing Wax sticks, candles, matchbox &amp; brass seal</strong></span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Marked Copy of Roll (in Green Cover)</strong> &amp; Working Copy</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>White Ballot Papers</strong> (General Executive Posts)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Colour Ballot Papers</strong> (Class Reps: I UG, II UG, III UG, PG)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Colour Ballot Papers</strong> (Contested Dept Associations)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Box with Padlock &amp; Brass Key</strong> (in Key Cover)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>White cloth for wrapping lock</strong>, twine &amp; red sealing wax</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Candles, matchbox &amp; official Brass Metal Seal</strong></span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Paper Strip Seals</strong> (prescribed sticker for box slit)</span></div>
               <div class="check-item"><span class="check-box">☐</span> <span><strong>Arrow cross-mark rubber stamps &amp; stamp pads</strong></span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Numbered Queue Tokens</strong> (for queue at 01:00 PM)</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Long metal scale / ruler</strong> (for pressing down ballots in box)</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover A</strong> (for Marked Copy of Electoral Roll)</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover B1</strong> (for Ballot Paper Account Copy 1 &mdash; Handover)</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover B2</strong> (for Ballot Paper Account Copy 2 &mdash; To Tape on Box)</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover for used counterfoils and unused ballot papers</strong></span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Paper Account Forms</strong> (2 blank copies)</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Stationery kit:</strong> Transparent packing tape, glue stick, pens</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Long metal scale / ruler</strong> (for pressing ballots in box)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Numbered Queue Tokens</strong> (for queue at 12:30 PM)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Form PRO-1</strong> (Ballots &amp; Books Account &mdash; 3 blank copies)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover 1: Green Cover</strong> (for Marked Electoral Roll)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover 2: Brown Cover</strong> (for Ballot Paper Account Copy 1)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover 3: Small Brown Cover</strong> (for Ballot Box Keys)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover B2</strong> (to tape on box lid with Ballot Account Copy 2)</span></div>
             </div>
 
-            <div class="sec-h">3. Polling Booth Setup (Before 09:30 AM)</div>
-            <p style="margin-bottom: 3px;"><strong>1. Voting Compartment Privacy:</strong> Set up the voting compartment in a secure, well-lit corner away from open windows and doors so that complete voting privacy is maintained. Ensure no one can see how a student marks the ballot.</p>
-            <p style="margin-bottom: 3px;"><strong>2. Door Poster &amp; Notices:</strong> Affix the Booth Allotment Door Poster outside the entrance so students can verify their booth before entering.</p>
-            <p style="margin-bottom: 3px;"><strong>3. Demonstration of Empty Box (09:15 AM):</strong> Before polling agents and your polling team, open the ballot box fully. Allow the polling agents to inspect the interior and confirm that the box is completely empty.</p>
-            <p style="margin-bottom: 3px;"><strong>4. Initial Locking &amp; Sealing:</strong> Close the box lid firmly and lock it with the padlock. Wrap the lock with the provided cloth, apply hot red sealing wax, and press the brass seal firmly into the wax. Place the key safely in the designated envelope kept in your custody.</p>
-            <p><strong>5. Drop Slit:</strong> Ensure the slit aperture on top of the box is in the open position so folded ballot papers can be inserted easily during voting.</p>
+            <div class="sec-h">3. Polling Booth Setup (08:45 AM – 09:15 AM)</div>
+            <p style="margin-bottom: 2px;"><strong>&bull; Voting Compartment:</strong> Set up voting compartment in a secure, well-lit corner away from windows and doors to maintain 100% secrecy.</p>
+            <p style="margin-bottom: 2px;"><strong>&bull; Door Display:</strong> Affix Booth Allotment Door Poster outside the entrance displaying Booth Number, Room Number, and allotted classes.</p>
+            <p style="margin-bottom: 2px;"><strong>&bull; Polling Agent Passes:</strong> Issue official passes to Polling Agents (maximum 2 passes per student organisation / candidate). <strong>Only ONE polling agent per organisation is permitted inside the booth at any given time.</strong></p>
+            <p style="margin-bottom: 2px;"><strong>&bull; Demonstration of Empty Box:</strong> Open the ballot box fully in front of all polling agents present so they can confirm it is 100% empty.</p>
+            <p style="margin-bottom: 2px;"><strong>&bull; Initial Locking &amp; Sealing:</strong> Close box lid firmly and lock it. Cover lock with provided white cloth, tie with twine, apply hot red sealing wax, and emboss with brass seal. Place key in small brown cover and seal it.</p>
+            <p style="margin-bottom: 2px;"><strong>&bull; Pre-Poll Declaration:</strong> Obtain signatures of all Polling Agents present on the pre-poll declaration form before opening the poll.</p>
+            <p><strong>&bull; Drop Slit:</strong> Ensure slit aperture on top of box is in OPEN position so folded ballots can easily slide inside.</p>
           </div>
 
           <!-- PAGE 2: Ballot Papers & Issuing Rules -->
           <div class="guide-page">
-            <div class="sec-h" style="margin-top:0;">4. Ballot Papers &amp; Issuing Guidelines</div>
-            <p style="margin-bottom: 5px;">Each student will be issued ballot papers according to their course, year of study, and department. Please follow these specific rules to ensure smooth distribution:</p>
+            <div class="sec-h" style="margin-top:0;">4. Ballot Paper Categories &amp; Distribution Rules</div>
+            <p style="margin-bottom: 4px;">Each student will receive 2 or 3 ballot papers depending on their year and whether their department association post is contested. Ballot papers are clearly distinguished by paper colour and heading:</p>
 
-            <div class="sec-sub">1. General Union Ballot Paper (White)</div>
-            <p class="rule-item">&bull; This common ballot paper is issued to <strong>all eligible students</strong> in the college, irrespective of their department or year of study.</p>
-            <p class="rule-item">&bull; It contains the college-wide executive posts: Chairman, Vice Chairperson, General Secretary, Joint Secretary, Arts Club Secretary, Student Editor, General Captain, and University Union Councillors (UUC).</p>
-            <p class="mal-note">ℹ️ എല്ലാ വിദ്യാർഥികൾക്കും (UG &amp; PG) നൽകേണ്ട പൊതു യൂണിയൻ ബാലറ്റ് പേപ്പറാണിത്.</p>
+            <div class="sec-sub">1. General Union Posts Ballot Paper (WHITE BALLOT)</div>
+            <p class="rule-item">&bull; Issued to <strong>every eligible student</strong> in the college across all departments and years.</p>
+            <p class="rule-item">&bull; Contains 8 elective posts: The Chairman (2 candidates), The Vice Chairman (2 candidates), The Secretary (2 candidates), The Joint Secretary (2 candidates), Councillors to Calicut University Union [UUC] (2 seats, 4 candidates), Chief Student Editor (2 candidates), Secretary Fine Arts (2 candidates), General Captain (2 candidates).</p>
+            <p class="mal-note">ℹ️ എല്ലാ വിദ്യാർഥികൾക്കും നൽകേണ്ട പൊതു യൂണിയൻ ബാലറ്റ് പേപ്പറാണിത് (വെള്ള നിറം).</p>
 
-            <div class="sec-sub">2. Year / Class Representative Ballot Papers (UG &amp; PG Rules)</div>
-            <p class="rule-item">&bull; <strong>PG Students:</strong> <strong>All Postgraduate students</strong> (across MA, MSc, MCom &mdash; both 1st Year and 2nd Year) receive the <strong>exact same PG Representative ballot paper</strong>. There are no separate departmental ballots for PG representative; all PG students vote using this common PG Representative ballot.</p>
-            <p class="mal-note">ℹ️ പി.ജി. വിദ്യാർഥികൾക്കെല്ലാം (ഏത് ഡിപ്പാർട്ട്മെന്റോ വർഷമോ ആകട്ടെ) ഒരേ PG Representative ബാലറ്റ് പേപ്പറാണ് നൽകേണ്ടത്.</p>
+            <div class="sec-sub">2. Year / Class Representative Ballot Papers (COLOUR BALLOTS)</div>
+            <p class="rule-item">&bull; <strong>PG Students:</strong> <strong>All Postgraduate students</strong> (across MA, MSc, MCom &mdash; both 1st Year &amp; 2nd Year) receive the <strong>exact same PG Representative colour ballot paper</strong>. There are no separate departmental ballots for PG representative.</p>
+            <p class="mal-note">ℹ️ പി.ജി. വിദ്യാർഥികൾക്കെല്ലാം (ഏത് ഡിപ്പാർട്ട്മെന്റോ വർഷമോ ആകട്ടെ) ഒരേ PG Representative കളർ ബാലറ്റ് പേപ്പറാണ് നൽകേണ്ടത്.</p>
             
-            <p class="rule-item">&bull; <strong>1st Year UG Students:</strong> <strong>All first-year undergraduate students</strong> (across BA, BSc, BCom) receive the <strong>exact same I UG Representative ballot paper</strong>.</p>
-            <p class="mal-note">ℹ️ എല്ലാ വിഷയങ്ങളിലെയും ഒന്നാം വർഷ ഡിഗ്രി വിദ്യാർഥികൾക്കും ഒരേ First Year UG Representative ബാലറ്റ് പേപ്പറാണ് നൽകേണ്ടത്.</p>
+            <p class="rule-item">&bull; <strong>1st Year UG Students:</strong> <strong>All first-year undergraduate students</strong> (across BA, BSc, BCom) receive the <strong>exact same I UG Representative colour ballot paper</strong>.</p>
+            <p class="mal-note">ℹ️ എല്ലാ വിഷയങ്ങളിലെയും ഒന്നാം വർഷ ഡിഗ്രി വിദ്യാർഥികൾക്ക് ഒരേ First Year UG Representative ബാലറ്റ് പേപ്പർ നൽകുക.</p>
 
-            <p class="rule-item">&bull; <strong>2nd Year UG Students:</strong> <strong>All second-year undergraduate students</strong> across all subjects receive the <strong>exact same II UG Representative ballot paper</strong>.</p>
+            <p class="rule-item">&bull; <strong>2nd Year UG Students:</strong> <strong>All second-year undergraduate students</strong> receive the <strong>exact same II UG Representative colour ballot paper</strong>.</p>
             <p class="mal-note">ℹ️ എല്ലാ രണ്ടാം വർഷ ഡിഗ്രി വിദ്യാർഥികൾക്കും ഒരേ II UG Representative ബാലറ്റ് പേപ്പറാണ് നൽകേണ്ടത്.</p>
 
-            <p class="rule-item">&bull; <strong>3rd Year UG Students:</strong> <strong>All third-year undergraduate students</strong> across all subjects receive the <strong>exact same III UG Representative ballot paper</strong>.</p>
+            <p class="rule-item">&bull; <strong>3rd Year UG Students:</strong> <strong>All third-year undergraduate students</strong> receive the <strong>exact same III UG Representative colour ballot paper</strong>.</p>
             <p class="mal-note">ℹ️ എല്ലാ മൂന്നാം വർഷ ഡിഗ്രി വിദ്യാർഥികൾക്കും ഒരേ III UG Representative ബാലറ്റ് പേപ്പറാണ് നൽകേണ്ടത്.</p>
 
-            <p class="rule-item" style="color:#1e3a8a;"><strong>Important for Polling Officers:</strong> Year representative ballots are uniform across the college for that year level. Simply check the student's year from the roll and issue the corresponding representative ballot.</p>
-
-            <div class="sec-sub">3. Department Association Ballot Papers</div>
-            <p class="rule-item">&bull; These ballots are specific to each academic department (e.g., Botany, Chemistry, Commerce, Economics, Electronics, English, Geography, History, Malayalam, Mathematics, Music, Philosophy, Physics, Tamil, Zoology).</p>
-            <p class="rule-item">&bull; <strong>All students belonging to the same department&mdash;both UG and PG classes of that department&mdash;receive the exact same Department Association ballot paper.</strong></p>
+            <div class="sec-sub">3. Department Association Secretary Ballot Papers (COLOUR BALLOTS)</div>
+            <p class="rule-item">&bull; Pertains to Association Secretary posts for academic departments.</p>
+            <p class="rule-item">&bull; <strong>All students belonging to the same department (both UG and PG classes of that department) receive the exact same Department Association colour ballot paper.</strong></p>
+            <p class="rule-item" style="color:#1e3a8a; font-weight:bold;">&bull; Contested Association Posts (10 Departments): Botany, Chemistry, Commerce, English, Geography, History, Malayalam, Physics, Tamil, and Zoology.</p>
             <p class="mal-note">ℹ️ ഒരേ ഡിപ്പാർട്ട്മെന്റിലെ എല്ലാ യു.ജി., പി.ജി. വിദ്യാർഥികൾക്കും അതാത് ഡിപ്പാർട്ട്മെന്റ് അസോസിയേഷൻ പോസ്റ്റുകളിലേക്ക് നൽകുന്നത് ഒരേ ബാലറ്റ് പേപ്പറാണ്.</p>
 
             <div class="sec-sub">4. Posts Without Election / Uncontested Posts (തിരഞ്ഞെടുപ്പ് ഇല്ലാത്ത പോസ്റ്റുകൾ)</div>
-            <p class="rule-item">&bull; Where only one valid nomination was received for a post, the candidate is elected uncontested (unopposed). Similarly, if no nominations were received, no election is held.</p>
-            <p class="rule-item" style="font-weight:bold; color:#991b1b;">&bull; FOR ALL UNCONTESTED POSTS, NO ELECTION IS HELD AND NO BALLOT PAPER IS PRINTED OR ISSUED.</p>
-            <p class="rule-item">&bull; Presiding Officers and Polling Officers should note that ballot papers are supplied <strong>only for actively contested posts</strong>. If a particular post does not appear on any ballot paper in your booth, it is because that post was elected unopposed. Voting takes place only for the posts listed on the supplied ballots.</p>
+            <p class="rule-item">&bull; Where only one valid nomination was received (candidate elected unopposed), or where no nominations were filed, <strong>no election is held and no ballot paper is printed or issued</strong>.</p>
+            <p class="rule-item">&bull; For example, in departments where Association Secretary is uncontested (Economics, Electronics, Mathematics, Music, Philosophy), no association ballot paper is issued.</p>
+            <p class="rule-item" style="font-weight:bold; color:#991b1b;">&bull; Polling Officers must note: Ballot papers are supplied ONLY for actively contested posts. Voting takes place exclusively for the posts printed on the supplied ballots.</p>
             <p class="mal-note">ℹ️ എതിരില്ലാതെ തിരഞ്ഞെടുക്കപ്പെട്ടതോ (Uncontested) നോമിനേഷൻ ഇല്ലാത്തതോ ആയ പോസ്റ്റുകളിലേക്ക് തിരഞ്ഞെടുപ്പ് ഉണ്ടാകുന്നതല്ല; അതിനാൽ അവയ്ക്ക് ബാലറ്റ് പേപ്പർ നൽകേണ്ടതില്ല. മത്സരം നടക്കുന്ന പോസ്റ്റുകളിലേക്ക് മാത്രമേ ബാലറ്റ് പേപ്പർ നൽകുകയുള്ളൂ.</p>
 
-            <div class="sec-sub">Summary: Ballots Handed to Each Student at the Booth</div>
+            <div class="sec-sub">Quick Reference: Ballots Issued per Voter</div>
             <table class="data-table">
               <thead>
                 <tr>
-                  <th style="width:30%;">Voter Category</th>
-                  <th style="width:55%;">Ballot Papers to Issue</th>
-                  <th style="width:15%; text-align:center;">Total Ballots</th>
+                  <th style="width:30%;">Elector Category</th>
+                  <th style="width:55%;">Ballot Papers to Hand Over</th>
+                  <th style="width:15%; text-align:center;">Total Slips</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td><strong>1st Year UG Student</strong></td>
-                  <td>1 General Union Ballot + 1 First Year UG Rep Ballot + 1 Dept Association Ballot*</td>
+                  <td>1 General Union (White) + 1 I UG Rep (Colour) + 1 Dept Association (Colour)*</td>
                   <td style="text-align:center; font-weight:bold;">2 or 3</td>
                 </tr>
                 <tr>
                   <td><strong>2nd Year UG Student</strong></td>
-                  <td>1 General Union Ballot + 1 Second Year UG Rep Ballot + 1 Dept Association Ballot*</td>
+                  <td>1 General Union (White) + 1 II UG Rep (Colour) + 1 Dept Association (Colour)*</td>
                   <td style="text-align:center; font-weight:bold;">2 or 3</td>
                 </tr>
                 <tr>
                   <td><strong>3rd Year UG Student</strong></td>
-                  <td>1 General Union Ballot + 1 Third Year UG Rep Ballot + 1 Dept Association Ballot*</td>
+                  <td>1 General Union (White) + 1 III UG Rep (Colour) + 1 Dept Association (Colour)*</td>
                   <td style="text-align:center; font-weight:bold;">2 or 3</td>
                 </tr>
                 <tr>
                   <td><strong>PG Student (Any Year/Dept)</strong></td>
-                  <td>1 General Union Ballot + 1 PG Representative Ballot + 1 Dept Association Ballot*</td>
+                  <td>1 General Union (White) + 1 PG Rep (Colour) + 1 Dept Association (Colour)*</td>
                   <td style="text-align:center; font-weight:bold;">2 or 3</td>
                 </tr>
               </tbody>
             </table>
-            <p style="font-size:7.5pt; color:#64748b; font-style:italic;">*Note: Department Association Ballot is issued only if the association post for that department is contested. If uncontested, no association ballot is issued.</p>
+            <p style="font-size:7.5pt; color:#64748b; font-style:italic;">*Note: Department Association Ballot is issued only if the association post for that department is contested (10 departments). In uncontested departments, total ballots issued is 2.</p>
           </div>
 
-          <!-- PAGE 3: Duties During Polling, Sealing & Handover Sequence -->
+          <!-- PAGE 3: Voting Procedure, Sealing & Handover Sequence -->
           <div class="guide-page">
-            <div class="sec-h" style="margin-top:0;">5. Duties During Polling Hours (09:30 AM – 01:00 PM)</div>
-            <p style="margin-bottom: 3px;"><strong>&bull; Polling Officer 1 (Identity &amp; Roll Verification):</strong> Check student's College ID card with photo. Locate student's name in Marked Roll, call out name and serial number loudly so agents can hear, and <strong>round off / circle the serial number in the roll to mark voted</strong>.</p>
-            <p style="margin-bottom: 3px;"><strong>&bull; Polling Officer 2 (Ballot Paper Issuance):</strong> Verify that the <strong>Presiding Officer has signed the back of each ballot paper</strong> before issuing. Write the student's roll serial number on the counterfoil of all issued ballots. <strong>Pre-fold each ballot paper along the score lines</strong> before handing it over. Hand over the <strong>arrow cross-mark stamp</strong> and instruct the student to mark using the stamp only.</p>
-            <p style="margin-bottom: 3px;"><strong>&bull; Presiding Officer &amp; Supervision:</strong> Ensure the student marks ballots in secrecy, refolds them, and drops all ballots into the ballot box.</p>
-            <p style="margin-bottom: 3px;"><strong>&bull; Managing Box Space:</strong> Intermittently insert the <strong>long metal scale / ruler</strong> through the slit to gently press down ballots and ensure adequate space inside the box.</p>
-            <p style="margin-bottom: 6px;"><strong>&bull; Mobile Phone Ban:</strong> No student, candidate, or polling agent is allowed to carry or use a mobile phone or camera inside the booth. Photographing a ballot paper is strictly prohibited.</p>
+            <div class="sec-h" style="margin-top:0;">5. Voting Procedure &amp; Rules During Poll (09:30 AM – 12:30 PM)</div>
+            <p style="margin-bottom: 2px;"><strong>&bull; Step 1 &mdash; Identity Verification (Polling Officer 1):</strong> Examine student's original College ID Card with photo. Announce name and roll number loudly so agents can hear. Obtain signature on roll, round off / circle serial number, and cross entry in red pen.</p>
+            <p style="margin-bottom: 2px;"><strong>&bull; Step 2 &mdash; Ballot Preparation &amp; Issuance (Polling Officer 2):</strong> Verify that the Presiding Officer has signed the back of each ballot paper before issuing. Record student's roll serial number on counterfoils. Pre-fold each ballot paper vertically and horizontally along score lines before handing it over.</p>
+            <p style="margin-bottom: 2px;"><strong>&bull; Step 3 &mdash; Arrow Cross Stamp (Polling Assistant):</strong> Hand over Arrow Cross Mark rubber stamp. Instruct elector to cast vote using the arrow stamp only inside the candidate's box.</p>
+            <p style="margin-bottom: 2px;"><strong>&bull; Step 4 &mdash; Voting Secrecy &amp; Deposit (Presiding Officer):</strong> Direct student into voting compartment. Ensure student refolds marked ballots and drops all ballots directly into the ballot box in full view before leaving.</p>
+            <p style="margin-bottom: 2px;"><strong>&bull; Managing Box Space:</strong> Intermittently insert the long metal scale / ruler through the slit to gently press down ballots and ensure adequate space inside the box.</p>
+            <p style="margin-bottom: 2px;"><strong>&bull; Assistance for Blind &amp; Infirm Voters:</strong> Blind or infirm voters may be accompanied by an authorised companion. Rules: (1) Only one companion is allowed per voter, (2) The companion can assist only a single voter, (3) The companion must maintain strict secrecy of voter choice, (4) Both elector and companion must produce ID cards before the PrO, and (5) Obtain a duly filled Companion Declaration Form.</p>
+            <p style="margin-bottom: 5px;"><strong>&bull; Voter Prohibitions &amp; Discipline:</strong> Strictly prohibit mobile phones and smartwatches inside the booth. No voter shall write their name, admission number, or any identifying mark on the ballot paper. No voter shall take a ballot paper outside the booth. Canvassing and slogan shouting within or near the polling station are strictly prohibited.</p>
 
-            <div class="sec-h">6. Close of Poll &amp; Sealing Procedures (01:00 PM)</div>
-            <p style="margin-bottom: 3px;"><strong>1. Queue Tokens at 01:00 PM:</strong> At exactly 01:00 PM, distribute numbered tokens to all voters waiting in queue, starting <strong>from the back of the queue towards the front</strong>. Allow all token holders to vote until the last voter finishes.</p>
-            <p style="margin-bottom: 3px;"><strong>2. Sealing Ballot Box Mouth (Slit):</strong> Close the internal mechanical slit flap. Affix the paper strip seal over the mouth / slit, apply hot red sealing wax with the brass seal, and <strong>have the Presiding Officer and Polling Agents sign across the seal</strong>.</p>
-            <p style="margin-bottom: 3px;"><strong>3. Ballot Paper Account (Two Copies Rule):</strong> Prepare <strong>TWO IDENTICAL COPIES</strong> of the Ballot Paper Account, balancing all figures (Issued = Received &minus; [Unused + Cancelled]). Both copies must be signed by the <strong>Presiding Officer AND all Polling Agents present</strong> (signatures below Presiding Officer).<br>
-            &bull; <strong>COPY 1 (Cover B1):</strong> Place in Cover B1, seal with red wax, and hand over separately at the reception desk.<br>
-            &bull; <strong>COPY 2 (Cover B2):</strong> Place in Cover B2, seal with red wax, and <strong>FIRMLY TAPE / STICK THIS SEALED COVER DIRECTLY TO THE OUTER LID OF THE BALLOT BOX</strong> using transparent packing tape.</p>
-            <p style="margin-bottom: 3px;"><strong>4. Sealing Ballot Books:</strong> Place counterfoils of used ballots, unused ballots, and cancelled ballots into the designated cover and seal it.</p>
-            <p style="margin-bottom: 6px;"><strong>5. Sealing Marked Roll (Cover A):</strong> Place the Marked Copy of Electoral Roll into Cover A and seal it securely.</p>
+            <div class="sec-h">6. Close of Poll &amp; Sealing Procedures (12:30 PM)</div>
+            <p style="margin-bottom: 2px;"><strong>1. Queue Tokens at 12:30 PM:</strong> At exactly 12:30 PM, close the voting line. If a queue exists at 12:30 PM, distribute numbered tokens starting from the last person at the end of the queue forward to the front. Allow all token holders to vote until the last person finishes.</p>
+            <p style="margin-bottom: 2px;"><strong>2. Sealing Ballot Box Mouth (Slit):</strong> Immediately after the last vote is cast, turn internal mechanical lever to lock slit shut. Affix prescribed Paper Strip Seal squarely over closed slit. Apply hot red sealing wax, emboss with brass seal, and obtain signatures of PrO and Polling Agents across the seal.</p>
+            <p style="margin-bottom: 2px;"><strong>3. Ballot Paper Account (Form PRO-1):</strong> Prepare Form PRO-1 in duplicate: Section 1 (Ballots &amp; Books Account), Section 2 (Account of Strip Seals), Section 3 (Account of Votes Recorded). Verify that Total Qty = Used + Returned. Both copies must be signed by the Presiding Officer AND all Polling Agents present. Provide a copy to polling agents present.<br>
+            &bull; <strong>COPY 1:</strong> Enclose in Brown Cover (Cover 2) for direct submission at the collection centre.<br>
+            &bull; <strong>COPY 2:</strong> Enclose in Cover B2, seal with wax, and <strong>FIRMLY TAPE / STICK DIRECTLY TO THE OUTER LID OF THE BALLOT BOX</strong> using wide transparent tape.</p>
+            <p style="margin-bottom: 2px;"><strong>4. Statutory Sealed Covers:</strong> Prepare the 3 specific statutory covers: (1) Marked Copy of Electoral Roll in <strong>GREEN COVER</strong>, (2) Ballot Paper Account (Form PRO-1) in <strong>BROWN COVER</strong>, (3) Ballot Box Keys in <strong>SMALL BROWN COVER</strong>, plus designated cover containing Counterfoils and Unused ballots.</p>
 
             <!-- Signature block preview -->
-            <table class="sig-table" style="background:#f8fafc; margin-top:2px; margin-bottom:6px;">
+            <table class="sig-table" style="background:#f8fafc; margin-top:2px; margin-bottom:5px;">
               <tr>
-                <td style="width:50%;"><strong>Date:</strong> ________________________<br><strong>Polling Station / Booth:</strong> _____</td>
+                <td style="width:50%;"><strong>Date:</strong> 15/10/2026<br><strong>Polling Station / Booth No.:</strong> _____</td>
                 <td style="width:50%; text-align:right;">________________________________________<br><strong>Signature of Presiding Officer</strong></td>
               </tr>
               <tr style="background:#f1f5f9;">
                 <td colspan="2" style="font-weight:bold; color:#1e3a8a;">
-                  Signatures of Polling Agents (Below Presiding Officer &mdash; on Both Copies of Ballot Paper Account):
+                  Signatures of Polling Agents Present (Below Presiding Officer &mdash; on Both Copies of Form PRO-1):
                 </td>
               </tr>
               <tr style="background:#fff;">
                 <td colspan="2">
-                  1. ____________________________ (Candidate: _________) &nbsp;&nbsp;&nbsp;&nbsp; 2. ____________________________ (Candidate: _________)<br>
-                  3. ____________________________ (Candidate: _________) &nbsp;&nbsp;&nbsp;&nbsp; 4. ____________________________ (Candidate: _________)
+                  1. ____________________________ (Org/Candidate: _________) &nbsp;&nbsp;&nbsp;&nbsp; 2. ____________________________ (Org/Candidate: _________)<br>
+                  3. ____________________________ (Org/Candidate: _________) &nbsp;&nbsp;&nbsp;&nbsp; 4. ____________________________ (Org/Candidate: _________)
                 </td>
               </tr>
             </table>
 
-            <div class="sec-h">7. Central Reception Counter Handover Sequence</div>
-            <p style="margin-bottom: 3px;">At the College Auditorium Central Reception Counter, hand over items in this exact sequence:</p>
+            <div class="sec-h">7. Central Reception Counter Handover Sequence (Auditorium)</div>
+            <p style="margin-bottom: 2px;">At the College Auditorium Central Reception Counter (from 12:30 PM onwards), hand over materials in this exact order:</p>
             <table class="data-table">
               <thead>
                 <tr>
-                  <th style="width:12%; text-align:center;">Order</th>
+                  <th style="width:10%; text-align:center;">Order</th>
                   <th style="width:48%;">Article to Hand Over</th>
-                  <th style="width:40%;">Verification by Reception Officer</th>
+                  <th style="width:42%;">Verification Check by Reception Team</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td style="text-align:center; font-weight:bold;">1</td>
-                  <td><strong>SEALED BALLOT BOX</strong><br>(With Sealed Cover B2 containing Ballot Paper Account Copy 2 taped to box lid)</td>
-                  <td>Verifies slit seal, lock wax seal, and presence of sealed Cover B2 firmly attached to box lid.</td>
+                  <td><strong>SEALED BALLOT BOX</strong><br>(With Sealed Cover B2 containing Form PRO-1 Copy 2 firmly taped on box lid)</td>
+                  <td>Verifies slit sticker seal, lock wax seal, and presence of sealed Form PRO-1 taped to box.</td>
                 </tr>
                 <tr>
                   <td style="text-align:center; font-weight:bold;">2</td>
-                  <td><strong>COVER B1: Sealed Ballot Paper Account</strong><br>(Copy 1 &mdash; Handover Copy)</td>
-                  <td>Verifies wax seal; checks figures against Copy 2 on the box.</td>
+                  <td><strong>COVER 1: GREEN COVER</strong><br>(Marked Copy of Electoral Roll)</td>
+                  <td>Verifies Green Cover is sealed with wax and signed across flap by First Polling Officer &amp; PrO.</td>
                 </tr>
                 <tr>
                   <td style="text-align:center; font-weight:bold;">3</td>
-                  <td><strong>COVER A: Sealed Marked Copy of Electoral Roll</strong></td>
-                  <td>Verifies envelope is sealed with wax and signed across flap.</td>
+                  <td><strong>COVER 2: BROWN COVER</strong><br>(Ballot Paper Account &mdash; Form PRO-1 Copy 1)</td>
+                  <td>Verifies Form PRO-1 figures balance and bear signatures of PrO and Polling Agents.</td>
                 </tr>
                 <tr>
                   <td style="text-align:center; font-weight:bold;">4</td>
-                  <td><strong>SEALED COVER with Counterfoils &amp; Unused Ballots</strong></td>
-                  <td>Verifies counterfoils, unused ballots, and cancelled ballots are enclosed and sealed.</td>
+                  <td><strong>COVER 3: SMALL BROWN COVER</strong><br>(Ballot Box Padlock Keys)</td>
+                  <td>Verifies small brown cover contains the booth padlock keys and is properly sealed.</td>
                 </tr>
                 <tr>
                   <td style="text-align:center; font-weight:bold;">5</td>
-                  <td><strong>POLLING KIT BAG with all remaining materials</strong></td>
-                  <td>Verifies return of brass seal, key envelope, stamps, stamp pads, stationery, and balance items.</td>
+                  <td><strong>SEALED COVER with Counterfoils &amp; Unused Ballots<br>&amp; POLLING KIT BAG</strong></td>
+                  <td>Verifies counterfoils, unused/cancelled ballots, brass seal, stamps, voting compartment, and booth room key are returned.</td>
                 </tr>
               </tbody>
             </table>
-            <p style="margin-top: 4px; font-size:8pt; color:#475569;">Please collect your official <strong>Presiding Officer Clearance Slip</strong> from the Returning Officer before leaving the Auditorium.</p>
+            <p style="margin-top: 3px; font-size:7.5pt; color:#475569;">
+              &bull; <strong>Clearance Slip:</strong> Collect signed Clearance Slip from Returning Officer before leaving.<br>
+              &bull; <strong>Counting Duty:</strong> Counting Staff report at 01:30 PM at Auditorium. Counting begins at 02:00 PM across 12 tables.
+            </p>
           </div>
         </body>
       </html>

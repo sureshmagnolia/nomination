@@ -261,103 +261,122 @@ Notice is hereby given that the scrutiny and counting of votes polled in the Col
     {
       id: 'statutory_notice_presiding_officer_instructions',
       title: `Instructions for Presiding Officers & Polling Teams`,
-      refNo: `${shortName}/ELEC/${year}/PrO-GUIDE-01`,
-      date: todayStr,
+      refNo: `${shortName}/ELEC/2026/PrO-GUIDE-01`,
+      date: '15/10/2026',
       category: 'Presiding Officer Guide',
       pinned: true,
       isPublished: true,
       signatoryName: 'Returning Officer',
       signatoryTitle: `Returning Officer, ${collegeName}`,
-      content: `### INSTRUCTIONS FOR PRESIDING OFFICERS & POLLING TEAMS
+      content: `### PROCEDURES & GUIDELINES FOR PRESIDING OFFICERS & POLLING TEAMS
+**Polling Date: 15/10/2026 (Thursday) | Reporting: 08:30 AM | Polling Hours: 09:30 AM – 12:30 PM**
 
 These instructions outline the operational workflow for conducting the poll, maintaining voting secrecy, issuing the correct ballot papers, and sealing materials at the close of voting.
 
 ---
 
-#### 📦 1. Material Collection & Verification Checklist (08:00 AM)
-Report to the Central Distribution Centre (Auditorium) and verify all items:
-- **Marked Copies of Electoral Roll** (2 sets) & Working Copy (1 set).
-- **Ballot Paper Booklets** (White/General, Year Representatives, Department Associations).
-- **Ballot Box & Padlock** with Key in designated Key Envelope.
-- **Sealing Materials**: White cloth for wrapping the lock, Red Sealing Wax (Lac), candles, matchbox, official brass seal, and Paper Strip Seal.
-- **Stationery & Equipment**: Indelible ink, Arrow cross-mark rubber stamps, inking pads, pens, transparent tape, and long metal ruler/scale.
-- **Envelopes**: Cover A (Marked Roll), Cover B1 (Ballot Paper Account Copy 1), Cover B2 (Ballot Paper Account Copy 2 — to tape on box), and cover for counterfoils and unused ballots.
-- **Numbered Queue Tokens** (for voters waiting at 01:00 PM).
+#### 🕒 1. Polling Schedule & Team Structure
+- **08:30 AM**: Reporting & Material Collection at Central Distribution Counter (Auditorium).
+- **08:45 AM – 09:15 AM**: Polling Booth Setup, testing box, and demonstrating empty box to polling agents.
+- **09:30 AM**: Commencement of Poll.
+- **09:30 AM – 12:30 PM**: Polling Hours.
+- **12:30 PM onwards**: Close of Poll, statutory sealing, and Return of Materials at College Auditorium.
+
+**Officers in Each Polling Booth (4 Members per Booth):**
+1. **Presiding Officer (PrO)**: Overall booth in-charge; signs on the back of all ballots before issuance; supervises secrecy, box sealing, Form PRO-1, and material return.
+2. **First Polling Officer (Polling Officer 1)**: Identifies students (original College ID Card); calls out student name & admission number loudly; gets student signature, rounds off serial number, and crosses entry in red pen.
+3. **Second Polling Officer (Polling Officer 2)**: Issues correct ballots (General White ballot, Year Rep colour ballot, Dept Association colour ballot); writes student serial number on counterfoils and pre-folds ballots.
+4. **Polling Assistant**: Handles voting table supplies: manages stamp ink pad, Arrow Cross mark rubber stamps, and ensures voter properly drops folded ballots into the ballot box.
 
 ---
 
-#### 🏫 2. Pre-Poll Booth Setup (08:45 AM – 09:30 AM)
+#### 📦 2. Material Collection Checklist (08:30 AM at Auditorium)
+Verify all items at the Distribution Counter before proceeding to the booth:
+- **Marked Copy of Roll** (in **Green Cover**) & Working Copy.
+- **White Ballot Papers** (General Executive Posts) & **Colour Ballot Papers** (Class Reps & Contested Dept Associations).
+- **Ballot Box with Padlock & Brass Key** (in **Small Brown Cover**).
+- **Sealing Materials**: White cloth for wrapping the lock, red cotton twine, red sealing wax sticks, candles, matchbox, brass metal seal, and Paper Strip Seals.
+- **Stationery & Supplies**: Indelible ink phial, Arrow cross-mark rubber stamps, inking pads, pens, transparent packing tape, long metal ruler/scale.
+- **Envelopes**: Cover 1 (Green Cover for Marked Roll), Cover 2 (Brown Cover for Form PRO-1 Copy 1), Cover 3 (Small Brown Cover for Keys), Cover B2 (to tape on box with Form PRO-1 Copy 2), and cover for counterfoils and unused ballots.
+- **Numbered Queue Tokens** (for voters waiting in line at 12:30 PM).
+- **Form PRO-1** (Ballots & Books Account — 3 blank copies).
+
+---
+
+#### 🏫 3. Pre-Poll Booth Setup (08:45 AM – 09:15 AM)
 1. **Voting Compartment Privacy**: Set up in a secure, well-lit corner away from open doors and windows to ensure 100% secrecy of vote.
-2. **Door Display**: Affix Booth Allotment Door Poster outside the entrance.
-3. **Demonstration of Empty Box (09:15 AM)**: Open the ballot box completely in front of authorized Polling Agents and the polling team to verify it is completely empty.
-4. **Initial Locking & Sealing**: Close box lid, lock with padlock, wrap lock with provided cloth, apply hot red wax with brass seal, and place key in designated envelope.
-5. **Drop Slit**: Ensure aperture slit is set in the OPEN position so folded ballots can easily slide inside.
+2. **Door Display**: Affix Booth Allotment Door Poster outside the entrance showing Booth Number, Room Number, and allotted classes.
+3. **Polling Agent Passes**: Issue passes to polling agents (maximum **2 passes per student organisation / candidate**). **Only ONE polling agent per organisation is permitted inside the booth at any given time**.
+4. **Demonstration of Empty Box**: Open the ballot box completely in front of all polling agents present to verify it is 100% empty.
+5. **Initial Locking & Sealing**: Close box lid, lock with padlock, wrap lock with provided white cloth, tie with twine, apply hot red wax with brass seal, and place key in the designated small brown cover.
+6. **Pre-Poll Declaration**: Obtain signatures of all Polling Agents present on the pre-poll declaration form before opening the poll.
+7. **Drop Slit**: Ensure aperture slit is set in the OPEN position so folded ballots can easily slide inside.
 
 ---
 
-#### 🗳️ 3. Ballot Papers & Issuing Guidelines
-Please follow these distribution rules carefully:
-1. **General Union Ballot Paper (White)**:
+#### 🗳️ 4. Ballot Papers & Issuing Guidelines
+1. **General Union Ballot Paper (WHITE BALLOT)**:
    - Issued to **every eligible student** voting at the booth, irrespective of department or year.
-   - Contains major college-wide executive posts (Chairman, Vice Chairperson, General Secretary, Joint Secretary, Arts Club Secretary, Student Editor, General Captain, UUC).
-   - *(എല്ലാ വിദ്യാർഥികൾക്കും നൽകേണ്ട പൊതു യൂണിയൻ ബാലറ്റ് പേപ്പർ)*.
-2. **Year / Class Representative Ballot Papers**:
-   - **PG Students**: ALL Postgraduate students (across MA, MSc, MCom — both 1st & 2nd Year) receive the **exact same PG Representative ballot paper**. There are no separate departmental ballots for PG representative.
-   - *(പി.ജി. വിദ്യാർഥികൾക്കെല്ലാം ഒരേ PG Representative ബാലറ്റ് പേപ്പറാണ് നൽകേണ്ടത്)*.
-   - **1st Year UG Students**: ALL 1st Year undergraduate students (BA, BSc, BCom) receive the **exact same I UG Representative ballot paper**.
-   - *(എല്ലാ വിഷയങ്ങളിലെയും ഒന്നാം വർഷ ഡിഗ്രി വിദ്യാർഥികൾക്കും ഒരേ First Year UG Representative ബാലറ്റ് പേപ്പർ)*.
-   - **2nd Year UG Students**: Receive the **exact same II UG Representative ballot paper**.
-   - **3rd Year UG Students**: Receive the **exact same III UG Representative ballot paper**.
-3. **Department Association Ballot Papers**:
-   - Pertains to Department Association Secretary posts.
-   - **All students belonging to the same academic department (both UG and PG classes of that department) receive the exact same Department Association ballot paper**.
-   - *(ഒരേ ഡിപ്പാർട്ട്മെന്റിലെ എല്ലാ യു.ജി., പി.ജി. വിദ്യാർഥികൾക്കും ഒരേ അസോസിയേഷൻ ബാലറ്റ് പേപ്പർ)*.
+   - Contains 8 elective posts: Chairman, Vice Chairman, Secretary, Joint Secretary, UUC (2 seats), Chief Student Editor, Secretary Fine Arts, and General Captain.
+   - *(എല്ലാ വിദ്യാർഥികൾക്കും നൽകേണ്ട പൊതു യൂണിയൻ ബാലറ്റ് പേപ്പർ - വെള്ള നിറം)*.
+2. **Year / Class Representative Ballot Papers (COLOUR BALLOTS)**:
+   - **PG Students**: ALL Postgraduate students (across MA, MSc, MCom — both 1st & 2nd Year) receive the **exact same PG Representative colour ballot paper**. There are no separate departmental ballots for PG representative.
+   - *(പി.ജി. വിദ്യാർഥികൾക്കെല്ലാം ഒരേ PG Representative കളർ ബാലറ്റ് പേപ്പറാണ് നൽകേണ്ടത്)*.
+   - **1st Year UG Students**: ALL 1st Year undergraduate students (BA, BSc, BCom) receive the **exact same I UG Representative colour ballot paper**.
+   - *(എല്ലാ വിഷയങ്ങളിലെയും ഒന്നാം വർഷ ഡിഗ്രി വിദ്യാർഥികൾക്ക് ഒരേ First Year UG Representative ബാലറ്റ് പേപ്പർ)*.
+   - **2nd Year UG Students**: Receive the **exact same II UG Representative colour ballot paper**.
+   - **3rd Year UG Students**: Receive the **exact same III UG Representative colour ballot paper**.
+3. **Department Association Ballot Papers (COLOUR BALLOTS)**:
+   - Pertains to Association Secretary posts for academic departments.
+   - **All students belonging to the same academic department (both UG and PG classes of that department) receive the exact same Department Association colour ballot paper**.
+   - **Contested Association Posts (10 Departments)**: Botany, Chemistry, Commerce, English, Geography, History, Malayalam, Physics, Tamil, and Zoology.
+   - *(ഒരേ ഡിപ്പാർട്ട്മെന്റിലെ എല്ലാ യു.ജി., പി.ജി. വിദ്യാർഥികൾക്കും ഒരേ അസോസിയേഷൻ കളർ ബാലറ്റ് പേപ്പർ)*.
 4. **Posts Without Election / Uncontested Posts (തിരഞ്ഞെടുപ്പ് ഇല്ലാത്ത പോസ്റ്റുകൾ)**:
    - Where a candidate is elected uncontested (unopposed), or where no nominations were filed, **no election is held and no ballot paper is printed or issued**.
+   - For example, in departments where Association Secretary is uncontested (Economics, Electronics, Mathematics, Music, Philosophy), no association ballot paper is issued.
    - Ballot papers are supplied **only for actively contested posts**. Voting takes place exclusively for the contested posts listed on the supplied ballots.
    - *(എതിരില്ലാതെ തിരഞ്ഞെടുക്കപ്പെട്ട പോസ്റ്റുകൾക്ക് തിരഞ്ഞെടുപ്പ് ഉണ്ടാകുന്നതല്ല; അതിനാൽ അവയ്ക്ക് ബാലറ്റ് പേപ്പർ നൽകേണ്ടതില്ല)*.
 
 ---
 
-#### 👥 4. Duties During Polling Hours (09:30 AM – 01:00 PM)
-1. **Polling Officer 1 (Identity & Roll Verification)**:
-   - Verify student's original College ID Card with photo.
-   - Locate student's name in Marked Roll, announce name and serial number aloud, and **round off / circle the serial number in the roll to mark voted**.
-2. **Polling Officer 2 (Ballot Paper Issuance)**:
-   - Ensure the **Presiding Officer has signed the back of each ballot paper** before issuing.
-   - Record student's roll serial number on the counterfoil of all issued ballots.
-   - **Pre-fold each ballot paper along the score lines** before handing it over.
-   - Hand over the **arrow cross-mark rubber stamp** and instruct the voter to mark using the stamp only.
-3. **Presiding Officer & Polling Area Supervision**:
+#### 👥 5. Duties During Polling Hours (09:30 AM – 12:30 PM)
+1. **Polling Officer 1 (Identity Verification)**: Verify original College ID Card with photo. Announce name & roll number loudly. Obtain student's signature on roll, round off serial number, and cross entry in red pen.
+2. **Polling Officer 2 (Ballot Issuance)**: Ensure Presiding Officer has signed the back of each ballot paper before issuing. Record student's roll serial number on counterfoils. Pre-fold each ballot paper along score lines before handing it over.
+3. **Polling Assistant (Stamps & Box Area)**: Hand over the Arrow Cross Mark rubber stamp and instruct elector to mark using the stamp only. Ensure voter drops folded ballots into the ballot box.
+4. **Presiding Officer & Supervision**:
    - Direct voter to secret compartment and ensure they drop all ballots into the ballot box.
    - **Managing Box Space**: Intermittently insert the **long metal scale / ruler** through the slit to gently press down ballots and ensure adequate space inside the box.
-   - **Mobile Phone Ban**: Strictly no mobile phones or cameras inside the polling station.
+   - **Assistance for Blind & Infirm Voters**: Blind or infirm voters may be accompanied by an authorised companion. Companion must be single-voter only, maintain secrecy, produce ID card, and sign declaration form.
+   - **Mobile Phone & Smartwatch Ban**: Strictly no mobile phones or smartwatches allowed inside the polling booth. Taking photographs of ballots is strictly prohibited.
 
 ---
 
-#### 🔒 5. Close of Poll & Sealing Procedures (01:00 PM)
-1. **Queue Tokens at 01:00 PM**: Distribute numbered tokens to all voters waiting in line at 01:00 PM, distributing **from the back of the queue towards the front**. Allow all token holders to vote.
+#### 🔒 6. Close of Poll & Sealing Procedures (12:30 PM)
+1. **Queue Tokens at 12:30 PM**: Distribute numbered tokens to all voters waiting in line at 12:30 PM, distributing **from the back of the queue towards the front**. Allow all token holders to vote.
 2. **Sealing Ballot Box Mouth (Slit)**:
    - Close internal mechanical slit flap.
    - Affix Paper Strip Seal over the slit, apply hot red wax with brass seal, and have **Presiding Officer and Polling Agents sign across the seal**.
-3. **Ballot Paper Account (Two Copies Rule)**:
-   - Prepare **TWO IDENTICAL COPIES** of Ballot Paper Account, balancing all figures (Issued = Received − [Unused + Cancelled]).
-   - Both copies must be signed by the **Presiding Officer AND all Polling Agents present** (signatures below Presiding Officer).
-   - **COPY 1 (Cover B1)**: Place in Cover B1, seal with red wax, and hand over separately at the reception desk.
-   - **COPY 2 (Cover B2)**: Place in Cover B2, seal with red wax, and **FIRMLY TAPE / STICK THIS ENTIRE SEALED COVER DIRECTLY TO THE OUTER LID OF THE BALLOT BOX** using wide transparent tape.
-4. **Sealing Ballot Books**: Place counterfoils of used ballots, unused ballots, and cancelled ballots in the designated cover and seal it.
-5. **Sealing Marked Roll (Cover A)**: Place Marked Copy of Electoral Roll into Cover A and seal it.
+3. **Ballot Paper Account (Form PRO-1)**:
+   - Prepare **Form PRO-1 in duplicate**: Section 1 (Ballots & Books Account), Section 2 (Account of Strip Seals), Section 3 (Account of Votes Recorded).
+   - Both copies must be signed by the **Presiding Officer AND all Polling Agents present**. Provide a copy to polling agents present.
+   - **COPY 1**: Enclose in **Brown Cover** (Cover 2) for direct submission at the collection centre.
+   - **COPY 2**: Enclose in Cover B2, seal with red wax, and **FIRMLY TAPE / STICK THIS ENTIRE SEALED COVER DIRECTLY TO THE OUTER LID OF THE BALLOT BOX** using wide transparent tape.
+4. **Sealing Statutory Covers**:
+   - **Cover 1 (Green Cover)**: Marked Copy of Electoral Roll.
+   - **Cover 2 (Brown Cover)**: Ballot Paper Account (Form PRO-1 Copy 1).
+   - **Cover 3 (Small Brown Cover)**: Ballot Box Padlock Keys.
+   - **Designated Cover**: Counterfoils of used ballots, unused ballots, and cancelled ballots.
 
 ---
 
-#### 🏛️ 6. Reception Counter Handover Sequence
-At the Central Reception Counter (Auditorium), hand over items in this exact sequence:
-1. **Sealed Ballot Box** (with Sealed Cover B2 containing Ballot Paper Account Copy 2 taped to box lid).
-2. **Cover B1: Sealed Ballot Paper Account** (Copy 1 — Handover Copy).
-3. **Cover A: Sealed Marked Copy of Electoral Roll**.
-4. **Sealed Cover with Counterfoils & Unused Ballots**.
-5. **Polling Kit Bag** with remaining stationery, brass seal, stamps, and key envelope.
-Collect your official **Presiding Officer Clearance Slip** from the Returning Officer.`
+#### 🏛️ 7. Reception Counter Handover Sequence (Auditorium)
+At the Central Reception Counter (College Auditorium, from 12:30 PM onwards), hand over materials in this exact order:
+1. **Sealed Ballot Box** (with Sealed Cover B2 containing Form PRO-1 Copy 2 firmly taped on box lid).
+2. **Cover 1: Green Cover** (Marked Copy of Electoral Roll).
+3. **Cover 2: Brown Cover** (Ballot Paper Account — Form PRO-1 Copy 1).
+4. **Cover 3: Small Brown Cover** (Ballot Box Padlock Keys).
+5. **Sealed Cover with Counterfoils & Unused Ballots, Voting Compartment, Room Key, and Polling Kit Bag**.
+*Collect your signed **Clearance Slip** from the Returning Officer before leaving. Counting staff report at 01:30 PM for counting beginning at 02:00 PM across 12 tables.*`
     }
   ];
 }
