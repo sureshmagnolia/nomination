@@ -3409,7 +3409,7 @@ export async function generateAndPrintPresidingOfficerInstructions(pwd) {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Presiding Officer Statutory Handbook &mdash; ${collegeName}</title>
+          <title>Presiding Officer Handbook &mdash; ${collegeName}</title>
           <style>
             @page {
               size: A4 portrait;
@@ -3427,31 +3427,31 @@ export async function generateAndPrintPresidingOfficerInstructions(pwd) {
               }
             }
             * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; background: #e2e8f0; font-size: 9pt; line-height: 1.35; }
-            .screen-topbar { position: sticky; top: 0; z-index: 1000; background: #000; color: #fff; padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-            .topbar-btn { background: #000; color: #fff; border: 1.5px solid #fff; padding: 6px 14px; font-weight: 700; font-size: 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; text-decoration: none; }
-            .topbar-btn:hover { background: #333; }
-            .guide-page { width: 190mm; margin: 8mm auto; background: #fff; padding: 12mm 14mm; border: 1.5px solid #000; box-shadow: 0 4px 15px rgba(0,0,0,0.15); page-break-after: always; break-after: page; }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; background: #e2e8f0; font-size: 8.5pt; line-height: 1.35; }
+            .screen-topbar { position: sticky; top: 0; z-index: 1000; background: #0f172a; color: #fff; padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+            .topbar-btn { background: #1e293b; color: #fff; border: 1.5px solid #475569; padding: 6px 14px; font-weight: 700; font-size: 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; text-decoration: none; }
+            .topbar-btn:hover { background: #334155; }
+            .guide-page { width: 190mm; margin: 8mm auto; background: #fff; padding: 10mm 12mm; border: 1.5px solid #cbd5e1; box-shadow: 0 4px 15px rgba(0,0,0,0.1); page-break-after: always; break-after: page; }
             .guide-page:last-child { page-break-after: auto; break-after: auto; }
-            .header-banner { text-align: center; border-bottom: 2.5px solid #1e3a8a; padding-bottom: 6px; margin-bottom: 10px; }
-            .col-title { font-size: 15pt; font-weight: 900; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.5px; }
-            .elect-title { font-size: 11pt; font-weight: 800; color: #991b1b; }
-            .doc-title { font-size: 10.5pt; font-weight: 800; color: #047857; text-transform: uppercase; margin-top: 2px; }
+            .header-banner { text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 8px; }
+            .col-title { font-size: 14pt; font-weight: 900; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.5px; }
+            .elect-title { font-size: 10.5pt; font-weight: 800; color: #991b1b; }
+            .doc-title { font-size: 10pt; font-weight: 800; color: #0f172a; text-transform: uppercase; margin-top: 1px; }
             .meta-bar { font-size: 8pt; color: #64748b; font-style: italic; margin-top: 2px; }
-            .callout-box { border-left: 4px solid #991b1b; background: #fef2f2; padding: 7px 10px; margin: 8px 0; border-radius: 2px; }
-            .callout-title { font-weight: 900; color: #991b1b; font-size: 9pt; }
-            .callout-body { font-size: 8.5pt; color: #1e293b; }
-            .sec-h { font-size: 10.5pt; font-weight: 900; color: #1e3a8a; text-transform: uppercase; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 2px; margin: 12px 0 6px 0; }
-            .sec-sub { font-size: 9pt; font-weight: 800; color: #0f172a; margin: 6px 0 3px 0; }
-            .checklist-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 12px; margin-bottom: 6px; }
-            .check-item { font-size: 8.5pt; display: flex; align-items: baseline; gap: 6px; }
-            .check-box { font-size: 10pt; font-weight: bold; color: #1e3a8a; }
-            .data-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; margin: 6px 0; font-size: 8pt; }
-            .data-table th { background: #1e3a8a; color: #fff; border: 1px solid #000; padding: 4px 6px; font-weight: 800; text-align: left; }
-            .data-table td { border: 1px solid #000; padding: 4px 6px; vertical-align: top; }
+            .note-box { border-left: 3.5px solid #2563eb; background: #f0f9ff; padding: 6px 10px; margin: 6px 0; border-radius: 3px; font-size: 8pt; color: #1e3a8a; }
+            .sec-h { font-size: 10pt; font-weight: 800; color: #1e3a8a; text-transform: uppercase; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 2px; margin: 10px 0 5px 0; }
+            .sec-sub { font-size: 8.5pt; font-weight: 800; color: #0f172a; margin: 5px 0 2px 0; }
+            .checklist-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px 10px; margin-bottom: 6px; }
+            .check-item { font-size: 8pt; display: flex; align-items: baseline; gap: 5px; }
+            .check-box { font-size: 9pt; font-weight: bold; color: #2563eb; }
+            .data-table { width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; margin: 5px 0; font-size: 7.5pt; }
+            .data-table th { background: #1e3a8a; color: #fff; border: 1px solid #94a3b8; padding: 4px 6px; font-weight: 700; text-align: left; }
+            .data-table td { border: 1px solid #cbd5e1; padding: 4px 6px; vertical-align: top; }
             .data-table tr:nth-child(even) td { background: #f8fafc; }
-            .sig-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; margin: 6px 0; font-size: 8pt; }
-            .sig-table td { border: 1px solid #000; padding: 5px 8px; }
+            .sig-table { width: 100%; border-collapse: collapse; border: 1px solid #94a3b8; margin: 5px 0; font-size: 7.5pt; }
+            .sig-table td { border: 1px solid #cbd5e1; padding: 4px 6px; }
+            .mal-note { color: #047857; font-style: italic; font-size: 7.5pt; margin-left: 12px; margin-bottom: 3px; }
+            .rule-item { margin-left: 10px; margin-bottom: 3px; font-size: 8pt; }
             @media print {
               body { background: #fff; }
               .screen-topbar { display: none !important; }
@@ -3462,146 +3462,197 @@ export async function generateAndPrintPresidingOfficerInstructions(pwd) {
         <body>
           <div class="screen-topbar no-print">
             <div style="display: flex; align-items: center; gap: 12px;">
-              <strong style="font-size: 14px; color: #fff;">Presiding Officer Statutory Handbook &mdash; ${year}</strong>
-              <span style="font-size: 11px; color: #cbd5e1;">A4 Portrait &bull; Print Ready</span>
+              <strong style="font-size: 14px; color: #fff;">Presiding Officer Handbook &mdash; ${year}</strong>
+              <span style="font-size: 11px; color: #94a3b8;">A4 Portrait &bull; Print Ready</span>
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
               <button class="topbar-btn" onclick="window.print()">
-                <span>🖨️</span> Print Handbook (A4)
+                <span>🖨️</span> Print Handbook
               </button>
               <a href="/INSTRUCTIONS_FOR_PRESIDING_OFFICERS.docx" download="INSTRUCTIONS_FOR_PRESIDING_OFFICERS.docx" class="topbar-btn" style="background:#047857; border-color:#10b981;">
                 <span>📥</span> Download Word DOCX
               </a>
-              <button class="topbar-btn" style="background: #333; border: 1.5px solid #666;" onclick="window.close()">
+              <button class="topbar-btn" style="background: #334155; border: 1.5px solid #64748b;" onclick="window.close()">
                 <span>✕</span> Close
               </button>
             </div>
           </div>
 
-          <!-- PAGE 1: Timeline, Material Collection Checklist & Pre-Poll Setup -->
+          <!-- PAGE 1: Timeline, Material Collection & Booth Setup -->
           <div class="guide-page">
             <div class="header-banner">
               <div class="col-title">${collegeName}</div>
               <div class="elect-title">COLLEGE UNION ELECTIONS ${year}</div>
-              <div class="doc-title">OFFICE OF THE RETURNING OFFICER &bull; STATUTORY INSTRUCTIONS TO PRESIDING OFFICERS</div>
-              <div class="meta-bar">Ref: GCC/CUE/${year}/PrO-GUIDE-01 &bull; Statutory Compliance Mandatory</div>
+              <div class="doc-title">OFFICE OF THE RETURNING OFFICER &bull; INSTRUCTIONS FOR PRESIDING OFFICERS</div>
+              <div class="meta-bar">Ref: GCC/CUE/${year}/PrO-GUIDE-01 &bull; Polling Hours: 09:30 AM &ndash; 01:00 PM</div>
             </div>
 
-            <div class="callout-box">
-              <div class="callout-title">⚠️ MANDATORY STATUTORY DIRECTIVE:</div>
-              <div class="callout-body">
-                All Presiding Officers are responsible for the flawless conduct of poll and maintenance of ballot secrecy. 
-                <strong>Notice: Both copies of the Ballot Paper Account (Form 2) MUST be in SEPARATE SEALED ENVELOPES—one delivered by hand to the RO and one firmly stuck to the Ballot Box. Both copies MUST bear the signatures of the Presiding Officer and all Polling Agents present.</strong>
-              </div>
+            <div class="note-box">
+              <strong>Note for Presiding Officers:</strong> These instructions provide a clear, step-by-step workflow for conducting the poll, maintaining complete ballot secrecy, issuing the correct ballot papers to each student, and properly accounting and sealing materials at the close of voting.
             </div>
 
-            <div class="sec-h">🕒 Polling Day Operational Schedule</div>
+            <div class="sec-h">1. Polling Day Operational Schedule</div>
             <table class="data-table">
               <thead>
                 <tr>
                   <th style="width:25%;">Time Window</th>
-                  <th style="width:30%;">Phase</th>
-                  <th style="width:45%;">Operational Milestone</th>
+                  <th style="width:25%;">Stage</th>
+                  <th style="width:50%;">Key Responsibilities</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td><strong>08:00 AM – 08:45 AM</strong></td>
-                  <td>Phase I: Material Collection</td>
-                  <td>Report at Central Distribution Centre (Auditorium). Physically verify polling kit against checklist.</td>
+                  <td>Material Collection</td>
+                  <td>Collect polling kit from Central Distribution Counter (Auditorium). Inspect items against the checklist.</td>
                 </tr>
                 <tr>
                   <td><strong>08:45 AM – 09:15 AM</strong></td>
-                  <td>Phase II: Booth Setup</td>
-                  <td>Set up secret compartment; demonstrate empty box to agents; initial lock &amp; inner seal.</td>
+                  <td>Booth Preparation</td>
+                  <td>Set up voting compartment for privacy. Affix door posters. Show empty ballot box to polling agents; lock and seal with wax.</td>
                 </tr>
                 <tr>
                   <td><strong>09:30 AM</strong></td>
-                  <td>Phase III: Poll Opening</td>
-                  <td>Open polling station promptly. Commence voting. Read secrecy notice to team.</td>
+                  <td>Poll Opens</td>
+                  <td>Open the polling booth promptly at 09:30 AM and commence voting.</td>
                 </tr>
                 <tr>
                   <td><strong>09:30 AM – 01:00 PM</strong></td>
-                  <td>Phase IV: Voting Hours</td>
-                  <td>Verify College ID; ink left forefinger; issue ballots; monitor secret drop into ballot box.</td>
+                  <td>Voting Hours</td>
+                  <td>Verify student photo ID, mark roll, issue correct ballots, and ensure ballots are dropped secretly into the box.</td>
                 </tr>
                 <tr>
-                  <td><strong>01:00 PM</strong></td>
-                  <td>Phase V: Poll Closure</td>
-                  <td>Distribute numbered tokens to any voters in queue at 01:00 PM; close outer entrance doors.</td>
-                </tr>
-                <tr>
-                  <td><strong>01:00 PM – 01:30 PM</strong></td>
-                  <td>Phase VI: Statutory Sealing</td>
-                  <td><strong>SEAL BOX MOUTH (SLIT); SEAL BOX LOCK; SEAL MARKED ROLL; PREPARE TWO SEALED COVERS OF BALLOT ACCOUNT (ONE STUCK TO BOX).</strong></td>
+                  <td><strong>01:00 PM onwards</strong></td>
+                  <td>Close of Poll &amp; Sealing</td>
+                  <td>Distribute numbered tokens back-to-front to students in queue at 01:00 PM. After last voter, seal box slit, prepare 2 copies of Ballot Paper Account, and seal all covers.</td>
                 </tr>
               </tbody>
             </table>
 
-            <div class="sec-h">📦 Material Collection Checklist (Verify at Distribution Counter)</div>
+            <div class="sec-h">2. Material Collection Checklist (Verify at Distribution Counter)</div>
             <div class="checklist-grid">
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Marked Copies of Electoral Roll</strong> (2 sets)</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Working Copy of Roll</strong> (1 set for queue)</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Books (White / Executive)</strong></span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Books (Colored / Dept Assocs)</strong></span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Books (Year Representatives)</strong></span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Box &amp; Key</strong> (Inspect lock &amp; flap)</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Aperture Strip Seals</strong> (Check serial numbers)</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Brass Metal Seal (PrO Official Seal)</strong></span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Paper Account Forms</strong> (3 blank sheets)</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Indelible Ink Phial with Applicator</strong></span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Arrow Cross-Mark Stamps &amp; Inking Pads</strong></span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Red Sealing Wax (Lac), Candles, Matchbox</strong></span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover A</strong> (Super-Statutory Marked Roll Cover)</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover B1</strong> (Ballot Account Handover Cover)</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover B2</strong> (Ballot Account Box Cover - To Stick)</span></div>
-              <div class="check-item"><span class="check-box">☐</span> <span><strong>Covers C, D, E, F</strong> (Statutory Covers)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Marked Copies of Electoral Roll</strong> (2 sets) &amp; Working Copy</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Paper Books</strong> (General, Year Reps, Dept Associations)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Box with Padlock &amp; Key</strong> (with Key Envelope)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>White cloth for wrapping lock</strong> &amp; Paper Strip Seal for box mouth</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Red Sealing Wax sticks, candles, matchbox &amp; brass seal</strong></span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Arrow cross-mark rubber stamps &amp; stamp pads</strong></span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Numbered Queue Tokens</strong> (for queue at 01:00 PM)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Long metal scale / ruler</strong> (for pressing down ballots in box)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover A</strong> (for Marked Copy of Electoral Roll)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover B1</strong> (for Ballot Paper Account Copy 1 &mdash; Handover)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover B2</strong> (for Ballot Paper Account Copy 2 &mdash; To Tape on Box)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover for used counterfoils and unused ballot papers</strong></span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Paper Account Forms</strong> (2 blank copies)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Stationery kit:</strong> Transparent packing tape, glue stick, pens</span></div>
             </div>
 
-            <div class="sec-h">🏫 Pre-Poll Setup &amp; Demonstration (08:45 AM – 09:15 AM)</div>
-            <p style="margin-bottom: 4px;"><strong>1. Secrecy Compartment:</strong> Erect voting compartment in a private corner ensuring zero visibility from doors and windows.</p>
-            <p style="margin-bottom: 4px;"><strong>2. Demonstration of Empty Box (09:15 AM):</strong> In front of Polling Agents, open the Ballot Box completely to prove it is 100% empty.</p>
-            <p style="margin-bottom: 4px;"><strong>3. Initial Lock &amp; Inner Seal:</strong> Fasten lock, pass twine through hasp, apply molten red wax with Brass Seal. Keep key in safe personal custody.</p>
-            <p><strong>4. Aperture Drop Slit:</strong> Set aperture flap in OPEN position so folded ballots easily slide inside.</p>
+            <div class="sec-h">3. Polling Booth Setup (Before 09:30 AM)</div>
+            <p style="margin-bottom: 3px;"><strong>1. Voting Compartment Privacy:</strong> Set up the voting compartment in a secure, well-lit corner away from open windows and doors so that complete voting privacy is maintained. Ensure no one can see how a student marks the ballot.</p>
+            <p style="margin-bottom: 3px;"><strong>2. Door Poster &amp; Notices:</strong> Affix the Booth Allotment Door Poster outside the entrance so students can verify their booth before entering.</p>
+            <p style="margin-bottom: 3px;"><strong>3. Demonstration of Empty Box (09:15 AM):</strong> Before polling agents and your polling team, open the ballot box fully. Allow the polling agents to inspect the interior and confirm that the box is completely empty.</p>
+            <p style="margin-bottom: 3px;"><strong>4. Initial Locking &amp; Sealing:</strong> Close the box lid firmly and lock it with the padlock. Wrap the lock with the provided cloth, apply hot red sealing wax, and press the brass seal firmly into the wax. Place the key safely in the designated envelope kept in your custody.</p>
+            <p><strong>5. Drop Slit:</strong> Ensure the slit aperture on top of the box is in the open position so folded ballot papers can be inserted easily during voting.</p>
           </div>
 
-          <!-- PAGE 2: Voting Protocols & Statutory Sealing Rules -->
+          <!-- PAGE 2: Ballot Papers & Issuing Rules -->
           <div class="guide-page">
-            <div class="sec-h" style="margin-top:0;">🗳️ Duties During Voting Hours (09:30 AM – 01:00 PM)</div>
-            <p style="margin-bottom: 4px;"><strong>&bull; Polling Officer 1:</strong> Verify mandatory College ID Card with photo. Trace student in Marked Roll, call out name loudly, underline in red ink, and tick margin.</p>
-            <p style="margin-bottom: 4px;"><strong>&bull; Polling Officer 2:</strong> Apply Indelible Ink on left index finger. Record roll number on counterfoil stub, obtain voter's signature, and detach ballot papers.</p>
-            <p style="margin-bottom: 4px;"><strong>&bull; Presiding Officer:</strong> Ensure voter marks ballot secretly with Arrow Stamp, folds along creases, and drops it into the Ballot Box under direct observation.</p>
-            <p style="margin-bottom: 8px;"><strong>&bull; Electronic Device Prohibition:</strong> Mobile phones, cameras, and recording devices are strictly prohibited inside the booth. Seize any phone attempting photography immediately.</p>
+            <div class="sec-h" style="margin-top:0;">4. Ballot Papers &amp; Issuing Guidelines</div>
+            <p style="margin-bottom: 5px;">Each student will be issued ballot papers according to their course, year of study, and department. Please follow these specific rules to ensure smooth distribution:</p>
 
-            <div class="sec-h">🔒 Close of Poll &amp; Critical Statutory Sealing Protocols (01:00 PM)</div>
+            <div class="sec-sub">1. General Union Ballot Paper (White)</div>
+            <p class="rule-item">&bull; This common ballot paper is issued to <strong>all eligible students</strong> in the college, irrespective of their department or year of study.</p>
+            <p class="rule-item">&bull; It contains the college-wide executive posts: Chairman, Vice Chairperson, General Secretary, Joint Secretary, Arts Club Secretary, Student Editor, General Captain, and University Union Councillors (UUC).</p>
+            <p class="mal-note">ℹ️ എല്ലാ വിദ്യാർഥികൾക്കും (UG &amp; PG) നൽകേണ്ട പൊതു യൂണിയൻ ബാലറ്റ് പേപ്പറാണിത്.</p>
+
+            <div class="sec-sub">2. Year / Class Representative Ballot Papers (UG &amp; PG Rules)</div>
+            <p class="rule-item">&bull; <strong>PG Students:</strong> <strong>All Postgraduate students</strong> (across MA, MSc, MCom &mdash; both 1st Year and 2nd Year) receive the <strong>exact same PG Representative ballot paper</strong>. There are no separate departmental ballots for PG representative; all PG students vote using this common PG Representative ballot.</p>
+            <p class="mal-note">ℹ️ പി.ജി. വിദ്യാർഥികൾക്കെല്ലാം (ഏത് ഡിപ്പാർട്ട്മെന്റോ വർഷമോ ആകട്ടെ) ഒരേ PG Representative ബാലറ്റ് പേപ്പറാണ് നൽകേണ്ടത്.</p>
             
-            <div class="sec-sub">1. Sealing the Ballot Box Mouth (Aperture Drop Slit)</div>
-            <p style="margin-bottom: 3px;">&bull; Slide internal mechanical lever to lock drop slit shut. Affix numbered Aperture Strip Seal over the slit.</p>
-            <p style="margin-bottom: 6px;">&bull; Pour molten red sealing wax over the slit joint/flap. Press official Brass Metal Seal into hot wax. PrO and Polling Agents sign across seal edges.</p>
+            <p class="rule-item">&bull; <strong>1st Year UG Students:</strong> <strong>All first-year undergraduate students</strong> (across BA, BSc, BCom) receive the <strong>exact same I UG Representative ballot paper</strong>.</p>
+            <p class="mal-note">ℹ️ എല്ലാ വിഷയങ്ങളിലെയും ഒന്നാം വർഷ ഡിഗ്രി വിദ്യാർഥികൾക്കും ഒരേ First Year UG Representative ബാലറ്റ് പേപ്പറാണ് നൽകേണ്ടത്.</p>
 
-            <div class="sec-sub">2. Sealing the Ballot Box Lock Mechanism</div>
-            <p style="margin-bottom: 3px;">&bull; Confirm padlock is tightly locked. Wrap strong red twine around hasp 3 times and knot securely.</p>
-            <p style="margin-bottom: 6px;">&bull; Wrap cloth/paper around joint, apply molten red wax, and emboss with Brass Metal Seal. Place key in envelope tied to handle.</p>
+            <p class="rule-item">&bull; <strong>2nd Year UG Students:</strong> <strong>All second-year undergraduate students</strong> across all subjects receive the <strong>exact same II UG Representative ballot paper</strong>.</p>
+            <p class="mal-note">ℹ️ എല്ലാ രണ്ടാം വർഷ ഡിഗ്രി വിദ്യാർഥികൾക്കും ഒരേ II UG Representative ബാലറ്റ് പേപ്പറാണ് നൽകേണ്ടത്.</p>
 
-            <div class="sec-sub">3. Ballot Paper Account (Form 2 / Form 4) &mdash; Two-Copies Rule</div>
-            <div class="callout-box" style="border-color:#b45309; background:#fffbeb;">
-              <div class="callout-title" style="color:#b45309;">🚨 TWO COPIES RULE &bull; BOTH IN SEPARATE SEALED COVERS:</div>
-              <div class="callout-body">
-                <strong>COPY 1 (HANDOVER COPY &mdash; COVER B1):</strong> Enclose in Cover B1. Seal with molten red wax, emboss with Brass Seal. Handed over by hand to the RO.<br>
-                <strong>COPY 2 (BOX COPY &mdash; COVER B2):</strong> Enclose in Cover B2. SEAL WITH RED WAX &amp; BRASS EMBOSSING. <strong>FIRMLY STICK / TAPE THIS ENTIRE SEALED COVER DIRECTLY TO THE OUTER LID OF THE BALLOT BOX</strong> using wide transparent tape.<br>
-                <strong>SIGNATURE MANDATE:</strong> Both Copy 1 and Copy 2 must be signed by the Presiding Officer AND all Polling Agents present!
-              </div>
-            </div>
+            <p class="rule-item">&bull; <strong>3rd Year UG Students:</strong> <strong>All third-year undergraduate students</strong> across all subjects receive the <strong>exact same III UG Representative ballot paper</strong>.</p>
+            <p class="mal-note">ℹ️ എല്ലാ മൂന്നാം വർഷ ഡിഗ്രി വിദ്യാർഥികൾക്കും ഒരേ III UG Representative ബാലറ്റ് പേപ്പറാണ് നൽകേണ്ടത്.</p>
 
-            <!-- Visual representation of footer -->
-            <table class="sig-table" style="background:#f8fafc; margin-top:4px;">
+            <p class="rule-item" style="color:#1e3a8a;"><strong>Important for Polling Officers:</strong> Year representative ballots are uniform across the college for that year level. Simply check the student's year from the roll and issue the corresponding representative ballot.</p>
+
+            <div class="sec-sub">3. Department Association Ballot Papers</div>
+            <p class="rule-item">&bull; These ballots are specific to each academic department (e.g., Botany, Chemistry, Commerce, Economics, Electronics, English, Geography, History, Malayalam, Mathematics, Music, Philosophy, Physics, Tamil, Zoology).</p>
+            <p class="rule-item">&bull; <strong>All students belonging to the same department&mdash;both UG and PG classes of that department&mdash;receive the exact same Department Association ballot paper.</strong></p>
+            <p class="mal-note">ℹ️ ഒരേ ഡിപ്പാർട്ട്മെന്റിലെ എല്ലാ യു.ജി., പി.ജി. വിദ്യാർഥികൾക്കും അതാത് ഡിപ്പാർട്ട്മെന്റ് അസോസിയേഷൻ പോസ്റ്റുകളിലേക്ക് നൽകുന്നത് ഒരേ ബാലറ്റ് പേപ്പറാണ്.</p>
+
+            <div class="sec-sub">4. Posts Without Election / Uncontested Posts (തിരഞ്ഞെടുപ്പ് ഇല്ലാത്ത പോസ്റ്റുകൾ)</div>
+            <p class="rule-item">&bull; Where only one valid nomination was received for a post, the candidate is elected uncontested (unopposed). Similarly, if no nominations were received, no election is held.</p>
+            <p class="rule-item" style="font-weight:bold; color:#991b1b;">&bull; FOR ALL UNCONTESTED POSTS, NO ELECTION IS HELD AND NO BALLOT PAPER IS PRINTED OR ISSUED.</p>
+            <p class="rule-item">&bull; Presiding Officers and Polling Officers should note that ballot papers are supplied <strong>only for actively contested posts</strong>. If a particular post does not appear on any ballot paper in your booth, it is because that post was elected unopposed. Voting takes place only for the posts listed on the supplied ballots.</p>
+            <p class="mal-note">ℹ️ എതിരില്ലാതെ തിരഞ്ഞെടുക്കപ്പെട്ടതോ (Uncontested) നോമിനേഷൻ ഇല്ലാത്തതോ ആയ പോസ്റ്റുകളിലേക്ക് തിരഞ്ഞെടുപ്പ് ഉണ്ടാകുന്നതല്ല; അതിനാൽ അവയ്ക്ക് ബാലറ്റ് പേപ്പർ നൽകേണ്ടതില്ല. മത്സരം നടക്കുന്ന പോസ്റ്റുകളിലേക്ക് മാത്രമേ ബാലറ്റ് പേപ്പർ നൽകുകയുള്ളൂ.</p>
+
+            <div class="sec-sub">Summary: Ballots Handed to Each Student at the Booth</div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width:30%;">Voter Category</th>
+                  <th style="width:55%;">Ballot Papers to Issue</th>
+                  <th style="width:15%; text-align:center;">Total Ballots</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>1st Year UG Student</strong></td>
+                  <td>1 General Union Ballot + 1 First Year UG Rep Ballot + 1 Dept Association Ballot*</td>
+                  <td style="text-align:center; font-weight:bold;">2 or 3</td>
+                </tr>
+                <tr>
+                  <td><strong>2nd Year UG Student</strong></td>
+                  <td>1 General Union Ballot + 1 Second Year UG Rep Ballot + 1 Dept Association Ballot*</td>
+                  <td style="text-align:center; font-weight:bold;">2 or 3</td>
+                </tr>
+                <tr>
+                  <td><strong>3rd Year UG Student</strong></td>
+                  <td>1 General Union Ballot + 1 Third Year UG Rep Ballot + 1 Dept Association Ballot*</td>
+                  <td style="text-align:center; font-weight:bold;">2 or 3</td>
+                </tr>
+                <tr>
+                  <td><strong>PG Student (Any Year/Dept)</strong></td>
+                  <td>1 General Union Ballot + 1 PG Representative Ballot + 1 Dept Association Ballot*</td>
+                  <td style="text-align:center; font-weight:bold;">2 or 3</td>
+                </tr>
+              </tbody>
+            </table>
+            <p style="font-size:7.5pt; color:#64748b; font-style:italic;">*Note: Department Association Ballot is issued only if the association post for that department is contested. If uncontested, no association ballot is issued.</p>
+          </div>
+
+          <!-- PAGE 3: Duties During Polling, Sealing & Handover Sequence -->
+          <div class="guide-page">
+            <div class="sec-h" style="margin-top:0;">5. Duties During Polling Hours (09:30 AM – 01:00 PM)</div>
+            <p style="margin-bottom: 3px;"><strong>&bull; Polling Officer 1 (Identity &amp; Roll Verification):</strong> Check student's College ID card with photo. Locate student's name in Marked Roll, call out name and serial number loudly so agents can hear, and <strong>round off / circle the serial number in the roll to mark voted</strong>.</p>
+            <p style="margin-bottom: 3px;"><strong>&bull; Polling Officer 2 (Ballot Paper Issuance):</strong> Verify that the <strong>Presiding Officer has signed the back of each ballot paper</strong> before issuing. Write the student's roll serial number on the counterfoil of all issued ballots. <strong>Pre-fold each ballot paper along the score lines</strong> before handing it over. Hand over the <strong>arrow cross-mark stamp</strong> and instruct the student to mark using the stamp only.</p>
+            <p style="margin-bottom: 3px;"><strong>&bull; Presiding Officer &amp; Supervision:</strong> Ensure the student marks ballots in secrecy, refolds them, and drops all ballots into the ballot box.</p>
+            <p style="margin-bottom: 3px;"><strong>&bull; Managing Box Space:</strong> Intermittently insert the <strong>long metal scale / ruler</strong> through the slit to gently press down ballots and ensure adequate space inside the box.</p>
+            <p style="margin-bottom: 6px;"><strong>&bull; Mobile Phone Ban:</strong> No student, candidate, or polling agent is allowed to carry or use a mobile phone or camera inside the booth. Photographing a ballot paper is strictly prohibited.</p>
+
+            <div class="sec-h">6. Close of Poll &amp; Sealing Procedures (01:00 PM)</div>
+            <p style="margin-bottom: 3px;"><strong>1. Queue Tokens at 01:00 PM:</strong> At exactly 01:00 PM, distribute numbered tokens to all voters waiting in queue, starting <strong>from the back of the queue towards the front</strong>. Allow all token holders to vote until the last voter finishes.</p>
+            <p style="margin-bottom: 3px;"><strong>2. Sealing Ballot Box Mouth (Slit):</strong> Close the internal mechanical slit flap. Affix the paper strip seal over the mouth / slit, apply hot red sealing wax with the brass seal, and <strong>have the Presiding Officer and Polling Agents sign across the seal</strong>.</p>
+            <p style="margin-bottom: 3px;"><strong>3. Ballot Paper Account (Two Copies Rule):</strong> Prepare <strong>TWO IDENTICAL COPIES</strong> of the Ballot Paper Account, balancing all figures (Issued = Received &minus; [Unused + Cancelled]). Both copies must be signed by the <strong>Presiding Officer AND all Polling Agents present</strong> (signatures below Presiding Officer).<br>
+            &bull; <strong>COPY 1 (Cover B1):</strong> Place in Cover B1, seal with red wax, and hand over separately at the reception desk.<br>
+            &bull; <strong>COPY 2 (Cover B2):</strong> Place in Cover B2, seal with red wax, and <strong>FIRMLY TAPE / STICK THIS SEALED COVER DIRECTLY TO THE OUTER LID OF THE BALLOT BOX</strong> using transparent packing tape.</p>
+            <p style="margin-bottom: 3px;"><strong>4. Sealing Ballot Books:</strong> Place counterfoils of used ballots, unused ballots, and cancelled ballots into the designated cover and seal it.</p>
+            <p style="margin-bottom: 6px;"><strong>5. Sealing Marked Roll (Cover A):</strong> Place the Marked Copy of Electoral Roll into Cover A and seal it securely.</p>
+
+            <!-- Signature block preview -->
+            <table class="sig-table" style="background:#f8fafc; margin-top:2px; margin-bottom:6px;">
               <tr>
                 <td style="width:50%;"><strong>Date:</strong> ________________________<br><strong>Polling Station / Booth:</strong> _____</td>
                 <td style="width:50%; text-align:right;">________________________________________<br><strong>Signature of Presiding Officer</strong></td>
               </tr>
-              <tr style="background:#eff6ff;">
+              <tr style="background:#f1f5f9;">
                 <td colspan="2" style="font-weight:bold; color:#1e3a8a;">
-                  SIGNATURES OF POLLING AGENTS (Below Presiding Officer &mdash; Mandatory on Both Copies):
+                  Signatures of Polling Agents (Below Presiding Officer &mdash; on Both Copies of Ballot Paper Account):
                 </td>
               </tr>
               <tr style="background:#fff;">
@@ -3612,15 +3663,45 @@ export async function generateAndPrintPresidingOfficerInstructions(pwd) {
               </tr>
             </table>
 
-            <div class="sec-sub">4. Sealing the Marked Copy of Electoral Roll (Cover A)</div>
-            <p style="margin-bottom: 6px;">&bull; Collate all pages of the Marked Roll. Enclose in Cover A (Super-Statutory Cover), tie with twine, apply molten red wax with Brass Seal on flap and corners, and sign across flap.</p>
-
-            <div class="sec-sub">5. Sealing Other Statutory Packets</div>
-            <p style="margin-bottom: 8px;">&bull; Cover C (Issued Counterfoils), Cover D (Unused Ballots), Cover E (Cancelled Ballots), Cover F (PrO Diary) &mdash; all sealed with molten red wax and signed.</p>
-
-            <div class="sec-h">🏛️ Reception Counter Handover Sequence &amp; Clearance</div>
-            <p style="margin-bottom: 4px;">Present items at Reception Desk in exact order: (1) Sealed Ballot Box with <strong>Cover B2 wax-sealed &amp; stuck on top</strong> &rarr; (2) Cover B1 (Sealed Ballot Account Copy 1) &rarr; (3) Cover A (Sealed Marked Roll) &rarr; (4) Statutory Covers C, D, E, F &rarr; (5) Stationery Bag with Brass Seal.</p>
-            <p><strong>Do not leave the campus until the Returning Officer stamps and signs your Presiding Officer Clearance Slip.</strong></p>
+            <div class="sec-h">7. Central Reception Counter Handover Sequence</div>
+            <p style="margin-bottom: 3px;">At the College Auditorium Central Reception Counter, hand over items in this exact sequence:</p>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width:12%; text-align:center;">Order</th>
+                  <th style="width:48%;">Article to Hand Over</th>
+                  <th style="width:40%;">Verification by Reception Officer</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="text-align:center; font-weight:bold;">1</td>
+                  <td><strong>SEALED BALLOT BOX</strong><br>(With Sealed Cover B2 containing Ballot Paper Account Copy 2 taped to box lid)</td>
+                  <td>Verifies slit seal, lock wax seal, and presence of sealed Cover B2 firmly attached to box lid.</td>
+                </tr>
+                <tr>
+                  <td style="text-align:center; font-weight:bold;">2</td>
+                  <td><strong>COVER B1: Sealed Ballot Paper Account</strong><br>(Copy 1 &mdash; Handover Copy)</td>
+                  <td>Verifies wax seal; checks figures against Copy 2 on the box.</td>
+                </tr>
+                <tr>
+                  <td style="text-align:center; font-weight:bold;">3</td>
+                  <td><strong>COVER A: Sealed Marked Copy of Electoral Roll</strong></td>
+                  <td>Verifies envelope is sealed with wax and signed across flap.</td>
+                </tr>
+                <tr>
+                  <td style="text-align:center; font-weight:bold;">4</td>
+                  <td><strong>SEALED COVER with Counterfoils &amp; Unused Ballots</strong></td>
+                  <td>Verifies counterfoils, unused ballots, and cancelled ballots are enclosed and sealed.</td>
+                </tr>
+                <tr>
+                  <td style="text-align:center; font-weight:bold;">5</td>
+                  <td><strong>POLLING KIT BAG with all remaining materials</strong></td>
+                  <td>Verifies return of brass seal, key envelope, stamps, stamp pads, stationery, and balance items.</td>
+                </tr>
+              </tbody>
+            </table>
+            <p style="margin-top: 4px; font-size:8pt; color:#475569;">Please collect your official <strong>Presiding Officer Clearance Slip</strong> from the Returning Officer before leaving the Auditorium.</p>
           </div>
         </body>
       </html>
