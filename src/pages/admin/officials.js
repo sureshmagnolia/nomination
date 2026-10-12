@@ -8785,14 +8785,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   <!-- Document Sheet -->
   <div class="sheet-wrapper">
     <div id="paperSheet" class="paper-sheet">
-      <!-- View 1: Department-Wise Master Roll (Full Details) -->
-      <div id="viewDeptWiseFull" style="display: ${initialHideStation ? 'none' : 'block'};">
-        ${deptWiseHtmlFull}
-      </div>
-
-      <!-- View 1B: Department-Wise Master Roll (Concealed Stations) -->
-      <div id="viewDeptWiseConcealed" style="display: ${initialHideStation ? 'block' : 'none'};">
-        ${deptWiseHtmlConcealed}
+      <!-- View 1: Department-Wise Master Roll -->
+      <div id="viewDeptWise" style="display: block;">
+        <div id="viewDeptWiseFull" style="display: ${initialHideStation ? 'none' : 'block'};">
+          ${deptWiseHtmlFull}
+        </div>
+        <div id="viewDeptWiseConcealed" style="display: ${initialHideStation ? 'block' : 'none'};">
+          ${deptWiseHtmlConcealed}
+        </div>
       </div>
 
       <!-- View 2: Booth & Table-Wise Deployment Schedule -->
@@ -8829,29 +8829,24 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         if (isConcealed) btn.classList.add('active'); else btn.classList.remove('active');
       }
 
-      const vFull = document.getElementById('viewDeptWiseFull');
-      const vConc = document.getElementById('viewDeptWiseConcealed');
+      const vDeptFull = document.getElementById('viewDeptWiseFull');
+      const vDeptConc = document.getElementById('viewDeptWiseConcealed');
       const vBoothFull = document.getElementById('viewBoothWiseFull');
       const vBoothConc = document.getElementById('viewBoothWiseConcealed');
       const combDept = document.getElementById('combDeptContainer');
       const combBooth = document.getElementById('combBoothContainer');
 
-      if (vFull && vConc) {
-        vFull.style.display = isConcealed ? 'none' : 'block';
-        vConc.style.display = isConcealed ? 'block' : 'none';
-      }
+      if (vDeptFull) vDeptFull.style.display = isConcealed ? 'none' : 'block';
+      if (vDeptConc) vDeptConc.style.display = isConcealed ? 'block' : 'none';
 
-      if (vBoothFull && vBoothConc) {
-        vBoothFull.style.display = isConcealed ? 'none' : 'block';
-        vBoothConc.style.display = isConcealed ? 'block' : 'none';
-      }
+      if (vBoothFull) vBoothFull.style.display = isConcealed ? 'none' : 'block';
+      if (vBoothConc) vBoothConc.style.display = isConcealed ? 'block' : 'none';
 
-      if (combDept) {
-        combDept.innerHTML = isConcealed ? document.getElementById('viewDeptWiseConcealed').innerHTML : document.getElementById('viewDeptWiseFull').innerHTML;
+      if (combDept && vDeptConc && vDeptFull) {
+        combDept.innerHTML = isConcealed ? vDeptConc.innerHTML : vDeptFull.innerHTML;
       }
-
-      if (combBooth) {
-        combBooth.innerHTML = isConcealed ? document.getElementById('viewBoothWiseConcealed').innerHTML : document.getElementById('viewBoothWiseFull').innerHTML;
+      if (combBooth && vBoothConc && vBoothFull) {
+        combBooth.innerHTML = isConcealed ? vBoothConc.innerHTML : vBoothFull.innerHTML;
       }
     }
 
@@ -8862,40 +8857,20 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
     function switchMasterView(mode) {
       currentMainView = mode;
-      const vFull = document.getElementById('viewDeptWiseFull');
-      const vConc = document.getElementById('viewDeptWiseConcealed');
+      const vDept = document.getElementById('viewDeptWise');
       const vBooth = document.getElementById('viewBoothWise');
       const vComb = document.getElementById('viewCombined');
       const bDept = document.getElementById('btnViewDept');
       const bBooth = document.getElementById('btnViewBooth');
       const bComb = document.getElementById('btnViewCombined');
 
-      bDept.classList.remove('active');
-      bBooth.classList.remove('active');
-      bComb.classList.remove('active');
+      if (bDept) bDept.classList.toggle('active', mode === 'dept');
+      if (bBooth) bBooth.classList.toggle('active', mode === 'booth');
+      if (bComb) bComb.classList.toggle('active', mode === 'combined');
 
-      if (mode === 'booth') {
-        if (vFull) vFull.style.display = 'none';
-        if (vConc) vConc.style.display = 'none';
-        if (vBooth) vBooth.style.display = 'block';
-        if (vComb) vComb.style.display = 'none';
-        bBooth.classList.add('active');
-      } else if (mode === 'combined') {
-        if (vFull) vFull.style.display = 'none';
-        if (vConc) vConc.style.display = 'none';
-        if (vBooth) vBooth.style.display = 'none';
-        if (vComb) vComb.style.display = 'block';
-        bComb.classList.add('active');
-      } else {
-        if (vBooth) vBooth.style.display = 'none';
-        if (vComb) vComb.style.display = 'none';
-        if (vFull && vConc) {
-          vFull.style.display = isConcealed ? 'none' : 'block';
-          vConc.style.display = isConcealed ? 'block' : 'none';
-        }
-        bDept.classList.add('active');
-      }
-      updateConcealUI();
+      if (vDept) vDept.style.display = (mode === 'dept') ? 'block' : 'none';
+      if (vBooth) vBooth.style.display = (mode === 'booth') ? 'block' : 'none';
+      if (vComb) vComb.style.display = (mode === 'combined') ? 'block' : 'none';
     }
 
     window.addEventListener('load', function() {
