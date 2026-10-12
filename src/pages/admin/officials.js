@@ -8301,12 +8301,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       .master-table th, .master-table td {
         border: 1px solid #000000 !important;
       }
-      .sign-box {
-        border: 1px dashed #000000 !important;
-        background: #ffffff !important;
-      }
-      .col-phone-blank {
-        border-bottom: 1.2px dotted #000000 !important;
+      .master-table td.col-sign {
+        height: 28px !important;
       }
     }
 
@@ -8543,12 +8539,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       width: 125px;
       min-width: 110px;
       text-align: center;
-    }
-    .sign-box {
-      height: 26px;
-      border: 1px dashed #000000 !important;
-      background: #ffffff !important;
-      margin: 2px 0;
+      height: 28px;
     }
     .col-phone {
       text-align: center;
@@ -8556,12 +8547,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       font-size: 8.5px;
       font-weight: 600;
       white-space: nowrap;
-    }
-    .col-phone-blank {
-      border-bottom: 1.2px dotted #000000;
-      width: 85%;
-      height: 14px;
-      margin: 0 auto;
     }
     .footer-row {
       display: flex;
@@ -8741,7 +8726,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     if (clean && clean !== '–' && clean !== 'N/A' && clean !== '-') {
       return `<td class="col-phone col-center">${esc(clean)}</td>`;
     }
-    return `<td class="col-phone col-center" title="Enter Mobile Number"><div class="col-phone-blank"></div></td>`;
+    return `<td class="col-phone col-center"></td>`;
   };
 
   const buildDeptWiseMasterRollHtml = (orderDate, hideStation = false) => {
@@ -8853,9 +8838,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>${esc(obs.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(obs.pen)}</td>
                   ${renderMobileCell(obs.phone)}
-                  <td class="col-sign">
-                    <div class="sign-box"></div>
-                  </td>
+                  <td class="col-sign"></td>
                 </tr>
               `).join('')}
             </tbody>
@@ -8899,7 +8882,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <td>${esc(roData.designation)}${roData.department && roData.department !== '–' ? ` · <span class="dept-badge">${esc(roData.department)}</span>` : ''}</td>
                 <td style="font-family: monospace; font-weight: 700;">${esc(roData.pen)}</td>
                 ${renderMobileCell(roData.phone)}
-                <td class="col-sign"><div class="sign-box"></div></td>
+                <td class="col-sign"></td>
               </tr>
             ` : ''}
             ${aroList.map(aro => `
@@ -8912,7 +8895,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <td>${esc(aro.designation)}${aro.department && aro.department !== '–' ? ` · <span class="dept-badge">${esc(aro.department)}</span>` : ''}</td>
                 <td style="font-family: monospace; font-weight: 600;">${esc(aro.pen)}</td>
                 ${renderMobileCell(aro.phone)}
-                <td class="col-sign"><div class="sign-box"></div></td>
+                <td class="col-sign"></td>
               </tr>
             `).join('')}
             ${!roData && aroList.length === 0 ? `
@@ -8972,9 +8955,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>${esc(disc.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(disc.pen)}</td>
                   ${renderMobileCell(disc.phone)}
-                  <td class="col-sign">
-                    <div class="sign-box"></div>
-                  </td>
+                  <td class="col-sign"></td>
                 </tr>
               `).join('')}
             </tbody>
@@ -9032,9 +9013,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>${esc(g.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(g.pen)}</td>
                   ${renderMobileCell(g.phone)}
-                  <td class="col-sign">
-                    <div class="sign-box"></div>
-                  </td>
+                  <td class="col-sign"></td>
                 </tr>
               `).join('')}
             </tbody>
@@ -9102,7 +9081,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     `}
                   </td>
                   ${renderMobileCell(c.phone)}
-                  <td class="col-sign"><div class="sign-box"></div></td>
+                  <td class="col-sign"></td>
                 </tr>
               `).join('')}
             </tbody>
@@ -9181,9 +9160,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     `)}
                   </td>
                   ${renderMobileCell(p.phone)}
-                  <td class="col-sign">
-                    <div class="sign-box"></div>
-                  </td>
+                  <td class="col-sign"></td>
                 </tr>
               `).join('')}
             </tbody>
@@ -9308,7 +9285,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>${esc(obs.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(obs.pen)}</td>
                   ${renderMobileCell(obs.phone)}
-                  <td class="col-sign"><div class="sign-box"></div></td>
+                  <td class="col-sign"></td>
                 </tr>
               `).join('')}
             </tbody>
@@ -9352,7 +9329,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <td>${esc(roData.designation)}${roData.department && roData.department !== '–' ? ` · <span class="dept-badge">${esc(roData.department)}</span>` : ''}</td>
                 <td style="font-family: monospace; font-weight: 700;">${esc(roData.pen)}</td>
                 ${renderMobileCell(roData.phone)}
-                <td class="col-sign"><div class="sign-box"></div></td>
+                <td class="col-sign"></td>
               </tr>
             ` : ''}
             ${aroList.map(aro => `
@@ -9365,7 +9342,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <td>${esc(aro.designation)}${aro.department && aro.department !== '–' ? ` · <span class="dept-badge">${esc(aro.department)}</span>` : ''}</td>
                 <td style="font-family: monospace; font-weight: 600;">${esc(aro.pen)}</td>
                 ${renderMobileCell(aro.phone)}
-                <td class="col-sign"><div class="sign-box"></div></td>
+                <td class="col-sign"></td>
               </tr>
             `).join('')}
             ${!roData && aroList.length === 0 ? `
@@ -9425,7 +9402,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>${esc(disc.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(disc.pen)}</td>
                   ${renderMobileCell(disc.phone)}
-                  <td class="col-sign"><div class="sign-box"></div></td>
+                  <td class="col-sign"></td>
                 </tr>
               `).join('')}
             </tbody>
@@ -9483,7 +9460,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>${esc(g.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(g.pen)}</td>
                   ${renderMobileCell(g.phone)}
-                  <td class="col-sign"><div class="sign-box"></div></td>
+                  <td class="col-sign"></td>
                 </tr>
               `).join('')}
             </tbody>
@@ -9548,7 +9525,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     <span class="staff-meta">Station: ${esc(c.station)}</span>
                   </td>
                   ${renderMobileCell(c.phone)}
-                  <td class="col-sign"><div class="sign-box"></div></td>
+                  <td class="col-sign"></td>
                 </tr>
               `).join('')}
             </tbody>
@@ -9634,7 +9611,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     ${pollHasDept ? `<td><span class="dept-badge">${esc((personObj?.isExcluded && !s.isCore) ? '–' : dept)}</span></td>` : ''}
                     <td style="font-family: monospace;">${esc((personObj?.isExcluded && !s.isCore) ? '–' : pen)}</td>
                     ${renderMobileCell(phone)}
-                    <td class="col-sign"><div class="sign-box"></div></td>
+                    <td class="col-sign"></td>
                   </tr>
                 `;
               }).join('');
@@ -9721,7 +9698,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     ${countHasDept ? `<td><span class="dept-badge">${esc((personObj?.isExcluded && !s.isCore) ? '–' : dept)}</span></td>` : ''}
                     <td style="font-family: monospace;">${esc((personObj?.isExcluded && !s.isCore) ? '–' : pen)}</td>
                     ${renderMobileCell(phone)}
-                    <td class="col-sign"><div class="sign-box"></div></td>
+                    <td class="col-sign"></td>
                   </tr>
                 `;
               }).join('');
@@ -9781,7 +9758,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>${esc(r.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(r.pen)}</td>
                   ${renderMobileCell(r.phone)}
-                  <td class="col-sign"><div class="sign-box"></div></td>
+                  <td class="col-sign"></td>
                 </tr>
               `).join('')}
             </tbody>
