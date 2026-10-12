@@ -6,7 +6,7 @@ import { DEFAULT_COLLEGE_LOGO } from './src/data/defaultEmblem.js';
 const collegeName = 'GOVERNMENT COLLEGE CHITTUR';
 const shortName = 'GCC';
 const year = '2026';
-const emblemPath = DEFAULT_COLLEGE_LOGO;
+const emblemPath = '';
 
 // 15 Departments of Government College Chittur with 1 UG to PG progression and realistic booth allotment
 const departmentsData = [
@@ -658,10 +658,10 @@ function generateHtml() {
   <div class="poster-page">
     <div class="poster-frame">
       
-      <!-- Top Emblem & Authority Header -->
+      <!-- Top Authority Header -->
       <div class="poster-header">
         <div class="header-logo-wrap">
-          <img src="${emblemPath}" class="header-logo" alt="GCC Emblem">
+          ${emblemPath ? `<img src="${emblemPath}" class="header-logo" alt="GCC Emblem">` : ''}
         </div>
         <div class="header-text-center">
           <h1 class="college-heading">${collegeName}</h1>
@@ -669,7 +669,7 @@ function generateHtml() {
           <div class="office-sub">Office of the Returning Officer &bull; Statutory Campus Polling Directory</div>
         </div>
         <div class="header-logo-wrap">
-          <img src="${emblemPath}" class="header-logo" alt="GCC Emblem">
+          ${emblemPath ? `<img src="${emblemPath}" class="header-logo" alt="GCC Emblem">` : ''}
         </div>
       </div>
 

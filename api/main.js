@@ -1,7 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { Resend } from 'resend';
 import crypto from 'crypto';
-import { DEFAULT_COLLEGE_LOGO } from './defaultEmblem.js';
 
 // Ensure DATABASE_URL is set in your Vercel project environment variables
 // If missing, use a valid placeholder format so the module doesn't crash on load
@@ -970,7 +969,7 @@ export default async function handler(req, res) {
         ...status,
         collegeName: colName || 'Government College Chittur, Palakkad',
         collegeShortName: colShort || 'GCC',
-        collegeLogo: colLogo || DEFAULT_COLLEGE_LOGO,
+        collegeLogo: colLogo || '',
         collegePlace: colPlace || 'Chittur, Palakkad',
         includeResearchScholars: incRS === 'true',
         ballot_binding_mode: bindingMode || 'definite',
@@ -1307,7 +1306,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
           collegeName: colName || 'Government College Chittur, Palakkad',
           collegeShortName: colShort || 'GCC',
           electionYear: electionYearSetting || status?.electionYear || '',
-          collegeLogo: colLogo || DEFAULT_COLLEGE_LOGO
+          collegeLogo: colLogo || ''
         }
       });
     }

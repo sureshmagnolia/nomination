@@ -289,6 +289,7 @@ function invalidateCache(actionSubstring) {
   Object.keys(_cache).forEach(k => {
     if (k.includes(actionSubstring)) delete _cache[k];
   });
+  invalidateAdminCached(actionSubstring).catch(() => {});
 }
 
 // ─── Public API ────────────────────────────────────────────────────────────────
@@ -522,12 +523,16 @@ export const api = {
 
   adminGetSettings: (password) => get({ action: 'adminGetSettings', password }),
   
-  adminUpdateSettings: (password, settings) => {
+  adminUpdateSettings: async (password, settings) => {
     updateCache({ action: 'adminGetSettings', password }, old => ({...old, ...settings}));
+    try {
+      await post({ action: 'adminUpdateSettings', password, ...settings });
+    } catch (_) {
+      bgPost({ action: 'adminUpdateSettings', password, ...settings });
+    }
     invalidateCache('getSettings');
     invalidateCache('adminGetSettings');
-    bgPost({ action: 'adminUpdateSettings', password, ...settings });
-    return Promise.resolve({ ok: true });
+    return { ok: true };
   },
 
   adminUpdateCredentials: (password, credentials) => {

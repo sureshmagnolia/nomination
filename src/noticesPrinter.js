@@ -1728,7 +1728,7 @@ export function printDepartmentClassDirectoryPoster(options = {}) {
   const collegePlace = settings.collegePlace || CONFIG.COLLEGE_PLACE || 'Chittur, Palakkad';
   const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME || 'GCC';
   const year = settings.electionYear || new Date().getFullYear().toString();
-  const collegeLogo = settings.collegeLogo || CONFIG.COLLEGE_LOGO || '';
+  const collegeLogo = settings.collegeLogo || '';
 
   // 1. Build class-to-booth lookup from live booths
   const classToBoothMap = {};
@@ -2281,7 +2281,7 @@ export function printCountingTablePlacards(options = {}) {
   const collegePlace = settings.collegePlace || CONFIG.COLLEGE_PLACE || 'Chittur, Palakkad';
   const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME || 'GCC';
   const year = settings.electionYear || new Date().getFullYear().toString();
-  const collegeLogo = settings.collegeLogo || CONFIG.COLLEGE_LOGO || '';
+  const collegeLogo = settings.collegeLogo || '';
 
   // All configured booths/tables
   const allBooths = Array.isArray(options.booths) && options.booths.length > 0

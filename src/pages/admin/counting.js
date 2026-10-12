@@ -2566,7 +2566,7 @@ export function printCountingMatrixA4Landscape(options = {}) {
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME || 'GOVERNMENT COLLEGE CHITTUR';
   const collegePlace = settings.collegePlace || CONFIG.COLLEGE_PLACE || 'Chittur, Palakkad';
   const electionYear = settings.electionYear || new Date().getFullYear().toString();
-  const collegeLogo = settings.collegeLogo || CONFIG.COLLEGE_LOGO || '';
+  const collegeLogo = settings.collegeLogo || '';
   const tablePolledBallots = options.tablePolledBallots || {};
   const allResults = Array.isArray(options.allResults) ? options.allResults : [];
 

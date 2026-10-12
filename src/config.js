@@ -1,5 +1,3 @@
-import { DEFAULT_COLLEGE_LOGO } from './data/defaultEmblem.js';
-
 export const CONFIG = {
   // Point to Vercel Serverless API
   API_BASE_URL: '/api/main',
@@ -11,7 +9,7 @@ export const CONFIG = {
   COLLEGE_NAME: 'Government College Chittur, Palakkad',
   COLLEGE_SHORT_NAME: 'GCC',
   COLLEGE_PLACE: 'Chittur, Palakkad',
-  COLLEGE_LOGO: DEFAULT_COLLEGE_LOGO,
+  COLLEGE_LOGO: '',
 
   // Posts are now managed dynamically via the Admin → Manage Posts page.
   // This array is used only as a fallback if the API hasn't loaded yet.

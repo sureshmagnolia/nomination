@@ -198,7 +198,7 @@ export async function invalidateAdminCached(keyPrefix) {
       req.onsuccess = (e) => {
         const cursor = e.target.result;
         if (cursor) {
-          if (!keyPrefix || cursor.key.startsWith(keyPrefix)) {
+          if (!keyPrefix || String(cursor.key).includes(keyPrefix) || cursor.key.startsWith(keyPrefix)) {
             cursor.delete();
           }
           cursor.continue();
