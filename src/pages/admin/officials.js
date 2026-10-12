@@ -438,6 +438,30 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     coreCommittee = localCore;
   }
 
+  // Reserve Officials State (Cross-duty reserves: Polling staff acting as Counting Reserve, Counting staff acting as Polling Reserve, or Standby)
+  let reserveOfficials = [];
+  const cachedRes = localStorage.getItem('gcc_election_reserves');
+  let localRes = [];
+  if (cachedRes !== null) {
+    try { localRes = JSON.parse(cachedRes); } catch (_) { localRes = []; }
+  }
+  if (Array.isArray(initialOfficialsData?.reserveOfficials) && initialOfficialsData.reserveOfficials.length > 0) {
+    reserveOfficials = initialOfficialsData.reserveOfficials;
+    localStorage.setItem('gcc_election_reserves', JSON.stringify(reserveOfficials));
+  } else if (localRes.length > 0) {
+    reserveOfficials = localRes;
+  }
+
+  const getReserveAssignment = (fName) => {
+    if (!fName) return null;
+    const clean = String(fName).trim().toLowerCase();
+    return reserveOfficials.find(r => String(r.name || '').trim().toLowerCase() === clean) || null;
+  };
+
+  const isReserveOfficial = (name) => {
+    return !!getReserveAssignment(name);
+  };
+
   // Ensure persistent teamNumber for formed polling and counting teams
   pollingTeams.forEach((t, idx) => {
     if (!t.teamNumber) t.teamNumber = idx + 1;
@@ -619,7 +643,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       flags.push(`📊 Table ${ntAssigned.counting.tableNumber} (Asst)`);
     }
 
-    // 10. Excluded
+    // 10. Reserve Duty (Cross-allotted or Standby)
+    const rAssigned = getReserveAssignment(fName);
+    if (rAssigned) {
+      flags.push(`🛡️ ${rAssigned.reserveType || 'Reserve'}`);
+    }
+
+    // 11. Excluded
     const pObj = getPerson(fName);
     if (pObj && isPersonExcluded(pObj)) {
       flags.push('⛔ Excluded');
@@ -1622,6 +1652,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     localStorage.setItem('gcc_election_ro', JSON.stringify(roOfficer));
     localStorage.setItem('gcc_election_aros', JSON.stringify(aroOfficers));
     localStorage.setItem('gcc_election_core_committee', JSON.stringify(coreCommittee));
+    localStorage.setItem('gcc_election_reserves', JSON.stringify(reserveOfficials));
 
     try {
       await api.adminSaveOfficials(pwd, {
@@ -1634,7 +1665,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         grievanceCell,
         roOfficer,
         aroOfficers,
-        coreCommittee
+        coreCommittee,
+        reserveOfficials
       });
       if (!quiet) showToast('Officials and rosters saved successfully!', 'success');
     } catch (e) {
@@ -2067,6 +2099,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       const tag = isGuestFaculty(f) ? '[Guest]' : isLibrarian(f) ? '[Librarian]' : '';
       const doubleTag = cDuty ? `[⚠️ Double Duty: Table ${cDuty.tableNumber}]` : '';
+      const rDuty = getReserveAssignment(f.name);
+      const resTag = rDuty ? `[🛡️ ${rDuty.reserveType}]` : '';
       const deptStr = (f.department || '').trim();
       const phoneStr = (f.phone || f.mobile) ? ` · 📱 ${esc(f.phone || f.mobile)}` : '';
 
@@ -2074,7 +2108,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       return `
         <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}>
-          ${prefix}#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${f.pen || '–'}${phoneStr}) ${tag} ${doubleTag}
+          ${prefix}#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${f.pen || '–'}${phoneStr}) ${tag} ${doubleTag} ${resTag}
         </option>
       `;
     }).join('');
@@ -2117,6 +2151,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       const tag = isGuestFaculty(f) ? '[Guest]' : isLibrarian(f) ? '[Librarian]' : '';
       const doubleTag = pDuty ? `[⚠️ Double Duty: Booth ${pDuty.boothNumber}]` : '';
+      const rDuty = getReserveAssignment(f.name);
+      const resTag = rDuty ? `[🛡️ ${rDuty.reserveType}]` : '';
       const deptStr = (f.department || '').trim();
       const phoneStr = (f.phone || f.mobile) ? ` · 📱 ${esc(f.phone || f.mobile)}` : '';
 
@@ -2124,7 +2160,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       return `
         <option value="${esc(f.name)}" ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}>
-          ${prefix}#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${f.pen || '–'}${phoneStr}) ${tag} ${doubleTag}
+          ${prefix}#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${f.pen || '–'}${phoneStr}) ${tag} ${doubleTag} ${resTag}
         </option>
       `;
     }).join('');
@@ -2862,6 +2898,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <button id="btnOpenCoreModalTop" class="btn btn-secondary border-cyan-500/50 text-cyan-300 hover:text-white hover:bg-cyan-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Manage Core Committee members">
               ⭐ Core Committee (${coreCommittee.length})
             </button>
+            <button id="btnOpenReserveModalTop" class="btn btn-secondary border-emerald-500/50 text-emerald-300 hover:text-white hover:bg-emerald-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Allot Reserve Officials for Polling &amp; Counting (Cross-Allotment Supported)">
+              🛡️ Allot Reserves (${reserveOfficials.length})
+            </button>
             <button id="btnSaveAll" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow">
               💾 Save All Changes
             </button>
@@ -3019,6 +3058,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               </button>
               <button id="btnOpenGrievanceModal" class="btn btn-secondary border-blue-500/50 text-blue-300 hover:text-white hover:bg-blue-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Appoint Grievance Committee">
                 🤝 Allot Grievance (${grievanceCell.length})
+              </button>
+              <button id="btnOpenReserveModalPolling" class="btn btn-secondary border-emerald-500/50 text-emerald-300 hover:text-white hover:bg-emerald-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Allot Reserve Officials (Cross-allot Polling staff as Counting Reserves, etc.)">
+                🛡️ Allot Reserves (${reserveOfficials.length})
               </button>
               <button id="btnPrintMasterDutyListPolling" class="btn btn-primary bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs px-3.5 py-2 flex items-center gap-1.5 shadow" title="Print Master Duty List with Observers, Discipline Committee, and Grievance Cell">
                 🖨️ Master Duty List
@@ -3226,6 +3268,51 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     <button class="text-rose-400 hover:text-rose-200 text-xs ml-1.5 btn-quick-remove-grievance" data-name="${esc(g.name)}" title="Remove from grievance cell">✖</button>
                   </div>
                 `).join('')}
+              </div>
+            `}
+          </div>
+
+          <!-- Reserve Officials Pool & Cross-Duty Allotments -->
+          <div class="glass rounded-xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/30 via-slate-900/60 to-slate-900/40 p-4 shadow-lg no-print">
+            <div class="flex items-center justify-between flex-wrap gap-2 pb-2.5 border-b border-emerald-500/20">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-lg shadow-inner">🛡️</div>
+                <div>
+                  <h5 class="font-bold text-white text-sm flex items-center gap-2">
+                    Reserve Officials Pool &amp; Cross-Duty Allotments
+                    <span class="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full">${reserveOfficials.length} Appointed Reserves</span>
+                  </h5>
+                  <p class="text-[11px] text-slate-400">Standby officials for emergency deployment. Officials on Polling duty can act as Counting reserves, and vice versa.</p>
+                </div>
+              </div>
+              <button class="btn btn-secondary border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/20 text-xs px-3 py-1.5 flex items-center gap-1 font-semibold btn-manage-reserves">
+                ➕ Add / Manage Reserves
+              </button>
+            </div>
+            ${reserveOfficials.length === 0 ? `
+              <div class="py-3 text-center text-slate-400 text-xs">
+                No reserve officials appointed yet. Click <button class="text-emerald-300 underline font-semibold btn-manage-reserves-inline">Allot Reserves</button> to appoint standby staff or cross-allot active personnel.
+              </div>
+            ` : `
+              <div class="flex items-center gap-2 flex-wrap pt-3">
+                ${reserveOfficials.map((r, idx) => {
+                  const pDuty = getPollingAssignment(r.name);
+                  const cDuty = getCountingAssignment(r.name);
+                  let activeTag = '';
+                  if (pDuty && cDuty) activeTag = ` [Booth ${pDuty.boothNumber} & Table ${cDuty.tableNumber}]`;
+                  else if (pDuty) activeTag = ` [Booth ${pDuty.boothNumber}]`;
+                  else if (cDuty) activeTag = ` [Table ${cDuty.tableNumber}]`;
+                  return `
+                    <div class="flex items-center gap-2 bg-slate-900/90 border border-emerald-500/40 rounded-lg px-3 py-1.5 shadow-sm">
+                      <span class="text-emerald-400 text-xs font-mono font-bold">#${idx + 1}</span>
+                      <div>
+                        <div class="font-bold text-white text-xs">${esc(r.name)}</div>
+                        <div class="text-[10px] text-emerald-300 font-medium">${esc(r.reserveType || 'Reserve')}${activeTag ? `<span class="text-slate-400 font-normal"> · ${esc(activeTag)}</span>` : ''}</div>
+                      </div>
+                      <button class="text-rose-400 hover:text-rose-200 text-xs ml-1.5 btn-quick-remove-reserve" data-name="${esc(r.name)}" title="Remove from reserve pool">✖</button>
+                    </div>
+                  `;
+                }).join('')}
               </div>
             `}
           </div>
@@ -3451,6 +3538,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <button id="btnPrintMasterDutyListConcealedCounting" class="btn btn-secondary border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/20 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Print Master Duty List with Duty & Station concealed (Roll Call / Attendance Mode)">
                 🔒 Concealed Stations
               </button>
+              <button id="btnOpenReserveModalCounting" class="btn btn-secondary border-emerald-500/50 text-emerald-300 hover:text-white hover:bg-emerald-600/30 text-xs px-3.5 py-2 flex items-center gap-1.5 font-bold shadow" title="Allot Reserve Officials (Cross-allot Counting staff as Polling Reserves, etc.)">
+                🛡️ Allot Reserves (${reserveOfficials.length})
+              </button>
               <button id="btnPrintCountingOrders" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5">
                 🖨️ Print Counting Orders
               </button>
@@ -3458,6 +3548,51 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 🗑️ Clear All
               </button>
             </div>
+          </div>
+
+          <!-- Reserve Officials Pool & Cross-Duty Allotments -->
+          <div class="glass rounded-xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/30 via-slate-900/60 to-slate-900/40 p-4 shadow-lg no-print">
+            <div class="flex items-center justify-between flex-wrap gap-2 pb-2.5 border-b border-emerald-500/20">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-lg shadow-inner">🛡️</div>
+                <div>
+                  <h5 class="font-bold text-white text-sm flex items-center gap-2">
+                    Reserve Officials Pool &amp; Cross-Duty Allotments
+                    <span class="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full">${reserveOfficials.length} Appointed Reserves</span>
+                  </h5>
+                  <p class="text-[11px] text-slate-400">Standby officials for emergency deployment. Officials on Polling duty can act as Counting reserves, and vice versa.</p>
+                </div>
+              </div>
+              <button class="btn btn-secondary border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/20 text-xs px-3 py-1.5 flex items-center gap-1 font-semibold btn-manage-reserves">
+                ➕ Add / Manage Reserves
+              </button>
+            </div>
+            ${reserveOfficials.length === 0 ? `
+              <div class="py-3 text-center text-slate-400 text-xs">
+                No reserve officials appointed yet. Click <button class="text-emerald-300 underline font-semibold btn-manage-reserves-inline">Allot Reserves</button> to appoint standby staff or cross-allot active personnel.
+              </div>
+            ` : `
+              <div class="flex items-center gap-2 flex-wrap pt-3">
+                ${reserveOfficials.map((r, idx) => {
+                  const pDuty = getPollingAssignment(r.name);
+                  const cDuty = getCountingAssignment(r.name);
+                  let activeTag = '';
+                  if (pDuty && cDuty) activeTag = ` [Booth ${pDuty.boothNumber} & Table ${cDuty.tableNumber}]`;
+                  else if (pDuty) activeTag = ` [Booth ${pDuty.boothNumber}]`;
+                  else if (cDuty) activeTag = ` [Table ${cDuty.tableNumber}]`;
+                  return `
+                    <div class="flex items-center gap-2 bg-slate-900/90 border border-emerald-500/40 rounded-lg px-3 py-1.5 shadow-sm">
+                      <span class="text-emerald-400 text-xs font-mono font-bold">#${idx + 1}</span>
+                      <div>
+                        <div class="font-bold text-white text-xs">${esc(r.name)}</div>
+                        <div class="text-[10px] text-emerald-300 font-medium">${esc(r.reserveType || 'Reserve')}${activeTag ? `<span class="text-slate-400 font-normal"> · ${esc(activeTag)}</span>` : ''}</div>
+                      </div>
+                      <button class="text-rose-400 hover:text-rose-200 text-xs ml-1.5 btn-quick-remove-reserve" data-name="${esc(r.name)}" title="Remove from reserve pool">✖</button>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `}
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="countingTeamsGrid">
@@ -5075,6 +5210,26 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     main.querySelector('#btnManageGrievanceBanner')?.addEventListener('click', () => openGrievanceModal());
     main.querySelector('.btn-manage-grievance-inline')?.addEventListener('click', () => openGrievanceModal());
 
+    // Open Reserve Officials Allotment Modal
+    main.querySelector('#btnOpenReserveModalTop')?.addEventListener('click', () => openReserveModal());
+    main.querySelector('#btnOpenReserveModalPolling')?.addEventListener('click', () => openReserveModal());
+    main.querySelector('#btnOpenReserveModalCounting')?.addEventListener('click', () => openReserveModal());
+    main.querySelectorAll('.btn-manage-reserves').forEach(btn => btn.addEventListener('click', () => openReserveModal()));
+    main.querySelectorAll('.btn-manage-reserves-inline').forEach(btn => btn.addEventListener('click', () => openReserveModal()));
+
+    // Quick remove reserve from banner
+    main.querySelectorAll('.btn-quick-remove-reserve').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const name = e.currentTarget.dataset.name;
+        if (confirm(`Remove "${name}" from Reserve Officials?`)) {
+          reserveOfficials = reserveOfficials.filter(r => r.name !== name);
+          await saveAll(false);
+          showToast(`Removed "${name}" from Reserve Pool.`, 'info');
+          renderUI();
+        }
+      });
+    });
+
     // Open Multi-Table Counting Assistant Allotment Modal
     main.querySelector('#btnAssignCountingAssistantMulti')?.addEventListener('click', () => openMultiTableAssistantModal());
 
@@ -5806,6 +5961,358 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         showToast(`Appointed ${coreCommittee.length} Core Committee member(s) successfully!`, 'success');
         renderUI();
       };
+    };
+
+    renderModal();
+  };
+
+  // ─── Reserve Officials & Cross-Duty Allotment Modal ─────────────────────────
+
+  // Helper: Render options for Reserve Allotment (Explicitly allows staff already on Polling or Counting duty)
+  const renderReservePersonOptions = (currentSelectedName, draftList, currentIdx) => {
+    let html = `<option value="">-- Select Faculty or Staff as Reserve --</option>`;
+
+    // Teaching Faculty
+    const sortedFac = [...faculty].sort(compareOfficials);
+    html += `<optgroup label="Teaching Faculty (${sortedFac.length})">`;
+    sortedFac.forEach(f => {
+      const isCur = currentSelectedName === f.name;
+      const isChosenInOther = draftList && Array.isArray(draftList) && draftList.some((item, i) => i !== currentIdx && item.name === f.name);
+      const pDuty = getPollingAssignment(f.name);
+      const cDuty = getCountingAssignment(f.name);
+
+      let dutyTag = '';
+      if (pDuty && cDuty) dutyTag = `[🗳️ Booth ${pDuty.boothNumber} & 📊 Table ${cDuty.tableNumber}] `;
+      else if (pDuty) dutyTag = `[🗳️ Booth ${pDuty.boothNumber}: ${pDuty.role === 'Presiding Officer' ? 'PrO' : 'PO'} · Ideal for Counting Reserve] `;
+      else if (cDuty) dutyTag = `[📊 Table ${cDuty.tableNumber}: ${cDuty.role === 'Counting Supervisor' ? 'Sup' : 'CO'} · Ideal for Polling Reserve] `;
+      else dutyTag = `[✨ Standby / No Active Duty] `;
+
+      if (isPersonExcluded(f)) dutyTag = `⛔ [Excluded] ` + dutyTag;
+
+      const deptStr = (f.department || '').trim();
+      html += `
+        <option value="${esc(f.name)}" ${isCur ? 'selected' : ''} ${isChosenInOther ? 'disabled' : ''}>
+          ${isChosenInOther ? '🚩 [Already in Reserves] ' : ''}${dutyTag}#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${f.pen || '–'})
+        </option>
+      `;
+    });
+    html += `</optgroup>`;
+
+    // Non-Teaching Staff
+    const sortedNT = [...nonTeaching].sort(compareOfficials);
+    html += `<optgroup label="Non-Teaching Staff (${sortedNT.length})">`;
+    sortedNT.forEach(nt => {
+      const isCur = currentSelectedName === nt.name;
+      const isChosenInOther = draftList && Array.isArray(draftList) && draftList.some((item, i) => i !== currentIdx && item.name === nt.name);
+      const ntAssigned = getNonTeachingAssignment(nt.name);
+
+      let dutyTag = '';
+      if (ntAssigned.polling && ntAssigned.counting) dutyTag = `[🗳️ Booth ${ntAssigned.polling.boothNumber} & 📊 Counting] `;
+      else if (ntAssigned.polling) dutyTag = `[🗳️ Booth ${ntAssigned.polling.boothNumber} Asst · Ideal for Counting Reserve] `;
+      else if (ntAssigned.counting) dutyTag = `[📊 Table ${ntAssigned.counting.tableNumber} Asst · Ideal for Polling Reserve] `;
+      else dutyTag = `[✨ Standby / No Duty] `;
+
+      if (isPersonExcluded(nt)) dutyTag = `⛔ [Excluded] ` + dutyTag;
+
+      const deptStr = (nt.department || nt.section || 'Office').trim();
+      html += `
+        <option value="${esc(nt.name)}" ${isCur ? 'selected' : ''} ${isChosenInOther ? 'disabled' : ''}>
+          ${isChosenInOther ? '🚩 [Already in Reserves] ' : ''}${dutyTag}${esc(nt.name)} (${esc(nt.designation || 'Staff')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${nt.pen || '–'})
+        </option>
+      `;
+    });
+    html += `</optgroup>`;
+
+    return html;
+  };
+
+  const openReserveModal = () => {
+    const existing = document.getElementById('reserveModalContainer');
+    if (existing) existing.remove();
+
+    let draftReserves = reserveOfficials.map(r => ({ ...r }));
+    if (draftReserves.length === 0) {
+      draftReserves.push({
+        name: '',
+        pen: '',
+        department: '',
+        designation: '',
+        seniority: 999,
+        type: 'Teaching Faculty',
+        reserveType: 'Counting Reserve'
+      });
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'reserveModalContainer';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md';
+    document.body.appendChild(modal);
+
+    const renderModal = () => {
+      modal.innerHTML = `
+        <div class="glass border border-emerald-500/40 rounded-2xl w-full max-w-3xl bg-slate-900/95 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+          <!-- Modal Header -->
+          <div class="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-emerald-950/50 via-slate-900 to-slate-900">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-xl shadow-inner border border-emerald-500/30">
+                🛡️
+              </div>
+              <div>
+                <h4 class="font-bold text-white text-base">Reserve Officials &amp; Cross-Duty Allotment</h4>
+                <p class="text-xs text-slate-400">Allot standby personnel. Officials doing Polling duty can act as Counting reserves, and vice versa.</p>
+              </div>
+            </div>
+            <button id="btnCloseReserveModal" class="text-slate-400 hover:text-white text-2xl font-bold px-2 py-1 leading-none">&times;</button>
+          </div>
+
+          <!-- Quick Action Helpers -->
+          <div class="p-3 bg-white/5 border-b border-white/10 flex items-center justify-between flex-wrap gap-2 text-xs">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-slate-300 font-semibold text-xs mr-1">⚡ Quick Allot:</span>
+              <button type="button" id="btnQuickCrossPolling" class="btn btn-secondary border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/20 text-[11px] px-2.5 py-1 font-medium" title="Allot officials on Polling duty as Counting Reserves">
+                🗳️ Polling Staff &rarr; Counting Reserve
+              </button>
+              <button type="button" id="btnQuickCrossCounting" class="btn btn-secondary border-purple-500/40 text-purple-300 hover:bg-purple-500/20 text-[11px] px-2.5 py-1 font-medium" title="Allot officials on Counting duty as Polling Reserves">
+                📊 Counting Staff &rarr; Polling Reserve
+              </button>
+              <button type="button" id="btnQuickAllotUnassigned" class="btn btn-secondary border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20 text-[11px] px-2.5 py-1 font-medium" title="Add all unassigned available faculty as Standby Reserves">
+                ✨ Available Faculty &rarr; Standby
+              </button>
+            </div>
+            <button type="button" id="btnAddReserveRow" class="btn btn-secondary border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20 text-xs px-3 py-1 flex items-center gap-1 font-bold">
+              ➕ Add Reserve Row
+            </button>
+          </div>
+
+          <!-- Modal Body -->
+          <div class="p-5 overflow-y-auto space-y-3 flex-1 custom-scrollbar">
+            ${draftReserves.map((res, idx) => {
+              const p = res.name ? getPerson(res.name) : null;
+              const pDuty = res.name ? getPollingAssignment(res.name) : null;
+              const cDuty = res.name ? getCountingAssignment(res.name) : null;
+
+              let activeNotice = '';
+              if (pDuty && cDuty) {
+                activeNotice = `<span class="text-[10px] text-amber-300 bg-amber-950/40 border border-amber-500/30 px-2 py-0.5 rounded font-mono">Active in Booth ${pDuty.boothNumber} & Table ${cDuty.tableNumber}</span>`;
+              } else if (pDuty) {
+                activeNotice = `<span class="text-[10px] text-indigo-300 bg-indigo-950/40 border border-indigo-500/30 px-2 py-0.5 rounded font-mono">Active: Polling Booth ${pDuty.boothNumber} (${pDuty.role === 'Presiding Officer' ? 'PrO' : 'PO'})</span>`;
+              } else if (cDuty) {
+                activeNotice = `<span class="text-[10px] text-purple-300 bg-purple-950/40 border border-purple-500/30 px-2 py-0.5 rounded font-mono">Active: Counting Table ${cDuty.tableNumber} (${cDuty.role === 'Counting Supervisor' ? 'Sup' : 'CO'})</span>`;
+              } else if (res.name) {
+                activeNotice = `<span class="text-[10px] text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded font-mono">Standby Reserve (No active booth/table)</span>`;
+              }
+
+              return `
+                <div class="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-2.5 relative" data-res-idx="${idx}">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-bold text-emerald-300 font-mono">🛡️ Reserve #${idx + 1}</span>
+                      ${activeNotice}
+                    </div>
+                    <button type="button" class="text-xs text-rose-400 hover:text-rose-200 hover:underline btn-remove-res-row flex items-center gap-1" data-idx="${idx}">
+                      <span>✖</span> Remove
+                    </button>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="md:col-span-2">
+                      <label class="block text-[11px] text-slate-400 font-medium mb-1">Official Name (Faculty or Non-Teaching Staff)</label>
+                      <select class="w-full bg-slate-900 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-emerald-500 select-res-person" data-idx="${idx}">
+                        ${renderReservePersonOptions(res.name, draftReserves, idx)}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label class="block text-[11px] text-slate-400 font-medium mb-1">Reserve Duty Role</label>
+                      <select class="w-full bg-slate-900 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-emerald-500 select-res-type" data-idx="${idx}">
+                        <option value="Counting Reserve" ${(res.reserveType || 'Counting Reserve') === 'Counting Reserve' ? 'selected' : ''}>Counting Reserve</option>
+                        <option value="Polling Reserve" ${res.reserveType === 'Polling Reserve' ? 'selected' : ''}>Polling Reserve</option>
+                        <option value="General Reserve" ${res.reserveType === 'General Reserve' ? 'selected' : ''}>General Reserve</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  ${p ? `
+                    <div class="flex items-center gap-3 text-[11px] text-slate-300 bg-slate-950/40 p-2 rounded-lg border border-white/5">
+                      <span><strong>Designation:</strong> ${esc(p.designation || 'Faculty')}</span>
+                      <span>•</span>
+                      <span><strong>Dept:</strong> ${esc(p.department || p.section || '–')}</span>
+                      <span>•</span>
+                      <span><strong>PEN:</strong> ${esc(p.pen || '–')}</span>
+                      ${p.phone ? `<span>•</span><span><strong>📱</strong> ${esc(p.phone)}</span>` : '<span class="text-amber-400/80">• (Mobile absent in system - can enter while signing)</span>'}
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="p-4 border-t border-white/10 flex items-center justify-between bg-slate-900">
+            <span class="text-xs text-slate-400">
+              Total Appointed Reserves: <strong>${draftReserves.filter(r => r.name).length}</strong>
+            </span>
+            <div class="flex items-center gap-2">
+              <button type="button" id="btnCancelReserveModal" class="btn btn-secondary text-xs px-4 py-2">
+                Cancel
+              </button>
+              <button type="button" id="btnSaveReserveModal" class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2 flex items-center gap-1.5 shadow">
+                💾 Save Reserve Allotments
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Attach Modal Event Listeners
+      modal.querySelector('#btnCloseReserveModal')?.addEventListener('click', () => modal.remove());
+      modal.querySelector('#btnCancelReserveModal')?.addEventListener('click', () => modal.remove());
+
+      modal.querySelector('#btnAddReserveRow')?.addEventListener('click', () => {
+        draftReserves.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: 'Teaching Faculty', reserveType: 'Counting Reserve' });
+        renderModal();
+      });
+
+      modal.querySelectorAll('.btn-remove-res-row').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = parseInt(e.currentTarget.dataset.idx, 10);
+          draftReserves.splice(idx, 1);
+          if (draftReserves.length === 0) {
+            draftReserves.push({ name: '', pen: '', department: '', designation: '', seniority: 999, type: 'Teaching Faculty', reserveType: 'Counting Reserve' });
+          }
+          renderModal();
+        });
+      });
+
+      modal.querySelectorAll('.select-res-person').forEach(sel => {
+        sel.addEventListener('change', (e) => {
+          const idx = parseInt(e.target.dataset.idx, 10);
+          const chosenName = e.target.value;
+          const p = getPerson(chosenName);
+          if (p) {
+            draftReserves[idx].name = p.name;
+            draftReserves[idx].pen = p.pen || '';
+            draftReserves[idx].department = p.department || p.section || '';
+            draftReserves[idx].designation = p.designation || '';
+            draftReserves[idx].seniority = p.seniority || 999;
+            draftReserves[idx].type = p.type || 'Teaching Faculty';
+
+            const pDuty = getPollingAssignment(p.name);
+            const cDuty = getCountingAssignment(p.name);
+            if (pDuty && !cDuty) {
+              draftReserves[idx].reserveType = 'Counting Reserve';
+            } else if (cDuty && !pDuty) {
+              draftReserves[idx].reserveType = 'Polling Reserve';
+            }
+          } else {
+            draftReserves[idx].name = '';
+            draftReserves[idx].pen = '';
+          }
+          renderModal();
+        });
+      });
+
+      modal.querySelectorAll('.select-res-type').forEach(sel => {
+        sel.addEventListener('change', (e) => {
+          const idx = parseInt(e.target.dataset.idx, 10);
+          draftReserves[idx].reserveType = e.target.value;
+        });
+      });
+
+      // Quick Actions
+      modal.querySelector('#btnQuickCrossPolling')?.addEventListener('click', () => {
+        let added = 0;
+        pollingTeams.forEach(t => {
+          const officials = [t.presidingOfficer, t.pollingOfficer1, t.pollingOfficer2, t.pollingOfficer3, t.pollingAssistant];
+          officials.forEach(off => {
+            if (off && off.name && !draftReserves.some(r => r.name === off.name)) {
+              const p = getPerson(off.name);
+              draftReserves.push({
+                name: off.name,
+                pen: off.pen || p?.pen || '',
+                department: p?.department || p?.section || '',
+                designation: p?.designation || '',
+                seniority: p?.seniority || 999,
+                type: p?.type || 'Teaching Faculty',
+                reserveType: 'Counting Reserve'
+              });
+              added++;
+            }
+          });
+        });
+        if (added > 0) {
+          draftReserves = draftReserves.filter(r => r.name);
+          renderModal();
+          showToast(`Added ${added} Polling Officials as Counting Reserves!`, 'success');
+        } else {
+          showToast('All Polling officials are already in the Reserve list.', 'info');
+        }
+      });
+
+      modal.querySelector('#btnQuickCrossCounting')?.addEventListener('click', () => {
+        let added = 0;
+        countingTeams.forEach(t => {
+          const officials = [t.supervisor, t.countingOfficer1, t.countingOfficer2, t.countingOfficer3, t.countingAssistant];
+          officials.forEach(off => {
+            if (off && off.name && !draftReserves.some(r => r.name === off.name)) {
+              const p = getPerson(off.name);
+              draftReserves.push({
+                name: off.name,
+                pen: off.pen || p?.pen || '',
+                department: p?.department || p?.section || '',
+                designation: p?.designation || '',
+                seniority: p?.seniority || 999,
+                type: p?.type || 'Teaching Faculty',
+                reserveType: 'Polling Reserve'
+              });
+              added++;
+            }
+          });
+        });
+        if (added > 0) {
+          draftReserves = draftReserves.filter(r => r.name);
+          renderModal();
+          showToast(`Added ${added} Counting Officials as Polling Reserves!`, 'success');
+        } else {
+          showToast('All Counting officials are already in the Reserve list.', 'info');
+        }
+      });
+
+      modal.querySelector('#btnQuickAllotUnassigned')?.addEventListener('click', () => {
+        let added = 0;
+        faculty.forEach(f => {
+          if (!isPersonExcluded(f) && !isPersonOnDuty(f) && !draftReserves.some(r => r.name === f.name)) {
+            draftReserves.push({
+              name: f.name,
+              pen: f.pen || '',
+              department: f.department || '',
+              designation: f.designation || '',
+              seniority: f.seniority || 999,
+              type: 'Teaching Faculty',
+              reserveType: 'General Reserve'
+            });
+            added++;
+          }
+        });
+        if (added > 0) {
+          draftReserves = draftReserves.filter(r => r.name);
+          renderModal();
+          showToast(`Added ${added} Available Faculty as Standby Reserves!`, 'success');
+        } else {
+          showToast('No unassigned available faculty found.', 'info');
+        }
+      });
+
+      // Save
+      modal.querySelector('#btnSaveReserveModal')?.addEventListener('click', async () => {
+        const clean = draftReserves.filter(r => r.name && r.name.trim().length > 0);
+        reserveOfficials = clean;
+        localStorage.setItem('gcc_election_reserves', JSON.stringify(reserveOfficials));
+        await saveAll(false);
+        showToast(`Saved ${reserveOfficials.length} Reserve Officials!`, 'success');
+        modal.remove();
+        renderUI();
+      });
     };
 
     renderModal();
@@ -7482,8 +7989,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       const pDuty = getPollingAssignment(f.name);
       const cDuty = getCountingAssignment(f.name);
+      const rDuty = getReserveAssignment(f.name);
 
-      if (pDuty || cDuty || onDuty) {
+      if (pDuty || cDuty || onDuty || rDuty) {
         seenStaff.add(fNameLower);
         const duties = [];
         const stations = [];
@@ -7497,6 +8005,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           const b = booths.find(x => x.boothNumber === cDuty.tableNumber);
           stations.push(b?.roomName || `Table ${cDuty.tableNumber}`);
         }
+        if (rDuty) {
+          duties.push(rDuty.reserveType || 'Reserve Duty');
+          stations.push('Central Control Room (Reserve Pool)');
+        }
+
+        const isDouble = !!(
+          (pDuty && cDuty) ||
+          (pDuty && rDuty && String(rDuty.reserveType || '').toLowerCase().includes('count')) ||
+          (cDuty && rDuty && String(rDuty.reserveType || '').toLowerCase().includes('poll'))
+        );
+
+        const isOnlyReserve = !pDuty && !cDuty && !!rDuty;
 
         personnel.push({
           name: f.name,
@@ -7506,11 +8026,29 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           phone: f.phone || f.mobile || '',
           seniority: (f.seniority !== undefined && f.seniority !== null) ? f.seniority : 999,
           duty: duties.join(' + ') || 'Active Election Duty',
-          hasDoubleDuty: !!(pDuty && cDuty),
-          isReserve: false,
+          hasDoubleDuty: isDouble,
+          isReserve: isOnlyReserve,
           station: stations.join(' / ') || 'Duty Station',
-          type: 'Teaching Faculty'
+          type: 'Teaching Faculty',
+          reserveType: rDuty?.reserveType || null
         });
+
+        if (rDuty) {
+          reserveList.push({
+            name: f.name,
+            designation: (f.designation || 'Faculty').trim(),
+            department: (f.department || '').trim() || '–',
+            pen: (f.pen || '–').trim(),
+            phone: f.phone || f.mobile || '',
+            seniority: (f.seniority !== undefined && f.seniority !== null) ? f.seniority : 999,
+            duty: (rDuty.reserveType || 'Reserve Duty') + (pDuty ? ` (Active: Booth ${pDuty.boothNumber})` : (cDuty ? ` (Active: Table ${cDuty.tableNumber})` : '')),
+            hasDoubleDuty: isDouble,
+            isReserve: true,
+            station: 'Central Control Room (Reserve Pool)',
+            type: 'Teaching Faculty',
+            reserveType: rDuty.reserveType
+          });
+        }
       } else {
         // ONLY people who are NOT excluded AND NOT on ANY duty are placed in Reserve!
         seenStaff.add(fNameLower);
@@ -7554,8 +8092,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       }
 
       const ntAssigned = getNonTeachingAssignment(nt.name);
+      const rDuty = getReserveAssignment(nt.name);
 
-      if (ntAssigned.polling || ntAssigned.counting || onDuty) {
+      if (ntAssigned.polling || ntAssigned.counting || onDuty || rDuty) {
         seenStaff.add(ntNameLower);
         const duties = [];
         const stations = [];
@@ -7574,6 +8113,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           });
           stations.push([...new Set(stationNames)].join(' / '));
         }
+        if (rDuty) {
+          duties.push(rDuty.reserveType || 'Reserve Duty');
+          stations.push('Central Control Room (Reserve Pool)');
+        }
+
+        const isDouble = !!(
+          (ntAssigned.polling && ntAssigned.counting) ||
+          (ntAssigned.polling && rDuty && String(rDuty.reserveType || '').toLowerCase().includes('count')) ||
+          (ntAssigned.counting && rDuty && String(rDuty.reserveType || '').toLowerCase().includes('poll'))
+        );
+
+        const isOnlyReserve = !ntAssigned.polling && !ntAssigned.counting && !!rDuty;
 
         personnel.push({
           name: nt.name,
@@ -7583,11 +8134,29 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           phone: nt.phone || nt.mobile || '',
           seniority: 9999,
           duty: duties.join(' + ') || 'Active Election Duty',
-          hasDoubleDuty: !!(ntAssigned.polling && ntAssigned.counting),
-          isReserve: false,
+          hasDoubleDuty: isDouble,
+          isReserve: isOnlyReserve,
           station: stations.join(' / ') || 'Office / Station',
-          type: 'Non-Teaching Staff'
+          type: 'Non-Teaching Staff',
+          reserveType: rDuty?.reserveType || null
         });
+
+        if (rDuty) {
+          reserveList.push({
+            name: nt.name,
+            designation: (nt.designation || 'Staff').trim(),
+            department: (nt.department || nt.section || 'Office').trim() || 'Office',
+            pen: (nt.pen || '–').trim(),
+            phone: nt.phone || nt.mobile || '',
+            seniority: 9999,
+            duty: (rDuty.reserveType || 'Reserve Duty') + (ntAssigned.polling ? ` (Active: Booth ${ntAssigned.polling.boothNumber})` : (ntAssigned.counting ? ` (Active: Table ${ntAssigned.counting.tableNumber})` : '')),
+            hasDoubleDuty: isDouble,
+            isReserve: true,
+            station: 'Central Control Room (Reserve Pool)',
+            type: 'Non-Teaching Staff',
+            reserveType: rDuty.reserveType
+          });
+        }
       } else {
         // ONLY people who are NOT excluded AND NOT on ANY duty are placed in Reserve!
         seenStaff.add(ntNameLower);
@@ -7609,14 +8178,26 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       }
     });
 
-    // Double-check final reserve filter so NO excluded or on-duty person can EVER slip in:
+    // Double-check final reserve filter so NO excluded person can slip in:
     const safePersonnel = personnel.filter(p => !isPersonExcluded(p));
-    const safeReserveList = reserveList.filter(res => !isPersonExcluded(res) && !isPersonOnDuty(res));
+    // Keep all appointed reserves (including staff who also perform active duty)
+    const safeReserveList = reserveList.filter(res => !isPersonExcluded(res));
+
+    // Deduplicate reserveList by name to avoid duplicate entries
+    const seenResKeys = new Set();
+    const dedupReserveList = [];
+    safeReserveList.forEach(r => {
+      const k = String(r.name || '').trim().toLowerCase();
+      if (!seenResKeys.has(k)) {
+        seenResKeys.add(k);
+        dedupReserveList.push(r);
+      }
+    });
 
     safePersonnel.sort(compareOfficials);
-    safeReserveList.sort(compareOfficials);
+    dedupReserveList.sort(compareOfficials);
 
-    return { roData, aroList, coreList, obsList, discList, grievList, personnel: safePersonnel, reserveList: safeReserveList };
+    return { roData, aroList, coreList, obsList, discList, grievList, personnel: safePersonnel, reserveList: dedupReserveList };
   };
 
   const openMasterDutyListWindow = (hideStation = false) => {
@@ -7723,6 +8304,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       .sign-box {
         border: 1px dashed #000000 !important;
         background: #ffffff !important;
+      }
+      .col-phone-blank {
+        border-bottom: 1.2px dotted #000000 !important;
       }
     }
 
@@ -7966,6 +8550,19 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       background: #ffffff !important;
       margin: 2px 0;
     }
+    .col-phone {
+      text-align: center;
+      font-family: monospace;
+      font-size: 8.5px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .col-phone-blank {
+      border-bottom: 1.2px dotted #000000;
+      width: 85%;
+      height: 14px;
+      margin: 0 auto;
+    }
     .footer-row {
       display: flex;
       justify-content: space-between;
@@ -8139,6 +8736,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 </html>`;
   };
 
+  const renderMobileCell = (phone) => {
+    const clean = phone ? String(phone).trim() : '';
+    if (clean && clean !== '–' && clean !== 'N/A' && clean !== '-') {
+      return `<td class="col-phone col-center">${esc(clean)}</td>`;
+    }
+    return `<td class="col-phone col-center" title="Enter Mobile Number"><div class="col-phone-blank"></div></td>`;
+  };
+
   const buildDeptWiseMasterRollHtml = (orderDate, hideStation = false) => {
     const { roData, aroList, coreList, obsList, discList, grievList, personnel, reserveList } = getMasterDutyData();
     const roAroCount = (roData ? 1 : 0) + aroList.length;
@@ -8210,16 +8815,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <table class="master-table">
             <colgroup>
               ${obsHasDept ? `
-                <col style="width: 7%;">
-                <col style="width: 28%;">
-                <col style="width: 22%;">
+                <col style="width: 6%;">
+                <col style="width: 24%;">
                 <col style="width: 18%;">
-                <col style="width: 11%;">
+                <col style="width: 16%;">
+                <col style="width: 10%;">
+                <col style="width: 12%;">
                 <col style="width: 14%;">
               ` : `
-                <col style="width: 8%;">
-                <col style="width: 38%;">
-                <col style="width: 24%;">
+                <col style="width: 7%;">
+                <col style="width: 31%;">
+                <col style="width: 20%;">
+                <col style="width: 12%;">
                 <col style="width: 14%;">
                 <col style="width: 16%;">
               `}
@@ -8231,6 +8838,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 ${obsHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
                 <th>PEN #</th>
+                <th class="col-center">Mobile Number</th>
                 <th class="col-center">Signature</th>
               </tr>
             </thead>
@@ -8240,11 +8848,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(obs.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(obs.name)}</span>
-                    ${renderSubtlePhone(obs.phone, true)}
                   </td>
                   ${obsHasDept ? `<td><span class="dept-badge">${esc(obs.department)}</span></td>` : ''}
                   <td>${esc(obs.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(obs.pen)}</td>
+                  ${renderMobileCell(obs.phone)}
                   <td class="col-sign">
                     <div class="sign-box"></div>
                   </td>
@@ -8261,11 +8869,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
         <table class="master-table">
           <colgroup>
-            <col style="width: 7%;">
-            <col style="width: 28%;">
-            <col style="width: 22%;">
+            <col style="width: 6%;">
+            <col style="width: 24%;">
             <col style="width: 18%;">
-            <col style="width: 11%;">
+            <col style="width: 16%;">
+            <col style="width: 10%;">
+            <col style="width: 12%;">
             <col style="width: 14%;">
           </colgroup>
           <thead>
@@ -8275,6 +8884,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <th>Designated Office / Role</th>
               <th>Department / Desig</th>
               <th>PEN #</th>
+              <th class="col-center">Mobile Number</th>
               <th class="col-center">Signature</th>
             </tr>
           </thead>
@@ -8284,11 +8894,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <td class="col-center" style="font-weight: 800; font-family: monospace;">RO</td>
                 <td>
                   <span class="staff-name" style="font-size: 11px;">${esc(roData.name)}</span>
-                  ${renderSubtlePhone(roData.phone, true)}
                 </td>
                 <td><strong>👑 Returning Officer (RO)</strong></td>
                 <td>${esc(roData.designation)}${roData.department && roData.department !== '–' ? ` · <span class="dept-badge">${esc(roData.department)}</span>` : ''}</td>
                 <td style="font-family: monospace; font-weight: 700;">${esc(roData.pen)}</td>
+                ${renderMobileCell(roData.phone)}
                 <td class="col-sign"><div class="sign-box"></div></td>
               </tr>
             ` : ''}
@@ -8297,16 +8907,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(aro.slNo)}</td>
                 <td>
                   <span class="staff-name">${esc(aro.name)}</span>
-                  ${renderSubtlePhone(aro.phone, true)}
                 </td>
                 <td><strong>⚖️ Assistant Returning Officer (ARO)</strong></td>
                 <td>${esc(aro.designation)}${aro.department && aro.department !== '–' ? ` · <span class="dept-badge">${esc(aro.department)}</span>` : ''}</td>
                 <td style="font-family: monospace; font-weight: 600;">${esc(aro.pen)}</td>
+                ${renderMobileCell(aro.phone)}
                 <td class="col-sign"><div class="sign-box"></div></td>
               </tr>
             `).join('')}
             ${!roData && aroList.length === 0 ? `
-              <tr><td colspan="6" class="col-center" style="color: #000000; font-style: italic; padding: 8px;">No Returning Officer or ARO configured.</td></tr>
+              <tr><td colspan="7" class="col-center" style="color: #000000; font-style: italic; padding: 8px;">No Returning Officer or ARO configured.</td></tr>
             ` : ''}
           </tbody>
         </table>
@@ -8324,16 +8934,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <table class="master-table">
             <colgroup>
               ${discHasDept ? `
-                <col style="width: 7%;">
-                <col style="width: 28%;">
-                <col style="width: 22%;">
+                <col style="width: 6%;">
+                <col style="width: 24%;">
                 <col style="width: 18%;">
-                <col style="width: 11%;">
+                <col style="width: 16%;">
+                <col style="width: 10%;">
+                <col style="width: 12%;">
                 <col style="width: 14%;">
               ` : `
-                <col style="width: 8%;">
-                <col style="width: 38%;">
-                <col style="width: 24%;">
+                <col style="width: 7%;">
+                <col style="width: 31%;">
+                <col style="width: 20%;">
+                <col style="width: 12%;">
                 <col style="width: 14%;">
                 <col style="width: 16%;">
               `}
@@ -8345,6 +8957,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 ${discHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
                 <th>PEN #</th>
+                <th class="col-center">Mobile Number</th>
                 <th class="col-center">Signature</th>
               </tr>
             </thead>
@@ -8354,11 +8967,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(disc.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(disc.name)}</span>
-                    ${renderSubtlePhone(disc.phone, true)}
                   </td>
                   ${discHasDept ? `<td><span class="dept-badge">${esc(disc.department)}</span></td>` : ''}
                   <td>${esc(disc.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(disc.pen)}</td>
+                  ${renderMobileCell(disc.phone)}
                   <td class="col-sign">
                     <div class="sign-box"></div>
                   </td>
@@ -8381,16 +8994,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <table class="master-table">
             <colgroup>
               ${grievHasDept ? `
-                <col style="width: 7%;">
-                <col style="width: 28%;">
-                <col style="width: 22%;">
+                <col style="width: 6%;">
+                <col style="width: 24%;">
                 <col style="width: 18%;">
-                <col style="width: 11%;">
+                <col style="width: 16%;">
+                <col style="width: 10%;">
+                <col style="width: 12%;">
                 <col style="width: 14%;">
               ` : `
-                <col style="width: 8%;">
-                <col style="width: 38%;">
-                <col style="width: 24%;">
+                <col style="width: 7%;">
+                <col style="width: 31%;">
+                <col style="width: 20%;">
+                <col style="width: 12%;">
                 <col style="width: 14%;">
                 <col style="width: 16%;">
               `}
@@ -8402,6 +9017,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 ${grievHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
                 <th>PEN #</th>
+                <th class="col-center">Mobile Number</th>
                 <th class="col-center">Signature</th>
               </tr>
             </thead>
@@ -8411,11 +9027,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(g.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(g.name)}</span>
-                    ${renderSubtlePhone(g.phone, true)}
                   </td>
                   ${grievHasDept ? `<td><span class="dept-badge">${esc(g.department)}</span></td>` : ''}
                   <td>${esc(g.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(g.pen)}</td>
+                  ${renderMobileCell(g.phone)}
                   <td class="col-sign">
                     <div class="sign-box"></div>
                   </td>
@@ -8438,13 +9054,24 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         ` : `
           <table class="master-table">
             <colgroup>
-              <col style="width: 7%;">
-              <col style="width: 25%;">
-              ${coreHasDept ? '<col style="width: 15%;">' : ''}
-              <col style="width: 15%;">
-              <col style="width: 10%;">
-              <col style="width: 18%;">
-              <col style="width: 10%;">
+              ${coreHasDept ? `
+                <col style="width: 6%;">
+                <col style="width: 20%;">
+                <col style="width: 13%;">
+                <col style="width: 13%;">
+                <col style="width: 9%;">
+                <col style="width: 16%;">
+                <col style="width: 11%;">
+                <col style="width: 12%;">
+              ` : `
+                <col style="width: 6%;">
+                <col style="width: 24%;">
+                <col style="width: 15%;">
+                <col style="width: 10%;">
+                <col style="width: 18%;">
+                <col style="width: 13%;">
+                <col style="width: 14%;">
+              `}
             </colgroup>
             <thead>
               <tr>
@@ -8454,6 +9081,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <th>Designation</th>
                 <th>PEN #</th>
                 <th>Assigned Responsibility &amp; Station</th>
+                <th class="col-center">Mobile Number</th>
                 <th class="col-center">Signature</th>
               </tr>
             </thead>
@@ -8463,7 +9091,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(c.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(c.name)}</span>
-                    ${renderSubtlePhone(c.phone, true)}
                   </td>
                   ${coreHasDept ? `<td><span class="dept-badge">${esc(c.department)}</span></td>` : ''}
                   <td>${esc(c.designation)}</td>
@@ -8474,6 +9101,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                       <span class="staff-meta">Station: ${esc(c.station)}</span>
                     `}
                   </td>
+                  ${renderMobileCell(c.phone)}
                   <td class="col-sign"><div class="sign-box"></div></td>
                 </tr>
               `).join('')}
@@ -8496,19 +9124,21 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             <colgroup>
               ${personnelHasDept ? `
                 <col style="width: 5%;">
-                <col style="width: 22%;">
-                <col style="width: 16%;">
+                <col style="width: 19%;">
                 <col style="width: 14%;">
-                <col style="width: 10%;">
-                <col style="width: 21%;">
+                <col style="width: 13%;">
+                <col style="width: 9%;">
+                <col style="width: 17%;">
+                <col style="width: 11%;">
                 <col style="width: 12%;">
               ` : `
-                <col style="width: 6%;">
-                <col style="width: 28%;">
-                <col style="width: 18%;">
-                <col style="width: 12%;">
+                <col style="width: 5%;">
                 <col style="width: 24%;">
+                <col style="width: 16%;">
+                <col style="width: 10%;">
+                <col style="width: 20%;">
                 <col style="width: 12%;">
+                <col style="width: 13%;">
               `}
             </colgroup>
             <thead>
@@ -8519,6 +9149,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <th>Designation</th>
                 <th>PEN #</th>
                 <th>Duty Assigned &amp; Station</th>
+                <th class="col-center">Mobile Number</th>
                 <th class="col-center">Signature</th>
               </tr>
             </thead>
@@ -8528,7 +9159,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${idx + 1}</td>
                   <td>
                     <span class="staff-name">${esc(p.name)}</span>
-                    ${renderSubtlePhone(p.phone, true)}
                     ${!hideStation && p.hasDoubleDuty ? `<span style="font-size: 8px; color: #000000; font-weight: bold; border: 1px solid #000000; padding: 0 3px; display: inline-block; margin-top: 1px;">⚠️ Double Duty (Polling &amp; Counting)</span>` : ''}
                     ${!hideStation && p.isReserve ? `<span style="font-size: 8px; color: #000000; font-weight: 700; border: 1px solid #000000; padding: 0 4px; display: inline-block; margin-top: 1px;">Reserve Official</span>` : ''}
                   </td>
@@ -8550,6 +9180,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                       <span class="staff-meta">Venue: ${esc(p.station)}</span>
                     `)}
                   </td>
+                  ${renderMobileCell(p.phone)}
                   <td class="col-sign">
                     <div class="sign-box"></div>
                   </td>
@@ -8639,17 +9270,19 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <table class="master-table">
             <colgroup>
               ${obsHasDept ? `
-                <col style="width: 8%;">
-                <col style="width: 28%;">
-                <col style="width: 22%;">
-                <col style="width: 16%;">
+                <col style="width: 7%;">
+                <col style="width: 24%;">
+                <col style="width: 18%;">
+                <col style="width: 15%;">
+                <col style="width: 10%;">
                 <col style="width: 12%;">
                 <col style="width: 14%;">
               ` : `
-                <col style="width: 8%;">
-                <col style="width: 38%;">
-                <col style="width: 22%;">
-                <col style="width: 16%;">
+                <col style="width: 7%;">
+                <col style="width: 31%;">
+                <col style="width: 20%;">
+                <col style="width: 12%;">
+                <col style="width: 14%;">
                 <col style="width: 16%;">
               `}
             </colgroup>
@@ -8660,6 +9293,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 ${obsHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
                 <th>PEN #</th>
+                <th class="col-center">Mobile Number</th>
                 <th class="col-center">Signature</th>
               </tr>
             </thead>
@@ -8669,11 +9303,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(obs.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(obs.name)}</span>
-                    ${renderSubtlePhone(obs.phone, true)}
                   </td>
                   ${obsHasDept ? `<td><span class="dept-badge">${esc(obs.department)}</span></td>` : ''}
                   <td>${esc(obs.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(obs.pen)}</td>
+                  ${renderMobileCell(obs.phone)}
                   <td class="col-sign"><div class="sign-box"></div></td>
                 </tr>
               `).join('')}
@@ -8688,10 +9322,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
         <table class="master-table">
           <colgroup>
-            <col style="width: 8%;">
-            <col style="width: 28%;">
-            <col style="width: 22%;">
-            <col style="width: 16%;">
+            <col style="width: 7%;">
+            <col style="width: 24%;">
+            <col style="width: 18%;">
+            <col style="width: 15%;">
+            <col style="width: 10%;">
             <col style="width: 12%;">
             <col style="width: 14%;">
           </colgroup>
@@ -8702,6 +9337,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <th>Designated Office / Role</th>
               <th>Department / Desig</th>
               <th>PEN #</th>
+              <th class="col-center">Mobile Number</th>
               <th class="col-center">Signature</th>
             </tr>
           </thead>
@@ -8711,11 +9347,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <td class="col-center" style="font-weight: 800; font-family: monospace;">RO</td>
                 <td>
                   <span class="staff-name">${esc(roData.name)}</span>
-                  ${renderSubtlePhone(roData.phone, true)}
                 </td>
                 <td><strong>👑 Returning Officer (RO)</strong></td>
                 <td>${esc(roData.designation)}${roData.department && roData.department !== '–' ? ` · <span class="dept-badge">${esc(roData.department)}</span>` : ''}</td>
                 <td style="font-family: monospace; font-weight: 700;">${esc(roData.pen)}</td>
+                ${renderMobileCell(roData.phone)}
                 <td class="col-sign"><div class="sign-box"></div></td>
               </tr>
             ` : ''}
@@ -8724,16 +9360,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(aro.slNo)}</td>
                 <td>
                   <span class="staff-name">${esc(aro.name)}</span>
-                  ${renderSubtlePhone(aro.phone, true)}
                 </td>
                 <td><strong>⚖️ Assistant Returning Officer (ARO)</strong></td>
                 <td>${esc(aro.designation)}${aro.department && aro.department !== '–' ? ` · <span class="dept-badge">${esc(aro.department)}</span>` : ''}</td>
                 <td style="font-family: monospace; font-weight: 600;">${esc(aro.pen)}</td>
+                ${renderMobileCell(aro.phone)}
                 <td class="col-sign"><div class="sign-box"></div></td>
               </tr>
             `).join('')}
             ${!roData && aroList.length === 0 ? `
-              <tr><td colspan="6" class="col-center" style="color: #000000; font-style: italic; padding: 8px;">No Returning Officer or ARO configured.</td></tr>
+              <tr><td colspan="7" class="col-center" style="color: #000000; font-style: italic; padding: 8px;">No Returning Officer or ARO configured.</td></tr>
             ` : ''}
           </tbody>
         </table>
@@ -8751,17 +9387,19 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <table class="master-table">
             <colgroup>
               ${discHasDept ? `
-                <col style="width: 8%;">
-                <col style="width: 28%;">
-                <col style="width: 22%;">
-                <col style="width: 16%;">
+                <col style="width: 7%;">
+                <col style="width: 24%;">
+                <col style="width: 18%;">
+                <col style="width: 15%;">
+                <col style="width: 10%;">
                 <col style="width: 12%;">
                 <col style="width: 14%;">
               ` : `
-                <col style="width: 8%;">
-                <col style="width: 38%;">
-                <col style="width: 22%;">
-                <col style="width: 16%;">
+                <col style="width: 7%;">
+                <col style="width: 31%;">
+                <col style="width: 20%;">
+                <col style="width: 12%;">
+                <col style="width: 14%;">
                 <col style="width: 16%;">
               `}
             </colgroup>
@@ -8772,6 +9410,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 ${discHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
                 <th>PEN #</th>
+                <th class="col-center">Mobile Number</th>
                 <th class="col-center">Signature</th>
               </tr>
             </thead>
@@ -8781,11 +9420,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(disc.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(disc.name)}</span>
-                    ${renderSubtlePhone(disc.phone, true)}
                   </td>
                   ${discHasDept ? `<td><span class="dept-badge">${esc(disc.department)}</span></td>` : ''}
                   <td>${esc(disc.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(disc.pen)}</td>
+                  ${renderMobileCell(disc.phone)}
                   <td class="col-sign"><div class="sign-box"></div></td>
                 </tr>
               `).join('')}
@@ -8806,17 +9445,19 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <table class="master-table">
             <colgroup>
               ${grievHasDept ? `
-                <col style="width: 8%;">
-                <col style="width: 28%;">
-                <col style="width: 22%;">
-                <col style="width: 16%;">
+                <col style="width: 7%;">
+                <col style="width: 24%;">
+                <col style="width: 18%;">
+                <col style="width: 15%;">
+                <col style="width: 10%;">
                 <col style="width: 12%;">
                 <col style="width: 14%;">
               ` : `
-                <col style="width: 8%;">
-                <col style="width: 38%;">
-                <col style="width: 22%;">
-                <col style="width: 16%;">
+                <col style="width: 7%;">
+                <col style="width: 31%;">
+                <col style="width: 20%;">
+                <col style="width: 12%;">
+                <col style="width: 14%;">
                 <col style="width: 16%;">
               `}
             </colgroup>
@@ -8827,6 +9468,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 ${grievHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
                 <th>PEN #</th>
+                <th class="col-center">Mobile Number</th>
                 <th class="col-center">Signature</th>
               </tr>
             </thead>
@@ -8836,11 +9478,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(g.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(g.name)}</span>
-                    ${renderSubtlePhone(g.phone, true)}
                   </td>
                   ${grievHasDept ? `<td><span class="dept-badge">${esc(g.department)}</span></td>` : ''}
                   <td>${esc(g.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(g.pen)}</td>
+                  ${renderMobileCell(g.phone)}
                   <td class="col-sign"><div class="sign-box"></div></td>
                 </tr>
               `).join('')}
@@ -8860,13 +9502,24 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         ` : `
           <table class="master-table">
             <colgroup>
-              <col style="width: 8%;">
-              <col style="width: 25%;">
-              ${coreHasDept ? '<col style="width: 15%;">' : ''}
-              <col style="width: 15%;">
-              <col style="width: 12%;">
-              <col style="width: 15%;">
-              <col style="width: 10%;">
+              ${coreHasDept ? `
+                <col style="width: 6%;">
+                <col style="width: 21%;">
+                <col style="width: 14%;">
+                <col style="width: 13%;">
+                <col style="width: 10%;">
+                <col style="width: 13%;">
+                <col style="width: 11%;">
+                <col style="width: 12%;">
+              ` : `
+                <col style="width: 7%;">
+                <col style="width: 25%;">
+                <col style="width: 16%;">
+                <col style="width: 11%;">
+                <col style="width: 15%;">
+                <col style="width: 13%;">
+                <col style="width: 13%;">
+              `}
             </colgroup>
             <thead>
               <tr>
@@ -8876,6 +9529,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <th>Designation</th>
                 <th>PEN #</th>
                 <th>Assigned Responsibility</th>
+                <th class="col-center">Mobile Number</th>
                 <th class="col-center">Signature</th>
               </tr>
             </thead>
@@ -8885,7 +9539,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(c.slNo)}</td>
                   <td>
                     <span class="staff-name">${esc(c.name)}</span>
-                    ${renderSubtlePhone(c.phone, true)}
                   </td>
                   ${coreHasDept ? `<td><span class="dept-badge">${esc(c.department)}</span></td>` : ''}
                   <td>${esc(c.designation)}</td>
@@ -8894,6 +9547,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     <div style="font-weight: 700; color: #000000;">${esc(c.duty)}</div>
                     <span class="staff-meta">Station: ${esc(c.station)}</span>
                   </td>
+                  ${renderMobileCell(c.phone)}
                   <td class="col-sign"><div class="sign-box"></div></td>
                 </tr>
               `).join('')}
@@ -8911,19 +9565,21 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <colgroup>
             ${pollHasDept ? `
               <col style="width: 6%;">
-              <col style="width: 14%;">
-              <col style="width: 24%;">
-              <col style="width: 15%;">
-              <col style="width: 18%;">
-              <col style="width: 9%;">
-              <col style="width: 14%;">
-            ` : `
-              <col style="width: 7%;">
-              <col style="width: 16%;">
-              <col style="width: 30%;">
-              <col style="width: 18%;">
               <col style="width: 13%;">
+              <col style="width: 20%;">
+              <col style="width: 14%;">
+              <col style="width: 14%;">
+              <col style="width: 9%;">
+              <col style="width: 11%;">
+              <col style="width: 13%;">
+            ` : `
+              <col style="width: 6%;">
+              <col style="width: 15%;">
+              <col style="width: 24%;">
               <col style="width: 16%;">
+              <col style="width: 11%;">
+              <col style="width: 13%;">
+              <col style="width: 15%;">
             `}
           </colgroup>
           <thead>
@@ -8934,6 +9590,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <th>Designated Role</th>
               ${pollHasDept ? '<th>Department</th>' : ''}
               <th>PEN #</th>
+              <th class="col-center">Mobile Number</th>
               <th class="col-center">Signature</th>
             </tr>
           </thead>
@@ -8954,6 +9611,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 const personObj = s.person ? getPerson(s.person.name) : null;
                 const dept = (personObj?.department || (s.isAssistant ? 'Office' : '')).trim() || '–';
                 const pen = s.person?.pen || personObj?.pen || '–';
+                const phone = s.person?.phone || personObj?.phone || '';
 
                 return `
                   <tr>
@@ -8968,7 +9626,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     <td>
                       ${s.person && s.person.name && (!personObj?.isExcluded || s.isCore) ? `
                         <span class="staff-name">${esc(s.person.name)}</span>
-                        ${renderSubtlePhone(s.person?.phone || personObj?.phone, true)}
                       ` : (personObj?.isExcluded && !s.isCore ? '<span style="color: #000000; font-style: italic;">– Excluded Official –</span>' : '<span style="color: #000000; font-style: italic;">– Unassigned –</span>')}
                     </td>
                     <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: #000000;">
@@ -8976,6 +9633,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     </td>
                     ${pollHasDept ? `<td><span class="dept-badge">${esc((personObj?.isExcluded && !s.isCore) ? '–' : dept)}</span></td>` : ''}
                     <td style="font-family: monospace;">${esc((personObj?.isExcluded && !s.isCore) ? '–' : pen)}</td>
+                    ${renderMobileCell(phone)}
                     <td class="col-sign"><div class="sign-box"></div></td>
                   </tr>
                 `;
@@ -8994,19 +9652,21 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <colgroup>
             ${countHasDept ? `
               <col style="width: 6%;">
-              <col style="width: 14%;">
-              <col style="width: 24%;">
-              <col style="width: 15%;">
-              <col style="width: 18%;">
-              <col style="width: 9%;">
-              <col style="width: 14%;">
-            ` : `
-              <col style="width: 7%;">
-              <col style="width: 16%;">
-              <col style="width: 30%;">
-              <col style="width: 18%;">
               <col style="width: 13%;">
+              <col style="width: 20%;">
+              <col style="width: 14%;">
+              <col style="width: 14%;">
+              <col style="width: 9%;">
+              <col style="width: 11%;">
+              <col style="width: 13%;">
+            ` : `
+              <col style="width: 6%;">
+              <col style="width: 15%;">
+              <col style="width: 24%;">
               <col style="width: 16%;">
+              <col style="width: 11%;">
+              <col style="width: 13%;">
+              <col style="width: 15%;">
             `}
           </colgroup>
           <thead>
@@ -9017,6 +9677,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <th>Designated Role</th>
               ${countHasDept ? '<th>Department</th>' : ''}
               <th>PEN #</th>
+              <th class="col-center">Mobile Number</th>
               <th class="col-center">Signature</th>
             </tr>
           </thead>
@@ -9037,6 +9698,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 const personObj = s.person ? getPerson(s.person.name) : null;
                 const dept = (personObj?.department || (s.isAssistant ? 'Office' : '')).trim() || '–';
                 const pen = s.person?.pen || personObj?.pen || '–';
+                const phone = s.person?.phone || personObj?.phone || '';
 
                 return `
                   <tr>
@@ -9051,7 +9713,6 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     <td>
                       ${s.person && s.person.name && (!personObj?.isExcluded || s.isCore) ? `
                         <span class="staff-name">${esc(s.person.name)}</span>
-                        ${renderSubtlePhone(s.person?.phone || personObj?.phone, true)}
                       ` : (personObj?.isExcluded && !s.isCore ? '<span style="color: #000000; font-style: italic;">– Excluded Official –</span>' : '<span style="color: #000000; font-style: italic;">– Unassigned –</span>')}
                     </td>
                     <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: #000000;">
@@ -9059,6 +9720,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     </td>
                     ${countHasDept ? `<td><span class="dept-badge">${esc((personObj?.isExcluded && !s.isCore) ? '–' : dept)}</span></td>` : ''}
                     <td style="font-family: monospace;">${esc((personObj?.isExcluded && !s.isCore) ? '–' : pen)}</td>
+                    ${renderMobileCell(phone)}
                     <td class="col-sign"><div class="sign-box"></div></td>
                   </tr>
                 `;
@@ -9080,12 +9742,22 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         ` : `
           <table class="master-table">
             <colgroup>
-              <col style="width: 8%;">
-              <col style="width: 32%;">
-              ${resHasDept ? '<col style="width: 18%;">' : ''}
-              <col style="width: 16%;">
-              <col style="width: 12%;">
-              <col style="width: 14%;">
+              ${resHasDept ? `
+                <col style="width: 6%;">
+                <col style="width: 24%;">
+                <col style="width: 18%;">
+                <col style="width: 16%;">
+                <col style="width: 10%;">
+                <col style="width: 12%;">
+                <col style="width: 14%;">
+              ` : `
+                <col style="width: 7%;">
+                <col style="width: 31%;">
+                <col style="width: 20%;">
+                <col style="width: 12%;">
+                <col style="width: 14%;">
+                <col style="width: 16%;">
+              `}
             </colgroup>
             <thead>
               <tr>
@@ -9094,6 +9766,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 ${resHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
                 <th>PEN #</th>
+                <th class="col-center">Mobile Number</th>
                 <th class="col-center">Signature</th>
               </tr>
             </thead>
@@ -9103,11 +9776,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${idx + 1}</td>
                   <td>
                     <span class="staff-name">${esc(r.name)}</span>
-                    ${renderSubtlePhone(r.phone, true)}
                   </td>
                   ${resHasDept ? `<td><span class="dept-badge">${esc(r.department)}</span></td>` : ''}
                   <td>${esc(r.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(r.pen)}</td>
+                  ${renderMobileCell(r.phone)}
                   <td class="col-sign"><div class="sign-box"></div></td>
                 </tr>
               `).join('')}

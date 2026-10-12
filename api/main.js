@@ -1182,7 +1182,7 @@ export default async function handler(req, res) {
     }
 
     if (action === 'adminGetOfficials') {
-      const [facRaw, ntRaw, pollRaw, countRaw, obsRaw, discRaw, grievRaw, roRaw, arosRaw, coreRaw] = await Promise.all([
+      const [facRaw, ntRaw, pollRaw, countRaw, obsRaw, discRaw, grievRaw, roRaw, arosRaw, coreRaw, resRaw] = await Promise.all([
         getSetting('election_faculty_roster'),
         getSetting('election_non_teaching_roster'),
         getSetting('polling_teams_officials'),
@@ -1192,7 +1192,8 @@ export default async function handler(req, res) {
         getSetting('election_grievance'),
         getSetting('election_ro'),
         getSetting('election_aros'),
-        getSetting('election_core_committee')
+        getSetting('election_core_committee'),
+        getSetting('election_reserve_officials')
       ]);
       return jsonOut(res, {
         faculty: safeJsonParse(facRaw, null),
@@ -1204,7 +1205,8 @@ export default async function handler(req, res) {
         grievanceCell: safeJsonParse(grievRaw, []),
         roOfficer: safeJsonParse(roRaw, null),
         aroOfficers: safeJsonParse(arosRaw, []),
-        coreCommittee: safeJsonParse(coreRaw, [])
+        coreCommittee: safeJsonParse(coreRaw, []),
+        reserveOfficials: safeJsonParse(resRaw, [])
       });
     }
 
@@ -2576,7 +2578,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
     }
 
     if (action === 'adminSaveOfficials') {
-      const { faculty, nonTeaching, pollingTeams, countingTeams, observers, disciplineCharge, grievanceCell, roOfficer, aroOfficers, coreCommittee } = body;
+      const { faculty, nonTeaching, pollingTeams, countingTeams, observers, disciplineCharge, grievanceCell, roOfficer, aroOfficers, coreCommittee, reserveOfficials } = body;
       const tasks = [];
       if (faculty !== undefined) tasks.push(setSetting('election_faculty_roster', JSON.stringify(faculty)));
       if (nonTeaching !== undefined) tasks.push(setSetting('election_non_teaching_roster', JSON.stringify(nonTeaching)));
@@ -2588,6 +2590,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       if (roOfficer !== undefined) tasks.push(setSetting('election_ro', JSON.stringify(roOfficer)));
       if (aroOfficers !== undefined) tasks.push(setSetting('election_aros', JSON.stringify(aroOfficers)));
       if (coreCommittee !== undefined) tasks.push(setSetting('election_core_committee', JSON.stringify(coreCommittee)));
+      if (reserveOfficials !== undefined) tasks.push(setSetting('election_reserve_officials', JSON.stringify(reserveOfficials)));
       await Promise.all(tasks);
       return jsonOut(res, { ok: true });
     }
