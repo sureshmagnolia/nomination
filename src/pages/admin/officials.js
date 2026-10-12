@@ -5968,62 +5968,88 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
   // ─── Reserve Officials & Cross-Duty Allotment Modal ─────────────────────────
 
-  // Helper: Render options for Reserve Allotment (Explicitly allows staff already on Polling or Counting duty)
-  const renderReservePersonOptions = (currentSelectedName, draftList, currentIdx) => {
-    let html = `<option value="">-- Select Faculty or Staff as Reserve --</option>`;
+  // Helper: Retrieve all available faculty & staff for Reserve Allotment with duty metadata
+  const getAllOfficialsForReserve = (draftList, currentIdx) => {
+    const list = [];
 
-    // Teaching Faculty
+    // 1. Teaching Faculty
     const sortedFac = [...faculty].sort(compareOfficials);
-    html += `<optgroup label="Teaching Faculty (${sortedFac.length})">`;
     sortedFac.forEach(f => {
-      const isCur = currentSelectedName === f.name;
       const isChosenInOther = draftList && Array.isArray(draftList) && draftList.some((item, i) => i !== currentIdx && item.name === f.name);
       const pDuty = getPollingAssignment(f.name);
       const cDuty = getCountingAssignment(f.name);
 
       let dutyTag = '';
-      if (pDuty && cDuty) dutyTag = `[🗳️ Booth ${pDuty.boothNumber} & 📊 Table ${cDuty.tableNumber}] `;
-      else if (pDuty) dutyTag = `[🗳️ Booth ${pDuty.boothNumber}: ${pDuty.role === 'Presiding Officer' ? 'PrO' : 'PO'} · Ideal for Counting Reserve] `;
-      else if (cDuty) dutyTag = `[📊 Table ${cDuty.tableNumber}: ${cDuty.role === 'Counting Supervisor' ? 'Sup' : 'CO'} · Ideal for Polling Reserve] `;
-      else dutyTag = `[✨ Standby / No Active Duty] `;
+      let dutyCategory = 'standby';
+      if (pDuty && cDuty) {
+        dutyTag = `Booth ${pDuty.boothNumber} & Table ${cDuty.tableNumber}`;
+        dutyCategory = 'both';
+      } else if (pDuty) {
+        dutyTag = `Booth ${pDuty.boothNumber} (${pDuty.role === 'Presiding Officer' ? 'PrO' : 'PO'}) · For Counting Reserve`;
+        dutyCategory = 'polling';
+      } else if (cDuty) {
+        dutyTag = `Table ${cDuty.tableNumber} (${cDuty.role === 'Counting Supervisor' ? 'Sup' : 'CO'}) · For Polling Reserve`;
+        dutyCategory = 'counting';
+      } else {
+        dutyTag = 'Standby (No Active Duty)';
+        dutyCategory = 'standby';
+      }
 
-      if (isPersonExcluded(f)) dutyTag = `⛔ [Excluded] ` + dutyTag;
-
-      const deptStr = (f.department || '').trim();
-      html += `
-        <option value="${esc(f.name)}" ${isCur ? 'selected' : ''} ${isChosenInOther ? 'disabled' : ''}>
-          ${isChosenInOther ? '🚩 [Already in Reserves] ' : ''}${dutyTag}#${f.seniority || '–'} ${esc(f.name)} (${esc(f.designation || 'Faculty')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${f.pen || '–'})
-        </option>
-      `;
+      list.push({
+        name: f.name,
+        designation: f.designation || 'Faculty',
+        department: (f.department || '').trim() || '–',
+        pen: f.pen || '–',
+        seniority: (f.seniority !== undefined && f.seniority !== null) ? f.seniority : 999,
+        type: 'Teaching Faculty',
+        dutyTag,
+        dutyCategory,
+        isExcluded: isPersonExcluded(f),
+        isChosenInOther,
+        pDuty,
+        cDuty
+      });
     });
-    html += `</optgroup>`;
 
-    // Non-Teaching Staff
+    // 2. Non-Teaching Staff
     const sortedNT = [...nonTeaching].sort(compareOfficials);
-    html += `<optgroup label="Non-Teaching Staff (${sortedNT.length})">`;
     sortedNT.forEach(nt => {
-      const isCur = currentSelectedName === nt.name;
       const isChosenInOther = draftList && Array.isArray(draftList) && draftList.some((item, i) => i !== currentIdx && item.name === nt.name);
       const ntAssigned = getNonTeachingAssignment(nt.name);
 
       let dutyTag = '';
-      if (ntAssigned.polling && ntAssigned.counting) dutyTag = `[🗳️ Booth ${ntAssigned.polling.boothNumber} & 📊 Counting] `;
-      else if (ntAssigned.polling) dutyTag = `[🗳️ Booth ${ntAssigned.polling.boothNumber} Asst · Ideal for Counting Reserve] `;
-      else if (ntAssigned.counting) dutyTag = `[📊 Table ${ntAssigned.counting.tableNumber} Asst · Ideal for Polling Reserve] `;
-      else dutyTag = `[✨ Standby / No Duty] `;
+      let dutyCategory = 'standby';
+      if (ntAssigned.polling && ntAssigned.counting) {
+        dutyTag = `Booth ${ntAssigned.polling.boothNumber} & Counting`;
+        dutyCategory = 'both';
+      } else if (ntAssigned.polling) {
+        dutyTag = `Booth ${ntAssigned.polling.boothNumber} Asst · For Counting Reserve`;
+        dutyCategory = 'polling';
+      } else if (ntAssigned.counting) {
+        dutyTag = `Table ${ntAssigned.counting.tableNumber} Asst · For Polling Reserve`;
+        dutyCategory = 'counting';
+      } else {
+        dutyTag = 'Standby (No Active Duty)';
+        dutyCategory = 'standby';
+      }
 
-      if (isPersonExcluded(nt)) dutyTag = `⛔ [Excluded] ` + dutyTag;
-
-      const deptStr = (nt.department || nt.section || 'Office').trim();
-      html += `
-        <option value="${esc(nt.name)}" ${isCur ? 'selected' : ''} ${isChosenInOther ? 'disabled' : ''}>
-          ${isChosenInOther ? '🚩 [Already in Reserves] ' : ''}${dutyTag}${esc(nt.name)} (${esc(nt.designation || 'Staff')}${deptStr ? ` · ${esc(deptStr)}` : ''} · PEN:${nt.pen || '–'})
-        </option>
-      `;
+      list.push({
+        name: nt.name,
+        designation: nt.designation || 'Staff',
+        department: (nt.department || nt.section || 'Office').trim() || 'Office',
+        pen: nt.pen || '–',
+        seniority: 9999,
+        type: 'Non-Teaching Staff',
+        dutyTag,
+        dutyCategory,
+        isExcluded: isPersonExcluded(nt),
+        isChosenInOther,
+        pDuty: ntAssigned.polling,
+        cDuty: ntAssigned.counting
+      });
     });
-    html += `</optgroup>`;
 
-    return html;
+    return list;
   };
 
   const openReserveModal = () => {
@@ -6049,6 +6075,13 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     document.body.appendChild(modal);
 
     const renderModal = () => {
+      const allAvailableOfficials = getAllOfficialsForReserve(draftReserves, -1);
+      const totalFac = allAvailableOfficials.filter(o => o.type === 'Teaching Faculty').length;
+      const totalStaff = allAvailableOfficials.filter(o => o.type === 'Non-Teaching Staff').length;
+      const totalPoll = allAvailableOfficials.filter(o => o.pDuty).length;
+      const totalCount = allAvailableOfficials.filter(o => o.cDuty).length;
+      const totalStandby = allAvailableOfficials.filter(o => !o.pDuty && !o.cDuty).length;
+
       modal.innerHTML = `
         <div class="glass border border-emerald-500/40 rounded-2xl w-full max-w-3xl bg-slate-900/95 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
           <!-- Modal Header -->
@@ -6085,7 +6118,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           </div>
 
           <!-- Modal Body -->
-          <div class="p-5 overflow-y-auto space-y-3 flex-1 custom-scrollbar">
+          <div class="p-5 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
             ${draftReserves.map((res, idx) => {
               const p = res.name ? getPerson(res.name) : null;
               const pDuty = res.name ? getPollingAssignment(res.name) : null;
@@ -6103,7 +6136,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               }
 
               return `
-                <div class="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-2.5 relative" data-res-idx="${idx}">
+                <div class="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-2.5 relative res-row-card" data-res-idx="${idx}">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
                       <span class="text-xs font-bold text-emerald-300 font-mono">🛡️ Reserve #${idx + 1}</span>
@@ -6115,16 +6148,71 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   </div>
 
                   <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <!-- Searchable Official Name Combobox -->
                     <div class="md:col-span-2">
                       <label class="block text-[11px] text-slate-400 font-medium mb-1">Official Name (Faculty or Non-Teaching Staff)</label>
-                      <select class="w-full bg-slate-900 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-emerald-500 select-res-person" data-idx="${idx}">
-                        ${renderReservePersonOptions(res.name, draftReserves, idx)}
-                      </select>
+                      <div class="relative res-combobox-wrapper" data-idx="${idx}">
+                        <!-- Combobox Trigger Button -->
+                        <button type="button" 
+                          class="w-full bg-slate-900 border border-white/15 hover:border-emerald-500/60 focus:border-emerald-500 rounded-lg px-3 py-2 text-xs text-white flex items-center justify-between gap-2 shadow-sm transition btn-res-combobox-trigger"
+                          data-idx="${idx}"
+                          title="Click to search and select official">
+                          <div class="flex items-center gap-2 truncate text-left min-w-0">
+                            ${res.name ? `
+                              <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+                              <span class="font-bold text-white truncate">${esc(res.name)}</span>
+                              <span class="text-[11px] text-slate-400 truncate hidden sm:inline">(${esc(res.department || p?.department || '–')} · PEN: ${esc(res.pen || p?.pen || '–')})</span>
+                            ` : `
+                              <span class="text-slate-400 flex items-center gap-1.5 truncate">
+                                <span>🔍</span>
+                                <span>-- Select or Search Faculty / Staff as Reserve --</span>
+                              </span>
+                            `}
+                          </div>
+                          <div class="flex items-center gap-1.5 shrink-0 text-slate-400">
+                            ${res.name ? `
+                              <span class="hover:text-rose-400 hover:bg-white/10 text-xs px-1.5 py-0.5 rounded transition btn-res-clear-person" data-idx="${idx}" title="Clear Selection">✕</span>
+                            ` : ''}
+                            <span class="text-[10px] transition-transform duration-200 arrow-indicator">▼</span>
+                          </div>
+                        </button>
+
+                        <!-- Searchable Dropdown Popup Menu -->
+                        <div class="hidden absolute left-0 right-0 top-full mt-1.5 z-50 rounded-xl bg-slate-900/98 border border-emerald-500/50 shadow-2xl overflow-hidden backdrop-blur-xl res-combobox-menu" data-idx="${idx}">
+                          <!-- Sticky Search Input & Filter Pills -->
+                          <div class="p-2.5 border-b border-white/10 bg-slate-950/90 space-y-2 sticky top-0 z-10">
+                            <div class="relative">
+                              <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+                              <input type="text" 
+                                class="w-full bg-slate-900 border border-white/20 rounded-lg pl-8 pr-7 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 res-search-input" 
+                                placeholder="Search official by name, dept, PEN, booth/table..." 
+                                data-idx="${idx}" 
+                                autocomplete="off" />
+                              <button type="button" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs res-search-clear" data-idx="${idx}">✕</button>
+                            </div>
+
+                            <!-- Filter Pills -->
+                            <div class="flex items-center gap-1 flex-wrap text-[10px] res-filter-bar" data-idx="${idx}">
+                              <button type="button" class="px-2 py-0.5 rounded bg-emerald-600/40 text-emerald-200 border border-emerald-500/40 font-semibold res-filter-tab active" data-filter="all">All (${allAvailableOfficials.length})</button>
+                              <button type="button" class="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 res-filter-tab" data-filter="faculty">Faculty (${totalFac})</button>
+                              <button type="button" class="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 res-filter-tab" data-filter="staff">Staff (${totalStaff})</button>
+                              <button type="button" class="px-2 py-0.5 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 res-filter-tab" data-filter="polling">Polling (${totalPoll})</button>
+                              <button type="button" class="px-2 py-0.5 rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 res-filter-tab" data-filter="counting">Counting (${totalCount})</button>
+                              <button type="button" class="px-2 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 res-filter-tab" data-filter="standby">Standby (${totalStandby})</button>
+                            </div>
+                          </div>
+
+                          <!-- Scrollable List of Officials -->
+                          <div class="max-h-60 overflow-y-auto p-1 divide-y divide-white/5 custom-scrollbar res-combobox-list" data-idx="${idx}">
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
+                    <!-- Reserve Duty Role Selection -->
                     <div>
                       <label class="block text-[11px] text-slate-400 font-medium mb-1">Reserve Duty Role</label>
-                      <select class="w-full bg-slate-900 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-emerald-500 select-res-type" data-idx="${idx}">
+                      <select class="w-full bg-slate-900 border border-white/15 rounded-lg px-2.5 py-2 text-xs text-white focus:border-emerald-500 select-res-type" data-idx="${idx}">
                         <option value="Counting Reserve" ${(res.reserveType || 'Counting Reserve') === 'Counting Reserve' ? 'selected' : ''}>Counting Reserve</option>
                         <option value="Polling Reserve" ${res.reserveType === 'Polling Reserve' ? 'selected' : ''}>Polling Reserve</option>
                         <option value="General Reserve" ${res.reserveType === 'General Reserve' ? 'selected' : ''}>General Reserve</option>
@@ -6133,7 +6221,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   </div>
 
                   ${p ? `
-                    <div class="flex items-center gap-3 text-[11px] text-slate-300 bg-slate-950/40 p-2 rounded-lg border border-white/5">
+                    <div class="flex items-center gap-3 text-[11px] text-slate-300 bg-slate-950/40 p-2 rounded-lg border border-white/5 flex-wrap">
                       <span><strong>Designation:</strong> ${esc(p.designation || 'Faculty')}</span>
                       <span>•</span>
                       <span><strong>Dept:</strong> ${esc(p.department || p.section || '–')}</span>
@@ -6164,6 +6252,126 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         </div>
       `;
 
+      // Helper to render filtered list items inside a row's combobox
+      const renderComboboxItems = (idx, filterCategory = 'all', searchQuery = '') => {
+        const listEl = modal.querySelector(`.res-combobox-list[data-idx="${idx}"]`);
+        if (!listEl) return;
+
+        const q = (searchQuery || '').toLowerCase().trim();
+        const officials = getAllOfficialsForReserve(draftReserves, idx);
+
+        const filtered = officials.filter(person => {
+          // 1. Category tab filter
+          if (filterCategory === 'faculty' && person.type !== 'Teaching Faculty') return false;
+          if (filterCategory === 'staff' && person.type !== 'Non-Teaching Staff') return false;
+          if (filterCategory === 'polling' && !person.pDuty) return false;
+          if (filterCategory === 'counting' && !person.cDuty) return false;
+          if (filterCategory === 'standby' && (person.pDuty || person.cDuty)) return false;
+
+          // 2. Search query filter (matches name, department, designation, pen, or duty tags)
+          if (q) {
+            const matchName = person.name.toLowerCase().includes(q);
+            const matchDept = person.department.toLowerCase().includes(q);
+            const matchDesig = person.designation.toLowerCase().includes(q);
+            const matchPen = String(person.pen).toLowerCase().includes(q);
+            const matchDuty = person.dutyTag.toLowerCase().includes(q);
+            if (!matchName && !matchDept && !matchDesig && !matchPen && !matchDuty) return false;
+          }
+
+          return true;
+        });
+
+        if (filtered.length === 0) {
+          listEl.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">No matching faculty or staff found.</div>`;
+          return;
+        }
+
+        const currentVal = draftReserves[idx]?.name || '';
+
+        listEl.innerHTML = filtered.map(person => {
+          const isSelected = person.name === currentVal;
+          const isOther = person.isChosenInOther;
+
+          let dutyBadge = '';
+          if (person.pDuty && person.cDuty) {
+            dutyBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">🗳️ Booth ${person.pDuty.boothNumber} & 📊 Table ${person.cDuty.tableNumber}</span>`;
+          } else if (person.pDuty) {
+            dutyBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">🗳️ Booth ${person.pDuty.boothNumber} (${person.pDuty.role === 'Presiding Officer' ? 'PrO' : 'PO'}) · For Counting Reserve</span>`;
+          } else if (person.cDuty) {
+            dutyBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30">📊 Table ${person.cDuty.tableNumber} (${person.cDuty.role === 'Counting Supervisor' ? 'Sup' : 'CO'}) · For Polling Reserve</span>`;
+          } else {
+            dutyBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">✨ Standby (No Duty)</span>`;
+          }
+
+          if (person.isExcluded) {
+            dutyBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30">⛔ Excluded</span> ` + dutyBadge;
+          }
+
+          if (isOther) {
+            dutyBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/30 text-amber-200 border border-amber-400/40">🚩 Already in Reserves</span> ` + dutyBadge;
+          }
+
+          return `
+            <div class="res-opt-item px-3 py-2 rounded-lg flex items-center justify-between cursor-pointer transition text-xs ${isSelected ? 'bg-emerald-600/30 border border-emerald-500/40 text-white font-bold' : isOther ? 'opacity-60 hover:opacity-100 hover:bg-white/5 text-slate-300' : 'text-slate-200 hover:bg-white/10 hover:text-white'}" 
+              data-idx="${idx}" 
+              data-name="${esc(person.name)}">
+              <div class="flex flex-col gap-0.5 min-w-0 pr-2">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-white text-xs">${esc(person.name)}</span>
+                  <span class="text-[10px] text-slate-400">#${person.seniority || '–'} · ${esc(person.type === 'Teaching Faculty' ? 'Faculty' : 'Staff')}</span>
+                </div>
+                <div class="flex items-center gap-2 text-[11px] text-slate-400">
+                  <span>${esc(person.designation)}</span>
+                  <span>•</span>
+                  <span>${esc(person.department)}</span>
+                  <span>•</span>
+                  <span class="font-mono">PEN: ${esc(person.pen)}</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5 mt-0.5">
+                  ${dutyBadge}
+                </div>
+              </div>
+              ${isSelected ? '<span class="text-emerald-400 font-bold shrink-0 text-sm">✓</span>' : ''}
+            </div>
+          `;
+        }).join('');
+
+        listEl.querySelectorAll('.res-opt-item').forEach(item => {
+          item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const chosenName = item.dataset.name;
+            selectOfficialForReserve(idx, chosenName);
+          });
+        });
+      };
+
+      // Handler when an official is selected for row idx
+      const selectOfficialForReserve = (idx, chosenName) => {
+        const p = getPerson(chosenName);
+        if (p) {
+          draftReserves[idx].name = p.name;
+          draftReserves[idx].pen = p.pen || '';
+          draftReserves[idx].department = p.department || p.section || '';
+          draftReserves[idx].designation = p.designation || '';
+          draftReserves[idx].seniority = p.seniority || 999;
+          draftReserves[idx].type = p.type || 'Teaching Faculty';
+
+          const pDuty = getPollingAssignment(p.name);
+          const cDuty = getCountingAssignment(p.name);
+          if (pDuty && !cDuty) {
+            draftReserves[idx].reserveType = 'Counting Reserve';
+          } else if (cDuty && !pDuty) {
+            draftReserves[idx].reserveType = 'Polling Reserve';
+          }
+        } else {
+          draftReserves[idx].name = '';
+          draftReserves[idx].pen = '';
+          draftReserves[idx].department = '';
+          draftReserves[idx].designation = '';
+        }
+        renderModal();
+      };
+
       // Attach Modal Event Listeners
       modal.querySelector('#btnCloseReserveModal')?.addEventListener('click', () => modal.remove());
       modal.querySelector('#btnCancelReserveModal')?.addEventListener('click', () => modal.remove());
@@ -6184,39 +6392,139 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         });
       });
 
-      modal.querySelectorAll('.select-res-person').forEach(sel => {
-        sel.addEventListener('change', (e) => {
-          const idx = parseInt(e.target.dataset.idx, 10);
-          const chosenName = e.target.value;
-          const p = getPerson(chosenName);
-          if (p) {
-            draftReserves[idx].name = p.name;
-            draftReserves[idx].pen = p.pen || '';
-            draftReserves[idx].department = p.department || p.section || '';
-            draftReserves[idx].designation = p.designation || '';
-            draftReserves[idx].seniority = p.seniority || 999;
-            draftReserves[idx].type = p.type || 'Teaching Faculty';
+      // Combobox Triggers
+      modal.querySelectorAll('.btn-res-combobox-trigger').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const idx = parseInt(btn.dataset.idx, 10);
+          const wrapper = btn.closest('.res-combobox-wrapper');
+          const menu = wrapper?.querySelector('.res-combobox-menu');
+          const arrow = btn.querySelector('.arrow-indicator');
+          const isHidden = menu ? menu.classList.contains('hidden') : true;
 
-            const pDuty = getPollingAssignment(p.name);
-            const cDuty = getCountingAssignment(p.name);
-            if (pDuty && !cDuty) {
-              draftReserves[idx].reserveType = 'Counting Reserve';
-            } else if (cDuty && !pDuty) {
-              draftReserves[idx].reserveType = 'Polling Reserve';
-            }
-          } else {
-            draftReserves[idx].name = '';
-            draftReserves[idx].pen = '';
+          // Close all menus first
+          modal.querySelectorAll('.res-combobox-menu').forEach(m => m.classList.add('hidden'));
+          modal.querySelectorAll('.arrow-indicator').forEach(a => a.style.transform = 'rotate(0deg)');
+          modal.querySelectorAll('.res-combobox-wrapper').forEach(w => w.style.zIndex = '');
+
+          if (isHidden && menu && wrapper) {
+            wrapper.style.zIndex = '40';
+            menu.classList.remove('hidden');
+            if (arrow) arrow.style.transform = 'rotate(180deg)';
+
+            const searchInput = menu.querySelector('.res-search-input');
+            const filterBar = menu.querySelector('.res-filter-bar');
+            const activeFilter = filterBar?.querySelector('.res-filter-tab.active')?.dataset.filter || 'all';
+            renderComboboxItems(idx, activeFilter, searchInput ? searchInput.value : '');
+
+            setTimeout(() => {
+              if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+              }
+            }, 40);
           }
-          renderModal();
         });
       });
 
+      // Clear selection button on trigger
+      modal.querySelectorAll('.btn-res-clear-person').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const idx = parseInt(btn.dataset.idx, 10);
+          selectOfficialForReserve(idx, '');
+        });
+      });
+
+      // Search inputs inside menus
+      modal.querySelectorAll('.res-search-input').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const idx = parseInt(input.dataset.idx, 10);
+          const menu = input.closest('.res-combobox-menu');
+          const clearBtn = menu?.querySelector('.res-search-clear');
+          if (clearBtn) {
+            if (input.value) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
+          }
+          const filterBar = menu?.querySelector('.res-filter-bar');
+          const activeFilter = filterBar?.querySelector('.res-filter-tab.active')?.dataset.filter || 'all';
+          renderComboboxItems(idx, activeFilter, input.value);
+        });
+
+        // Press Enter to select the first matching result
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const idx = parseInt(input.dataset.idx, 10);
+            const listEl = modal.querySelector(`.res-combobox-list[data-idx="${idx}"]`);
+            const firstItem = listEl?.querySelector('.res-opt-item');
+            if (firstItem) {
+              firstItem.click();
+            }
+          }
+        });
+      });
+
+      // Clear search query button
+      modal.querySelectorAll('.res-search-clear').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const idx = parseInt(btn.dataset.idx, 10);
+          const menu = btn.closest('.res-combobox-menu');
+          const input = menu?.querySelector('.res-search-input');
+          if (input) {
+            input.value = '';
+            btn.classList.add('hidden');
+            const filterBar = menu?.querySelector('.res-filter-bar');
+            const activeFilter = filterBar?.querySelector('.res-filter-tab.active')?.dataset.filter || 'all';
+            renderComboboxItems(idx, activeFilter, '');
+            input.focus();
+          }
+        });
+      });
+
+      // Category filter tabs
+      modal.querySelectorAll('.res-filter-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const filterBar = tab.parentElement;
+          const idx = parseInt(filterBar.dataset.idx, 10);
+          filterBar.querySelectorAll('.res-filter-tab').forEach(t => {
+            t.classList.remove('active', 'bg-emerald-600/40', 'text-emerald-200', 'font-semibold');
+            t.classList.add('bg-white/5', 'text-slate-300');
+          });
+          tab.classList.remove('bg-white/5', 'text-slate-300');
+          tab.classList.add('active', 'bg-emerald-600/40', 'text-emerald-200', 'font-semibold');
+
+          const menu = tab.closest('.res-combobox-menu');
+          const searchInput = menu?.querySelector('.res-search-input');
+          renderComboboxItems(idx, tab.dataset.filter, searchInput ? searchInput.value : '');
+        });
+      });
+
+      // Reserve duty role dropdown
       modal.querySelectorAll('.select-res-type').forEach(sel => {
         sel.addEventListener('change', (e) => {
           const idx = parseInt(e.target.dataset.idx, 10);
           draftReserves[idx].reserveType = e.target.value;
         });
+      });
+
+      // Close dropdowns on click outside or Escape
+      modal.addEventListener('click', (e) => {
+        if (!e.target.closest('.res-combobox-wrapper')) {
+          modal.querySelectorAll('.res-combobox-menu').forEach(m => m.classList.add('hidden'));
+          modal.querySelectorAll('.arrow-indicator').forEach(a => a.style.transform = 'rotate(0deg)');
+          modal.querySelectorAll('.res-combobox-wrapper').forEach(w => w.style.zIndex = '');
+        }
+      });
+
+      modal.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          modal.querySelectorAll('.res-combobox-menu').forEach(m => m.classList.add('hidden'));
+          modal.querySelectorAll('.arrow-indicator').forEach(a => a.style.transform = 'rotate(0deg)');
+          modal.querySelectorAll('.res-combobox-wrapper').forEach(w => w.style.zIndex = '');
+        }
       });
 
       // Quick Actions
