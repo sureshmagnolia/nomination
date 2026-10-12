@@ -967,6 +967,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const isCoreMan = isCore(f.name, f.pen);
     const isRoMan = isRo(f.name, f.pen);
     const isAroMan = isAro(f.name, f.pen);
+    const rDuty = getReserveAssignment(f.name);
     const isPosted = isObs || isDisc || isGriev || isCoreMan || isRoMan || isAroMan || pDuty || cDuty;
 
     return `
@@ -1000,18 +1001,19 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             ${isGriev ? `<span class="badge bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-bold shadow-sm">🤝 Grievance</span>` : ''}
             ${pDuty ? `<span class="badge bg-blue-500/20 text-blue-200 border border-blue-500/35 text-[10px] font-semibold shadow-sm">🗳️ Booth ${pDuty.boothNumber} (${pDuty.role})</span>` : ''}
             ${cDuty ? `<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/35 text-[10px] font-semibold shadow-sm">📊 Table ${cDuty.tableNumber} (${cDuty.role})</span>` : ''}
+            ${rDuty ? `<span class="badge bg-teal-500/20 text-teal-300 border border-teal-500/35 text-[10px] font-semibold shadow-sm">🛡️ ${esc(rDuty.reserveType || 'General Reserve')}</span>` : ''}
             ${pDuty && cDuty ? `<span class="badge bg-amber-500/25 text-amber-300 border border-amber-500/50 text-[10px] font-bold shadow-sm">⚠️ Double Duty</span>` : ''}
             ${isExcluded ? `
               <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold shadow-sm" title="${esc(f.exclusionReason || 'Excluded from election duties')}">
                 ⛔ Excluded${f.exclusionReason ? `: ${esc(f.exclusionReason)}` : ''}
               </span>
-            ` : (isPosted ? `
+            ` : (isPosted || rDuty ? `
               <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold shadow-sm">
                 ✓ Posted
               </span>
             ` : `
               <span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-medium shadow-sm" title="Not posted · Standby in Reserve Pool">
-                📋 Reserve Pool
+                📋 General Reserve
               </span>
             `)}
           </div>
@@ -1037,6 +1039,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const getNonTeachingRowHtml = (nt, idx) => {
     const isExcluded = isPersonExcluded(nt);
     const asstDuty = getNonTeachingAssignment(nt.name);
+    const rDuty = getReserveAssignment(nt.name);
     const isObs = isObserver(nt.name);
     const isDisc = isDiscipline(nt.name);
     const isGriev = isGrievance(nt.name);
@@ -1071,17 +1074,18 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             ${isGriev ? `<span class="badge bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-bold shadow-sm">🤝 Grievance</span>` : ''}
             ${asstDuty.polling ? `<span class="badge bg-blue-500/20 text-blue-200 border border-blue-500/35 text-[10px] font-semibold shadow-sm">🗳️ Booth ${asstDuty.polling.boothNumber}</span>` : ''}
             ${asstDuty.counting ? `<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/35 text-[10px] font-semibold shadow-sm">📊 Table ${asstDuty.counting.tableNumber}</span>` : ''}
+            ${rDuty ? `<span class="badge bg-teal-500/20 text-teal-300 border border-teal-500/35 text-[10px] font-semibold shadow-sm">🛡️ ${esc(rDuty.reserveType || 'General Reserve')}</span>` : ''}
             ${isExcluded ? `
               <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold shadow-sm" title="${esc(nt.exclusionReason || 'Excluded from election duties')}">
                 ⛔ Excluded${nt.exclusionReason ? `: ${esc(nt.exclusionReason)}` : ''}
               </span>
-            ` : (isPosted ? `
+            ` : (isPosted || rDuty ? `
               <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold shadow-sm">
                 ✓ Posted
               </span>
             ` : `
               <span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-medium shadow-sm" title="Not posted · Standby in Reserve Pool">
-                📋 Reserve Pool
+                📋 General Reserve
               </span>
             `)}
           </div>
@@ -4773,8 +4777,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         const isObs = isObserver(f.name);
         const isDisc = isDiscipline(f.name);
         const isGriev = isGrievance(f.name);
+        const rDuty = getReserveAssignment(f.name);
         const isPosted = isObs || isDisc || isGriev || p || c;
-        const statusStr = f.isExcluded ? 'Excluded' : (isPosted ? 'Posted' : 'Reserve (Standby)');
+        const statusStr = f.isExcluded ? 'Excluded' : (isPosted ? 'Posted' : (rDuty ? (rDuty.reserveType || 'General Reserve') : 'General Reserve'));
 
         rows.push([
           f.seniority || '',
@@ -4808,11 +4813,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       const sortedNT = [...nonTeaching].sort(compareOfficials);
       sortedNT.forEach((nt, idx) => {
         const asstDuty = getNonTeachingAssignment(nt.name);
+        const rDuty = getReserveAssignment(nt.name);
         const isObs = isObserver(nt.name);
         const isDisc = isDiscipline(nt.name);
         const isGriev = isGrievance(nt.name);
         const isPosted = isObs || isDisc || isGriev || asstDuty.polling || asstDuty.counting;
-        const statusStr = nt.isExcluded ? 'Excluded' : (isPosted ? 'Posted' : 'Reserve (Standby)');
+        const statusStr = nt.isExcluded ? 'Excluded' : (isPosted ? 'Posted' : (rDuty ? (rDuty.reserveType || 'General Reserve') : 'General Reserve'));
 
         rows.push([
           idx + 1,
@@ -5983,7 +5989,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       if (pDuty && cDuty) dutyTag = `Booth ${pDuty.boothNumber} & Table ${cDuty.tableNumber}`;
       else if (pDuty) dutyTag = `Booth ${pDuty.boothNumber} (${pDuty.role === 'Presiding Officer' ? 'PrO' : 'PO'})`;
       else if (cDuty) dutyTag = `Table ${cDuty.tableNumber} (${cDuty.role === 'Counting Supervisor' ? 'Sup' : 'CO'})`;
-      else dutyTag = 'Standby';
+      else dutyTag = 'General Reserve';
 
       list.push({
         name: f.name,
@@ -6010,7 +6016,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       if (ntAssigned.polling && ntAssigned.counting) dutyTag = `Booth ${ntAssigned.polling.boothNumber} & Counting`;
       else if (ntAssigned.polling) dutyTag = `Booth ${ntAssigned.polling.boothNumber} Asst`;
       else if (ntAssigned.counting) dutyTag = `Table ${ntAssigned.counting.tableNumber} Asst`;
-      else dutyTag = 'Standby';
+      else dutyTag = 'General Reserve';
 
       list.push({
         name: nt.name,
@@ -6080,7 +6086,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 📊 Counting &rarr; Polling Reserve
               </button>
               <button type="button" id="btnQuickAllotUnassigned" class="btn btn-secondary border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 text-[11px] px-2 py-1 font-medium" title="Allot unassigned faculty as general reserves">
-                ✨ Faculty &rarr; Standby
+                ✨ Faculty &rarr; General Reserve
               </button>
             </div>
             <button type="button" id="btnAddReserveRow" class="btn btn-secondary border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20 text-xs px-2.5 py-1 flex items-center gap-1 font-bold shrink-0">
@@ -6103,7 +6109,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               } else if (cDuty) {
                 activeNotice = `<span class="text-[10px] text-purple-300 bg-purple-950/40 border border-purple-500/30 px-2 py-0.5 rounded font-mono">Counting: Table ${cDuty.tableNumber} (${cDuty.role === 'Counting Supervisor' ? 'Sup' : 'CO'})</span>`;
               } else if (res.name) {
-                activeNotice = `<span class="text-[10px] text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded font-mono">Standby Reserve</span>`;
+                activeNotice = `<span class="text-[10px] text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded font-mono">${esc(res.reserveType || 'General Reserve')}</span>`;
               }
 
               return `
@@ -6230,7 +6236,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           } else if (person.cDuty) {
             dutyBadge = `<span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">📊 Table ${person.cDuty.tableNumber}</span>`;
           } else {
-            dutyBadge = `<span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">✨ Standby</span>`;
+            dutyBadge = `<span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">📋 General Reserve</span>`;
           }
 
           if (isOther) {
@@ -6458,7 +6464,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         if (added > 0) {
           draftReserves = draftReserves.filter(r => r.name);
           renderModal();
-          showToast(`Added ${added} Available Faculty as Standby Reserves!`, 'success');
+          showToast(`Added ${added} Available Faculty as General Reserves!`, 'success');
         } else {
           showToast('No unassigned available faculty found.', 'info');
         }
@@ -8167,7 +8173,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           stations.push(b?.roomName || `Table ${cDuty.tableNumber}`);
         }
         if (rDuty) {
-          duties.push(rDuty.reserveType || 'Reserve Duty');
+          duties.push(rDuty.reserveType || 'General Reserve');
           stations.push('Central Control Room (Reserve Pool)');
         }
 
@@ -8195,6 +8201,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         });
 
         if (rDuty) {
+          const resRole = rDuty.reserveType || 'General Reserve';
+          const activeDutyNote = pDuty ? `(Active: Booth ${pDuty.boothNumber})` : (cDuty ? `(Active: Table ${cDuty.tableNumber})` : '');
           reserveList.push({
             name: f.name,
             designation: (f.designation || 'Faculty').trim(),
@@ -8202,12 +8210,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             pen: (f.pen || '–').trim(),
             phone: f.phone || f.mobile || '',
             seniority: (f.seniority !== undefined && f.seniority !== null) ? f.seniority : 999,
-            duty: (rDuty.reserveType || 'Reserve Duty') + (pDuty ? ` (Active: Booth ${pDuty.boothNumber})` : (cDuty ? ` (Active: Table ${cDuty.tableNumber})` : '')),
+            duty: resRole + (activeDutyNote ? ` ${activeDutyNote}` : ''),
+            reserveDuty: resRole,
+            reserveType: resRole,
+            activeDutyNote: activeDutyNote,
             hasDoubleDuty: isDouble,
             isReserve: true,
             station: 'Central Control Room (Reserve Pool)',
-            type: 'Teaching Faculty',
-            reserveType: rDuty.reserveType
+            type: 'Teaching Faculty'
           });
         }
       } else {
@@ -8220,7 +8230,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           pen: (f.pen || '–').trim(),
           phone: f.phone || f.mobile || '',
           seniority: (f.seniority !== undefined && f.seniority !== null) ? f.seniority : 999,
-          duty: 'Reserve Duty (Standby)',
+          duty: 'General Reserve',
+          reserveDuty: 'General Reserve',
+          reserveType: 'General Reserve',
+          activeDutyNote: '',
           hasDoubleDuty: false,
           isReserve: true,
           station: 'Central Control Room (Reserve Pool)',
@@ -8275,7 +8288,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           stations.push([...new Set(stationNames)].join(' / '));
         }
         if (rDuty) {
-          duties.push(rDuty.reserveType || 'Reserve Duty');
+          duties.push(rDuty.reserveType || 'General Reserve');
           stations.push('Central Control Room (Reserve Pool)');
         }
 
@@ -8303,6 +8316,8 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         });
 
         if (rDuty) {
+          const resRole = rDuty.reserveType || 'General Reserve';
+          const activeDutyNote = ntAssigned.polling ? `(Active: Booth ${ntAssigned.polling.boothNumber})` : (ntAssigned.counting ? `(Active: Table ${ntAssigned.counting.tableNumber})` : '');
           reserveList.push({
             name: nt.name,
             designation: (nt.designation || 'Staff').trim(),
@@ -8310,12 +8325,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
             pen: (nt.pen || '–').trim(),
             phone: nt.phone || nt.mobile || '',
             seniority: 9999,
-            duty: (rDuty.reserveType || 'Reserve Duty') + (ntAssigned.polling ? ` (Active: Booth ${ntAssigned.polling.boothNumber})` : (ntAssigned.counting ? ` (Active: Table ${ntAssigned.counting.tableNumber})` : '')),
+            duty: resRole + (activeDutyNote ? ` ${activeDutyNote}` : ''),
+            reserveDuty: resRole,
+            reserveType: resRole,
+            activeDutyNote: activeDutyNote,
             hasDoubleDuty: isDouble,
             isReserve: true,
             station: 'Central Control Room (Reserve Pool)',
-            type: 'Non-Teaching Staff',
-            reserveType: rDuty.reserveType
+            type: 'Non-Teaching Staff'
           });
         }
       } else {
@@ -8328,7 +8345,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           pen: (nt.pen || '–').trim(),
           phone: nt.phone || nt.mobile || '',
           seniority: 9999,
-          duty: 'Reserve Duty (Standby Assistant)',
+          duty: 'General Reserve',
+          reserveDuty: 'General Reserve',
+          reserveType: 'General Reserve',
+          activeDutyNote: '',
           hasDoubleDuty: false,
           isReserve: true,
           station: 'Central Control Room (Reserve Pool)',
@@ -9880,20 +9900,22 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           <table class="master-table">
             <colgroup>
               ${resHasDept ? `
-                <col style="width: 6%;">
-                <col style="width: 24%;">
-                <col style="width: 18%;">
-                <col style="width: 16%;">
-                <col style="width: 10%;">
-                <col style="width: 12%;">
-                <col style="width: 14%;">
+                <col style="width: 5%;">
+                <col style="width: 21%;">
+                <col style="width: 15%;">
+                <col style="width: 13%;">
+                <col style="width: 9%;">
+                <col style="width: 15%;">
+                <col style="width: 11%;">
+                <col style="width: 11%;">
               ` : `
-                <col style="width: 7%;">
-                <col style="width: 31%;">
-                <col style="width: 20%;">
+                <col style="width: 6%;">
+                <col style="width: 25%;">
+                <col style="width: 17%;">
+                <col style="width: 10%;">
+                <col style="width: 18%;">
                 <col style="width: 12%;">
-                <col style="width: 14%;">
-                <col style="width: 16%;">
+                <col style="width: 12%;">
               `}
             </colgroup>
             <thead>
@@ -9903,6 +9925,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 ${resHasDept ? '<th>Department</th>' : ''}
                 <th>Designation</th>
                 <th>PEN #</th>
+                <th class="col-center">Reserve Duty</th>
                 <th class="col-center">Mobile Number</th>
                 <th class="col-center">Signature</th>
               </tr>
@@ -9917,6 +9940,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   ${resHasDept ? `<td><span class="dept-badge">${esc(r.department)}</span></td>` : ''}
                   <td>${esc(r.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(r.pen)}</td>
+                  <td class="col-center" style="font-weight: 700; color: #000000;">
+                    ${esc(r.reserveDuty || r.reserveType || 'General Reserve')}
+                    ${r.activeDutyNote ? `<div style="font-size: 8px; font-weight: normal; color: #444; margin-top: 1px;">${esc(r.activeDutyNote)}</div>` : ''}
+                  </td>
                   ${renderMobileCell(r.phone)}
                   <td class="col-sign"></td>
                 </tr>
