@@ -1601,6 +1601,7 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
             <button id="btnRegenPlan" class="btn btn-primary border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 px-4" title="Action: Calculates voter counts, generates official ballot slip serial ranges (G, R, A), bundles 50-slip books, and freezes the Master Plan.&#10;Prerequisite: Click '💾 Save Configuration' first to ensure your latest booth and class allocations are saved in the database.">🔄 Finalize Master Plan</button>
             <button id="btnPrintRolls" class="btn btn-secondary" title="Action: Generates official printable Marked Copies of the Electoral Roll for each booth with voter details and ballot checkboxes.&#10;Prerequisite: Complete class allotments, save configuration, and click '🔄 Finalize Master Plan' first.">🖨️ Print Marked Copy (Electoral Rolls)</button>
             <button id="btnPrintBallotAccounts" class="btn btn-secondary border-indigo-500/30 text-indigo-300 hover:bg-indigo-500 hover:text-white" title="Action: Generates statutory Presiding Officer Ballot Paper Accounts (Form 4 / Form V) pre-filled with official book numbers and serial ranges.&#10;Prerequisite: Click '🔄 Finalize Master Plan' first so ballot serial number ranges and book counts are generated.">📑 Print Ballot Accounts</button>
+            <button id="btnPrintPrOGuide" class="btn btn-secondary border-emerald-500/30 text-emerald-300 hover:bg-emerald-500 hover:text-white" title="Action: Generates official Presiding Officer Statutory Handbook with material checklist, sealing protocols, and polling agent signature requirements.">📘 PrO Handbook</button>
           </div>
         </div>
         <div id="printArea" class="hidden"></div>
@@ -1836,6 +1837,10 @@ function renderBoothsUI(main, pwd, nominalRoll, initialBooths, initialLocations,
     
     main.querySelector('#btnPrintBallotAccounts').addEventListener('click', () => {
       generateAndPrintBallotAccounts(pwd);
+    });
+
+    main.querySelector('#btnPrintPrOGuide')?.addEventListener('click', () => {
+      generateAndPrintPresidingOfficerInstructions(pwd);
     });
 
     main.querySelector('#btnUpdateBoothCount').addEventListener('click', async () => {
@@ -2480,9 +2485,25 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
           </table>
         </div>
 
-        <div class="footer" style="display: flex; justify-content: space-between; margin-top: 15px; padding: 0 20px;">
+        <div class="footer" style="display: flex; justify-content: space-between; margin-top: 15px; padding: 0 10px;">
           <div class="sig-line">Returning Officer</div>
           <div class="sig-line">Signature of Presiding Officer</div>
+        </div>
+
+        <!-- Space for Signatures of Polling Agents Below Presiding Officer -->
+        <div style="margin-top: 10px; border-top: 1.5px dashed #000; padding: 5px 10px 0 10px; font-size: 11px;">
+          <div style="font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;">
+            <span style="text-transform: uppercase; letter-spacing: 0.3px;">Signatures of Polling Agents:</span>
+            <span style="font-size: 10px; font-weight: normal; color: #555;">(Sign with Name &amp; Candidate / Organization)</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 14px; font-size: 10px;">
+            <div>1. ___________________________</div>
+            <div>2. ___________________________</div>
+            <div>3. ___________________________</div>
+            <div>4. ___________________________</div>
+            <div>5. ___________________________</div>
+            <div>6. ___________________________</div>
+          </div>
         </div>
       </div>`;
 
@@ -2654,6 +2675,25 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
 
   const sortedBooths = [...booths].sort((a, b) => a.boothNumber - b.boothNumber);
 
+  const copies = [
+    {
+      num: 1,
+      badgeTitle: 'COPY 1 — HANDOVER COPY (COVER B1)',
+      badgeSub: 'Mandatory: Enclose in sealed Cover B1 & hand over directly to Returning Officer at Reception Counter',
+      themeBg: '#eff6ff',
+      themeText: '#1e3a8a',
+      themeBorder: '#3b82f6'
+    },
+    {
+      num: 2,
+      badgeTitle: 'COPY 2 — BALLOT BOX COPY (COVER B2)',
+      badgeSub: 'Mandatory: Enclose in sealed Cover B2, WAX-SEAL WITH METAL SEAL, & FIRMLY TAPE / STICK ON BOX OUTER LID',
+      themeBg: '#fffbeb',
+      themeText: '#92400e',
+      themeBorder: '#d97706'
+    }
+  ];
+
   sortedBooths.forEach((b) => {
     if (!b.classes || b.classes.length === 0) return;
     const assignments = plan.boothAssignments[b.boothNumber] || { general: null, reps: [], assocs: [] };
@@ -2665,204 +2705,214 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
     const boothAssocPosts = assignments.assocs.map(a => ({ name: a.post, count: a.count }));
     const allBoothPosts = [...boothGeneralPosts, ...boothRepPosts, ...boothAssocPosts];
 
-    html += `
-    <div class="page-break">
-      <div class="account-page">
-        
-        <!-- Header -->
-        <div class="account-header">
-          ${collegeLogo ? `<img src="${collegeLogo}" class="college-logo-img" alt="Emblem">` : ''}
-          <div class="college-name">${esc(collegeName)}</div>
-          <div class="account-doc-title">COLLEGE UNION ELECTION ${esc(electionYear)} &mdash; BALLOTS &amp; BOOKS ACCOUNT</div>
-        </div>
-        
-        <!-- Booth Details Banner -->
-        <div class="booth-meta-banner">
-          <div class="meta-booth-id">
-            <span class="meta-label">BOOTH NUMBER:</span>
-            <span class="meta-booth-val">${b.boothNumber}</span>
-          </div>
-          <div class="meta-location">
-            <span class="meta-label">LOCATION / VENUE:</span>
-            <span class="meta-venue-val">${esc(b.roomName || 'UNSPECIFIED')}</span>
-          </div>
-        </div>
-
-        <!-- SECTION 1: BALLOTS & BOOKS ACCOUNT -->
-        <div class="account-section">
-          <h4 class="section-heading">1. Ballots &amp; Books Account</h4>
-          <table class="account-table table-ballots">
-            <thead>
-              <tr>
-                <th style="width:24%;">Ballot Category</th>
-                <th style="width:18%;">Serial Range</th>
-                <th style="width:11%; text-align:center;">Total Qty</th>
-                <th style="width:15%;">Book IDs</th>
-                <th style="width:11%; text-align:center;">No. Used</th>
-                <th style="width:11%; text-align:center;">No. Returned</th>
-                <th style="width:10%;">Remarks</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(assignments.generalParts && assignments.generalParts.length > 1) ? assignments.generalParts.map(gp => `
-                <tr class="row-general">
-                  <td class="col-cat">${esc(gp.title || 'General Union Posts')}</td>
-                  <td class="col-serial">${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.start} - ${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.end}</td>
-                  <td class="col-qty text-center">
-                    ${gp.count}
-                    ${gp.reserveCount > 0 ? `<div style="font-size:9px; color:#4f46e5; font-weight:bold;">(${gp.voterCount} V + ${gp.reserveCount} Res)</div>` : (gp.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${gp.regCount || (gp.count - gp.rsCount)} Reg + ${gp.rsCount} RS)</div>` : '')}
-                  </td>
-                  <td class="col-books">${esc(gp.bookIds || '-')}</td>
-                  <td class="col-fill"></td>
-                  <td class="col-fill"></td>
-                  <td class="col-fill"></td>
-                </tr>
-              `).join('') : (assignments.general ? `
-                <tr class="row-general">
-                  <td class="col-cat">${esc(assignments.general.title || 'General Union Posts')}</td>
-                  <td class="col-serial">${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.start} - ${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.end}</td>
-                  <td class="col-qty text-center">
-                    ${assignments.general.count}
-                    ${assignments.general.reserveCount > 0 ? `<div style="font-size:9px; color:#4f46e5; font-weight:bold;">(${assignments.general.voterCount} V + ${assignments.general.reserveCount} Res)</div>` : (assignments.general.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${assignments.general.regCount || (assignments.general.count - assignments.general.rsCount)} Reg + ${assignments.general.rsCount} RS)</div>` : '')}
-                  </td>
-                  <td class="col-books">${esc(assignments.general.bookIds || '-')}</td>
-                  <td class="col-fill"></td>
-                  <td class="col-fill"></td>
-                  <td class="col-fill"></td>
-                </tr>
-              ` : '')}
-              ${assignments.reps.map(r => `
-                <tr>
-                  <td class="col-cat">${esc(r.post)}</td>
-                  <td class="col-serial">R${r.start} - R${r.end}</td>
-                  <td class="col-qty text-center">
-                    ${r.count}
-                    ${r.reserveCount > 0 ? `<div style="font-size:9px; color:#047857; font-weight:bold;">(${r.voterCount} V + ${r.reserveCount} Res)</div>` : ''}
-                  </td>
-                  <td class="col-books">${esc(r.bookIds || '-')}</td>
-                  <td class="col-fill"></td>
-                  <td class="col-fill"></td>
-                  <td class="col-fill"></td>
-                </tr>
-              `).join('')}
-              ${assignments.assocs.map(a => `
-                <tr>
-                  <td class="col-cat">${esc(a.post)}</td>
-                  <td class="col-serial">A${a.start} - A${a.end}</td>
-                  <td class="col-qty text-center">
-                    ${a.count}
-                    ${a.reserveCount > 0 ? `<div style="font-size:9px; color:#b45309; font-weight:bold;">(${a.voterCount} V + ${a.reserveCount} Res)</div>` : (a.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${a.regCount || (a.count - a.rsCount)} Reg + ${a.rsCount} RS)</div>` : '')}
-                  </td>
-                  <td class="col-books">${esc(a.bookIds || '-')}</td>
-                  <td class="col-fill"></td>
-                  <td class="col-fill"></td>
-                  <td class="col-fill"></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+    copies.forEach(cp => {
+      html += `
+      <div class="page-break page-copy-${cp.num}">
+        <div class="account-page">
           
-          <div class="account-note-box">
-            <strong>Note:</strong> Total Qty should be equal to (Number of Ballots Used + Number of Ballots Returned). Please record any discrepancies in the Remarks column.
+          <!-- Header -->
+          <div class="account-header">
+            ${collegeLogo ? `<img src="${collegeLogo}" class="college-logo-img" alt="Emblem">` : ''}
+            <div class="college-name">${esc(collegeName)}</div>
+            <div class="account-doc-title">COLLEGE UNION ELECTION ${esc(electionYear)} &mdash; BALLOTS &amp; BOOKS ACCOUNT</div>
+            
+            <!-- Statutory Copy Designation Badge -->
+            <div class="copy-designation-badge" style="background: ${cp.themeBg}; color: ${cp.themeText}; border: 1.5px solid ${cp.themeBorder}; margin: 3px auto 0 auto; padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: baseline; gap: 6px; max-width: 100%;">
+              <span style="font-weight: 900; font-size: 8.5pt; letter-spacing: 0.3px;">${cp.badgeTitle}</span>
+              <span style="font-size: 7pt; font-weight: 600; opacity: 0.9;">&bull; ${cp.badgeSub}</span>
+            </div>
           </div>
-        </div>
+          
+          <!-- Booth Details Banner -->
+          <div class="booth-meta-banner">
+            <div class="meta-booth-id">
+              <span class="meta-label">BOOTH NUMBER:</span>
+              <span class="meta-booth-val">${b.boothNumber}</span>
+            </div>
+            <div class="meta-location">
+              <span class="meta-label">LOCATION / VENUE:</span>
+              <span class="meta-venue-val">${esc(b.roomName || 'UNSPECIFIED')}</span>
+            </div>
+          </div>
 
-        <!-- SECTION 2: ACCOUNT OF BALLOT BOX STRIP SEALS -->
-        <div class="account-section">
-          <h4 class="section-heading">2. Account of Ballot Box Strip Seals (To be filled by PrO)</h4>
-          <table class="account-table table-seals">
-            <thead>
-              <tr>
-                <th style="width: 6%; text-align: center;">Sl.</th>
-                <th style="width: 46%;">Item / Description</th>
-                <th style="width: 18%; text-align: center;">Number (Count)</th>
-                <th style="width: 30%;">Serial Number(s)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="text-center font-bold">1</td>
-                <td class="font-semibold">Number of Strip Seals Issued</td>
-                <td class="col-fill text-center"></td>
-                <td class="col-fill"></td>
-              </tr>
-              <tr>
-                <td class="text-center font-bold">2</td>
-                <td class="font-semibold">Number and Sl. Number of Strip Seals Used</td>
-                <td class="col-fill text-center"></td>
-                <td class="col-fill"></td>
-              </tr>
-              <tr>
-                <td class="text-center font-bold">3</td>
-                <td class="font-semibold">Number and Sl. Number of Strip Seals Returned (Unused)</td>
-                <td class="col-fill text-center"></td>
-                <td class="col-fill"></td>
-              </tr>
-              <tr>
-                <td class="text-center font-bold">4</td>
-                <td class="font-semibold">Number and Sl. Number of Strip Seals Damaged (if any)</td>
-                <td class="col-fill text-center"></td>
-                <td class="col-fill"></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- SECTION 3: ACCOUNT OF VOTES -->
-        <div class="account-section">
-          <h4 class="section-heading">3. Account of Votes (To be filled by PrO)</h4>
-          <table class="account-table table-votes">
-            <thead>
-              <tr>
-                <th style="width:36%;">Name of Post</th>
-                <th style="width:20%; text-align:center;">Total Voters Assigned</th>
-                <th style="width:22%; text-align:center;">No. of Votes Recorded</th>
-                <th style="width:22%;">Remarks</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${allBoothPosts.map(p => `
+          <!-- SECTION 1: BALLOTS & BOOKS ACCOUNT -->
+          <div class="account-section">
+            <h4 class="section-heading">1. Ballots &amp; Books Account</h4>
+            <table class="account-table table-ballots">
+              <thead>
                 <tr>
-                  <td class="col-post-title">${esc(p.name)}</td>
-                  <td class="col-voters-assigned text-center">${p.count}</td>
-                  <td class="col-fill"></td>
+                  <th style="width:24%;">Ballot Category</th>
+                  <th style="width:18%;">Serial Range</th>
+                  <th style="width:11%; text-align:center;">Total Qty</th>
+                  <th style="width:15%;">Book IDs</th>
+                  <th style="width:11%; text-align:center;">No. Used</th>
+                  <th style="width:11%; text-align:center;">No. Returned</th>
+                  <th style="width:10%;">Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(assignments.generalParts && assignments.generalParts.length > 1) ? assignments.generalParts.map(gp => `
+                  <tr class="row-general">
+                    <td class="col-cat">${esc(gp.title || 'General Union Posts')}</td>
+                    <td class="col-serial">${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.start} - ${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.end}</td>
+                    <td class="col-qty text-center">
+                      ${gp.count}
+                      ${gp.reserveCount > 0 ? `<div style="font-size:9px; color:#4f46e5; font-weight:bold;">(${gp.voterCount} V + ${gp.reserveCount} Res)</div>` : (gp.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${gp.regCount || (gp.count - gp.rsCount)} Reg + ${gp.rsCount} RS)</div>` : '')}
+                    </td>
+                    <td class="col-books">${esc(gp.bookIds || '-')}</td>
+                    <td class="col-fill"></td>
+                    <td class="col-fill"></td>
+                    <td class="col-fill"></td>
+                  </tr>
+                `).join('') : (assignments.general ? `
+                  <tr class="row-general">
+                    <td class="col-cat">${esc(assignments.general.title || 'General Union Posts')}</td>
+                    <td class="col-serial">${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.start} - ${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.end}</td>
+                    <td class="col-qty text-center">
+                      ${assignments.general.count}
+                      ${assignments.general.reserveCount > 0 ? `<div style="font-size:9px; color:#4f46e5; font-weight:bold;">(${assignments.general.voterCount} V + ${assignments.general.reserveCount} Res)</div>` : (assignments.general.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${assignments.general.regCount || (assignments.general.count - assignments.general.rsCount)} Reg + ${assignments.general.rsCount} RS)</div>` : '')}
+                    </td>
+                    <td class="col-books">${esc(assignments.general.bookIds || '-')}</td>
+                    <td class="col-fill"></td>
+                    <td class="col-fill"></td>
+                    <td class="col-fill"></td>
+                  </tr>
+                ` : '')}
+                ${assignments.reps.map(r => `
+                  <tr>
+                    <td class="col-cat">${esc(r.post)}</td>
+                    <td class="col-serial">R${r.start} - R${r.end}</td>
+                    <td class="col-qty text-center">
+                      ${r.count}
+                      ${r.reserveCount > 0 ? `<div style="font-size:9px; color:#047857; font-weight:bold;">(${r.voterCount} V + ${r.reserveCount} Res)</div>` : ''}
+                    </td>
+                    <td class="col-books">${esc(r.bookIds || '-')}</td>
+                    <td class="col-fill"></td>
+                    <td class="col-fill"></td>
+                    <td class="col-fill"></td>
+                  </tr>
+                `).join('')}
+                ${assignments.assocs.map(a => `
+                  <tr>
+                    <td class="col-cat">${esc(a.post)}</td>
+                    <td class="col-serial">A${a.start} - A${a.end}</td>
+                    <td class="col-qty text-center">
+                      ${a.count}
+                      ${a.reserveCount > 0 ? `<div style="font-size:9px; color:#b45309; font-weight:bold;">(${a.voterCount} V + ${a.reserveCount} Res)</div>` : (a.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${a.regCount || (a.count - a.rsCount)} Reg + ${a.rsCount} RS)</div>` : '')}
+                    </td>
+                    <td class="col-books">${esc(a.bookIds || '-')}</td>
+                    <td class="col-fill"></td>
+                    <td class="col-fill"></td>
+                    <td class="col-fill"></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            
+            <div class="account-note-box">
+              <strong>Note:</strong> Total Qty should be equal to (Number of Ballots Used + Number of Ballots Returned). Please record any discrepancies in the Remarks column.
+            </div>
+          </div>
+
+          <!-- SECTION 2: ACCOUNT OF BALLOT BOX STRIP SEALS -->
+          <div class="account-section">
+            <h4 class="section-heading">2. Account of Ballot Box Strip Seals (To be filled by PrO)</h4>
+            <table class="account-table table-seals">
+              <thead>
+                <tr>
+                  <th style="width: 6%; text-align: center;">Sl.</th>
+                  <th style="width: 46%;">Item / Description</th>
+                  <th style="width: 18%; text-align: center;">Number (Count)</th>
+                  <th style="width: 30%;">Serial Number(s)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="text-center font-bold">1</td>
+                  <td class="font-semibold">Number of Strip Seals Issued</td>
+                  <td class="col-fill text-center"></td>
                   <td class="col-fill"></td>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
+                <tr>
+                  <td class="text-center font-bold">2</td>
+                  <td class="font-semibold">Number and Sl. Number of Strip Seals Used</td>
+                  <td class="col-fill text-center"></td>
+                  <td class="col-fill"></td>
+                </tr>
+                <tr>
+                  <td class="text-center font-bold">3</td>
+                  <td class="font-semibold">Number and Sl. Number of Strip Seals Returned (Unused)</td>
+                  <td class="col-fill text-center"></td>
+                  <td class="col-fill"></td>
+                </tr>
+                <tr>
+                  <td class="text-center font-bold">4</td>
+                  <td class="font-semibold">Number and Sl. Number of Strip Seals Damaged (if any)</td>
+                  <td class="col-fill text-center"></td>
+                  <td class="col-fill"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-        <!-- Footer / Signature -->
-        <div class="account-footer-container">
-          <div class="account-footer">
-            <div class="footer-meta">
-              <div class="date-field"><strong>Date:</strong> ________________________</div>
-              <div class="booth-field"><strong>Polling Station / Booth:</strong> ${b.boothNumber}</div>
+          <!-- SECTION 3: ACCOUNT OF VOTES -->
+          <div class="account-section">
+            <h4 class="section-heading">3. Account of Votes (To be filled by PrO)</h4>
+            <table class="account-table table-votes">
+              <thead>
+                <tr>
+                  <th style="width:36%;">Name of Post</th>
+                  <th style="width:20%; text-align:center;">Total Voters Assigned</th>
+                  <th style="width:22%; text-align:center;">No. of Votes Recorded</th>
+                  <th style="width:22%;">Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${allBoothPosts.map(p => `
+                  <tr>
+                    <td class="col-post-title">${esc(p.name)}</td>
+                    <td class="col-voters-assigned text-center">${p.count}</td>
+                    <td class="col-fill"></td>
+                    <td class="col-fill"></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Footer / Signature -->
+          <div class="account-footer-container">
+            <div class="account-footer">
+              <div class="footer-meta">
+                <div class="date-field"><strong>Date:</strong> ________________________</div>
+                <div class="booth-field"><strong>Polling Station / Booth:</strong> ${b.boothNumber} &bull; ${esc(b.roomName || 'UNSPECIFIED')}</div>
+              </div>
+              <div class="sig-block">
+                <div class="sig-line-bar"></div>
+                <div class="sig-title">Signature of Presiding Officer</div>
+              </div>
             </div>
-            <div class="sig-block">
-              <div class="sig-line-bar"></div>
-              <div class="sig-title">Signature of Presiding Officer</div>
+
+            <!-- Space for Signatures of Polling Agents Below Presiding Officer -->
+            <div class="agents-sig-container">
+              <div class="agents-header">
+                <span class="agents-title">Signatures of Polling Agents (Mandatory on Both Copies):</span>
+                <span class="agents-hint">(Sign with Name &amp; Candidate / Organization)</span>
+              </div>
+              <div class="agents-grid">
+                <div class="agent-box"><span class="agent-num">1.</span> <span class="agent-line">________________________________</span></div>
+                <div class="agent-box"><span class="agent-num">2.</span> <span class="agent-line">________________________________</span></div>
+                <div class="agent-box"><span class="agent-num">3.</span> <span class="agent-line">________________________________</span></div>
+                <div class="agent-box"><span class="agent-num">4.</span> <span class="agent-line">________________________________</span></div>
+                <div class="agent-box"><span class="agent-num">5.</span> <span class="agent-line">________________________________</span></div>
+                <div class="agent-box"><span class="agent-num">6.</span> <span class="agent-line">________________________________</span></div>
+              </div>
             </div>
           </div>
 
-          <!-- Space for Signatures of Polling Agents Below Presiding Officer -->
-          <div class="agents-sig-container">
-            <div class="agents-header">
-              <span class="agents-title">Signatures of Polling Agents:</span>
-              <span class="agents-hint">(With Name of Candidate / Organization)</span>
-            </div>
-            <div class="agents-grid">
-              <div class="agent-box"><span class="agent-num">1.</span> <span class="agent-line">_______________________________</span></div>
-              <div class="agent-box"><span class="agent-num">2.</span> <span class="agent-line">_______________________________</span></div>
-              <div class="agent-box"><span class="agent-num">3.</span> <span class="agent-line">_______________________________</span></div>
-              <div class="agent-box"><span class="agent-num">4.</span> <span class="agent-line">_______________________________</span></div>
-            </div>
-          </div>
         </div>
-
-      </div>
-    </div>`;
+      </div>`;
+    });
   });
   return html;
 };
@@ -3224,8 +3274,8 @@ export function triggerBallotAccountPrint(html) {
           }
           .agents-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px 14px;
           }
           .agent-box {
             font-size: 8pt;
@@ -3247,11 +3297,17 @@ export function triggerBallotAccountPrint(html) {
         <div class="screen-topbar no-print">
           <div style="display: flex; align-items: center; gap: 12px;">
             <strong style="font-size: 14px; color: #fff;">Ballots &amp; Books Account (Form 2)</strong>
-            <span style="font-size: 11px; color: #cbd5e1;">A4 Portrait &bull; Print Ready</span>
+            <span style="font-size: 11px; color: #cbd5e1;">A4 Portrait &bull; Copies 1 &amp; 2 Included</span>
           </div>
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <button class="topbar-btn" onclick="window.print()">
-              <span>🖨️</span> Print All Booths (A4)
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="topbar-btn" onclick="filterAndPrint('all')">
+              <span>🖨️</span> Print Both Copies
+            </button>
+            <button class="topbar-btn" style="background: #1e3a8a; border-color: #3b82f6;" onclick="filterAndPrint('copy1')">
+              <span>📄</span> Copy 1 (Handover)
+            </button>
+            <button class="topbar-btn" style="background: #92400e; border-color: #f59e0b;" onclick="filterAndPrint('copy2')">
+              <span>📦</span> Copy 2 (Ballot Box)
             </button>
             <button class="topbar-btn" style="background: #333333; border: 1.5px solid #666;" onclick="window.close()">
               <span>✕</span> Close
@@ -3260,6 +3316,21 @@ export function triggerBallotAccountPrint(html) {
         </div>
 
         ${html}
+
+        <script>
+          function filterAndPrint(filter) {
+            document.querySelectorAll('.page-break').forEach(function(el) {
+              if (filter === 'all') {
+                el.style.display = 'block';
+              } else if (filter === 'copy1') {
+                el.style.display = el.classList.contains('page-copy-1') ? 'block' : 'none';
+              } else if (filter === 'copy2') {
+                el.style.display = el.classList.contains('page-copy-2') ? 'block' : 'none';
+              }
+            });
+            window.print();
+          }
+        </script>
       </body>
     </html>
   `);
@@ -3316,5 +3387,251 @@ export async function generateAndPrintBallotAccounts(pwd) {
     showToast(`Failed to generate ballot accounts: ${err.message}`, 'error');
   }
 }
+
+export async function generateAndPrintPresidingOfficerInstructions(pwd) {
+  showToast('Preparing Presiding Officer Handbook...', 'info');
+  try {
+    const [settings, schedule] = await Promise.all([
+      api.adminGetSettings(pwd).catch(() => ({})),
+      api.adminGetSchedule(pwd).catch(() => ({}))
+    ]);
+
+    const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME || 'Government College Chittur';
+    const year = settings.electionYear || schedule.electionYear || new Date().getFullYear();
+
+    const printWin = window.open('', '_blank');
+    if (!printWin) {
+      alert('Popup blocked! Please allow popups for this site to print.');
+      return;
+    }
+
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Presiding Officer Statutory Handbook &mdash; ${collegeName}</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 10mm 12mm 10mm 12mm;
+              @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-family: Arial, sans-serif;
+                font-size: 7.5pt;
+                font-weight: bold;
+              }
+              @bottom-left {
+                content: "Office of the Returning Officer — Presiding Officer Handbook";
+                font-family: Arial, sans-serif;
+                font-size: 7.5pt;
+              }
+            }
+            * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; background: #e2e8f0; font-size: 9pt; line-height: 1.35; }
+            .screen-topbar { position: sticky; top: 0; z-index: 1000; background: #000; color: #fff; padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+            .topbar-btn { background: #000; color: #fff; border: 1.5px solid #fff; padding: 6px 14px; font-weight: 700; font-size: 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; text-decoration: none; }
+            .topbar-btn:hover { background: #333; }
+            .guide-page { width: 190mm; margin: 8mm auto; background: #fff; padding: 12mm 14mm; border: 1.5px solid #000; box-shadow: 0 4px 15px rgba(0,0,0,0.15); page-break-after: always; break-after: page; }
+            .guide-page:last-child { page-break-after: auto; break-after: auto; }
+            .header-banner { text-align: center; border-bottom: 2.5px solid #1e3a8a; padding-bottom: 6px; margin-bottom: 10px; }
+            .col-title { font-size: 15pt; font-weight: 900; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.5px; }
+            .elect-title { font-size: 11pt; font-weight: 800; color: #991b1b; }
+            .doc-title { font-size: 10.5pt; font-weight: 800; color: #047857; text-transform: uppercase; margin-top: 2px; }
+            .meta-bar { font-size: 8pt; color: #64748b; font-style: italic; margin-top: 2px; }
+            .callout-box { border-left: 4px solid #991b1b; background: #fef2f2; padding: 7px 10px; margin: 8px 0; border-radius: 2px; }
+            .callout-title { font-weight: 900; color: #991b1b; font-size: 9pt; }
+            .callout-body { font-size: 8.5pt; color: #1e293b; }
+            .sec-h { font-size: 10.5pt; font-weight: 900; color: #1e3a8a; text-transform: uppercase; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 2px; margin: 12px 0 6px 0; }
+            .sec-sub { font-size: 9pt; font-weight: 800; color: #0f172a; margin: 6px 0 3px 0; }
+            .checklist-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 12px; margin-bottom: 6px; }
+            .check-item { font-size: 8.5pt; display: flex; align-items: baseline; gap: 6px; }
+            .check-box { font-size: 10pt; font-weight: bold; color: #1e3a8a; }
+            .data-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; margin: 6px 0; font-size: 8pt; }
+            .data-table th { background: #1e3a8a; color: #fff; border: 1px solid #000; padding: 4px 6px; font-weight: 800; text-align: left; }
+            .data-table td { border: 1px solid #000; padding: 4px 6px; vertical-align: top; }
+            .data-table tr:nth-child(even) td { background: #f8fafc; }
+            .sig-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; margin: 6px 0; font-size: 8pt; }
+            .sig-table td { border: 1px solid #000; padding: 5px 8px; }
+            @media print {
+              body { background: #fff; }
+              .screen-topbar { display: none !important; }
+              .guide-page { margin: 0; box-shadow: none; border: none; width: 100%; padding: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="screen-topbar no-print">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <strong style="font-size: 14px; color: #fff;">Presiding Officer Statutory Handbook &mdash; ${year}</strong>
+              <span style="font-size: 11px; color: #cbd5e1;">A4 Portrait &bull; Print Ready</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button class="topbar-btn" onclick="window.print()">
+                <span>🖨️</span> Print Handbook (A4)
+              </button>
+              <a href="/INSTRUCTIONS_FOR_PRESIDING_OFFICERS.docx" download="INSTRUCTIONS_FOR_PRESIDING_OFFICERS.docx" class="topbar-btn" style="background:#047857; border-color:#10b981;">
+                <span>📥</span> Download Word DOCX
+              </a>
+              <button class="topbar-btn" style="background: #333; border: 1.5px solid #666;" onclick="window.close()">
+                <span>✕</span> Close
+              </button>
+            </div>
+          </div>
+
+          <!-- PAGE 1: Timeline, Material Collection Checklist & Pre-Poll Setup -->
+          <div class="guide-page">
+            <div class="header-banner">
+              <div class="col-title">${collegeName}</div>
+              <div class="elect-title">COLLEGE UNION ELECTIONS ${year}</div>
+              <div class="doc-title">OFFICE OF THE RETURNING OFFICER &bull; STATUTORY INSTRUCTIONS TO PRESIDING OFFICERS</div>
+              <div class="meta-bar">Ref: GCC/CUE/${year}/PrO-GUIDE-01 &bull; Statutory Compliance Mandatory</div>
+            </div>
+
+            <div class="callout-box">
+              <div class="callout-title">⚠️ MANDATORY STATUTORY DIRECTIVE:</div>
+              <div class="callout-body">
+                All Presiding Officers are responsible for the flawless conduct of poll and maintenance of ballot secrecy. 
+                <strong>Notice: Both copies of the Ballot Paper Account (Form 2) MUST be in SEPARATE SEALED ENVELOPES—one delivered by hand to the RO and one firmly stuck to the Ballot Box. Both copies MUST bear the signatures of the Presiding Officer and all Polling Agents present.</strong>
+              </div>
+            </div>
+
+            <div class="sec-h">🕒 Polling Day Operational Schedule</div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width:25%;">Time Window</th>
+                  <th style="width:30%;">Phase</th>
+                  <th style="width:45%;">Operational Milestone</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>08:00 AM – 08:45 AM</strong></td>
+                  <td>Phase I: Material Collection</td>
+                  <td>Report at Central Distribution Centre (Auditorium). Physically verify polling kit against checklist.</td>
+                </tr>
+                <tr>
+                  <td><strong>08:45 AM – 09:15 AM</strong></td>
+                  <td>Phase II: Booth Setup</td>
+                  <td>Set up secret compartment; demonstrate empty box to agents; initial lock &amp; inner seal.</td>
+                </tr>
+                <tr>
+                  <td><strong>09:30 AM</strong></td>
+                  <td>Phase III: Poll Opening</td>
+                  <td>Open polling station promptly. Commence voting. Read secrecy notice to team.</td>
+                </tr>
+                <tr>
+                  <td><strong>09:30 AM – 01:00 PM</strong></td>
+                  <td>Phase IV: Voting Hours</td>
+                  <td>Verify College ID; ink left forefinger; issue ballots; monitor secret drop into ballot box.</td>
+                </tr>
+                <tr>
+                  <td><strong>01:00 PM</strong></td>
+                  <td>Phase V: Poll Closure</td>
+                  <td>Distribute numbered tokens to any voters in queue at 01:00 PM; close outer entrance doors.</td>
+                </tr>
+                <tr>
+                  <td><strong>01:00 PM – 01:30 PM</strong></td>
+                  <td>Phase VI: Statutory Sealing</td>
+                  <td><strong>SEAL BOX MOUTH (SLIT); SEAL BOX LOCK; SEAL MARKED ROLL; PREPARE TWO SEALED COVERS OF BALLOT ACCOUNT (ONE STUCK TO BOX).</strong></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="sec-h">📦 Material Collection Checklist (Verify at Distribution Counter)</div>
+            <div class="checklist-grid">
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Marked Copies of Electoral Roll</strong> (2 sets)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Working Copy of Roll</strong> (1 set for queue)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Books (White / Executive)</strong></span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Books (Colored / Dept Assocs)</strong></span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Books (Year Representatives)</strong></span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Box &amp; Key</strong> (Inspect lock &amp; flap)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Aperture Strip Seals</strong> (Check serial numbers)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Brass Metal Seal (PrO Official Seal)</strong></span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Ballot Paper Account Forms</strong> (3 blank sheets)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Indelible Ink Phial with Applicator</strong></span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Arrow Cross-Mark Stamps &amp; Inking Pads</strong></span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Red Sealing Wax (Lac), Candles, Matchbox</strong></span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover A</strong> (Super-Statutory Marked Roll Cover)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover B1</strong> (Ballot Account Handover Cover)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Cover B2</strong> (Ballot Account Box Cover - To Stick)</span></div>
+              <div class="check-item"><span class="check-box">☐</span> <span><strong>Covers C, D, E, F</strong> (Statutory Covers)</span></div>
+            </div>
+
+            <div class="sec-h">🏫 Pre-Poll Setup &amp; Demonstration (08:45 AM – 09:15 AM)</div>
+            <p style="margin-bottom: 4px;"><strong>1. Secrecy Compartment:</strong> Erect voting compartment in a private corner ensuring zero visibility from doors and windows.</p>
+            <p style="margin-bottom: 4px;"><strong>2. Demonstration of Empty Box (09:15 AM):</strong> In front of Polling Agents, open the Ballot Box completely to prove it is 100% empty.</p>
+            <p style="margin-bottom: 4px;"><strong>3. Initial Lock &amp; Inner Seal:</strong> Fasten lock, pass twine through hasp, apply molten red wax with Brass Seal. Keep key in safe personal custody.</p>
+            <p><strong>4. Aperture Drop Slit:</strong> Set aperture flap in OPEN position so folded ballots easily slide inside.</p>
+          </div>
+
+          <!-- PAGE 2: Voting Protocols & Statutory Sealing Rules -->
+          <div class="guide-page">
+            <div class="sec-h" style="margin-top:0;">🗳️ Duties During Voting Hours (09:30 AM – 01:00 PM)</div>
+            <p style="margin-bottom: 4px;"><strong>&bull; Polling Officer 1:</strong> Verify mandatory College ID Card with photo. Trace student in Marked Roll, call out name loudly, underline in red ink, and tick margin.</p>
+            <p style="margin-bottom: 4px;"><strong>&bull; Polling Officer 2:</strong> Apply Indelible Ink on left index finger. Record roll number on counterfoil stub, obtain voter's signature, and detach ballot papers.</p>
+            <p style="margin-bottom: 4px;"><strong>&bull; Presiding Officer:</strong> Ensure voter marks ballot secretly with Arrow Stamp, folds along creases, and drops it into the Ballot Box under direct observation.</p>
+            <p style="margin-bottom: 8px;"><strong>&bull; Electronic Device Prohibition:</strong> Mobile phones, cameras, and recording devices are strictly prohibited inside the booth. Seize any phone attempting photography immediately.</p>
+
+            <div class="sec-h">🔒 Close of Poll &amp; Critical Statutory Sealing Protocols (01:00 PM)</div>
+            
+            <div class="sec-sub">1. Sealing the Ballot Box Mouth (Aperture Drop Slit)</div>
+            <p style="margin-bottom: 3px;">&bull; Slide internal mechanical lever to lock drop slit shut. Affix numbered Aperture Strip Seal over the slit.</p>
+            <p style="margin-bottom: 6px;">&bull; Pour molten red sealing wax over the slit joint/flap. Press official Brass Metal Seal into hot wax. PrO and Polling Agents sign across seal edges.</p>
+
+            <div class="sec-sub">2. Sealing the Ballot Box Lock Mechanism</div>
+            <p style="margin-bottom: 3px;">&bull; Confirm padlock is tightly locked. Wrap strong red twine around hasp 3 times and knot securely.</p>
+            <p style="margin-bottom: 6px;">&bull; Wrap cloth/paper around joint, apply molten red wax, and emboss with Brass Metal Seal. Place key in envelope tied to handle.</p>
+
+            <div class="sec-sub">3. Ballot Paper Account (Form 2 / Form 4) &mdash; Two-Copies Rule</div>
+            <div class="callout-box" style="border-color:#b45309; background:#fffbeb;">
+              <div class="callout-title" style="color:#b45309;">🚨 TWO COPIES RULE &bull; BOTH IN SEPARATE SEALED COVERS:</div>
+              <div class="callout-body">
+                <strong>COPY 1 (HANDOVER COPY &mdash; COVER B1):</strong> Enclose in Cover B1. Seal with molten red wax, emboss with Brass Seal. Handed over by hand to the RO.<br>
+                <strong>COPY 2 (BOX COPY &mdash; COVER B2):</strong> Enclose in Cover B2. SEAL WITH RED WAX &amp; BRASS EMBOSSING. <strong>FIRMLY STICK / TAPE THIS ENTIRE SEALED COVER DIRECTLY TO THE OUTER LID OF THE BALLOT BOX</strong> using wide transparent tape.<br>
+                <strong>SIGNATURE MANDATE:</strong> Both Copy 1 and Copy 2 must be signed by the Presiding Officer AND all Polling Agents present!
+              </div>
+            </div>
+
+            <!-- Visual representation of footer -->
+            <table class="sig-table" style="background:#f8fafc; margin-top:4px;">
+              <tr>
+                <td style="width:50%;"><strong>Date:</strong> ________________________<br><strong>Polling Station / Booth:</strong> _____</td>
+                <td style="width:50%; text-align:right;">________________________________________<br><strong>Signature of Presiding Officer</strong></td>
+              </tr>
+              <tr style="background:#eff6ff;">
+                <td colspan="2" style="font-weight:bold; color:#1e3a8a;">
+                  SIGNATURES OF POLLING AGENTS (Below Presiding Officer &mdash; Mandatory on Both Copies):
+                </td>
+              </tr>
+              <tr style="background:#fff;">
+                <td colspan="2">
+                  1. ____________________________ (Candidate: _________) &nbsp;&nbsp;&nbsp;&nbsp; 2. ____________________________ (Candidate: _________)<br>
+                  3. ____________________________ (Candidate: _________) &nbsp;&nbsp;&nbsp;&nbsp; 4. ____________________________ (Candidate: _________)
+                </td>
+              </tr>
+            </table>
+
+            <div class="sec-sub">4. Sealing the Marked Copy of Electoral Roll (Cover A)</div>
+            <p style="margin-bottom: 6px;">&bull; Collate all pages of the Marked Roll. Enclose in Cover A (Super-Statutory Cover), tie with twine, apply molten red wax with Brass Seal on flap and corners, and sign across flap.</p>
+
+            <div class="sec-sub">5. Sealing Other Statutory Packets</div>
+            <p style="margin-bottom: 8px;">&bull; Cover C (Issued Counterfoils), Cover D (Unused Ballots), Cover E (Cancelled Ballots), Cover F (PrO Diary) &mdash; all sealed with molten red wax and signed.</p>
+
+            <div class="sec-h">🏛️ Reception Counter Handover Sequence &amp; Clearance</div>
+            <p style="margin-bottom: 4px;">Present items at Reception Desk in exact order: (1) Sealed Ballot Box with <strong>Cover B2 wax-sealed &amp; stuck on top</strong> &rarr; (2) Cover B1 (Sealed Ballot Account Copy 1) &rarr; (3) Cover A (Sealed Marked Roll) &rarr; (4) Statutory Covers C, D, E, F &rarr; (5) Stationery Bag with Brass Seal.</p>
+            <p><strong>Do not leave the campus until the Returning Officer stamps and signs your Presiding Officer Clearance Slip.</strong></p>
+          </div>
+        </body>
+      </html>
+    `);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => { printWin.print(); }, 500);
+  } catch (err) {
+    showToast(`Failed to open handbook: ${err.message}`, 'error');
+  }
+}
+
 
 

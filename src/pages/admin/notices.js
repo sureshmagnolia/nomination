@@ -11,7 +11,7 @@ import { CONFIG } from '../../config.js';
 import { printCountingTablePlacards, printOfficialNotice, printBoothDoorPoster, printBatchBoothDoorPosters, printCampusMasterDirectory, printBallotBoxStripSeals, openBallotBoxStripSealsPdf, printDepartmentClassDirectoryPoster, openDepartmentClassPosterPdf } from '../../noticesPrinter.js';
 import { getDefaultStatutoryNotices } from '../../noticesTemplates.js';
 import { generateAndPrintBallots, generateAndPrintBallotPressSummary, downloadBallotsExcel, openBallotSummaryConfigModal } from './ballots.js';
-import { generateAndPrintElectoralRolls, generateAndPrintBallotAccounts } from './booths.js';
+import { generateAndPrintElectoralRolls, generateAndPrintBallotAccounts, generateAndPrintPresidingOfficerInstructions } from './booths.js';
 import { openPrintRollModal } from '../../rollPrinter.js';
 import { getCountingMeta } from '../../offlineStorage.js';
 
@@ -361,6 +361,30 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                   <button id="btnHubPrintBallotAccounts" class="btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 shadow-md">
                     <span>🖨️</span> Print Ballot Accounts
                   </button>
+                </div>
+
+                <!-- Presiding Officer Statutory Handbook & Sealing Guide -->
+                <div class="bg-white/5 rounded-xl p-4 border border-emerald-500/30 hover:border-emerald-500/50 transition flex flex-col justify-between space-y-3 min-w-0 bg-gradient-to-br from-emerald-950/20 to-transparent">
+                  <div>
+                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30 whitespace-nowrap">Official Handbook</span>
+                      <span class="text-[10px] font-mono text-slate-400 whitespace-nowrap">A4 (2 Pages)</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white flex items-center gap-1.5">
+                      <span>📘</span> Presiding Officer Handbook
+                    </h5>
+                    <p class="text-xs text-slate-400 mt-1">
+                      Statutory instructions: Material checklist (☐), Aperture slit &amp; padlock sealing rules, Ballot Paper Account two-copies rule (Cover B1 &amp; B2), Polling Agent signatures, and reception counter clearance.
+                    </p>
+                  </div>
+                  <div class="flex items-center gap-2 w-full pt-1">
+                    <button id="btnHubPrintPrOGuide" class="btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 px-3 rounded-lg flex-1 min-w-0 flex items-center justify-center gap-1.5 shadow-md">
+                      <span>🖨️</span> <span class="truncate">Print PrO Guide</span>
+                    </button>
+                    <a href="/INSTRUCTIONS_FOR_PRESIDING_OFFICERS.docx" download="INSTRUCTIONS_FOR_PRESIDING_OFFICERS.docx" class="btn btn-secondary text-xs font-bold py-2 px-3 rounded-lg border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 flex items-center justify-center gap-1 shrink-0 whitespace-nowrap" title="Download official Microsoft Word .docx">
+                      <span>📥</span> DOCX
+                    </a>
+                  </div>
                 </div>
 
                 <!-- Batch Polling Booth Door Posters -->
@@ -1024,6 +1048,9 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
   });
   main.querySelector('#btnHubPrintBallotAccounts')?.addEventListener('click', () => {
     generateAndPrintBallotAccounts(pwd);
+  });
+  main.querySelector('#btnHubPrintPrOGuide')?.addEventListener('click', () => {
+    generateAndPrintPresidingOfficerInstructions(pwd);
   });
 
   // Batch Door Posters & Campus Directory
