@@ -8395,6 +8395,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const deptWiseHtmlFull = buildDeptWiseMasterRollHtml(orderDate, false);
     const deptWiseHtmlConcealed = buildDeptWiseMasterRollHtml(orderDate, true);
     const boothWiseHtmlFull = buildBoothWiseDeploymentHtml(orderDate, false);
+    const boothWiseHtmlConcealed = buildBoothWiseDeploymentHtml(orderDate, true);
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -8796,7 +8797,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       <!-- View 2: Booth & Table-Wise Deployment Schedule -->
       <div id="viewBoothWise" style="display: none;">
-        ${boothWiseHtmlFull}
+        <div id="viewBoothWiseFull" style="display: ${initialHideStation ? 'none' : 'block'};">
+          ${boothWiseHtmlFull}
+        </div>
+        <div id="viewBoothWiseConcealed" style="display: ${initialHideStation ? 'block' : 'none'};">
+          ${boothWiseHtmlConcealed}
+        </div>
       </div>
 
       <!-- View 3: Combined View -->
@@ -8805,7 +8811,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           ${initialHideStation ? deptWiseHtmlConcealed : deptWiseHtmlFull}
         </div>
         <div class="page-break" style="margin: 20px 0;"></div>
-        ${boothWiseHtmlFull}
+        <div id="combBoothContainer">
+          ${initialHideStation ? boothWiseHtmlConcealed : boothWiseHtmlFull}
+        </div>
       </div>
     </div>
   </div>
@@ -8823,20 +8831,27 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
       const vFull = document.getElementById('viewDeptWiseFull');
       const vConc = document.getElementById('viewDeptWiseConcealed');
+      const vBoothFull = document.getElementById('viewBoothWiseFull');
+      const vBoothConc = document.getElementById('viewBoothWiseConcealed');
       const combDept = document.getElementById('combDeptContainer');
+      const combBooth = document.getElementById('combBoothContainer');
 
-      if (currentMainView === 'dept') {
-        if (isConcealed) {
-          vFull.style.display = 'none';
-          vConc.style.display = 'block';
-        } else {
-          vFull.style.display = 'block';
-          vConc.style.display = 'none';
-        }
+      if (vFull && vConc) {
+        vFull.style.display = isConcealed ? 'none' : 'block';
+        vConc.style.display = isConcealed ? 'block' : 'none';
+      }
+
+      if (vBoothFull && vBoothConc) {
+        vBoothFull.style.display = isConcealed ? 'none' : 'block';
+        vBoothConc.style.display = isConcealed ? 'block' : 'none';
       }
 
       if (combDept) {
         combDept.innerHTML = isConcealed ? document.getElementById('viewDeptWiseConcealed').innerHTML : document.getElementById('viewDeptWiseFull').innerHTML;
+      }
+
+      if (combBooth) {
+        combBooth.innerHTML = isConcealed ? document.getElementById('viewBoothWiseConcealed').innerHTML : document.getElementById('viewBoothWiseFull').innerHTML;
       }
     }
 
@@ -8860,29 +8875,27 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       bComb.classList.remove('active');
 
       if (mode === 'booth') {
-        vFull.style.display = 'none';
-        vConc.style.display = 'none';
-        vBooth.style.display = 'block';
-        vComb.style.display = 'none';
+        if (vFull) vFull.style.display = 'none';
+        if (vConc) vConc.style.display = 'none';
+        if (vBooth) vBooth.style.display = 'block';
+        if (vComb) vComb.style.display = 'none';
         bBooth.classList.add('active');
       } else if (mode === 'combined') {
-        vFull.style.display = 'none';
-        vConc.style.display = 'none';
-        vBooth.style.display = 'none';
-        vComb.style.display = 'block';
+        if (vFull) vFull.style.display = 'none';
+        if (vConc) vConc.style.display = 'none';
+        if (vBooth) vBooth.style.display = 'none';
+        if (vComb) vComb.style.display = 'block';
         bComb.classList.add('active');
       } else {
-        if (isConcealed) {
-          vFull.style.display = 'none';
-          vConc.style.display = 'block';
-        } else {
-          vFull.style.display = 'block';
-          vConc.style.display = 'none';
+        if (vBooth) vBooth.style.display = 'none';
+        if (vComb) vComb.style.display = 'none';
+        if (vFull && vConc) {
+          vFull.style.display = isConcealed ? 'none' : 'block';
+          vConc.style.display = isConcealed ? 'block' : 'none';
         }
-        vBooth.style.display = 'none';
-        vComb.style.display = 'none';
         bDept.classList.add('active');
       }
+      updateConcealUI();
     }
 
     window.addEventListener('load', function() {
@@ -9696,7 +9709,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                   <td>${esc(c.designation)}</td>
                   <td style="font-family: monospace; font-weight: 600;">${esc(c.pen)}</td>
                   <td>
-                    <div style="font-weight: 700; color: #000000;">${esc(c.duty)}</div>
+                    ${hideStation ? '' : `<div style="font-weight: 700; color: #000000;">${esc(c.duty)}</div>`}
                   </td>
                   ${renderMobileCell(c.phone)}
                   <td class="col-sign"></td>
@@ -9771,7 +9784,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         Booth ${b.boothNumber}
                       </td>
                       <td rowspan="${slots.length}" style="font-weight: 700;">
-                        ${esc(b.roomName || `Booth ${b.boothNumber}`)}
+                        ${hideStation ? '' : esc(b.roomName || `Booth ${b.boothNumber}`)}
                       </td>
                     ` : ''}
                     <td>
@@ -9858,7 +9871,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         Table ${b.boothNumber}
                       </td>
                       <td rowspan="${slots.length}" style="font-weight: 700;">
-                        ${esc(b.roomName || `Table ${b.boothNumber}`)}
+                        ${hideStation ? '' : esc(b.roomName || `Table ${b.boothNumber}`)}
                       </td>
                     ` : ''}
                     <td>
