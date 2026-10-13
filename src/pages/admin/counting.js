@@ -338,8 +338,17 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     const T = boothsList.length;
     const isMismatch = matrix.length !== T;
 
-    // Build list of active contesting posts sorted statutorily (Assoc 1st, Reps, General, UUC Last)
-    const sortedPostObjects = sortPostsForCounting(postsList);
+    // Build list of active contesting posts scheduled in the matrix (Assoc 1st, Reps, General, UUC Last)
+    const scheduledPostsSet = new Set();
+    matrix.forEach(row => {
+      if (Array.isArray(row)) {
+        row.forEach(p => {
+          if (p) scheduledPostsSet.add(pName(p));
+        });
+      }
+    });
+
+    const sortedPostObjects = sortPostsForCounting(postsList).filter(p => scheduledPostsSet.has(pName(p)));
 
     // Map each post to its counting tables/rounds
     const postTableMap = {};
@@ -477,7 +486,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
               <h3 class="text-xl font-bold text-white">Counting Matrix &amp; Forms</h3>
               ${isOffline ? '<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-semibold">Offline Mode (IndexedDB)</span>' : ''}
             </div>
-            <p class="text-slate-400 text-sm mt-0.5">${T} tables · ${totalRounds} rounds · ${postsList.length} posts total · ${allFormsList.length} counting forms</p>
+            <p class="text-slate-400 text-sm mt-0.5">${T} tables · ${totalRounds} rounds · ${sortedPostObjects.length} contested posts scheduled · ${allFormsList.length} counting forms</p>
           </div>
           <div class="flex gap-2 flex-wrap items-center">
             <button id="btnOpenBpaModal" class="btn btn-secondary border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500 hover:text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm" title="Action: Enter or auto-detect actual ballots polled in box (Ballot Paper Account / Form 5 / PrO Diary) per table to calibrate UUC 25-ballot batches and expected vote totals.">
@@ -486,7 +495,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             <a href="#/admin/officials" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold flex items-center gap-1.5" title="Action: Opens the Election Officials Team Builder to allot Counting Supervisors and Counting Assistants to tables.&#10;Prerequisite: Configure booths/tables and upload staff rosters first.">
               <span>👥</span> Allot Counting Teams
             </a>
-            <button id="btnRegenerate" class="btn btn-secondary bg-white/5 border-white/10 hover:bg-white/10 text-xs font-semibold flex items-center gap-1.5" title="Action: Re-runs statutory counting allocation: Department Associations 1st, General Union Posts rotated across tables each round, and UUC Last Always.&#10;Prerequisite: Recommended if candidate lists or booth configurations have changed.">
+            <button id="btnRegenerate" class="btn btn-secondary bg-white/5 border-white/10 hover:bg-white/10 text-xs font-semibold flex items-center gap-1.5" title="Action: Re-runs statutory counting allocation: Department Associations 1st, General Union Posts rotated across tables each round, and UUC Last Always (Only contested posts on respective booth ballots).&#10;Prerequisite: Recommended if candidate lists or booth configurations have changed.">
               <span>🔄</span> Regenerate Matrix
             </button>
           </div>
@@ -1765,19 +1774,19 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
 
     // Matrix Regenerate listeners
     main.querySelector('#btnRegenerate')?.addEventListener('click', () => {
-      if (confirm(`Are you sure? This will regenerate the counting matrix following statutory allocation:\n\n• Department Associations: Round 1 (FIRST)\n• Year Representatives: Round 2\n• General Union Posts: Rotated per table across rounds\n• University Union Councillor (UUC): Final Round (LAST ALWAYS)\n\nResults entry serial numbers may change!`)) {
+      if (confirm(`Are you sure? This will regenerate the counting matrix following statutory allocation:\n\n• Department Associations: Round 1 (FIRST)\n• Year Representatives: Round 2\n• General Union Posts: Rotated per table across rounds\n• University Union Councillor (UUC): Final Round (LAST ALWAYS)\n\nNote: Uncontested posts (0 or 1 candidate) without competition are excluded as no ballots are issued for them.\nResults entry serial numbers may change!`)) {
         generateAndSave();
       }
     });
 
     main.querySelector('#btnNoticeRegenerate')?.addEventListener('click', () => {
-      if (confirm(`Regenerate counting matrix to align with all ${T} polling booths (Associations 1st, rotated General posts, UUC Last)?`)) {
+      if (confirm(`Regenerate counting matrix to align with all ${T} polling booths (Associations 1st, rotated General posts, UUC Last)?\n\nOnly contested posts on respective booth ballots will be included.`)) {
         generateAndSave();
       }
     });
 
     main.querySelector('#btnOrderRegenerate')?.addEventListener('click', () => {
-      if (confirm(`Re-align counting matrix to statutory order (Associations 1st, rotated General posts, UUC Last Always) across all ${T} polling booths?`)) {
+      if (confirm(`Re-align counting matrix to statutory order (Associations 1st, rotated General posts, UUC Last Always) across all ${T} polling booths?\n\nOnly contested posts on respective booth ballots will be included.`)) {
         generateAndSave();
       }
     });
@@ -1866,11 +1875,43 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       return true;
     };
 
-    // 1. Four-Tier Statutory Segregation
-    const uucPosts = postsList.filter(p => isUuc(pName(p)));
-    const assocPosts = postsList.filter(p => !uucPosts.includes(p) && (isAssocPost(p) || Boolean(getPostDept(p))));
-    const yearRepPosts = postsList.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && isYearRepPost(p));
-    const generalPosts = postsList.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && !yearRepPosts.includes(p));
+    // 0. Filter ONLY Contested Posts (Posts with Competition requiring Ballots)
+    // Exclude posts without valid nominations (0 candidates) and uncontested posts (<= 1 candidate, or <= seats)
+    const normPost = s => String(s || '').trim().toLowerCase().replace(/^the\s+/i, '').trim();
+
+    const getCandidatesForPost = (post) => {
+      if (!post) return [];
+      const target = normPost(pName(post));
+      return candidatesList.filter(c => normPost(c.post) === target);
+    };
+
+    const isContestedPost = (post) => {
+      if (!post) return false;
+      const pCands = getCandidatesForPost(post);
+      const pn = pName(post);
+      const seats = (typeof post.seats === 'number' && post.seats > 0)
+        ? post.seats
+        : (isUuc(pn) ? 2 : 1);
+      return pCands.length > seats;
+    };
+
+    if (!candidatesList.length) {
+      showToast('⚠️ Cannot regenerate matrix: No valid candidates found in nominations roster. Please ensure nominations are imported and scrutinized.', 'error');
+      return;
+    }
+
+    const contestedPosts = postsList.filter(isContestedPost);
+
+    if (!contestedPosts.length) {
+      showToast('⚠️ No contested posts found (all posts are uncontested or vacant). No counting matrix needed.', 'warning');
+      return;
+    }
+
+    // 1. Four-Tier Statutory Segregation (Contested Posts Only)
+    const uucPosts = contestedPosts.filter(p => isUuc(pName(p)));
+    const assocPosts = contestedPosts.filter(p => !uucPosts.includes(p) && (isAssocPost(p) || Boolean(getPostDept(p))));
+    const yearRepPosts = contestedPosts.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && isYearRepPost(p));
+    const generalPosts = contestedPosts.filter(p => !uucPosts.includes(p) && !assocPosts.includes(p) && !yearRepPosts.includes(p));
 
     // Sort within tiers
     assocPosts.sort(comparePosts);
@@ -1878,44 +1919,46 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     generalPosts.sort(comparePosts);
     uucPosts.sort(comparePosts);
 
+    const maxAssoc = Math.max(...Array.from({ length: T }, (_, t) => assocPosts.filter(ap => isMatch(ap, t)).length), 0);
+    const maxYear = Math.max(...Array.from({ length: T }, (_, t) => yearRepPosts.filter(yp => isMatch(yp, t)).length), 0);
     const G = generalPosts.length;
+    const maxUuc = Math.max(...Array.from({ length: T }, (_, t) => uucPosts.filter(up => isMatch(up, t)).length), 0);
 
-    // 2. Build table rounds:
-    //    Tier 1: Association Posts (FIRST)
-    //    Tier 2: Year Representatives (SECOND)
-    //    Tier 3: General Union Posts (THIRD, ROTATED PER TABLE EACH ROUND: generalPosts[(t + i) % G])
-    //    Tier 4: University Union Councillor (UUC - LAST ALWAYS)
-    const tablePrefix = [];
-    const tableUuc = [];
+    const R = Math.max(maxAssoc + maxYear + G + maxUuc, 1);
 
-    for (let t = 0; t < T; t++) {
-      const myAssoc = assocPosts.filter(ap => isMatch(ap, t));
-      const myYearReps = yearRepPosts.filter(yp => isMatch(yp, t));
-      const myGeneral = [];
-      if (G > 0) {
-        for (let i = 0; i < G; i++) {
-          myGeneral.push(generalPosts[(t + i) % G]);
-        }
-      }
-      tablePrefix.push([...myAssoc, ...myYearReps, ...myGeneral]);
-      tableUuc.push(uucPosts.filter(up => isMatch(up, t)));
-    }
-
-    const maxPrefix = Math.max(...tablePrefix.map(p => p.length), 0);
-    const maxUuc = Math.max(...tableUuc.map(u => u.length), 0);
-    const R = Math.max(maxPrefix + maxUuc, 1);
-
-    // Construct matrix: non-UUC fill early rounds, UUC is anchored to the final rounds across all tables
+    // 2. Build table rounds strictly following statutory phases:
+    //    Phase 1 (Rounds 0 .. maxAssoc - 1): Department Associations (1st)
+    //    Phase 2 (Rounds maxAssoc .. maxAssoc + maxYear - 1): Year Representatives (2nd)
+    //    Phase 3 (Rounds maxAssoc + maxYear .. maxAssoc + maxYear + G - 1): General Union Posts rotated across tables
+    //    Phase 4 (Final rounds): University Union Councillor (UUC - Last Always)
     const matrix = Array.from({ length: T }, (_, t) => {
       const row = Array.from({ length: R }, () => null);
-      const prefix = tablePrefix[t];
-      prefix.forEach((p, idx) => {
-        row[idx] = p;
+      const myAssoc = assocPosts.filter(ap => isMatch(ap, t));
+      const myYearReps = yearRepPosts.filter(yp => isMatch(yp, t));
+      const myUuc = uucPosts.filter(up => isMatch(up, t));
+
+      // Phase 1: Contested Department Association of this booth
+      myAssoc.forEach((p, idx) => {
+        if (idx < maxAssoc) row[idx] = p;
       });
-      const uuc = tableUuc[t];
-      uuc.forEach((p, idx) => {
-        row[R - maxUuc + idx] = p;
+
+      // Phase 2: Contested Year Representative of this booth
+      myYearReps.forEach((p, idx) => {
+        if (idx < maxYear) row[maxAssoc + idx] = p;
       });
+
+      // Phase 3: Contested General Union Posts (Rotated per table)
+      if (G > 0) {
+        for (let i = 0; i < G; i++) {
+          row[maxAssoc + maxYear + i] = generalPosts[(t + i) % G];
+        }
+      }
+
+      // Phase 4: Contested UUC (Final round)
+      myUuc.forEach((p, idx) => {
+        if (idx < maxUuc) row[maxAssoc + maxYear + G + idx] = p;
+      });
+
       return row;
     });
 
@@ -1929,15 +1972,20 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       }
     }
 
-    const roundLabels = Array.from({ length: R }, (_, i) => {
-      if (maxUuc > 0 && i >= R - maxUuc) {
-        return maxUuc === 1 ? `Round ${i + 1} (UUC)` : `Round ${i + 1} (UUC ${i - (R - maxUuc) + 1})`;
-      }
-      if (i === 0 && assocPosts.length > 0) {
-        return `Round 1 (Assoc)`;
-      }
-      return `Round ${i + 1}`;
-    });
+    const roundLabels = [];
+    for (let a = 0; a < maxAssoc; a++) {
+      roundLabels.push(maxAssoc === 1 ? 'Round 1 (Assoc)' : `Round ${roundLabels.length + 1} (Assoc ${a + 1})`);
+    }
+    for (let y = 0; y < maxYear; y++) {
+      roundLabels.push(maxYear === 1 ? `Round ${roundLabels.length + 1} (Year Rep)` : `Round ${roundLabels.length + 1} (Year Rep ${y + 1})`);
+    }
+    for (let g = 0; g < G; g++) {
+      roundLabels.push(`Round ${roundLabels.length + 1}`);
+    }
+    for (let u = 0; u < maxUuc; u++) {
+      roundLabels.push(maxUuc === 1 ? `Round ${roundLabels.length + 1} (UUC)` : `Round ${roundLabels.length + 1} (UUC ${u + 1})`);
+    }
+    if (roundLabels.length === 0) roundLabels.push('Round 1');
 
     const payload = {
       matrix,
@@ -1950,7 +1998,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     try {
       await api.adminSaveCountingMatrix(pwd, payload);
       await saveCountingMeta({ savedMatrix: payload, posts: postsList, finalList: candidatesList, booths: boothsList, settings, countingTeams, nominalRoll: nominalRollList, results: allResults });
-      showToast('Counting matrix regenerated statutorily (Assoc 1st, Rotated General, UUC Last).', 'success');
+      showToast('Counting matrix regenerated statutorily (Only contested posts from respective booth ballots).', 'success');
       renderDisplay(payload);
     } catch (e) {
       console.warn('Online save matrix failed, saving locally to IndexedDB:', e);
@@ -2592,6 +2640,7 @@ export function printCountingMatrixA4Landscape(options = {}) {
   const now = new Date();
   const genDate = `${now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
   const roundColWidthPercent = ((100 - 8.8) / Math.max(totalRounds, 1)).toFixed(3);
+  const totalFormSerialsCount = Object.keys(formSerials).length || (T * totalRounds);
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -2967,7 +3016,7 @@ export function printCountingMatrixA4Landscape(options = {}) {
         <div class="header-meta">
           <div class="meta-box">
             <div><strong>Tables:</strong> ${T} | <strong>Rounds:</strong> ${totalRounds}</div>
-            <div><strong>Serials:</strong> #1 .. #${T * totalRounds}</div>
+            <div><strong>Serials:</strong> #1 .. #${totalFormSerialsCount}</div>
             <div><strong>Generated:</strong> ${genDate}</div>
           </div>
         </div>
