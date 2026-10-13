@@ -14,7 +14,7 @@
 
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast, isAssocPost, isYearRepPost, comparePosts, sortPosts } from '../../utils.js';
+import { esc, showToast, isAssocPost, isYearRepPost, comparePosts, sortPosts, getStudentYearLevel } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 import { getAllResultsLocally } from '../../offlineStorage.js';
 
@@ -221,8 +221,8 @@ function performFullSystemAudit({
   const classStudentCounts = {};
   const classToDept = {};
   nominalRoll.forEach(s => {
-    const c = String(s['CLASS'] || 'Unknown').trim();
-    const d = String(s['Dept'] || '').trim().toUpperCase();
+    const c = String(s['CLASS'] || s['class'] || s['Class'] || 'Unknown').trim();
+    const d = String(s['Dept'] || s['dept'] || s['Department'] || '').trim().toUpperCase();
     classStudentCounts[c] = (classStudentCounts[c] || 0) + 1;
     if (c && d) classToDept[c] = d;
   });
@@ -434,13 +434,12 @@ function performFullSystemAudit({
       const bDepts = new Set(bClasses.map(c => classToDept[c]).filter(Boolean));
       const bYears = new Set();
       bClasses.forEach(c => {
-        const u = c.toUpperCase();
-        if (['MA','MSC','MCOM','M.SC','M.COM','M.A'].some(pg => u.includes(pg))) bYears.add('PG');
-        else {
-          if (u.includes('1ST YEAR') || /^\s*(1|1ST|I)\b/.test(u) || /\b1ST\b/.test(u)) bYears.add('1');
-          if (u.includes('2ND YEAR') || /^\s*(2|2ND|II)\b/.test(u) || /\b2ND\b/.test(u)) bYears.add('2');
-          if (u.includes('3RD YEAR') || /^\s*(3|3RD|III)\b/.test(u) || /\b3RD\b/.test(u)) bYears.add('3');
-        }
+        const lvl = getStudentYearLevel(c);
+        if (lvl === '1_UG') bYears.add('1');
+        else if (lvl === '2_UG') bYears.add('2');
+        else if (lvl === '3_UG') bYears.add('3');
+        else if (lvl === '1_PG' || lvl === '2_PG') bYears.add('PG');
+        else if (lvl === 'RS') bYears.add('RS');
       });
 
       // 1. General Union Ballot Check

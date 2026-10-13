@@ -1,7 +1,7 @@
 import { printCountingTablePlacards } from '../../noticesPrinter.js';
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast, setLoading, isYearEligible, sortPosts, isAssocPost, isYearRepPost, comparePosts } from '../../utils.js';
+import { esc, showToast, setLoading, isYearEligible, sortPosts, isAssocPost, isYearRepPost, comparePosts, getStudentYearLevel } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 import { saveCountingMeta, getCountingMeta, getAllResultsLocally } from '../../offlineStorage.js';
 import { router } from '../../router.js';
@@ -1798,13 +1798,13 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
 
     const classToDept = {};
     nominalRollList.forEach(s => {
-      const c = String(s['CLASS'] || '').trim();
-      const d = String(s['Dept']  || '').trim().toUpperCase();
+      const c = String(s['CLASS'] || s['class'] || s['Class'] || '').trim();
+      const d = String(s['Dept']  || s['dept']  || s['Department'] || '').trim().toUpperCase();
       if (c && d) {
         classToDept[c] = d;
         const u = c.toUpperCase();
         if (u.includes('RESEARCH') || u.includes('SCHOLAR') || u.includes('PHD') || u.includes('PH.D')) {
-          classToDept[`RESEARCH SCHOLAR - ${s['Dept']}`] = d;
+          classToDept[`RESEARCH SCHOLAR - ${d}`] = d;
         }
       }
     });
@@ -1813,15 +1813,12 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     const boothYears = boothsList.map(b => {
       const yrs = new Set();
       getBoothClasses(b).forEach(c => {
-        const u = c.toUpperCase();
-        const isPG = ['MA','MSC','MCOM','M.SC','M.COM','M.A'].some(pg => u.includes(pg));
-        if (isPG) {
-          yrs.add('PG');
-        } else {
-          if (u.includes('1ST YEAR') || /^\s*(1|1ST|I)\b/.test(u) || /\b1ST\b/.test(u)) yrs.add('1');
-          if (u.includes('2ND YEAR') || /^\s*(2|2ND|II)\b/.test(u) || /\b2ND\b/.test(u)) yrs.add('2');
-          if (u.includes('3RD YEAR') || /^\s*(3|3RD|III)\b/.test(u) || /\b3RD\b/.test(u)) yrs.add('3');
-        }
+        const lvl = getStudentYearLevel(c);
+        if (lvl === '1_UG') yrs.add('1');
+        else if (lvl === '2_UG') yrs.add('2');
+        else if (lvl === '3_UG') yrs.add('3');
+        else if (lvl === '1_PG' || lvl === '2_PG') yrs.add('PG');
+        else if (lvl === 'RS') yrs.add('RS');
       });
       return yrs;
     });
@@ -1854,6 +1851,22 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         if (yrRes === '1') return bYrs.has('1');
         if (yrRes === '2') return bYrs.has('2');
         if (yrRes === '3') return bYrs.has('3');
+      }
+      let targetYears = [];
+      if (Array.isArray(post.yearRuleYears) && post.yearRuleYears.length > 0) {
+        targetYears = post.yearRuleYears;
+      } else if (typeof post.yearRuleYears === 'string' && post.yearRuleYears.trim()) {
+        targetYears = post.yearRuleYears.split(',').map(y => y.trim()).filter(Boolean);
+      }
+      if (targetYears.length > 0) {
+        return targetYears.some(yr => {
+          const y = String(yr).toUpperCase();
+          if (y.includes('PG')) return bYrs.has('PG');
+          if (y.startsWith('1') || y === '1') return bYrs.has('1');
+          if (y.startsWith('2') || y === '2') return bYrs.has('2');
+          if (y.startsWith('3') || y === '3') return bYrs.has('3');
+          return false;
+        });
       }
       const nameUpper = pName(post).toUpperCase();
       if (nameUpper.includes('PG')) return bYrs.has('PG');
