@@ -96,19 +96,58 @@ export function cleanFacultyName(raw) {
   s = s.replace(/^["'`\s]+/, '').replace(/["'`\s]+$/, '');
 
   // 1. Remove combined honorary/military prefixes with Dr (e.g., "Lt. Dr.", "LT.DR.", "Prof. Dr.", "Capt. Dr.")
-  s = s.replace(/^(?:lt\.?|capt\.?|major\.?|prof\.?)\s*(?:dr\b\.?|dr\.)\s*[-–—:,.]?\s*/i, '');
+  s = s.replace(/^(?:lt\.?|capt\.?|major\.?|prof\.?|professor)\s*(?:dr\b\.?|dr\.)\s*[-–—:,.]?\s*/i, '');
 
   // 2. Remove standard Dr / DR / Dr. / DR. / Dr: / DR, prefix
   s = s.replace(/^(?:dr\b\.?|dr\.)\s*[-–—:,.]?\s*/i, '');
 
+  // 3. Fallback for raw dr prefix with punctuation or space
+  s = s.replace(/^dr[\s,.:–—-]+/i, '');
+
+  // 4. Remove standalone honorary titles
+  s = s.replace(/^(?:prof\b\.?|professor\b|sri\b\.?|smt\b\.?)\s*[-–—:,.]?\s*/i, '');
+
   // Strip wrapping quotes again if any were internal
   s = s.replace(/^["'`\s]+/, '').replace(/["'`\s]+$/, '');
 
-  // 3. Normalize whitespace (collapse multiple spaces into single space)
+  // 5. Normalize whitespace (collapse multiple spaces into single space)
   s = s.replace(/\s+/g, ' ').trim();
 
-  // 4. Convert all characters to uppercase
+  // 6. Convert all characters to uppercase
   return s.toUpperCase();
+}
+
+/**
+ * Sanitizes a duty slot object or string to guarantee clean UPPERCASE name without Dr. prefix.
+ */
+export function sanitizeDutySlot(slot) {
+  if (!slot) return slot;
+  if (typeof slot === 'string') return cleanFacultyName(slot);
+  if (typeof slot === 'object' && slot.name) {
+    return { ...slot, name: cleanFacultyName(slot.name) };
+  }
+  return slot;
+}
+
+/**
+ * Sanitizes all official slots across a polling or counting team.
+ */
+export function sanitizeTeamPersonnel(team) {
+  if (!team) return team;
+  return {
+    ...team,
+    presidingOfficer: sanitizeDutySlot(team.presidingOfficer),
+    pollingOfficer1: sanitizeDutySlot(team.pollingOfficer1),
+    pollingOfficer2: sanitizeDutySlot(team.pollingOfficer2),
+    pollingOfficer3: sanitizeDutySlot(team.pollingOfficer3),
+    pollingAssistant: sanitizeDutySlot(team.pollingAssistant),
+    supervisor: sanitizeDutySlot(team.supervisor),
+    countingOfficer1: sanitizeDutySlot(team.countingOfficer1),
+    countingOfficer2: sanitizeDutySlot(team.countingOfficer2),
+    countingOfficer3: sanitizeDutySlot(team.countingOfficer3),
+    countingAssistant: sanitizeDutySlot(team.countingAssistant),
+    coreInCharge: sanitizeDutySlot(team.coreInCharge)
+  };
 }
 
 /**
@@ -306,10 +345,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     try { localPolling = JSON.parse(cachedPoll); } catch (_) { localPolling = []; }
   }
   if (Array.isArray(initialOfficialsData?.pollingTeams) && initialOfficialsData.pollingTeams.length > 0) {
-    pollingTeams = initialOfficialsData.pollingTeams;
+    pollingTeams = initialOfficialsData.pollingTeams.map(sanitizeTeamPersonnel);
     localStorage.setItem('gcc_polling_teams', JSON.stringify(pollingTeams));
   } else if (localPolling.length > 0) {
-    pollingTeams = localPolling;
+    pollingTeams = localPolling.map(sanitizeTeamPersonnel);
   }
 
   // Counting Teams: Server is authoritative truth across PCs
@@ -320,14 +359,14 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     try { localCounting = JSON.parse(cachedCount); } catch (_) { localCounting = []; }
   }
   if (Array.isArray(initialOfficialsData?.countingTeams) && initialOfficialsData.countingTeams.length > 0) {
-    countingTeams = initialOfficialsData.countingTeams;
+    countingTeams = initialOfficialsData.countingTeams.map(sanitizeTeamPersonnel);
     localStorage.setItem('gcc_counting_teams', JSON.stringify(countingTeams));
   } else if (localCounting.length > 0) {
-    countingTeams = localCounting;
+    countingTeams = localCounting.map(sanitizeTeamPersonnel);
   }
   // Auto-recover from statutory duty roster backup if counting teams are unassigned or missing supervisors
   if (!Array.isArray(countingTeams) || countingTeams.length === 0 || !countingTeams.some(t => t.supervisor)) {
-    countingTeams = OFFICIAL_COUNTING_ROSTER_BACKUP.map(t => ({ ...t }));
+    countingTeams = OFFICIAL_COUNTING_ROSTER_BACKUP.map(t => sanitizeTeamPersonnel({ ...t }));
     localStorage.setItem('gcc_counting_teams', JSON.stringify(countingTeams));
   }
 
@@ -379,11 +418,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         if ((!existing.designation || existing.designation === 'Faculty') && item.designation && item.designation !== 'Faculty') {
           existing.designation = item.designation;
         }
-        if (item.name && item.name.length > existing.name.length && /^(dr|prof)/i.test(item.name)) {
-          existing.name = item.name;
-        }
+        existing.name = cleanFacultyName(existing.name || item.name);
       } else {
-        const copy = { ...item };
+        const copy = { ...item, name: cleanFacultyName(item.name) };
         const idx = result.length;
         result.push(copy);
         if (pen) seenPens.set(pen, idx);
@@ -1743,6 +1780,11 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     disciplineCharge = dedupeOfficials(disciplineCharge);
     grievanceCell = dedupeOfficials(grievanceCell);
     aroOfficers = dedupeOfficials(aroOfficers);
+    pollingTeams = Array.isArray(pollingTeams) ? pollingTeams.map(sanitizeTeamPersonnel) : [];
+    countingTeams = Array.isArray(countingTeams) ? countingTeams.map(sanitizeTeamPersonnel) : [];
+    if (roOfficer) roOfficer = sanitizeDutySlot(roOfficer);
+    if (Array.isArray(reserveOfficials)) reserveOfficials = reserveOfficials.map(r => ({ ...r, name: cleanFacultyName(r.name) }));
+    if (Array.isArray(faculty)) faculty = faculty.map(f => ({ ...f, name: cleanFacultyName(f.name) }));
 
     localStorage.setItem('gcc_faculty_roster', JSON.stringify(faculty));
     localStorage.setItem('gcc_non_teaching_roster', JSON.stringify(nonTeaching));
@@ -4825,29 +4867,16 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         return { ...f, name: newName };
       });
 
-      pollingTeams = pollingTeams.map(t => ({
-        ...t,
-        presidingOfficer: updateDutyPersonName(t.presidingOfficer),
-        pollingOfficer1: updateDutyPersonName(t.pollingOfficer1),
-        pollingOfficer2: updateDutyPersonName(t.pollingOfficer2),
-        pollingOfficer3: updateDutyPersonName(t.pollingOfficer3),
-        coreInCharge: updateDutyPersonName(t.coreInCharge)
-      }));
+      pollingTeams = pollingTeams.map(sanitizeTeamPersonnel);
+      countingTeams = countingTeams.map(sanitizeTeamPersonnel);
 
-      countingTeams = countingTeams.map(t => ({
-        ...t,
-        supervisor: updateDutyPersonName(t.supervisor),
-        countingOfficer1: updateDutyPersonName(t.countingOfficer1),
-        countingOfficer2: updateDutyPersonName(t.countingOfficer2),
-        countingOfficer3: updateDutyPersonName(t.countingOfficer3)
-      }));
-
-      if (roOfficer) roOfficer = updateDutyPersonName(roOfficer);
-      aroOfficers = aroOfficers.map(updateDutyPersonName);
-      coreCommittee = coreCommittee.map(updateDutyPersonName);
-      observers = observers.map(updateDutyPersonName);
-      disciplineCharge = disciplineCharge.map(updateDutyPersonName);
-      grievanceCell = grievanceCell.map(updateDutyPersonName);
+      if (roOfficer) roOfficer = sanitizeDutySlot(roOfficer);
+      aroOfficers = aroOfficers.map(sanitizeDutySlot);
+      coreCommittee = coreCommittee.map(sanitizeDutySlot);
+      observers = observers.map(sanitizeDutySlot);
+      disciplineCharge = disciplineCharge.map(sanitizeDutySlot);
+      grievanceCell = grievanceCell.map(sanitizeDutySlot);
+      reserveOfficials = (reserveOfficials || []).map(r => ({ ...r, name: cleanFacultyName(r.name) }));
 
       renderUI();
       await saveAll(false);
@@ -8119,7 +8148,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   const getMasterDutyData = () => {
     // 0. Returning Officer (RO)
     const roData = roOfficer && roOfficer.name ? {
-      name: roOfficer.name,
+      name: cleanFacultyName(roOfficer.name),
       designation: (roOfficer.designation || 'Returning Officer').trim(),
       department: (roOfficer.department || '').trim() || '–',
       pen: (roOfficer.pen || '–').trim(),
@@ -8137,7 +8166,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       .map((a) => {
         const p = getPerson(a.name);
         return {
-          name: a.name,
+          name: cleanFacultyName(a.name),
           designation: (p?.designation || a.designation || 'Assistant Returning Officer').trim(),
           department: (p?.department || a.department || '').trim() || '–',
           pen: (p?.pen || a.pen || '–').trim(),
@@ -8185,7 +8214,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         }
 
         return {
-          name: c.name,
+          name: cleanFacultyName(c.name),
           designation: (p?.designation || c.designation || 'Faculty').trim(),
           department: (p?.department || c.department || '').trim() || '–',
           pen: (p?.pen || c.pen || '–').trim(),
@@ -8210,7 +8239,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       .map((obs) => {
         const p = getPerson(obs.name);
         return {
-          name: obs.name,
+          name: cleanFacultyName(obs.name),
           designation: (p?.designation || obs.designation || 'Faculty').trim(),
           department: (p?.department || obs.department || '').trim() || '–',
           pen: (p?.pen || obs.pen || '–').trim(),
@@ -8233,7 +8262,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       .map((disc) => {
         const p = getPerson(disc.name);
         return {
-          name: disc.name,
+          name: cleanFacultyName(disc.name),
           designation: (p?.designation || disc.designation || (p?.type === 'Teaching Faculty' ? 'Faculty' : 'Staff')).trim(),
           department: (p?.department || disc.department || (p?.type === 'Teaching Faculty' ? '' : 'Office')).trim() || '–',
           pen: (p?.pen || disc.pen || '–').trim(),
@@ -8256,7 +8285,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
       .map((g) => {
         const p = getPerson(g.name);
         return {
-          name: g.name,
+          name: cleanFacultyName(g.name),
           designation: (p?.designation || g.designation || (p?.type === 'Teaching Faculty' ? 'Faculty' : 'Staff')).trim(),
           department: (p?.department || g.department || (p?.type === 'Teaching Faculty' ? '' : 'Office')).trim() || '–',
           pen: (p?.pen || g.pen || '–').trim(),
@@ -8338,7 +8367,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         const isOnlyReserve = !pDuty && !cDuty && !!rDuty;
 
         personnel.push({
-          name: f.name,
+          name: cleanFacultyName(f.name),
           designation: (f.designation || 'Faculty').trim(),
           department: (f.department || '').trim() || '–',
           pen: (f.pen || '–').trim(),
@@ -8355,7 +8384,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         if (rDuty) {
           const resRole = rDuty.reserveType || 'General Reserve';
           reserveList.push({
-            name: f.name,
+            name: cleanFacultyName(f.name),
             designation: (f.designation || 'Faculty').trim(),
             department: (f.department || '').trim() || '–',
             pen: (f.pen || '–').trim(),
@@ -8374,7 +8403,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         // ONLY people who are NOT excluded AND NOT on ANY duty are placed in Reserve!
         seenStaff.add(fNameLower);
         const resEntry = {
-          name: f.name,
+          name: cleanFacultyName(f.name),
           designation: (f.designation || 'Faculty').trim(),
           department: (f.department || '').trim() || '–',
           pen: (f.pen || '–').trim(),
@@ -8450,7 +8479,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         const isOnlyReserve = !ntAssigned.polling && !ntAssigned.counting && !!rDuty;
 
         personnel.push({
-          name: nt.name,
+          name: cleanFacultyName(nt.name),
           designation: (nt.designation || 'Staff').trim(),
           department: (nt.department || nt.section || 'Office').trim() || 'Office',
           pen: (nt.pen || '–').trim(),
@@ -8467,7 +8496,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         if (rDuty) {
           const resRole = rDuty.reserveType || 'General Reserve';
           reserveList.push({
-            name: nt.name,
+            name: cleanFacultyName(nt.name),
             designation: (nt.designation || 'Staff').trim(),
             department: (nt.department || nt.section || 'Office').trim() || 'Office',
             pen: (nt.pen || '–').trim(),
@@ -8486,7 +8515,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
         // ONLY people who are NOT excluded AND NOT on ANY duty are placed in Reserve!
         seenStaff.add(ntNameLower);
         const resEntry = {
-          name: nt.name,
+          name: cleanFacultyName(nt.name),
           designation: (nt.designation || 'Staff').trim(),
           department: (nt.department || nt.section || 'Office').trim() || 'Office',
           pen: (nt.pen || '–').trim(),
@@ -9147,7 +9176,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(obs.slNo)}</td>
                   <td>
-                    <span class="staff-name">${esc(obs.name)}</span>
+                    <span class="staff-name">${esc(cleanFacultyName(obs.name))}</span>
                   </td>
                   ${obsHasDept ? `<td><span class="dept-badge">${esc(obs.department)}</span></td>` : ''}
                   <td>${esc(obs.designation)}</td>
@@ -9191,7 +9220,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <tr>
                 <td class="col-center" style="font-weight: 800; font-family: monospace;">RO</td>
                 <td>
-                  <span class="staff-name" style="font-size: 11px;">${esc(roData.name)}</span>
+                  <span class="staff-name" style="font-size: 11px;">${esc(cleanFacultyName(roData.name))}</span>
                 </td>
                 <td><strong>👑 Returning Officer (RO)</strong></td>
                 <td>${esc(roData.designation)}${roData.department && roData.department !== '–' ? ` · <span class="dept-badge">${esc(roData.department)}</span>` : ''}</td>
@@ -9204,7 +9233,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <tr>
                 <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(aro.slNo)}</td>
                 <td>
-                  <span class="staff-name">${esc(aro.name)}</span>
+                  <span class="staff-name">${esc(cleanFacultyName(aro.name))}</span>
                 </td>
                 <td><strong>⚖️ Assistant Returning Officer (ARO)</strong></td>
                 <td>${esc(aro.designation)}${aro.department && aro.department !== '–' ? ` · <span class="dept-badge">${esc(aro.department)}</span>` : ''}</td>
@@ -9264,7 +9293,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(disc.slNo)}</td>
                   <td>
-                    <span class="staff-name">${esc(disc.name)}</span>
+                    <span class="staff-name">${esc(cleanFacultyName(disc.name))}</span>
                   </td>
                   ${discHasDept ? `<td><span class="dept-badge">${esc(disc.department)}</span></td>` : ''}
                   <td>${esc(disc.designation)}</td>
@@ -9322,7 +9351,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(g.slNo)}</td>
                   <td>
-                    <span class="staff-name">${esc(g.name)}</span>
+                    <span class="staff-name">${esc(cleanFacultyName(g.name))}</span>
                   </td>
                   ${grievHasDept ? `<td><span class="dept-badge">${esc(g.department)}</span></td>` : ''}
                   <td>${esc(g.designation)}</td>
@@ -9384,7 +9413,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(c.slNo)}</td>
                   <td>
-                    <span class="staff-name">${esc(c.name)}</span>
+                    <span class="staff-name">${esc(cleanFacultyName(c.name))}</span>
                   </td>
                   ${coreHasDept ? `<td><span class="dept-badge">${esc(c.department)}</span></td>` : ''}
                   <td>${esc(c.designation)}</td>
@@ -9452,7 +9481,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${idx + 1}</td>
                   <td>
-                    <span class="staff-name">${esc(p.name)}</span>
+                    <span class="staff-name">${esc(cleanFacultyName(p.name))}</span>
                     ${!hideStation && p.hasDoubleDuty ? `<span style="font-size: 8px; color: #000000; font-weight: bold; border: 1px solid #000000; padding: 0 3px; display: inline-block; margin-top: 1px;">⚠️ Double Duty (Polling &amp; Counting)</span>` : ''}
                     ${!hideStation && p.isReserve ? `<span style="font-size: 8px; color: #000000; font-weight: 700; border: 1px solid #000000; padding: 0 4px; display: inline-block; margin-top: 1px;">Reserve Official</span>` : ''}
                   </td>
@@ -9594,7 +9623,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(obs.slNo)}</td>
                   <td>
-                    <span class="staff-name">${esc(obs.name)}</span>
+                    <span class="staff-name">${esc(cleanFacultyName(obs.name))}</span>
                   </td>
                   ${obsHasDept ? `<td><span class="dept-badge">${esc(obs.department)}</span></td>` : ''}
                   <td>${esc(obs.designation)}</td>
@@ -9638,7 +9667,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <tr>
                 <td class="col-center" style="font-weight: 800; font-family: monospace;">RO</td>
                 <td>
-                  <span class="staff-name">${esc(roData.name)}</span>
+                  <span class="staff-name">${esc(cleanFacultyName(roData.name))}</span>
                 </td>
                 <td><strong>👑 Returning Officer (RO)</strong></td>
                 <td>${esc(roData.designation)}${roData.department && roData.department !== '–' ? ` · <span class="dept-badge">${esc(roData.department)}</span>` : ''}</td>
@@ -9651,7 +9680,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               <tr>
                 <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(aro.slNo)}</td>
                 <td>
-                  <span class="staff-name">${esc(aro.name)}</span>
+                  <span class="staff-name">${esc(cleanFacultyName(aro.name))}</span>
                 </td>
                 <td><strong>⚖️ Assistant Returning Officer (ARO)</strong></td>
                 <td>${esc(aro.designation)}${aro.department && aro.department !== '–' ? ` · <span class="dept-badge">${esc(aro.department)}</span>` : ''}</td>
@@ -9711,7 +9740,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(disc.slNo)}</td>
                   <td>
-                    <span class="staff-name">${esc(disc.name)}</span>
+                    <span class="staff-name">${esc(cleanFacultyName(disc.name))}</span>
                   </td>
                   ${discHasDept ? `<td><span class="dept-badge">${esc(disc.department)}</span></td>` : ''}
                   <td>${esc(disc.designation)}</td>
@@ -9769,7 +9798,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(g.slNo)}</td>
                   <td>
-                    <span class="staff-name">${esc(g.name)}</span>
+                    <span class="staff-name">${esc(cleanFacultyName(g.name))}</span>
                   </td>
                   ${grievHasDept ? `<td><span class="dept-badge">${esc(g.department)}</span></td>` : ''}
                   <td>${esc(g.designation)}</td>
@@ -9830,7 +9859,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${esc(c.slNo)}</td>
                   <td>
-                    <span class="staff-name">${esc(c.name)}</span>
+                    <span class="staff-name">${esc(cleanFacultyName(c.name))}</span>
                   </td>
                   ${coreHasDept ? `<td><span class="dept-badge">${esc(c.department)}</span></td>` : ''}
                   <td>${esc(c.designation)}</td>
@@ -9916,7 +9945,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     ` : ''}
                     <td>
                       ${s.person && s.person.name && (!personObj?.isExcluded || s.isCore) ? `
-                        <span class="staff-name">${esc(s.person.name)}</span>
+                        <span class="staff-name">${esc(cleanFacultyName(s.person.name))}</span>
                       ` : (personObj?.isExcluded && !s.isCore ? '<span style="color: #000000; font-style: italic;">– Excluded Official –</span>' : '<span style="color: #000000; font-style: italic;">– Unassigned –</span>')}
                     </td>
                     <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: #000000;">
@@ -10003,7 +10032,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                     ` : ''}
                     <td>
                       ${s.person && s.person.name && (!personObj?.isExcluded || s.isCore) ? `
-                        <span class="staff-name">${esc(s.person.name)}</span>
+                        <span class="staff-name">${esc(cleanFacultyName(s.person.name))}</span>
                       ` : (personObj?.isExcluded && !s.isCore ? '<span style="color: #000000; font-style: italic;">– Excluded Official –</span>' : '<span style="color: #000000; font-style: italic;">– Unassigned –</span>')}
                     </td>
                     <td style="font-weight: ${s.isHead ? '700' : 'normal'}; color: #000000;">
@@ -10069,7 +10098,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                 <tr>
                   <td class="col-center" style="font-weight: 700; font-family: monospace;">${idx + 1}</td>
                   <td>
-                    <span class="staff-name">${esc(r.name)}</span>
+                    <span class="staff-name">${esc(cleanFacultyName(r.name))}</span>
                   </td>
                   ${resHasDept ? `<td><span class="dept-badge">${esc(r.department)}</span></td>` : ''}
                   <td>${esc(r.designation)}</td>

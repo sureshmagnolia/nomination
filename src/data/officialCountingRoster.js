@@ -37,13 +37,13 @@ export const OFFICIAL_COUNTING_ROSTER_BACKUP = [
     "tableNumber": 2,
     "roomName": "Table 2",
     "supervisor": {
-      "name": "DR.PARVATHY P",
+      "name": "PARVATHY P",
       "pen": "596378",
       "designation": "Professor",
       "department": "Economics"
     },
     "countingOfficer1": {
-      "name": "Dr.SUMATHY.M",
+      "name": "SUMATHY.M",
       "pen": "712287",
       "designation": "Asst.Prof.",
       "department": "Economics"
@@ -67,7 +67,7 @@ export const OFFICIAL_COUNTING_ROSTER_BACKUP = [
     "tableNumber": 3,
     "roomName": "Table 3",
     "supervisor": {
-      "name": "DR. LAKSHMANAN.M.P",
+      "name": "LAKSHMANAN.M.P",
       "pen": "596049",
       "designation": "Asso.Prof.",
       "department": "Commerce"
@@ -109,7 +109,7 @@ export const OFFICIAL_COUNTING_ROSTER_BACKUP = [
       "department": "Economics"
     },
     "countingOfficer2": {
-      "name": "DR VIJAYASREE HARIDAS",
+      "name": "VIJAYASREE HARIDAS",
       "pen": "1027220",
       "designation": "Asst.Prof.",
       "department": "Chemistry"
@@ -133,13 +133,13 @@ export const OFFICIAL_COUNTING_ROSTER_BACKUP = [
       "department": "Commerce"
     },
     "countingOfficer1": {
-      "name": "Dr.MANU CHAKRAVATHY.S",
+      "name": "MANU CHAKRAVATHY.S",
       "pen": "401480",
       "designation": "Asst.Prof.",
       "department": "Physical Education"
     },
     "countingOfficer2": {
-      "name": "DR SURYA K S",
+      "name": "SURYA K S",
       "pen": "1027219",
       "designation": "Asst.Prof.",
       "department": "Zoology"
@@ -187,13 +187,13 @@ export const OFFICIAL_COUNTING_ROSTER_BACKUP = [
     "tableNumber": 7,
     "roomName": "Table 7",
     "supervisor": {
-      "name": "Dr.Roobina A",
+      "name": "ROOBINA A",
       "pen": "672090",
       "designation": "Asso.Prof.",
       "department": "Geography"
     },
     "countingOfficer1": {
-      "name": "Dr.RUBY.R",
+      "name": "RUBY.R",
       "pen": "807552",
       "designation": "Asst.Prof.",
       "department": "Mathematics"
@@ -217,7 +217,7 @@ export const OFFICIAL_COUNTING_ROSTER_BACKUP = [
     "tableNumber": 8,
     "roomName": "Table 8",
     "supervisor": {
-      "name": "Dr.MANJU VARGHESE",
+      "name": "MANJU VARGHESE",
       "pen": "663321",
       "designation": "Asso.Prof.",
       "department": "Economics"
@@ -253,7 +253,7 @@ export const OFFICIAL_COUNTING_ROSTER_BACKUP = [
       "department": "Botany"
     },
     "countingOfficer1": {
-      "name": "Dr.SHILPA M.",
+      "name": "SHILPA M.",
       "pen": "807009",
       "designation": "Asst.Prof.",
       "department": "Mathematics"
@@ -277,7 +277,7 @@ export const OFFICIAL_COUNTING_ROSTER_BACKUP = [
     "tableNumber": 10,
     "roomName": "Table 10",
     "supervisor": {
-      "name": "Dr.SARIN.V.P",
+      "name": "SARIN.V.P",
       "pen": "663963",
       "designation": "Asso.Prof.",
       "department": "Electronics"
@@ -307,13 +307,13 @@ export const OFFICIAL_COUNTING_ROSTER_BACKUP = [
     "tableNumber": 11,
     "roomName": "Table 11",
     "supervisor": {
-      "name": "DR.A.VIJAYAN",
+      "name": "A.VIJAYAN",
       "pen": "412534",
       "designation": "Asst. Prof.",
       "department": "Tamil"
     },
     "countingOfficer1": {
-      "name": "DR.RATHI.R",
+      "name": "RATHI.R",
       "pen": "778803",
       "designation": "Asst. Prof.",
       "department": "Tamil"

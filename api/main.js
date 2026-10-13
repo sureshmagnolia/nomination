@@ -21,6 +21,46 @@ const safeJsonParse = (val, fallback = null) => {
   }
 };
 
+const cleanFacultyName = (raw) => {
+  if (!raw || typeof raw !== 'string') return '';
+  let s = raw.trim();
+  s = s.replace(/^["'`\s]+/, '').replace(/["'`\s]+$/, '');
+  s = s.replace(/^(?:lt\.?|capt\.?|major\.?|prof\.?)\s*(?:dr\b\.?|dr\.)\s*[-–—:,.]?\s*/i, '');
+  s = s.replace(/^(?:dr\b\.?|dr\.)\s*[-–—:,.]?\s*/i, '');
+  s = s.replace(/^dr[\s,.:–—-]+/i, '');
+  s = s.replace(/^(?:prof\b\.?|professor\b|sri\b\.?|smt\b\.?)\s*[-–—:,.]?\s*/i, '');
+  s = s.replace(/^["'`\s]+/, '').replace(/["'`\s]+$/, '');
+  s = s.replace(/\s+/g, ' ').trim();
+  return s.toUpperCase();
+};
+
+const sanitizeDutySlot = (slot) => {
+  if (!slot) return slot;
+  if (typeof slot === 'string') return cleanFacultyName(slot);
+  if (typeof slot === 'object' && slot.name) {
+    return { ...slot, name: cleanFacultyName(slot.name) };
+  }
+  return slot;
+};
+
+const sanitizeTeamPersonnel = (team) => {
+  if (!team) return team;
+  return {
+    ...team,
+    presidingOfficer: sanitizeDutySlot(team.presidingOfficer),
+    pollingOfficer1: sanitizeDutySlot(team.pollingOfficer1),
+    pollingOfficer2: sanitizeDutySlot(team.pollingOfficer2),
+    pollingOfficer3: sanitizeDutySlot(team.pollingOfficer3),
+    pollingAssistant: sanitizeDutySlot(team.pollingAssistant),
+    supervisor: sanitizeDutySlot(team.supervisor),
+    countingOfficer1: sanitizeDutySlot(team.countingOfficer1),
+    countingOfficer2: sanitizeDutySlot(team.countingOfficer2),
+    countingOfficer3: sanitizeDutySlot(team.countingOfficer3),
+    countingAssistant: sanitizeDutySlot(team.countingAssistant),
+    coreInCharge: sanitizeDutySlot(team.coreInCharge)
+  };
+};
+
 const normalizeOfficialName = (name) => {
   if (!name) return '';
   return String(name)
@@ -67,11 +107,9 @@ const dedupeOfficials = (list) => {
       if ((!existing.designation || existing.designation === 'Faculty') && item.designation && item.designation !== 'Faculty') {
         existing.designation = item.designation;
       }
-      if (item.name && item.name.length > existing.name.length && /^(dr|prof)/i.test(item.name)) {
-        existing.name = item.name;
-      }
+      existing.name = cleanFacultyName(existing.name || item.name);
     } else {
-      const copy = { ...item };
+      const copy = { ...item, name: cleanFacultyName(item.name) };
       const idx = result.length;
       result.push(copy);
       if (pen) seenPens.set(pen, idx);
@@ -1257,17 +1295,17 @@ export default async function handler(req, res) {
         getSetting('election_reserve_officials')
       ]);
       return jsonOut(res, {
-        faculty: safeJsonParse(facRaw, null),
+        faculty: Array.isArray(safeJsonParse(facRaw, null)) ? safeJsonParse(facRaw, []).map(f => ({ ...f, name: cleanFacultyName(f.name) })) : safeJsonParse(facRaw, null),
         nonTeaching: safeJsonParse(ntRaw, null),
-        pollingTeams: safeJsonParse(pollRaw, []),
-        countingTeams: safeJsonParse(countRaw, []),
+        pollingTeams: safeJsonParse(pollRaw, []).map(sanitizeTeamPersonnel),
+        countingTeams: safeJsonParse(countRaw, []).map(sanitizeTeamPersonnel),
         observers: dedupeOfficials(safeJsonParse(obsRaw, [])),
         disciplineCharge: dedupeOfficials(safeJsonParse(discRaw, [])),
         grievanceCell: dedupeOfficials(safeJsonParse(grievRaw, [])),
-        roOfficer: safeJsonParse(roRaw, null),
+        roOfficer: roRaw ? sanitizeDutySlot(safeJsonParse(roRaw)) : null,
         aroOfficers: dedupeOfficials(safeJsonParse(arosRaw, [])),
         coreCommittee: dedupeOfficials(safeJsonParse(coreRaw, [])),
-        reserveOfficials: safeJsonParse(resRaw, [])
+        reserveOfficials: safeJsonParse(resRaw, []).map(r => ({ ...r, name: cleanFacultyName(r.name) }))
       });
     }
 
@@ -2641,17 +2679,17 @@ All students are directed to strictly adhere to the University Code of Conduct, 
     if (action === 'adminSaveOfficials') {
       const { faculty, nonTeaching, pollingTeams, countingTeams, observers, disciplineCharge, grievanceCell, roOfficer, aroOfficers, coreCommittee, reserveOfficials } = body;
       const tasks = [];
-      if (faculty !== undefined) tasks.push(setSetting('election_faculty_roster', JSON.stringify(faculty)));
+      if (faculty !== undefined) tasks.push(setSetting('election_faculty_roster', JSON.stringify(Array.isArray(faculty) ? faculty.map(f => ({ ...f, name: cleanFacultyName(f.name) })) : faculty)));
       if (nonTeaching !== undefined) tasks.push(setSetting('election_non_teaching_roster', JSON.stringify(nonTeaching)));
-      if (pollingTeams !== undefined) tasks.push(setSetting('polling_teams_officials', JSON.stringify(pollingTeams)));
-      if (countingTeams !== undefined) tasks.push(setSetting('counting_teams_officials', JSON.stringify(countingTeams)));
+      if (pollingTeams !== undefined) tasks.push(setSetting('polling_teams_officials', JSON.stringify(Array.isArray(pollingTeams) ? pollingTeams.map(sanitizeTeamPersonnel) : pollingTeams)));
+      if (countingTeams !== undefined) tasks.push(setSetting('counting_teams_officials', JSON.stringify(Array.isArray(countingTeams) ? countingTeams.map(sanitizeTeamPersonnel) : countingTeams)));
       if (observers !== undefined) tasks.push(setSetting('election_observers', JSON.stringify(dedupeOfficials(observers))));
       if (disciplineCharge !== undefined) tasks.push(setSetting('election_discipline', JSON.stringify(dedupeOfficials(disciplineCharge))));
       if (grievanceCell !== undefined) tasks.push(setSetting('election_grievance', JSON.stringify(dedupeOfficials(grievanceCell))));
-      if (roOfficer !== undefined) tasks.push(setSetting('election_ro', JSON.stringify(roOfficer)));
+      if (roOfficer !== undefined) tasks.push(setSetting('election_ro', JSON.stringify(sanitizeDutySlot(roOfficer))));
       if (aroOfficers !== undefined) tasks.push(setSetting('election_aros', JSON.stringify(dedupeOfficials(aroOfficers))));
       if (coreCommittee !== undefined) tasks.push(setSetting('election_core_committee', JSON.stringify(dedupeOfficials(coreCommittee))));
-      if (reserveOfficials !== undefined) tasks.push(setSetting('election_reserve_officials', JSON.stringify(reserveOfficials)));
+      if (reserveOfficials !== undefined) tasks.push(setSetting('election_reserve_officials', JSON.stringify(Array.isArray(reserveOfficials) ? reserveOfficials.map(r => ({ ...r, name: cleanFacultyName(r.name) })) : reserveOfficials)));
       await Promise.all(tasks);
       return jsonOut(res, { ok: true });
     }
