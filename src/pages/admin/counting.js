@@ -116,7 +116,7 @@ export async function renderAdminCounting(container) {
   `);
 
   try {
-    const [savedMatrix, posts, nominationsRaw, booths, nominalRoll, settings, officialsRaw, resultsRaw] = await Promise.all([
+    const [savedMatrix, posts, nominationsRaw, booths, nominalRoll, settings, officialsRaw, resultsRaw, ballotPlanRaw] = await Promise.all([
       api.adminGetCountingMatrix(pwd, true).catch(() => null),
       api.getPosts().catch(() => []),
       api.adminGetNominations(pwd).catch(() => []),
@@ -124,11 +124,19 @@ export async function renderAdminCounting(container) {
       api.getNominalRoll().catch(() => []),
       api.adminGetSettings(pwd).catch(() => ({})),
       api.adminGetOfficials(pwd, true).catch(() => null),
-      api.adminGetResults(pwd, true).catch(() => [])
+      api.adminGetResults(pwd, true).catch(() => []),
+      api.adminGetBallotPlan(pwd).catch(() => null)
     ]);
 
+    let ballotPlan = ballotPlanRaw || null;
+    if (!ballotPlan && settings?.ballotPlan) {
+      try {
+        ballotPlan = typeof settings.ballotPlan === 'string' ? JSON.parse(settings.ballotPlan) : settings.ballotPlan;
+      } catch (_) {}
+    }
+
     const allNoms = Array.isArray(nominationsRaw) ? nominationsRaw : [];
-    const finalList = allNoms.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved');
+    const finalList = allNoms.filter(n => (n.status === 'Valid' || n.status === 'Approved' || n.status === 'Accepted') && n.withdrawalStatus !== 'Approved' && n.withdrawal_status !== 'Approved');
     const boothsList = Array.isArray(booths) ? booths : (Array.isArray(booths?.booths) ? booths.booths : []);
     const postsList = Array.isArray(posts) ? posts : (Array.isArray(posts?.posts) ? posts.posts : []);
     const nominalRollList = Array.isArray(nominalRoll) ? nominalRoll : [];
@@ -145,9 +153,9 @@ export async function renderAdminCounting(container) {
     }
 
     // Cache metadata in IndexedDB for offline access
-    await saveCountingMeta({ savedMatrix, posts: postsList, finalList, booths: boothsList, settings, countingTeams, nominalRoll: nominalRollList, results: resultsList });
+    await saveCountingMeta({ savedMatrix, posts: postsList, finalList, booths: boothsList, settings, countingTeams, nominalRoll: nominalRollList, results: resultsList, ballotPlan });
 
-    renderCountingUI(container.querySelector('#adminMain'), pwd, savedMatrix, postsList, finalList, boothsList, nominalRollList, settings, false, countingTeams, resultsList);
+    renderCountingUI(container.querySelector('#adminMain'), pwd, savedMatrix, postsList, finalList, boothsList, nominalRollList, settings, false, countingTeams, resultsList, ballotPlan);
   } catch (e) {
     console.warn('Counting online load failed, checking IndexedDB cache:', e);
     const cached = await getCountingMeta();
@@ -164,7 +172,8 @@ export async function renderAdminCounting(container) {
         cached.settings || {},
         true,
         cached.countingTeams || [],
-        localResults.length ? localResults : (cached.results || [])
+        localResults.length ? localResults : (cached.results || []),
+        cached.ballotPlan || null
       );
     } else {
       container.querySelector('#adminMain').innerHTML = `<div class="alert alert-error">❌ ${esc(e.message)}</div>`;
@@ -199,7 +208,13 @@ function getSupervisorNameForTable(tableNum, countingTeams) {
   return getSupervisorInfoForTable(tableNum, countingTeams).name;
 }
 
-function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nominalRoll, settings = {}, isOffline = false, countingTeams = [], allResults = []) {
+function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nominalRoll, settings = {}, isOffline = false, countingTeams = [], allResults = [], ballotPlan = null) {
+  let activePlan = ballotPlan;
+  if (!activePlan && settings?.ballotPlan) {
+    try {
+      activePlan = typeof settings.ballotPlan === 'string' ? JSON.parse(settings.ballotPlan) : settings.ballotPlan;
+    } catch (_) {}
+  }
   const collegeName = settings?.collegeName || CONFIG.COLLEGE_NAME || 'Government Victoria College Palakkad';
   const electionYear = settings?.electionYear || new Date().getFullYear().toString();
   const collegeLogo = settings?.collegeLogo || '';
@@ -1876,8 +1891,44 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       return true;
     };
 
+    const normPost = s => String(s || '').trim().toLowerCase().replace(/^the\s+/i, '').trim();
+
     const isMatch = (post, bIdx) => {
-      if (isUuc(pName(post))) return true;
+      const pn = pName(post);
+      if (isUuc(pn)) return true;
+
+      const b = boothsList[bIdx];
+      const bNum = Number(b?.boothNumber || (bIdx + 1));
+
+      // 1. Primary Statutory Source: Ballot Plan (Physical Ground Truth of printed & distributed ballot books)
+      if (activePlan) {
+        const bAssign = activePlan.boothAssignments ? (activePlan.boothAssignments[bNum] || activePlan.boothAssignments[String(bNum)]) : null;
+        
+        if (isAssocPost(post) || Boolean(getPostDept(post))) {
+          if (bAssign && Array.isArray(bAssign.assocs)) {
+            return bAssign.assocs.some(a => normPost(a.post) === normPost(pn) && a.count > 0);
+          }
+          if (activePlan.assocs && Array.isArray(activePlan.assocs.results)) {
+            return activePlan.assocs.results.some(r => Number(r.booth) === bNum && normPost(r.post) === normPost(pn) && r.count > 0);
+          }
+        }
+
+        if (isYearRepPost(post)) {
+          if (bAssign && Array.isArray(bAssign.reps)) {
+            return bAssign.reps.some(r => normPost(r.post) === normPost(pn) && r.count > 0);
+          }
+          if (activePlan.reps && Array.isArray(activePlan.reps.results)) {
+            return activePlan.reps.results.some(r => Number(r.booth) === bNum && normPost(r.post) === normPost(pn) && r.count > 0);
+          }
+        }
+
+        if (!isAssocPost(post) && !isYearRepPost(post)) {
+          // General union posts on the General Ballot belong to all polling booths
+          return true;
+        }
+      }
+
+      // 2. Direct voter & department fallback if Ballot Plan is not yet available
       if (isAssocPost(post) || Boolean(getPostDept(post))) {
         const pDept = getPostDept(post);
         return isDeptMatch(pDept, bIdx);
@@ -1890,8 +1941,6 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
 
     // 0. Filter ONLY Contested Posts (Posts with Competition requiring Ballots)
     // Exclude posts without valid nominations (0 candidates) and uncontested posts (<= 1 candidate, or <= seats)
-    const normPost = s => String(s || '').trim().toLowerCase().replace(/^the\s+/i, '').trim();
-
     const getCandidatesForPost = (post) => {
       if (!post) return [];
       const target = normPost(pName(post));
@@ -1900,8 +1949,26 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
 
     const isContestedPost = (post) => {
       if (!post) return false;
-      const pCands = getCandidatesForPost(post);
       const pn = pName(post);
+
+      // If activePlan is present, a post is contested iff it has ballot books generated in the plan
+      if (activePlan) {
+        if (isUuc(pn)) return true;
+        if (isAssocPost(post) || Boolean(getPostDept(post))) {
+          return Array.isArray(activePlan.assocs?.results) && activePlan.assocs.results.some(r => normPost(r.post) === normPost(pn) && r.count > 0);
+        }
+        if (isYearRepPost(post)) {
+          return Array.isArray(activePlan.reps?.results) && activePlan.reps.results.some(r => normPost(r.post) === normPost(pn) && r.count > 0);
+        }
+        const genPosts = (activePlan.general && Array.isArray(activePlan.general.posts))
+          ? activePlan.general.posts
+          : (Array.isArray(activePlan.generalParts) ? activePlan.generalParts.flatMap(gp => gp.posts || []) : []);
+        if (genPosts.length > 0) {
+          return genPosts.some(p => normPost(p) === normPost(pn));
+        }
+      }
+
+      const pCands = getCandidatesForPost(post);
       const seats = (typeof post.seats === 'number' && post.seats > 0)
         ? post.seats
         : (isUuc(pn) ? 2 : 1);
