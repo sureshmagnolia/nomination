@@ -2399,7 +2399,7 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
                   <td style="font-size:11px;">${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.start} - ${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.end}</td>
                   <td style="text-align:center; font-size:12px;">
                     ${gp.count}
-                    ${gp.reserveCount > 0 ? `<div style="font-size:9px; color:#4f46e5; font-weight:bold;">(${gp.voterCount} V + ${gp.reserveCount} Res)</div>` : (gp.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${gp.regCount || (gp.count - gp.rsCount)} Reg + ${gp.rsCount} RS)</div>` : '')}
+                    ${gp.reserveCount > 0 ? `<div style="font-size:9px; color:#4f46e5; font-weight:bold;">(${gp.voterCount} V + ${gp.reserveCount} Res)</div>` : ''}
                   </td>
                   <td style="font-size:10px;">${gp.bookIds}</td>
                   <td style="height: 20px;"></td><td style="height: 20px;"></td><td style="height: 20px;"></td>
@@ -2410,7 +2410,7 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
                   <td style="font-size:11px;">${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.start} - ${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.end}</td>
                   <td style="text-align:center; font-size:12px;">
                     ${assignments.general.count}
-                    ${assignments.general.reserveCount > 0 ? `<div style="font-size:9px; color:#4f46e5; font-weight:bold;">(${assignments.general.voterCount} V + ${assignments.general.reserveCount} Res)</div>` : (assignments.general.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${assignments.general.regCount || (assignments.general.count - assignments.general.rsCount)} Reg + ${assignments.general.rsCount} RS)</div>` : '')}
+                    ${assignments.general.reserveCount > 0 ? `<div style="font-size:9px; color:#4f46e5; font-weight:bold;">(${assignments.general.voterCount} V + ${assignments.general.reserveCount} Res)</div>` : ''}
                   </td>
                   <td style="font-size:10px;">${assignments.general.bookIds}</td>
                   <td style="height: 20px;"></td><td style="height: 20px;"></td><td style="height: 20px;"></td>
@@ -2434,7 +2434,7 @@ export const buildElectoralRollHtml = (booths, students, posts, classStats, nomi
                   <td style="font-size:11px;">A${a.start} - A${a.end}</td>
                   <td style="text-align:center; font-size:12px;">
                     ${a.count}
-                    ${a.reserveCount > 0 ? `<div style="font-size:9px; color:#b45309; font-weight:bold;">(${a.voterCount} V + ${a.reserveCount} Res)</div>` : (a.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${a.regCount || (a.count - a.rsCount)} Reg + ${a.rsCount} RS)</div>` : '')}
+                    ${a.reserveCount > 0 ? `<div style="font-size:9px; color:#b45309; font-weight:bold;">(${a.voterCount} V + ${a.reserveCount} Res)</div>` : ''}
                   </td>
                   <td style="font-size:10px;">${a.bookIds}</td>
                   <td style="height: 20px;"></td><td style="height: 20px;"></td><td style="height: 20px;"></td>
@@ -2731,7 +2731,7 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
                     <td class="col-serial">${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.start} - ${gp.prefix === 'G' ? 'G' : gp.prefix + '-'}${gp.end}</td>
                     <td class="col-qty text-center">
                       ${gp.count}
-                      ${gp.reserveCount > 0 ? `<div style="font-size:9px; color:#4f46e5; font-weight:bold;">(${gp.voterCount} V + ${gp.reserveCount} Res)</div>` : (gp.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${gp.regCount || (gp.count - gp.rsCount)} Reg + ${gp.rsCount} RS)</div>` : '')}
+                      ${gp.reserveCount > 0 ? `<div style="font-size:9px; color:#4f46e5; font-weight:bold;">(${gp.voterCount} V + ${gp.reserveCount} Res)</div>` : ''}
                     </td>
                     <td class="col-books">${esc(gp.bookIds || '-')}</td>
                     <td class="col-fill"></td>
@@ -2744,7 +2744,7 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
                     <td class="col-serial">${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.start} - ${assignments.general.prefix && assignments.general.prefix !== 'G' ? assignments.general.prefix + '-' : 'G'}${assignments.general.end}</td>
                     <td class="col-qty text-center">
                       ${assignments.general.count}
-                      ${assignments.general.reserveCount > 0 ? `<div style="font-size:9px; color:#4f46e5; font-weight:bold;">(${assignments.general.voterCount} V + ${assignments.general.reserveCount} Res)</div>` : (assignments.general.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${assignments.general.regCount || (assignments.general.count - assignments.general.rsCount)} Reg + ${assignments.general.rsCount} RS)</div>` : '')}
+                      ${assignments.general.reserveCount > 0 ? `<div style="font-size:9px; color:#4f46e5; font-weight:bold;">(${assignments.general.voterCount} V + ${assignments.general.reserveCount} Res)</div>` : ''}
                     </td>
                     <td class="col-books">${esc(assignments.general.bookIds || '-')}</td>
                     <td class="col-fill"></td>
@@ -2772,7 +2772,7 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
                     <td class="col-serial">A${a.start} - A${a.end}</td>
                     <td class="col-qty text-center">
                       ${a.count}
-                      ${a.reserveCount > 0 ? `<div style="font-size:9px; color:#b45309; font-weight:bold;">(${a.voterCount} V + ${a.reserveCount} Res)</div>` : (a.rsCount > 0 ? `<div style="font-size:9px; color:#d97706; font-weight:bold;">(${a.regCount || (a.count - a.rsCount)} Reg + ${a.rsCount} RS)</div>` : '')}
+                      ${a.reserveCount > 0 ? `<div style="font-size:9px; color:#b45309; font-weight:bold;">(${a.voterCount} V + ${a.reserveCount} Res)</div>` : ''}
                     </td>
                     <td class="col-books">${esc(a.bookIds || '-')}</td>
                     <td class="col-fill"></td>
