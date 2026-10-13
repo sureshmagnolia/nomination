@@ -1434,7 +1434,53 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           return;
         }
 
-        if (confirm(`📥 Successfully parsed ${parsedFaculty.length} teaching faculty records from "${file.name}".\n\nApply this teaching faculty roster (existing exclusion flags and duty notes will be preserved)?`)) {
+        let mode = 'replace';
+        if (faculty.length > 0) {
+          const res = prompt(
+            `📥 Parsed ${parsedFaculty.length} Teaching Faculty records from "${file.name}".\n\n` +
+            `Your current roster has ${faculty.length} faculty members.\n\n` +
+            `How would you like to apply this file?\n` +
+            ` • Enter "1" to MERGE (Add new faculty & update existing, keeping current roster intact)\n` +
+            ` • Enter "2" to REPLACE (Completely replace existing roster with this file)\n` +
+            ` • Press Cancel or enter "0" to Abort`,
+            parsedFaculty.length < faculty.length ? '1' : '2'
+          );
+          if (!res || (res !== '1' && res !== '2')) return;
+          mode = res === '1' ? 'merge' : 'replace';
+        } else {
+          if (!confirm(`📥 Successfully parsed ${parsedFaculty.length} teaching faculty records from "${file.name}".\n\nApply this teaching faculty roster?`)) return;
+        }
+
+        if (mode === 'merge') {
+          const merged = [...faculty];
+          let addedCount = 0;
+          let updatedCount = 0;
+          parsedFaculty.forEach(pf => {
+            const idx = merged.findIndex(f => (pf.pen && f.pen && String(pf.pen) === String(f.pen)) || (pf.name && f.name && pf.name.toLowerCase() === f.name.toLowerCase()));
+            if (idx >= 0) {
+              const existing = merged[idx];
+              merged[idx] = {
+                ...existing,
+                ...pf,
+                phone: pf.phone || existing.phone || existing.mobile || '',
+                isExcluded: existing.isExcluded,
+                exclusionReason: existing.exclusionReason
+              };
+              updatedCount++;
+            } else {
+              merged.push({
+                ...pf,
+                seniority: pf.seniority || (merged.length + 1)
+              });
+              addedCount++;
+            }
+          });
+          faculty = merged;
+          faculty.sort(compareOfficials);
+          saveAll(false);
+          showToast(`Merged: Added ${addedCount} new faculty, updated ${updatedCount} (Total: ${faculty.length})!`, 'success');
+          renderUI();
+        } else {
           // Preserve any existing exclusions or manual edits
           faculty = parsedFaculty.map(pf => {
             const existing = faculty.find(f => (pf.pen && f.pen && String(pf.pen) === String(f.pen)) || (pf.name && f.name && pf.name.toLowerCase() === f.name.toLowerCase()));
@@ -1451,8 +1497,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               exclusionReason: exReason
             };
           });
+          faculty.sort(compareOfficials);
           saveAll(false);
-          showToast(`Imported ${parsedFaculty.length} faculty records!`, 'success');
+          showToast(`Replaced: Loaded ${parsedFaculty.length} faculty records!`, 'success');
           renderUI();
         }
       } catch (err) {
@@ -1571,13 +1618,54 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           return;
         }
 
-        let confirmMsg = `📥 Successfully parsed ${parsedNT.length} Non-Teaching Staff members from "${file.name}".`;
-        if (detectedLibrarians.length > 0) {
-          confirmMsg += `\n\n📚 Identified ${detectedLibrarians.length} Librarian(s):\n${detectedLibrarians.map(l => '• ' + l.name + ' (' + l.designation + ')').join('\n')}\nPer election guidelines, Librarians are included in the Teaching Faculty Roster and excluded from Non-Teaching Staff.`;
+        let mode = 'replace';
+        if (nonTeaching.length > 0) {
+          let promptText = `📥 Parsed ${parsedNT.length} Non-Teaching Staff records from "${file.name}".\n\n`;
+          if (detectedLibrarians.length > 0) {
+            promptText += `📚 Identified ${detectedLibrarians.length} Librarian(s) to add to Teaching Faculty.\n\n`;
+          }
+          promptText += `Your current roster has ${nonTeaching.length} non-teaching staff members.\n\n` +
+            `How would you like to apply this file?\n` +
+            ` • Enter "1" to MERGE (Add new staff & update existing, keeping current roster intact)\n` +
+            ` • Enter "2" to REPLACE (Completely replace existing roster with this file)\n` +
+            ` • Press Cancel or enter "0" to Abort`;
+          
+          const res = prompt(promptText, parsedNT.length < nonTeaching.length ? '1' : '2');
+          if (!res || (res !== '1' && res !== '2')) return;
+          mode = res === '1' ? 'merge' : 'replace';
+        } else {
+          let confirmMsg = `📥 Successfully parsed ${parsedNT.length} Non-Teaching Staff members from "${file.name}".`;
+          if (detectedLibrarians.length > 0) {
+            confirmMsg += `\n\n📚 Identified ${detectedLibrarians.length} Librarian(s):\n${detectedLibrarians.map(l => '• ' + l.name + ' (' + l.designation + ')').join('\n')}\nPer election guidelines, Librarians are included in the Teaching Faculty Roster and excluded from Non-Teaching Staff.`;
+          }
+          confirmMsg += `\n\nApply this non-teaching staff roster?`;
+          if (!confirm(confirmMsg)) return;
         }
-        confirmMsg += `\n\nApply this update to your election rosters (existing exclusion flags will be preserved)?`;
 
-        if (confirm(confirmMsg)) {
+        let addedCount = 0;
+        let updatedCount = 0;
+
+        if (mode === 'merge') {
+          const merged = [...nonTeaching];
+          parsedNT.forEach(pnt => {
+            const idx = merged.findIndex(nt => (pnt.pen && nt.pen && String(pnt.pen) === String(nt.pen)) || (pnt.name && nt.name && pnt.name.toLowerCase() === nt.name.toLowerCase()));
+            if (idx >= 0) {
+              const existing = merged[idx];
+              merged[idx] = {
+                ...existing,
+                ...pnt,
+                phone: pnt.phone || existing.phone || existing.mobile || '',
+                isExcluded: existing.isExcluded,
+                exclusionReason: existing.exclusionReason
+              };
+              updatedCount++;
+            } else {
+              merged.push(pnt);
+              addedCount++;
+            }
+          });
+          nonTeaching = merged;
+        } else {
           // Preserve any existing manual exclusions
           nonTeaching = parsedNT.map(pnt => {
             const existing = nonTeaching.find(nt => (pnt.pen && nt.pen && String(pnt.pen) === String(nt.pen)) || (pnt.name && nt.name && pnt.name.toLowerCase() === nt.name.toLowerCase()));
@@ -1594,33 +1682,39 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               exclusionReason: exReason
             };
           });
-
-          // Add librarians to faculty if not already present
-          let libAdded = 0;
-          detectedLibrarians.forEach(lib => {
-            if (!faculty.some(f => (lib.pen && f.pen && String(f.pen) === String(lib.pen)) || f.name.toLowerCase() === lib.name.toLowerCase())) {
-              faculty.push({
-                seniority: faculty.length + 1,
-                name: lib.name,
-                pen: lib.pen,
-                phone: lib.phone || '',
-                designation: lib.designation,
-                department: lib.department,
-                joiningDate: '',
-                isExcluded: lib.isExcluded || false,
-                excluded: lib.isExcluded || false,
-                is_excluded: lib.isExcluded || false,
-                status: lib.isExcluded ? 'Excluded' : 'Available',
-                exclusionReason: lib.exclusionReason || ''
-              });
-              libAdded++;
-            }
-          });
-
-          saveAll(false);
-          showToast(`Imported ${parsedNT.length} Non-Teaching staff!${libAdded > 0 ? ` (${libAdded} Librarians added to Faculty)` : ''}`, 'success');
-          renderUI();
         }
+
+        // Add librarians to faculty if not already present
+        let libAdded = 0;
+        detectedLibrarians.forEach(lib => {
+          if (!faculty.some(f => (lib.pen && f.pen && String(f.pen) === String(lib.pen)) || f.name.toLowerCase() === lib.name.toLowerCase())) {
+            faculty.push({
+              seniority: faculty.length + 1,
+              name: lib.name,
+              pen: lib.pen,
+              phone: lib.phone || '',
+              designation: lib.designation,
+              department: lib.department,
+              joiningDate: '',
+              isExcluded: lib.isExcluded || false,
+              excluded: lib.isExcluded || false,
+              is_excluded: lib.isExcluded || false,
+              status: lib.isExcluded ? 'Excluded' : 'Available',
+              exclusionReason: lib.exclusionReason || ''
+            });
+            libAdded++;
+          }
+        });
+
+        nonTeaching.sort(compareOfficials);
+        if (libAdded > 0) faculty.sort(compareOfficials);
+        saveAll(false);
+        if (mode === 'merge') {
+          showToast(`Merged: Added ${addedCount} new staff, updated ${updatedCount} (Total: ${nonTeaching.length})!${libAdded > 0 ? ` (${libAdded} Librarians added to Faculty)` : ''}`, 'success');
+        } else {
+          showToast(`Replaced: Loaded ${parsedNT.length} Non-Teaching staff!${libAdded > 0 ? ` (${libAdded} Librarians added to Faculty)` : ''}`, 'success');
+        }
+        renderUI();
       } catch (err) {
         showToast(`Non-teaching import error: ${err.message}`, 'error');
       }
