@@ -21,6 +21,67 @@ const safeJsonParse = (val, fallback = null) => {
   }
 };
 
+const normalizeOfficialName = (name) => {
+  if (!name) return '';
+  return String(name)
+    .trim()
+    .replace(/^(dr|prof|sri|smt|mr|mrs|ms)[\s.,]+/i, '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase();
+};
+
+const cleanOfficialPen = (pen) => {
+  if (!pen) return '';
+  return String(pen).trim().replace(/[^0-9]/g, '');
+};
+
+const dedupeOfficials = (list) => {
+  if (!Array.isArray(list)) return [];
+  const seenPens = new Map();
+  const seenNames = new Map();
+  const result = [];
+
+  list.forEach(item => {
+    if (!item || !item.name || !String(item.name).trim()) return;
+    const pen = cleanOfficialPen(item.pen);
+    const norm = normalizeOfficialName(item.name);
+
+    let existingIdx = -1;
+    if (pen && seenPens.has(pen)) {
+      existingIdx = seenPens.get(pen);
+    } else if (norm && seenNames.has(norm)) {
+      existingIdx = seenNames.get(norm);
+    }
+
+    if (existingIdx >= 0) {
+      const existing = result[existingIdx];
+      if (!existing.phone && (item.phone || item.mobile)) {
+        existing.phone = item.phone || item.mobile;
+      }
+      if (!existing.pen && item.pen) {
+        existing.pen = item.pen;
+      }
+      if ((!existing.department || existing.department === '–') && item.department && item.department !== '–') {
+        existing.department = item.department;
+      }
+      if ((!existing.designation || existing.designation === 'Faculty') && item.designation && item.designation !== 'Faculty') {
+        existing.designation = item.designation;
+      }
+      if (item.name && item.name.length > existing.name.length && /^(dr|prof)/i.test(item.name)) {
+        existing.name = item.name;
+      }
+    } else {
+      const copy = { ...item };
+      const idx = result.length;
+      result.push(copy);
+      if (pen) seenPens.set(pen, idx);
+      if (norm) seenNames.set(norm, idx);
+    }
+  });
+
+  return result;
+};
+
 const getAuthToken = (req) => (req && req.headers ? (req.headers['x-session-token'] || req.headers['x-admin-password'] || req.headers['authorization'] || '') : '');
 
 const checkAdmin = async (password, sessionToken, action) => {
@@ -1200,12 +1261,12 @@ export default async function handler(req, res) {
         nonTeaching: safeJsonParse(ntRaw, null),
         pollingTeams: safeJsonParse(pollRaw, []),
         countingTeams: safeJsonParse(countRaw, []),
-        observers: safeJsonParse(obsRaw, []),
-        disciplineCharge: safeJsonParse(discRaw, []),
-        grievanceCell: safeJsonParse(grievRaw, []),
+        observers: dedupeOfficials(safeJsonParse(obsRaw, [])),
+        disciplineCharge: dedupeOfficials(safeJsonParse(discRaw, [])),
+        grievanceCell: dedupeOfficials(safeJsonParse(grievRaw, [])),
         roOfficer: safeJsonParse(roRaw, null),
-        aroOfficers: safeJsonParse(arosRaw, []),
-        coreCommittee: safeJsonParse(coreRaw, []),
+        aroOfficers: dedupeOfficials(safeJsonParse(arosRaw, [])),
+        coreCommittee: dedupeOfficials(safeJsonParse(coreRaw, [])),
         reserveOfficials: safeJsonParse(resRaw, [])
       });
     }
@@ -2584,12 +2645,12 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       if (nonTeaching !== undefined) tasks.push(setSetting('election_non_teaching_roster', JSON.stringify(nonTeaching)));
       if (pollingTeams !== undefined) tasks.push(setSetting('polling_teams_officials', JSON.stringify(pollingTeams)));
       if (countingTeams !== undefined) tasks.push(setSetting('counting_teams_officials', JSON.stringify(countingTeams)));
-      if (observers !== undefined) tasks.push(setSetting('election_observers', JSON.stringify(observers)));
-      if (disciplineCharge !== undefined) tasks.push(setSetting('election_discipline', JSON.stringify(disciplineCharge)));
-      if (grievanceCell !== undefined) tasks.push(setSetting('election_grievance', JSON.stringify(grievanceCell)));
+      if (observers !== undefined) tasks.push(setSetting('election_observers', JSON.stringify(dedupeOfficials(observers))));
+      if (disciplineCharge !== undefined) tasks.push(setSetting('election_discipline', JSON.stringify(dedupeOfficials(disciplineCharge))));
+      if (grievanceCell !== undefined) tasks.push(setSetting('election_grievance', JSON.stringify(dedupeOfficials(grievanceCell))));
       if (roOfficer !== undefined) tasks.push(setSetting('election_ro', JSON.stringify(roOfficer)));
-      if (aroOfficers !== undefined) tasks.push(setSetting('election_aros', JSON.stringify(aroOfficers)));
-      if (coreCommittee !== undefined) tasks.push(setSetting('election_core_committee', JSON.stringify(coreCommittee)));
+      if (aroOfficers !== undefined) tasks.push(setSetting('election_aros', JSON.stringify(dedupeOfficials(aroOfficers))));
+      if (coreCommittee !== undefined) tasks.push(setSetting('election_core_committee', JSON.stringify(dedupeOfficials(coreCommittee))));
       if (reserveOfficials !== undefined) tasks.push(setSetting('election_reserve_officials', JSON.stringify(reserveOfficials)));
       await Promise.all(tasks);
       return jsonOut(res, { ok: true });

@@ -331,6 +331,69 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     localStorage.setItem('gcc_counting_teams', JSON.stringify(countingTeams));
   }
 
+  // ─── Committee Deduplication Helpers ──────────────────────────────────────────
+  const normalizeOfficialName = (name) => {
+    if (!name) return '';
+    return String(name)
+      .trim()
+      .replace(/^(dr|prof|sri|smt|mr|mrs|ms)[\s.,]+/i, '')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .toLowerCase();
+  };
+
+  const cleanOfficialPen = (pen) => {
+    if (!pen) return '';
+    return String(pen).trim().replace(/[^0-9]/g, '');
+  };
+
+  const dedupeOfficials = (list) => {
+    if (!Array.isArray(list)) return [];
+    const seenPens = new Map();
+    const seenNames = new Map();
+    const result = [];
+
+    list.forEach(item => {
+      if (!item || !item.name || !String(item.name).trim()) return;
+      const pen = cleanOfficialPen(item.pen);
+      const norm = normalizeOfficialName(item.name);
+
+      let existingIdx = -1;
+      if (pen && seenPens.has(pen)) {
+        existingIdx = seenPens.get(pen);
+      } else if (norm && seenNames.has(norm)) {
+        existingIdx = seenNames.get(norm);
+      }
+
+      if (existingIdx >= 0) {
+        // Merge missing fields into the retained record
+        const existing = result[existingIdx];
+        if (!existing.phone && (item.phone || item.mobile)) {
+          existing.phone = item.phone || item.mobile;
+        }
+        if (!existing.pen && item.pen) {
+          existing.pen = item.pen;
+        }
+        if ((!existing.department || existing.department === '–') && item.department && item.department !== '–') {
+          existing.department = item.department;
+        }
+        if ((!existing.designation || existing.designation === 'Faculty') && item.designation && item.designation !== 'Faculty') {
+          existing.designation = item.designation;
+        }
+        if (item.name && item.name.length > existing.name.length && /^(dr|prof)/i.test(item.name)) {
+          existing.name = item.name;
+        }
+      } else {
+        const copy = { ...item };
+        const idx = result.length;
+        result.push(copy);
+        if (pen) seenPens.set(pen, idx);
+        if (norm) seenNames.set(norm, idx);
+      }
+    });
+
+    return result;
+  };
+
   // Election Observers
   let observers = [];
   const cachedObs = localStorage.getItem('gcc_election_observers');
@@ -339,10 +402,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     try { localObs = JSON.parse(cachedObs); } catch (_) { localObs = []; }
   }
   if (Array.isArray(initialOfficialsData?.observers) && initialOfficialsData.observers.length > 0) {
-    observers = initialOfficialsData.observers;
+    observers = dedupeOfficials(initialOfficialsData.observers);
     localStorage.setItem('gcc_election_observers', JSON.stringify(observers));
   } else if (localObs.length > 0) {
-    observers = localObs;
+    observers = dedupeOfficials(localObs);
   }
 
   const isObserver = (name) => {
@@ -358,10 +421,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     try { localDisc = JSON.parse(cachedDisc); } catch (_) { localDisc = []; }
   }
   if (Array.isArray(initialOfficialsData?.disciplineCharge) && initialOfficialsData.disciplineCharge.length > 0) {
-    disciplineCharge = initialOfficialsData.disciplineCharge;
+    disciplineCharge = dedupeOfficials(initialOfficialsData.disciplineCharge);
     localStorage.setItem('gcc_election_discipline', JSON.stringify(disciplineCharge));
   } else if (localDisc.length > 0) {
-    disciplineCharge = localDisc;
+    disciplineCharge = dedupeOfficials(localDisc);
   }
 
   const isDiscipline = (name) => {
@@ -378,10 +441,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     try { localGriev = JSON.parse(cachedGriev); } catch (_) { localGriev = []; }
   }
   if (Array.isArray(initialOfficialsData?.grievanceCell) && initialOfficialsData.grievanceCell.length > 0) {
-    grievanceCell = initialOfficialsData.grievanceCell;
+    grievanceCell = dedupeOfficials(initialOfficialsData.grievanceCell);
     localStorage.setItem('gcc_election_grievance', JSON.stringify(grievanceCell));
   } else if (localGriev.length > 0) {
-    grievanceCell = localGriev;
+    grievanceCell = dedupeOfficials(localGriev);
   }
 
   const isGrievance = (name) => {
@@ -419,10 +482,10 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     try { localAros = JSON.parse(cachedAros); } catch (_) { localAros = []; }
   }
   if (Array.isArray(initialOfficialsData?.aroOfficers) && initialOfficialsData.aroOfficers.length > 0) {
-    aroOfficers = initialOfficialsData.aroOfficers;
+    aroOfficers = dedupeOfficials(initialOfficialsData.aroOfficers);
     localStorage.setItem('gcc_election_aros', JSON.stringify(aroOfficers));
   } else if (localAros.length > 0) {
-    aroOfficers = localAros;
+    aroOfficers = dedupeOfficials(localAros);
   }
 
   // Core Committee State (Faculty assigned to assist RO across polling & counting)
@@ -432,11 +495,23 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   if (cachedCore) {
     try { localCore = JSON.parse(cachedCore); } catch (_) { localCore = []; }
   }
-  if (Array.isArray(initialOfficialsData?.coreCommittee) && initialOfficialsData.coreCommittee.length > 0) {
-    coreCommittee = initialOfficialsData.coreCommittee;
-    localStorage.setItem('gcc_election_core_committee', JSON.stringify(coreCommittee));
-  } else if (localCore.length > 0) {
-    coreCommittee = localCore;
+  const rawCoreList = (Array.isArray(initialOfficialsData?.coreCommittee) && initialOfficialsData.coreCommittee.length > 0)
+    ? initialOfficialsData.coreCommittee
+    : localCore;
+  coreCommittee = dedupeOfficials(rawCoreList);
+  localStorage.setItem('gcc_election_core_committee', JSON.stringify(coreCommittee));
+
+  // Auto-cleaner: If duplicates were purged, silently sync clean data to cloud
+  if (rawCoreList.length > coreCommittee.length) {
+    console.info(`🧹 Auto-deduplicated Core Committee: purged ${rawCoreList.length - coreCommittee.length} duplicates (${coreCommittee.length} unique members retained).`);
+    setTimeout(async () => {
+      try {
+        await api.adminSaveOfficials(pwd, { coreCommittee });
+        console.info('✅ Cloud Core Committee deduplicated & synced successfully.');
+      } catch (err) {
+        console.warn('Silent cloud sync of deduplicated Core Committee notice:', err.message);
+      }
+    }, 1000);
   }
 
   // Reserve Officials State (Cross-duty reserves: Polling staff acting as Counting Reserve, Counting staff acting as Polling Reserve, or Standby)
@@ -491,12 +566,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   }
 
   function isCore(name, pen) {
-    const cn = String(name || '').trim().toLowerCase();
-    const cp = String(pen || '').trim().toLowerCase();
+    const cn = normalizeOfficialName(name);
+    const cp = cleanOfficialPen(pen);
     return coreCommittee.some(c => {
-      const cname = String(c.name || '').trim().toLowerCase();
-      const cpen = String(c.pen || '').trim().toLowerCase();
-      return (cn && cn === cname) || (cp && cpen && cp === cpen);
+      const cname = normalizeOfficialName(c.name);
+      const cpen = cleanOfficialPen(c.pen);
+      return (cp && cpen && cp === cpen) || (cn && cname && cn === cname);
     });
   }
 
@@ -811,20 +886,36 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   // Auto-reconcile and ensure any Core In-Charge assigned on polling or counting teams is registered in coreCommittee
   [...pollingTeams, ...countingTeams].forEach(t => {
     if (t?.coreInCharge?.name) {
-      const match = coreCommittee.find(c => String(c.name || '').trim().toLowerCase() === String(t.coreInCharge.name).trim().toLowerCase());
+      const rawName = String(t.coreInCharge.name || '').trim();
+      const rawPen = cleanOfficialPen(t.coreInCharge.pen);
+      const normName = normalizeOfficialName(rawName);
+
+      const match = coreCommittee.find(c => {
+        const cPen = cleanOfficialPen(c.pen);
+        const cNorm = normalizeOfficialName(c.name);
+        return (rawPen && cPen && rawPen === cPen) || (normName && cNorm && normName === cNorm);
+      });
       if (!match) {
-        const p = getPerson(t.coreInCharge.name);
+        const p = getPerson(rawName) || (rawPen ? getPerson(rawPen) : null);
         coreCommittee.push({
-          name: t.coreInCharge.name,
+          name: rawName,
           pen: t.coreInCharge.pen || p?.pen || '',
           phone: t.coreInCharge.phone || p?.phone || '',
           designation: t.coreInCharge.designation || p?.designation || 'Faculty',
           department: t.coreInCharge.department || p?.department || '',
           seniority: t.coreInCharge.seniority || p?.seniority || 999
         });
+      } else {
+        if (!match.phone && (t.coreInCharge.phone || p?.phone)) {
+          match.phone = t.coreInCharge.phone || p?.phone || '';
+        }
+        if (!match.pen && t.coreInCharge.pen) {
+          match.pen = t.coreInCharge.pen;
+        }
       }
     }
   });
+  coreCommittee = dedupeOfficials(coreCommittee);
   coreCommittee.sort(compareOfficials);
 
   // Helper: Get all roster personnel (Faculty + Non-Teaching Staff) sorted by seniority and category
@@ -1647,6 +1738,12 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
   // Save changes to API & local cache
   const saveAll = async (quiet = false) => {
+    coreCommittee = dedupeOfficials(coreCommittee);
+    observers = dedupeOfficials(observers);
+    disciplineCharge = dedupeOfficials(disciplineCharge);
+    grievanceCell = dedupeOfficials(grievanceCell);
+    aroOfficers = dedupeOfficials(aroOfficers);
+
     localStorage.setItem('gcc_faculty_roster', JSON.stringify(faculty));
     localStorage.setItem('gcc_non_teaching_roster', JSON.stringify(nonTeaching));
     localStorage.setItem('gcc_polling_teams', JSON.stringify(pollingTeams));
@@ -2264,18 +2361,28 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
   // Helper to render Core Committee In-Charge options for Polling Booths
   const renderPollingCoreInChargeOptions = (boothNumber, currentSelectedName) => {
-    let pool = [...coreCommittee];
-    if (currentSelectedName && !pool.some(c => String(c.name || '').trim().toLowerCase() === String(currentSelectedName).trim().toLowerCase())) {
-      const p = getPerson(currentSelectedName);
-      pool.push({
-        name: currentSelectedName,
-        pen: p?.pen || '',
-        designation: p?.designation || 'Faculty',
-        department: p?.department || '',
-        seniority: p?.seniority || 999
+    let pool = dedupeOfficials([...coreCommittee]);
+    if (currentSelectedName) {
+      const currentNorm = normalizeOfficialName(currentSelectedName);
+      const currentPen = cleanOfficialPen(getPerson(currentSelectedName)?.pen);
+      const alreadyInPool = pool.some(c => {
+        const cPen = cleanOfficialPen(c.pen);
+        const cNorm = normalizeOfficialName(c.name);
+        return (currentPen && cPen && currentPen === cPen) || (currentNorm && cNorm && currentNorm === cNorm);
       });
+      if (!alreadyInPool) {
+        const p = getPerson(currentSelectedName);
+        pool.push({
+          name: currentSelectedName,
+          pen: p?.pen || '',
+          designation: p?.designation || 'Faculty',
+          department: p?.department || '',
+          seniority: p?.seniority || 999,
+          phone: p?.phone || ''
+        });
+      }
     }
-    const sortedCore = pool.sort(compareOfficials);
+    const sortedCore = dedupeOfficials(pool).sort(compareOfficials);
     return sortedCore.map(c => {
       const isSelected = currentSelectedName === c.name;
       const bInCharge = pollingTeams.find(t => t.coreInCharge && t.coreInCharge.name === c.name && t.boothNumber !== boothNumber);
@@ -2304,18 +2411,28 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
 
   // Helper to render Core Committee In-Charge options for Counting Tables
   const renderCountingCoreInChargeOptions = (tableNumber, currentSelectedName) => {
-    let pool = [...coreCommittee];
-    if (currentSelectedName && !pool.some(c => String(c.name || '').trim().toLowerCase() === String(currentSelectedName).trim().toLowerCase())) {
-      const p = getPerson(currentSelectedName);
-      pool.push({
-        name: currentSelectedName,
-        pen: p?.pen || '',
-        designation: p?.designation || 'Faculty',
-        department: p?.department || '',
-        seniority: p?.seniority || 999
+    let pool = dedupeOfficials([...coreCommittee]);
+    if (currentSelectedName) {
+      const currentNorm = normalizeOfficialName(currentSelectedName);
+      const currentPen = cleanOfficialPen(getPerson(currentSelectedName)?.pen);
+      const alreadyInPool = pool.some(c => {
+        const cPen = cleanOfficialPen(c.pen);
+        const cNorm = normalizeOfficialName(c.name);
+        return (currentPen && cPen && currentPen === cPen) || (currentNorm && cNorm && currentNorm === cNorm);
       });
+      if (!alreadyInPool) {
+        const p = getPerson(currentSelectedName);
+        pool.push({
+          name: currentSelectedName,
+          pen: p?.pen || '',
+          designation: p?.designation || 'Faculty',
+          department: p?.department || '',
+          seniority: p?.seniority || 999,
+          phone: p?.phone || ''
+        });
+      }
     }
-    const sortedCore = pool.sort(compareOfficials);
+    const sortedCore = dedupeOfficials(pool).sort(compareOfficials);
     return sortedCore.map(c => {
       const isSelected = currentSelectedName === c.name;
       const tInCharge = countingTeams.find(t => t.coreInCharge && t.coreInCharge.name === c.name && (t.tableNumber || t.boothNumber) !== tableNumber);
@@ -5298,24 +5415,33 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           pollingTeams.push(team);
         }
         if (selectedName) {
-          let coreMem = coreCommittee.find(c => c.name === selectedName);
+          const selNorm = normalizeOfficialName(selectedName);
+          const p = getPerson(selectedName);
+          const selPen = cleanOfficialPen(p?.pen);
+          let coreMem = coreCommittee.find(c => {
+            const cPen = cleanOfficialPen(c.pen);
+            const cNorm = normalizeOfficialName(c.name);
+            return (selPen && cPen && selPen === cPen) || (selNorm && cNorm && selNorm === cNorm);
+          });
           if (!coreMem) {
-            const p = getPerson(selectedName);
             coreMem = {
               name: selectedName,
               pen: p?.pen || '',
               designation: p?.designation || 'Faculty',
               department: p?.department || '',
-              seniority: p?.seniority || 999
+              seniority: p?.seniority || 999,
+              phone: p?.phone || ''
             };
             coreCommittee.push(coreMem);
           }
+          coreCommittee = dedupeOfficials(coreCommittee);
           team.coreInCharge = {
             name: coreMem.name,
             pen: coreMem.pen || '',
             designation: coreMem.designation || 'Faculty',
             department: coreMem.department || '',
-            seniority: coreMem.seniority || 999
+            seniority: coreMem.seniority || 999,
+            phone: coreMem.phone || p?.phone || ''
           };
         } else {
           team.coreInCharge = null;
@@ -5336,24 +5462,33 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           countingTeams.push(team);
         }
         if (selectedName) {
-          let coreMem = coreCommittee.find(c => c.name === selectedName);
+          const selNorm = normalizeOfficialName(selectedName);
+          const p = getPerson(selectedName);
+          const selPen = cleanOfficialPen(p?.pen);
+          let coreMem = coreCommittee.find(c => {
+            const cPen = cleanOfficialPen(c.pen);
+            const cNorm = normalizeOfficialName(c.name);
+            return (selPen && cPen && selPen === cPen) || (selNorm && cNorm && selNorm === cNorm);
+          });
           if (!coreMem) {
-            const p = getPerson(selectedName);
             coreMem = {
               name: selectedName,
               pen: p?.pen || '',
               designation: p?.designation || 'Faculty',
               department: p?.department || '',
-              seniority: p?.seniority || 999
+              seniority: p?.seniority || 999,
+              phone: p?.phone || ''
             };
             coreCommittee.push(coreMem);
           }
+          coreCommittee = dedupeOfficials(coreCommittee);
           team.coreInCharge = {
             name: coreMem.name,
             pen: coreMem.pen || '',
             designation: coreMem.designation || 'Faculty',
             department: coreMem.department || '',
-            seniority: coreMem.seniority || 999
+            seniority: coreMem.seniority || 999,
+            phone: coreMem.phone || p?.phone || ''
           };
         } else {
           team.coreInCharge = null;
@@ -5969,8 +6104,9 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
           ...c,
           phone: c.phone || faculty.find(f => f.name === c.name)?.phone || ''
         }));
-        validCore.sort(compareOfficials);
-        coreCommittee = validCore;
+        const dedupedCore = dedupeOfficials(validCore);
+        dedupedCore.sort(compareOfficials);
+        coreCommittee = dedupedCore;
         await saveAll(false);
         modal.remove();
         showToast(`Appointed ${coreCommittee.length} Core Committee member(s) successfully!`, 'success');
@@ -8019,14 +8155,21 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     });
 
     // 0C. Core Committee
-    const coreList = (coreCommittee || [])
+    const cleanCoreCommittee = dedupeOfficials(coreCommittee);
+    const coreList = cleanCoreCommittee
       .filter((c) => c && c.name && c.name.trim().length > 0)
       .map((c) => {
-        const p = getPerson(c.name);
-        const cleanName = String(c.name || '').trim().toLowerCase();
-        const cleanPen = String(c.pen || '').trim().toLowerCase();
-        const bInCharge = pollingTeams.find(t => t.coreInCharge && (String(t.coreInCharge.name || '').trim().toLowerCase() === cleanName || (cleanPen && String(t.coreInCharge.pen || '').trim().toLowerCase() === cleanPen)));
-        const tInCharge = countingTeams.find(t => t.coreInCharge && (String(t.coreInCharge.name || '').trim().toLowerCase() === cleanName || (cleanPen && String(t.coreInCharge.pen || '').trim().toLowerCase() === cleanPen)));
+        const p = getPerson(c.name) || (c.pen ? getPerson(c.pen) : null);
+        const cNorm = normalizeOfficialName(c.name);
+        const cPen = cleanOfficialPen(c.pen);
+        const isMatch = (target) => {
+          if (!target || !target.name) return false;
+          const tPen = cleanOfficialPen(target.pen);
+          const tNorm = normalizeOfficialName(target.name);
+          return (cPen && tPen && cPen === tPen) || (cNorm && tNorm && cNorm === tNorm);
+        };
+        const bInCharge = pollingTeams.find(t => isMatch(t.coreInCharge));
+        const tInCharge = countingTeams.find(t => isMatch(t.coreInCharge));
 
         let stationText = 'Central Control Room';
         let dutyText = 'Core Committee Member';
