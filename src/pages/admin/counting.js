@@ -470,10 +470,10 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
               <span class="text-2xl">🔄</span>
               <div>
                 <strong>Statutory Allocation Order Notice:</strong>
-                <span>Current matrix does not follow statutory counting order (<strong>Department Associations 1st</strong>, <strong>General Union Posts rotated across tables each round</strong>, and <strong>UUC Last Always</strong>).</span>
+                <span>Current matrix does not follow statutory counting order (<strong>Department Associations 1st</strong>, <strong>General Union Posts &amp; Year Reps rotated in intermediate rounds</strong>, and <strong>UUC Last Always</strong>).</span>
               </div>
             </div>
-            <button id="btnOrderRegenerate" class="btn btn-sm bg-indigo-600 hover:bg-indigo-500 text-white font-bold shrink-0 shadow" title="Action: Re-runs statutory counting allocation algorithm: Associations 1st, General Union Posts rotated across tables, UUC Last Always.">
+            <button id="btnOrderRegenerate" class="btn btn-sm bg-indigo-600 hover:bg-indigo-500 text-white font-bold shrink-0 shadow" title="Action: Re-runs statutory counting allocation algorithm: Associations 1st, General Union Posts &amp; Year Reps rotated across tables, UUC Last Always.">
               🔄 Re-align Matrix Now
             </button>
           </div>
@@ -495,7 +495,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             <a href="#/admin/officials" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold flex items-center gap-1.5" title="Action: Opens the Election Officials Team Builder to allot Counting Supervisors and Counting Assistants to tables.&#10;Prerequisite: Configure booths/tables and upload staff rosters first.">
               <span>👥</span> Allot Counting Teams
             </a>
-            <button id="btnRegenerate" class="btn btn-secondary bg-white/5 border-white/10 hover:bg-white/10 text-xs font-semibold flex items-center gap-1.5" title="Action: Re-runs statutory counting allocation: Department Associations 1st, General Union Posts rotated across tables each round, and UUC Last Always (Only contested posts on respective booth ballots).&#10;Prerequisite: Recommended if candidate lists or booth configurations have changed.">
+            <button id="btnRegenerate" class="btn btn-secondary bg-white/5 border-white/10 hover:bg-white/10 text-xs font-semibold flex items-center gap-1.5" title="Action: Re-runs statutory counting allocation: Department Associations 1st, General Union Posts &amp; Year Reps rotated in intermediate rounds, and UUC Last Always (Only contested posts on respective booth ballots).&#10;Prerequisite: Recommended if candidate lists or booth configurations have changed.">
               <span>🔄</span> Regenerate Matrix
             </button>
           </div>
@@ -655,7 +655,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
               <p class="text-[11px] text-slate-400 mt-0.5">Click any <strong>🖨️ Form</strong> button for 1-click printing, or click round/table headers to print entire batches.</p>
             </div>
             <div class="flex items-center gap-3">
-              <span class="text-[11px] text-slate-500 font-mono hidden sm:inline">Form Serials: #1 .. #${T * totalRounds}</span>
+              <span class="text-[11px] text-slate-500 font-mono hidden sm:inline">Form Serials: #1 .. #${allFormsList.length}</span>
               <button type="button" id="btnPrintMatrixLandscape" class="btn btn-secondary text-xs font-bold py-1 px-3 rounded-lg border-indigo-400/40 text-indigo-300 hover:bg-indigo-600 hover:text-white flex items-center gap-1.5 shadow-sm transition-all cursor-pointer" title="Print the entire Table × Round Allocation Matrix chart on 1 Landscape A4 page in pure Black & White">
                 <span>🖨️</span>
                 <span>Print Matrix (1-Page A4)</span>
@@ -1774,19 +1774,19 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
 
     // Matrix Regenerate listeners
     main.querySelector('#btnRegenerate')?.addEventListener('click', () => {
-      if (confirm(`Are you sure? This will regenerate the counting matrix following statutory allocation:\n\n• Department Associations: Round 1 (FIRST)\n• Year Representatives: Round 2\n• General Union Posts: Rotated per table across rounds\n• University Union Councillor (UUC): Final Round (LAST ALWAYS)\n\nNote: Uncontested posts (0 or 1 candidate) without competition are excluded as no ballots are issued for them.\nResults entry serial numbers may change!`)) {
+      if (confirm(`Are you sure? This will regenerate the counting matrix following statutory allocation:\n\n• Phase 1: Department Associations (FIRST)\n• Intermediate Rounds: General Union Posts & Year Reps rotated across tables\n• Final Round: University Union Councillor (UUC - LAST ALWAYS)\n\nNote: Uncontested posts (0 or 1 candidate) without competition are excluded as no ballots are issued for them.\nResults entry serial numbers may change!`)) {
         generateAndSave();
       }
     });
 
     main.querySelector('#btnNoticeRegenerate')?.addEventListener('click', () => {
-      if (confirm(`Regenerate counting matrix to align with all ${T} polling booths (Associations 1st, rotated General posts, UUC Last)?\n\nOnly contested posts on respective booth ballots will be included.`)) {
+      if (confirm(`Regenerate counting matrix to align with all ${T} polling booths (Associations 1st, rotated General & Year Rep posts, UUC Last)?\n\nOnly contested posts on respective booth ballots will be included.`)) {
         generateAndSave();
       }
     });
 
     main.querySelector('#btnOrderRegenerate')?.addEventListener('click', () => {
-      if (confirm(`Re-align counting matrix to statutory order (Associations 1st, rotated General posts, UUC Last Always) across all ${T} polling booths?\n\nOnly contested posts on respective booth ballots will be included.`)) {
+      if (confirm(`Re-align counting matrix to statutory order (Associations 1st, rotated General & Year Rep posts, UUC Last Always) across all ${T} polling booths?\n\nOnly contested posts on respective booth ballots will be included.`)) {
         generateAndSave();
       }
     });
@@ -1924,39 +1924,39 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     const G = generalPosts.length;
     const maxUuc = Math.max(...Array.from({ length: T }, (_, t) => uucPosts.filter(up => isMatch(up, t)).length), 0);
 
-    const R = Math.max(maxAssoc + maxYear + G + maxUuc, 1);
+    const M = G + maxYear;
+    const R = Math.max(maxAssoc + M + maxUuc, 1);
 
-    // 2. Build table rounds strictly following statutory phases:
+    // 2. Build table rounds strictly following statutory allocation:
     //    Phase 1 (Rounds 0 .. maxAssoc - 1): Department Associations (1st)
-    //    Phase 2 (Rounds maxAssoc .. maxAssoc + maxYear - 1): Year Representatives (2nd)
-    //    Phase 3 (Rounds maxAssoc + maxYear .. maxAssoc + maxYear + G - 1): General Union Posts rotated across tables
-    //    Phase 4 (Final rounds): University Union Councillor (UUC - Last Always)
+    //    Intermediate Phase (Rounds maxAssoc .. maxAssoc + M - 1): General Union Posts & Year Reps rotated across tables
+    //    Final Phase (Rounds maxAssoc + M .. R - 1): University Union Councillor (UUC - Last Always)
     const matrix = Array.from({ length: T }, (_, t) => {
       const row = Array.from({ length: R }, () => null);
       const myAssoc = assocPosts.filter(ap => isMatch(ap, t));
       const myYearReps = yearRepPosts.filter(yp => isMatch(yp, t));
       const myUuc = uucPosts.filter(up => isMatch(up, t));
 
-      // Phase 1: Contested Department Association of this booth
+      // Phase 1: Contested Department Association of this booth (Round 1)
       myAssoc.forEach((p, idx) => {
         if (idx < maxAssoc) row[idx] = p;
       });
 
-      // Phase 2: Contested Year Representative of this booth
-      myYearReps.forEach((p, idx) => {
-        if (idx < maxYear) row[maxAssoc + idx] = p;
-      });
-
-      // Phase 3: Contested General Union Posts (Rotated per table)
-      if (G > 0) {
-        for (let i = 0; i < G; i++) {
-          row[maxAssoc + maxYear + i] = generalPosts[(t + i) % G];
+      // Intermediate Phase: Rotated General Union Posts & Year Representatives
+      if (M > 0) {
+        for (let i = 0; i < M; i++) {
+          const slot = (t + i) % M;
+          if (slot < G) {
+            row[maxAssoc + i] = generalPosts[slot];
+          } else {
+            row[maxAssoc + i] = myYearReps[slot - G] || null;
+          }
         }
       }
 
-      // Phase 4: Contested UUC (Final round)
+      // Final Phase: Contested UUC (Final round)
       myUuc.forEach((p, idx) => {
-        if (idx < maxUuc) row[maxAssoc + maxYear + G + idx] = p;
+        if (idx < maxUuc) row[maxAssoc + M + idx] = p;
       });
 
       return row;
@@ -1976,10 +1976,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     for (let a = 0; a < maxAssoc; a++) {
       roundLabels.push(maxAssoc === 1 ? 'Round 1 (Assoc)' : `Round ${roundLabels.length + 1} (Assoc ${a + 1})`);
     }
-    for (let y = 0; y < maxYear; y++) {
-      roundLabels.push(maxYear === 1 ? `Round ${roundLabels.length + 1} (Year Rep)` : `Round ${roundLabels.length + 1} (Year Rep ${y + 1})`);
-    }
-    for (let g = 0; g < G; g++) {
+    for (let m = 0; m < M; m++) {
       roundLabels.push(`Round ${roundLabels.length + 1}`);
     }
     for (let u = 0; u < maxUuc; u++) {
@@ -1998,7 +1995,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     try {
       await api.adminSaveCountingMatrix(pwd, payload);
       await saveCountingMeta({ savedMatrix: payload, posts: postsList, finalList: candidatesList, booths: boothsList, settings, countingTeams, nominalRoll: nominalRollList, results: allResults });
-      showToast('Counting matrix regenerated statutorily (Only contested posts from respective booth ballots).', 'success');
+      showToast('Counting matrix regenerated statutorily (Assoc 1st, Rotated General & Year Reps, UUC Last).', 'success');
       renderDisplay(payload);
     } catch (e) {
       console.warn('Online save matrix failed, saving locally to IndexedDB:', e);
