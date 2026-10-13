@@ -2675,25 +2675,6 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
 
   const sortedBooths = [...booths].sort((a, b) => a.boothNumber - b.boothNumber);
 
-  const copies = [
-    {
-      num: 1,
-      badgeTitle: 'COPY 1 — HANDOVER COPY (COVER B1)',
-      badgeSub: 'Mandatory: Enclose in sealed Cover B1 & hand over directly to Returning Officer at Reception Counter',
-      themeBg: '#eff6ff',
-      themeText: '#1e3a8a',
-      themeBorder: '#3b82f6'
-    },
-    {
-      num: 2,
-      badgeTitle: 'COPY 2 — BALLOT BOX COPY (COVER B2)',
-      badgeSub: 'Mandatory: Enclose in sealed Cover B2, WAX-SEAL WITH METAL SEAL, & FIRMLY TAPE / STICK ON BOX OUTER LID',
-      themeBg: '#fffbeb',
-      themeText: '#92400e',
-      themeBorder: '#d97706'
-    }
-  ];
-
   sortedBooths.forEach((b) => {
     if (!b.classes || b.classes.length === 0) return;
     const assignments = plan.boothAssignments[b.boothNumber] || { general: null, reps: [], assocs: [] };
@@ -2705,9 +2686,8 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
     const boothAssocPosts = assignments.assocs.map(a => ({ name: a.post, count: a.count }));
     const allBoothPosts = [...boothGeneralPosts, ...boothRepPosts, ...boothAssocPosts];
 
-    copies.forEach(cp => {
-      html += `
-      <div class="page-break page-copy-${cp.num}">
+    html += `
+      <div class="page-break">
         <div class="account-page">
           
           <!-- Header -->
@@ -2715,12 +2695,6 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
             ${collegeLogo ? `<img src="${collegeLogo}" class="college-logo-img" alt="Emblem">` : ''}
             <div class="college-name">${esc(collegeName)}</div>
             <div class="account-doc-title">COLLEGE UNION ELECTION ${esc(electionYear)} &mdash; BALLOTS &amp; BOOKS ACCOUNT</div>
-            
-            <!-- Statutory Copy Designation Badge -->
-            <div class="copy-designation-badge" style="background: ${cp.themeBg}; color: ${cp.themeText}; border: 1.5px solid ${cp.themeBorder}; margin: 3px auto 0 auto; padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: baseline; gap: 6px; max-width: 100%;">
-              <span style="font-weight: 900; font-size: 8.5pt; letter-spacing: 0.3px;">${cp.badgeTitle}</span>
-              <span style="font-size: 7pt; font-weight: 600; opacity: 0.9;">&bull; ${cp.badgeSub}</span>
-            </div>
           </div>
           
           <!-- Booth Details Banner -->
@@ -2896,7 +2870,7 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
             <!-- Space for Signatures of Polling Agents Below Presiding Officer -->
             <div class="agents-sig-container">
               <div class="agents-header">
-                <span class="agents-title">Signatures of Polling Agents (Mandatory on Both Copies):</span>
+                <span class="agents-title">Signatures of Polling Agents:</span>
                 <span class="agents-hint">(Sign with Name &amp; Candidate / Organization)</span>
               </div>
               <div class="agents-grid">
@@ -2912,7 +2886,6 @@ export const buildBallotAccountHtml = (booths, students, posts, classStats, nomi
 
         </div>
       </div>`;
-    });
   });
   return html;
 };
@@ -3297,17 +3270,11 @@ export function triggerBallotAccountPrint(html) {
         <div class="screen-topbar no-print">
           <div style="display: flex; align-items: center; gap: 12px;">
             <strong style="font-size: 14px; color: #fff;">Ballots &amp; Books Account (Form 2)</strong>
-            <span style="font-size: 11px; color: #cbd5e1;">A4 Portrait &bull; Copies 1 &amp; 2 Included</span>
+            <span style="font-size: 11px; color: #cbd5e1;">A4 Portrait &bull; 1 Copy per Booth</span>
           </div>
           <div style="display: flex; align-items: center; gap: 8px;">
-            <button class="topbar-btn" onclick="filterAndPrint('all')">
-              <span>🖨️</span> Print Both Copies
-            </button>
-            <button class="topbar-btn" style="background: #1e3a8a; border-color: #3b82f6;" onclick="filterAndPrint('copy1')">
-              <span>📄</span> Copy 1 (Handover)
-            </button>
-            <button class="topbar-btn" style="background: #92400e; border-color: #f59e0b;" onclick="filterAndPrint('copy2')">
-              <span>📦</span> Copy 2 (Ballot Box)
+            <button class="topbar-btn" onclick="window.print()">
+              <span>🖨️</span> Print Ballot Accounts
             </button>
             <button class="topbar-btn" style="background: #333333; border: 1.5px solid #666;" onclick="window.close()">
               <span>✕</span> Close
@@ -3316,21 +3283,6 @@ export function triggerBallotAccountPrint(html) {
         </div>
 
         ${html}
-
-        <script>
-          function filterAndPrint(filter) {
-            document.querySelectorAll('.page-break').forEach(function(el) {
-              if (filter === 'all') {
-                el.style.display = 'block';
-              } else if (filter === 'copy1') {
-                el.style.display = el.classList.contains('page-copy-1') ? 'block' : 'none';
-              } else if (filter === 'copy2') {
-                el.style.display = el.classList.contains('page-copy-2') ? 'block' : 'none';
-              }
-            });
-            window.print();
-          }
-        </script>
       </body>
     </html>
   `);
