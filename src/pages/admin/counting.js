@@ -1774,19 +1774,19 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
 
     // Matrix Regenerate listeners
     main.querySelector('#btnRegenerate')?.addEventListener('click', () => {
-      if (confirm(`Are you sure? This will regenerate the counting matrix following statutory allocation:\n\n• Phase 1: Department Associations (FIRST)\n• Intermediate Rounds: General Union Posts & Year Reps rotated across tables\n• Final Round: University Union Councillor (UUC - LAST ALWAYS)\n\nNote: Uncontested posts (0 or 1 candidate) without competition are excluded as no ballots are issued for them.\nResults entry serial numbers may change!`)) {
+      if (confirm(`Are you sure? This will regenerate the counting matrix following statutory allocation:\n\n• Phase 1: Department Associations (FIRST)\n• Intermediate Rounds: General Union Posts & Year Reps rotated continuously (no middle gaps)\n• Final Round: University Union Councillor (UUC - LAST ALWAYS)\n\nAll table gaps are placed at the end immediately before UUC so tables that finish early wait together for UUC.\nResults entry serial numbers may change!`)) {
         generateAndSave();
       }
     });
 
     main.querySelector('#btnNoticeRegenerate')?.addEventListener('click', () => {
-      if (confirm(`Regenerate counting matrix to align with all ${T} polling booths (Associations 1st, rotated General & Year Rep posts, UUC Last)?\n\nOnly contested posts on respective booth ballots will be included.`)) {
+      if (confirm(`Regenerate counting matrix to align with all ${T} polling booths (Continuous count, all gaps at end before UUC)?\n\nOnly contested posts on respective booth ballots will be included.`)) {
         generateAndSave();
       }
     });
 
     main.querySelector('#btnOrderRegenerate')?.addEventListener('click', () => {
-      if (confirm(`Re-align counting matrix to statutory order (Associations 1st, rotated General & Year Rep posts, UUC Last Always) across all ${T} polling booths?\n\nOnly contested posts on respective booth ballots will be included.`)) {
+      if (confirm(`Re-align counting matrix to statutory order (Continuous count, all gaps at end before UUC) across all ${T} polling booths?\n\nOnly contested posts on respective booth ballots will be included.`)) {
         generateAndSave();
       }
     });
@@ -1919,44 +1919,54 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     generalPosts.sort(comparePosts);
     uucPosts.sort(comparePosts);
 
-    const maxAssoc = Math.max(...Array.from({ length: T }, (_, t) => assocPosts.filter(ap => isMatch(ap, t)).length), 0);
-    const maxYear = Math.max(...Array.from({ length: T }, (_, t) => yearRepPosts.filter(yp => isMatch(yp, t)).length), 0);
     const G = generalPosts.length;
-    const maxUuc = Math.max(...Array.from({ length: T }, (_, t) => uucPosts.filter(up => isMatch(up, t)).length), 0);
 
-    const M = G + maxYear;
-    const R = Math.max(maxAssoc + M + maxUuc, 1);
-
-    // 2. Build table rounds strictly following statutory allocation:
-    //    Phase 1 (Rounds 0 .. maxAssoc - 1): Department Associations (1st)
-    //    Intermediate Phase (Rounds maxAssoc .. maxAssoc + M - 1): General Union Posts & Year Reps rotated across tables
-    //    Final Phase (Rounds maxAssoc + M .. R - 1): University Union Councillor (UUC - Last Always)
-    const matrix = Array.from({ length: T }, (_, t) => {
-      const row = Array.from({ length: R }, () => null);
+    // 2. Build table non-UUC posts:
+    //    Phase 1: Department Association(s) 1st
+    //    Intermediate: General Union Posts rotated across tables + Year Reps staggered
+    //    Strict Rule: All posts on a table are scheduled continuously from Round 1 with NO gaps in middle.
+    //    All gaps are placed at the end, immediately before UUC, so tables that finish early wait for UUC.
+    const tablePreUucPosts = [];
+    for (let t = 0; t < T; t++) {
       const myAssoc = assocPosts.filter(ap => isMatch(ap, t));
       const myYearReps = yearRepPosts.filter(yp => isMatch(yp, t));
-      const myUuc = uucPosts.filter(up => isMatch(up, t));
 
-      // Phase 1: Contested Department Association of this booth (Round 1)
-      myAssoc.forEach((p, idx) => {
-        if (idx < maxAssoc) row[idx] = p;
+      // Rotated general union posts for Table t
+      const rotatedGen = G > 0
+        ? Array.from({ length: G }, (_, i) => generalPosts[(t + i) % G])
+        : [];
+
+      // Stagger Year Reps into rotated general posts
+      const intermediatePosts = [...rotatedGen];
+      myYearReps.forEach((yr, k) => {
+        const insertIdx = (t * 2 + k * 3) % (intermediatePosts.length + 1);
+        intermediatePosts.splice(insertIdx, 0, yr);
       });
 
-      // Intermediate Phase: Rotated General Union Posts & Year Representatives
-      if (M > 0) {
-        for (let i = 0; i < M; i++) {
-          const slot = (t + i) % M;
-          if (slot < G) {
-            row[maxAssoc + i] = generalPosts[slot];
-          } else {
-            row[maxAssoc + i] = myYearReps[slot - G] || null;
-          }
-        }
-      }
+      // Association first, then intermediate posts (solid, no nulls)
+      tablePreUucPosts.push([...myAssoc, ...intermediatePosts]);
+    }
 
-      // Final Phase: Contested UUC (Final round)
+    const maxPreUuc = Math.max(...tablePreUucPosts.map(p => p.length), 0);
+    const maxUuc = Math.max(...Array.from({ length: T }, (_, t) => uucPosts.filter(up => isMatch(up, t)).length), 0);
+    const R = Math.max(maxPreUuc + maxUuc, 1);
+
+    const matrix = Array.from({ length: T }, (_, t) => {
+      const row = Array.from({ length: R }, () => null);
+      const preList = tablePreUucPosts[t] || [];
+
+      // Schedule all non-UUC posts continuously from round 0 (no gaps in middle)
+      preList.forEach((p, idx) => {
+        row[idx] = p;
+      });
+
+      // Any remaining rounds between preList.length and maxPreUuc - 1 naturally stay null (–)
+      // (All gaps are strictly at the end, right before UUC!)
+
+      // Final round(s): UUC
+      const myUuc = uucPosts.filter(up => isMatch(up, t));
       myUuc.forEach((p, idx) => {
-        if (idx < maxUuc) row[maxAssoc + M + idx] = p;
+        row[maxPreUuc + idx] = p;
       });
 
       return row;
@@ -1973,11 +1983,11 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     }
 
     const roundLabels = [];
-    for (let a = 0; a < maxAssoc; a++) {
-      roundLabels.push(maxAssoc === 1 ? 'Round 1 (Assoc)' : `Round ${roundLabels.length + 1} (Assoc ${a + 1})`);
-    }
-    for (let m = 0; m < M; m++) {
-      roundLabels.push(`Round ${roundLabels.length + 1}`);
+    if (maxPreUuc > 0) {
+      roundLabels.push(assocPosts.length > 0 ? 'Round 1 (Assoc)' : 'Round 1');
+      for (let i = 1; i < maxPreUuc; i++) {
+        roundLabels.push(`Round ${i + 1}`);
+      }
     }
     for (let u = 0; u < maxUuc; u++) {
       roundLabels.push(maxUuc === 1 ? `Round ${roundLabels.length + 1} (UUC)` : `Round ${roundLabels.length + 1} (UUC ${u + 1})`);
@@ -1995,7 +2005,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     try {
       await api.adminSaveCountingMatrix(pwd, payload);
       await saveCountingMeta({ savedMatrix: payload, posts: postsList, finalList: candidatesList, booths: boothsList, settings, countingTeams, nominalRoll: nominalRollList, results: allResults });
-      showToast('Counting matrix regenerated statutorily (Assoc 1st, Rotated General & Year Reps, UUC Last).', 'success');
+      showToast('Counting matrix regenerated statutorily (Continuous count, all gaps at end before UUC).', 'success');
       renderDisplay(payload);
     } catch (e) {
       console.warn('Online save matrix failed, saving locally to IndexedDB:', e);
