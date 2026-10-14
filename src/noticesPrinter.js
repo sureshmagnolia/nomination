@@ -3185,48 +3185,51 @@ export function printBatchBoothCandidatesList(boothsList, settings = {}, schedul
       col2.reduce((sum, p) => sum + p.cands.length, 0)
     );
 
-    let candNameSize = '14.5px';
-    let candClassSize = '11.5px';
-    let candSlSize = '14.5px';
-    let headerSize = '11.5px';
-    let headerPad = '5px 10px';
-    let rowPad = '8px 12px';
-    let cardGap = '9px';
+    let candNameSize = '13px';
+    let candClassSize = '10px';
+    let candSlSize = '13px';
+    let headerSize = '10.5px';
+    let headerPad = '3px 8px';
+    let rowPad = '3px 8px';
+    let cardGap = '6px';
 
     if (maxColCands >= 14) {
-      candNameSize = '13.5px';
-      candClassSize = '10.5px';
-      candSlSize = '13.5px';
-      headerSize = '10.5px';
-      headerPad = '4px 9px';
-      rowPad = '5.5px 10px';
-      cardGap = '6px';
+      candNameSize = '12px';
+      candClassSize = '9.5px';
+      candSlSize = '12px';
+      headerSize = '10px';
+      headerPad = '2.5px 7px';
+      rowPad = '2px 7px';
+      cardGap = '5px';
     } else if (maxColCands === 13) {
-      candNameSize = '14px';
-      candClassSize = '11px';
-      candSlSize = '14px';
-      headerSize = '11px';
-      headerPad = '4.5px 9px';
-      rowPad = '6.5px 11px';
-      cardGap = '7.5px';
+      candNameSize = '12.5px';
+      candClassSize = '10px';
+      candSlSize = '12.5px';
+      headerSize = '10.5px';
+      headerPad = '3px 8px';
+      rowPad = '2.5px 7px';
+      cardGap = '5.5px';
     }
 
-    const renderPostCard = (p) => `
-      <div class="post-card">
-        <div class="post-header">${esc(p.post.toUpperCase())}</div>
-        <div class="candidates-list">
-          ${p.cands.map((c, i) => `
-            <div class="candidate-row">
-              <span class="cand-sl">${i + 1}</span>
-              <div class="cand-info">
-                <div class="cand-name">${esc((c.candidateName || c.candidate_name || '').toUpperCase())}</div>
-                <div class="cand-class">${esc(c.candidateClass || c.candidate_class || '')}</div>
+    const renderPostCard = (p) => {
+      const flexWeight = (p.cands.length + 0.6).toFixed(2);
+      return `
+        <div class="post-card" style="flex: ${flexWeight}; min-height: 0;">
+          <div class="post-header">${esc(p.post.toUpperCase())}</div>
+          <div class="candidates-list">
+            ${p.cands.map((c, i) => `
+              <div class="candidate-row">
+                <span class="cand-sl">${i + 1}</span>
+                <div class="cand-info">
+                  <div class="cand-name">${esc((c.candidateName || c.candidate_name || '').toUpperCase())}</div>
+                  <div class="cand-class">${esc(c.candidateClass || c.candidate_class || '')}</div>
+                </div>
               </div>
-            </div>
-          `).join('')}
+            `).join('')}
+          </div>
         </div>
-      </div>
-    `;
+      `;
+    };
 
     return `
       <div class="booth-page" id="booth-page-${bNum}" style="--cand-name-size: ${candNameSize}; --cand-class-size: ${candClassSize}; --cand-sl-size: ${candSlSize}; --post-header-size: ${headerSize}; --post-header-pad: ${headerPad}; --row-pad: ${rowPad}; --card-gap: ${cardGap};">
@@ -3281,14 +3284,14 @@ export function printBatchBoothCandidatesList(boothsList, settings = {}, schedul
     }
     .booth-page {
       width: 100%;
-      height: 283mm;
-      max-height: 283mm;
+      height: 281mm;
+      max-height: 281mm;
+      box-sizing: border-box;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       page-break-after: always;
       break-after: page;
-      overflow: hidden;
       padding: 0;
     }
     .booth-page:last-child {
@@ -3297,8 +3300,9 @@ export function printBatchBoothCandidatesList(boothsList, settings = {}, schedul
     }
     .poster-header {
       text-align: center;
-      padding-bottom: 4px;
+      padding-bottom: 3px;
       border-bottom: 2px solid #0f172a;
+      flex-shrink: 0;
     }
     .college-logo {
       max-height: 38px;
@@ -3328,9 +3332,9 @@ export function printBatchBoothCandidatesList(boothsList, settings = {}, schedul
       font-weight: 900;
       background: #0f172a;
       color: #ffffff;
-      padding: 2.5px 16px;
+      padding: 2px 16px;
       border-radius: 4px;
-      margin-top: 3px;
+      margin-top: 2px;
       letter-spacing: 1.2px;
       text-transform: uppercase;
     }
@@ -3341,8 +3345,9 @@ export function printBatchBoothCandidatesList(boothsList, settings = {}, schedul
       background: #f1f5f9;
       border: 1.5px solid #0f172a;
       border-radius: 5px;
-      padding: 4px 10px;
-      margin: 5px 0;
+      padding: 3.5px 10px;
+      margin: 4px 0;
+      flex-shrink: 0;
     }
     .booth-num {
       font-size: 13px;
@@ -3358,24 +3363,23 @@ export function printBatchBoothCandidatesList(boothsList, settings = {}, schedul
     .columns-wrap {
       flex: 1;
       display: flex;
-      gap: 14px;
+      gap: 12px;
       min-height: 0;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
     .column {
       flex: 1;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      gap: var(--card-gap, 8px);
+      gap: var(--card-gap, 6px);
       min-height: 0;
     }
     .post-card {
-      flex: 1;
       display: flex;
       flex-direction: column;
       border: 1.5px solid #0f172a;
-      border-radius: 6px;
+      border-radius: 5px;
       overflow: hidden;
       background: #fff;
       min-height: 0;
@@ -3384,11 +3388,11 @@ export function printBatchBoothCandidatesList(boothsList, settings = {}, schedul
     .post-header {
       background: #0f172a;
       color: #ffffff;
-      font-size: var(--post-header-size, 11px);
+      font-size: var(--post-header-size, 10.5px);
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      padding: var(--post-header-pad, 4.5px 10px);
+      letter-spacing: 0.4px;
+      padding: var(--post-header-pad, 3px 8px);
       border-bottom: 1px solid #0f172a;
       flex-shrink: 0;
     }
@@ -3396,23 +3400,25 @@ export function printBatchBoothCandidatesList(boothsList, settings = {}, schedul
       flex: 1;
       display: flex;
       flex-direction: column;
+      min-height: 0;
       justify-content: space-around;
       background: #fff;
     }
     .candidate-row {
       flex: 1;
+      min-height: 0;
       display: flex;
       align-items: center;
-      padding: var(--row-pad, 7px 11px);
+      padding: var(--row-pad, 3px 8px);
       border-bottom: 1px solid #f1f5f9;
     }
     .candidate-row:last-child {
       border-bottom: none;
     }
     .cand-sl {
-      width: 26px;
+      width: 22px;
       font-weight: 900;
-      font-size: var(--cand-sl-size, 14px);
+      font-size: var(--cand-sl-size, 13px);
       color: #0f172a;
       flex-shrink: 0;
     }
@@ -3422,28 +3428,35 @@ export function printBatchBoothCandidatesList(boothsList, settings = {}, schedul
       display: flex;
       flex-direction: column;
       justify-content: center;
-      gap: 2px;
+      line-height: 1.15;
     }
     .cand-name {
-      font-size: var(--cand-name-size, 14px);
-      font-weight: 850;
+      font-size: var(--cand-name-size, 13px);
+      font-weight: 800;
       color: #0f172a;
-      line-height: 1.25;
+      line-height: 1.2;
       text-transform: uppercase;
-      letter-spacing: 0.35px;
+      letter-spacing: 0.25px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .cand-class {
-      font-size: var(--cand-class-size, 11px);
+      font-size: var(--cand-class-size, 10px);
       font-weight: 600;
       color: #334155;
-      line-height: 1.2;
+      line-height: 1.15;
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .poster-footer {
       display: flex;
       align-items: flex-end;
       justify-content: flex-end;
       border-top: 1.5px solid #0f172a;
-      padding-top: 4px;
+      padding-top: 3px;
       flex-shrink: 0;
     }
     .footer-sign {
