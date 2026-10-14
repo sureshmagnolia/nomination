@@ -437,6 +437,32 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       return eff.isActual;
     }).length;
 
+    // Detect if at least 1 single-vote General post data came from all tables
+    const getGeneralPostsReadiness = () => {
+      const ready = [];
+      const pending = [];
+      for (let t = 0; t < T; t++) {
+        const b = boothsList[t];
+        const bNum = b?.boothNumber || (t + 1);
+        const roomName = b?.roomName || `Table ${bNum}`;
+        const deduced = deduceBallotsFromResults(allResults, bNum);
+        if (deduced && deduced.ballots > 0) {
+          ready.push({ tableNum: bNum, roomName, postName: deduced.postName, ballots: deduced.ballots });
+        } else {
+          pending.push({ tableNum: bNum, roomName });
+        }
+      }
+      return {
+        total: T,
+        readyCount: ready.length,
+        isAllReady: pending.length === 0,
+        ready,
+        pending
+      };
+    };
+
+    const genReadiness = getGeneralPostsReadiness();
+
     // Detect if current matrix adheres to statutory counting order
     // (Associations 1st, General Union Posts rotated across tables, UUC Last Always)
     const isOrderStatutory = (() => {
@@ -504,8 +530,11 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             <p class="text-slate-400 text-sm mt-0.5">${T} tables · ${totalRounds} rounds · ${sortedPostObjects.length} contested posts scheduled · ${allFormsList.length} counting forms</p>
           </div>
           <div class="flex gap-2 flex-wrap items-center">
-            <button id="btnOpenBpaModal" class="btn btn-secondary border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500 hover:text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm" title="Action: Enter or auto-detect actual ballots polled in box (Ballot Paper Account / Form 5 / PrO Diary) per table to calibrate UUC 25-ballot batches and expected vote totals.">
-              <span>🗳️</span> Ballot Paper Account ${tablesWithPolledCount > 0 ? `<span class="badge bg-emerald-500/30 text-emerald-200 border border-emerald-500/50 text-[10px] py-0 px-1 font-mono">${tablesWithPolledCount}/${T} Polled</span>` : ''}
+            <button id="btnOpenBpaModal" class="btn btn-secondary border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500 hover:text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm" title="Action: Check actual polled ballots from General seats results or enter manually (Ballot Paper Account / Form 5).">
+              <span>🗳️</span> Ballot Paper Account ${genReadiness.isAllReady
+                ? `<span class="badge bg-emerald-500/30 text-emerald-200 border border-emerald-500/50 text-[10px] py-0 px-1.5 font-mono">✅ All ${T} Tables Ready</span>`
+                : `<span class="badge bg-amber-500/30 text-amber-200 border border-amber-500/50 text-[10px] py-0 px-1.5 font-mono" title="General post results pending for: Table ${genReadiness.pending.map(p => p.tableNum).join(', Table ')}">⚠️ General Data: ${genReadiness.readyCount}/${T} (Pending: ${genReadiness.pending.map(p => 'T' + p.tableNum).join(', ')})</span>`
+              }
             </button>
             <a href="#/admin/officials" class="btn btn-secondary border-purple-500/30 text-purple-300 hover:bg-purple-500 hover:text-white text-xs font-semibold flex items-center gap-1.5" title="Action: Opens the Election Officials Team Builder to allot Counting Supervisors and Counting Assistants to tables.&#10;Prerequisite: Configure booths/tables and upload staff rosters first.">
               <span>👥</span> Allot Counting Teams
@@ -651,7 +680,11 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
             <span id="printScopeHint" class="flex items-center gap-1.5 text-slate-300">
               💡 <strong>Scope:</strong> Batch printing all ${allFormsList.length} counting forms across all ${totalRounds} rounds and ${T} tables.
             </span>
-            <div class="flex items-center gap-2.5">
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <span id="uucReadinessStatusBadge" class="text-[10.5px] font-semibold px-2 py-0.5 rounded-md border flex items-center gap-1 cursor-pointer transition-colors ${genReadiness.isAllReady ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25'}" title="${genReadiness.isAllReady ? 'All tables have single-vote General post data ready. UUC Tally sheets will use actual ballots.' : `Click to view Ballot Paper Account. General post data pending for Table ${genReadiness.pending.map(p => p.tableNum).join(', Table ')}`}">
+                <span>${genReadiness.isAllReady ? '✅' : '⚠️'}</span>
+                <span>UUC Tally: ${genReadiness.isAllReady ? 'All Tables Ready (Actual Ballots)' : `${genReadiness.readyCount}/${T} Ready (${genReadiness.pending.length} Pending: ${genReadiness.pending.map(p => 'T' + p.tableNum).join(', ')})`}</span>
+              </span>
               <span id="recountBadgeStatus" class="hidden text-amber-300 font-bold text-[10.5px] bg-amber-500/15 px-2 py-0.5 rounded-md border border-amber-500/30 flex items-center gap-1">
                 <span>⚠️</span> RECOUNT MODE ACTIVE
               </span>
@@ -922,6 +955,9 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
               </div>
               <button type="button" id="btnCloseBpaModal" class="text-slate-400 hover:text-white text-xl p-1 rounded-lg hover:bg-white/10 transition-colors">✕</button>
             </div>
+
+            <!-- Dynamic General Seats Readiness Banner -->
+            <div id="bpaGeneralStatusBanner" class="p-3 bg-slate-950/80 border-b border-white/10"></div>
 
             <!-- Quick Auto-Detect & Bulk Presets Bar -->
             <div class="p-3.5 bg-slate-950/40 border-b border-white/10 flex flex-wrap items-center justify-between gap-2.5">
@@ -1292,6 +1328,37 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       let html = '';
       let count = 0;
 
+      // Check if target table(s) have pending General seats data (missing actual ballots in box)
+      const pendingActualTables = [];
+      uucPosts.forEach(p => {
+        const pn = pName(p);
+        const tables = postTableMap[pn] || [];
+        tables.forEach(tInfo => {
+          if (targetTable && String(tInfo.tableNum) !== String(targetTable)) return;
+          const eff = getEffectiveVoterCountForTable(tInfo.tableNum);
+          if (!eff.isActual) {
+            if (!pendingActualTables.some(item => String(item.tableNum) === String(tInfo.tableNum))) {
+              pendingActualTables.push({ tableNum: tInfo.tableNum, roomName: tInfo.roomName });
+            }
+          }
+        });
+      });
+
+      if (pendingActualTables.length > 0) {
+        const tableListStr = pendingActualTables.map(t => `  • Table ${t.tableNum} (${t.roomName})`).join('\n');
+        const proceed = confirm(
+          `⚠️ UUC TALLY SHEET: PENDING GENERAL SEATS DATA\n\n` +
+          `Actual polled ballot data has NOT yet arrived for:\n${tableListStr}\n\n` +
+          `These ${pendingActualTables.length} table(s) will fall back to Allotted Electors instead of actual physical ballots in the box.\n\n` +
+          `• Click CANCEL to open Ballot Paper Account and fetch/enter actual data.\n` +
+          `• Click OK to proceed with printing anyway.`
+        );
+        if (!proceed) {
+          openBpaModal();
+          return;
+        }
+      }
+
       uucPosts.forEach(p => {
         const pn = pName(p);
         const tables = postTableMap[pn] || [];
@@ -1657,6 +1724,79 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     const openBpaModal = () => {
       if (!modalBpa || !bpaTableBody) return;
 
+      const genReadinessNow = getGeneralPostsReadiness();
+      const bannerEl = modalBpa.querySelector('#bpaGeneralStatusBanner');
+      if (bannerEl) {
+        if (genReadinessNow.isAllReady) {
+          bannerEl.innerHTML = `
+            <div class="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-200 text-xs flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+              <div class="flex items-center gap-2.5">
+                <span class="text-2xl">✅</span>
+                <div>
+                  <div class="font-bold text-emerald-300 text-sm">All ${T} Tables Ready with General Seats Data!</div>
+                  <div class="text-[11.5px] text-emerald-200/90 mt-0.5">
+                    Single-vote General Union seat results are recorded for every table. Click below to auto-fill actual ballots and print 100% accurate UUC Tally Sheets.
+                  </div>
+                </div>
+              </div>
+              <button type="button" id="btnBpaAutoDetectBanner" class="btn btn-xs bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-3.5 py-1.5 rounded-lg shadow shrink-0">
+                ⚡ Auto-Fill All (${T}/${T})
+              </button>
+            </div>
+          `;
+          bannerEl.querySelector('#btnBpaAutoDetectBanner')?.addEventListener('click', () => {
+            modalBpa.querySelector('#btnBpaAutoDetect')?.click();
+          });
+        } else {
+          bannerEl.innerHTML = `
+            <div class="p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
+              <div class="flex items-start gap-2.5">
+                <span class="text-2xl shrink-0">⚠️</span>
+                <div>
+                  <div class="font-bold text-amber-300 text-sm">
+                    General Seat Data Pending: ${genReadinessNow.pending.length} of ${T} Table(s) Missing
+                  </div>
+                  <div class="text-[11.5px] text-amber-100 mt-1">
+                    The following table(s) do not have any single-vote General post results entered yet:
+                    <div class="flex flex-wrap gap-1.5 mt-1.5">
+                      ${genReadinessNow.pending.map(p => `
+                        <span class="px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/40 font-mono font-bold text-[11px] inline-flex items-center gap-1 shadow-sm">
+                          <span>Table ${p.tableNum}</span>
+                          <span class="text-[9.5px] font-normal text-amber-200/70">(${esc(p.roomName)})</span>
+                        </span>
+                      `).join('')}
+                    </div>
+                  </div>
+                  <div class="text-[11px] text-amber-300/80 mt-2 flex items-center gap-1">
+                    <span>💡</span>
+                    <span>Fetch/enter results for Chairman, Gen Sec, etc. for these tables, or enter physical ballots manually before printing UUC Tally Sheets.</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex sm:flex-col gap-2 shrink-0 self-start sm:self-center">
+                <a href="#/admin/results-entry" class="btn btn-xs bg-amber-500 hover:bg-amber-400 text-black font-bold px-3 py-1.5 rounded-lg shadow inline-flex items-center justify-center gap-1">
+                  <span>📝</span> Enter Results
+                </a>
+                <button type="button" id="btnFilterPendingBpaRows" class="btn btn-xs btn-secondary text-[11px] px-2.5 py-1 rounded-lg border-amber-400/30 text-amber-300 hover:bg-amber-400/10">
+                  🔍 Highlight Pending
+                </button>
+              </div>
+            </div>
+          `;
+          bannerEl.querySelector('#btnFilterPendingBpaRows')?.addEventListener('click', () => {
+            bpaTableBody.querySelectorAll('.bpa-row').forEach(r => {
+              const isPending = r.dataset.hasDeduced !== 'true';
+              if (isPending) {
+                r.classList.add('bg-amber-500/20', 'ring-1', 'ring-amber-400');
+                r.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              } else {
+                r.classList.remove('bg-amber-500/20', 'ring-1', 'ring-amber-400');
+              }
+            });
+          });
+        }
+      }
+
       let rowsHtml = '';
       for (let t = 0; t < T; t++) {
         const b = boothsList[t];
@@ -1666,26 +1806,30 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         const deduced = deduceBallotsFromResults(allResults, bNum);
         const sNum = String(bNum);
         const manualVal = tablePolledBallots[sNum] !== undefined ? tablePolledBallots[sNum] : '';
+        const isDeduced = deduced && deduced.ballots > 0;
 
         rowsHtml += `
-          <tr class="bpa-row hover:bg-white/[0.02]" data-table="${bNum}" data-allotted="${allotted}">
+          <tr class="bpa-row hover:bg-white/[0.02] ${!isDeduced ? 'bg-amber-500/[0.04]' : ''}" data-table="${bNum}" data-allotted="${allotted}" data-has-deduced="${isDeduced ? 'true' : 'false'}">
             <td class="font-bold text-sky-300 py-2">
-              <div>Table ${bNum}</div>
+              <div class="flex items-center gap-1.5">
+                <span>Table ${bNum}</span>
+                ${!isDeduced ? '<span class="text-[9px] font-bold text-amber-400 bg-amber-400/10 px-1 rounded border border-amber-400/20">Pending</span>' : ''}
+              </div>
               <div class="text-[10px] text-slate-400 font-normal truncate max-w-[120px]">${esc(roomName)}</div>
             </td>
             <td class="text-center font-mono font-bold text-indigo-300 py-2">
               ${allotted || '<span class="text-slate-500">0</span>'}
             </td>
             <td class="text-left text-[11px] py-2">
-              ${deduced && deduced.ballots > 0
+              ${isDeduced
                 ? `<span class="badge bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-mono text-[10.5px] cursor-pointer hover:bg-emerald-500/30 bpa-btn-apply-deduced" data-table="${bNum}" data-count="${deduced.ballots}" title="Click to use ${deduced.ballots} for Table ${bNum}">
                      ⚡ ${deduced.ballots} (${esc(deduced.postName)})
                    </span>`
-                : '<span class="text-slate-500 italic text-[10.5px]">No results entered yet</span>'
+                : '<span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold text-[10.5px]">⚠️ No general results yet</span>'
               }
             </td>
             <td class="text-center py-2">
-              <input type="number" min="0" max="9999" class="bpa-input-table field text-center font-mono font-bold text-xs py-1 px-2 w-24 bg-black/60 border border-white/20 focus:border-emerald-400 rounded-lg text-emerald-300" data-table="${bNum}" value="${manualVal !== undefined && manualVal !== null ? manualVal : ''}" placeholder="${allotted || '0'}">
+              <input type="number" min="0" max="9999" class="bpa-input-table field text-center font-mono font-bold text-xs py-1 px-2 w-24 bg-black/60 border ${!isDeduced && !manualVal ? 'border-amber-500/40 focus:border-amber-400' : 'border-white/20 focus:border-emerald-400'} rounded-lg text-emerald-300" data-table="${bNum}" value="${manualVal !== undefined && manualVal !== null ? manualVal : ''}" placeholder="${allotted || '0'}">
             </td>
             <td class="text-center bpa-row-turnout py-2">
               –
@@ -1727,6 +1871,7 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
     };
 
     main.querySelector('#btnOpenBpaModal')?.addEventListener('click', openBpaModal);
+    main.querySelector('#uucReadinessStatusBadge')?.addEventListener('click', openBpaModal);
     modalBpa?.querySelector('#btnCloseBpaModal')?.addEventListener('click', closeBpaModal);
     modalBpa?.querySelector('#btnCancelBpaModal')?.addEventListener('click', closeBpaModal);
     modalBpa?.addEventListener('click', (e) => {
@@ -1747,8 +1892,12 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
         }
       });
       recalculateBpaStats();
-      if (detectedCount > 0) {
-        showToast(`Auto-detected actual polled ballots for ${detectedCount} table(s) from results entry!`, 'success');
+      const currentReadiness = getGeneralPostsReadiness();
+      if (currentReadiness.isAllReady) {
+        showToast(`✅ All ${T} tables successfully auto-detected from General seat results!`, 'success');
+      } else if (detectedCount > 0) {
+        const pendingNums = currentReadiness.pending.map(p => `Table ${p.tableNum}`).join(', ');
+        showToast(`Auto-detected ${detectedCount}/${T} tables. Pending General seats data for: ${pendingNums}`, 'warning');
       } else {
         showToast('No single-vote results found yet for auto-deduction. Enter values manually or enter results first.', 'info');
       }
