@@ -1067,11 +1067,22 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   };
 
   // Helper: Check if non-teaching staff is assigned
-  const getNonTeachingAssignment = (ntName) => {
-    if (!ntName) return { polling: null, counting: null, countingTables: [] };
-    const clean = String(ntName).trim().toLowerCase();
-    const p = pollingTeams.find(t => t.pollingAssistant && String(t.pollingAssistant.name).trim().toLowerCase() === clean);
-    const cList = countingTeams.filter(t => t.countingAssistant && String(t.countingAssistant.name).trim().toLowerCase() === clean);
+  const getNonTeachingAssignment = (ntName, ntPen = '') => {
+    if (!ntName && !ntPen) return { polling: null, counting: null, countingTables: [] };
+    const clean = String(ntName || '').trim().toLowerCase();
+    const cleanPen = cleanOfficialPen(ntPen);
+    const p = pollingTeams.find(t => {
+      if (!t.pollingAssistant) return false;
+      if (cleanPen && t.pollingAssistant.pen && cleanOfficialPen(t.pollingAssistant.pen) === cleanPen) return true;
+      const tName = String(t.pollingAssistant.name || '').trim().toLowerCase();
+      return (clean && tName === clean) || (clean && cleanFacultyName(tName) === cleanFacultyName(clean));
+    });
+    const cList = countingTeams.filter(t => {
+      if (!t.countingAssistant) return false;
+      if (cleanPen && t.countingAssistant.pen && cleanOfficialPen(t.countingAssistant.pen) === cleanPen) return true;
+      const tName = String(t.countingAssistant.name || '').trim().toLowerCase();
+      return (clean && tName === clean) || (clean && cleanFacultyName(tName) === cleanFacultyName(clean));
+    });
     const countingTables = cList.map(t => t.tableNumber || t.boothNumber).sort((a, b) => a - b);
     return {
       polling: p ? { boothNumber: p.boothNumber, role: 'Polling Assistant' } : null,
@@ -2404,16 +2415,30 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     }).join('');
   };
 
+  // Helper: Match non-teaching staff across dropdown values and assignments
+  const isStaffSelected = (nt, currentSelectedName, currentSelectedPen = '') => {
+    if (!nt) return false;
+    if (currentSelectedPen && nt.pen && cleanOfficialPen(currentSelectedPen) === cleanOfficialPen(nt.pen)) {
+      return true;
+    }
+    if (!currentSelectedName) return false;
+    const s1 = String(currentSelectedName).trim().toLowerCase();
+    const s2 = String(nt.name || '').trim().toLowerCase();
+    if (s1 === s2) return true;
+    if (cleanFacultyName(s1) === cleanFacultyName(s2)) return true;
+    return false;
+  };
+
   // Helper to render Non-Teaching options in Polling Assistant dropdowns
-  const renderPollingNonTeachingOptions = (boothNumber, currentSelectedName) => {
+  const renderPollingNonTeachingOptions = (boothNumber, currentSelectedName, currentSelectedPen = '') => {
     return [...nonTeaching].sort(compareOfficials).map(nt => {
-      const isSelected = currentSelectedName === nt.name;
+      const isSelected = isStaffSelected(nt, currentSelectedName, currentSelectedPen);
       const isRoOfficial = isRo(nt.name, nt.pen);
       const isAroOfficial = isAro(nt.name, nt.pen);
       const isObs = isObserver(nt.name);
       const isDisc = isDiscipline(nt.name);
       const isGriev = isGrievance(nt.name);
-      const ntAssigned = getNonTeachingAssignment(nt.name);
+      const ntAssigned = getNonTeachingAssignment(nt.name, nt.pen);
       const isAllottedInPolling = ntAssigned.polling && ntAssigned.polling.boothNumber !== boothNumber;
 
       let prefix = '';
@@ -2449,15 +2474,15 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   };
 
   // Helper to render Non-Teaching options in Counting Assistant dropdowns
-  const renderCountingNonTeachingOptions = (tableNumber, currentSelectedName) => {
+  const renderCountingNonTeachingOptions = (tableNumber, currentSelectedName, currentSelectedPen = '') => {
     return [...nonTeaching].sort(compareOfficials).map(nt => {
-      const isSelected = currentSelectedName === nt.name;
+      const isSelected = isStaffSelected(nt, currentSelectedName, currentSelectedPen);
       const isRoOfficial = isRo(nt.name, nt.pen);
       const isAroOfficial = isAro(nt.name, nt.pen);
       const isObs = isObserver(nt.name);
       const isDisc = isDiscipline(nt.name);
       const isGriev = isGrievance(nt.name);
-      const ntAssigned = getNonTeachingAssignment(nt.name);
+      const ntAssigned = getNonTeachingAssignment(nt.name, nt.pen);
       const otherTables = (ntAssigned.countingTables || []).filter(t => t !== tableNumber);
       const isAlreadyOnOtherTables = otherTables.length > 0;
 
@@ -3760,7 +3785,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         </div>
                         <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-emerald-400 focus:outline-none select-polling-assistant" data-booth="${b.boothNumber}">
                           <option value="">-- Select Non-Teaching Staff --</option>
-                          ${renderPollingNonTeachingOptions(b.boothNumber, team.pollingAssistant?.name)}
+                          ${renderPollingNonTeachingOptions(b.boothNumber, team.pollingAssistant?.name, team.pollingAssistant?.pen)}
                         </select>
                         ${renderSubtlePhone(team.pollingAssistant?.phone || getPerson(team.pollingAssistant?.name)?.phone)}
                         ${asstDouble ? `<p class="text-[10px] text-amber-300 mt-1">⚠️ Double Duty: Serving at Counting Table ${asstDouble.tableNumber} (Counting Assistant)</p>` : ''}
@@ -4033,7 +4058,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         </div>
                         <select class="w-full bg-slate-900 border border-white/20 rounded-lg p-2 text-xs text-white focus:border-purple-400 focus:outline-none select-counting-assistant" data-table="${b.boothNumber}">
                           <option value="">-- Select Non-Teaching Staff --</option>
-                          ${renderCountingNonTeachingOptions(b.boothNumber, team.countingAssistant?.name)}
+                          ${renderCountingNonTeachingOptions(b.boothNumber, team.countingAssistant?.name, team.countingAssistant?.pen)}
                         </select>
                         ${renderSubtlePhone(team.countingAssistant?.phone || getPerson(team.countingAssistant?.name)?.phone)}
                         ${(() => {
@@ -4478,24 +4503,47 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     main.querySelectorAll('.select-polling-assistant').forEach(sel => {
       sel.addEventListener('change', (e) => {
         const boothNum = parseInt(e.target.dataset.booth, 10);
-        const selectedName = e.target.value;
-
-        // Release from any other polling booth assistant slot to avoid duplicates
-        if (selectedName) {
-          pollingTeams.forEach(t => {
-            if (t.pollingAssistant && t.pollingAssistant.name === selectedName && t.boothNumber !== boothNum) {
-              t.pollingAssistant = null;
-            }
-          });
-        }
+        const selectedVal = (e.target.value || '').trim();
 
         let team = pollingTeams.find(t => t.boothNumber === boothNum);
         if (!team) {
           team = { boothNumber: boothNum, roomName: `Booth ${boothNum}`, presidingOfficer: null, pollingOfficer1: null, pollingOfficer2: null, pollingOfficer3: null, pollingAssistant: null };
           pollingTeams.push(team);
         }
-        const nt = nonTeaching.find(n => n.name === selectedName);
-        team.pollingAssistant = nt ? { name: nt.name, designation: nt.designation, pen: nt.pen || '' } : null;
+
+        if (!selectedVal) {
+          team.pollingAssistant = null;
+          saveAll(true);
+          renderUI();
+          return;
+        }
+
+        const nt = nonTeaching.find(n => 
+          n.name === selectedVal ||
+          (n.pen && String(n.pen).trim() === selectedVal) ||
+          String(n.name || '').trim().toLowerCase() === selectedVal.toLowerCase() ||
+          cleanFacultyName(n.name) === cleanFacultyName(selectedVal)
+        );
+
+        // Release from any other polling booth assistant slot to avoid duplicates
+        pollingTeams.forEach(t => {
+          if (t.pollingAssistant && t.boothNumber !== boothNum) {
+            const matches = (nt && t.pollingAssistant.pen && nt.pen && cleanOfficialPen(t.pollingAssistant.pen) === cleanOfficialPen(nt.pen)) ||
+                            (String(t.pollingAssistant.name || '').trim().toLowerCase() === selectedVal.toLowerCase()) ||
+                            (cleanFacultyName(t.pollingAssistant.name) === cleanFacultyName(selectedVal));
+            if (matches) {
+              t.pollingAssistant = null;
+            }
+          }
+        });
+
+        team.pollingAssistant = nt ? {
+          name: nt.name,
+          designation: nt.designation || 'Staff',
+          pen: nt.pen || '',
+          phone: nt.phone || nt.mobile || ''
+        } : null;
+
         saveAll(true);
         renderUI();
       });
@@ -4585,17 +4633,37 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     main.querySelectorAll('.select-counting-assistant').forEach(sel => {
       sel.addEventListener('change', (e) => {
         const tableNum = parseInt(e.target.dataset.table, 10);
-        const selectedName = e.target.value;
+        const selectedVal = (e.target.value || '').trim();
 
-        // Note: Same counting assistant CAN be assigned to multiple tables due to staff shortage.
-        // Do NOT release them from other counting tables.
         let team = countingTeams.find(t => String(t.tableNumber || t.boothNumber) === String(tableNum));
         if (!team) {
           team = { tableNumber: tableNum, roomName: `Table ${tableNum}`, supervisor: null, countingOfficer1: null, countingOfficer2: null, countingOfficer3: null, countingAssistant: null };
           countingTeams.push(team);
         }
-        const nt = nonTeaching.find(n => n.name === selectedName);
-        team.countingAssistant = nt ? { name: nt.name, designation: nt.designation, pen: nt.pen || '' } : null;
+
+        if (!selectedVal) {
+          team.countingAssistant = null;
+          saveAll(true);
+          renderUI();
+          return;
+        }
+
+        const nt = nonTeaching.find(n => 
+          n.name === selectedVal ||
+          (n.pen && String(n.pen).trim() === selectedVal) ||
+          String(n.name || '').trim().toLowerCase() === selectedVal.toLowerCase() ||
+          cleanFacultyName(n.name) === cleanFacultyName(selectedVal)
+        );
+
+        // Note: Same counting assistant CAN be assigned to multiple tables due to staff shortage.
+        // Do NOT release them from other counting tables.
+        team.countingAssistant = nt ? {
+          name: nt.name,
+          designation: nt.designation || 'Staff',
+          pen: nt.pen || '',
+          phone: nt.phone || nt.mobile || ''
+        } : null;
+
         saveAll(true);
         renderUI();
       });
