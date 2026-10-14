@@ -3180,6 +3180,37 @@ export function printBatchBoothCandidatesList(boothsList, settings = {}, schedul
     const col1 = boothPosts.slice(0, bestSplit);
     const col2 = boothPosts.slice(bestSplit);
 
+    const maxColCands = Math.max(
+      col1.reduce((sum, p) => sum + p.cands.length, 0),
+      col2.reduce((sum, p) => sum + p.cands.length, 0)
+    );
+
+    let candNameSize = '14.5px';
+    let candClassSize = '11.5px';
+    let candSlSize = '14.5px';
+    let headerSize = '11.5px';
+    let headerPad = '5px 10px';
+    let rowPad = '8px 12px';
+    let cardGap = '9px';
+
+    if (maxColCands >= 14) {
+      candNameSize = '13.5px';
+      candClassSize = '10.5px';
+      candSlSize = '13.5px';
+      headerSize = '10.5px';
+      headerPad = '4px 9px';
+      rowPad = '5.5px 10px';
+      cardGap = '6px';
+    } else if (maxColCands === 13) {
+      candNameSize = '14px';
+      candClassSize = '11px';
+      candSlSize = '14px';
+      headerSize = '11px';
+      headerPad = '4.5px 9px';
+      rowPad = '6.5px 11px';
+      cardGap = '7.5px';
+    }
+
     const renderPostCard = (p) => `
       <div class="post-card">
         <div class="post-header">${esc(p.post.toUpperCase())}</div>
@@ -3198,7 +3229,7 @@ export function printBatchBoothCandidatesList(boothsList, settings = {}, schedul
     `;
 
     return `
-      <div class="booth-page" id="booth-page-${bNum}">
+      <div class="booth-page" id="booth-page-${bNum}" style="--cand-name-size: ${candNameSize}; --cand-class-size: ${candClassSize}; --cand-sl-size: ${candSlSize}; --post-header-size: ${headerSize}; --post-header-pad: ${headerPad}; --row-pad: ${rowPad}; --card-gap: ${cardGap};">
         <div class="poster-header">
           ${collegeLogo ? `<img src="${collegeLogo}" class="college-logo" alt="Logo">` : ''}
           <h1 class="college-name">${esc(collegeName.toUpperCase())}</h1>
@@ -3217,10 +3248,6 @@ export function printBatchBoothCandidatesList(boothsList, settings = {}, schedul
         </div>
 
         <div class="poster-footer">
-          <div class="footer-meta">
-            <div>Date: ${todayFormatted()}</div>
-            <div>Place: ${esc(collegePlace)}</div>
-          </div>
           <div class="footer-sign">
             <div class="sign-title">Returning Officer</div>
             <div class="sign-sub">${esc(collegeName)}</div>
@@ -3331,36 +3358,37 @@ export function printBatchBoothCandidatesList(boothsList, settings = {}, schedul
     .columns-wrap {
       flex: 1;
       display: flex;
-      gap: 12px;
+      gap: 14px;
       min-height: 0;
-      margin-bottom: 5px;
+      margin-bottom: 6px;
     }
     .column {
       flex: 1;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      gap: 6px;
+      gap: var(--card-gap, 8px);
       min-height: 0;
     }
     .post-card {
       flex: 1;
       display: flex;
       flex-direction: column;
-      border: 1.5px solid #1e293b;
-      border-radius: 5px;
+      border: 1.5px solid #0f172a;
+      border-radius: 6px;
       overflow: hidden;
       background: #fff;
       min-height: 0;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
     .post-header {
       background: #0f172a;
       color: #ffffff;
-      font-size: 10px;
+      font-size: var(--post-header-size, 11px);
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 0.4px;
-      padding: 3px 8px;
+      letter-spacing: 0.5px;
+      padding: var(--post-header-pad, 4.5px 10px);
       border-bottom: 1px solid #0f172a;
       flex-shrink: 0;
     }
@@ -3375,63 +3403,64 @@ export function printBatchBoothCandidatesList(boothsList, settings = {}, schedul
       flex: 1;
       display: flex;
       align-items: center;
-      padding: 4px 8px;
+      padding: var(--row-pad, 7px 11px);
       border-bottom: 1px solid #f1f5f9;
     }
     .candidate-row:last-child {
       border-bottom: none;
     }
     .cand-sl {
-      width: 20px;
+      width: 26px;
       font-weight: 900;
-      font-size: 12px;
-      color: #1e293b;
+      font-size: var(--cand-sl-size, 14px);
+      color: #0f172a;
       flex-shrink: 0;
     }
     .cand-info {
       flex: 1;
       min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2px;
     }
     .cand-name {
-      font-size: 12px;
-      font-weight: 800;
+      font-size: var(--cand-name-size, 14px);
+      font-weight: 850;
       color: #0f172a;
-      line-height: 1.15;
+      line-height: 1.25;
       text-transform: uppercase;
-      letter-spacing: 0.2px;
+      letter-spacing: 0.35px;
     }
     .cand-class {
-      font-size: 9.5px;
+      font-size: var(--cand-class-size, 11px);
       font-weight: 600;
-      color: #475569;
-      line-height: 1.1;
-      margin-top: 1px;
+      color: #334155;
+      line-height: 1.2;
     }
     .poster-footer {
       display: flex;
       align-items: flex-end;
-      justify-content: space-between;
+      justify-content: flex-end;
       border-top: 1.5px solid #0f172a;
-      padding-top: 3px;
-      font-size: 9.5px;
+      padding-top: 4px;
       flex-shrink: 0;
-    }
-    .footer-meta {
-      font-weight: 700;
-      color: #334155;
-      line-height: 1.3;
     }
     .footer-sign {
       text-align: right;
     }
     .sign-title {
-      font-weight: 800;
-      font-size: 10.5px;
+      font-weight: 900;
+      font-size: 11px;
       color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
     }
     .sign-sub {
-      font-size: 9px;
-      color: #64748b;
+      font-size: 9.5px;
+      font-weight: 600;
+      color: #475569;
+      margin-top: 1px;
     }
 
     /* Interactive preview bar (Hidden in print) */

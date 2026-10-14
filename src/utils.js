@@ -657,12 +657,12 @@ export function getPostOrderRank(postOrRule) {
   if (!isAssocPost(postOrRule)) {
     if (u.includes('CHAIR') && !u.includes('VICE')) return 1;
     if (u.includes('VICE') && u.includes('CHAIR')) return 2;
-    if (u === 'THE SECRETARY' || u === 'SECRETARY' || u === 'GENERAL SECRETARY' || (u.includes('SECRETARY') && !u.includes('JOINT') && !u.includes('FINE'))) return 3;
+    if (u === 'THE SECRETARY' || u === 'SECRETARY' || u === 'GENERAL SECRETARY' || (u.includes('SECRETARY') && !u.includes('JOINT') && !u.includes('FINE') && !u.includes('ARTS'))) return 3;
     if (u.includes('JOINT SECRETARY')) return 4;
-    if (u.includes('STUDENT EDITOR') || u.includes('CHIEF STUDENT EDITOR') || u.includes('MAGAZINE') || u.includes('EDITOR')) return 5;
+    if (u.includes('UNIVERSITY UNION COUNCILLOR') || u.includes('UUC') || u.includes('COUNCILLOR')) return 5;
     if (u.includes('FINE ARTS') || u.includes('ARTS CLUB') || u.includes('ARTS')) return 6;
-    if (u.includes('GENERAL CAPTAIN') || u.includes('SPORTS')) return 7;
-    if (u.includes('UNIVERSITY UNION COUNCILLOR') || u.includes('UUC') || u.includes('COUNCILLOR')) return 8;
+    if (u.includes('STUDENT EDITOR') || u.includes('CHIEF STUDENT EDITOR') || u.includes('MAGAZINE') || u.includes('EDITOR')) return 7;
+    if (u.includes('GENERAL CAPTAIN') || u.includes('SPORTS')) return 8;
   }
 
   // Other general campus-wide union posts (Rank 50)
