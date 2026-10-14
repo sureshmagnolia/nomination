@@ -513,49 +513,155 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       String(c.post || '').trim().toLowerCase() === pPostTrim
     );
     const postAgg = agg[p.post] || agg[String(p.post || '').trim()] || {};
-    
+    const isUUC = p.post.toUpperCase().includes('UUC') || p.post.toUpperCase().includes('UNIVERSITY');
+    const seats = isUUC ? 2 : 1;
+
     // Check for Unanimous (Permissible ONLY if the Final List is officially set and published!)
-    if (isFinalPublished && postCandidates.length === 1) {
+    if (isFinalPublished && postCandidates.length <= seats && postCandidates.length > 0) {
       return {
         post: p.post,
         type: 'unanimous',
+        isUUC,
+        seats,
         winner: postCandidates[0],
-        candidates: postCandidates
+        winners: postCandidates,
+        candidates: postCandidates.map(c => ({
+          ...c,
+          votes: 0,
+          isElected: true,
+          statusRemarks: 'ELECTED UNANIMOUSLY',
+          marginText: 'Uncontested'
+        }))
       };
     }
 
     // Single candidate in draft preview before final list publication
-    if (!isFinalPublished && postCandidates.length === 1) {
+    if (!isFinalPublished && postCandidates.length <= seats && postCandidates.length > 0) {
       return {
         post: p.post,
         type: 'draft-single',
-        candidates: postCandidates
+        isUUC,
+        seats,
+        candidates: postCandidates.map(c => ({
+          ...c,
+          votes: 0,
+          isElected: false,
+          statusRemarks: 'PROVISIONAL (FINAL LIST PENDING)',
+          marginText: 'Pending'
+        }))
       };
     }
 
     if (postCandidates.length === 0) {
-      return { post: p.post, type: 'no-candidates' };
+      return { post: p.post, type: 'no-candidates', isUUC, seats, candidates: [] };
     }
 
     // Normal Election
     const candidatesWithVotes = postCandidates.map(c => ({
       ...c,
-      votes: postAgg[c.id] || 0
-    }));
+      votes: Number(postAgg[c.id]) || 0
+    })).sort((a, b) => b.votes - a.votes);
 
-    // Sort by votes
-    candidatesWithVotes.sort((a, b) => b.votes - a.votes);
-    
-    const maxVotes = candidatesWithVotes[0].votes;
-    const winners = candidatesWithVotes.filter(c => c.votes === maxVotes && c.votes > 0);
-    const isTie = winners.length > 1;
+    let isTie = false;
+    let tieType = null;
+    let tiedCandidates = [];
+    let winners = [];
+
+    const v0 = candidatesWithVotes[0]?.votes || 0;
+    const v1 = candidatesWithVotes[1]?.votes || 0;
+    const v2 = candidatesWithVotes[2]?.votes || 0;
+
+    if (seats === 1) {
+      if (v0 > 0 && v0 === v1) {
+        isTie = true;
+        tieType = 'tie-1st';
+        tiedCandidates = candidatesWithVotes.filter(c => c.votes === v0);
+      } else if (v0 > 0) {
+        winners = [candidatesWithVotes[0]];
+      }
+    } else {
+      // UUC (2 seats)
+      if (v0 > 0 && v0 === v1 && v1 === v2) {
+        isTie = true;
+        tieType = 'tie-all';
+        tiedCandidates = candidatesWithVotes.filter(c => c.votes === v0);
+      } else if (v0 > 0 && v0 === v1 && v1 > (v2 || 0)) {
+        winners = [candidatesWithVotes[0], candidatesWithVotes[1]];
+      } else if (v0 > 0 && v0 > v1 && v1 > 0 && v1 === (v2 || 0)) {
+        isTie = true;
+        tieType = 'tie-2nd';
+        winners = [candidatesWithVotes[0]];
+        tiedCandidates = candidatesWithVotes.filter((c, idx) => idx >= 1 && c.votes === v1);
+      } else if (v0 > 0 && v1 > 0 && v0 > v1 && v1 > (v2 || 0)) {
+        winners = [candidatesWithVotes[0], candidatesWithVotes[1]];
+      } else if (v0 > 0) {
+        winners = [candidatesWithVotes[0]];
+      }
+    }
+
+    const processedCandidates = candidatesWithVotes.map((c, idx) => {
+      const isElected = winners.some(w => w.id === c.id);
+      let statusRemarks = '';
+      let margin = 0;
+      let marginText = '';
+
+      if (v0 === 0) {
+        statusRemarks = 'Awaiting Count';
+        marginText = '—';
+      } else if (seats === 1) {
+        if (isTie && c.votes === v0) {
+          statusRemarks = `⚖️ TIE (${c.votes} votes) — Decision by Toss`;
+          marginText = 'Equal Votes';
+        } else if (isElected) {
+          margin = c.votes - v1;
+          marginText = `+${margin} votes`;
+          statusRemarks = `✓ ELECTED (Won by ${margin} votes)`;
+        } else {
+          margin = v0 - c.votes;
+          marginText = `-${margin} votes`;
+          statusRemarks = `Trailing by ${margin} votes`;
+        }
+      } else {
+        // UUC (2 seats)
+        const nonElectedThreshold = candidatesWithVotes.length > 2 ? v2 : 0;
+        if (isTie && tieType === 'tie-2nd' && c.votes === v1 && idx >= 1) {
+          statusRemarks = `⚖️ TIE FOR 2ND SEAT (${c.votes} votes) — Decision by Toss`;
+          marginText = 'Equal Votes';
+        } else if (isTie && tieType === 'tie-all' && c.votes === v0) {
+          statusRemarks = `⚖️ 3-WAY TIE (${c.votes} votes) — Decision by Toss`;
+          marginText = 'Equal Votes';
+        } else if (isElected) {
+          const rank = idx + 1;
+          margin = candidatesWithVotes.length > 2 ? (c.votes - nonElectedThreshold) : 0;
+          marginText = margin > 0 ? `+${margin} votes` : 'Elected';
+          statusRemarks = margin > 0 ? `✓ ELECTED (Rank ${rank} • Margin: +${margin} votes)` : `✓ ELECTED (Rank ${rank})`;
+        } else {
+          const trailFrom2nd = v1 - c.votes;
+          marginText = `-${trailFrom2nd} votes`;
+          statusRemarks = `Trailing 2nd seat by ${trailFrom2nd} votes`;
+        }
+      }
+
+      return {
+        ...c,
+        isElected,
+        statusRemarks,
+        margin,
+        marginText
+      };
+    });
 
     return {
       post: p.post,
       type: 'election',
-      candidates: candidatesWithVotes,
-      winner: isTie ? null : winners[0],
+      isUUC,
+      seats,
+      candidates: processedCandidates,
+      winner: winners[0] || null,
+      winners,
       isTie,
+      tieType,
+      tiedCandidates,
       totalVotes: Object.values(postAgg).reduce((a, b) => a + b, 0),
       nota: postAgg['NOTA'] || 0,
       invalid: postAgg['INVALID'] || 0
@@ -1258,8 +1364,8 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
     }
     const printHtml = `
       <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; padding: 20px; position: relative; }
-        .official-sheet { max-w: 850px; margin: 0 auto; padding: 40px; border: 1px solid #ddd; background: white; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #000; line-height: 1.4; padding: 20px; position: relative; background: #fff; }
+        .official-sheet { max-width: 900px; margin: 0 auto; padding: 25px; border: 1px solid #ccc; background: white; }
         .watermark-global {
           position: fixed;
           top: 50%;
@@ -1267,7 +1373,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           transform: translate(-50%, -50%);
           width: 500px;
           height: 500px;
-          opacity: 0.08;
+          opacity: 0.06;
           filter: grayscale(100%);
           pointer-events: none;
           z-index: -1;
@@ -1275,29 +1381,51 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           background-repeat: no-repeat;
           background-position: center;
         }
-        .header { text-align: center; border-bottom: 3px double #000; padding-bottom: 20px; margin-bottom: 25px; }
-        .header h1 { margin: 0; font-size: 22px; text-transform: uppercase; letter-spacing: 0.5px; color: #000; }
-        .header h2 { margin: 5px 0 0 0; font-size: 15px; color: #000; font-weight: 600; text-transform: uppercase; }
-        .post-group { page-break-inside: avoid !important; break-inside: avoid !important; margin-bottom: 14px !important; display: block !important; }
+        .header { text-align: center; border-bottom: 2.5px solid #000; padding-bottom: 14px; margin-bottom: 18px; }
+        .header h2 { margin: 0; font-size: 17px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #000; line-height: 1.2; }
+        .header h1 { margin: 4px 0 0 0; font-size: 13.5px; font-weight: 700; color: #222; text-transform: uppercase; letter-spacing: 0.4px; }
+        .doc-badge {
+          display: inline-block;
+          font-size: 13px;
+          font-weight: 900;
+          background: #000;
+          color: #fff;
+          padding: 3px 18px;
+          border-radius: 3px;
+          margin-top: 8px;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+        }
+        .statutory-intro { font-size: 11.5px; margin-bottom: 18px; text-align: justify; color: #111; line-height: 1.5; }
+        .post-group { page-break-inside: avoid !important; break-inside: avoid !important; margin-bottom: 15px !important; display: block !important; }
         .result-table { width: 100%; border-collapse: collapse; page-break-inside: avoid !important; break-inside: avoid !important; }
-        .result-table th, .result-table td { border: 1px solid #000; padding: 7px 9px; font-size: 12px; color: #000; }
-        .result-table th { background: #f2f2f2; text-align: left; text-transform: uppercase; font-size: 11px; }
-        .post-header { background: #eaeaea; font-weight: bold; font-size: 13px; text-transform: uppercase; color: #000; padding: 9px 10px; border-bottom: 2px solid #000; }
-        .winner-row { background: #ffffff !important; font-weight: bold; }
-        .footer { margin-top: 40px; display: flex; justify-content: space-between; align-items: flex-start; page-break-inside: avoid !important; break-inside: avoid !important; }
-        .sig-box { width: 250px; border-top: 1px solid #000; text-align: center; padding-top: 8px; font-size: 12px; font-weight: bold; color: #000; margin-top: 30px; }
+        .result-table th, .result-table td { border: 1px solid #000; padding: 6px 8px; font-size: 11.5px; color: #000; }
+        .post-header { background: #f1f5f9; font-weight: 900; font-size: 12px; text-transform: uppercase; color: #000; padding: 7px 9px; border-bottom: 1.5px solid #000; letter-spacing: 0.3px; }
+        .th-col { background: #e2e8f0; font-weight: 800; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.2px; text-align: left; }
+        .winner-row { background: #f8fafc !important; font-weight: bold; }
+        .toss-box {
+          border: 1.5px dashed #000 !important;
+          background: #fffdf5 !important;
+          padding: 9px 12px !important;
+          text-align: left !important;
+        }
+        .footer { margin-top: 30px; display: flex; justify-content: space-between; align-items: flex-end; page-break-inside: avoid !important; break-inside: avoid !important; border-top: 1px solid #000; padding-top: 10px; }
+        .footer-meta { font-size: 11.5px; line-height: 1.5; font-weight: 600; }
+        .sig-box { text-align: right; line-height: 1.35; }
+        .sig-title { font-weight: 900; font-size: 12px; text-transform: uppercase; }
         @page {
-          margin: 12mm 15mm 16mm 15mm;
+          size: A4 portrait;
+          margin: 12mm 14mm 14mm 14mm;
           @bottom-right {
             content: "Page " counter(page) " of " counter(pages);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             font-size: 8.5pt;
             font-weight: 600;
             color: #000000;
           }
           @bottom-left {
-            content: "${esc(collegeName)} — Official Results Declaration ${esc(year)}";
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            content: "${esc(collegeName)} — Form 8 Official Declaration of Results ${esc(year)}";
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             font-size: 8pt;
             color: #000000;
           }
@@ -1309,7 +1437,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
             color: #000000 !important;
             border-color: #000000 !important;
           }
-          body { padding: 0; }
+          body { padding: 0; background: #fff; }
           .official-sheet { border: none; width: 100%; max-width: 100%; padding: 0; }
           .post-group { page-break-inside: avoid !important; break-inside: avoid !important; }
           .result-table { page-break-inside: avoid !important; break-inside: avoid !important; }
@@ -1321,25 +1449,23 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       <div class="official-sheet">
         <div class="header">
           ${!isFinalPublished ? `
-            <div style="background:#f9f9f9;border:1.5px solid #000;padding:8px 12px;text-align:center;font-weight:bold;color:#000;font-size:12px;margin-bottom:15px;text-transform:uppercase;letter-spacing:0.5px;">
+            <div style="background:#f9f9f9;border:1.5px solid #000;padding:6px 12px;text-align:center;font-weight:bold;color:#000;font-size:11px;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;">
               ⚠️ DRAFT RESULT PREVIEW — AWAITING OFFICIAL PUBLICATION OF FINAL CANDIDATES LIST
             </div>
           ` : ''}
-          ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:60px;max-width:140px;margin:0 auto 8px auto;display:block;object-fit:contain;filter:grayscale(100%)" alt="College Logo">` : ''}
+          ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:55px;max-width:130px;margin:0 auto 6px auto;display:block;object-fit:contain;filter:grayscale(100%)" alt="College Logo">` : ''}
           <h2>${esc(collegeName)}</h2>
-          <h1>College Union Election ${year}</h1>
-          <div style="font-size: 18px; margin-top: 15px; font-weight: 900; text-decoration: underline; color: #000;">
-            ${isFinalPublished ? 'OFFICIAL RESULT NOTIFICATION' : 'DRAFT RESULT NOTIFICATION (PROVISIONAL)'}
+          <h1>College Union Elections ${year}</h1>
+          <div class="doc-badge">
+            ${isFinalPublished ? 'FORM 8: OFFICIAL DECLARATION OF RESULTS' : 'PROVISIONAL DRAFT RESULT DECLARATION'}
           </div>
         </div>
 
-        <p style="font-size: 13.5px; margin-bottom: 22px; text-align: justify; color: #000;">
+        <p class="statutory-intro">
           ${isFinalPublished ? `
-            The following candidates are hereby declared to have been duly elected to the respective offices of the College Union for the academic year ${year}, 
-            based on the counting of votes held on ${new Date().toLocaleDateString('en-IN', {day: 'numeric', month: 'long', year: 'numeric'})}.
+            In accordance with the Calicut University Election Rules and the College Union Constitution, the following is the official declaration of results based on the counting of votes polled on ${new Date().toLocaleDateString('en-IN', {day: 'numeric', month: 'long', year: 'numeric'})}. The candidates declared duly elected to the respective offices are specified hereunder, along with the votes secured and margins:
           ` : `
-            PROVISIONAL DRAFT: The following is an interim compilation of votes and scrutinized candidate nominations. 
-            Official result declaration and uncontested winner notifications are subject to the publication of the Final List of Contesting Candidates by the Returning Officer.
+            PROVISIONAL DRAFT: The following is an interim compilation of votes and scrutinized candidate nominations. Official result declaration and uncontested winner notifications are subject to the publication of the Final List of Contesting Candidates by the Returning Officer.
           `}
         </p>
 
@@ -1351,33 +1477,63 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
                 <table class="result-table">
                   <thead>
                     <tr style="page-break-after:avoid;break-after:avoid">
-                      <th colspan="4" class="post-header">
-                        POST: ${esc(res.post)}
+                      <th colspan="5" class="post-header">
+                        POST: ${esc(res.post.toUpperCase())} ${res.isUUC ? '(2 SEATS)' : '(1 SEAT)'}
                       </th>
                     </tr>
                     <tr style="page-break-after:avoid;break-after:avoid">
-                      <th style="width: 10%; text-align: center;">Sl. No.</th>
-                      <th style="width: 45%;">Name of Candidate</th>
-                      <th style="text-align: center; width: 15%;">Votes Secured</th>
-                      <th style="width: 30%;">Remarks</th>
+                      <th class="th-col" style="width: 6%; text-align: center;">Sl.</th>
+                      <th class="th-col" style="width: 32%;">Name of Candidate</th>
+                      <th class="th-col" style="width: 22%;">Class</th>
+                      <th class="th-col" style="width: 14%; text-align: center;">Votes Secured</th>
+                      <th class="th-col" style="width: 26%;">Result & Margin</th>
                     </tr>
                   </thead>
                   <tbody>
-                    ${res.candidates.map((c, idx) => {
-                      const isWinner = res.winner && res.winner.id === c.id;
-                      return `
-                        <tr class="${isWinner ? 'winner-row' : ''}">
-                          <td style="text-align: center; color: #000; font-size: 12px;">${idx + 1}</td>
-                          <td style="font-weight: ${isWinner ? 'bold' : 'normal'}; font-size: 13px; color: #000;">
-                            ${esc(c.candidateName)} ${c.candidateSerial ? `<span style="font-size: 11px; font-weight: normal; color: #333;">(Roll Sl. #${esc(c.candidateSerial)})</span>` : ''}
-                          </td>
-                          <td style="text-align: center; font-weight: bold; font-size: 13px; color: #000;">${res.type === 'unanimous' ? '—' : (c.votes || 0)}</td>
-                          <td style="font-size: 11.5px; font-weight: bold; color: #000;">
-                            ${isWinner ? (res.type === 'unanimous' ? 'ELECTED UNANIMOUSLY' : '✓ ELECTED') : (res.type === 'draft-single' ? 'PROVISIONAL (FINAL LIST PENDING)' : '')}
-                          </td>
-                        </tr>
-                      `;
-                    }).join('')}
+                    ${res.candidates.map((c, idx) => `
+                      <tr class="${c.isElected ? 'winner-row' : ''}">
+                        <td style="text-align: center; color: #000; font-size: 11.5px; font-weight: bold;">${idx + 1}</td>
+                        <td style="font-weight: ${c.isElected ? '800' : '600'}; font-size: 12px; color: #000;">
+                          ${esc((c.candidateName || '').toUpperCase())}
+                          ${c.candidateSerial ? `<span style="font-size: 10px; font-weight: normal; color: #444;"> (Roll #${esc(c.candidateSerial)})</span>` : ''}
+                        </td>
+                        <td style="font-size: 11px; color: #000; font-weight: 500;">
+                          ${esc(c.candidateClass || c.class || '—')}
+                        </td>
+                        <td style="text-align: center; font-weight: 900; font-size: 12.5px; color: #000;">
+                          ${res.type === 'unanimous' ? '—' : (c.votes != null ? c.votes : 0)}
+                        </td>
+                        <td style="font-size: 11px; font-weight: ${c.isElected ? '800' : '500'}; color: #000;">
+                          ${esc(c.statusRemarks || (c.isElected ? '✓ ELECTED' : ''))}
+                        </td>
+                      </tr>
+                    `).join('')}
+
+                    ${res.isTie ? `
+                      <tr style="page-break-inside: avoid; break-inside: avoid;">
+                        <td colspan="5" class="toss-box">
+                          <div style="font-weight: 900; font-size: 11px; text-transform: uppercase; color: #000; letter-spacing: 0.3px;">
+                            🎲 TIE RESOLUTION BY LOT / TOSS (University Election Statute):
+                          </div>
+                          <div style="font-size: 10.5px; color: #111; margin-top: 2px;">
+                            ${res.tieType === 'tie-2nd' ? 
+                              `Tie detected for the second UUC councillor seat (${res.tiedCandidates.map(tc => tc.candidateName).join(' & ')} scored equal votes). Result decided by lot/toss drawn by the Returning Officer:` :
+                              `Equal votes secured (${res.tiedCandidates.map(tc => tc.candidateName).join(' & ')}). In accordance with rules, the victory is decided by lot/toss drawn by the Returning Officer:`
+                            }
+                          </div>
+                          <div style="margin-top: 9px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 11.5px; gap: 16px;">
+                            <div>
+                              <strong>${res.tieType === 'tie-2nd' ? '2nd UUC Winner by Toss:' : 'Declared Winner by Toss:'}</strong> 
+                              <span style="display: inline-block; min-width: 250px; border-bottom: 1.5px solid #000; margin-left: 6px;">&nbsp;</span>
+                            </div>
+                            <div>
+                              <strong>Signature of Returning Officer:</strong> 
+                              <span style="display: inline-block; min-width: 150px; border-bottom: 1.5px solid #000; margin-left: 6px;">&nbsp;</span>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ` : ''}
                   </tbody>
                 </table>
               </div>
@@ -1386,13 +1542,14 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
         </div>
 
         <div class="footer">
-          <div style="font-size: 13px;">
-            <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-IN')}</p>
-            <p><strong>Place:</strong> ${esc(collegePlace)}</p>
+          <div class="footer-meta">
+            <div><strong>Date:</strong> ${new Date().toLocaleDateString('en-IN')}</div>
+            <div><strong>Place:</strong> ${esc(collegePlace)}</div>
           </div>
           <div class="sig-box">
-            RETURNING OFFICER<br>
-            <span style="font-weight: normal; font-size: 11px;">College Union Election ${year}</span>
+            <div class="sig-title">RETURNING OFFICER</div>
+            <div>College Union Elections ${year}</div>
+            <div>${esc(collegeName)}</div>
           </div>
         </div>
       </div>
