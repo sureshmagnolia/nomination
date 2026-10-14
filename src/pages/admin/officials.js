@@ -903,18 +903,28 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   function getPerson(identifier) {
     if (!identifier) return null;
     const clean = String(identifier).trim().toLowerCase();
+    const cleanPen = cleanOfficialPen(identifier);
+    const norm = normalizeOfficialName(identifier);
     const fac = faculty.find(f => {
       const pen = String(f.pen || '').trim().toLowerCase();
       const name = String(f.name || '').trim().toLowerCase();
       const combo = `${name} (${pen})`;
-      return (pen && pen === clean) || name === clean || combo === clean;
+      return (pen && pen === clean) || 
+             (cleanPen && f.pen && cleanOfficialPen(f.pen) === cleanPen) || 
+             name === clean || 
+             combo === clean || 
+             (norm && normalizeOfficialName(f.name) === norm);
     });
     if (fac) return { ...fac, phone: fac.phone || fac.mobile || '', type: 'Teaching Faculty', isExcluded: isPersonExcluded(fac) };
     const nt = nonTeaching.find(n => {
       const pen = String(n.pen || '').trim().toLowerCase();
       const name = String(n.name || '').trim().toLowerCase();
       const combo = `${name} (${pen})`;
-      return (pen && pen === clean) || name === clean || combo === clean;
+      return (pen && pen === clean) || 
+             (cleanPen && n.pen && cleanOfficialPen(n.pen) === cleanPen) || 
+             name === clean || 
+             combo === clean || 
+             (norm && normalizeOfficialName(n.name) === norm);
     });
     if (nt) return { ...nt, phone: nt.phone || nt.mobile || '', type: 'Non-Teaching Staff', isExcluded: isPersonExcluded(nt) };
     return null;
@@ -1071,17 +1081,22 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     if (!ntName && !ntPen) return { polling: null, counting: null, countingTables: [] };
     const clean = String(ntName || '').trim().toLowerCase();
     const cleanPen = cleanOfficialPen(ntPen);
+    const norm = normalizeOfficialName(ntName);
     const p = pollingTeams.find(t => {
       if (!t.pollingAssistant) return false;
       if (cleanPen && t.pollingAssistant.pen && cleanOfficialPen(t.pollingAssistant.pen) === cleanPen) return true;
       const tName = String(t.pollingAssistant.name || '').trim().toLowerCase();
-      return (clean && tName === clean) || (clean && cleanFacultyName(tName) === cleanFacultyName(clean));
+      return (clean && tName === clean) || 
+             (clean && cleanFacultyName(tName) === cleanFacultyName(clean)) ||
+             (norm && normalizeOfficialName(tName) === norm);
     });
     const cList = countingTeams.filter(t => {
       if (!t.countingAssistant) return false;
       if (cleanPen && t.countingAssistant.pen && cleanOfficialPen(t.countingAssistant.pen) === cleanPen) return true;
       const tName = String(t.countingAssistant.name || '').trim().toLowerCase();
-      return (clean && tName === clean) || (clean && cleanFacultyName(tName) === cleanFacultyName(clean));
+      return (clean && tName === clean) || 
+             (clean && cleanFacultyName(tName) === cleanFacultyName(clean)) ||
+             (norm && normalizeOfficialName(tName) === norm);
     });
     const countingTables = cList.map(t => t.tableNumber || t.boothNumber).sort((a, b) => a - b);
     return {
