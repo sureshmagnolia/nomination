@@ -1178,7 +1178,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
   // Helper: Generate HTML for a single non-teaching table row
   const getNonTeachingRowHtml = (nt, idx) => {
     const isExcluded = isPersonExcluded(nt);
-    const asstDuty = getNonTeachingAssignment(nt.name);
+    const asstDuty = getNonTeachingAssignment(nt.name, nt.pen);
     const rDuty = getReserveAssignment(nt.name);
     const isObs = isObserver(nt.name);
     const isDisc = isDiscipline(nt.name);
@@ -3121,7 +3121,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
     const totalNT = nonTeaching.length;
     const activeNT = nonTeaching.filter(n => !isPersonExcluded(n)).length;
     const postedNT = nonTeaching.filter(nt => {
-      const a = getNonTeachingAssignment(nt.name);
+      const a = getNonTeachingAssignment(nt.name, nt.pen);
       return !isPersonExcluded(nt) && (isObserver(nt.name) || isDiscipline(nt.name) || isGrievance(nt.name) || a.polling || a.counting);
     }).length;
     const reserveNT = Math.max(0, activeNT - postedNT);
@@ -3627,7 +3627,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               const po1Double = team.pollingOfficer1 ? getCountingAssignment(team.pollingOfficer1.name) : null;
               const po2Double = team.pollingOfficer2 ? getCountingAssignment(team.pollingOfficer2.name) : null;
               const po3Double = team.pollingOfficer3 ? getCountingAssignment(team.pollingOfficer3.name) : null;
-              const asstDouble = team.pollingAssistant ? getNonTeachingAssignment(team.pollingAssistant.name).counting : null;
+              const asstDouble = team.pollingAssistant ? getNonTeachingAssignment(team.pollingAssistant.name, team.pollingAssistant.pen).counting : null;
               const hasDoubleDuty = !!(pDouble || po1Double || po2Double || po3Double || asstDouble);
 
               return `
@@ -3903,7 +3903,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
               const co1Double = team.countingOfficer1 ? getPollingAssignment(team.countingOfficer1.name) : null;
               const co2Double = team.countingOfficer2 ? getPollingAssignment(team.countingOfficer2.name) : null;
               const co3Double = team.countingOfficer3 ? getPollingAssignment(team.countingOfficer3.name) : null;
-              const asstDouble = team.countingAssistant ? getNonTeachingAssignment(team.countingAssistant.name).polling : null;
+              const asstDouble = team.countingAssistant ? getNonTeachingAssignment(team.countingAssistant.name, team.countingAssistant.pen).polling : null;
               const hasDoubleDuty = !!(supDouble || co1Double || co2Double || co3Double || asstDouble);
 
               return `
@@ -4062,7 +4062,7 @@ function renderOfficialsUI(main, pwd, initialOfficialsData, initialBooths, setti
                         </select>
                         ${renderSubtlePhone(team.countingAssistant?.phone || getPerson(team.countingAssistant?.name)?.phone)}
                         ${(() => {
-                          const asstAssignment = team.countingAssistant ? getNonTeachingAssignment(team.countingAssistant.name) : null;
+                          const asstAssignment = team.countingAssistant ? getNonTeachingAssignment(team.countingAssistant.name, team.countingAssistant.pen) : null;
                           const otherTables = asstAssignment ? (asstAssignment.countingTables || []).filter(t => t !== b.boothNumber) : [];
                           if (otherTables.length > 0) {
                             return `<p class="text-[10px] text-purple-300 font-semibold mt-1 flex items-center gap-1"><span>🔗</span> Also assisting Table ${otherTables.join(', ')} (${asstAssignment.countingTables.length} tables total)</p>`;
