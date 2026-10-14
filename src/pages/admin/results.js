@@ -1384,17 +1384,16 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
         .header { text-align: center; border-bottom: 2.5px solid #000; padding-bottom: 14px; margin-bottom: 18px; }
         .header h2 { margin: 0; font-size: 17px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #000; line-height: 1.2; }
         .header h1 { margin: 4px 0 0 0; font-size: 13.5px; font-weight: 700; color: #222; text-transform: uppercase; letter-spacing: 0.4px; }
-        .doc-badge {
-          display: inline-block;
-          font-size: 13px;
+        .doc-title {
+          font-size: 14px;
           font-weight: 900;
-          background: #000;
-          color: #fff;
-          padding: 3px 18px;
-          border-radius: 3px;
-          margin-top: 8px;
-          letter-spacing: 1px;
           text-transform: uppercase;
+          letter-spacing: 1.2px;
+          color: #000;
+          margin-top: 8px;
+          text-decoration: underline;
+          text-underline-offset: 4px;
+          display: block;
         }
         .statutory-intro { font-size: 11.5px; margin-bottom: 18px; text-align: justify; color: #111; line-height: 1.5; }
         .post-group { page-break-inside: avoid !important; break-inside: avoid !important; margin-bottom: 15px !important; display: block !important; }
@@ -1424,20 +1423,16 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
             color: #000000;
           }
           @bottom-left {
-            content: "${esc(collegeName)} — Form 8 Official Declaration of Results ${esc(year)}";
+            content: "${esc(collegeName)} — Declaration of Results ${esc(year)}";
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             font-size: 8pt;
             color: #000000;
           }
         }
         @media print {
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color: #000000 !important;
-            border-color: #000000 !important;
-          }
-          body { padding: 0; background: #fff; }
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          body { padding: 0; background: #fff; color: #000; }
           .official-sheet { border: none; width: 100%; max-width: 100%; padding: 0; }
           .post-group { page-break-inside: avoid !important; break-inside: avoid !important; }
           .result-table { page-break-inside: avoid !important; break-inside: avoid !important; }
@@ -1456,9 +1451,9 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:55px;max-width:130px;margin:0 auto 6px auto;display:block;object-fit:contain;filter:grayscale(100%)" alt="College Logo">` : ''}
           <h2>${esc(collegeName)}</h2>
           <h1>College Union Elections ${year}</h1>
-          <div class="doc-badge">
-            ${isFinalPublished ? 'FORM 8: OFFICIAL DECLARATION OF RESULTS' : 'PROVISIONAL DRAFT RESULT DECLARATION'}
-          </div>
+          <h3 class="doc-title">
+            ${isFinalPublished ? 'DECLARATION OF RESULTS' : 'PROVISIONAL DECLARATION OF RESULTS'}
+          </h3>
         </div>
 
         <p class="statutory-intro">
@@ -1495,7 +1490,6 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
                         <td style="text-align: center; color: #000; font-size: 11.5px; font-weight: bold;">${idx + 1}</td>
                         <td style="font-weight: ${c.isElected ? '800' : '600'}; font-size: 12px; color: #000;">
                           ${esc((c.candidateName || '').toUpperCase())}
-                          ${c.candidateSerial ? `<span style="font-size: 10px; font-weight: normal; color: #444;"> (Roll #${esc(c.candidateSerial)})</span>` : ''}
                         </td>
                         <td style="font-size: 11px; color: #000; font-weight: 500;">
                           ${esc(c.candidateClass || c.class || '—')}
