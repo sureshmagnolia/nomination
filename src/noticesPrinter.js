@@ -4,7 +4,7 @@
  * Individual Polling Booth Door Posters, and Campus Master Directory Posters.
  */
 
-import { esc, triggerPrint, todayFormatted, compareClassesByYearOrder } from './utils.js';
+import { esc, triggerPrint, todayFormatted, compareClassesByYearOrder, comparePosts, isAssocPost, isYearRepPost } from './utils.js';
 import { CONFIG } from './config.js';
 import { OFFICIAL_COUNTING_ROSTER_BACKUP } from './data/officialCountingRoster.js';
 
@@ -3055,6 +3055,522 @@ export function printCountingTablePlacards(options = {}) {
     if (sel) {
       sel.addEventListener('change', (e) => {
         applyFilter(e.target.value);
+      });
+    }
+  </script>
+</body>
+</html>`);
+
+  w.document.close();
+  setTimeout(() => w.print(), 350);
+}
+
+/**
+ * Print individual Polling Booth Candidate List (1 Page A4)
+ */
+export function printBoothCandidatesList(booth, settings = {}, schedule = {}, options = {}) {
+  printBatchBoothCandidatesList([booth], settings, schedule, options);
+}
+
+/**
+ * Batch print Booth-wise List of Candidates for all booths (1 Page per Booth)
+ * Ordering: General candidates first in order, followed by Reps and Associations.
+ * Details: Sl No, Candidate Name, Candidate Class only (identical to Ballots).
+ * Alignment: Relaxed alignment filling the full A4 page with zero trailing blank space.
+ */
+export function printBatchBoothCandidatesList(boothsList, settings = {}, schedule = {}, options = {}) {
+  if (!Array.isArray(boothsList) || boothsList.length === 0) {
+    alert('No polling booths provided for candidate list printing.');
+    return;
+  }
+
+  const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME || 'GOVERNMENT COLLEGE CHITTUR';
+  const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME || 'GCC';
+  const year = settings.electionYear || new Date().getFullYear();
+  const collegeLogo = settings.collegeLogo || '';
+  const collegePlace = settings.collegePlace || CONFIG.COLLEGE_PLACE || 'Chittur';
+  const plan = options?.plan || settings?.ballotPlan || null;
+
+  // Filter nominations to valid and non-withdrawn
+  const allNoms = options?.nominations || options?.candidates || [];
+  const validNoms = allNoms.filter(n => {
+    const isVal = n.status === 'Valid' || n.status === 'VALID';
+    const isWithdrawn = n.withdrawalStatus === 'Approved' || n.withdrawal_status === 'Approved';
+    return isVal && !isWithdrawn;
+  });
+
+  const w = window.open('', '_blank');
+  if (!w) {
+    alert('Pop-up blocker prevented opening the print window. Please allow pop-ups for this site.');
+    return;
+  }
+
+  const boothsHtml = boothsList.map((booth) => {
+    const bNum = Number(booth.boothNumber);
+    const bAssign = plan?.boothAssignments?.[bNum] || null;
+
+    // 1. General posts in standard ballot rank order
+    const genCandidatePosts = Array.from(new Set(validNoms
+      .filter(n => !isAssocPost(n.post) && !isYearRepPost(n.post))
+      .map(n => n.post)
+    )).sort(comparePosts);
+
+    const genPostsList = [];
+    genCandidatePosts.forEach(p => {
+      const pCands = validNoms
+        .filter(n => n.post === p)
+        .sort((a, b) => String(a.candidateName || a.candidate_name || '').localeCompare(String(b.candidateName || b.candidate_name || '')));
+      if (pCands.length > 0) {
+        genPostsList.push({ post: p, cands: pCands, type: 'general' });
+      }
+    });
+
+    // 2. Representative posts allotted to this booth
+    let repPostNames = [];
+    if (bAssign?.reps && Array.isArray(bAssign.reps) && bAssign.reps.length > 0) {
+      repPostNames = bAssign.reps.map(r => r.post).filter(Boolean);
+    } else if (Array.isArray(booth.repPosts) && booth.repPosts.length > 0) {
+      repPostNames = booth.repPosts;
+    }
+
+    const repPostsList = [];
+    repPostNames.sort(comparePosts).forEach(p => {
+      const pCands = validNoms
+        .filter(n => n.post === p)
+        .sort((a, b) => String(a.candidateName || a.candidate_name || '').localeCompare(String(b.candidateName || b.candidate_name || '')));
+      if (pCands.length > 0) {
+        repPostsList.push({ post: p, cands: pCands, type: 'rep' });
+      }
+    });
+
+    // 3. Department Association Secretary posts allotted to this booth
+    let assocPostNames = [];
+    if (bAssign?.assocs && Array.isArray(bAssign.assocs) && bAssign.assocs.length > 0) {
+      assocPostNames = bAssign.assocs.map(a => a.post).filter(Boolean);
+    } else if (Array.isArray(booth.assocDepts) && booth.assocDepts.length > 0) {
+      assocPostNames = booth.assocDepts.map(d => d.startsWith('Association Secretary') ? d : `Association Secretary ${d}`);
+    }
+
+    const assocPostsList = [];
+    assocPostNames.sort(comparePosts).forEach(p => {
+      const pCands = validNoms
+        .filter(n => n.post === p)
+        .sort((a, b) => String(a.candidateName || a.candidate_name || '').localeCompare(String(b.candidateName || b.candidate_name || '')));
+      if (pCands.length > 0) {
+        assocPostsList.push({ post: p, cands: pCands, type: 'assoc' });
+      }
+    });
+
+    // Combine in strict order: General first, then Reps, then Associations
+    const boothPosts = [...genPostsList, ...repPostsList, ...assocPostsList];
+
+    // Compute optimal balanced column split
+    let bestSplit = Math.ceil(boothPosts.length / 2);
+    let minDiff = 9999;
+    for (let i = 1; i < boothPosts.length; i++) {
+      const w1 = boothPosts.slice(0, i).reduce((sum, p) => sum + 1.2 + p.cands.length, 0);
+      const w2 = boothPosts.slice(i).reduce((sum, p) => sum + 1.2 + p.cands.length, 0);
+      const diff = Math.abs(w1 - w2);
+      if (diff < minDiff) {
+        minDiff = diff;
+        bestSplit = i;
+      }
+    }
+
+    const col1 = boothPosts.slice(0, bestSplit);
+    const col2 = boothPosts.slice(bestSplit);
+
+    const renderPostCard = (p) => `
+      <div class="post-card">
+        <div class="post-header">${esc(p.post.toUpperCase())}</div>
+        <div class="candidates-list">
+          ${p.cands.map((c, i) => `
+            <div class="candidate-row">
+              <span class="cand-sl">${i + 1}</span>
+              <div class="cand-info">
+                <div class="cand-name">${esc((c.candidateName || c.candidate_name || '').toUpperCase())}</div>
+                <div class="cand-class">${esc(c.candidateClass || c.candidate_class || '')}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    return `
+      <div class="booth-page" id="booth-page-${bNum}">
+        <div class="poster-header">
+          ${collegeLogo ? `<img src="${collegeLogo}" class="college-logo" alt="Logo">` : ''}
+          <h1 class="college-name">${esc(collegeName.toUpperCase())}</h1>
+          <h2 class="election-title">COLLEGE UNION ELECTIONS ${esc(year)}</h2>
+          <div class="document-badge">LIST OF CANDIDATES</div>
+        </div>
+
+        <div class="booth-banner">
+          <div class="booth-num">BOOTH NO. ${bNum}</div>
+          <div class="booth-venue">📍 ${esc(booth.roomName || 'Designated Polling Station')}</div>
+        </div>
+
+        <div class="columns-wrap">
+          <div class="column col-left">${col1.map(renderPostCard).join('')}</div>
+          <div class="column col-right">${col2.map(renderPostCard).join('')}</div>
+        </div>
+
+        <div class="poster-footer">
+          <div class="footer-meta">
+            <div>Date: ${todayFormatted()}</div>
+            <div>Place: ${esc(collegePlace)}</div>
+          </div>
+          <div class="footer-sign">
+            <div class="sign-title">Returning Officer</div>
+            <div class="sign-sub">${esc(collegeName)}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  w.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>List of Candidates - ${esc(shortName)} Election ${esc(year)}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 7mm 9mm 7mm 9mm;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #0f172a;
+      background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .booth-page {
+      width: 100%;
+      height: 283mm;
+      max-height: 283mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      page-break-after: always;
+      break-after: page;
+      overflow: hidden;
+      padding: 0;
+    }
+    .booth-page:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+    .poster-header {
+      text-align: center;
+      padding-bottom: 4px;
+      border-bottom: 2px solid #0f172a;
+    }
+    .college-logo {
+      max-height: 38px;
+      max-width: 105px;
+      margin: 0 auto 3px auto;
+      display: block;
+      object-fit: contain;
+    }
+    .college-name {
+      font-size: 14.5px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      color: #0f172a;
+      text-transform: uppercase;
+      line-height: 1.15;
+    }
+    .election-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #334155;
+      margin-top: 1px;
+      letter-spacing: 0.4px;
+    }
+    .document-badge {
+      display: inline-block;
+      font-size: 12.5px;
+      font-weight: 900;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 2.5px 16px;
+      border-radius: 4px;
+      margin-top: 3px;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+    }
+    .booth-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f1f5f9;
+      border: 1.5px solid #0f172a;
+      border-radius: 5px;
+      padding: 4px 10px;
+      margin: 5px 0;
+    }
+    .booth-num {
+      font-size: 13px;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: 0.4px;
+    }
+    .booth-venue {
+      font-size: 11px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+    .columns-wrap {
+      flex: 1;
+      display: flex;
+      gap: 12px;
+      min-height: 0;
+      margin-bottom: 5px;
+    }
+    .column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 6px;
+      min-height: 0;
+    }
+    .post-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border: 1.5px solid #1e293b;
+      border-radius: 5px;
+      overflow: hidden;
+      background: #fff;
+      min-height: 0;
+    }
+    .post-header {
+      background: #0f172a;
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      padding: 3px 8px;
+      border-bottom: 1px solid #0f172a;
+      flex-shrink: 0;
+    }
+    .candidates-list {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      background: #fff;
+    }
+    .candidate-row {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      padding: 4px 8px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .candidate-row:last-child {
+      border-bottom: none;
+    }
+    .cand-sl {
+      width: 20px;
+      font-weight: 900;
+      font-size: 12px;
+      color: #1e293b;
+      flex-shrink: 0;
+    }
+    .cand-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .cand-name {
+      font-size: 12px;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.15;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+    }
+    .cand-class {
+      font-size: 9.5px;
+      font-weight: 600;
+      color: #475569;
+      line-height: 1.1;
+      margin-top: 1px;
+    }
+    .poster-footer {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      border-top: 1.5px solid #0f172a;
+      padding-top: 3px;
+      font-size: 9.5px;
+      flex-shrink: 0;
+    }
+    .footer-meta {
+      font-weight: 700;
+      color: #334155;
+      line-height: 1.3;
+    }
+    .footer-sign {
+      text-align: right;
+    }
+    .sign-title {
+      font-weight: 800;
+      font-size: 10.5px;
+      color: #0f172a;
+    }
+    .sign-sub {
+      font-size: 9px;
+      color: #64748b;
+    }
+
+    /* Interactive preview bar (Hidden in print) */
+    .top-action-bar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: #0f172a;
+      color: #fff;
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #334155;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      margin-bottom: 20px;
+    }
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .top-bar-title {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    .top-bar-desc {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .top-bar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .topbar-select {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #475569;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .topbar-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 800;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-print {
+      background: #2563eb;
+      color: #ffffff;
+    }
+    .btn-print:hover {
+      background: #1d4ed8;
+    }
+    .btn-close {
+      background: #334155;
+      color: #cbd5e1;
+    }
+    .btn-close:hover {
+      background: #475569;
+    }
+
+    @media screen {
+      body {
+        background: #0f172a;
+        padding-bottom: 40px;
+      }
+      .booth-page {
+        background: #ffffff;
+        margin: 0 auto 30px auto;
+        padding: 7mm 9mm;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        border-radius: 4px;
+      }
+    }
+    @media print {
+      .top-action-bar {
+        display: none !important;
+      }
+      body {
+        background: transparent !important;
+        padding: 0 !important;
+      }
+      .booth-page {
+        margin: 0 !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-action-bar">
+    <div class="top-bar-left">
+      <span class="top-bar-title">📋 List of Candidates</span>
+      <span class="top-bar-desc">(${boothsList.length} Booth${boothsList.length > 1 ? 's' : ''} • Exactly 1 Page per Booth)</span>
+    </div>
+    <div class="top-bar-actions">
+      ${boothsList.length > 1 ? `
+        <select id="selBoothFilter" class="topbar-select">
+          <option value="all">Print All ${boothsList.length} Booths (Batch A4)</option>
+          ${boothsList.map(b => `<option value="${b.boothNumber}">Booth ${b.boothNumber} - ${esc(b.roomName || '')}</option>`).join('')}
+        </select>
+      ` : ''}
+      <button class="topbar-btn btn-print" onclick="window.print()">
+        <span>🖨️</span> Print (Ctrl + P)
+      </button>
+      <button class="topbar-btn btn-close" onclick="window.close()">
+        ✕ Close
+      </button>
+    </div>
+  </div>
+
+  ${boothsHtml}
+
+  <script>
+    const sel = document.getElementById('selBoothFilter');
+    if (sel) {
+      sel.addEventListener('change', (e) => {
+        const val = e.target.value;
+        const pages = document.querySelectorAll('.booth-page');
+        pages.forEach(p => {
+          if (val === 'all') {
+            p.style.display = 'flex';
+          } else {
+            p.style.display = p.id === ('booth-page-' + val) ? 'flex' : 'none';
+          }
+        });
       });
     }
   </script>

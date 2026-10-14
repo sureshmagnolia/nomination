@@ -8,7 +8,7 @@ import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
 import { esc, showToast, setLoading } from '../../utils.js';
 import { CONFIG } from '../../config.js';
-import { printCountingTablePlacards, printOfficialNotice, printBoothDoorPoster, printBatchBoothDoorPosters, printCampusMasterDirectory, printBallotBoxStripSeals, openBallotBoxStripSealsPdf, printDepartmentClassDirectoryPoster, openDepartmentClassPosterPdf } from '../../noticesPrinter.js';
+import { printCountingTablePlacards, printOfficialNotice, printBoothDoorPoster, printBatchBoothDoorPosters, printCampusMasterDirectory, printBallotBoxStripSeals, openBallotBoxStripSealsPdf, printDepartmentClassDirectoryPoster, openDepartmentClassPosterPdf, printBoothCandidatesList, printBatchBoothCandidatesList } from '../../noticesPrinter.js';
 import { getDefaultStatutoryNotices } from '../../noticesTemplates.js';
 import { generateAndPrintBallots, generateAndPrintBallotPressSummary, downloadBallotsExcel, openBallotSummaryConfigModal } from './ballots.js';
 import { generateAndPrintElectoralRolls, generateAndPrintBallotAccounts, generateAndPrintPresidingOfficerInstructions } from './booths.js';
@@ -34,11 +34,12 @@ async function loadAdminNoticesData(main, pwd) {
   if (!main) return;
 
   try {
-    const [noticesData, officialsData, countingMatrixData, nominalRoll] = await Promise.all([
+    const [noticesData, officialsData, countingMatrixData, nominalRoll, nominations] = await Promise.all([
       api.adminGetNotices(pwd, true).catch(() => ({})),
       api.adminGetOfficials(pwd, true).catch(() => null),
       api.adminGetCountingMatrix(pwd, true).catch(() => null),
-      api.getNominalRoll().catch(() => [])
+      api.getNominalRoll().catch(() => []),
+      api.adminGetNominations(pwd, true).catch(() => [])
     ]);
 
     const settings = noticesData.settings || {};
@@ -102,14 +103,14 @@ async function loadAdminNoticesData(main, pwd) {
         }
       } catch (_) {}
     }
-    renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts, nominalRoll, plan, countingTeams, finalCountingMatrix);
+    renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts, nominalRoll, plan, countingTeams, finalCountingMatrix, nominations);
   } catch (err) {
     console.error('Error loading admin notices:', err);
     main.innerHTML = `<div class="alert alert-error">❌ ${esc(err.message || 'Failed to load notices')}</div>`;
   }
 }
 
-function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts = [], nominalRoll = [], plan = null, countingTeams = [], countingMatrixData = null) {
+function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, classMap, posts = [], nominalRoll = [], plan = null, countingTeams = [], countingMatrixData = null, nominations = []) {
   const collegeName = settings.collegeName || CONFIG.COLLEGE_NAME;
   const shortName = settings.collegeShortName || CONFIG.COLLEGE_SHORT_NAME;
   const year = settings.electionYear || new Date().getFullYear();
@@ -402,6 +403,25 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                   </button>
                 </div>
 
+                <!-- Booth-wise List of Candidates (1 Page per Booth) -->
+                <div class="bg-white/5 rounded-xl p-4 border border-indigo-500/30 hover:border-indigo-500/50 transition flex flex-col justify-between space-y-3 min-w-0 bg-gradient-to-br from-indigo-950/20 to-transparent">
+                  <div>
+                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30 whitespace-nowrap">Polling Station Kit</span>
+                      <span class="text-[10px] font-mono text-slate-400 whitespace-nowrap">A4 (1 Page / Booth)</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white flex items-center gap-1.5">
+                      <span>📋</span> List of Candidates (Booth-wise)
+                    </h5>
+                    <p class="text-xs text-slate-400 mt-1">
+                      Booth-specific candidate voting list for polling stations: General candidates first in order, followed by Year Reps and Associations.
+                    </p>
+                  </div>
+                  <button id="btnHubPrintCandidateLists" class="btn bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 shadow-md">
+                    <span>🖨️</span> Print Candidate Lists (${booths.length || 12} Booths)
+                  </button>
+                </div>
+
                 <!-- Ballot Box Aperture Strip Seals -->
                 <div class="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/40 transition flex flex-col justify-between space-y-3 min-w-0">
                   <div>
@@ -688,6 +708,9 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
               <p class="text-slate-400 text-xs mt-0.5">High-contrast, large-format door notices with assigned classes, room numbers, and presiding officer voter rules.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <button id="btnPrintAllCandidatesList" class="btn bg-indigo-600 hover:bg-indigo-500 text-white font-bold btn-sm flex items-center gap-1.5 shadow-lg shadow-indigo-600/30">
+                <span>📋</span> Print Candidate Lists (Batch A4)
+              </button>
               <button id="btnPrintAllDoorPosters" class="btn btn-primary btn-sm flex items-center gap-2 shadow-lg shadow-indigo-600/30">
                 <span>🖨️</span> Print ALL Door Posters (Batch A4)
               </button>
@@ -733,10 +756,12 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                     </div>
                   </div>
 
-                  <div class="pt-3 border-t border-white/10 flex items-center justify-between">
-                    <span class="text-[11px] text-slate-500">Door Poster Ready</span>
-                    <button class="btn btn-secondary btn-sm print-single-booth-btn flex items-center gap-1 text-xs" data-num="${esc(b.boothNumber)}">
-                      <span>🖨️</span> Print Door Poster
+                  <div class="pt-3 border-t border-white/10 flex items-center justify-between gap-2">
+                    <button class="btn btn-secondary btn-sm print-single-candidates-btn flex items-center gap-1 text-xs" data-num="${esc(b.boothNumber)}" title="Print List of Candidates for this booth">
+                      <span>📋</span> Candidate List
+                    </button>
+                    <button class="btn btn-secondary btn-sm print-single-booth-btn flex items-center gap-1 text-xs" data-num="${esc(b.boothNumber)}" title="Print Door Poster">
+                      <span>🖨️</span> Door Poster
                     </button>
                   </div>
                 </div>
@@ -970,10 +995,10 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
   `;
 
   // Attach event handlers
-  attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts, nominalRoll, plan, countingTeams, countingMatrixData, classMap);
+  attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts, nominalRoll, plan, countingTeams, countingMatrixData, classMap, nominations);
 }
 
-function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts = [], nominalRoll = [], plan = null, countingTeams = [], countingMatrixData = null, classMap = {}) {
+function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths, posts = [], nominalRoll = [], plan = null, countingTeams = [], countingMatrixData = null, classMap = {}, nominations = []) {
   const ballotPlan = plan || settings?.ballotPlan || null;
   // Navigation Tabs: Master Print vs Posters vs Notices vs Index
   const tabMaster = main.querySelector('#adminTabMasterPrint');
@@ -1163,6 +1188,41 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
     }
   });
 
+
+  // Print Candidate Lists (Booth-wise, 1 page per booth)
+  const handlePrintAllCandidatesList = async () => {
+    if (!booths.length) {
+      showToast('No polling booths configured to print.', 'error');
+      return;
+    }
+    let activeNoms = nominations;
+    if (!activeNoms || !activeNoms.length) {
+      try {
+        activeNoms = await api.adminGetNominations(pwd, true);
+      } catch (_) {}
+    }
+    printBatchBoothCandidatesList(booths, settings, schedule, { plan: ballotPlan, posts, nominations: activeNoms });
+  };
+
+  main.querySelector('#btnHubPrintCandidateLists')?.addEventListener('click', handlePrintAllCandidatesList);
+  main.querySelector('#btnPrintAllCandidatesList')?.addEventListener('click', handlePrintAllCandidatesList);
+
+  // Print Single Booth Candidate List
+  main.querySelectorAll('.print-single-candidates-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const num = Number(btn.dataset.num);
+      const b = booths.find(item => Number(item.boothNumber) === num);
+      if (b) {
+        let activeNoms = nominations;
+        if (!activeNoms || !activeNoms.length) {
+          try {
+            activeNoms = await api.adminGetNominations(pwd, true);
+          } catch (_) {}
+        }
+        printBoothCandidatesList(b, settings, schedule, { plan: ballotPlan, posts, nominations: activeNoms });
+      }
+    });
+  });
 
   // Print ALL Door Posters
   main.querySelector('#btnPrintAllDoorPosters')?.addEventListener('click', () => {
