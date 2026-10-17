@@ -741,17 +741,55 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
   });
 
   // ─── Form Load Handlers ─────────────────────────────────────────────────────
+  let lastOpenedFromLedger = false;
+  let lastScrollPos = { y: 0, x: 0, matrixLeft: 0, matrixTop: 0 };
+
+  const recordScrollPosition = (fromLedger = false) => {
+    lastOpenedFromLedger = fromLedger;
+    const matrixEl = main.querySelector('#ledgerMatrixGrid');
+    lastScrollPos = {
+      y: window.scrollY,
+      x: window.scrollX,
+      matrixLeft: matrixEl ? matrixEl.scrollLeft : 0,
+      matrixTop: matrixEl ? matrixEl.scrollTop : 0
+    };
+  };
+
+  const restoreScrollPosition = () => {
+    if (!lastOpenedFromLedger) return;
+    const targetY = lastScrollPos.y;
+    const targetX = lastScrollPos.x;
+    const targetMLeft = lastScrollPos.matrixLeft;
+    const targetMTop = lastScrollPos.matrixTop;
+
+    const apply = () => {
+      window.scrollTo({ left: targetX, top: targetY, behavior: 'instant' });
+      const matrixEl = main.querySelector('#ledgerMatrixGrid');
+      if (matrixEl) {
+        matrixEl.scrollLeft = targetMLeft;
+        matrixEl.scrollTop = targetMTop;
+      }
+    };
+
+    apply();
+    requestAnimationFrame(apply);
+    setTimeout(apply, 30);
+    setTimeout(apply, 100);
+  };
+
   const txtSerial = main.querySelector('#txtSerial');
   const btnSerial = main.querySelector('#btnLoadBySerial');
 
-  const loadBySerial = async () => {
+  const loadBySerial = async (fromLedger = false) => {
     const s = txtSerial.value.trim();
     if (!s) return;
     const info = serialMap[s];
     if (!info) { showToast(`Invalid Serial Number: #${s}`, 'error'); return; }
 
+    recordScrollPosition(fromLedger);
+
     try {
-      setLoading(btnSerial, true, 'Loading...');
+      if (!fromLedger) setLoading(btnSerial, true, 'Loading...');
       if (navigator.onLine) {
         api.invalidateCache('adminGetResults');
         const freshResults = await api.adminGetResults(pwd, true).catch(() => []);
@@ -761,21 +799,27 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       }
       await mergeQueueIntoResults(allResults);
       renderFormGrid(booths[info.t].boothNumber, info.postName, s, info.r + 1);
-      renderLedger(main, allResults, allFormSerialsMeta);
+      await renderLedger(main, allResults, allFormSerialsMeta);
       updateConnectivityUI();
+      if (fromLedger) {
+        restoreScrollPosition();
+      }
     } catch (e) {
       allResults = await getAllResultsLocally();
       await mergeQueueIntoResults(allResults);
       renderFormGrid(booths[info.t].boothNumber, info.postName, s, info.r + 1);
-      renderLedger(main, allResults, allFormSerialsMeta);
+      await renderLedger(main, allResults, allFormSerialsMeta);
       updateConnectivityUI();
+      if (fromLedger) {
+        restoreScrollPosition();
+      }
     } finally {
-      setLoading(btnSerial, false, 'Load Form');
+      if (!fromLedger) setLoading(btnSerial, false, 'Load Form');
     }
   };
 
-  btnSerial.addEventListener('click', loadBySerial);
-  txtSerial.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); loadBySerial(); } });
+  btnSerial.addEventListener('click', () => loadBySerial(false));
+  txtSerial.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); loadBySerial(false); } });
   txtSerial.addEventListener('wheel', () => txtSerial.blur(), { passive: true });
 
   // Prevent wheel scroll from modifying active number inputs, ensuring smooth page scrolling
@@ -840,7 +884,17 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       const txt = main.querySelector('#txtSerial');
       if (txt) {
         txt.value = '';
-        txt.focus();
+        if (!lastOpenedFromLedger) {
+          txt.focus({ preventScroll: true });
+        }
+      }
+      restoreScrollPosition();
+      if (serial && lastOpenedFromLedger) {
+        const matrixEl = main.querySelector('#ledgerMatrixGrid');
+        const activeCell = matrixEl?.querySelector(`button[data-serial="${serial}"]`);
+        if (activeCell) {
+          activeCell.focus({ preventScroll: true });
+        }
       }
     };
 
@@ -1182,14 +1236,27 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
           showToast(`Form #${serial || 'Manual'} saved to device (IndexedDB)!`, 'success');
         }
 
-        // Close modal and return focus to serial entry
+        // Close modal without resetting scroll position
         closeModal();
 
-        // 3. Update ledger immediately
-        renderLedger(main, allResults, allFormSerialsMeta);
+        // 3. Update ledger immediately while maintaining view
+        await renderLedger(main, allResults, allFormSerialsMeta);
         updateConnectivityUI();
 
-        // 4. Process background sync queue if online
+        // 4. Restore scroll positions
+        restoreScrollPosition();
+
+        // 5. Highlight the saved form cell and gently focus it without scrolling
+        if (serial) {
+          const matrixEl = main.querySelector('#ledgerMatrixGrid');
+          const savedCell = matrixEl?.querySelector(`button[data-serial="${serial}"]`);
+          if (savedCell) {
+            savedCell.classList.add('ring-2', 'ring-emerald-400', 'ring-offset-1', 'ring-offset-slate-900');
+            savedCell.focus({ preventScroll: true });
+          }
+        }
+
+        // 6. Process background sync queue if online
         processQueue(main, allResults, allFormSerialsMeta);
       } catch (saveErr) {
         console.error('Failed to save votes:', saveErr);
@@ -1277,6 +1344,11 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
   const chipsGridEl = main.querySelector('#ledgerGrid');
   const disparityBanner = main.querySelector('#disparitySummaryBanner');
   if (!matrixGridEl && !chipsGridEl) return;
+
+  const prevMatrixScrollLeft = matrixGridEl ? matrixGridEl.scrollLeft : 0;
+  const prevMatrixScrollTop = matrixGridEl ? matrixGridEl.scrollTop : 0;
+  const prevWindowY = window.scrollY;
+  const prevWindowX = window.scrollX;
 
   const queue = await getSyncQueue();
   const statusMap = {};
@@ -1468,17 +1540,26 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
     });
 
     mHtml += `</tbody></table>`;
+    if (matrixGridEl.offsetHeight > 0) {
+      matrixGridEl.style.minHeight = `${matrixGridEl.offsetHeight}px`;
+    }
     matrixGridEl.innerHTML = mHtml;
+
+    // Immediately restore matrix and window scroll
+    matrixGridEl.scrollLeft = prevMatrixScrollLeft;
+    matrixGridEl.scrollTop = prevMatrixScrollTop;
+    if (window.scrollY !== prevWindowY || window.scrollX !== prevWindowX) {
+      window.scrollTo({ left: prevWindowX, top: prevWindowY, behavior: 'instant' });
+    }
 
     // Single click on matrix button loads form
     matrixGridEl.querySelectorAll('button[data-serial]').forEach(btn => {
       btn.addEventListener('click', () => {
         const s = btn.dataset.serial;
         const txt = main.querySelector('#txtSerial');
-        const btnLoad = main.querySelector('#btnLoadBySerial');
         if (txt && s) {
           txt.value = s;
-          if (btnLoad) btnLoad.click();
+          loadBySerial(true);
         }
       });
     });
@@ -1540,10 +1621,9 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
       chip.addEventListener('click', () => {
         const serial = chip.dataset.serial;
         const txtSerial = main.querySelector('#txtSerial');
-        const btnLoad = main.querySelector('#btnLoadBySerial');
         if (txtSerial && serial) {
           txtSerial.value = serial;
-          if (btnLoad) btnLoad.click();
+          loadBySerial(true);
         }
       });
     });
@@ -1579,10 +1659,9 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
         row.addEventListener('click', () => {
           const serial = row.dataset.serial;
           const txtSerial = main.querySelector('#txtSerial');
-          const btnLoad = main.querySelector('#btnLoadBySerial');
           if (txtSerial && serial) {
             txtSerial.value = serial;
-            if (btnLoad) btnLoad.click();
+            loadBySerial(true);
           }
         });
       });
