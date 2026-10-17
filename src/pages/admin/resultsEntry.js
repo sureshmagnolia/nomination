@@ -34,6 +34,7 @@ let cachedPosts = [];
 let cachedFinalList = [];
 let cachedMatrix = null;
 let isOfflineMode = false;
+let currentLoadBySerial = null;
 
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', async (e) => {
@@ -780,9 +781,10 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
   const txtSerial = main.querySelector('#txtSerial');
   const btnSerial = main.querySelector('#btnLoadBySerial');
 
-  const loadBySerial = async (fromLedger = false) => {
-    const s = txtSerial.value.trim();
+  const loadBySerial = async (fromLedger = false, explicitSerial = null) => {
+    const s = explicitSerial ? String(explicitSerial).trim() : txtSerial.value.trim();
     if (!s) return;
+    if (txtSerial) txtSerial.value = s;
     const info = serialMap[s];
     if (!info) { showToast(`Invalid Serial Number: #${s}`, 'error'); return; }
 
@@ -817,6 +819,9 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       if (!fromLedger) setLoading(btnSerial, false, 'Load Form');
     }
   };
+
+  currentLoadBySerial = loadBySerial;
+  main._loadBySerial = loadBySerial;
 
   btnSerial.addEventListener('click', () => loadBySerial(false));
   txtSerial.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); loadBySerial(false); } });
@@ -1350,6 +1355,17 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
   const prevWindowY = window.scrollY;
   const prevWindowX = window.scrollX;
 
+  const triggerLoadSerial = (s) => {
+    if (typeof main._loadBySerial === 'function') {
+      main._loadBySerial(true, s);
+    } else if (typeof currentLoadBySerial === 'function') {
+      currentLoadBySerial(true, s);
+    } else {
+      const btnLoad = main.querySelector('#btnLoadBySerial');
+      if (btnLoad) btnLoad.click();
+    }
+  };
+
   const queue = await getSyncQueue();
   const statusMap = {};
 
@@ -1557,10 +1573,8 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
       btn.addEventListener('click', () => {
         const s = btn.dataset.serial;
         const txt = main.querySelector('#txtSerial');
-        if (txt && s) {
-          txt.value = s;
-          loadBySerial(true);
-        }
+        if (txt && s) txt.value = s;
+        if (s) triggerLoadSerial(s);
       });
     });
   }
@@ -1621,10 +1635,8 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
       chip.addEventListener('click', () => {
         const serial = chip.dataset.serial;
         const txtSerial = main.querySelector('#txtSerial');
-        if (txtSerial && serial) {
-          txtSerial.value = serial;
-          loadBySerial(true);
-        }
+        if (txtSerial && serial) txtSerial.value = serial;
+        if (serial) triggerLoadSerial(serial);
       });
     });
   }
@@ -1659,10 +1671,8 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
         row.addEventListener('click', () => {
           const serial = row.dataset.serial;
           const txtSerial = main.querySelector('#txtSerial');
-          if (txtSerial && serial) {
-            txtSerial.value = serial;
-            loadBySerial(true);
-          }
+          if (txtSerial && serial) txtSerial.value = serial;
+          if (serial) triggerLoadSerial(serial);
         });
       });
     }
