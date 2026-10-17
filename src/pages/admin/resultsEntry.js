@@ -904,16 +904,16 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
     };
 
     modalArea.innerHTML = `
-      <div id="modalBackdrop" class="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-modal-backdrop">
-        <div class="bg-slate-900 border border-indigo-500/30 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col my-auto max-h-[92vh] animate-modal-card border-white/10" style="box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(99, 102, 241, 0.2);">
+      <div id="modalBackdrop" class="fixed inset-0 z-[9999] flex items-start justify-center pt-2 sm:pt-4 px-3 sm:px-4 pb-4 bg-black/80 backdrop-blur-md animate-modal-backdrop overflow-y-auto">
+        <div class="bg-slate-900 border border-indigo-500/30 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[96vh] animate-modal-card border-white/10" style="box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(99, 102, 241, 0.2);">
           
-          <!-- Modal Header -->
-          <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-4 border-b border-indigo-500/20 flex justify-between items-center shrink-0">
+          <!-- Modal Header (Compact) -->
+          <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-4 py-2.5 sm:px-5 sm:py-3 border-b border-indigo-500/20 flex justify-between items-center shrink-0">
             <div>
-              <h4 class="font-bold text-indigo-200 text-base sm:text-lg flex items-center gap-2">
+              <h4 class="font-bold text-indigo-200 text-sm sm:text-base flex items-center gap-2">
                 <span>Table ${tableNum} • Round ${roundNum || 'N/A'} • ${esc(postName)}</span>
               </h4>
-              <p class="text-xs text-slate-400 mt-0.5">Form Serial: #${serial || 'Manual'}</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">Form Serial: #${serial || 'Manual'}</p>
             </div>
             <div class="flex items-center gap-2">
               ${serial ? `<div class="bg-indigo-500 text-white text-xs px-2.5 py-1 rounded-md font-mono font-bold shadow">FORM #${serial}</div>` : ''}
@@ -921,66 +921,66 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
             </div>
           </div>
 
-          <!-- Modal Scrollable Body -->
-          <div class="p-4 sm:p-6 space-y-3.5 overflow-y-auto flex-1 custom-scrollbar">
+          <!-- Modal Scrollable Body (Compact so all rows fit on screen without scroll) -->
+          <div class="p-3 sm:p-4 space-y-2 overflow-y-auto flex-1 custom-scrollbar">
             ${candidates.map((c, i) => `
-              <div class="flex items-center justify-between bg-white/5 p-3 sm:p-4 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
-                <div class="flex items-center gap-3 sm:gap-4">
-                  <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 font-bold shrink-0">${i + 1}</div>
+              <div class="flex items-center justify-between bg-white/5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+                <div class="flex items-center gap-2.5 sm:gap-3.5">
+                  <div class="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 font-bold text-xs shrink-0">${i + 1}</div>
                   <div>
-                    <div class="font-bold text-white flex items-center gap-2 flex-wrap">
+                    <div class="font-bold text-white text-sm sm:text-base flex items-center gap-2 flex-wrap">
                       <span>${esc(c.candidateName)}</span>
-                      ${c.candidateSerial ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-xs">Sl. #${esc(c.candidateSerial)}</span>` : ''}
+                      ${c.candidateSerial ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-[11px] py-0 px-1.5">Sl. #${esc(c.candidateSerial)}</span>` : ''}
                     </div>
-                    <div class="text-xs text-slate-400 mt-0.5">${esc(c.candidateClass || '')}</div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">${esc(c.candidateClass || '')}</div>
                   </div>
                 </div>
                 <div class="w-28 sm:w-32 shrink-0">
-                  <input type="number" class="field text-center text-lg font-bold vote-input focus:ring-2 focus:ring-indigo-400" data-cid="${esc(c.id)}" data-cname="${esc(c.candidateName)}" placeholder="0" value="${getVotes(c.id)}" min="0" ${isLocked ? 'disabled' : ''}>
+                  <input type="number" class="field text-center text-lg font-bold py-1.5 h-10 vote-input focus:ring-2 focus:ring-indigo-400" data-cid="${esc(c.id)}" data-cname="${esc(c.candidateName)}" placeholder="0" value="${getVotes(c.id)}" min="0" ${isLocked ? 'disabled' : ''}>
                 </div>
               </div>
             `).join('')}
 
-            <div class="border-t border-white/10 my-3"></div>
+            <div class="border-t border-white/10 my-1.5"></div>
 
-            <div class="flex items-center justify-between bg-slate-800/50 p-3 sm:p-4 rounded-xl border border-slate-700">
-              <div class="font-bold text-slate-300">NOTA</div>
+            <div class="flex items-center justify-between bg-slate-800/50 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-slate-700">
+              <div class="font-bold text-slate-300 text-sm">NOTA</div>
               <div class="w-28 sm:w-32 shrink-0">
-                <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="NOTA" data-cname="NOTA" placeholder="0" value="${getVotes('NOTA')}" min="0" ${isLocked ? 'disabled' : ''}>
+                <input type="number" class="field text-center text-lg font-bold py-1.5 h-10 vote-input" data-cid="NOTA" data-cname="NOTA" placeholder="0" value="${getVotes('NOTA')}" min="0" ${isLocked ? 'disabled' : ''}>
               </div>
             </div>
 
-            <div class="flex items-center justify-between bg-red-500/5 p-3 sm:p-4 rounded-xl border border-red-500/20">
-              <div class="font-bold text-red-400">INVALID</div>
+            <div class="flex items-center justify-between bg-red-500/5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-red-500/20">
+              <div class="font-bold text-red-400 text-sm">INVALID</div>
               <div class="w-28 sm:w-32 shrink-0">
-                <input type="number" class="field text-center text-lg font-bold border-red-500/30 vote-input" data-cid="INVALID" data-cname="Invalid" placeholder="0" value="${getVotes('INVALID')}" min="0" ${isLocked ? 'disabled' : ''}>
+                <input type="number" class="field text-center text-lg font-bold py-1.5 h-10 border-red-500/30 vote-input" data-cid="INVALID" data-cname="Invalid" placeholder="0" value="${getVotes('INVALID')}" min="0" ${isLocked ? 'disabled' : ''}>
               </div>
             </div>
 
-            <div class="flex items-center justify-between bg-indigo-500/20 p-3.5 sm:p-4 rounded-xl border border-indigo-500/40 mt-4">
-              <div class="font-black text-indigo-300 text-lg sm:text-xl tracking-wider">TOTAL BALLOTS TALLIED</div>
-              <div class="w-28 sm:w-32 text-center text-2xl font-black text-white font-mono" id="totalVotesDisplay">0</div>
+            <div class="flex items-center justify-between bg-indigo-500/20 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-indigo-500/40 mt-2">
+              <div class="font-black text-indigo-300 text-sm sm:text-base tracking-wider">TOTAL BALLOTS TALLIED</div>
+              <div class="w-28 sm:w-32 text-center text-xl sm:text-2xl font-black text-white font-mono" id="totalVotesDisplay">0</div>
             </div>
 
             <div id="disparityAlertArea" class="transition-all"></div>
           </div>
 
-          <!-- Modal Footer -->
-          <div class="bg-slate-950/90 p-4 sm:p-5 border-t border-white/10 flex flex-wrap justify-between items-center gap-4 shrink-0">
-            <div class="flex items-center gap-2.5">
-              <button id="btnClearForm" type="button" class="btn btn-secondary text-rose-300 hover:text-white hover:bg-rose-600/80 border-rose-500/40 px-3.5 py-2.5 text-xs font-bold transition flex items-center gap-1.5 shadow" ${isLocked ? 'disabled' : ''} title="Clear all saved votes for this form and reset ledger status to Not Entered">
+          <!-- Modal Footer (Compact & Prominent) -->
+          <div class="bg-slate-950/90 px-4 py-2.5 sm:px-5 sm:py-3 border-t border-white/10 flex flex-wrap justify-between items-center gap-3 shrink-0">
+            <div class="flex items-center gap-2">
+              <button id="btnClearForm" type="button" class="btn btn-secondary text-rose-300 hover:text-white hover:bg-rose-600/80 border-rose-500/40 px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 shadow" ${isLocked ? 'disabled' : ''} title="Clear all saved votes for this form and reset ledger status to Not Entered">
                 <span>🗑️</span> <span>Clear Form</span>
               </button>
-              <button id="btnCancelModal" type="button" class="btn btn-secondary px-4 py-2.5 text-xs font-semibold text-slate-300 hover:text-white">
+              <button id="btnCancelModal" type="button" class="btn btn-secondary px-3.5 py-1.5 text-xs font-semibold text-slate-300 hover:text-white">
                 Cancel
               </button>
             </div>
             <button id="btnSaveVotes" class="btn btn-success ${isLocked 
               ? 'opacity-50 cursor-not-allowed bg-slate-700 text-slate-400 border border-slate-600 shadow-none' 
-              : 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 hover:from-emerald-500 hover:via-emerald-400 hover:to-teal-400 text-white shadow-xl shadow-emerald-600/40 hover:shadow-2xl hover:shadow-emerald-500/60 ring-2 ring-emerald-400/50 hover:ring-emerald-300 border-2 border-emerald-300/60 hover:scale-[1.03] active:scale-[0.98]'} px-10 sm:px-12 py-3.5 sm:py-4 font-black tracking-wide text-base sm:text-lg rounded-xl flex items-center justify-center gap-3 transition-all duration-150 cursor-pointer shadow-lg" ${isLocked ? 'disabled' : ''} title="Save entered votes to device IndexedDB & ledger (Shortcut: Ctrl+S)">
+              : 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 hover:from-emerald-500 hover:via-emerald-400 hover:to-teal-400 text-white shadow-xl shadow-emerald-600/40 hover:shadow-2xl hover:shadow-emerald-500/60 ring-2 ring-emerald-400/50 hover:ring-emerald-300 border-2 border-emerald-300/60 hover:scale-[1.03] active:scale-[0.98]'} px-8 sm:px-10 py-2.5 sm:py-3 font-black tracking-wide text-sm sm:text-base rounded-xl flex items-center justify-center gap-2.5 transition-all duration-150 cursor-pointer shadow-lg" ${isLocked ? 'disabled' : ''} title="Save entered votes to device IndexedDB & ledger (Shortcut: Ctrl+S)">
               ${isLocked 
                 ? '<span>🔒 Results Locked</span>' 
-                : '<span class="text-2xl leading-none">💾</span><span class="tracking-wider uppercase font-black">Save Form Results</span>'}
+                : '<span class="text-xl leading-none">💾</span><span class="tracking-wider uppercase font-black">Save Form Results</span>'}
             </button>
           </div>
 

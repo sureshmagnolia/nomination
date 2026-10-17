@@ -2160,20 +2160,13 @@ function renderCountingUI(main, pwd, savedMatrix, posts, finalList, booths, nomi
       const myAssoc = assocPosts.filter(ap => isMatch(ap, t));
       const myYearReps = yearRepPosts.filter(yp => isMatch(yp, t));
 
-      // Rotated general union posts for Table t
+      // Rotated general union posts for Table t (excluding UUC)
       const rotatedGen = G > 0
         ? Array.from({ length: G }, (_, i) => generalPosts[(t + i) % G])
         : [];
 
-      // Stagger Year Reps into rotated general posts
-      const intermediatePosts = [...rotatedGen];
-      myYearReps.forEach((yr, k) => {
-        const insertIdx = (t * 2 + k * 3) % (intermediatePosts.length + 1);
-        intermediatePosts.splice(insertIdx, 0, yr);
-      });
-
-      // Association first, then intermediate posts (solid, no nulls)
-      tablePreUucPosts.push([...myAssoc, ...intermediatePosts]);
+      // Statutory Order: Association Secretary, then Year Reps, then General posts rotated per table
+      tablePreUucPosts.push([...myAssoc, ...myYearReps, ...rotatedGen]);
     }
 
     const maxPreUuc = Math.max(...tablePreUucPosts.map(p => p.length), 0);
@@ -2364,7 +2357,7 @@ function buildFormHtml(tableNum, roundNum, postName, candidates, serial, college
     <!-- Table No, Round No, and Form # Bar — Pure Black & White -->
     <div style="display:flex;justify-content:space-between;align-items:center;background:#fff;padding:5px 12px;border:1.5px solid #000;margin-bottom:6px;font-size:13px;font-weight:bold;color:#000;">
       <div style="display:flex;align-items:center;gap:24px;">
-        <span>TABLE NO: <u style="font-size:14px;font-weight:800;">${tableNum}</u>${roomName ? ` <span style="font-size:11px;font-weight:normal;">(${esc(roomName)})</span>` : ''}</span>
+        <span>TABLE NO: <u style="font-size:14px;font-weight:800;">${tableNum}</u></span>
         <span>ROUND NO: <u style="font-size:14px;font-weight:800;">${roundNum}</u></span>
       </div>
       <div class="serial-tag" style="border:2px solid #000;color:#000;white-space:nowrap;font-size:13.5px;font-weight:800;padding:3px 10px;">
