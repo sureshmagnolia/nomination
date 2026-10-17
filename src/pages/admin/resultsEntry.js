@@ -743,39 +743,82 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
 
   // ─── Form Load Handlers ─────────────────────────────────────────────────────
   let lastOpenedFromLedger = false;
-  let lastScrollPos = { y: 0, x: 0, matrixLeft: 0, matrixTop: 0 };
+  let lastScrollPos = {
+    mainTop: 0,
+    mainLeft: 0,
+    parentTop: 0,
+    parentLeft: 0,
+    windowY: 0,
+    windowX: 0,
+    matrixLeft: 0,
+    matrixTop: 0,
+    serial: null
+  };
 
-  const recordScrollPosition = (fromLedger = false) => {
+  const recordScrollPosition = (fromLedger = false, targetSerial = null) => {
     lastOpenedFromLedger = fromLedger;
     const matrixEl = main.querySelector('#ledgerMatrixGrid');
+    const parentEl = main?.parentElement;
     lastScrollPos = {
-      y: window.scrollY,
-      x: window.scrollX,
+      mainTop: main ? main.scrollTop : 0,
+      mainLeft: main ? main.scrollLeft : 0,
+      parentTop: parentEl ? parentEl.scrollTop : 0,
+      parentLeft: parentEl ? parentEl.scrollLeft : 0,
+      windowY: window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0,
+      windowX: window.scrollX || document.documentElement.scrollLeft || document.body.scrollLeft || 0,
       matrixLeft: matrixEl ? matrixEl.scrollLeft : 0,
-      matrixTop: matrixEl ? matrixEl.scrollTop : 0
+      matrixTop: matrixEl ? matrixEl.scrollTop : 0,
+      serial: targetSerial
     };
   };
 
   const restoreScrollPosition = () => {
     if (!lastOpenedFromLedger) return;
-    const targetY = lastScrollPos.y;
-    const targetX = lastScrollPos.x;
-    const targetMLeft = lastScrollPos.matrixLeft;
-    const targetMTop = lastScrollPos.matrixTop;
+    const pos = { ...lastScrollPos };
+    const matrixEl = main.querySelector('#ledgerMatrixGrid');
+    const parentEl = main?.parentElement;
 
     const apply = () => {
-      window.scrollTo({ left: targetX, top: targetY, behavior: 'instant' });
-      const matrixEl = main.querySelector('#ledgerMatrixGrid');
+      // 1. Restore scroll on #adminMain (main container)
+      if (main && pos.mainTop > 0) {
+        main.scrollTop = pos.mainTop;
+        main.scrollLeft = pos.mainLeft;
+      }
+      // 2. Restore scroll on parent container
+      if (parentEl && pos.parentTop > 0) {
+        parentEl.scrollTop = pos.parentTop;
+        parentEl.scrollLeft = pos.parentLeft;
+      }
+      // 3. Restore window / documentElement / body scroll
+      if (pos.windowY > 0 || pos.windowX > 0) {
+        window.scrollTo({ left: pos.windowX, top: pos.windowY, behavior: 'instant' });
+        if (document.documentElement) document.documentElement.scrollTop = pos.windowY;
+        if (document.body) document.body.scrollTop = pos.windowY;
+      }
+
+      // 4. Restore matrix container scroll
       if (matrixEl) {
-        matrixEl.scrollLeft = targetMLeft;
-        matrixEl.scrollTop = targetMTop;
+        matrixEl.scrollLeft = pos.matrixLeft;
+        matrixEl.scrollTop = pos.matrixTop;
+      }
+
+      // 5. Ensure the target form cell stays anchored in view
+      if (pos.serial) {
+        const targetBtn = main.querySelector(`button[data-serial="${pos.serial}"]`);
+        if (targetBtn) {
+          if (main && main.scrollTop === 0 && pos.mainTop > 0) {
+            targetBtn.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+          }
+          targetBtn.focus({ preventScroll: true });
+        }
       }
     };
 
     apply();
     requestAnimationFrame(apply);
     setTimeout(apply, 30);
-    setTimeout(apply, 100);
+    setTimeout(apply, 80);
+    setTimeout(apply, 150);
   };
 
   const txtSerial = main.querySelector('#txtSerial');
@@ -788,7 +831,7 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
     const info = serialMap[s];
     if (!info) { showToast(`Invalid Serial Number: #${s}`, 'error'); return; }
 
-    recordScrollPosition(fromLedger);
+    recordScrollPosition(fromLedger, s);
 
     try {
       if (!fromLedger) setLoading(btnSerial, true, 'Loading...');
@@ -801,7 +844,11 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       }
       await mergeQueueIntoResults(allResults);
       renderFormGrid(booths[info.t].boothNumber, info.postName, s, info.r + 1);
-      await renderLedger(main, allResults, allFormSerialsMeta);
+      // Only re-render ledger if NOT opened from ledger (e.g. entered via top serial input)
+      // When opened from ledger, the ledger is already rendered and visible behind modal
+      if (!fromLedger) {
+        await renderLedger(main, allResults, allFormSerialsMeta);
+      }
       updateConnectivityUI();
       if (fromLedger) {
         restoreScrollPosition();
@@ -810,7 +857,9 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       allResults = await getAllResultsLocally();
       await mergeQueueIntoResults(allResults);
       renderFormGrid(booths[info.t].boothNumber, info.postName, s, info.r + 1);
-      await renderLedger(main, allResults, allFormSerialsMeta);
+      if (!fromLedger) {
+        await renderLedger(main, allResults, allFormSerialsMeta);
+      }
       updateConnectivityUI();
       if (fromLedger) {
         restoreScrollPosition();
@@ -1352,8 +1401,11 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
 
   const prevMatrixScrollLeft = matrixGridEl ? matrixGridEl.scrollLeft : 0;
   const prevMatrixScrollTop = matrixGridEl ? matrixGridEl.scrollTop : 0;
-  const prevWindowY = window.scrollY;
-  const prevWindowX = window.scrollX;
+  const prevMainTop = main ? main.scrollTop : 0;
+  const prevMainLeft = main ? main.scrollLeft : 0;
+  const prevParentTop = main?.parentElement ? main.parentElement.scrollTop : 0;
+  const prevWindowY = window.scrollY || document.documentElement?.scrollTop || 0;
+  const prevWindowX = window.scrollX || document.documentElement?.scrollLeft || 0;
 
   const triggerLoadSerial = (s) => {
     if (typeof main._loadBySerial === 'function') {
@@ -1561,10 +1613,17 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
     }
     matrixGridEl.innerHTML = mHtml;
 
-    // Immediately restore matrix and window scroll
+    // Immediately restore matrix, main container, parent container, and window scroll
     matrixGridEl.scrollLeft = prevMatrixScrollLeft;
     matrixGridEl.scrollTop = prevMatrixScrollTop;
-    if (window.scrollY !== prevWindowY || window.scrollX !== prevWindowX) {
+    if (main && prevMainTop > 0) {
+      main.scrollTop = prevMainTop;
+      main.scrollLeft = prevMainLeft;
+    }
+    if (main?.parentElement && prevParentTop > 0) {
+      main.parentElement.scrollTop = prevParentTop;
+    }
+    if (prevWindowY > 0 || prevWindowX > 0) {
       window.scrollTo({ left: prevWindowX, top: prevWindowY, behavior: 'instant' });
     }
 
