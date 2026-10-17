@@ -634,9 +634,6 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
           </div>
         </div>
       </div>
-
-      <!-- Pop-Up Modal Container for Result Entry -->
-      <div id="resultsModalContainer"></div>
     </div>
   `;
 
@@ -740,6 +737,14 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
   main.querySelector('#btnSyncNow')?.addEventListener('click', () => {
     processQueue(main, allResults, allFormSerialsMeta, true);
   });
+
+  // Ensure any existing modal container on document.body is cleared
+  const existingModal = document.getElementById('resultsModalContainer');
+  if (existingModal) existingModal.innerHTML = '';
+  window.addEventListener('popstate', () => {
+    const m = document.getElementById('resultsModalContainer');
+    if (m) m.remove();
+  }, { once: true });
 
   // ─── Form Load Handlers ─────────────────────────────────────────────────────
   let lastOpenedFromLedger = false;
@@ -926,8 +931,20 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
   });
 
   // ─── Form Input Grid Modal Rendering ───────────────────────────────────────
+  const getModalContainer = () => {
+    let container = document.getElementById('resultsModalContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'resultsModalContainer';
+      document.body.appendChild(container);
+    } else if (container.parentElement !== document.body) {
+      document.body.appendChild(container);
+    }
+    return container;
+  };
+
   const renderFormGrid = (tableNum, postName, serial, roundNum) => {
-    const modalArea = main.querySelector('#resultsModalContainer');
+    const modalArea = getModalContainer();
     if (!modalArea) return;
 
     const candidates = finalList.filter(c => c.post === postName).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
@@ -943,13 +960,6 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
         }
       }
       restoreScrollPosition();
-      if (serial && lastOpenedFromLedger) {
-        const matrixEl = main.querySelector('#ledgerMatrixGrid');
-        const activeCell = matrixEl?.querySelector(`button[data-serial="${serial}"]`);
-        if (activeCell) {
-          activeCell.focus({ preventScroll: true });
-        }
-      }
     };
 
     const handleKeydown = (e) => {
@@ -966,7 +976,7 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
 
     if (candidates.length === 0) {
       modalArea.innerHTML = `
-        <div id="modalBackdrop" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-modal-backdrop">
+        <div id="modalBackdrop" class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-modal-backdrop">
           <div class="bg-slate-900 border border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl text-center space-y-4 animate-modal-card">
             <div class="text-3xl">⚠️</div>
             <h3 class="text-base font-bold text-white">No Candidates Found</h3>
@@ -984,7 +994,7 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
 
     if (candidates.length === 1) {
       modalArea.innerHTML = `
-        <div id="modalBackdrop" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-modal-backdrop">
+        <div id="modalBackdrop" class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-modal-backdrop">
           <div class="bg-slate-900 border border-emerald-500/40 rounded-2xl p-7 max-w-md w-full shadow-2xl text-center space-y-4 animate-modal-card">
             <div class="text-4xl mb-1">🏆</div>
             <h3 class="text-lg font-bold text-emerald-400">Elected Unopposed</h3>
@@ -1012,7 +1022,7 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
     };
 
     modalArea.innerHTML = `
-      <div id="modalBackdrop" class="fixed inset-0 z-[9999] flex items-start justify-center pt-2 sm:pt-4 px-3 sm:px-4 pb-4 bg-black/80 backdrop-blur-md animate-modal-backdrop overflow-y-auto">
+      <div id="modalBackdrop" class="fixed inset-0 z-[99999] flex items-start justify-center pt-2 sm:pt-4 px-3 sm:px-4 pb-4 bg-black/80 backdrop-blur-md animate-modal-backdrop overflow-y-auto">
         <div class="bg-slate-900 border border-indigo-500/30 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[96vh] animate-modal-card border-white/10" style="box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(99, 102, 241, 0.2);">
           
           <!-- Modal Header (Compact) -->
@@ -1101,6 +1111,15 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
     modalArea.querySelector('#modalBackdrop')?.addEventListener('click', (e) => {
       if (e.target.id === 'modalBackdrop') closeModal();
     });
+
+    // Auto-focus first candidate input
+    const firstVoteInput = modalArea.querySelector('.vote-input');
+    if (firstVoteInput) {
+      setTimeout(() => {
+        firstVoteInput.focus({ preventScroll: true });
+        firstVoteInput.select();
+      }, 50);
+    }
 
     let currentDisparityInfo = null;
 
