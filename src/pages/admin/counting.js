@@ -2351,28 +2351,25 @@ function buildFormHtml(tableNum, roundNum, postName, candidates, serial, college
         </tr>`;
 
   return `<div class="pg" style="page-break-inside:avoid;">
-    <!-- Top 3-Column Header: Balanced Left Spacer + Center Branding + Right Badge -->
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-      <div style="width:140px;flex-shrink:0;"></div>
-      <div style="flex:1;text-align:center;padding:0 6px;">
-        ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:40px;max-width:120px;margin:0 auto 3px auto;display:block;object-fit:contain;filter:grayscale(100%);" alt="College Logo">` : ''}
-        <div style="font-size:13.5px;font-weight:800;color:#000;text-transform:uppercase;letter-spacing:0.5px;line-height:1.2;">${esc(collegeName)}</div>
-        <div style="font-size:11.5px;font-weight:700;color:#000;margin-top:2px;">College Union Election ${esc(yearStr)}</div>
-        <h2 style="margin:4px 0 0;font-size:18px;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:#000;">
-          Counting Form ${isRecount ? '<span style="color:#000;font-size:13px;border:1.5px solid #000;padding:2px 6px;vertical-align:middle;margin-left:8px;border-radius:2px;letter-spacing:1px;">RECOUNT</span>' : ''}
-        </h2>
-      </div>
-      <div style="width:140px;flex-shrink:0;display:flex;justify-content:flex-end;">
-        <div class="serial-tag" style="border:2px solid #000;color:#000;white-space:nowrap;">
-          ${isRecount ? `RECOUNT — FORM #${serial}` : `FORM #${serial}`}
-        </div>
-      </div>
+    <!-- Centered College Branding Header -->
+    <div style="text-align:center;margin-bottom:8px;">
+      ${collegeLogo ? `<img src="${collegeLogo}" style="max-height:40px;max-width:120px;margin:0 auto 3px auto;display:block;object-fit:contain;filter:grayscale(100%);" alt="College Logo">` : ''}
+      <div style="font-size:13.5px;font-weight:800;color:#000;text-transform:uppercase;letter-spacing:0.5px;line-height:1.2;">${esc(collegeName)}</div>
+      <div style="font-size:11.5px;font-weight:700;color:#000;margin-top:2px;">College Union Election ${esc(yearStr)}</div>
+      <h2 style="margin:4px 0 0;font-size:18px;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:#000;">
+        Counting Form ${isRecount ? '<span style="color:#000;font-size:13px;border:1.5px solid #000;padding:2px 6px;vertical-align:middle;margin-left:8px;border-radius:2px;letter-spacing:1px;">RECOUNT</span>' : ''}
+      </h2>
     </div>
 
-    <!-- Table No and Round No Bar — Pure Black & White -->
+    <!-- Table No, Round No, and Form # Bar — Pure Black & White -->
     <div style="display:flex;justify-content:space-between;align-items:center;background:#fff;padding:5px 12px;border:1.5px solid #000;margin-bottom:6px;font-size:13px;font-weight:bold;color:#000;">
-      <span>TABLE NO: <u style="font-size:14px;font-weight:800;">${tableNum}</u></span>
-      <span>ROUND NO: <u style="font-size:14px;font-weight:800;">${roundNum}</u></span>
+      <div style="display:flex;align-items:center;gap:24px;">
+        <span>TABLE NO: <u style="font-size:14px;font-weight:800;">${tableNum}</u>${roomName ? ` <span style="font-size:11px;font-weight:normal;">(${esc(roomName)})</span>` : ''}</span>
+        <span>ROUND NO: <u style="font-size:14px;font-weight:800;">${roundNum}</u></span>
+      </div>
+      <div class="serial-tag" style="border:2px solid #000;color:#000;white-space:nowrap;font-size:13.5px;font-weight:800;padding:3px 10px;">
+        ${isRecount ? `RECOUNT — FORM #${serial}` : `FORM #${serial}`}
+      </div>
     </div>
 
     <!-- Post Title Bar -->
