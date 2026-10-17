@@ -778,6 +778,14 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
 
   btnSerial.addEventListener('click', loadBySerial);
   txtSerial.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); loadBySerial(); } });
+  txtSerial.addEventListener('wheel', () => txtSerial.blur(), { passive: true });
+
+  // Prevent wheel scroll from modifying active number inputs, ensuring smooth page scrolling
+  main.addEventListener('wheel', () => {
+    if (document.activeElement && document.activeElement.type === 'number') {
+      document.activeElement.blur();
+    }
+  }, { passive: true });
 
   main.querySelector('#btnLoadForm').addEventListener('click', async () => {
     const tableNum = main.querySelector('#selTable').value;
@@ -975,6 +983,7 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
     };
     area.querySelectorAll('.vote-input').forEach(inp => {
       inp.addEventListener('input', updateGrandTotal);
+      inp.addEventListener('wheel', () => inp.blur(), { passive: true });
     });
     updateGrandTotal();
 

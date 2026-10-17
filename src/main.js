@@ -118,6 +118,13 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// Prevent mouse wheel from inadvertently changing values in number inputs while allowing smooth scrolling
+document.addEventListener('wheel', () => {
+  if (document.activeElement && document.activeElement.type === 'number') {
+    document.activeElement.blur();
+  }
+}, { passive: true });
+
 router.start();
 
 // ─── Background Sync UI & Init ────────────────────────────────────────────────

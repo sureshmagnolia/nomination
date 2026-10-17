@@ -313,6 +313,16 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   filter: invert(0.8);
 }
+/* Suppress number input spin buttons / steppers across all browsers */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
 .field:focus {
   border-color: var(--btn-primary-bg) !important;
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
