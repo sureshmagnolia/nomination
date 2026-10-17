@@ -532,112 +532,110 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
         </div>
       ` : ''}
 
-      <div id="resultsGridContainer" class="grid grid-cols-1 xl:grid-cols-12 gap-6 transition-all duration-300">
-
-        <!-- LEFT: Entry Panel -->
-        <div id="entryColLeft" class="xl:col-span-7 space-y-4 transition-all duration-300">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="glass rounded-xl p-5 border border-indigo-500/20">
-              <label class="block text-sm text-slate-300 mb-1 font-bold">Form Serial Number</label>
-              <div class="flex gap-2">
-                <input type="number" id="txtSerial" class="field text-lg font-mono font-bold" placeholder="e.g. 1" autofocus>
-                <button id="btnLoadBySerial" class="btn btn-primary px-6 font-bold">Load Form</button>
-              </div>
-            </div>
-
-            <div class="glass rounded-xl p-5 opacity-75">
-              <label class="block text-sm text-slate-300 mb-1">Manual Selection (Fallback)</label>
-              <div class="flex gap-2">
-                <select id="selTable" class="field text-xs">
-                  <option value="">Table...</option>
-                  ${booths.map(b => `<option value="${b.boothNumber}">Table ${b.boothNumber}</option>`).join('')}
-                </select>
-                <select id="selPost" class="field text-xs">
-                  <option value="">Post...</option>
-                  ${sortPosts(posts).map(p => `<option value="${esc(p.post || p.name)}">${esc(p.post || p.name)}</option>`).join('')}
-                </select>
-                <button id="btnLoadForm" class="btn btn-secondary px-4 text-xs font-semibold">Load</button>
-              </div>
-            </div>
-          </div>
-
-          <div id="entryFormArea"></div>
-        </div>
-
-        <!-- RIGHT: Entered Forms Ledger -->
-        <div id="ledgerColRight" class="xl:col-span-5 transition-all duration-300">
-          <div class="glass rounded-xl overflow-hidden border border-white/10 xl:sticky xl:top-6 shadow-2xl">
-            <!-- Header -->
-            <div class="bg-gradient-to-r from-slate-900/90 to-indigo-950/80 p-3.5 sm:p-4 border-b border-white/10 flex items-center justify-between flex-wrap gap-2">
-              <div>
-                <h4 class="font-bold text-white text-sm flex items-center gap-2">
-                  <span>Counting Forms Ledger</span>
-                </h4>
-                <div id="ledgerSummary" class="flex flex-wrap gap-2.5 text-[11px] text-slate-400 mt-1"></div>
-              </div>
-              <div class="flex items-center gap-2">
-                <button id="btnToggleExpandLedger" type="button" class="btn btn-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10 text-[11px] py-1 px-2.5 rounded-lg flex items-center gap-1 shadow-sm transition" title="Toggle wide matrix view across full page">
-                  <span id="expandLedgerIcon">⛶</span> <span id="expandLedgerText">Expand</span>
-                </button>
-                <span id="ledgerCount" class="text-xs font-bold bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded border border-indigo-500/30 whitespace-nowrap">0/0 done</span>
-              </div>
-            </div>
-            <!-- Tabs -->
-            <div class="flex border-b border-white/10 bg-slate-900/50">
-              <button id="tabMatrix" class="ledger-tab active-tab px-3.5 py-2 text-xs font-bold text-white border-b-2 border-indigo-400 flex items-center gap-1.5">
-                <span>▦</span> <span>Table × Round Matrix</span>
-              </button>
-              <button id="tabChips" class="ledger-tab px-3 py-2 text-xs font-semibold text-slate-400 border-b-2 border-transparent hover:text-white flex items-center gap-1.5">
-                <span>⠿</span> <span>Flat Chips</span>
-              </button>
-              <button id="tabPending" class="ledger-tab px-3 py-2 text-xs font-semibold text-slate-400 border-b-2 border-transparent hover:text-white flex items-center gap-1.5">
-                <span>⏳</span> <span>Missing</span> <span id="pendingTabCount" class="ml-1 bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full text-[10px]">0</span>
-              </button>
-            </div>
-            <!-- Matrix View Panel (default) -->
-            <div id="panelMatrix">
-              <div id="disparitySummaryBanner" class="hidden p-3 border-b border-red-500/40 bg-red-950/40 transition-all"></div>
-              <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 border-b border-white/10 bg-slate-900/60 text-[10px] text-slate-400">
-                <div class="flex flex-wrap gap-2.5">
-                  <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500/30 border border-emerald-500 inline-block"></span>Synced</span>
-                  <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-amber-500/30 border border-amber-500 inline-block"></span>Local</span>
-                  <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-red-500/30 border border-red-500 inline-block"></span>⚠️ Disparity</span>
-                  <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-slate-800 border border-slate-600 border-dashed inline-block"></span>Missing</span>
-                </div>
-                <span class="text-[9.5px] text-slate-400 italic">Click cell to load form</span>
-              </div>
-              <div class="ledger-matrix-container p-2" id="ledgerMatrixGrid"></div>
-            </div>
-            <!-- Flat Chips Panel -->
-            <div id="panelChips" class="hidden">
-              <div class="flex flex-wrap gap-2.5 px-4 py-2 border-b border-white/10 bg-slate-900/60 text-[10px] text-slate-400">
-                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500/30 border border-emerald-500 inline-block"></span>Synced</span>
-                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-amber-500/30 border border-amber-500 inline-block"></span>Local (IndexedDB)</span>
-                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-red-500/30 border border-red-500 inline-block"></span>Disparity Mismatch</span>
-                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-slate-800 border border-slate-600 inline-block"></span>Not Entered</span>
-              </div>
-              <div class="overflow-y-auto p-3" style="max-height: 52vh;">
-                <div id="ledgerGrid" class="flex flex-wrap gap-1.5"></div>
-              </div>
-            </div>
-            <!-- Pending list tab -->
-            <div id="panelPending" class="hidden overflow-y-auto" style="max-height: 58vh;">
-              <table class="w-full text-left">
-                <thead class="sticky top-0 bg-slate-900/95 border-b border-white/10">
-                  <tr>
-                    <th class="px-3 py-2 text-[11px] text-slate-400 font-semibold w-14">Form #</th>
-                    <th class="px-3 py-2 text-[11px] text-slate-400 font-semibold w-16">Table</th>
-                    <th class="px-3 py-2 text-[11px] text-slate-400 font-semibold">Post</th>
-                    <th class="px-3 py-2 text-[11px] text-slate-400 font-semibold w-16 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody id="pendingList"></tbody>
-              </table>
-            </div>
+      <!-- Quick Form Entry & Search Bar -->
+      <div class="glass rounded-xl p-3 sm:p-4 border border-indigo-500/20 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-lg">
+        <!-- Form Serial Quick Entry -->
+        <div class="flex items-center gap-2 flex-1 max-w-lg">
+          <label for="txtSerial" class="text-xs font-bold text-indigo-300 whitespace-nowrap flex items-center gap-1.5">
+            <span>⚡ Form #</span>
+          </label>
+          <div class="flex gap-2 flex-1">
+            <input type="number" id="txtSerial" class="field text-sm font-mono font-bold py-1.5 px-3" placeholder="Enter Form Serial (e.g. 1)" autofocus>
+            <button id="btnLoadBySerial" class="btn btn-primary px-5 py-1.5 text-xs font-bold whitespace-nowrap shadow-md">
+              Load &amp; Enter
+            </button>
           </div>
         </div>
 
+        <!-- Manual Table + Post Fallback -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-[11px] text-slate-400 font-medium whitespace-nowrap">Or Manual:</span>
+          <select id="selTable" class="field text-xs py-1.5 px-2 w-28">
+            <option value="">Table...</option>
+            ${booths.map(b => `<option value="${b.boothNumber}">Table ${b.boothNumber}</option>`).join('')}
+          </select>
+          <select id="selPost" class="field text-xs py-1.5 px-2 w-44">
+            <option value="">Post...</option>
+            ${sortPosts(posts).map(p => `<option value="${esc(p.post || p.name)}">${esc(p.post || p.name)}</option>`).join('')}
+          </select>
+          <button id="btnLoadForm" class="btn btn-secondary px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap">
+            Load
+          </button>
+        </div>
       </div>
+
+      <!-- FULL-WIDTH: Entered Forms Ledger -->
+      <div id="ledgerContainerFull" class="w-full transition-all duration-300">
+        <div class="glass rounded-xl overflow-hidden border border-white/10 shadow-2xl">
+          <!-- Header -->
+          <div class="bg-gradient-to-r from-slate-900/90 to-indigo-950/80 p-3.5 sm:p-4 border-b border-white/10 flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h4 class="font-bold text-white text-base flex items-center gap-2">
+                <span>Counting Forms Ledger</span>
+              </h4>
+              <div id="ledgerSummary" class="flex flex-wrap gap-2.5 text-[11px] text-slate-400 mt-1"></div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="ledgerCount" class="text-xs font-bold bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-md border border-indigo-500/30 whitespace-nowrap">0/0 done</span>
+            </div>
+          </div>
+          <!-- Tabs -->
+          <div class="flex border-b border-white/10 bg-slate-900/50">
+            <button id="tabMatrix" class="ledger-tab active-tab px-4 py-2.5 text-xs font-bold text-white border-b-2 border-indigo-400 flex items-center gap-1.5">
+              <span>▦</span> <span>Table × Round Matrix</span>
+            </button>
+            <button id="tabChips" class="ledger-tab px-3.5 py-2.5 text-xs font-semibold text-slate-400 border-b-2 border-transparent hover:text-white flex items-center gap-1.5">
+              <span>⠿</span> <span>Flat Chips</span>
+            </button>
+            <button id="tabPending" class="ledger-tab px-3.5 py-2.5 text-xs font-semibold text-slate-400 border-b-2 border-transparent hover:text-white flex items-center gap-1.5">
+              <span>⏳</span> <span>Missing</span> <span id="pendingTabCount" class="ml-1 bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full text-[10px]">0</span>
+            </button>
+          </div>
+          <!-- Matrix View Panel (default) -->
+          <div id="panelMatrix">
+            <div id="disparitySummaryBanner" class="hidden p-3 border-b border-red-500/40 bg-red-950/40 transition-all"></div>
+            <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-b border-white/10 bg-slate-900/60 text-[10px] text-slate-400">
+              <div class="flex flex-wrap gap-3">
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-emerald-500/30 border border-emerald-500 inline-block"></span>Synced</span>
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-amber-500/30 border border-amber-500 inline-block"></span>Local</span>
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-red-500/30 border border-red-500 inline-block"></span>⚠️ Disparity</span>
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-slate-800 border border-slate-600 border-dashed inline-block"></span>Missing</span>
+              </div>
+              <span class="text-[10px] text-indigo-300/80 font-medium">✨ Click any cell to pop up the result entry form</span>
+            </div>
+            <div class="ledger-matrix-container p-2.5" id="ledgerMatrixGrid"></div>
+          </div>
+          <!-- Flat Chips Panel -->
+          <div id="panelChips" class="hidden">
+            <div class="flex flex-wrap gap-3 px-4 py-2 border-b border-white/10 bg-slate-900/60 text-[10px] text-slate-400">
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-emerald-500/30 border border-emerald-500 inline-block"></span>Synced</span>
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-amber-500/30 border border-amber-500 inline-block"></span>Local (IndexedDB)</span>
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-red-500/30 border border-red-500 inline-block"></span>Disparity Mismatch</span>
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-slate-800 border border-slate-600 inline-block"></span>Not Entered</span>
+            </div>
+            <div class="overflow-y-auto p-4" style="max-height: 70vh;">
+              <div id="ledgerGrid" class="flex flex-wrap gap-2"></div>
+            </div>
+          </div>
+          <!-- Pending list tab -->
+          <div id="panelPending" class="hidden overflow-y-auto" style="max-height: 70vh;">
+            <table class="w-full text-left">
+              <thead class="sticky top-0 bg-slate-900/95 border-b border-white/10">
+                <tr>
+                  <th class="px-4 py-2.5 text-xs text-slate-400 font-semibold w-16">Form #</th>
+                  <th class="px-4 py-2.5 text-xs text-slate-400 font-semibold w-24">Table</th>
+                  <th class="px-4 py-2.5 text-xs text-slate-400 font-semibold">Post</th>
+                  <th class="px-4 py-2.5 text-xs text-slate-400 font-semibold w-24 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="pendingList"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pop-Up Modal Container for Result Entry -->
+      <div id="resultsModalContainer"></div>
     </div>
   `;
 
@@ -829,25 +827,66 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
     }
   });
 
-  // ─── Form Input Grid Rendering ──────────────────────────────────────────────
+  // ─── Form Input Grid Modal Rendering ───────────────────────────────────────
   const renderFormGrid = (tableNum, postName, serial, roundNum) => {
-    const area = main.querySelector('#entryFormArea');
+    const modalArea = main.querySelector('#resultsModalContainer');
+    if (!modalArea) return;
+
     const candidates = finalList.filter(c => c.post === postName).sort((a, b) => String(a.candidateName || '').localeCompare(String(b.candidateName || '')));
 
+    const closeModal = () => {
+      modalArea.innerHTML = '';
+      document.removeEventListener('keydown', handleEsc);
+      const txt = main.querySelector('#txtSerial');
+      if (txt) {
+        txt.value = '';
+        txt.focus();
+      }
+    };
+
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') closeModal();
+    };
+    document.addEventListener('keydown', handleEsc);
+
     if (candidates.length === 0) {
-      area.innerHTML = `<div class="alert alert-warning">No candidates found for ${esc(postName)}.</div>`;
+      modalArea.innerHTML = `
+        <div id="modalBackdrop" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-modal-backdrop">
+          <div class="bg-slate-900 border border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl text-center space-y-4 animate-modal-card">
+            <div class="text-3xl">⚠️</div>
+            <h3 class="text-base font-bold text-white">No Candidates Found</h3>
+            <p class="text-xs text-slate-400">No candidates are registered for <strong>${esc(postName)}</strong>.</p>
+            <button id="btnCloseModalEmpty" class="btn btn-secondary w-full py-2 text-xs font-bold">Close</button>
+          </div>
+        </div>
+      `;
+      modalArea.querySelector('#btnCloseModalEmpty')?.addEventListener('click', closeModal);
+      modalArea.querySelector('#modalBackdrop')?.addEventListener('click', (e) => {
+        if (e.target.id === 'modalBackdrop') closeModal();
+      });
       return;
     }
 
     if (candidates.length === 1) {
-      area.innerHTML = `
-        <div class="glass p-8 rounded-2xl border border-emerald-500/30 text-center page-enter">
-          <div class="text-4xl mb-3">🏆</div>
-          <h3 class="text-lg font-bold text-emerald-400">Elected Unanimously (Unopposed)</h3>
-          <p class="text-sm text-slate-300 mt-1"><strong>${esc(candidates[0].candidateName)}</strong> (${esc(candidates[0].candidateClass || '')}) is returned unopposed for <strong>${esc(postName)}</strong>.</p>
-          <p class="text-xs text-slate-500 mt-2">No ballot voting or vote entry was conducted for this post.</p>
+      modalArea.innerHTML = `
+        <div id="modalBackdrop" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-modal-backdrop">
+          <div class="bg-slate-900 border border-emerald-500/40 rounded-2xl p-7 max-w-md w-full shadow-2xl text-center space-y-4 animate-modal-card">
+            <div class="text-4xl mb-1">🏆</div>
+            <h3 class="text-lg font-bold text-emerald-400">Elected Unopposed</h3>
+            <p class="text-sm text-slate-200">
+              <strong>${esc(candidates[0].candidateName)}</strong> (${esc(candidates[0].candidateClass || '')}) is returned unopposed for <strong>${esc(postName)}</strong>.
+            </p>
+            <p class="text-xs text-slate-400">No ballot voting or vote entry was conducted for this post.</p>
+            <div class="pt-2">
+              <button id="btnCloseModalUnopposed" class="btn btn-primary px-8 py-2 text-xs font-bold">Close</button>
+            </div>
+          </div>
         </div>
       `;
+      modalArea.querySelector('#btnCloseModalUnopposed')?.addEventListener('click', closeModal);
+      modalArea.querySelector('#modalBackdrop')?.addEventListener('click', (e) => {
+        if (e.target.id === 'modalBackdrop') closeModal();
+      });
       return;
     }
 
@@ -857,83 +896,104 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       return match ? match.Votes : '';
     };
 
-    area.innerHTML = `
-      <div class="glass rounded-xl overflow-hidden page-enter border border-white/10 shadow-2xl">
-        <div class="bg-indigo-500/10 p-4 border-b border-indigo-500/20 flex justify-between items-center">
-          <div>
-            <h4 class="font-bold text-indigo-300">Table ${tableNum} • Round ${roundNum || 'N/A'} • ${esc(postName)}</h4>
-            <p class="text-[10px] text-slate-400 mt-1">Form Serial: #${serial || 'Manual'}</p>
+    modalArea.innerHTML = `
+      <div id="modalBackdrop" class="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-modal-backdrop">
+        <div class="bg-slate-900 border border-indigo-500/30 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col my-auto max-h-[92vh] animate-modal-card border-white/10" style="box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(99, 102, 241, 0.2);">
+          
+          <!-- Modal Header -->
+          <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-4 border-b border-indigo-500/20 flex justify-between items-center shrink-0">
+            <div>
+              <h4 class="font-bold text-indigo-200 text-base sm:text-lg flex items-center gap-2">
+                <span>Table ${tableNum} • Round ${roundNum || 'N/A'} • ${esc(postName)}</span>
+              </h4>
+              <p class="text-xs text-slate-400 mt-0.5">Form Serial: #${serial || 'Manual'}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              ${serial ? `<div class="bg-indigo-500 text-white text-xs px-2.5 py-1 rounded-md font-mono font-bold shadow">FORM #${serial}</div>` : ''}
+              <button id="btnCloseModalX" type="button" class="text-slate-400 hover:text-white text-lg w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors" title="Close (Esc)">✕</button>
+            </div>
           </div>
-          ${serial ? `<div class="bg-indigo-500 text-white text-xs px-2.5 py-1 rounded-md font-mono font-bold shadow">FORM #${serial}</div>` : ''}
-        </div>
-        <div class="p-6 space-y-4">
-          ${candidates.map((c, i) => `
-            <div class="flex items-center justify-between bg-white/5 p-4 rounded-lg border border-white/5 hover:border-white/10 transition-colors">
-              <div class="flex items-center gap-4">
-                <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 font-bold">${i + 1}</div>
-                <div>
-                  <div class="font-bold text-white flex items-center gap-2">
-                    <span>${esc(c.candidateName)}</span>
-                    ${c.candidateSerial ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-xs">Sl. #${esc(c.candidateSerial)}</span>` : ''}
+
+          <!-- Modal Scrollable Body -->
+          <div class="p-4 sm:p-6 space-y-3.5 overflow-y-auto flex-1 custom-scrollbar">
+            ${candidates.map((c, i) => `
+              <div class="flex items-center justify-between bg-white/5 p-3 sm:p-4 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+                <div class="flex items-center gap-3 sm:gap-4">
+                  <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 font-bold shrink-0">${i + 1}</div>
+                  <div>
+                    <div class="font-bold text-white flex items-center gap-2 flex-wrap">
+                      <span>${esc(c.candidateName)}</span>
+                      ${c.candidateSerial ? `<span class="badge bg-indigo-500/20 text-indigo-300 font-mono text-xs">Sl. #${esc(c.candidateSerial)}</span>` : ''}
+                    </div>
+                    <div class="text-xs text-slate-400 mt-0.5">${esc(c.candidateClass || '')}</div>
                   </div>
-                  <div class="text-xs text-slate-400 mt-0.5">${esc(c.candidateClass || '')}</div>
+                </div>
+                <div class="w-28 sm:w-32 shrink-0">
+                  <input type="number" class="field text-center text-lg font-bold vote-input focus:ring-2 focus:ring-indigo-400" data-cid="${esc(c.id)}" data-cname="${esc(c.candidateName)}" placeholder="0" value="${getVotes(c.id)}" min="0" ${isLocked ? 'disabled' : ''}>
                 </div>
               </div>
-              <div class="w-32">
-                <input type="number" class="field text-center text-lg font-bold vote-input focus:ring-2 focus:ring-indigo-400" data-cid="${esc(c.id)}" data-cname="${esc(c.candidateName)}" placeholder="0" value="${getVotes(c.id)}" min="0" ${isLocked ? 'disabled' : ''}>
+            `).join('')}
+
+            <div class="border-t border-white/10 my-3"></div>
+
+            <div class="flex items-center justify-between bg-slate-800/50 p-3 sm:p-4 rounded-xl border border-slate-700">
+              <div class="font-bold text-slate-300">NOTA</div>
+              <div class="w-28 sm:w-32 shrink-0">
+                <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="NOTA" data-cname="NOTA" placeholder="0" value="${getVotes('NOTA')}" min="0" ${isLocked ? 'disabled' : ''}>
               </div>
             </div>
-          `).join('')}
 
-          <div class="border-t border-white/10 my-4"></div>
-
-          <div class="flex items-center justify-between bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-            <div><div class="font-bold text-slate-300">NOTA</div></div>
-            <div class="w-32">
-              <input type="number" class="field text-center text-lg font-bold vote-input" data-cid="NOTA" data-cname="NOTA" placeholder="0" value="${getVotes('NOTA')}" min="0" ${isLocked ? 'disabled' : ''}>
+            <div class="flex items-center justify-between bg-red-500/5 p-3 sm:p-4 rounded-xl border border-red-500/20">
+              <div class="font-bold text-red-400">INVALID</div>
+              <div class="w-28 sm:w-32 shrink-0">
+                <input type="number" class="field text-center text-lg font-bold border-red-500/30 vote-input" data-cid="INVALID" data-cname="Invalid" placeholder="0" value="${getVotes('INVALID')}" min="0" ${isLocked ? 'disabled' : ''}>
+              </div>
             </div>
-          </div>
 
-          <div class="flex items-center justify-between bg-red-500/5 p-4 rounded-lg border border-red-500/20">
-            <div><div class="font-bold text-red-400">INVALID</div></div>
-            <div class="w-32">
-              <input type="number" class="field text-center text-lg font-bold border-red-500/30 vote-input" data-cid="INVALID" data-cname="Invalid" placeholder="0" value="${getVotes('INVALID')}" min="0" ${isLocked ? 'disabled' : ''}>
+            <div class="flex items-center justify-between bg-indigo-500/20 p-3.5 sm:p-4 rounded-xl border border-indigo-500/40 mt-4">
+              <div class="font-black text-indigo-300 text-lg sm:text-xl tracking-wider">TOTAL BALLOTS TALLIED</div>
+              <div class="w-28 sm:w-32 text-center text-2xl font-black text-white font-mono" id="totalVotesDisplay">0</div>
             </div>
+
+            <div id="disparityAlertArea" class="transition-all"></div>
           </div>
 
-          <div class="flex items-center justify-between bg-indigo-500/20 p-4 rounded-lg border border-indigo-500/40 mt-4">
-            <div class="font-black text-indigo-300 text-xl tracking-wider">TOTAL BALLOTS TALLIED</div>
-            <div class="w-32 text-center text-2xl font-black text-white font-mono" id="totalVotesDisplay">0</div>
-          </div>
-          <div id="disparityAlertArea" class="transition-all"></div>
-        </div>
-        <div class="bg-slate-900/60 p-4 border-t border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <div class="flex items-center gap-3">
-            <button id="btnClearForm" type="button" class="btn btn-secondary text-rose-300 hover:text-white hover:bg-rose-600/80 border-rose-500/40 px-4 text-xs font-bold transition flex items-center gap-1.5 shadow" ${isLocked ? 'disabled' : ''} title="Clear all saved votes for this form and reset ledger status to Not Entered">
-              <span>🗑️</span> <span>Clear Form (Clean Start)</span>
+          <!-- Modal Footer -->
+          <div class="bg-slate-950/90 p-4 border-t border-white/10 flex flex-wrap justify-between items-center gap-3 shrink-0">
+            <div class="flex items-center gap-2">
+              <button id="btnClearForm" type="button" class="btn btn-secondary text-rose-300 hover:text-white hover:bg-rose-600/80 border-rose-500/40 px-3.5 py-2 text-xs font-bold transition flex items-center gap-1.5 shadow" ${isLocked ? 'disabled' : ''} title="Clear all saved votes for this form and reset ledger status to Not Entered">
+                <span>🗑️</span> <span>Clear Form</span>
+              </button>
+              <button id="btnCancelModal" type="button" class="btn btn-secondary px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white">
+                Cancel
+              </button>
+            </div>
+            <button id="btnSaveVotes" class="btn ${isLocked ? 'opacity-50 cursor-not-allowed bg-slate-700 text-slate-400' : 'btn-success'} px-8 py-2.5 font-bold shadow-lg" ${isLocked ? 'disabled' : ''}>
+              ${isLocked ? '🔒 Results Locked' : '💾 Save Form Results'}
             </button>
-            <p class="text-xs text-slate-400 italic hidden sm:block">
-              <span>💾 0ms IndexedDB local save · Automatic cloud sync</span>
-            </p>
           </div>
-          <button id="btnSaveVotes" class="btn ${isLocked ? 'opacity-50 cursor-not-allowed bg-slate-700 text-slate-400' : 'btn-success'} px-10 font-bold shadow-lg" ${isLocked ? 'disabled' : ''}>
-            ${isLocked ? '🔒 Results Locked (Save Blocked)' : '💾 Save Form Results'}
-          </button>
+
         </div>
       </div>
     `;
+
+    modalArea.querySelector('#btnCloseModalX')?.addEventListener('click', closeModal);
+    modalArea.querySelector('#btnCancelModal')?.addEventListener('click', closeModal);
+    modalArea.querySelector('#modalBackdrop')?.addEventListener('click', (e) => {
+      if (e.target.id === 'modalBackdrop') closeModal();
+    });
 
     let currentDisparityInfo = null;
 
     const updateGrandTotal = () => {
       let total = 0;
-      area.querySelectorAll('.vote-input').forEach(inp => {
+      modalArea.querySelectorAll('.vote-input').forEach(inp => {
         total += parseInt(inp.value, 10) || 0;
       });
-      const disp = area.querySelector('#totalVotesDisplay');
+      const disp = modalArea.querySelector('#totalVotesDisplay');
       if (disp) disp.textContent = total;
 
-      const alertArea = area.querySelector('#disparityAlertArea');
+      const alertArea = modalArea.querySelector('#disparityAlertArea');
       if (!alertArea) return;
 
       currentDisparityInfo = checkLiveFormDisparity(
@@ -981,14 +1041,24 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
         alertArea.innerHTML = '';
       }
     };
-    area.querySelectorAll('.vote-input').forEach(inp => {
+
+    modalArea.querySelectorAll('.vote-input').forEach(inp => {
       inp.addEventListener('input', updateGrandTotal);
       inp.addEventListener('wheel', () => inp.blur(), { passive: true });
     });
     updateGrandTotal();
 
+    // Auto-focus first input field for immediate typing
+    setTimeout(() => {
+      const firstInput = modalArea.querySelector('.vote-input');
+      if (firstInput && !isLocked) {
+        firstInput.focus();
+        firstInput.select();
+      }
+    }, 60);
+
     // ─── Clear Form (Clean Start) Handler ──────────────────────────────────────
-    area.querySelector('#btnClearForm')?.addEventListener('click', async () => {
+    modalArea.querySelector('#btnClearForm')?.addEventListener('click', async () => {
       if (isLocked) {
         showToast('Results are locked and frozen. No modifications allowed.', 'error');
         return;
@@ -1005,7 +1075,7 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
 
       if (!confirm(confirmMsg)) return;
 
-      const btnClear = area.querySelector('#btnClearForm');
+      const btnClear = modalArea.querySelector('#btnClearForm');
       setLoading(btnClear, true, 'Clearing...');
 
       try {
@@ -1033,10 +1103,10 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
         }
 
         // 4. Reset form inputs
-        area.querySelectorAll('.vote-input').forEach(inp => {
+        modalArea.querySelectorAll('.vote-input').forEach(inp => {
           inp.value = '';
         });
-        const disp = area.querySelector('#totalVotesDisplay');
+        const disp = modalArea.querySelector('#totalVotesDisplay');
         if (disp) disp.textContent = '0';
         updateGrandTotal();
 
@@ -1049,16 +1119,17 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
         console.error('Failed to clear form:', err);
         showToast(`Failed to clear form: ${err.message}`, 'error');
       } finally {
-        setLoading(btnClear, false, '🗑️ Clear Form (Clean Start)');
+        setLoading(btnClear, false, '🗑️ Clear Form');
       }
     });
 
-    area.querySelector('#btnSaveVotes').addEventListener('click', async () => {
+    // ─── Save Form Results Handler ─────────────────────────────────────────────
+    modalArea.querySelector('#btnSaveVotes')?.addEventListener('click', async () => {
       if (isLocked) {
         showToast('Results are locked and frozen. No further vote entries are allowed.', 'error');
         return;
       }
-      const inputs = area.querySelectorAll('.vote-input');
+      const inputs = modalArea.querySelectorAll('.vote-input');
       const resultsToSave = [];
 
       inputs.forEach(inp => {
@@ -1075,59 +1146,48 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
 
       if (resultsToSave.every(r => r.Votes === 0) && !confirm('All votes entered are 0. Are you sure you want to save?')) return;
 
-      // 1. Save directly into IndexedDB (0ms latency, persists on power outage or reload)
-      await saveFormResultsLocally(tableNum, postName, roundNum, serial, resultsToSave);
+      const btnSave = modalArea.querySelector('#btnSaveVotes');
+      setLoading(btnSave, true, 'Saving...');
 
-      // 2. Optimistically update in-memory results array
-      resultsToSave.forEach(ns => {
-        const idx = allResults.findIndex(r => String(r.TableNumber) === String(tableNum) && String(r.Post) === postName && r.CandidateId === ns.CandidateId);
-        if (idx >= 0) {
-          allResults[idx].Votes = ns.Votes;
-          allResults[idx].RoundNumber = ns.RoundNumber;
-          allResults[idx].FormSerial = ns.FormSerial;
+      try {
+        // 1. Save directly into IndexedDB (0ms latency, persists on power outage or reload)
+        await saveFormResultsLocally(tableNum, postName, roundNum, serial, resultsToSave);
+
+        // 2. Optimistically update in-memory results array
+        resultsToSave.forEach(ns => {
+          const idx = allResults.findIndex(r => String(r.TableNumber) === String(tableNum) && String(r.Post) === postName && r.CandidateId === ns.CandidateId);
+          if (idx >= 0) {
+            allResults[idx].Votes = ns.Votes;
+            allResults[idx].RoundNumber = ns.RoundNumber;
+            allResults[idx].FormSerial = ns.FormSerial;
+          } else {
+            allResults.push(ns);
+          }
+        });
+
+        if (currentDisparityInfo && currentDisparityInfo.isDisparity) {
+          showToast(`Form #${serial || 'Manual'} saved! Flagged in RED due to General Ballot disparity.`, 'warning');
         } else {
-          allResults.push(ns);
+          showToast(`Form #${serial || 'Manual'} saved to device (IndexedDB)!`, 'success');
         }
-      });
 
-      if (currentDisparityInfo && currentDisparityInfo.isDisparity) {
-        showToast(`Form #${serial || 'Manual'} saved! Flagged in RED due to General Ballot disparity.`, 'warning');
-      } else {
-        showToast(`Form #${serial || 'Manual'} saved to device (IndexedDB)!`, 'success');
+        // Close modal and return focus to serial entry
+        closeModal();
+
+        // 3. Update ledger immediately
+        renderLedger(main, allResults, allFormSerialsMeta);
+        updateConnectivityUI();
+
+        // 4. Process background sync queue if online
+        processQueue(main, allResults, allFormSerialsMeta);
+      } catch (saveErr) {
+        console.error('Failed to save votes:', saveErr);
+        showToast(`Failed to save votes: ${saveErr.message}`, 'error');
+      } finally {
+        setLoading(btnSave, false, '💾 Save Form Results');
       }
-      area.innerHTML = '';
-      txtSerial.value = '';
-      txtSerial.focus();
-
-      renderLedger(main, allResults, allFormSerialsMeta);
-      updateConnectivityUI();
-
-      // 3. Process background sync queue if online
-      processQueue(main, allResults, allFormSerialsMeta);
     });
   };
-
-  // Expand / Split ledger toggle handler
-  const btnExpand = main.querySelector('#btnToggleExpandLedger');
-  let isLedgerExpanded = false;
-  btnExpand?.addEventListener('click', () => {
-    isLedgerExpanded = !isLedgerExpanded;
-    const leftCol = main.querySelector('#entryColLeft');
-    const rightCol = main.querySelector('#ledgerColRight');
-    const icon = main.querySelector('#expandLedgerIcon');
-    const txt = main.querySelector('#expandLedgerText');
-    if (isLedgerExpanded) {
-      if (leftCol) leftCol.className = 'xl:col-span-4 space-y-4 transition-all duration-300';
-      if (rightCol) rightCol.className = 'xl:col-span-8 transition-all duration-300';
-      if (icon) icon.textContent = '🗗';
-      if (txt) txt.textContent = 'Split';
-    } else {
-      if (leftCol) leftCol.className = 'xl:col-span-7 space-y-4 transition-all duration-300';
-      if (rightCol) rightCol.className = 'xl:col-span-5 transition-all duration-300';
-      if (icon) icon.textContent = '⛶';
-      if (txt) txt.textContent = 'Expand';
-    }
-  });
 
   // Initial UI sync
   renderLedger(main, allResults, allFormSerialsMeta);
@@ -1408,7 +1468,6 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
         if (txt && s) {
           txt.value = s;
           if (btnLoad) btnLoad.click();
-          main.querySelector('#entryFormArea')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       });
     });
@@ -1474,7 +1533,6 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
         if (txtSerial && serial) {
           txtSerial.value = serial;
           if (btnLoad) btnLoad.click();
-          main.querySelector('#entryFormArea')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       });
     });
@@ -1514,7 +1572,6 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
           if (txtSerial && serial) {
             txtSerial.value = serial;
             if (btnLoad) btnLoad.click();
-            main.querySelector('#entryFormArea')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
         });
       });

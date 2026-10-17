@@ -489,8 +489,9 @@ select.field option {
 
 /* Ledger Table x Round Grid Styles */
 .ledger-matrix-container {
-  max-height: 58vh;
-  overflow: auto;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
   position: relative;
   border-radius: 0.5rem;
   scrollbar-width: thin;
@@ -507,14 +508,15 @@ select.field option {
   z-index: 20;
   background-color: rgba(15, 23, 42, 0.98);
   backdrop-filter: blur(8px);
-  padding: 0.4rem 0.25rem;
+  padding: 0.45rem 0.35rem;
   font-weight: 700;
   text-align: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   white-space: nowrap;
+  min-width: 82px;
 }
 .ledger-matrix-table td {
-  padding: 0.2rem 0.15rem;
+  padding: 0.25rem 0.2rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   vertical-align: middle;
@@ -523,18 +525,20 @@ select.field option {
   position: sticky;
   left: 0;
   z-index: 10;
-  background-color: rgba(15, 23, 42, 0.96);
+  background-color: rgba(15, 23, 42, 0.98);
   backdrop-filter: blur(8px);
   border-right: 1px solid rgba(255, 255, 255, 0.2) !important;
+  min-width: 95px;
+  width: 95px;
 }
 .ledger-matrix-table th.ledger-sticky-col {
   z-index: 30;
 }
 .ledger-matrix-cell {
   width: 100%;
-  min-width: 65px;
-  min-height: 38px;
-  padding: 3px 4px;
+  min-width: 78px;
+  min-height: 40px;
+  padding: 3px 5px;
   border-radius: 6px;
   display: flex;
   flex-direction: column;
@@ -544,13 +548,29 @@ select.field option {
   transition: all 0.15s ease;
   cursor: pointer;
   user-select: none;
-  font-size: 0.7rem;
-  line-height: 1.1;
+  font-size: 0.72rem;
+  line-height: 1.15;
   text-align: center;
 }
 .ledger-matrix-cell:hover {
   transform: translateY(-1px);
   filter: brightness(1.15);
+}
+
+/* Modal Animations */
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modalScaleUp {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-modal-backdrop {
+  animation: modalFadeIn 0.18s ease-out forwards;
+}
+.animate-modal-card {
+  animation: modalScaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .disparity-pulse {
   animation: pulseSubtleRed 2s infinite ease-in-out;
