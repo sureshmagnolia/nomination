@@ -477,6 +477,85 @@ select.field option {
   transition: all 0.15s ease;
 }
 
+/* Ledger Table x Round Grid Styles */
+.ledger-matrix-container {
+  max-height: 58vh;
+  overflow: auto;
+  position: relative;
+  border-radius: 0.5rem;
+  scrollbar-width: thin;
+}
+.ledger-matrix-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.72rem;
+}
+.ledger-matrix-table th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background-color: rgba(15, 23, 42, 0.98);
+  backdrop-filter: blur(8px);
+  padding: 0.4rem 0.25rem;
+  font-weight: 700;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  white-space: nowrap;
+}
+.ledger-matrix-table td {
+  padding: 0.2rem 0.15rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: middle;
+}
+.ledger-sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  background-color: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(8px);
+  border-right: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+.ledger-matrix-table th.ledger-sticky-col {
+  z-index: 30;
+}
+.ledger-matrix-cell {
+  width: 100%;
+  min-width: 65px;
+  min-height: 38px;
+  padding: 3px 4px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.7rem;
+  line-height: 1.1;
+  text-align: center;
+}
+.ledger-matrix-cell:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.15);
+}
+.disparity-pulse {
+  animation: pulseSubtleRed 2s infinite ease-in-out;
+}
+@keyframes pulseSubtleRed {
+  0%, 100% {
+    border-color: rgba(239, 68, 68, 0.8);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    border-color: rgba(239, 68, 68, 1);
+    box-shadow: 0 0 10px 2px rgba(239, 68, 68, 0.5);
+  }
+}
+
 html:not([data-theme="dark"]) .matrix-post-pill:not([class*="bg-amber"]) {
   background-color: #ecfdf5 !important;
   color: #065f46 !important;

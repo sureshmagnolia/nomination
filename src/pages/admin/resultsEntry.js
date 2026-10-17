@@ -6,7 +6,8 @@
  */
 import { api } from '../../api.js';
 import { renderAdminLayout, getAdminPassword } from './layout.js';
-import { esc, showToast, setLoading, sortPosts } from '../../utils.js';
+import { esc, showToast, setLoading, sortPosts, isAssocPost, isYearRepPost } from '../../utils.js';
+import { isUuc, formatMatrixPostName } from './counting.js';
 import {
   saveCountingMeta,
   getCountingMeta,
@@ -34,15 +35,17 @@ let cachedFinalList = [];
 let cachedMatrix = null;
 let isOfflineMode = false;
 
-window.addEventListener('beforeunload', async (e) => {
-  try {
-    const pending = await getPendingSyncCount();
-    if (pending > 0) {
-      e.preventDefault();
-      e.returnValue = `You have ${pending} unsynced form(s) saved on this device. They will sync automatically once internet is restored.`;
-    }
-  } catch (_) {}
-});
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', async (e) => {
+    try {
+      const pending = await getPendingSyncCount();
+      if (pending > 0) {
+        e.preventDefault();
+        e.returnValue = `You have ${pending} unsynced form(s) saved on this device. They will sync automatically once internet is restored.`;
+      }
+    } catch (_) {}
+  });
+}
 
 /**
  * Re-applies any pending local form edits from IndexedDB queue onto the in-memory results
@@ -70,6 +73,289 @@ async function mergeQueueIntoResults(allResults) {
   } catch (err) {
     console.warn('mergeQueueIntoResults error:', err);
   }
+}
+
+/**
+ * Helper to identify single-vote General posts (Chairperson, Vice Chair, Gen Sec, etc.)
+ * Excludes Association posts (independent departmental rolls), Year Reps (year rolls), and UUC (dual-vote).
+ */
+export function isSingleVoteGeneral(postName) {
+  if (!postName) return false;
+  const p = typeof postName === 'string' ? postName : String(postName.post || postName.name || '');
+  return !isAssocPost(p) && !isYearRepPost(p) && !isUuc(p);
+}
+
+/**
+ * Calculates total tallied votes (candidates + NOTA + INVALID) for a table + post
+ */
+export function getFormTalliedVotes(allResults, tableNum, postName) {
+  if (!Array.isArray(allResults) || !allResults.length) return null;
+  const pTarget = String(postName || '').trim().toLowerCase();
+  const tTarget = String(tableNum);
+  const matches = allResults.filter(r => 
+    String(r.TableNumber) === tTarget && 
+    String(r.Post || '').trim().toLowerCase() === pTarget
+  );
+  if (!matches.length) return null;
+  return matches.reduce((sum, r) => sum + (parseInt(r.Votes, 10) || 0), 0);
+}
+
+/**
+ * Comprehensive cross-round disparity analysis for all tables.
+ * Statutory rule:
+ * - Single-vote General posts at Table T must have equal ballot totals (B).
+ * - Dual-vote UUC at Table T must have exactly 2 * B votes.
+ */
+export function analyzeTableDisparities(allResults, matrix, formSerials, booths) {
+  const pName = p => (typeof p === 'string' ? p : String(p?.post || p?.name || '')).trim();
+  const formDisparities = {}; // serial -> { tableNum, serial, roundNum, postName, actual, expected, diff, message }
+  const tableSummaries = {};  // tableNum -> { hasDisparity, baselineBallots, generalEntries, uucEntry, messages }
+  let totalDisparitiesCount = 0;
+
+  if (!matrix || !Array.isArray(matrix) || !booths || !Array.isArray(booths)) {
+    return { formDisparities, tableSummaries, totalDisparitiesCount: 0 };
+  }
+
+  booths.forEach((b, t) => {
+    const tableNum = String(b.boothNumber || (t + 1));
+    const tableRow = matrix[t] || [];
+    const generalEntries = [];
+    let uucEntry = null;
+
+    tableRow.forEach((postObj, r) => {
+      if (!postObj) return;
+      const post = pName(postObj);
+      const serial = formSerials ? formSerials[`${t}-${r}`] : null;
+      if (!serial) return;
+
+      const totalVotes = getFormTalliedVotes(allResults, tableNum, post);
+      if (totalVotes === null) return; // not entered yet
+
+      if (isSingleVoteGeneral(post)) {
+        generalEntries.push({
+          serial: String(serial),
+          round: r + 1,
+          post,
+          ballots: totalVotes
+        });
+      } else if (isUuc(post)) {
+        uucEntry = {
+          serial: String(serial),
+          round: r + 1,
+          post,
+          votes: totalVotes,
+          equivalentBallots: totalVotes / 2
+        };
+      }
+    });
+
+    let hasDisparity = false;
+    const tableMessages = [];
+
+    // 1. Cross-compare single-vote general posts among each other
+    if (generalEntries.length > 1) {
+      const freq = {};
+      generalEntries.forEach(g => { freq[g.ballots] = (freq[g.ballots] || 0) + 1; });
+      let consensusBallots = generalEntries[0].ballots;
+      let maxCount = 0;
+      Object.entries(freq).forEach(([val, count]) => {
+        if (count > maxCount) {
+          maxCount = count;
+          consensusBallots = Number(val);
+        }
+      });
+
+      if (uucEntry && Number.isInteger(uucEntry.equivalentBallots)) {
+        consensusBallots = uucEntry.equivalentBallots;
+      }
+
+      generalEntries.forEach(g => {
+        if (g.ballots !== consensusBallots) {
+          hasDisparity = true;
+          const ref = generalEntries.find(o => o.serial !== g.serial && o.ballots === consensusBallots) || generalEntries.find(o => o.serial !== g.serial);
+          const diff = g.ballots - (ref ? ref.ballots : consensusBallots);
+          const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+          const msg = `Disparity in Table ${tableNum}: Round ${g.round} (${g.post}) recorded ${g.ballots} ballots, but Round ${ref ? ref.round : '?' } (${ref ? ref.post : 'General'}) recorded ${ref ? ref.ballots : consensusBallots} ballots (Mismatch: ${diffStr}).`;
+
+          formDisparities[g.serial] = {
+            tableNum,
+            serial: g.serial,
+            roundNum: g.round,
+            postName: g.post,
+            actual: g.ballots,
+            expected: ref ? ref.ballots : consensusBallots,
+            diff,
+            message: msg
+          };
+          tableMessages.push(msg);
+          totalDisparitiesCount++;
+        }
+      });
+    }
+
+    // 2. Cross-compare UUC vs General posts (UUC must equal 2 * General ballots)
+    if (uucEntry && generalEntries.length > 0) {
+      generalEntries.forEach(g => {
+        const expectedUuc = g.ballots * 2;
+        if (uucEntry.votes !== expectedUuc) {
+          hasDisparity = true;
+          const diff = uucEntry.votes - expectedUuc;
+          const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+          const uucMsg = `UUC Disparity in Table ${tableNum}: Round ${uucEntry.round} (UUC) has ${uucEntry.votes} votes (${uucEntry.equivalentBallots} ballots), which is NOT double the ${g.ballots} General ballots in Round ${g.round} (${g.post}). Expected UUC: ${expectedUuc} votes (Mismatch: ${diffStr} votes).`;
+
+          if (!formDisparities[uucEntry.serial]) {
+            formDisparities[uucEntry.serial] = {
+              tableNum,
+              serial: uucEntry.serial,
+              roundNum: uucEntry.round,
+              postName: uucEntry.post,
+              actual: uucEntry.votes,
+              expected: expectedUuc,
+              diff,
+              message: uucMsg
+            };
+            totalDisparitiesCount++;
+          }
+          if (!tableMessages.includes(uucMsg)) {
+            tableMessages.push(uucMsg);
+          }
+        }
+      });
+    }
+
+    tableSummaries[tableNum] = {
+      hasDisparity,
+      generalEntries,
+      uucEntry,
+      baselineBallots: generalEntries.length ? generalEntries[0].ballots : (uucEntry ? uucEntry.equivalentBallots : null),
+      messages: tableMessages
+    };
+  });
+
+  return { formDisparities, tableSummaries, totalDisparitiesCount };
+}
+
+/**
+ * Real-time evaluator called as operator types vote numbers in a form.
+ */
+export function checkLiveFormDisparity(tableNum, postName, currentTotal, allResults, matrix, formSerials, booths, currentSerial, currentRound) {
+  if (currentTotal === null || currentTotal === undefined || isNaN(currentTotal) || currentTotal <= 0) return null;
+  const pName = p => (typeof p === 'string' ? p : String(p?.post || p?.name || '')).trim();
+  const curPostStr = pName(postName);
+  const curTableStr = String(tableNum);
+
+  const isGen = isSingleVoteGeneral(curPostStr);
+  const isUucPost = isUuc(curPostStr);
+
+  if (!isGen && !isUucPost) return null; // Association and Year Rep posts are exempt
+
+  const otherGeneralEntries = [];
+  let existingUucEntry = null;
+
+  if (matrix && booths) {
+    const tIdx = booths.findIndex(b => String(b.boothNumber) === curTableStr);
+    if (tIdx >= 0 && matrix[tIdx]) {
+      matrix[tIdx].forEach((pObj, r) => {
+        if (!pObj) return;
+        const p = pName(pObj);
+        const s = formSerials ? formSerials[`${tIdx}-${r}`] : null;
+        if (!s || String(s) === String(currentSerial) || (p.toLowerCase() === curPostStr.toLowerCase() && r + 1 === Number(currentRound))) {
+          return; // Skip current form being edited
+        }
+
+        const sum = getFormTalliedVotes(allResults, curTableStr, p);
+        if (sum === null) return;
+
+        if (isSingleVoteGeneral(p)) {
+          otherGeneralEntries.push({ post: p, round: r + 1, serial: String(s), ballots: sum });
+        } else if (isUuc(p)) {
+          existingUucEntry = { post: p, round: r + 1, serial: String(s), votes: sum, equivalentBallots: sum / 2 };
+        }
+      });
+    }
+  }
+
+  // 1. Single-Vote General Post live validation
+  if (isGen) {
+    if (otherGeneralEntries.length > 0) {
+      const mismatchRef = otherGeneralEntries.find(o => o.ballots !== currentTotal);
+      if (mismatchRef) {
+        const diff = currentTotal - mismatchRef.ballots;
+        const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+        return {
+          isDisparity: true,
+          postType: 'general',
+          currentTotal,
+          expectedTotal: mismatchRef.ballots,
+          diff,
+          diffStr,
+          title: `⚠️ General Ballot Total Disparity Detected for Table ${curTableStr}!`,
+          message: `Current Form Total is <strong>${currentTotal} ballots</strong>, but <strong>Round ${mismatchRef.round} (${esc(mismatchRef.post)}, Form #${mismatchRef.serial})</strong> recorded <strong class="text-emerald-300 font-mono">${mismatchRef.ballots} ballots</strong> (Mismatch: <strong>${diffStr} ballots</strong>).`,
+          subtext: `All General posts at Table ${curTableStr} are counted from the same physical General Ballot papers and must have identical total counts. You can still save if this faithfully reflects the physical counting sheet, but it will be flagged in RED across the ledger.`
+        };
+      }
+    }
+
+    if (existingUucEntry) {
+      const expectedBallots = existingUucEntry.equivalentBallots;
+      if (currentTotal !== expectedBallots) {
+        const diff = currentTotal - expectedBallots;
+        const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+        return {
+          isDisparity: true,
+          postType: 'general_vs_uuc',
+          currentTotal,
+          expectedTotal: expectedBallots,
+          diff,
+          diffStr,
+          title: `⚠️ General vs UUC Disparity Detected for Table ${curTableStr}!`,
+          message: `Current General Total is <strong>${currentTotal} ballots</strong>, but <strong>Round ${existingUucEntry.round} (UUC, Form #${existingUucEntry.serial})</strong> recorded <strong>${existingUucEntry.votes} votes</strong> (${expectedBallots} ballots × 2 votes). Expected: <strong class="text-emerald-300 font-mono">${expectedBallots} ballots</strong> (Mismatch: <strong>${diffStr} ballots</strong>).`,
+          subtext: `UUC ballots have double the total votes of General ballots. You can still save this form, but it will be flagged in RED.`
+        };
+      }
+    }
+
+    if (otherGeneralEntries.length > 0) {
+      return {
+        isDisparity: false,
+        postType: 'general',
+        currentTotal,
+        message: `🟢 Consistent: Exactly matches ${otherGeneralEntries[0].ballots} ballots in Round ${otherGeneralEntries[0].round} (${esc(otherGeneralEntries[0].post)})`
+      };
+    }
+  }
+
+  // 2. UUC live validation (must be double General total)
+  if (isUucPost) {
+    if (otherGeneralEntries.length > 0) {
+      const refGen = otherGeneralEntries[0];
+      const expectedUuc = refGen.ballots * 2;
+      if (currentTotal !== expectedUuc) {
+        const diff = currentTotal - expectedUuc;
+        const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+        return {
+          isDisparity: true,
+          postType: 'uuc',
+          currentTotal,
+          expectedTotal: expectedUuc,
+          diff,
+          diffStr,
+          title: `⚠️ UUC Dual-Vote Disparity Detected for Table ${curTableStr}!`,
+          message: `Current UUC Total is <strong>${currentTotal} votes</strong> (${currentTotal / 2} ballots), but <strong>Round ${refGen.round} (${esc(refGen.post)}, Form #${refGen.serial})</strong> recorded <strong>${refGen.ballots} ballots</strong>. Since UUC has 2 votes per ballot, expected UUC total is <strong class="text-emerald-300 font-mono">${expectedUuc} votes</strong> (${refGen.ballots} × 2). Disparity: <strong>${diffStr} votes</strong>.`,
+          subtext: `UUC should have double the total of that table as it has 2 votes per ballot. You can still save if this reflects the physical counting sheet, but it will be flagged in RED.`
+        };
+      } else {
+        return {
+          isDisparity: false,
+          postType: 'uuc',
+          currentTotal,
+          message: `🟢 Consistent: Exactly double (${currentTotal} votes = 2 × ${refGen.ballots} ballots) of Round ${refGen.round} (${esc(refGen.post)})`
+        };
+      }
+    }
+  }
+
+  return null;
 }
 
 export async function renderAdminResultsEntry(container) {
@@ -246,10 +532,10 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
         </div>
       ` : ''}
 
-      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <div id="resultsGridContainer" class="grid grid-cols-1 xl:grid-cols-12 gap-6 transition-all duration-300">
 
         <!-- LEFT: Entry Panel -->
-        <div class="xl:col-span-7 space-y-4">
+        <div id="entryColLeft" class="xl:col-span-7 space-y-4 transition-all duration-300">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="glass rounded-xl p-5 border border-indigo-500/20">
               <label class="block text-sm text-slate-300 mb-1 font-bold">Form Serial Number</label>
@@ -279,27 +565,55 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
         </div>
 
         <!-- RIGHT: Entered Forms Ledger -->
-        <div class="xl:col-span-5">
+        <div id="ledgerColRight" class="xl:col-span-5 transition-all duration-300">
           <div class="glass rounded-xl overflow-hidden border border-white/10 xl:sticky xl:top-6 shadow-2xl">
             <!-- Header -->
-            <div class="bg-gradient-to-r from-slate-900/90 to-indigo-950/80 p-4 border-b border-white/10 flex items-center justify-between">
+            <div class="bg-gradient-to-r from-slate-900/90 to-indigo-950/80 p-3.5 sm:p-4 border-b border-white/10 flex items-center justify-between flex-wrap gap-2">
               <div>
-                <h4 class="font-bold text-white text-sm">Counting Forms Ledger</h4>
-                <div id="ledgerSummary" class="flex flex-wrap gap-3 text-[11px] text-slate-400 mt-0.5"></div>
+                <h4 class="font-bold text-white text-sm flex items-center gap-2">
+                  <span>Counting Forms Ledger</span>
+                </h4>
+                <div id="ledgerSummary" class="flex flex-wrap gap-2.5 text-[11px] text-slate-400 mt-1"></div>
               </div>
-              <span id="ledgerCount" class="text-xs font-bold bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded border border-indigo-500/30 whitespace-nowrap">0/0 done</span>
+              <div class="flex items-center gap-2">
+                <button id="btnToggleExpandLedger" type="button" class="btn btn-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10 text-[11px] py-1 px-2.5 rounded-lg flex items-center gap-1 shadow-sm transition" title="Toggle wide matrix view across full page">
+                  <span id="expandLedgerIcon">⛶</span> <span id="expandLedgerText">Expand</span>
+                </button>
+                <span id="ledgerCount" class="text-xs font-bold bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded border border-indigo-500/30 whitespace-nowrap">0/0 done</span>
+              </div>
             </div>
             <!-- Tabs -->
             <div class="flex border-b border-white/10 bg-slate-900/50">
-              <button id="tabChips" class="ledger-tab active-tab px-4 py-2 text-xs font-semibold text-white border-b-2 border-indigo-400">All Forms</button>
-              <button id="tabPending" class="ledger-tab px-4 py-2 text-xs font-semibold text-slate-400 border-b-2 border-transparent hover:text-white">⏳ Pending <span id="pendingTabCount" class="ml-1 bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full text-[10px]">0</span></button>
+              <button id="tabMatrix" class="ledger-tab active-tab px-3.5 py-2 text-xs font-bold text-white border-b-2 border-indigo-400 flex items-center gap-1.5">
+                <span>▦</span> <span>Table × Round Matrix</span>
+              </button>
+              <button id="tabChips" class="ledger-tab px-3 py-2 text-xs font-semibold text-slate-400 border-b-2 border-transparent hover:text-white flex items-center gap-1.5">
+                <span>⠿</span> <span>Flat Chips</span>
+              </button>
+              <button id="tabPending" class="ledger-tab px-3 py-2 text-xs font-semibold text-slate-400 border-b-2 border-transparent hover:text-white flex items-center gap-1.5">
+                <span>⏳</span> <span>Missing</span> <span id="pendingTabCount" class="ml-1 bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full text-[10px]">0</span>
+              </button>
             </div>
-            <!-- Legend (chips tab) -->
-            <div id="panelChips">
+            <!-- Matrix View Panel (default) -->
+            <div id="panelMatrix">
+              <div id="disparitySummaryBanner" class="hidden p-3 border-b border-red-500/40 bg-red-950/40 transition-all"></div>
+              <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 border-b border-white/10 bg-slate-900/60 text-[10px] text-slate-400">
+                <div class="flex flex-wrap gap-2.5">
+                  <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500/30 border border-emerald-500 inline-block"></span>Synced</span>
+                  <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-amber-500/30 border border-amber-500 inline-block"></span>Local</span>
+                  <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-red-500/30 border border-red-500 inline-block"></span>⚠️ Disparity</span>
+                  <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-slate-800 border border-slate-600 border-dashed inline-block"></span>Missing</span>
+                </div>
+                <span class="text-[9.5px] text-slate-400 italic">Click cell to load form</span>
+              </div>
+              <div class="ledger-matrix-container p-2" id="ledgerMatrixGrid"></div>
+            </div>
+            <!-- Flat Chips Panel -->
+            <div id="panelChips" class="hidden">
               <div class="flex flex-wrap gap-2.5 px-4 py-2 border-b border-white/10 bg-slate-900/60 text-[10px] text-slate-400">
                 <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500/30 border border-emerald-500 inline-block"></span>Synced</span>
                 <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-amber-500/30 border border-amber-500 inline-block"></span>Local (IndexedDB)</span>
-                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-sky-500/30 border border-sky-500 inline-block"></span>Syncing</span>
+                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-red-500/30 border border-red-500 inline-block"></span>Disparity Mismatch</span>
                 <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-slate-800 border border-slate-600 inline-block"></span>Not Entered</span>
               </div>
               <div class="overflow-y-auto p-3" style="max-height: 52vh;">
@@ -314,6 +628,7 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
                     <th class="px-3 py-2 text-[11px] text-slate-400 font-semibold w-14">Form #</th>
                     <th class="px-3 py-2 text-[11px] text-slate-400 font-semibold w-16">Table</th>
                     <th class="px-3 py-2 text-[11px] text-slate-400 font-semibold">Post</th>
+                    <th class="px-3 py-2 text-[11px] text-slate-400 font-semibold w-16 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody id="pendingList"></tbody>
@@ -582,6 +897,7 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
             <div class="font-black text-indigo-300 text-xl tracking-wider">TOTAL BALLOTS TALLIED</div>
             <div class="w-32 text-center text-2xl font-black text-white font-mono" id="totalVotesDisplay">0</div>
           </div>
+          <div id="disparityAlertArea" class="transition-all"></div>
         </div>
         <div class="bg-slate-900/60 p-4 border-t border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div class="flex items-center gap-3">
@@ -599,6 +915,8 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       </div>
     `;
 
+    let currentDisparityInfo = null;
+
     const updateGrandTotal = () => {
       let total = 0;
       area.querySelectorAll('.vote-input').forEach(inp => {
@@ -606,6 +924,54 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       });
       const disp = area.querySelector('#totalVotesDisplay');
       if (disp) disp.textContent = total;
+
+      const alertArea = area.querySelector('#disparityAlertArea');
+      if (!alertArea) return;
+
+      currentDisparityInfo = checkLiveFormDisparity(
+        tableNum,
+        postName,
+        total,
+        allResults,
+        savedMatrix?.matrix,
+        savedMatrix?.formSerials,
+        booths,
+        serial,
+        roundNum
+      );
+
+      if (currentDisparityInfo && currentDisparityInfo.isDisparity) {
+        alertArea.innerHTML = `
+          <div class="mt-3 p-4 bg-red-950/70 border-2 border-red-500 rounded-xl text-xs space-y-2 disparity-pulse shadow-xl text-left">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-2 font-bold text-red-300 text-sm">
+                <span class="text-lg">⚠️</span>
+                <span>${esc(currentDisparityInfo.title)}</span>
+              </div>
+              <span class="badge bg-red-500/30 text-red-200 border border-red-500 font-mono text-[11px] font-bold px-2.5 py-0.5 rounded shadow-sm">
+                Mismatch: ${currentDisparityInfo.diffStr || currentDisparityInfo.diff}
+              </span>
+            </div>
+            <div class="text-slate-100 text-xs leading-relaxed bg-black/30 p-2.5 rounded-lg border border-red-500/30">
+              ${currentDisparityInfo.message}
+            </div>
+            <div class="text-[11px] text-red-300/90 leading-tight">
+              ℹ️ <strong>Statutory Note:</strong> ${currentDisparityInfo.subtext}
+            </div>
+          </div>
+        `;
+      } else if (currentDisparityInfo && !currentDisparityInfo.isDisparity && total > 0) {
+        alertArea.innerHTML = `
+          <div class="mt-3 p-2.5 bg-emerald-950/40 border border-emerald-500/40 rounded-xl text-xs text-emerald-300 flex items-center justify-between shadow-sm">
+            <span class="flex items-center gap-2 font-medium">
+              <span>✅</span> <span>${currentDisparityInfo.message}</span>
+            </span>
+            <span class="text-[10px] bg-emerald-500/20 text-emerald-200 px-2 py-0.5 rounded border border-emerald-500/30 font-mono font-bold">Consistent</span>
+          </div>
+        `;
+      } else {
+        alertArea.innerHTML = '';
+      }
     };
     area.querySelectorAll('.vote-input').forEach(inp => {
       inp.addEventListener('input', updateGrandTotal);
@@ -663,6 +1029,7 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
         });
         const disp = area.querySelector('#totalVotesDisplay');
         if (disp) disp.textContent = '0';
+        updateGrandTotal();
 
         showToast(`Form #${serial || 'Manual'} has been completely cleared! Ledger reset to Not Entered.`, 'success');
 
@@ -714,7 +1081,11 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
         }
       });
 
-      showToast(`Form #${serial || 'Manual'} saved to device (IndexedDB)!`, 'success');
+      if (currentDisparityInfo && currentDisparityInfo.isDisparity) {
+        showToast(`Form #${serial || 'Manual'} saved! Flagged in RED due to General Ballot disparity.`, 'warning');
+      } else {
+        showToast(`Form #${serial || 'Manual'} saved to device (IndexedDB)!`, 'success');
+      }
       area.innerHTML = '';
       txtSerial.value = '';
       txtSerial.focus();
@@ -726,6 +1097,28 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       processQueue(main, allResults, allFormSerialsMeta);
     });
   };
+
+  // Expand / Split ledger toggle handler
+  const btnExpand = main.querySelector('#btnToggleExpandLedger');
+  let isLedgerExpanded = false;
+  btnExpand?.addEventListener('click', () => {
+    isLedgerExpanded = !isLedgerExpanded;
+    const leftCol = main.querySelector('#entryColLeft');
+    const rightCol = main.querySelector('#ledgerColRight');
+    const icon = main.querySelector('#expandLedgerIcon');
+    const txt = main.querySelector('#expandLedgerText');
+    if (isLedgerExpanded) {
+      if (leftCol) leftCol.className = 'xl:col-span-4 space-y-4 transition-all duration-300';
+      if (rightCol) rightCol.className = 'xl:col-span-8 transition-all duration-300';
+      if (icon) icon.textContent = '🗗';
+      if (txt) txt.textContent = 'Split';
+    } else {
+      if (leftCol) leftCol.className = 'xl:col-span-7 space-y-4 transition-all duration-300';
+      if (rightCol) rightCol.className = 'xl:col-span-5 transition-all duration-300';
+      if (icon) icon.textContent = '⛶';
+      if (txt) txt.textContent = 'Expand';
+    }
+  });
 
   // Initial UI sync
   renderLedger(main, allResults, allFormSerialsMeta);
@@ -798,15 +1191,17 @@ async function processQueue(main, allResults, allFormSerialsMeta, manualClick = 
  * Renders the Right-hand Forms Ledger
  */
 async function renderLedger(main, allResults, allFormSerialsMeta) {
-  const grid = main.querySelector('#ledgerGrid');
   const countEl = main.querySelector('#ledgerCount');
   const summaryEl = main.querySelector('#ledgerSummary');
-  if (!grid) return;
+  const matrixGridEl = main.querySelector('#ledgerMatrixGrid');
+  const chipsGridEl = main.querySelector('#ledgerGrid');
+  const disparityBanner = main.querySelector('#disparitySummaryBanner');
+  if (!matrixGridEl && !chipsGridEl) return;
 
   const queue = await getSyncQueue();
   const statusMap = {};
 
-  // 1. Pre-populate all known form serials as 'pending'
+  // 1. Pre-populate all known form serials as 'not-entered'
   Object.keys(allFormSerialsMeta).forEach(serial => {
     statusMap[String(serial)] = 'not-entered';
   });
@@ -825,6 +1220,19 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
     }
   });
 
+  // 4. Run full cross-round ballot disparity analysis
+  const matrixData = cachedMatrix?.matrix || [];
+  const formSerialsMap = cachedMatrix?.formSerials || {};
+  const boothsList = cachedBooths || [];
+  const totalRounds = cachedMatrix?.totalRounds || (matrixData[0] ? matrixData[0].length : 0);
+
+  const { formDisparities, tableSummaries, totalDisparitiesCount } = analyzeTableDisparities(
+    allResults,
+    matrixData,
+    formSerialsMap,
+    boothsList
+  );
+
   const allSerials = Object.keys(allFormSerialsMeta).map(Number).sort((a, b) => a - b);
   const total = allSerials.length;
   let doneSynced = 0, doneLocal = 0, failed = 0, pendingCount = 0;
@@ -840,77 +1248,230 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
 
   const completedTotal = doneSynced + doneLocal;
   if (countEl) countEl.textContent = `${completedTotal}/${total} done`;
+
   if (summaryEl) {
     summaryEl.innerHTML = `
       <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>${doneSynced} Synced</span>
-      ${doneLocal > 0 ? `<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>${doneLocal} Local (IndexedDB)</span>` : ''}
+      ${doneLocal > 0 ? `<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>${doneLocal} Local</span>` : ''}
+      ${totalDisparitiesCount > 0 ? `<span class="flex items-center gap-1 text-red-400 font-bold"><span class="w-2 h-2 rounded-full bg-red-500 inline-block animate-pulse"></span>${totalDisparitiesCount} Disparity</span>` : ''}
       <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-slate-500 inline-block"></span>${pendingCount} Pending</span>
       ${failed > 0 ? `<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>${failed} Failed</span>` : ''}
     `;
   }
 
+  // 5. Update Disparity Banner
+  if (disparityBanner) {
+    if (totalDisparitiesCount > 0) {
+      disparityBanner.className = 'p-3 border-b border-red-500/50 bg-red-950/60 flex items-center justify-between gap-3 text-xs shadow-inner';
+      disparityBanner.innerHTML = `
+        <div class="flex items-center gap-2 font-bold text-red-200">
+          <span class="text-base animate-pulse">⚠️</span>
+          <span><strong>${totalDisparitiesCount} General Ballot Disparity Alert(s):</strong> Inconsistent ballot counts detected across rounds.</span>
+        </div>
+        <span class="text-[10px] bg-red-500/30 text-red-200 border border-red-500/50 px-2.5 py-0.5 rounded font-mono font-bold whitespace-nowrap">
+          Flagged in RED below
+        </span>
+      `;
+    } else {
+      disparityBanner.className = 'hidden';
+      disparityBanner.innerHTML = '';
+    }
+  }
+
   const currentSerial = String(main.querySelector('#txtSerial')?.value || '').trim();
-  const chipClass = (st, s) => {
-    let base = 'w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold select-none transition-all border cursor-pointer';
-    if (currentSerial && String(s) === currentSerial) {
-      base += ' ring-2 ring-indigo-400 ring-offset-1 ring-offset-slate-900 shadow-md shadow-indigo-500/40 font-extrabold scale-105';
-    }
-    switch (st) {
-      case 'synced':
-        return `${base} bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30`;
-      case 'syncing':
-        return `${base} bg-sky-500/20 text-sky-300 border-sky-500/40 animate-pulse`;
-      case 'pending':
-      case 'retry':
-        return `${base} bg-amber-500/25 text-amber-300 border-amber-500/50 hover:bg-amber-500/40 shadow-sm`;
-      case 'error':
-        return `${base} bg-red-500/25 text-red-300 border-red-500/50 hover:bg-red-500/40 retry-btn`;
-      default: // not entered yet
-        return `${base} bg-slate-800/80 text-slate-500 border-slate-700 hover:bg-slate-700/80`;
-    }
-  };
 
-  const chipTitle = (s, st, meta) => {
-    const info = meta[String(s)] || {};
-    const base = `Form #${s} | Table ${info.tableNum || '?'} | ${info.postName || '?'}`;
-    const action = ' | Click to load form';
-    if (st === 'error') {
-      const item = queue.find(i => String(i.formSerial) === String(s));
-      return `${base} | ❌ Cloud Sync Error: ${item?.errorMsg || 'Retrying...'}${action}`;
-    }
-    if (st === 'pending') return `${base} | 💾 Saved locally in IndexedDB (Queued for Cloud Sync)${action}`;
-    if (st === 'synced') return `${base} | 🟢 Synced with Cloud Database${action}`;
-    if (st === 'syncing') return `${base} | 🔵 Uploading to Cloud...${action}`;
-    return `${base} | ⏳ Not entered yet${action}`;
-  };
+  // ─── 6. Render Table × Round Matrix Grid (Default Tab) ───────────────────────
+  if (matrixGridEl && matrixData.length > 0) {
+    let mHtml = `
+      <table class="ledger-matrix-table">
+        <thead>
+          <tr>
+            <th class="ledger-sticky-col w-20 text-left px-2">Table</th>
+            ${Array.from({ length: totalRounds }).map((_, r) => `
+              <th class="text-center min-w-[70px]">R${r + 1}</th>
+            `).join('')}
+          </tr>
+        </thead>
+        <tbody>
+    `;
 
-  grid.innerHTML = allSerials.map(s => {
-    const st = statusMap[String(s)] || 'not-entered';
-    const qItem = queue.find(i => String(i.formSerial) === String(s));
-    return `<button class="${chipClass(st, s)}"
-      title="${chipTitle(s, st, allFormSerialsMeta)}"
-      data-serial="${s}"
-      ${st === 'error' && qItem ? `data-id="${qItem.id}"` : ''}
-    >${s}</button>`;
-  }).join('');
+    boothsList.forEach((b, t) => {
+      const tableNum = String(b.boothNumber || (t + 1));
+      const tSummary = tableSummaries[tableNum] || {};
+      const row = matrixData[t] || [];
 
-  // Single-click on any chip: load that form for result entry
-  grid.querySelectorAll('button[data-serial]').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const serial = chip.dataset.serial;
-      const txtSerial = main.querySelector('#txtSerial');
-      const btnLoad = main.querySelector('#btnLoadBySerial');
-      if (txtSerial && serial) {
-        txtSerial.value = serial;
-        if (btnLoad) {
-          btnLoad.click();
+      mHtml += `<tr>`;
+      // Sticky table header
+      mHtml += `
+        <td class="ledger-sticky-col p-1.5 align-middle">
+          <div class="flex flex-col gap-0.5">
+            <div class="flex items-center justify-between gap-1">
+              <span class="font-bold text-indigo-300 text-xs">🪑 T${tableNum}</span>
+              ${tSummary.hasDisparity ? `
+                <span class="badge bg-red-500/30 text-red-200 border border-red-500 text-[8px] px-1 py-0 font-bold shrink-0 animate-pulse" title="${esc((tSummary.messages || []).join('\n'))}">
+                  ⚠️ Mismatch
+                </span>
+              ` : (tSummary.baselineBallots !== null && tSummary.baselineBallots !== undefined ? `
+                <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono text-[8px] px-1 py-0 shrink-0" title="Consistent General Ballots: ${tSummary.baselineBallots}">
+                  🗳️ ${tSummary.baselineBallots}
+                </span>
+              ` : '')}
+            </div>
+          </div>
+        </td>
+      `;
+
+      // Round cells
+      for (let r = 0; r < totalRounds; r++) {
+        const postObj = row[r];
+        if (!postObj) {
+          mHtml += `<td class="text-center text-slate-600 font-mono text-[10px] bg-slate-900/30 select-none">—</td>`;
+          continue;
         }
-        main.querySelector('#entryFormArea')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    });
-  });
 
-  // Pending forms list tab
+        const postName = typeof postObj === 'string' ? postObj : String(postObj.post || postObj.name || '');
+        const shortName = formatMatrixPostName(postName);
+        const serial = formSerialsMap[`${t}-${r}`];
+        if (!serial) {
+          mHtml += `<td class="text-center text-slate-600 font-mono text-[10px]">—</td>`;
+          continue;
+        }
+
+        const sStr = String(serial);
+        const st = statusMap[sStr] || 'not-entered';
+        const isDisp = Boolean(formDisparities[sStr]);
+        const dispInfo = formDisparities[sStr];
+        const tallied = getFormTalliedVotes(allResults, tableNum, postName);
+
+        let cellClass = 'ledger-matrix-cell';
+        let cellTitle = `Form #${sStr} | Table ${tableNum} • Round ${r + 1} | ${postName}`;
+
+        if (currentSerial && sStr === currentSerial) {
+          cellClass += ' ring-2 ring-indigo-400 ring-offset-1 ring-offset-slate-900 scale-105';
+        }
+
+        if (isDisp) {
+          cellClass += ' bg-red-500/30 text-red-100 border border-red-500 disparity-pulse shadow-md font-bold';
+          cellTitle += ` | ⚠️ DISPARITY: ${dispInfo?.message || 'Mismatched ballot count'}`;
+        } else if (st === 'synced') {
+          cellClass += ' bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30';
+          cellTitle += ` | 🟢 Synced (${tallied !== null ? tallied + ' ballots/votes' : ''})`;
+        } else if (st === 'pending' || st === 'retry') {
+          cellClass += ' bg-amber-500/25 text-amber-300 border border-amber-500/50 hover:bg-amber-500/40 shadow-sm';
+          cellTitle += ` | 💾 Local (IndexedDB) (${tallied !== null ? tallied + ' ballots/votes' : ''})`;
+        } else if (st === 'syncing') {
+          cellClass += ' bg-sky-500/20 text-sky-300 border border-sky-500/40 animate-pulse';
+          cellTitle += ' | 🔵 Uploading to Cloud...';
+        } else if (st === 'error') {
+          cellClass += ' bg-red-500/20 text-red-300 border border-red-500/50';
+          cellTitle += ' | ❌ Cloud Sync Error';
+        } else {
+          cellClass += ' bg-slate-800/80 text-slate-400 border border-slate-700/80 border-dashed hover:border-slate-500 hover:bg-slate-700/60';
+          cellTitle += ' | ⏳ Missing / Not Entered (Click to load and enter form)';
+        }
+
+        mHtml += `
+          <td>
+            <button type="button" class="${cellClass}" data-serial="${sStr}" title="${esc(cellTitle)}">
+              <span class="font-mono font-bold leading-none ${isDisp ? 'text-red-200' : ''}">#${sStr}</span>
+              <span class="text-[8.5px] truncate max-w-full opacity-90 leading-tight">${esc(shortName)}</span>
+              ${tallied !== null ? `
+                <span class="text-[8px] font-mono font-bold mt-0.5 px-1 rounded ${isDisp ? 'bg-red-900/80 text-red-200 border border-red-500/60' : 'bg-black/30 text-white/90'}">
+                  ${isDisp ? '⚠️ ' : ''}${tallied}
+                </span>
+              ` : ''}
+            </button>
+          </td>
+        `;
+      }
+      mHtml += `</tr>`;
+    });
+
+    mHtml += `</tbody></table>`;
+    matrixGridEl.innerHTML = mHtml;
+
+    // Single click on matrix button loads form
+    matrixGridEl.querySelectorAll('button[data-serial]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const s = btn.dataset.serial;
+        const txt = main.querySelector('#txtSerial');
+        const btnLoad = main.querySelector('#btnLoadBySerial');
+        if (txt && s) {
+          txt.value = s;
+          if (btnLoad) btnLoad.click();
+          main.querySelector('#entryFormArea')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  }
+
+  // ─── 7. Render Flat Chips Grid ──────────────────────────────────────────────
+  if (chipsGridEl) {
+    const chipClass = (st, s) => {
+      let base = 'w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold select-none transition-all border cursor-pointer';
+      if (currentSerial && String(s) === currentSerial) {
+        base += ' ring-2 ring-indigo-400 ring-offset-1 ring-offset-slate-900 shadow-md shadow-indigo-500/40 font-extrabold scale-105';
+      }
+      if (formDisparities[String(s)]) {
+        return `${base} bg-red-500/30 text-red-200 border-red-500 disparity-pulse hover:bg-red-500/40 font-bold`;
+      }
+      switch (st) {
+        case 'synced':
+          return `${base} bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30`;
+        case 'syncing':
+          return `${base} bg-sky-500/20 text-sky-300 border-sky-500/40 animate-pulse`;
+        case 'pending':
+        case 'retry':
+          return `${base} bg-amber-500/25 text-amber-300 border-amber-500/50 hover:bg-amber-500/40 shadow-sm`;
+        case 'error':
+          return `${base} bg-red-500/25 text-red-300 border-red-500/50 hover:bg-red-500/40 retry-btn`;
+        default: // not entered yet
+          return `${base} bg-slate-800/80 text-slate-500 border-slate-700 hover:bg-slate-700/80`;
+      }
+    };
+
+    const chipTitle = (s, st, meta) => {
+      const info = meta[String(s)] || {};
+      const base = `Form #${s} | Table ${info.tableNum || '?'} | ${info.postName || '?'}`;
+      const action = ' | Click to load form';
+      if (formDisparities[String(s)]) {
+        return `${base} | ⚠️ DISPARITY: ${formDisparities[String(s)].message}${action}`;
+      }
+      if (st === 'error') {
+        const item = queue.find(i => String(i.formSerial) === String(s));
+        return `${base} | ❌ Cloud Sync Error: ${item?.errorMsg || 'Retrying...'}${action}`;
+      }
+      if (st === 'pending') return `${base} | 💾 Saved locally in IndexedDB (Queued for Cloud Sync)${action}`;
+      if (st === 'synced') return `${base} | 🟢 Synced with Cloud Database${action}`;
+      if (st === 'syncing') return `${base} | 🔵 Uploading to Cloud...${action}`;
+      return `${base} | ⏳ Not entered yet${action}`;
+    };
+
+    chipsGridEl.innerHTML = allSerials.map(s => {
+      const st = statusMap[String(s)] || 'not-entered';
+      const qItem = queue.find(i => String(i.formSerial) === String(s));
+      return `<button class="${chipClass(st, s)}"
+        title="${chipTitle(s, st, allFormSerialsMeta)}"
+        data-serial="${s}"
+        ${st === 'error' && qItem ? `data-id="${qItem.id}"` : ''}
+      >${s}</button>`;
+    }).join('');
+
+    chipsGridEl.querySelectorAll('button[data-serial]').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const serial = chip.dataset.serial;
+        const txtSerial = main.querySelector('#txtSerial');
+        const btnLoad = main.querySelector('#btnLoadBySerial');
+        if (txtSerial && serial) {
+          txtSerial.value = serial;
+          if (btnLoad) btnLoad.click();
+          main.querySelector('#entryFormArea')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  }
+
+  // ─── 8. Render Pending Forms List Tab ───────────────────────────────────────
   const pendingList = main.querySelector('#pendingList');
   const pendingTabCount = main.querySelector('#pendingTabCount');
   const pendingSerials = allSerials.filter(s => {
@@ -920,15 +1481,18 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
   if (pendingTabCount) pendingTabCount.textContent = pendingSerials.length;
   if (pendingList) {
     if (pendingSerials.length === 0) {
-      pendingList.innerHTML = `<tr><td colspan="3" class="px-3 py-8 text-center text-emerald-400 font-bold text-sm">🎉 All forms have been entered!</td></tr>`;
+      pendingList.innerHTML = `<tr><td colspan="4" class="px-3 py-8 text-center text-emerald-400 font-bold text-sm">🎉 All counting forms have been entered!</td></tr>`;
     } else {
       pendingList.innerHTML = pendingSerials.map(s => {
         const info = allFormSerialsMeta[String(s)] || {};
         return `
           <tr class="border-b border-white/5 hover:bg-white/5 transition cursor-pointer pending-row" data-serial="${s}">
             <td class="px-3 py-2 font-bold text-slate-300 text-xs">#${s}</td>
-            <td class="px-3 py-2 text-slate-400 text-xs">Table ${info.tableNum || '?'}</td>
-            <td class="px-3 py-2 text-slate-300 text-xs leading-tight">${esc(info.postName || '?')}</td>
+            <td class="px-3 py-2 text-slate-400 text-xs font-semibold">Table ${info.tableNum || '?'}</td>
+            <td class="px-3 py-2 text-slate-300 text-xs leading-tight font-medium">${esc(info.postName || '?')}</td>
+            <td class="px-3 py-2 text-right">
+              <button type="button" class="btn btn-xs btn-primary px-2 py-0.5 text-[10px] font-bold">Load</button>
+            </td>
           </tr>
         `;
       }).join('');
@@ -948,22 +1512,33 @@ async function renderLedger(main, allResults, allFormSerialsMeta) {
     }
   }
 
-  // Tabs switching
+  // ─── 9. Tab Switching Logic ─────────────────────────────────────────────────
   if (!main.dataset.tabsInit) {
     main.dataset.tabsInit = '1';
+    const tabMatrix = main.querySelector('#tabMatrix');
     const tabChips = main.querySelector('#tabChips');
     const tabPending = main.querySelector('#tabPending');
+    const panelMatrix = main.querySelector('#panelMatrix');
     const panelChips = main.querySelector('#panelChips');
     const panelPending = main.querySelector('#panelPending');
-    tabChips?.addEventListener('click', () => {
-      tabChips.classList.add('text-white', 'border-indigo-400'); tabChips.classList.remove('text-slate-400', 'border-transparent');
-      tabPending.classList.remove('text-white', 'border-indigo-400'); tabPending.classList.add('text-slate-400', 'border-transparent');
-      panelChips.classList.remove('hidden'); panelPending.classList.add('hidden');
-    });
-    tabPending?.addEventListener('click', () => {
-      tabPending.classList.add('text-white', 'border-indigo-400'); tabPending.classList.remove('text-slate-400', 'border-transparent');
-      tabChips.classList.remove('text-white', 'border-indigo-400'); tabChips.classList.add('text-slate-400', 'border-transparent');
-      panelPending.classList.remove('hidden'); panelChips.classList.add('hidden');
-    });
+
+    const activateTab = (tab, panel) => {
+      [tabMatrix, tabChips, tabPending].forEach(t => {
+        if (!t) return;
+        t.classList.remove('text-white', 'border-indigo-400', 'font-bold');
+        t.classList.add('text-slate-400', 'border-transparent', 'font-semibold');
+      });
+      [panelMatrix, panelChips, panelPending].forEach(p => {
+        if (!p) return;
+        p.classList.add('hidden');
+      });
+      tab.classList.add('text-white', 'border-indigo-400', 'font-bold');
+      tab.classList.remove('text-slate-400', 'border-transparent', 'font-semibold');
+      panel.classList.remove('hidden');
+    };
+
+    tabMatrix?.addEventListener('click', () => activateTab(tabMatrix, panelMatrix));
+    tabChips?.addEventListener('click', () => activateTab(tabChips, panelChips));
+    tabPending?.addEventListener('click', () => activateTab(tabPending, panelPending));
   }
 }
