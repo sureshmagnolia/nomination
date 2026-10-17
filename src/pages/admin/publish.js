@@ -304,42 +304,67 @@ function renderPublishPage(main, settings, nominations, postsData, nominalRoll, 
         </div>`}
       </div>
 
-      <!-- 4. Election Results publish, freeze & print -->
+      <!-- 4. Election Results Lifecycle & Official Declaration -->
       <div class="glass rounded-xl p-6 space-y-4">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <div class="flex items-center gap-2">
-              <h4 class="font-bold text-white text-base">📊 Election Results Visibility & Official Declaration</h4>
-              <span class="badge ${resultsPublished ? 'badge-valid' : 'badge-pending'} text-xs">
-                ${resultsPublished ? '📢 Publicly Live' : '👁️‍🗨️ Hidden from Public'}
+            <div class="flex items-center gap-2 flex-wrap">
+              <h4 class="font-bold text-white text-base">📊 Election Results Visibility & Declaration</h4>
+              <span class="badge ${resultsPublished ? 'badge-valid' : (isCountingActive ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'badge-pending')} text-xs">
+                ${resultsPublished ? '📢 Publicly Live' : (isCountingActive ? '🗳️ Counting in Progress' : '⏳ Pre-Counting Standby')}
               </span>
-              <span class="badge ${isCountingActive ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-slate-700 text-slate-300'} text-xs">
-                ${isCountingActive ? '⚡ Counting in Progress' : '⏳ Counting Inactive'}
-              </span>
-              ${resultsLocked ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs">🔒 Locked & Frozen</span>` : ''}
+              ${resultsLocked ? `<span class="badge bg-sky-500/20 text-sky-300 border border-sky-500/30 text-xs">🔒 Tallies Locked</span>` : ''}
             </div>
             <p class="text-slate-400 text-xs mt-1">
-              Control live counting status, public results visibility, and lock vote tallies against modification.
+              ${resultsPublished 
+                ? 'Election results and winners are currently broadcast live to all students and electors on the public portal.' 
+                : (isCountingActive 
+                  ? 'Vote entry is underway. Public visitors see an official "Counting in Progress" waiting screen.' 
+                  : 'Counting mode has not been started yet. Public visitors see standard pre-election countdown.')}
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-2 shrink-0">
-            <button id="btnPrintResults" class="btn btn-primary btn-sm flex items-center gap-1.5">
-              <span>🖨️</span> Print Official Result Sheet
+            <button id="btnPrintResults" class="btn btn-secondary btn-sm flex items-center gap-1.5" title="Print Official Form 8 Result Sheet">
+              <span>🖨️</span> Print Official Sheet
             </button>
-            <button data-nav="/admin/results" class="btn btn-secondary btn-sm">🏆 View Results</button>
+            <button data-nav="/admin/results" class="btn btn-primary btn-sm flex items-center gap-1.5 font-bold shadow-md">
+              <span>⚡</span> Results Command Center
+            </button>
           </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-3 pt-2">
-          <button id="toggleCountingBtn" class="btn ${isCountingActive ? 'btn-danger' : 'bg-amber-500 hover:bg-amber-600 text-black font-bold'} btn-sm">
-            ${isCountingActive ? '⏸️ Stop Counting Mode' : '⚡ Set Counting Active'}
-          </button>
-          <button id="toggleResultsPublishBtn" class="btn ${resultsPublished ? 'btn-danger' : 'btn-primary'} btn-sm">
-            ${resultsPublished ? '🚫 Hide Results from Public' : '📢 Publish Results to Public'}
-          </button>
-          <button id="toggleResultsLockBtn" class="btn ${resultsLocked ? 'btn-secondary' : 'bg-amber-500 hover:bg-amber-600 text-black font-bold'} btn-sm">
-            ${resultsLocked ? '🔓 Unlock Results' : '🔒 Freeze / Lock Results'}
-          </button>
+        <!-- Synchronized Lifecycle Status Bar -->
+        <div class="p-3.5 rounded-lg border ${resultsPublished ? 'bg-emerald-500/10 border-emerald-500/30' : (resultsLocked ? 'bg-sky-500/10 border-sky-500/30' : (isCountingActive ? 'bg-amber-500/10 border-amber-500/30' : 'bg-white/5 border-white/10'))} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5">
+            <span class="text-xl">${resultsPublished ? '🌐' : (resultsLocked ? '🔒' : (isCountingActive ? '🗳️' : '⏳'))}</span>
+            <div>
+              <div class="text-xs font-bold text-white uppercase tracking-wider">
+                ${resultsPublished ? 'Stage 3: Results Declared & Publicly Live' : (resultsLocked ? 'Stage 2: Tallies Audited & Locked' : (isCountingActive ? 'Stage 1: Counting in Progress' : 'Stage 0: Pre-Counting Standby'))}
+              </div>
+              <div class="text-[11px] text-slate-300">
+                ${resultsPublished 
+                  ? 'Students can view official winners, votes, and margins at #/results.' 
+                  : (resultsLocked 
+                    ? 'All vote tallies are locked. Ready for official public declaration.' 
+                    : (isCountingActive ? 'Entry ledger active. Results confidential until declaration.' : 'Ballot verification and prep mode.'))}
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            ${resultsPublished ? `
+              <button id="toggleResultsPublishBtn" class="btn btn-sm bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-md">
+                🔒 Hide from Public
+              </button>
+            ` : (resultsLocked ? `
+              <button id="toggleResultsPublishBtn" class="btn btn-sm btn-primary font-bold shadow-md">
+                📢 Declare & Publish Results
+              </button>
+            ` : `
+              <button data-nav="/admin/results" class="btn btn-sm bg-amber-500 hover:bg-amber-600 text-black font-bold shadow-md">
+                ⚙️ Manage in Results Center
+              </button>
+            `)}
+          </div>
         </div>
       </div>
 

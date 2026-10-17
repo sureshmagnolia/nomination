@@ -701,72 +701,202 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
         </div>
       ` : ''}
 
-      <!-- Admin Real-Time Status & Live Publication Control Banner -->
-      <div class="glass p-4 rounded-2xl border ${isPublic ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-amber-500/40 bg-amber-500/10'} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
-        <div class="flex items-start sm:items-center gap-3">
-          <span class="text-3xl">${isPublic ? '🌐' : '👁️‍🗨️'}</span>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="font-bold text-white text-sm uppercase tracking-wider">${isPublic ? 'Results are Publicly Live' : 'Admin Live Monitoring Mode'}</span>
-              <span class="badge ${isPublic ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'} text-[10px] font-bold">
-                ${isPublic ? '📢 VISIBLE TO STUDENTS' : '🔒 HIDDEN FROM STUDENTS • ADMIN LIVE ONLY'}
-              </span>
-            </div>
-            <p class="text-slate-300 text-xs mt-1">
-              ${isPublic ? 'All students and electors can currently view live vote counts and winners on the public portal.' : 'You can see all votes live as entries are recorded. Public visitors see "Counting in Progress" until you click Publish.'}
-            </p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <button id="btnPublishBanner" class="btn btn-sm ${isPublic ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'btn-primary'} font-bold shadow-lg flex items-center gap-1.5" title="Action: ${isPublic ? 'Hides election results from public portal view.' : 'Publishes final verified election results to the public portal.'}&#10;Prerequisite: Verify all round counts and finalize declarations.">
-            <span>${isPublic ? '🔒' : '📢'}</span> ${isPublic ? 'Hide from Public' : 'Push Live to Public'}
-          </button>
-        </div>
-      </div>
+      <!-- Unified Election Results Lifecycle Command Center -->
+      ${(() => {
+        const stage = isPublic ? 3 : (isLocked ? 2 : (isCountingActive ? 1 : 0));
+        return `
+        <div class="glass p-5 rounded-2xl border ${
+          stage === 3 
+            ? 'border-emerald-500/40 bg-gradient-to-r from-emerald-950/40 via-slate-900/60 to-slate-900/40' 
+            : (stage === 2 
+              ? 'border-sky-500/40 bg-gradient-to-r from-sky-950/40 via-slate-900/60 to-slate-900/40' 
+              : (stage === 1 
+                ? 'border-amber-500/40 bg-gradient-to-r from-amber-950/40 via-slate-900/60 to-slate-900/40' 
+                : 'border-white/10 bg-white/5'))
+        } shadow-xl space-y-4">
 
-      <!-- Control Panels: Lock/Freeze, Live Counting, and Public Visibility -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="p-4 rounded-xl border ${isCountingActive ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-500/10 border-slate-500/30'} flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <span class="text-2xl">${isCountingActive ? '🗳️' : '⏳'}</span>
-            <div>
-              <div class="font-bold text-sm text-white">${isCountingActive ? 'Counting: Active' : 'Counting: Inactive'}</div>
-              <div class="text-xs text-slate-400">${isCountingActive ? 'Public sees "Counting in Progress"' : 'Public sees "Counting Not Started"'}</div>
+          <!-- 3-Stage Progressive Pipeline Stepper -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 p-1.5 bg-black/30 rounded-xl border border-white/5">
+            <!-- Stage 1: Live Counting -->
+            <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${
+              stage === 1 
+                ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 shadow-sm' 
+                : (stage > 1 ? 'bg-emerald-500/10 text-emerald-400' : 'text-slate-400')
+            }">
+              <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                stage === 1 
+                  ? 'bg-amber-500 text-black animate-pulse font-black' 
+                  : (stage > 1 ? 'bg-emerald-500 text-black font-black' : 'bg-slate-800 text-slate-400')
+              }">
+                ${stage > 1 ? '✓' : '1'}
+              </div>
+              <div class="min-w-0">
+                <div class="text-xs font-bold uppercase tracking-wider truncate">1. Live Counting</div>
+                <div class="text-[10px] opacity-80 truncate">${stage === 1 ? 'Active & Receiving' : (stage > 1 ? 'Tallies Completed' : 'Awaiting Start')}</div>
+              </div>
+            </div>
+
+            <!-- Stage 2: Audit & Lock -->
+            <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${
+              stage === 2 
+                ? 'bg-sky-500/20 border border-sky-500/40 text-sky-300 shadow-sm' 
+                : (stage > 2 ? 'bg-emerald-500/10 text-emerald-400' : 'text-slate-400')
+            }">
+              <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                stage === 2 
+                  ? 'bg-sky-400 text-black font-black ring-2 ring-sky-400/50' 
+                  : (stage > 2 ? 'bg-emerald-500 text-black font-black' : 'bg-slate-800 text-slate-400')
+              }">
+                ${stage > 2 ? '✓' : '2'}
+              </div>
+              <div class="min-w-0">
+                <div class="text-xs font-bold uppercase tracking-wider truncate">2. Audit & Lock</div>
+                <div class="text-[10px] opacity-80 truncate">${stage === 2 ? 'Frozen for Verification' : (stage > 2 ? 'Audited & Locked' : 'Entry Open')}</div>
+              </div>
+            </div>
+
+            <!-- Stage 3: Public Declaration -->
+            <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all ${
+              stage === 3 
+                ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 shadow-sm' 
+                : 'text-slate-400'
+            }">
+              <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                stage === 3 
+                  ? 'bg-emerald-400 text-black font-black animate-pulse' 
+                  : 'bg-slate-800 text-slate-400'
+              }">
+                ${stage === 3 ? '📢' : '3'}
+              </div>
+              <div class="min-w-0">
+                <div class="text-xs font-bold uppercase tracking-wider truncate">3. Public Declaration</div>
+                <div class="text-[10px] opacity-80 truncate">${stage === 3 ? 'Live on Public Portal' : 'Confidential (Admin Only)'}</div>
+              </div>
             </div>
           </div>
-          <button id="btnToggleCounting" class="btn btn-sm ${isCountingActive ? 'bg-rose-500/80 hover:bg-rose-600 text-white font-bold' : 'bg-amber-500 hover:bg-amber-600 text-black font-bold'}" title="Action: ${isCountingActive ? 'Deactivates counting status mode.' : 'Marks counting active and informs public portal counting is underway.'}&#10;Prerequisite: Polling concluded and ballot boxes received at counting hall.">
-            ${isCountingActive ? '⏸️ Stop Counting' : '⚡ Set Counting Active'}
-          </button>
-        </div>
 
-        <div class="p-4 rounded-xl border ${isLocked ? 'bg-amber-500/10 border-amber-500/30' : 'bg-white/5 border-white/10'} flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <span class="text-2xl">${isLocked ? '🔒' : '🔓'}</span>
-            <div>
-              <div class="font-bold text-sm text-white">${isLocked ? 'Results: Locked & Frozen' : 'Results: Unlocked'}</div>
-              <div class="text-xs text-slate-400">${isLocked ? 'Vote entry blocked' : 'Vote entry portal open'}</div>
+          <!-- Active Lifecycle Status Bar & Primary Actions -->
+          <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pt-1">
+            <div class="flex items-start gap-3">
+              <span class="text-3xl shrink-0 mt-0.5">${
+                stage === 3 ? '🌐' : (stage === 2 ? '🔒' : (stage === 1 ? '🗳️' : '⏳'))
+              }</span>
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-bold text-white text-base tracking-tight">${
+                    stage === 3 
+                      ? 'Results are Publicly Live' 
+                      : (stage === 2 
+                        ? 'Tallies Frozen & Ready for Declaration' 
+                        : (stage === 1 ? 'Live Counting in Progress' : 'Standby • Pre-Counting Mode'))
+                  }</span>
+                  <span class="badge ${
+                    stage === 3 
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
+                      : (stage === 2 
+                        ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' 
+                        : (stage === 1 
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' 
+                          : 'bg-slate-700/50 text-slate-300 border border-slate-600/40'))
+                  } text-[10px] font-bold">
+                    ${stage === 3 ? '📢 VISIBLE TO STUDENTS' : '🔒 HIDDEN FROM STUDENTS • ADMIN ONLY'}
+                  </span>
+                </div>
+                <p class="text-slate-300 text-xs mt-1 leading-relaxed max-w-2xl">
+                  ${
+                    stage === 3 
+                      ? 'All students and electors can currently view live vote counts, margins, and official winner declarations on the public portal.' 
+                      : (stage === 2 
+                        ? 'All vote entries are frozen against modifications. Review Form 8, verify counts, then click Declare & Publish to push live.' 
+                        : (stage === 1 
+                          ? 'Counting tables are recording entries into the ledger. Live votes update dynamically for admins; public visitors see "Counting in Progress".' 
+                          : 'Counting mode is inactive. When ballot boxes arrive at the counting hall, activate counting mode to notify public visitors.'))
+                  }
+                </p>
+              </div>
+            </div>
+
+            <!-- Contextual Lifecycle Action Buttons -->
+            <div class="flex flex-wrap items-center gap-2.5 shrink-0 w-full sm:w-auto justify-start sm:justify-end">
+              ${stage === 0 ? `
+                <button id="btnLifecyclePrimary" class="btn bg-amber-500 hover:bg-amber-600 text-black font-bold px-5 py-2 shadow-lg flex items-center gap-2 text-xs sm:text-sm">
+                  <span>⚡</span> Start Counting Mode
+                </button>
+              ` : ''}
+
+              ${stage === 1 ? `
+                <button id="btnLifecycleSecondary" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5 text-slate-300 hover:text-white" title="Temporarily pauses counting status">
+                  <span>⏸️</span> Pause Counting
+                </button>
+                <button id="btnLifecyclePrimary" class="btn bg-sky-500 hover:bg-sky-600 text-white font-bold px-5 py-2 shadow-lg flex items-center gap-2 text-xs sm:text-sm" title="Locks ledger entries and prepares for declaration">
+                  <span>🔒</span> Freeze & Lock Tallies
+                </button>
+              ` : ''}
+
+              ${stage === 2 ? `
+                <button id="btnLifecycleSecondary" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5 text-amber-300 border-amber-500/30 hover:bg-amber-500/10" title="Unlocks counting ledger to correct discrepancies">
+                  <span>🔓</span> Unlock for Edits
+                </button>
+                <button id="btnLifecyclePrimary" class="btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2 shadow-lg ring-2 ring-emerald-400/40 flex items-center gap-2 text-xs sm:text-sm animate-pulse" title="Publishes verified results and declared winners to the public portal">
+                  <span>📢</span> Declare & Publish Results
+                </button>
+              ` : ''}
+
+              ${stage === 3 ? `
+                <button id="btnLifecycleSecondary" class="btn btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5 ${isLocked ? 'text-amber-300 border-amber-500/30 hover:bg-amber-500/10' : 'text-slate-300'}" title="${isLocked ? 'Reopen ledger for edits' : 'Re-freeze tallies'}">
+                  <span>${isLocked ? '🔓 Unlock Tallies' : '🔒 Re-lock Tallies'}</span>
+                </button>
+                <button id="btnLifecyclePrimary" class="btn bg-rose-600 hover:bg-rose-700 text-white font-bold px-5 py-2 shadow-lg flex items-center gap-2 text-xs sm:text-sm" title="Hides election results from public portal view">
+                  <span>🔒</span> Hide from Public (Rollback)
+                </button>
+              ` : ''}
             </div>
           </div>
-          <button id="btnToggleLock" class="btn btn-sm ${isLocked ? 'btn-secondary' : 'bg-amber-500 hover:bg-amber-600 text-black font-bold'}" title="Action: ${isLocked ? 'Unlocks vote entry portal for further additions or corrections.' : 'Freezes and locks all vote entries against edits.'}&#10;Prerequisite: Verify all counting rounds against Form 7 tabulation sheets.">
-            ${isLocked ? '🔓 Unlock' : '🔒 Freeze / Lock'}
-          </button>
-        </div>
 
-        <div class="p-4 rounded-xl border ${isPublic ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-500/10 border-slate-500/30'} flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <span class="text-2xl">${isPublic ? '🌐' : '👁️‍🗨️'}</span>
-            <div>
-              <div class="font-bold text-sm text-white">${isPublic ? 'Public View: Live' : 'Public View: Hidden'}</div>
-              <div class="text-xs text-slate-400">${isPublic ? 'Results visible to everyone' : 'Only admin sees live counts'}</div>
+          <!-- Discreet Manual Controls Accordion -->
+          <details class="group pt-2 border-t border-white/5 text-xs">
+            <summary class="cursor-pointer text-slate-400 hover:text-slate-200 select-none flex items-center gap-1.5 font-medium">
+              <span class="group-open:rotate-90 transition-transform inline-block">▸</span>
+              <span>Advanced / Individual Status Toggles</span>
+            </summary>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3">
+              <div class="p-3 rounded-lg bg-black/20 border border-white/5 flex items-center justify-between">
+                <div>
+                  <div class="font-bold text-white text-[11px]">Counting Mode</div>
+                  <div class="text-[10px] text-slate-400">${isCountingActive ? 'Active' : 'Inactive'}</div>
+                </div>
+                <button id="btnManualCounting" class="btn btn-xs ${isCountingActive ? 'btn-danger' : 'btn-secondary'}">
+                  ${isCountingActive ? 'Stop' : 'Activate'}
+                </button>
+              </div>
+
+              <div class="p-3 rounded-lg bg-black/20 border border-white/5 flex items-center justify-between">
+                <div>
+                  <div class="font-bold text-white text-[11px]">Results Lock</div>
+                  <div class="text-[10px] text-slate-400">${isLocked ? 'Locked & Frozen' : 'Unlocked'}</div>
+                </div>
+                <button id="btnManualLock" class="btn btn-xs ${isLocked ? 'btn-secondary' : 'btn-warning'}">
+                  ${isLocked ? 'Unlock' : 'Lock'}
+                </button>
+              </div>
+
+              <div class="p-3 rounded-lg bg-black/20 border border-white/5 flex items-center justify-between">
+                <div>
+                  <div class="font-bold text-white text-[11px]">Public Visibility</div>
+                  <div class="text-[10px] text-slate-400">${isPublic ? 'Live' : 'Hidden'}</div>
+                </div>
+                <button id="btnManualPublish" class="btn btn-xs ${isPublic ? 'btn-danger' : 'btn-success'}">
+                  ${isPublic ? 'Hide' : 'Publish'}
+                </button>
+              </div>
             </div>
-          </div>
-          <button id="btnTogglePublic" class="btn btn-sm ${isPublic ? 'bg-rose-500/80 hover:bg-rose-600 text-white font-bold' : 'btn-success font-bold'}" title="Action: ${isPublic ? 'Hides candidate scores and winner declarations from public.' : 'Broadcasts results and winner declarations to public portal.'}&#10;Prerequisite: Returning Officer approval of final count.">
-            ${isPublic ? '👁️‍🗨️ Hide' : '📢 Publish'}
-          </button>
+          </details>
         </div>
-      </div>
+        `;
+      })()}
 
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/5 p-6 rounded-2xl border border-white/10">
+      <!-- Vote Counting Overview & Action Toolbar -->
+      <div class="glass p-5 rounded-2xl border border-white/10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
         <div>
           <div class="flex items-center gap-2 flex-wrap">
             <h2 class="text-xl font-bold text-white tracking-tight">Vote Counting Overview</h2>
@@ -780,35 +910,46 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
               </span>
             `}
           </div>
-          <p class="text-slate-400 text-sm mt-0.5">Real-time tally of counting matrix entries and leading candidates.</p>
+          <p class="text-slate-400 text-xs mt-0.5">Real-time tally of counting matrix entries and leading candidates.</p>
         </div>
-        <div class="flex flex-wrap items-center gap-2.5">
-          ${!isOffline ? `
-            <button id="btnToggleAutoRefresh" class="btn btn-secondary px-3.5 text-xs flex items-center gap-1.5 font-mono" title="Action: Toggles automatic background polling (every 4 seconds) on or off.">
-              <span>${isLivePolling ? '🟢' : '⏸️'}</span> Live Polling: ${isLivePolling ? 'ON (4s)' : 'PAUSED'}
+
+        <!-- Clustered Action Groups -->
+        <div class="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-between xl:justify-end">
+          <!-- Cluster A: Official Documents & Presentation Displays -->
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="btnPrintOfficial" class="btn btn-primary px-4 py-1.5 text-xs flex items-center gap-1.5 font-bold shadow-lg" title="Action: Generates official University Form 8 Declaration of Results printable sheet.&#10;Prerequisite: Ensure all post counts are verified and finalized.">
+              <span>🖨️</span> Print Official Result Sheet
             </button>
-            <button id="btnAdminRefreshResults" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5" title="Action: Immediately re-fetches latest vote records and updates margin calculations.">
-              <span>🔄</span> Refresh
+            <a href="#/trends" target="_blank" class="btn btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5 font-bold text-sky-300 border-sky-500/30 hover:bg-sky-500/10" title="Action: Opens projector-friendly trends and live declaration screen in a new window.">
+              <span>🎯</span> Trends Screen
+            </a>
+            <button id="btnOpenStandingsModal" class="btn btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10" title="Confidential: View panel standings modal split by General, Reps, and Associations">
+              <span>📊</span> Standings
             </button>
-          ` : ''}
-          <button id="btnResultsExportBackup" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10" title="Action: Downloads full JSON backup file containing all counting entries and timestamps.&#10;Prerequisite: Save to external USB drive for audit safety.">
-            <span>📥</span> Backup (JSON)
-          </button>
-          <button id="btnResultsExportCSV" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10" title="Action: Exports a comprehensive CSV spreadsheet of candidate scores and margins.">
-            <span>📊</span> CSV
-          </button>
-          <button id="btnOpenStandingsModal" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10" title="Confidential: View panel standings modal split by General, Reps, and Associations">
-            <span>📊</span> Standings
-          </button>
-          <button id="btnOpenPanelSetup" class="btn btn-secondary px-3 text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border-white/10" title="Confidential: Assign candidate colors">
-            <span>🎨</span> Colors
-          </button>
-          <a href="#/trends" target="_blank" class="btn btn-secondary px-3.5 text-xs flex items-center gap-1.5 font-bold text-sky-300 border-sky-500/30 hover:bg-sky-500/10" title="Action: Opens projector-friendly trends and live declaration screen in a new window.">
-            <span>🎯</span> Trends Screen
-          </a>
-          <button id="btnPrintOfficial" class="btn btn-primary px-5 text-xs flex items-center gap-1.5 font-bold shadow-lg" title="Action: Generates official University Form 8 Declaration of Results printable sheet.&#10;Prerequisite: Ensure all post counts are verified and finalized.">
-            <span>🖨️</span> Print Official Result Sheet
-          </button>
+            <button id="btnOpenPanelSetup" class="btn btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border-white/10" title="Confidential: Assign candidate colors">
+              <span>🎨</span> Colors
+            </button>
+          </div>
+
+          <div class="hidden sm:block h-6 w-px bg-white/10"></div>
+
+          <!-- Cluster B: Stream Controls & Data Export -->
+          <div class="flex flex-wrap items-center gap-2">
+            ${!isOffline ? `
+              <button id="btnToggleAutoRefresh" class="btn btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5 font-mono" title="Action: Toggles automatic background polling (every 4 seconds) on or off.">
+                <span>${isLivePolling ? '🟢' : '⏸️'}</span> ${isLivePolling ? 'Polling: 4s' : 'Polling: Paused'}
+              </button>
+              <button id="btnAdminRefreshResults" class="btn btn-secondary px-2.5 py-1.5 text-xs flex items-center gap-1.5" title="Action: Immediately re-fetches latest vote records and updates margin calculations.">
+                <span>🔄</span> Refresh
+              </button>
+            ` : ''}
+            <button id="btnResultsExportBackup" class="btn btn-secondary px-2.5 py-1.5 text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10" title="Action: Downloads full JSON backup file containing all counting entries and timestamps.&#10;Prerequisite: Save to external USB drive for audit safety.">
+              <span>📥</span> JSON
+            </button>
+            <button id="btnResultsExportCSV" class="btn btn-secondary px-2.5 py-1.5 text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10" title="Action: Exports a comprehensive CSV spreadsheet of candidate scores and margins.">
+              <span>📊</span> CSV
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1602,92 +1743,209 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
     };
   }
 
-  // ── Publish / Hide from Top Banner ──────────────────────────────────────────
-  const btnTopBanner = main.querySelector('#btnPublishBanner');
-  if (btnTopBanner) {
-    btnTopBanner.onclick = () => {
-      const btnPublic = main.querySelector('#btnTogglePublic');
-      if (btnPublic) btnPublic.click();
-    };
-  }
+  // ── Unified Election Results Lifecycle Actions ──────────────────────────────
+  const currentStage = isPublic ? 3 : (isLocked ? 2 : (isCountingActive ? 1 : 0));
 
-  // ── Toggle Counting Mode ────────────────────────────────────────────────────
-  const btnCounting = main.querySelector('#btnToggleCounting');
-  if (btnCounting) {
-    btnCounting.onclick = async () => {
-      const willActivate = !isCountingActive;
-      const msg = willActivate
-        ? 'Set Counting Mode Active? Visitors to the public portal will see "Counting in Progress".'
-        : 'Set Counting Mode Inactive? Visitors to the public portal will be asked to wait for counting to begin.';
-      if (!confirm(msg)) return;
-
-      btnCounting.disabled = true;
-      btnCounting.textContent = 'Please wait...';
-      try {
-        const res = await api.adminToggleCounting(pwd);
-        isCountingActive = res.active;
-        sets.countingActive = isCountingActive ? 'true' : 'false';
-        showToast(isCountingActive ? '⚡ Counting mode active! Public sees "Counting in Progress".' : '⏳ Counting mode inactive. Public asked to wait.', 'success');
-        renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData);
-      } catch (err) {
-        showToast(err.message, 'error');
-        btnCounting.disabled = false;
-        btnCounting.textContent = isCountingActive ? '⏸️ Stop Counting' : '⚡ Set Counting Active';
+  // Primary Action Button (Progressive Forward Step)
+  const btnLifecyclePrimary = main.querySelector('#btnLifecyclePrimary');
+  if (btnLifecyclePrimary) {
+    btnLifecyclePrimary.onclick = async () => {
+      if (currentStage === 0) {
+        // Stage 0 -> 1: Start Counting Mode
+        if (!confirm('Start Live Counting Mode?\n\nPublic portal will show "Counting in Progress". Counting tables can begin entering votes into the counting ledger.')) return;
+        btnLifecyclePrimary.disabled = true;
+        btnLifecyclePrimary.textContent = 'Please wait...';
+        try {
+          if (api.adminSetCountingActive) {
+            await api.adminSetCountingActive(pwd, true);
+          } else {
+            await api.adminToggleCounting(pwd);
+          }
+          isCountingActive = true;
+          sets.countingActive = 'true';
+          showToast('⚡ Live Counting Mode is now ACTIVE! Public sees "Counting in Progress".', 'success');
+          renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+        } catch (err) {
+          showToast(`Failed: ${err.message}`, 'error');
+          btnLifecyclePrimary.disabled = false;
+          btnLifecyclePrimary.innerHTML = '<span>⚡</span> Start Counting Mode';
+        }
+      } else if (currentStage === 1) {
+        // Stage 1 -> 2: Freeze & Lock Tallies
+        if (!confirm('Freeze & Lock All Vote Entries?\n\nThis locks the counting matrix ledger against further edits and freezes tallies for Returning Officer audit and declaration.')) return;
+        btnLifecyclePrimary.disabled = true;
+        btnLifecyclePrimary.textContent = 'Locking entries...';
+        try {
+          if (api.adminLockResults) {
+            await api.adminLockResults(pwd);
+          } else {
+            await api.adminToggleLockResults(pwd);
+          }
+          isLocked = true;
+          sets.resultsLocked = 'true';
+          showToast('🔒 All vote entries locked & frozen for verification.', 'success');
+          renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+        } catch (err) {
+          showToast(`Failed: ${err.message}`, 'error');
+          btnLifecyclePrimary.disabled = false;
+          btnLifecyclePrimary.innerHTML = '<span>🔒</span> Freeze & Lock Tallies';
+        }
+      } else if (currentStage === 2) {
+        // Stage 2 -> 3: Declare & Publish Results
+        const ok = confirm(
+          'Declare & Publish Election Results to Public Portal?\n\n' +
+          '✓ All vote entries are frozen and audited\n' +
+          '✓ Official winner declarations and final vote counts will go live immediately\n' +
+          '✓ All students, candidates, and electors will have full visibility\n\n' +
+          'Do you wish to broadcast the results live now?'
+        );
+        if (!ok) return;
+        btnLifecyclePrimary.disabled = true;
+        btnLifecyclePrimary.textContent = 'Publishing live...';
+        try {
+          if (api.adminPublishResults) {
+            await api.adminPublishResults(pwd);
+          } else {
+            await api.adminTogglePublishResults(pwd);
+          }
+          isPublic = true;
+          sets.resultsPublished = 'true';
+          showToast('📢 Election Results are now DECLARED & LIVE on the public portal!', 'success');
+          renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+        } catch (err) {
+          showToast(`Failed: ${err.message}`, 'error');
+          btnLifecyclePrimary.disabled = false;
+          btnLifecyclePrimary.innerHTML = '<span>📢</span> Declare & Publish Results';
+        }
+      } else if (currentStage === 3) {
+        // Stage 3 -> 2: Hide / Rollback Results
+        if (!confirm('Hide election results from the public portal?\n\nVisitors will see "Counting in Progress" or "Under Verification". Live tallies remain visible to admins.')) return;
+        btnLifecyclePrimary.disabled = true;
+        btnLifecyclePrimary.textContent = 'Hiding results...';
+        try {
+          if (api.adminUnpublishResults) {
+            await api.adminUnpublishResults(pwd);
+          } else {
+            await api.adminTogglePublishResults(pwd);
+          }
+          isPublic = false;
+          sets.resultsPublished = 'false';
+          showToast('👁️‍🗨️ Election results hidden from public portal.', 'success');
+          renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+        } catch (err) {
+          showToast(`Failed: ${err.message}`, 'error');
+          btnLifecyclePrimary.disabled = false;
+          btnLifecyclePrimary.innerHTML = '<span>🔒</span> Hide from Public (Rollback)';
+        }
       }
     };
   }
 
-  // ── Toggle Lock / Freeze ────────────────────────────────────────────────────
-  const btnLock = main.querySelector('#btnToggleLock');
-  if (btnLock) {
-    btnLock.onclick = async () => {
-      const willLock = !isLocked;
-      const msg = willLock 
-        ? 'Lock and freeze election results? No further vote entries will be allowed.'
-        : 'Unlock election results? Vote entries will be re-enabled.';
-      if (!confirm(msg)) return;
-
-      btnLock.disabled = true;
-      btnLock.textContent = 'Please wait...';
-      try {
-        const res = await api.adminToggleLockResults(pwd);
-        isLocked = res.locked;
-        sets.resultsLocked = isLocked ? 'true' : 'false';
-        showToast(isLocked ? '🔒 Results locked and frozen.' : '🔓 Results unlocked for editing.', 'success');
-        renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData);
-      } catch (err) {
-        showToast(err.message, 'error');
-        btnLock.disabled = false;
-        btnLock.textContent = isLocked ? '🔓 Unlock Results' : '🔒 Freeze / Lock';
+  // Secondary Action Button (Rollback / Unlock / Pause)
+  const btnLifecycleSecondary = main.querySelector('#btnLifecycleSecondary');
+  if (btnLifecycleSecondary) {
+    btnLifecycleSecondary.onclick = async () => {
+      if (currentStage === 1) {
+        // Pause Counting Mode
+        if (!confirm('Pause Counting Mode? Visitors will see that counting is temporarily paused or awaiting start.')) return;
+        btnLifecycleSecondary.disabled = true;
+        try {
+          if (api.adminSetCountingActive) {
+            await api.adminSetCountingActive(pwd, false);
+          } else {
+            await api.adminToggleCounting(pwd);
+          }
+          isCountingActive = false;
+          sets.countingActive = 'false';
+          showToast('⏸️ Counting mode paused.', 'info');
+          renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+        } catch (err) {
+          showToast(`Failed: ${err.message}`, 'error');
+          btnLifecycleSecondary.disabled = false;
+        }
+      } else if (currentStage === 2) {
+        // Unlock tallies for editing
+        if (!confirm('Unlock vote entries for editing?\n\nOnly do this if a discrepancy requires correcting a counting form. Remember to re-freeze tallies after corrections.')) return;
+        btnLifecycleSecondary.disabled = true;
+        try {
+          if (api.adminUnlockResults) {
+            await api.adminUnlockResults(pwd);
+          } else {
+            await api.adminToggleLockResults(pwd);
+          }
+          isLocked = false;
+          sets.resultsLocked = 'false';
+          showToast('🔓 Vote entries unlocked for editing.', 'info');
+          renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+        } catch (err) {
+          showToast(`Failed: ${err.message}`, 'error');
+          btnLifecycleSecondary.disabled = false;
+        }
+      } else if (currentStage === 3) {
+        const willLock = !isLocked;
+        const msg = willLock 
+          ? 'Re-freeze and lock results tallies?' 
+          : '⚠️ WARNING: Results are currently LIVE to the public.\n\nAre you sure you want to unlock vote entries while results are publicly broadcasting?';
+        if (!confirm(msg)) return;
+        btnLifecycleSecondary.disabled = true;
+        try {
+          if (willLock) {
+            if (api.adminLockResults) await api.adminLockResults(pwd);
+            else await api.adminToggleLockResults(pwd);
+            isLocked = true;
+            sets.resultsLocked = 'true';
+          } else {
+            if (api.adminUnlockResults) await api.adminUnlockResults(pwd);
+            else await api.adminToggleLockResults(pwd);
+            isLocked = false;
+            sets.resultsLocked = 'false';
+          }
+          showToast(isLocked ? '🔒 Results re-locked.' : '🔓 Results unlocked for live entry.', 'info');
+          renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+        } catch (err) {
+          showToast(`Failed: ${err.message}`, 'error');
+          btnLifecycleSecondary.disabled = false;
+        }
       }
     };
   }
 
-  // ── Toggle Public Visibility ────────────────────────────────────────────────
-  const btnPublic = main.querySelector('#btnTogglePublic');
-  if (btnPublic) {
-    btnPublic.onclick = async () => {
-      const willPublish = !isPublic;
-      const msg = willPublish
-        ? 'Publish election results to the public portal? Anyone visiting the site will see live results.'
-        : 'Hide election results from public view? The public portal will show counting in progress.';
-      if (!confirm(msg)) return;
+  // Manual Override Toggles (Drawer)
+  main.querySelector('#btnManualCounting')?.addEventListener('click', async () => {
+    try {
+      const res = await api.adminToggleCounting(pwd);
+      isCountingActive = res.active;
+      sets.countingActive = isCountingActive ? 'true' : 'false';
+      showToast(isCountingActive ? '⚡ Counting mode active' : '⏳ Counting mode inactive', 'success');
+      renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
 
-      btnPublic.disabled = true;
-      btnPublic.textContent = 'Please wait...';
-      try {
-        const res = await api.adminTogglePublishResults(pwd);
-        isPublic = res.published;
-        sets.resultsPublished = isPublic ? 'true' : 'false';
-        showToast(isPublic ? '📢 Results published to public portal!' : '👁️‍🗨️ Results hidden from public view.', 'success');
-        renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData);
-      } catch (err) {
-        showToast(err.message, 'error');
-        btnPublic.disabled = false;
-        btnPublic.textContent = isPublic ? '👁️‍🗨️ Hide Public View' : '📢 Publish to Public';
-      }
-    };
-  }
+  main.querySelector('#btnManualLock')?.addEventListener('click', async () => {
+    try {
+      const res = await api.adminToggleLockResults(pwd);
+      isLocked = res.locked;
+      sets.resultsLocked = isLocked ? 'true' : 'false';
+      showToast(isLocked ? '🔒 Results locked' : '🔓 Results unlocked', 'success');
+      renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
+
+  main.querySelector('#btnManualPublish')?.addEventListener('click', async () => {
+    try {
+      const res = await api.adminTogglePublishResults(pwd);
+      isPublic = res.published;
+      sets.resultsPublished = isPublic ? 'true' : 'false';
+      showToast(isPublic ? '📢 Results published' : '👁️‍🗨️ Results hidden', 'success');
+      renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, isFinalPublished, reloadData, isLivePolling, setLivePolling, isOffline);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
 
   // ── Bind Navigation Buttons ────────────────────────────────────────────────
   main.querySelectorAll('[data-nav]').forEach(btn => {
