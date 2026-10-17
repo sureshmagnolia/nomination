@@ -836,7 +836,7 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
 
     const closeModal = () => {
       modalArea.innerHTML = '';
-      document.removeEventListener('keydown', handleEsc);
+      document.removeEventListener('keydown', handleKeydown);
       const txt = main.querySelector('#txtSerial');
       if (txt) {
         txt.value = '';
@@ -844,10 +844,17 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
       }
     };
 
-    const handleEsc = (e) => {
+    const handleKeydown = (e) => {
       if (e.key === 'Escape') closeModal();
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        const btnSave = modalArea.querySelector('#btnSaveVotes');
+        if (btnSave && !btnSave.disabled) {
+          btnSave.click();
+        }
+      }
     };
-    document.addEventListener('keydown', handleEsc);
+    document.addEventListener('keydown', handleKeydown);
 
     if (candidates.length === 0) {
       modalArea.innerHTML = `
@@ -959,17 +966,21 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
           </div>
 
           <!-- Modal Footer -->
-          <div class="bg-slate-950/90 p-4 border-t border-white/10 flex flex-wrap justify-between items-center gap-3 shrink-0">
-            <div class="flex items-center gap-2">
-              <button id="btnClearForm" type="button" class="btn btn-secondary text-rose-300 hover:text-white hover:bg-rose-600/80 border-rose-500/40 px-3.5 py-2 text-xs font-bold transition flex items-center gap-1.5 shadow" ${isLocked ? 'disabled' : ''} title="Clear all saved votes for this form and reset ledger status to Not Entered">
+          <div class="bg-slate-950/90 p-4 sm:p-5 border-t border-white/10 flex flex-wrap justify-between items-center gap-4 shrink-0">
+            <div class="flex items-center gap-2.5">
+              <button id="btnClearForm" type="button" class="btn btn-secondary text-rose-300 hover:text-white hover:bg-rose-600/80 border-rose-500/40 px-3.5 py-2.5 text-xs font-bold transition flex items-center gap-1.5 shadow" ${isLocked ? 'disabled' : ''} title="Clear all saved votes for this form and reset ledger status to Not Entered">
                 <span>🗑️</span> <span>Clear Form</span>
               </button>
-              <button id="btnCancelModal" type="button" class="btn btn-secondary px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white">
+              <button id="btnCancelModal" type="button" class="btn btn-secondary px-4 py-2.5 text-xs font-semibold text-slate-300 hover:text-white">
                 Cancel
               </button>
             </div>
-            <button id="btnSaveVotes" class="btn ${isLocked ? 'opacity-50 cursor-not-allowed bg-slate-700 text-slate-400' : 'btn-success'} px-8 py-2.5 font-bold shadow-lg" ${isLocked ? 'disabled' : ''}>
-              ${isLocked ? '🔒 Results Locked' : '💾 Save Form Results'}
+            <button id="btnSaveVotes" class="btn btn-success ${isLocked 
+              ? 'opacity-50 cursor-not-allowed bg-slate-700 text-slate-400 border border-slate-600 shadow-none' 
+              : 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 hover:from-emerald-500 hover:via-emerald-400 hover:to-teal-400 text-white shadow-xl shadow-emerald-600/40 hover:shadow-2xl hover:shadow-emerald-500/60 ring-2 ring-emerald-400/50 hover:ring-emerald-300 border-2 border-emerald-300/60 hover:scale-[1.03] active:scale-[0.98]'} px-10 sm:px-12 py-3.5 sm:py-4 font-black tracking-wide text-base sm:text-lg rounded-xl flex items-center justify-center gap-3 transition-all duration-150 cursor-pointer shadow-lg" ${isLocked ? 'disabled' : ''} title="Save entered votes to device IndexedDB & ledger (Shortcut: Ctrl+S)">
+              ${isLocked 
+                ? '<span>🔒 Results Locked</span>' 
+                : '<span class="text-2xl leading-none">💾</span><span class="tracking-wider uppercase font-black">Save Form Results</span>'}
             </button>
           </div>
 
@@ -1184,7 +1195,7 @@ function renderEntryUI(main, pwd, booths, posts, finalList, allResults, savedMat
         console.error('Failed to save votes:', saveErr);
         showToast(`Failed to save votes: ${saveErr.message}`, 'error');
       } finally {
-        setLoading(btnSave, false, '💾 Save Form Results');
+        setLoading(btnSave, false, '<span class="text-2xl leading-none">💾</span><span class="tracking-wider uppercase font-black">Save Form Results</span>');
       }
     });
   };
