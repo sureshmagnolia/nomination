@@ -1748,7 +1748,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
                             <div>
                               <strong>${res.tieType === 'tie-2nd' ? '2nd UUC Winner by Lot:' : 'Declared Winner by Lot:'}</strong> 
                               ${res.tieDecision ? 
-                                `<span style="display: inline-block; font-weight: 800; border-bottom: 1.5px solid #000; margin-left: 6px; padding: 0 10px; color: #000;">${esc(res.tieDecision.candidateName)} (Decided by Lot)</span>` :
+                                `<span style="display: inline-block; font-weight: 800; border-bottom: 1.5px solid #000; margin-left: 6px; padding: 0 10px; color: #000;">${esc(res.tieDecision.candidateName)}</span>` :
                                 `<span style="display: inline-block; min-width: 250px; border-bottom: 1.5px solid #000; margin-left: 6px;">&nbsp;</span>`
                               }
                             </div>
