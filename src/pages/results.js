@@ -187,8 +187,7 @@ export async function renderResults(container, options = {}) {
           <!-- View Tabs (Odometer Default / Breakdown Secondary) -->
           <div class="inline-flex p-1 bg-slate-900/90 rounded-xl border border-white/10 shadow-inner">
             <button id="tabBtnTrends" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-sky-600 text-white shadow-lg transition flex items-center gap-2">
-              <span>🎯</span> Counting Trends (Odometer View)
-              <span class="px-1.5 py-0.2 rounded text-[10px] font-black uppercase tracking-wider bg-sky-500/20 text-sky-300 border border-sky-500/30">Odometer</span>
+              <span>🎯</span> Counting Trends
             </button>
             <button id="tabBtnStandard" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-400 hover:text-white transition flex items-center gap-2">
               <span>📊</span> Results Breakdown
