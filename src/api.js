@@ -539,6 +539,42 @@ export const api = {
     return post({ action: 'adminUpdateCredentials', password, ...credentials });
   },
 
+  adminSaveTieDecision: async (password, postName, winnerId, candidateName, method = 'Toss / Lot', notes = '') => {
+    try {
+      const local = JSON.parse(localStorage.getItem('election_tie_decisions') || '{}');
+      local[postName] = { winnerId, candidateName, method, notes, timestamp: new Date().toISOString() };
+      localStorage.setItem('election_tie_decisions', JSON.stringify(local));
+    } catch (_) {}
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    invalidateCache('getResults');
+    invalidateCache('adminGetResults');
+    return post({ action: 'adminSaveTieDecision', password, post: postName, winnerId, candidateName, method, notes });
+  },
+
+  adminClearTieDecision: async (password, postName) => {
+    try {
+      const local = JSON.parse(localStorage.getItem('election_tie_decisions') || '{}');
+      delete local[postName];
+      localStorage.setItem('election_tie_decisions', JSON.stringify(local));
+    } catch (_) {}
+    invalidateCache('getSettings');
+    invalidateCache('adminGetSettings');
+    invalidateCache('getResults');
+    invalidateCache('adminGetResults');
+    return post({ action: 'adminClearTieDecision', password, post: postName });
+  },
+
+  getTieDecisions: async () => {
+    return get({ action: 'getTieDecisions' }).catch(() => {
+      try {
+        return JSON.parse(localStorage.getItem('election_tie_decisions') || '{}');
+      } catch (_) {
+        return {};
+      }
+    });
+  },
+
   getPublicSettings: () => get({ action: 'adminGetSettings', password: 'NONE' }),
 
   // ─── Posts Management ───────────────────────────────────────────────────────

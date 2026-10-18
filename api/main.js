@@ -802,7 +802,8 @@ export default async function handler(req, res) {
       'getResults',
       'getValidNominations',
       'getFinalNominations',
-      'getPublicNominations'
+      'getPublicNominations',
+      'getTieDecisions'
     ]);
 
     const isPublicCacheable = req.method === 'GET' && 
@@ -1054,7 +1055,7 @@ export default async function handler(req, res) {
 
     if (action === 'getSettings' || action === 'adminGetSettings') {
       const status = await getFullElectionStatus();
-      const [colName, colShort, colLogo, colPlace, incRS, bindingMode, bookSize, mergeRem] = await Promise.all([
+      const [colName, colShort, colLogo, colPlace, incRS, bindingMode, bookSize, mergeRem, tieDecisions] = await Promise.all([
         getSetting('collegeName'),
         getSetting('collegeShortName'),
         getSetting('collegeLogo'),
@@ -1062,7 +1063,8 @@ export default async function handler(req, res) {
         getSetting('include_research_scholars'),
         getSetting('ballot_binding_mode'),
         getSetting('ballot_book_size'),
-        getSetting('ballot_merge_remainders')
+        getSetting('ballot_merge_remainders'),
+        getSetting('tie_decisions')
       ]);
       const obj = {
         ...status,
@@ -1073,7 +1075,8 @@ export default async function handler(req, res) {
         includeResearchScholars: incRS === 'true',
         ballot_binding_mode: bindingMode || 'definite',
         ballot_book_size: Number(bookSize) > 0 ? Number(bookSize) : 50,
-        ballot_merge_remainders: mergeRem !== 'false'
+        ballot_merge_remainders: mergeRem !== 'false',
+        tieDecisions: safeJsonParse(tieDecisions, {})
       };
       if (action === 'adminGetSettings') {
         const rows = await sql`SELECT value FROM settings WHERE key = 'adminEmail'`;
@@ -1426,8 +1429,10 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       }
 
       const data = await getSetting('results_data');
+      const tieDecisions = safeJsonParse(await getSetting('tie_decisions'), {});
       return jsonOut(res, {
         results: safeJsonParse(data, []),
+        tieDecisions,
         published: true,
         countingActive,
         locked
@@ -2284,6 +2289,39 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       if (body.ballot_book_size !== undefined) await setSetting('ballot_book_size', String(body.ballot_book_size));
       if (body.ballot_merge_remainders !== undefined) await setSetting('ballot_merge_remainders', String(body.ballot_merge_remainders));
       return jsonOut(res, { ok: true });
+    }
+
+    if (action === 'adminSaveTieDecision') {
+      const { post, winnerId, candidateName, method, notes } = body;
+      if (!post || !winnerId) {
+        return errOut(res, 'Post and winnerId are required');
+      }
+      const existing = safeJsonParse(await getSetting('tie_decisions'), {});
+      existing[post] = {
+        winnerId,
+        candidateName: candidateName || winnerId,
+        method: method || 'Toss / Lot',
+        notes: notes || '',
+        timestamp: new Date().toISOString()
+      };
+      await setSetting('tie_decisions', JSON.stringify(existing));
+      return jsonOut(res, { ok: true, tieDecisions: existing });
+    }
+
+    if (action === 'adminClearTieDecision') {
+      const { post } = body;
+      if (!post) {
+        return errOut(res, 'Post is required');
+      }
+      const existing = safeJsonParse(await getSetting('tie_decisions'), {});
+      delete existing[post];
+      await setSetting('tie_decisions', JSON.stringify(existing));
+      return jsonOut(res, { ok: true, tieDecisions: existing });
+    }
+
+    if (action === 'getTieDecisions') {
+      const existing = safeJsonParse(await getSetting('tie_decisions'), {});
+      return jsonOut(res, existing);
     }
 
     if (action === 'adminSaveBallotPackagingConfig') {

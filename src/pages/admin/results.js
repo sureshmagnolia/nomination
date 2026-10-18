@@ -562,6 +562,9 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       votes: Number(postAgg[c.id]) || 0
     })).sort((a, b) => b.votes - a.votes);
 
+    const tieDecisions = sets?.tieDecisions || JSON.parse(localStorage.getItem('election_tie_decisions') || '{}');
+    const tieDecision = tieDecisions[p.post] || null;
+
     let isTie = false;
     let tieType = null;
     let tiedCandidates = [];
@@ -576,6 +579,10 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
         isTie = true;
         tieType = 'tie-1st';
         tiedCandidates = candidatesWithVotes.filter(c => c.votes === v0);
+        if (tieDecision) {
+          const w = candidatesWithVotes.find(c => c.id === tieDecision.winnerId || c.candidateName === tieDecision.candidateName);
+          if (w) winners = [w];
+        }
       } else if (v0 > 0) {
         winners = [candidatesWithVotes[0]];
       }
@@ -585,13 +592,22 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
         isTie = true;
         tieType = 'tie-all';
         tiedCandidates = candidatesWithVotes.filter(c => c.votes === v0);
+        if (tieDecision) {
+          const w = candidatesWithVotes.find(c => c.id === tieDecision.winnerId || c.candidateName === tieDecision.candidateName);
+          if (w) winners = [w];
+        }
       } else if (v0 > 0 && v0 === v1 && v1 > (v2 || 0)) {
         winners = [candidatesWithVotes[0], candidatesWithVotes[1]];
       } else if (v0 > 0 && v0 > v1 && v1 > 0 && v1 === (v2 || 0)) {
         isTie = true;
         tieType = 'tie-2nd';
-        winners = [candidatesWithVotes[0]];
         tiedCandidates = candidatesWithVotes.filter((c, idx) => idx >= 1 && c.votes === v1);
+        if (tieDecision) {
+          const w2 = candidatesWithVotes.find(c => (c.id === tieDecision.winnerId || c.candidateName === tieDecision.candidateName) && c.id !== candidatesWithVotes[0].id);
+          winners = [candidatesWithVotes[0], w2 || candidatesWithVotes[1]];
+        } else {
+          winners = [candidatesWithVotes[0]];
+        }
       } else if (v0 > 0 && v1 > 0 && v0 > v1 && v1 > (v2 || 0)) {
         winners = [candidatesWithVotes[0], candidatesWithVotes[1]];
       } else if (v0 > 0) {
@@ -609,7 +625,13 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
         statusRemarks = 'Awaiting Count';
         marginText = '—';
       } else if (seats === 1) {
-        if (isTie && c.votes === v0) {
+        if (isTie && tieDecision && isElected) {
+          statusRemarks = `✓ ELECTED (Won by Toss / Lot • Equal votes: ${c.votes})`;
+          marginText = 'Won Toss/Lot';
+        } else if (isTie && tieDecision && c.votes === v0) {
+          statusRemarks = `Equal votes (${c.votes}) • Decided by Toss / Lot`;
+          marginText = 'Lost Toss/Lot';
+        } else if (isTie && c.votes === v0) {
           statusRemarks = `⚖️ TIE (${c.votes} votes) — Decision by Toss`;
           marginText = 'Equal Votes';
         } else if (isElected) {
@@ -624,7 +646,13 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       } else {
         // UUC (2 seats)
         const nonElectedThreshold = candidatesWithVotes.length > 2 ? v2 : 0;
-        if (isTie && tieType === 'tie-2nd' && c.votes === v1 && idx >= 1) {
+        if (isTie && tieType === 'tie-2nd' && tieDecision && isElected) {
+          statusRemarks = `✓ ELECTED (2nd Seat Won by Toss / Lot • Equal votes: ${c.votes})`;
+          marginText = 'Won Toss/Lot';
+        } else if (isTie && tieType === 'tie-2nd' && tieDecision && c.votes === v1 && idx >= 1) {
+          statusRemarks = `Equal votes (${c.votes}) for 2nd Seat • Decided by Toss / Lot`;
+          marginText = 'Lost Toss/Lot';
+        } else if (isTie && tieType === 'tie-2nd' && c.votes === v1 && idx >= 1) {
           statusRemarks = `⚖️ TIE FOR 2ND SEAT (${c.votes} votes) — Decision by Toss`;
           marginText = 'Equal Votes';
         } else if (isTie && tieType === 'tie-all' && c.votes === v0) {
@@ -662,6 +690,8 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       isTie,
       tieType,
       tiedCandidates,
+      isTieResolved: isTie && !!tieDecision,
+      tieDecision,
       totalVotes: Object.values(postAgg).reduce((a, b) => a + b, 0),
       nota: postAgg['NOTA'] || 0,
       invalid: postAgg['INVALID'] || 0
@@ -986,7 +1016,9 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
                     `<span class="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ELECTED UNANIMOUSLY</span>` : 
                     (res.type === 'draft-single' ?
                       `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">1 VALID NOMINEE • AWAITING FINAL LIST</span>` :
-                      `<span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${res.isTie ? '⚖️ TIE DETECTED' : (isFinalPublished ? 'CONTESTED ELECTION' : 'CONTESTED (DRAFT PREVIEW)')}</span>`
+                      `<span class="text-[10px] font-bold uppercase tracking-widest ${res.isTie ? (res.isTieResolved ? 'text-emerald-400 font-black' : 'text-amber-400 font-black animate-pulse') : 'text-slate-500'}">
+                    ${res.isTie ? (res.isTieResolved ? '🎲 DECIDED BY TOSS / LOT' : '⚖️ TIE DETECTED') : (isFinalPublished ? 'CONTESTED ELECTION' : 'CONTESTED (DRAFT PREVIEW)')}
+                  </span>`
                     )
                   }
                 </div>
@@ -1024,14 +1056,20 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
                               <td class="py-4 text-center">
                                 ${res.type === 'draft-single' ? 
                                   `<span class="text-amber-400 text-[10px] font-bold border border-amber-400/30 px-2 py-0.5 rounded bg-amber-500/10 tracking-wider">AWAITING FINAL LIST</span>` :
-                                  (isLeading ? 
-                                    (isLocked ? 
-                                      `<span class="text-emerald-400 text-[10px] font-black border border-emerald-400/30 px-2 py-0.5 rounded bg-emerald-500/10 tracking-wider">ELECTED</span>` : 
-                                      (isFinalPublished ? 
-                                        `<span class="text-amber-400 text-[10px] font-black border border-amber-400/30 px-2 py-0.5 rounded bg-amber-500/10 tracking-wider">LEADING</span>` :
-                                        `<span class="text-slate-400 text-[10px] font-bold border border-white/10 px-2 py-0.5 rounded bg-white/5 tracking-wider">DRAFT TALLY</span>`
+                                  (c.isElected && res.isTieResolved ?
+                                    `<span class="text-emerald-400 text-[10px] font-black border border-emerald-400/30 px-2 py-0.5 rounded bg-emerald-500/10 tracking-wider inline-flex items-center gap-1 shadow-sm"><span>🎲</span> ELECTED BY TOSS</span>` :
+                                    (res.isTie && !res.isTieResolved && c.votes === res.tiedCandidates[0]?.votes ?
+                                      `<span class="text-amber-400 text-[10px] font-black border border-amber-400/30 px-2 py-0.5 rounded bg-amber-500/10 tracking-wider inline-flex items-center gap-1 animate-pulse"><span>⚖️</span> TIED (${c.votes}v)</span>` :
+                                      (isLeading ? 
+                                        (isLocked ? 
+                                          `<span class="text-emerald-400 text-[10px] font-black border border-emerald-400/30 px-2 py-0.5 rounded bg-emerald-500/10 tracking-wider">ELECTED</span>` : 
+                                          (isFinalPublished ? 
+                                            `<span class="text-amber-400 text-[10px] font-black border border-amber-400/30 px-2 py-0.5 rounded bg-amber-500/10 tracking-wider">LEADING</span>` :
+                                            `<span class="text-slate-400 text-[10px] font-bold border border-white/10 px-2 py-0.5 rounded bg-white/5 tracking-wider">DRAFT TALLY</span>`
+                                          )
+                                        ) : ''
                                       )
-                                    ) : ''
+                                    )
                                   )
                                 }
                               </td>
@@ -1040,6 +1078,56 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
                         }).join('')}
                       </tbody>
                     </table>
+
+                    ${res.isTie ? `
+                      <div class="mt-4 p-4 rounded-xl border ${res.isTieResolved ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-amber-500/40 bg-amber-500/10'} page-enter">
+                        ${res.isTieResolved ? `
+                          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                              <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center justify-center text-lg shrink-0">
+                                🎲
+                              </div>
+                              <div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                  <span class="text-xs font-black text-emerald-300 uppercase tracking-wider">Tie Decided by Toss / Lot</span>
+                                  <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">Official Decision Recorded</span>
+                                </div>
+                                <p class="text-xs text-white mt-0.5">
+                                  Declared Winner: <strong class="text-emerald-400 underline font-extrabold">${esc(res.tieDecision.candidateName)}</strong> (Equal votes: ${res.tiedCandidates[0]?.votes || 0})
+                                </p>
+                                <span class="text-[10px] text-slate-400">Recorded: ${new Date(res.tieDecision.timestamp).toLocaleString('en-IN')}</span>
+                              </div>
+                            </div>
+                            <button data-clear-tie-post="${esc(res.post)}" class="btn btn-xs bg-slate-800 hover:bg-rose-900/50 text-slate-300 hover:text-rose-200 border border-white/10 px-3 py-1.5 rounded-lg flex items-center gap-1 shrink-0">
+                              <span>🔄</span> Re-open / Change Toss
+                            </button>
+                          </div>
+                        ` : `
+                          <div>
+                            <div class="flex items-start gap-2.5 mb-2.5">
+                              <span class="text-xl">⚖️</span>
+                              <div>
+                                <h5 class="text-xs font-black text-amber-300 uppercase tracking-wider">Equality of Votes (Tie) Detected</h5>
+                                <p class="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                                  Tied candidates: <strong>${res.tiedCandidates.map(c => esc(c.name || c.candidateName)).join(' & ')}</strong> (${res.tiedCandidates[0]?.votes || 0} votes each).
+                                  Under Calicut University / College Union Election Rules, the seat must be decided by lot / toss drawn by the Returning Officer.
+                                </p>
+                              </div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2.5 mt-3 pt-3 border-t border-amber-500/20">
+                              <label class="text-xs text-amber-200 font-bold">Select Winner decided by Toss / Lot:</label>
+                              <select id="selTie_${esc(res.post.replace(/[^a-zA-Z0-9]/g, '_'))}" class="select select-sm bg-slate-900 border border-amber-500/40 text-white text-xs rounded-lg px-2.5 py-1.5">
+                                <option value="">-- Choose Candidate --</option>
+                                ${res.tiedCandidates.map(c => `<option value="${esc(c.id)}" data-name="${esc(c.candidateName || c.name)}">${esc(c.candidateName || c.name)} (${esc(c.candidateClass || '')})</option>`).join('')}
+                              </select>
+                              <button data-save-tie-post="${esc(res.post)}" class="btn btn-sm bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs px-4 py-1.5 rounded-lg shadow-md flex items-center gap-1.5">
+                                <span>🎲</span> Record Toss Decision
+                              </button>
+                            </div>
+                          </div>
+                        `}
+                      </div>
+                    ` : ''}
 
                     ${res.type === 'election' ? `
                       <div class="mt-6 pt-4 border-t border-white/10 grid grid-cols-2 gap-3">
@@ -1659,7 +1747,10 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
                           <div style="margin-top: 9px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 11.5px; gap: 16px;">
                             <div>
                               <strong>${res.tieType === 'tie-2nd' ? '2nd UUC Winner by Toss:' : 'Declared Winner by Toss:'}</strong> 
-                              <span style="display: inline-block; min-width: 250px; border-bottom: 1.5px solid #000; margin-left: 6px;">&nbsp;</span>
+                              ${res.tieDecision ? 
+                                `<span style="display: inline-block; font-weight: 800; border-bottom: 1.5px solid #000; margin-left: 6px; padding: 0 10px; color: #000;">${esc(res.tieDecision.candidateName)} (Decided by Toss / Lot)</span>` :
+                                `<span style="display: inline-block; min-width: 250px; border-bottom: 1.5px solid #000; margin-left: 6px;">&nbsp;</span>`
+                              }
                             </div>
                             <div>
                               <strong>Signature of Returning Officer:</strong> 
@@ -1730,6 +1821,59 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       }
     };
   }
+
+  // ── Tie Decision (Toss / Lot) Recording & Clearing Handlers ─────────────────
+  main.querySelectorAll('[data-save-tie-post]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const postName = btn.getAttribute('data-save-tie-post');
+      const safeId = postName.replace(/[^a-zA-Z0-9]/g, '_');
+      const sel = main.querySelector(`#selTie_${safeId}`);
+      const winnerId = sel?.value;
+      const selectedOption = sel?.selectedOptions?.[0];
+      const candName = selectedOption?.getAttribute('data-name') || selectedOption?.textContent || winnerId;
+
+      if (!winnerId) {
+        showToast('Please select a candidate chosen by Toss / Lot.', 'error');
+        return;
+      }
+
+      if (!confirm(`Confirm Toss / Lot Decision:\n\nPost: ${postName}\nElected Winner: ${candName}\n\nDo you want to record this official toss decision?`)) {
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Recording...';
+      try {
+        await api.adminSaveTieDecision(pwd, postName, winnerId, candName, 'Toss / Lot');
+        showToast(`Toss decision recorded: ${candName} elected for ${postName}`, 'success');
+        if (reloadData) await reloadData(true);
+      } catch (err) {
+        showToast(`Failed to record tie decision: ${err.message}`, 'error');
+        btn.disabled = false;
+        btn.textContent = '🎲 Record Toss Decision';
+      }
+    });
+  });
+
+  main.querySelectorAll('[data-clear-tie-post]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const postName = btn.getAttribute('data-clear-tie-post');
+      if (!confirm(`Re-open Tie for "${postName}"?\n\nThis will remove the current toss decision and mark the post as a pending tie.`)) {
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Resetting...';
+      try {
+        await api.adminClearTieDecision(pwd, postName);
+        showToast(`Toss decision cleared for ${postName}`, 'info');
+        if (reloadData) await reloadData(true);
+      } catch (err) {
+        showToast(`Failed to reset tie decision: ${err.message}`, 'error');
+        btn.disabled = false;
+        btn.textContent = '🔄 Re-open / Change Toss';
+      }
+    });
+  });
 
   // ── Auto-Refresh Toggle ────────────────────────────────────────────────────
   const btnAuto = main.querySelector('#btnToggleAutoRefresh');

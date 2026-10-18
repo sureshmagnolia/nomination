@@ -434,7 +434,8 @@ export async function renderResults(container, options = {}) {
       const isResultsLocked = (rawResults && rawResults.locked === true) || sets?.resultsLocked === 'true';
       const year = schedule?.electionYear || sets?.electionYear || new Date().getFullYear();
 
-      cachedPayload = { posts, results, schedule, isCountingActive, isResultsPublished, isResultsLocked, year };
+      const tieDecisions = rawResults?.tieDecisions || sets?.tieDecisions || JSON.parse(localStorage.getItem('election_tie_decisions') || '{}');
+      cachedPayload = { posts, results, schedule, isCountingActive, isResultsPublished, isResultsLocked, year, tieDecisions };
       
       // Store cache for public users only
       if (!isAdmin) {
@@ -512,7 +513,7 @@ export async function renderResults(container, options = {}) {
     }
 
     // Convert live results into trend posts
-    const liveTrendsData = buildTrendsDataFromResults(payload.posts, payload.results);
+    const liveTrendsData = buildTrendsDataFromResults(payload.posts, payload.results, payload.tieDecisions || {});
     renderTrendsCards(main, liveTrendsData, previousTrendsState, Object.keys(previousTrendsState).length === 0);
     previousTrendsState = JSON.parse(JSON.stringify(liveTrendsData));
   }
@@ -525,7 +526,7 @@ export async function renderResults(container, options = {}) {
 /**
  * Builds data structure for the Trends view from active posts and vote records
  */
-function buildTrendsDataFromResults(posts, results) {
+function buildTrendsDataFromResults(posts, results, tieDecisions = {}) {
   const sorted = sortPosts(posts || []);
   const agg = {};
   sorted.forEach(p => {
@@ -549,18 +550,72 @@ function buildTrendsDataFromResults(posts, results) {
     const candidateIds = Object.keys(pAgg);
     if (candidateIds.length === 0) return;
 
-    const candidates = candidateIds.map(id => ({
+    const isUUC = pName.toUpperCase().includes('UUC') || pName.toUpperCase().includes('UNIVERSITY');
+    const seats = isUUC ? 2 : 1;
+    const decision = tieDecisions[pName] || null;
+
+    let candidates = candidateIds.map(id => ({
+      id,
       name: pAgg[id].name || id,
       votes: pAgg[id].votes || 0,
       isNota: id === 'NOTA',
       isInvalid: id === 'INVALID'
-    }));
+    })).sort((a, b) => b.votes - a.votes);
 
-    const isUUC = pName.toUpperCase().includes('UUC') || pName.toUpperCase().includes('UNIVERSITY');
+    // Identify candidate vote values for tie calculation (excluding NOTA / INVALID)
+    const valids = candidates.filter(c => !c.isNota && !c.isInvalid);
+    const v0 = valids[0]?.votes || 0;
+    const v1 = valids[1]?.votes || 0;
+    const v2 = valids[2]?.votes || 0;
+
+    let isTie = false;
+    let tieType = null;
+    if (seats === 1) {
+      if (v0 > 0 && v0 === v1) {
+        isTie = true;
+        tieType = 'tie-1st';
+      }
+    } else {
+      if (v0 > 0 && v0 === v1 && v1 === v2) {
+        isTie = true;
+        tieType = 'tie-all';
+      } else if (v0 > 0 && v1 > 0 && v1 === v2) {
+        isTie = true;
+        tieType = 'tie-2nd';
+      }
+    }
+
+    if (isTie && decision) {
+      candidates = candidates.map(c => {
+        const isWinner = (c.id === decision.winnerId || c.name === decision.candidateName);
+        const isTied = (tieType === 'tie-1st' && c.votes === v0) || (tieType === 'tie-2nd' && c.votes === v1) || (tieType === 'tie-all' && c.votes === v0);
+        return {
+          ...c,
+          isTieWinner: isWinner,
+          isTied,
+          tieMethod: decision.method || 'Toss / Lot'
+        };
+      }).sort((a, b) => {
+        if (a.votes !== b.votes) return b.votes - a.votes;
+        if (a.isTieWinner) return -1;
+        if (b.isTieWinner) return 1;
+        return 0;
+      });
+    } else if (isTie) {
+      candidates = candidates.map(c => ({
+        ...c,
+        isTied: (tieType === 'tie-1st' && c.votes === v0) || (tieType === 'tie-2nd' && c.votes === v1) || (tieType === 'tie-all' && c.votes === v0)
+      }));
+    }
+
     list.push({
       post: pName,
       isUUC,
-      seats: isUUC ? 2 : 1,
+      seats,
+      isTie,
+      tieType,
+      isTieResolved: isTie && !!decision,
+      tieDecision: decision,
       candidates
     });
   });
@@ -608,7 +663,16 @@ async function renderTrendsCards(container, postsData, oldDataObj, isFirstLoad =
           <div class="flex items-start justify-between gap-3 mb-3">
             <div>
               <h2 class="text-lg sm:text-xl font-black ${theme.text} uppercase tracking-wide leading-tight">${esc(postName)}</h2>
-              ${seats > 1 ? `<span class="badge ${theme.badge} text-[10px] font-extrabold uppercase tracking-wider mt-1 inline-block">${seats} SEATS ELECTION</span>` : ''}
+              <div class="flex items-center gap-1.5 flex-wrap mt-1">
+                ${seats > 1 ? `<span class="badge ${theme.badge} text-[10px] font-extrabold uppercase tracking-wider">${seats} SEATS ELECTION</span>` : ''}
+                ${postObj.isTieResolved ? 
+                  `<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1">🎲 Won by Toss / Lot</span>` : 
+                  (postObj.isTie ? 
+                    `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 animate-pulse">⚖️ Tie (Toss Pending)</span>` : 
+                    ''
+                  )
+                }
+              </div>
             </div>
             <div class="text-[11px] font-bold text-slate-400 uppercase tracking-widest pt-1">
               Votes
@@ -672,7 +736,28 @@ async function renderTrendsCards(container, postsData, oldDataObj, isFirstLoad =
       rankEl.className = `rank font-black text-base w-6 text-center shrink-0 ${isLeading ? theme.text : 'text-slate-400'}`;
       nameEl.textContent = c.name;
 
-      if (isLeading) {
+      if (c.isTieWinner) {
+        row.className = `candidate-row flex items-center justify-between p-3 rounded-xl transition duration-300 bg-emerald-950/40 shadow border border-emerald-500/40`;
+        leadEl.innerHTML = `
+          <div class="flex items-center gap-1.5 text-white px-2.5 py-0.5 rounded-full bg-emerald-600 shadow-md animate-pulse">
+            <span class="text-[9px] uppercase tracking-wider font-black">🎲 WON BY TOSS</span>
+          </div>
+        `;
+      } else if (c.isTied && postObj.isTieResolved) {
+        row.className = `candidate-row flex items-center justify-between p-3 rounded-xl transition duration-300 bg-slate-900/40 hover:bg-slate-800/40 border border-slate-700/50`;
+        leadEl.innerHTML = `
+          <div class="flex items-center gap-1 text-slate-300 px-2 py-0.5 rounded-full bg-slate-800 text-[10px] font-bold border border-white/10">
+            <span>⚖️ Tied (${c.votes}v)</span>
+          </div>
+        `;
+      } else if (c.isTied && !postObj.isTieResolved) {
+        row.className = `candidate-row flex items-center justify-between p-3 rounded-xl transition duration-300 bg-amber-950/20 border border-amber-500/30`;
+        leadEl.innerHTML = `
+          <div class="flex items-center gap-1 text-amber-300 px-2 py-0.5 rounded-full bg-amber-500/20 text-[10px] font-bold border border-amber-500/30 animate-pulse">
+            <span>⚖️ TIED (${c.votes}v)</span>
+          </div>
+        `;
+      } else if (isLeading) {
         row.className = `candidate-row flex items-center justify-between p-3 rounded-xl transition duration-300 bg-white/10 shadow border border-white/15`;
         leadEl.innerHTML = lead > 0 ? `
           <div class="flex items-center gap-1.5 text-white px-2.5 py-0.5 rounded-full ${theme.leadBg} shadow-md animate-pulse">
@@ -925,9 +1010,18 @@ function renderStandardView(main, payload, isViewerAdmin) {
 
     html += `
       <div class="glass rounded-2xl overflow-hidden border border-white/10 page-enter shadow-2xl">
-        <div class="bg-gradient-to-r from-slate-900/80 to-indigo-900/80 p-5 border-b border-white/10 flex items-center justify-between">
-          <h2 class="text-xl sm:text-2xl font-bold text-white tracking-tight">${esc(name)}</h2>
-          ${seats > 1 ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-bold">${seats} SEATS</span>` : ''}
+        <div class="bg-gradient-to-r from-slate-900/80 to-indigo-900/80 p-5 border-b border-white/10 flex items-center justify-between flex-wrap gap-2">
+          <div class="flex items-center gap-3">
+            <h2 class="text-xl sm:text-2xl font-bold text-white tracking-tight">${esc(name)}</h2>
+            ${seats > 1 ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-bold">${seats} SEATS</span>` : ''}
+          </div>
+          ${tieDecisions && tieDecisions[name] ? 
+            `<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 shadow-sm">🎲 DECIDED BY TOSS / LOT</span>` : 
+            (valids.length > 1 && valids[0]?.votes > 0 && valids[0]?.votes === valids[1]?.votes ? 
+              `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 animate-pulse">⚖️ TIE DETECTED • AWAITING TOSS</span>` : 
+              ''
+            )
+          }
         </div>
         <div class="p-6 space-y-6 bg-slate-900/20">
           ${valids.map((c, i) => {
@@ -946,10 +1040,13 @@ function renderStandardView(main, payload, isViewerAdmin) {
                     <div>
                       <div class="flex items-center gap-2">
                         <span class="font-bold text-white text-base sm:text-lg">${esc(c.name)}</span>
-                        ${isLeading ? (isResultsLocked ? 
-                          `<span class="bg-emerald-500/20 text-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-black border border-emerald-500/30 tracking-wider">ELECTED</span>` : 
-                          `<span class="bg-amber-500/20 text-amber-300 text-[10px] px-2 py-0.5 rounded-full font-black border border-amber-500/30 tracking-wider">LEADING</span>`
-                        ) : ''}
+                        ${tieDecisions && tieDecisions[name] && (c.id === tieDecisions[name].winnerId || c.name === tieDecisions[name].candidateName) ?
+                          `<span class="bg-emerald-500/20 text-emerald-300 text-[10px] px-2.5 py-0.5 rounded-full font-black border border-emerald-500/30 tracking-wider inline-flex items-center gap-1"><span>🎲</span> ELECTED BY TOSS</span>` :
+                          (isLeading ? (isResultsLocked ? 
+                            `<span class="bg-emerald-500/20 text-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-black border border-emerald-500/30 tracking-wider">ELECTED</span>` : 
+                            `<span class="bg-amber-500/20 text-amber-300 text-[10px] px-2 py-0.5 rounded-full font-black border border-amber-500/30 tracking-wider">LEADING</span>`
+                          ) : '')
+                        }
                         ${lead > 0 ? `<span class="bg-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold border border-green-500/30">LEAD: ${lead}</span>` : ''}
                       </div>
                     </div>
