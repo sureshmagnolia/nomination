@@ -69,6 +69,7 @@ router
   .on('/final-list',        render(renderFinalList))
   .on('/withdraw',          render(renderWithdraw))
   .on('/results',           render(renderResults))
+  .on('/results/breakdown', render((app) => renderResults(app, { initialTab: 'standard' })))
   .on('/trends',            render((app) => renderResults(app, { initialTab: 'trends' })))
   .on('/nominal-roll',      render(renderNominalRoll))
   .on('/find-booth',        render(renderBoothSearch))

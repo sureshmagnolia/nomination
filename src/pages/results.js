@@ -155,7 +155,7 @@ export async function renderResults(container, options = {}) {
   const adminPwd = localStorage.getItem('adminPwd') || sessionStorage.getItem('adminPwd');
   const isAdmin = !!adminPwd;
 
-  let activeTab = options.initialTab || (window.location.hash.includes('trends') ? 'trends' : 'standard');
+  let activeTab = options.initialTab || (window.location.hash.includes('breakdown') || window.location.hash.includes('standard') ? 'standard' : 'trends');
   let testData = null;
   let previousTrendsState = {};
   let cachedPayload = null;
@@ -184,14 +184,14 @@ export async function renderResults(container, options = {}) {
 
         <!-- Tab & Action Controls Subheader -->
         <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 border-t border-white/5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          <!-- View Tabs -->
+          <!-- View Tabs (Odometer Default / Breakdown Secondary) -->
           <div class="inline-flex p-1 bg-slate-900/90 rounded-xl border border-white/10 shadow-inner">
-            <button id="tabBtnStandard" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition flex items-center gap-2">
-              <span>📊</span> Results Breakdown
-            </button>
-            <button id="tabBtnTrends" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition flex items-center gap-2">
-              <span>🎯</span> Counting Trends (Screen View)
+            <button id="tabBtnTrends" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-sky-600 text-white shadow-lg transition flex items-center gap-2">
+              <span>🎯</span> Counting Trends (Odometer View)
               <span class="px-1.5 py-0.2 rounded text-[10px] font-black uppercase tracking-wider bg-sky-500/20 text-sky-300 border border-sky-500/30">Odometer</span>
+            </button>
+            <button id="tabBtnStandard" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-400 hover:text-white transition flex items-center gap-2">
+              <span>📊</span> Results Breakdown
             </button>
           </div>
 
@@ -233,14 +233,14 @@ export async function renderResults(container, options = {}) {
   const resultsMain = container.querySelector('#resultsMain');
 
   function updateTabButtons() {
-    if (activeTab === 'standard') {
-      tabBtnStandard.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-indigo-600 text-white shadow-lg transition flex items-center gap-2';
-      tabBtnTrends.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-400 hover:text-white transition flex items-center gap-2';
-      if (trendsToolbar) trendsToolbar.style.display = 'none';
-    } else {
-      tabBtnStandard.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-400 hover:text-white transition flex items-center gap-2';
+    if (activeTab === 'trends') {
       tabBtnTrends.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-sky-600 text-white shadow-lg transition flex items-center gap-2';
+      tabBtnStandard.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-400 hover:text-white transition flex items-center gap-2';
       if (trendsToolbar) trendsToolbar.style.display = '';
+    } else {
+      tabBtnTrends.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-400 hover:text-white transition flex items-center gap-2';
+      tabBtnStandard.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-indigo-600 text-white shadow-lg transition flex items-center gap-2';
+      if (trendsToolbar) trendsToolbar.style.display = 'none';
     }
   }
 
