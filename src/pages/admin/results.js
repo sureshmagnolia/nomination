@@ -1736,7 +1736,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
                       <tr style="page-break-inside: avoid; break-inside: avoid;">
                         <td colspan="5" class="lot-box">
                           <div style="font-weight: 900; font-size: 11px; text-transform: uppercase; color: #000; letter-spacing: 0.3px;">
-                            🎲 TIE RESOLUTION BY DRAW OF LOTS (University Election Statute):
+                            TIE RESOLUTION BY LOT:
                           </div>
                           <div style="font-size: 10.5px; color: #111; margin-top: 2px;">
                             ${res.tieType === 'tie-2nd' ? 
