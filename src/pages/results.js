@@ -593,7 +593,7 @@ function buildTrendsDataFromResults(posts, results, tieDecisions = {}) {
           ...c,
           isTieWinner: isWinner,
           isTied,
-          tieMethod: decision.method || 'Toss / Lot'
+          tieMethod: decision.method || 'Lot'
         };
       }).sort((a, b) => {
         if (a.votes !== b.votes) return b.votes - a.votes;
@@ -666,9 +666,9 @@ async function renderTrendsCards(container, postsData, oldDataObj, isFirstLoad =
               <div class="flex items-center gap-1.5 flex-wrap mt-1">
                 ${seats > 1 ? `<span class="badge ${theme.badge} text-[10px] font-extrabold uppercase tracking-wider">${seats} SEATS ELECTION</span>` : ''}
                 ${postObj.isTieResolved ? 
-                  `<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1">🎲 Won by Toss / Lot</span>` : 
+                  `<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1">🎲 Won by Lot</span>` : 
                   (postObj.isTie ? 
-                    `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 animate-pulse">⚖️ Tie (Toss Pending)</span>` : 
+                    `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 animate-pulse">⚖️ Tie (Lot Pending)</span>` : 
                     ''
                   )
                 }
@@ -740,7 +740,7 @@ async function renderTrendsCards(container, postsData, oldDataObj, isFirstLoad =
         row.className = `candidate-row flex items-center justify-between p-3 rounded-xl transition duration-300 bg-emerald-950/40 shadow border border-emerald-500/40`;
         leadEl.innerHTML = `
           <div class="flex items-center gap-1.5 text-white px-2.5 py-0.5 rounded-full bg-emerald-600 shadow-md animate-pulse">
-            <span class="text-[9px] uppercase tracking-wider font-black">🎲 WON BY TOSS</span>
+            <span class="text-[9px] uppercase tracking-wider font-black">🎲 WON BY LOT</span>
           </div>
         `;
       } else if (c.isTied && postObj.isTieResolved) {
@@ -843,7 +843,7 @@ function updateRollingCounter(container, oldValue, newValue, isFirstLoad = false
  * Standard View Renderer (detailed tables, leading candidate leaderboard, progress bars)
  */
 function renderStandardView(main, payload, isViewerAdmin) {
-  const { posts, results, isCountingActive, isResultsPublished, isResultsLocked } = payload || {};
+  const { posts, results, isCountingActive, isResultsPublished, isResultsLocked, tieDecisions = {} } = payload || {};
 
   // For public visitors: strictly hide until released by Returning Officer
   // For admins: allow viewing live breakdown stream
@@ -1016,9 +1016,9 @@ function renderStandardView(main, payload, isViewerAdmin) {
             ${seats > 1 ? `<span class="badge bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-bold">${seats} SEATS</span>` : ''}
           </div>
           ${tieDecisions && tieDecisions[name] ? 
-            `<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 shadow-sm">🎲 DECIDED BY TOSS / LOT</span>` : 
+            `<span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 shadow-sm">🎲 DECIDED BY LOT</span>` : 
             (valids.length > 1 && valids[0]?.votes > 0 && valids[0]?.votes === valids[1]?.votes ? 
-              `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 animate-pulse">⚖️ TIE DETECTED • AWAITING TOSS</span>` : 
+              `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 animate-pulse">⚖️ TIE DETECTED • AWAITING LOT</span>` : 
               ''
             )
           }
@@ -1041,7 +1041,7 @@ function renderStandardView(main, payload, isViewerAdmin) {
                       <div class="flex items-center gap-2">
                         <span class="font-bold text-white text-base sm:text-lg">${esc(c.name)}</span>
                         ${tieDecisions && tieDecisions[name] && (c.id === tieDecisions[name].winnerId || c.name === tieDecisions[name].candidateName) ?
-                          `<span class="bg-emerald-500/20 text-emerald-300 text-[10px] px-2.5 py-0.5 rounded-full font-black border border-emerald-500/30 tracking-wider inline-flex items-center gap-1"><span>🎲</span> ELECTED BY TOSS</span>` :
+                          `<span class="bg-emerald-500/20 text-emerald-300 text-[10px] px-2.5 py-0.5 rounded-full font-black border border-emerald-500/30 tracking-wider inline-flex items-center gap-1"><span>🎲</span> ELECTED BY LOT</span>` :
                           (isLeading ? (isResultsLocked ? 
                             `<span class="bg-emerald-500/20 text-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-black border border-emerald-500/30 tracking-wider">ELECTED</span>` : 
                             `<span class="bg-amber-500/20 text-amber-300 text-[10px] px-2 py-0.5 rounded-full font-black border border-amber-500/30 tracking-wider">LEADING</span>`

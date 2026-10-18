@@ -539,7 +539,7 @@ export const api = {
     return post({ action: 'adminUpdateCredentials', password, ...credentials });
   },
 
-  adminSaveTieDecision: async (password, postName, winnerId, candidateName, method = 'Toss / Lot', notes = '') => {
+  adminSaveTieDecision: async (password, postName, winnerId, candidateName, method = 'Lot', notes = '') => {
     try {
       const local = JSON.parse(localStorage.getItem('election_tie_decisions') || '{}');
       local[postName] = { winnerId, candidateName, method, notes, timestamp: new Date().toISOString() };

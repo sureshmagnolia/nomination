@@ -2300,7 +2300,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       existing[post] = {
         winnerId,
         candidateName: candidateName || winnerId,
-        method: method || 'Toss / Lot',
+        method: method || 'Lot',
         notes: notes || '',
         timestamp: new Date().toISOString()
       };
