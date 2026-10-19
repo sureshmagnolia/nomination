@@ -388,9 +388,12 @@ export async function openOathModal(options = {}) {
 
     // ── MODAL STATE MANAGEMENT ──────────────────────────────────────────────────
     const yearNum = settings.electionYear || schedule.electionYear || new Date().getFullYear();
-    let collegeNameMl = 'ഗവൺമെന്റ് കോളേജ് ചിറ്റൂരിലെ';
-    let academicYear = `${Number(yearNum) - 1}-${yearNum}`;
-    let oathDate = getFormattedCurrentDate();
+    // If year entered in settings is 2026, academic year is 2026 - 2027
+    const defaultAcademicYear = `${Number(yearNum)} - ${Number(yearNum) + 1}`;
+    
+    let collegeNameMl = localStorage.getItem('gcc_oath_college_name_ml') || 'ഗവൺമെന്റ് കോളേജ് ചിറ്റൂരിലെ';
+    let academicYear = localStorage.getItem('gcc_oath_academic_year') || defaultAcademicYear;
+    let oathDate = localStorage.getItem('gcc_oath_date') || getFormattedCurrentDate();
     let selectedIndex = 0;
     let viewMode = 'single'; // 'single' | 'all'
 
@@ -596,19 +599,22 @@ export async function openOathModal(options = {}) {
       modalEl.querySelector('#btnCloseOathModalBtn')?.addEventListener('click', closeModal);
       modalEl.querySelector('#oathBackdrop')?.addEventListener('click', closeModal);
 
-      // Global parameters change
+      // Global parameters change with persistence
       modalEl.querySelector('#inputCollegeMl')?.addEventListener('input', (e) => {
         collegeNameMl = e.target.value.trim() || 'ഗവൺമെന്റ് കോളേജ് ചിറ്റൂരിലെ';
+        try { localStorage.setItem('gcc_oath_college_name_ml', collegeNameMl); } catch (_) {}
         updatePreviewDisplay();
       });
 
       modalEl.querySelector('#inputAcademicYear')?.addEventListener('input', (e) => {
-        academicYear = e.target.value.trim() || '2026-2027';
+        academicYear = e.target.value.trim() || defaultAcademicYear;
+        try { localStorage.setItem('gcc_oath_academic_year', academicYear); } catch (_) {}
         updatePreviewDisplay();
       });
 
       modalEl.querySelector('#inputOathDate')?.addEventListener('input', (e) => {
         oathDate = e.target.value.trim() || getFormattedCurrentDate();
+        try { localStorage.setItem('gcc_oath_date', oathDate); } catch (_) {}
         updatePreviewDisplay();
       });
 
