@@ -43,17 +43,18 @@ export function isGeneralPost(postName = '') {
  * Standardize English post title for official oath document
  */
 export function getStandardGeneralPostTitle(postName = '') {
-  const p = String(postName || '').trim().toLowerCase();
-  // Check 'vice' BEFORE 'chairperson/chairman' so Vice Chairperson does not get matched as Chairman
-  if (p.includes('vice')) return 'THE VICE CHAIRPERSON';
-  if (p.includes('chairperson') || p.includes('chairman')) return 'THE CHAIRMAN';
-  if (p.includes('joint')) return 'THE JOINT SECRETARY';
-  if (p.includes('general secretary')) return 'THE GENERAL SECRETARY';
-  if (p.includes('uuc') || p.includes('councillor') || p.includes('university union')) return 'THE UNIVERSITY UNION COUNCILLOR';
-  if (p.includes('editor') || p.includes('magazine')) return 'THE CHIEF STUDENT EDITOR';
-  if (p.includes('fine arts') || p.includes('arts club')) return 'THE SECRETARY FINE ARTS';
-  if (p.includes('sports') || p.includes('captain') || p.includes('games')) return 'THE GENERAL CAPTAIN FOR SPORTS AND GAMES';
-  return postName.toUpperCase();
+  let p = String(postName || '').trim();
+  if (!p) return '';
+
+  // Clean trailing acronym parentheticals like (UUC)
+  p = p.replace(/\s*\(\s*uuc\s*\)/i, '').trim();
+
+  // Ensure standard leading "THE "
+  if (!p.toLowerCase().startsWith('the ')) {
+    p = 'THE ' + p;
+  }
+
+  return p.toUpperCase();
 }
 
 /**
