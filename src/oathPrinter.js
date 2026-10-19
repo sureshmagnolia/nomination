@@ -44,10 +44,11 @@ export function isGeneralPost(postName = '') {
  */
 export function getStandardGeneralPostTitle(postName = '') {
   const p = String(postName || '').trim().toLowerCase();
-  if (p.includes('chairperson') || p.includes('chairman')) return 'THE CHAIRMAN';
+  // Check 'vice' BEFORE 'chairperson/chairman' so Vice Chairperson does not get matched as Chairman
   if (p.includes('vice')) return 'THE VICE CHAIRPERSON';
-  if (p.includes('general secretary')) return 'THE GENERAL SECRETARY';
+  if (p.includes('chairperson') || p.includes('chairman')) return 'THE CHAIRMAN';
   if (p.includes('joint')) return 'THE JOINT SECRETARY';
+  if (p.includes('general secretary')) return 'THE GENERAL SECRETARY';
   if (p.includes('uuc') || p.includes('councillor') || p.includes('university union')) return 'THE UNIVERSITY UNION COUNCILLOR';
   if (p.includes('editor') || p.includes('magazine')) return 'THE CHIEF STUDENT EDITOR';
   if (p.includes('fine arts') || p.includes('arts club')) return 'THE SECRETARY FINE ARTS';
@@ -548,6 +549,24 @@ export async function openOathModal(options = {}) {
 
               <!-- Interactive Sheet Display Canvas -->
               <div class="flex-1 flex flex-col items-center justify-start overflow-y-auto py-2 px-1">
+                <style>
+                  .oath-sheet-preview, .oath-sheet-preview * {
+                    color: #000000 !important;
+                  }
+                  .oath-post-title-preview {
+                    color: #000000 !important;
+                    font-weight: 800 !important;
+                  }
+                  .oath-title-ml-preview {
+                    color: #000000 !important;
+                    font-weight: 800 !important;
+                  }
+                  .oath-sheet-preview hr {
+                    border: none !important;
+                    border-top: 2px solid #2563eb !important;
+                    opacity: 1 !important;
+                  }
+                </style>
                 ${viewMode === 'single' ? renderSingleA4SheetHtml(selectedItem, collegeNameMl, academicYear, oathDate) : `
                   <div class="w-full space-y-6 flex flex-col items-center">
                     ${wonCandidatesList.filter(item => item.enabled !== false).map((item, i) => `
@@ -760,25 +779,29 @@ export function renderSingleA4SheetHtml(item, collegeNameMl, academicYear, oathD
       position: relative;
       border: 1px solid #d1d5db;
     ">
-      <!-- Top Title -->
+      <!-- Top Header: Post Title & Malayalam Title -->
       <div style="text-align: center; margin-bottom: 2px;">
-        <h2 style="
-          font-family: 'Inter', -apple-system, sans-serif;
-          font-size: 19px;
-          font-weight: 800;
-          letter-spacing: 0.5px;
-          color: #000;
-          margin: 0;
-          text-transform: uppercase;
-        ">${esc(item.postTitleEn)}</h2>
+        <div class="oath-post-title-preview" style="
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+          font-size: 21px !important;
+          font-weight: 800 !important;
+          letter-spacing: 0.8px !important;
+          color: #000000 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          text-transform: uppercase !important;
+          line-height: 1.2 !important;
+        ">${esc(item.postTitleEn)}</div>
         
-        <h1 style="
-          font-family: 'Anek Malayalam', 'Noto Sans Malayalam', sans-serif;
-          font-size: 24px;
-          font-weight: 800;
-          color: #000;
-          margin: 6px 0 0 0;
-        ">സത്യപ്രതിജ്ഞ</h1>
+        <div class="oath-title-ml-preview" style="
+          font-family: 'Anek Malayalam', 'Noto Sans Malayalam', sans-serif !important;
+          font-size: 27px !important;
+          font-weight: 800 !important;
+          color: #000000 !important;
+          margin: 6px 0 0 0 !important;
+          padding: 0 !important;
+          line-height: 1.3 !important;
+        ">സത്യപ്രതിജ്ഞ</div>
       </div>
 
       <!-- Top Blue Horizontal Divider Line -->
