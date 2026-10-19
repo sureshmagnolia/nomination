@@ -14,6 +14,7 @@ import { generateAndPrintBallots, generateAndPrintBallotPressSummary, downloadBa
 import { generateAndPrintElectoralRolls, generateAndPrintBallotAccounts, generateAndPrintPresidingOfficerInstructions } from './booths.js';
 import { openPrintRollModal } from '../../rollPrinter.js';
 import { getCountingMeta } from '../../offlineStorage.js';
+import { openOathModal } from '../../oathPrinter.js';
 
 
 export async function renderAdminNotices(container) {
@@ -206,6 +207,9 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                 </button>
                 <button id="btnHubQuickPressSummary" class="btn bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black px-4 py-2.5 rounded-xl shadow-lg shadow-amber-500/20 flex items-center gap-2">
                   <span>🗳️</span> Press Summary Sheet
+                </button>
+                <button id="btnHubQuickOaths" class="btn bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2" title="Swearing-in Ceremony Oaths (Available after Results Declaration)">
+                  <span>📜</span> Swearing-in Oaths
                 </button>
               </div>
             </div>
@@ -693,6 +697,25 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                   <a href="#/admin/results" class="btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 shadow-md">
                     <span>🏆</span> Open Form 7 Proclamation
                   </a>
+                </div>
+
+                <!-- Swearing-in Ceremony Oaths (A4 Portrait - Won Candidates Only) -->
+                <div class="bg-white/5 rounded-xl p-4 border border-indigo-500/30 hover:border-indigo-500/50 transition flex flex-col justify-between space-y-3 min-w-0 bg-gradient-to-br from-indigo-950/20 to-transparent">
+                  <div>
+                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30 whitespace-nowrap">Ceremony Packet</span>
+                      <span class="text-[10px] font-mono text-emerald-400 whitespace-nowrap">A4 Single Sheet (Won Only)</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white flex items-center gap-1.5">
+                      <span>📜</span> Swearing-in Oaths (സത്യപ്രതിജ്ഞ)
+                    </h5>
+                    <p class="text-xs text-slate-400 mt-1">
+                      Official Malayalam swearing-in oaths in Anek Malayalam font for won candidates of General Union posts. Generates strictly after Results Declaration.
+                    </p>
+                  </div>
+                  <button id="btnHubOpenOathModal" class="btn bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 shadow-md">
+                    <span>📜</span> Open Oath Studio Modal
+                  </button>
                 </div>
               </div>
             </div>

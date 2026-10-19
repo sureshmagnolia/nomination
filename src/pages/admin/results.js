@@ -15,6 +15,7 @@ import {
 } from '../../offlineStorage.js';
 
 import { router } from '../../router.js';
+import { openOathModal } from '../../oathPrinter.js';
 
 let activeAdminResultsPollTimer = null;
 let lastDataFingerprint = '';
@@ -949,6 +950,9 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
           <div class="flex flex-wrap items-center gap-2">
             <button id="btnPrintOfficial" class="btn btn-primary px-4 py-1.5 text-xs flex items-center gap-1.5 font-bold shadow-lg" title="Action: Generates official University Form 8 Declaration of Results printable sheet.&#10;Prerequisite: Ensure all post counts are verified and finalized.">
               <span>🖨️</span> Print Official Result Sheet
+            </button>
+            <button id="btnResultsOpenOaths" class="btn bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 text-xs flex items-center gap-1.5 font-bold shadow-lg shadow-indigo-600/30" title="Generate Swearing-in Ceremony Oath sheets (സത്യപ്രതിജ്ഞ) for Won candidates of General Union posts on single A4 sheets. (Available only after Results are declared)">
+              <span>📜</span> Swearing-in Oaths
             </button>
             <a href="#/trends" target="_blank" class="btn btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5 font-bold text-sky-300 border-sky-500/30 hover:bg-sky-500/10" title="Action: Opens projector-friendly trends and live declaration screen in a new window.">
               <span>🎯</span> Trends Screen
