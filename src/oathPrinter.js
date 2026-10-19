@@ -178,7 +178,7 @@ export async function openOathModal(options = {}) {
   // Show preliminary loading modal
   const modalEl = document.createElement('div');
   modalEl.id = 'oathModalContainer';
-  modalEl.className = 'fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5';
+  modalEl.className = 'fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5';
   modalEl.innerHTML = `
     <div class="absolute inset-0 bg-slate-950/85 backdrop-blur-md"></div>
     <div class="relative bg-slate-900 border border-white/15 rounded-2xl p-8 text-center text-slate-200 z-10 shadow-2xl max-w-md w-full">

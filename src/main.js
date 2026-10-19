@@ -1,3 +1,4 @@
+import { openOathModal } from './oathPrinter.js';
 /**
  * main.js - Application entry point
  * Sets up the router and background decorations, then starts the app.
@@ -166,3 +167,12 @@ if ('serviceWorker' in navigator && window.location.protocol.startsWith('http'))
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   });
 }
+
+// ─── Global Swearing-in Oath Action Handler ──────────────────────────────────
+document.addEventListener('click', (e) => {
+  const oathTrigger = e.target.closest('#btnResultsOpenOaths, #btnHubOpenOathModal, #btnHubQuickOaths, [data-action="open-oaths"]');
+  if (oathTrigger) {
+    e.preventDefault();
+    openOathModal();
+  }
+});

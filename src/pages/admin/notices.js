@@ -208,7 +208,7 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                 <button id="btnHubQuickPressSummary" class="btn bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black px-4 py-2.5 rounded-xl shadow-lg shadow-amber-500/20 flex items-center gap-2">
                   <span>🗳️</span> Press Summary Sheet
                 </button>
-                <button id="btnHubQuickOaths" class="btn bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2" title="Swearing-in Ceremony Oaths (Available after Results Declaration)">
+                <button id="btnHubQuickOaths" data-action="open-oaths" class="btn bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2" title="Swearing-in Ceremony Oaths (Available after Results Declaration)">
                   <span>📜</span> Swearing-in Oaths
                 </button>
               </div>
@@ -713,7 +713,7 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                       Official Malayalam swearing-in oaths in Anek Malayalam font for won candidates of General Union posts. Generates strictly after Results Declaration.
                     </p>
                   </div>
-                  <button id="btnHubOpenOathModal" class="btn bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 shadow-md">
+                  <button id="btnHubOpenOathModal" data-action="open-oaths" class="btn bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 shadow-md">
                     <span>📜</span> Open Oath Studio Modal
                   </button>
                 </div>
@@ -1166,6 +1166,27 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
   };
   main.querySelector('#btnHubOpenRollModal')?.addEventListener('click', handleOpenRollModal);
   main.querySelector('#btnHubQuickNominalRoll')?.addEventListener('click', handleOpenRollModal);
+
+  // Swearing-in Ceremony Oaths (സത്യപ്രതിജ്ഞ)
+  const handleOpenOaths = (e) => {
+    if (e) e.preventDefault();
+    openOathModal({
+      settings,
+      schedule,
+      posts,
+      nominations,
+      nominalRoll,
+      pwd
+    });
+  };
+  main.querySelector('#btnHubOpenOathModal')?.addEventListener('click', handleOpenOaths);
+  main.querySelector('#btnHubQuickOaths')?.addEventListener('click', handleOpenOaths);
+  main.addEventListener('click', (e) => {
+    const oathBtn = e.target.closest('#btnHubOpenOathModal, #btnHubQuickOaths, [data-action="open-oaths"]');
+    if (oathBtn) {
+      handleOpenOaths(e);
+    }
+  });
 
   // Counting Table Sequence Placards (Dynamic round-by-round from counting matrix)
   main.querySelector('#btnHubPrintPlacards')?.addEventListener('click', () => {

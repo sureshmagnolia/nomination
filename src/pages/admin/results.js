@@ -951,7 +951,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
             <button id="btnPrintOfficial" class="btn btn-primary px-4 py-1.5 text-xs flex items-center gap-1.5 font-bold shadow-lg" title="Action: Generates official University Form 8 Declaration of Results printable sheet.&#10;Prerequisite: Ensure all post counts are verified and finalized.">
               <span>🖨️</span> Print Official Result Sheet
             </button>
-            <button id="btnResultsOpenOaths" class="btn bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 text-xs flex items-center gap-1.5 font-bold shadow-lg shadow-indigo-600/30" title="Generate Swearing-in Ceremony Oath sheets (സത്യപ്രതിജ്ഞ) for Won candidates of General Union posts on single A4 sheets. (Available only after Results are declared)">
+            <button id="btnResultsOpenOaths" data-action="open-oaths" class="btn bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 text-xs flex items-center gap-1.5 font-bold shadow-lg shadow-indigo-600/30" title="Generate Swearing-in Ceremony Oath sheets (സത്യപ്രതിജ്ഞ) for Won candidates of General Union posts on single A4 sheets. (Available only after Results are declared)">
               <span>📜</span> Swearing-in Oaths
             </button>
             <a href="#/trends" target="_blank" class="btn btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5 font-bold text-sky-300 border-sky-500/30 hover:bg-sky-500/10" title="Action: Opens projector-friendly trends and live declaration screen in a new window.">
@@ -1586,6 +1586,26 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       showToast(`Results spreadsheet downloaded: ${filename}`, 'success');
     } catch (err) {
       showToast(`CSV export failed: ${err.message}`, 'error');
+    }
+  });
+
+  // Swearing-in Ceremony Oaths (സത്യപ്രതിജ്ഞ)
+  const handleOpenResultsOaths = (e) => {
+    if (e) e.preventDefault();
+    openOathModal({
+      results,
+      candidates,
+      posts,
+      settings: sets,
+      schedule: sched,
+      pwd
+    });
+  };
+  main.querySelector('#btnResultsOpenOaths')?.addEventListener('click', handleOpenResultsOaths);
+  main.addEventListener('click', (e) => {
+    const oathBtn = e.target.closest('#btnResultsOpenOaths, [data-action="open-oaths"]');
+    if (oathBtn) {
+      handleOpenResultsOaths(e);
     }
   });
 
