@@ -58,18 +58,22 @@ export function getStandardGeneralPostTitle(postName = '') {
 /**
  * Compute post winners from posts, candidates, and counting results
  */
-export function computePostWinners({ posts = [], candidates = [], results = [], isFinalPublished = false, tieDecisions = {} }) {
+export function computePostWinners({ posts = [], candidates = [], results = [], isFinalPublished = false, tieDecisions = {} } = {}) {
+  const postsList = Array.isArray(posts) ? posts : (posts?.posts || CONFIG.DEFAULT_POSTS || []);
+  const candList = Array.isArray(candidates) ? candidates : (candidates?.active || candidates?.nominations || []);
+  const resList = Array.isArray(results) ? results : (results?.results || []);
+
   const agg = {};
-  results.forEach(r => {
+  resList.forEach(r => {
     const postKey = String(r.Post || '').trim();
     if (!agg[postKey]) agg[postKey] = {};
     if (!agg[postKey][r.CandidateId]) agg[postKey][r.CandidateId] = 0;
     agg[postKey][r.CandidateId] += Number(r.Votes) || 0;
   });
 
-  return posts.map(p => {
+  return postsList.map(p => {
     const pPostTrim = String(p.post || '').trim().toLowerCase();
-    const postCandidates = candidates.filter(c => 
+    const postCandidates = candList.filter(c => 
       String(c.post || '').trim().toLowerCase() === pPostTrim
     );
     const postAgg = agg[p.post] || agg[String(p.post || '').trim()] || {};
@@ -188,496 +192,521 @@ export async function openOathModal(options = {}) {
   `;
   document.body.appendChild(modalEl);
 
-  let settings = options.settings;
-  let schedule = options.schedule;
-  let posts = options.posts;
-  let candidates = options.candidates;
-  let results = options.results;
-  let nominations = options.nominations;
-  let nominalRoll = options.nominalRoll;
-
-  // Fetch missing dependencies if not provided
   try {
-    if (!settings || !schedule) {
-      const setsPromise = pwd ? api.adminGetSettings(pwd).catch(() => ({})) : api.getSettings().catch(() => ({}));
-      const schedPromise = pwd ? api.adminGetSchedule(pwd).catch(() => ({})) : api.getPublicSchedule().catch(() => ({}));
-      const [s, sc] = await Promise.all([setsPromise, schedPromise]);
-      settings = settings || s || {};
-      schedule = schedule || sc || {};
-    }
+    let settings = options.settings;
+    let schedule = options.schedule;
+    let posts = options.posts;
+    let candidates = options.candidates;
+    let results = options.results;
+    let nominations = options.nominations;
+    let nominalRoll = options.nominalRoll;
 
-    if (!posts || posts.length === 0) {
-      posts = pwd ? await api.adminGetPosts(pwd).catch(() => CONFIG.DEFAULT_POSTS) : (CONFIG.DEFAULT_POSTS || []);
-    }
-
-    if (!results || results.length === 0) {
-      const rawRes = pwd ? await api.adminGetResults(pwd, true).catch(() => []) : await api.getResults(true).catch(() => []);
-      results = Array.isArray(rawRes) ? rawRes : (rawRes?.results || []);
-    }
-
-    if (!candidates || candidates.length === 0) {
-      if (pwd) {
-        try {
-          const fn = await api.adminGetFinalNominations(pwd).catch(() => null);
-          if (Array.isArray(fn?.active) && fn.active.length > 0) {
-            candidates = fn.active;
-          } else if (Array.isArray(fn) && fn.length > 0) {
-            candidates = fn;
-          }
-        } catch (_) {}
+    // Fetch missing dependencies if not provided
+    try {
+      if (!settings || !schedule) {
+        const setsPromise = pwd ? api.adminGetSettings(pwd).catch(() => ({})) : api.getSettings().catch(() => ({}));
+        const schedPromise = api.getPublicSchedule().catch(() => ({}));
+        const [s, sc] = await Promise.all([setsPromise, schedPromise]);
+        settings = settings || s || {};
+        schedule = schedule || sc || {};
       }
-      if (!candidates || candidates.length === 0) {
-        const allNoms = nominations || (pwd ? await api.adminGetNominations(pwd, true).catch(() => []) : []);
-        if (allNoms && allNoms.length) {
-          candidates = allNoms.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved');
+
+      if (!posts || !Array.isArray(posts) || posts.length === 0) {
+        const rawPosts = pwd ? await api.adminGetPosts(pwd).catch(() => null) : await api.getPosts().catch(() => null);
+        if (Array.isArray(rawPosts)) posts = rawPosts;
+        else if (Array.isArray(rawPosts?.posts)) posts = rawPosts.posts;
+        else posts = CONFIG.DEFAULT_POSTS || [];
+      }
+
+      if (!results || !Array.isArray(results) || results.length === 0) {
+        const rawRes = pwd ? await api.adminGetResults(pwd, true).catch(() => null) : await api.getResults(true).catch(() => null);
+        if (Array.isArray(rawRes)) results = rawRes;
+        else if (Array.isArray(rawRes?.results)) results = rawRes.results;
+        else {
+          try {
+            const { getAllResultsLocally } = await import('./offlineStorage.js');
+            const local = await getAllResultsLocally();
+            if (Array.isArray(local) && local.length > 0) results = local;
+          } catch (_) {}
         }
       }
-    }
 
-    if (!nominalRoll || nominalRoll.length === 0) {
-      nominalRoll = await api.getNominalRoll().catch(() => []);
-    }
-  } catch (err) {
-    console.warn('Error fetching oath dependencies:', err);
-  }
-
-  // Check if results are declared and published
-  let isResultsPublished = (settings?.resultsPublished === 'true') || 
-                           (settings?.resultsPublished === true) || 
-                           (schedule?.resultsPublished === 'true') || 
-                           (schedule?.resultsPublished === true) || 
-                           (options.isResultsPublished === true);
-
-  if (!isResultsPublished) {
-    try {
-      const freshSets = pwd ? await api.adminGetSettings(pwd).catch(() => null) : await api.getSettings().catch(() => null);
-      if (freshSets?.resultsPublished === 'true' || freshSets?.resultsPublished === true) {
-        isResultsPublished = true;
-        settings = Object.assign(settings || {}, freshSets);
+      if (!candidates || !Array.isArray(candidates) || candidates.length === 0) {
+        if (pwd) {
+          try {
+            const fn = await api.adminGetFinalNominations(pwd).catch(() => null);
+            if (Array.isArray(fn?.active) && fn.active.length > 0) {
+              candidates = fn.active;
+            } else if (Array.isArray(fn) && fn.length > 0) {
+              candidates = fn;
+            }
+          } catch (_) {}
+        }
+        if (!candidates || !Array.isArray(candidates) || candidates.length === 0) {
+          let allNoms = nominations;
+          if (!allNoms || !Array.isArray(allNoms)) {
+            allNoms = pwd ? await api.adminGetNominations(pwd, true).catch(() => []) : [];
+            if (!Array.isArray(allNoms) && Array.isArray(allNoms?.nominations)) {
+              allNoms = allNoms.nominations;
+            }
+          }
+          if (Array.isArray(allNoms) && allNoms.length) {
+            candidates = allNoms.filter(n => n.status === 'Valid' && n.withdrawalStatus !== 'Approved');
+          }
+        }
       }
-    } catch (_) {}
-  }
 
-  // ── RULE ENFORCEMENT: CANNOT GENERATE BEFORE RESULT IS PUBLISHED ─────────────
-  if (!isResultsPublished) {
-    modalEl.innerHTML = `
-      <div class="absolute inset-0 bg-slate-950/85 backdrop-blur-md" id="oathBackdrop"></div>
-      <div class="relative bg-slate-900 border border-amber-500/30 rounded-2xl p-6 sm:p-8 text-center text-slate-200 z-10 shadow-2xl max-w-lg w-full space-y-5 animate-scale-in">
-        <div class="w-16 h-16 mx-auto rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center text-3xl shadow-inner">
-          🔒
-        </div>
-        <div class="space-y-2">
-          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider bg-amber-500/10 text-amber-300 border border-amber-500/30">
-            <span>⚠️</span> Statutory Pre-Condition Lock
+      if (!nominalRoll || !Array.isArray(nominalRoll) || nominalRoll.length === 0) {
+        nominalRoll = await api.getNominalRoll().catch(() => []);
+      }
+    } catch (err) {
+      console.warn('Error fetching oath dependencies:', err);
+    }
+
+    // Ensure all collections are guaranteed arrays
+    posts = Array.isArray(posts) ? posts : (posts?.posts || CONFIG.DEFAULT_POSTS || []);
+    candidates = Array.isArray(candidates) ? candidates : (candidates?.active || candidates?.nominations || []);
+    results = Array.isArray(results) ? results : (results?.results || []);
+    nominalRoll = Array.isArray(nominalRoll) ? nominalRoll : [];
+
+    // Check if results are declared and published
+    let isResultsPublished = (settings?.resultsPublished === 'true') || 
+                             (settings?.resultsPublished === true) || 
+                             (schedule?.resultsPublished === 'true') || 
+                             (schedule?.resultsPublished === true) || 
+                             (options.isResultsPublished === true);
+
+    if (!isResultsPublished) {
+      try {
+        const freshSets = pwd ? await api.adminGetSettings(pwd).catch(() => null) : await api.getSettings().catch(() => null);
+        if (freshSets?.resultsPublished === 'true' || freshSets?.resultsPublished === true) {
+          isResultsPublished = true;
+          settings = Object.assign(settings || {}, freshSets);
+        }
+      } catch (_) {}
+    }
+
+    // ── RULE ENFORCEMENT: CANNOT GENERATE BEFORE RESULT IS PUBLISHED ─────────────
+    if (!isResultsPublished) {
+      modalEl.innerHTML = `
+        <div class="absolute inset-0 bg-slate-950/85 backdrop-blur-md" id="oathBackdrop"></div>
+        <div class="relative bg-slate-900 border border-amber-500/30 rounded-2xl p-6 sm:p-8 text-center text-slate-200 z-10 shadow-2xl max-w-lg w-full space-y-5 animate-scale-in">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center text-3xl shadow-inner">
+            🔒
           </div>
-          <h3 class="text-xl font-black text-white">Results Awaiting Official Declaration</h3>
-          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-md mx-auto">
-            Swearing-in Ceremony Oaths (<strong>സത്യപ്രതിജ്ഞാ പത്രിക</strong>) are generated strictly for <strong>Won Candidates</strong> after official election results are declared and published by the Returning Officer.
-          </p>
-        </div>
-
-        <div class="p-4 rounded-xl bg-black/40 border border-white/5 text-left text-xs text-slate-400 space-y-2">
-          <div class="flex items-center justify-between font-bold text-slate-300">
-            <span>Current Election Lifecycle Stage:</span>
-            <span class="text-amber-400 font-mono">Stage 1 / 2 (Not Published)</span>
+          <div class="space-y-2">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider bg-amber-500/10 text-amber-300 border border-amber-500/30">
+              <span>⚠️</span> Statutory Pre-Condition Lock
+            </div>
+            <h3 class="text-xl font-black text-white">Results Awaiting Official Declaration</h3>
+            <p class="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-md mx-auto">
+              Swearing-in Ceremony Oaths (<strong>സത്യപ്രതിജ്ഞാ പത്രിക</strong>) are generated strictly for <strong>Won Candidates</strong> after official election results are declared and published by the Returning Officer.
+            </p>
           </div>
-          <p class="text-[11px] text-slate-400 leading-normal">
-            To generate and print these statutory oaths, navigate to the <strong>Results Command Center</strong>, review counting tallies, and click <strong>"Declare &amp; Publish Results" (Stage 3)</strong>.
-          </p>
+
+          <div class="p-4 rounded-xl bg-black/40 border border-white/5 text-left text-xs text-slate-400 space-y-2">
+            <div class="flex items-center justify-between font-bold text-slate-300">
+              <span>Current Election Lifecycle Stage:</span>
+              <span class="text-amber-400 font-mono">Stage 1 / 2 (Not Published)</span>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-normal">
+              To generate and print these statutory oaths, navigate to the <strong>Results Command Center</strong>, review counting tallies, and click <strong>"Declare &amp; Publish Results" (Stage 3)</strong>.
+            </p>
+          </div>
+
+          <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button id="btnCloseOathGuard" class="btn btn-secondary text-xs font-bold py-2.5 px-5 rounded-xl w-full sm:w-auto">
+              Close
+            </button>
+            <a href="#/admin/results" id="btnGoToResultsCmd" class="btn bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2.5 px-5 rounded-xl w-full sm:w-auto shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
+              <span>🏆</span> Go to Results Command Center &rarr;
+            </a>
+          </div>
         </div>
+      `;
 
-        <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-          <button id="btnCloseOathGuard" class="btn btn-secondary text-xs font-bold py-2.5 px-5 rounded-xl w-full sm:w-auto">
-            Close
-          </button>
-          <a href="#/admin/results" id="btnGoToResultsCmd" class="btn bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2.5 px-5 rounded-xl w-full sm:w-auto shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
-            <span>🏆</span> Go to Results Command Center &rarr;
-          </a>
-        </div>
-      </div>
-    `;
-
-    const closeGuard = () => modalEl.remove();
-    modalEl.querySelector('#btnCloseOathGuard')?.addEventListener('click', closeGuard);
-    modalEl.querySelector('#oathBackdrop')?.addEventListener('click', closeGuard);
-    modalEl.querySelector('#btnGoToResultsCmd')?.addEventListener('click', closeGuard);
-    return;
-  }
-
-  // ── EXTRACT WON CANDIDATES FOR ALL GENERAL POSTS ──────────────────────────────
-  const tieDecisions = settings?.tieDecisions || JSON.parse(localStorage.getItem('election_tie_decisions') || '{}');
-  const postResults = computePostWinners({
-    posts,
-    candidates,
-    results,
-    isFinalPublished: true,
-    tieDecisions
-  });
-
-  // Filter only General Posts and extract won candidates
-  const generalPosts = posts.filter(p => isGeneralPost(p.post));
-  const wonCandidatesList = [];
-
-  generalPosts.forEach(p => {
-    const pr = postResults.find(r => r.post.toLowerCase().trim() === p.post.toLowerCase().trim());
-    const winners = pr?.winners || [];
-    const isUUC = pr?.isUUC || p.post.toUpperCase().includes('UUC') || p.post.toUpperCase().includes('UNIVERSITY');
-
-    if (isUUC) {
-      // Handle UUC Seat 1
-      if (winners[0]) {
-        wonCandidatesList.push(formatWinnerItem(winners[0], p.post, 'THE UNIVERSITY UNION COUNCILLOR', 'uuc_1', 'University Union Councillor (Councillor 1)', nominalRoll));
-      }
-      // Handle UUC Seat 2
-      if (winners[1]) {
-        wonCandidatesList.push(formatWinnerItem(winners[1], p.post, 'THE UNIVERSITY UNION COUNCILLOR', 'uuc_2', 'University Union Councillor (Councillor 2)', nominalRoll));
-      }
-    } else if (winners[0]) {
-      const defaultTitleEn = getStandardGeneralPostTitle(p.post);
-      wonCandidatesList.push(formatWinnerItem(winners[0], p.post, defaultTitleEn, `post_${p.post.replace(/\s+/g, '_')}`, p.post, nominalRoll));
+      const closeGuard = () => modalEl.remove();
+      modalEl.querySelector('#btnCloseOathGuard')?.addEventListener('click', closeGuard);
+      modalEl.querySelector('#oathBackdrop')?.addEventListener('click', closeGuard);
+      modalEl.querySelector('#btnGoToResultsCmd')?.addEventListener('click', closeGuard);
+      return;
     }
-  });
 
-  // If no won candidates were found in general posts
-  if (wonCandidatesList.length === 0) {
-    modalEl.innerHTML = `
-      <div class="absolute inset-0 bg-slate-950/85 backdrop-blur-md" id="oathBackdrop"></div>
-      <div class="relative bg-slate-900 border border-white/15 rounded-2xl p-6 sm:p-8 text-center text-slate-200 z-10 shadow-2xl max-w-lg w-full space-y-4">
-        <div class="text-3xl">⚠️</div>
-        <h3 class="text-lg font-bold text-white">No Won Candidates Found for General Posts</h3>
-        <p class="text-xs text-slate-400">
-          No winning candidates were recorded in the declared results for Executive/General Union posts. Please verify votes entry in Results Command Center.
-        </p>
-        <button id="btnCloseOathEmpty" class="btn btn-secondary text-xs font-bold py-2 px-5 rounded-xl">Close</button>
-      </div>
-    `;
-    modalEl.querySelector('#btnCloseOathEmpty')?.addEventListener('click', () => modalEl.remove());
-    modalEl.querySelector('#oathBackdrop')?.addEventListener('click', () => modalEl.remove());
-    return;
-  }
+    // ── EXTRACT WON CANDIDATES FOR ALL GENERAL POSTS ──────────────────────────────
+    const tieDecisions = settings?.tieDecisions || JSON.parse(localStorage.getItem('election_tie_decisions') || '{}');
+    const postResults = computePostWinners({
+      posts,
+      candidates,
+      results,
+      isFinalPublished: true,
+      tieDecisions
+    });
 
-  // ── MODAL STATE MANAGEMENT ──────────────────────────────────────────────────
-  const yearNum = settings.electionYear || schedule.electionYear || new Date().getFullYear();
-  let collegeNameMl = 'ഗവൺമെന്റ് കോളേജ് ചിറ്റൂരിലെ';
-  let academicYear = `${Number(yearNum) - 1}-${yearNum}`;
-  let oathDate = getFormattedCurrentDate();
-  let selectedIndex = 0;
-  let viewMode = 'single'; // 'single' | 'all'
+    // Filter only General Posts and extract won candidates
+    const generalPosts = posts.filter(p => isGeneralPost(p.post));
+    const wonCandidatesList = [];
 
-  // Helper to re-render the modal interface
-  function renderOathModalUI() {
-    const selectedItem = wonCandidatesList[selectedIndex] || wonCandidatesList[0];
-    const totalWon = wonCandidatesList.length;
-    const activeWonCount = wonCandidatesList.filter(item => item.enabled !== false).length;
+    generalPosts.forEach(p => {
+      const pr = postResults.find(r => String(r.post || '').toLowerCase().trim() === String(p.post || '').toLowerCase().trim());
+      const winners = pr?.winners || [];
+      const isUUC = pr?.isUUC || p.post.toUpperCase().includes('UUC') || p.post.toUpperCase().includes('UNIVERSITY');
 
-    modalEl.innerHTML = `
-      <!-- Backdrop -->
-      <div class="absolute inset-0 bg-slate-950/85 backdrop-blur-md" id="oathBackdrop"></div>
+      if (isUUC) {
+        // Handle UUC Seat 1
+        if (winners[0]) {
+          wonCandidatesList.push(formatWinnerItem(winners[0], p.post, 'THE UNIVERSITY UNION COUNCILLOR', 'uuc_1', 'University Union Councillor (Councillor 1)', nominalRoll));
+        }
+        // Handle UUC Seat 2
+        if (winners[1]) {
+          wonCandidatesList.push(formatWinnerItem(winners[1], p.post, 'THE UNIVERSITY UNION COUNCILLOR', 'uuc_2', 'University Union Councillor (Councillor 2)', nominalRoll));
+        }
+      } else if (winners[0]) {
+        const defaultTitleEn = getStandardGeneralPostTitle(p.post);
+        wonCandidatesList.push(formatWinnerItem(winners[0], p.post, defaultTitleEn, `post_${p.post.replace(/\s+/g, '_')}`, p.post, nominalRoll));
+      }
+    });
 
-      <!-- Main Modal Card -->
-      <div class="relative bg-slate-900 border border-white/15 rounded-2xl shadow-2xl max-w-6xl w-full flex flex-col z-10 max-h-[94vh] overflow-hidden">
+    // If no won candidates were found in general posts
+    if (wonCandidatesList.length === 0) {
+      modalEl.innerHTML = `
+        <div class="absolute inset-0 bg-slate-950/85 backdrop-blur-md" id="oathBackdrop"></div>
+        <div class="relative bg-slate-900 border border-white/15 rounded-2xl p-6 sm:p-8 text-center text-slate-200 z-10 shadow-2xl max-w-lg w-full space-y-4">
+          <div class="text-3xl">⚠️</div>
+          <h3 class="text-lg font-bold text-white">No Won Candidates Found for General Posts</h3>
+          <p class="text-xs text-slate-400">
+            No winning candidates were recorded in the declared results for Executive/General Union posts. Please verify votes entry in Results Command Center.
+          </p>
+          <button id="btnCloseOathEmpty" class="btn btn-secondary text-xs font-bold py-2 px-5 rounded-xl">Close</button>
+        </div>
+      `;
+      modalEl.querySelector('#btnCloseOathEmpty')?.addEventListener('click', () => modalEl.remove());
+      modalEl.querySelector('#oathBackdrop')?.addEventListener('click', () => modalEl.remove());
+      return;
+    }
+
+    // ── MODAL STATE MANAGEMENT ──────────────────────────────────────────────────
+    const yearNum = settings.electionYear || schedule.electionYear || new Date().getFullYear();
+    let collegeNameMl = 'ഗവൺമെന്റ് കോളേജ് ചിറ്റൂരിലെ';
+    let academicYear = `${Number(yearNum) - 1}-${yearNum}`;
+    let oathDate = getFormattedCurrentDate();
+    let selectedIndex = 0;
+    let viewMode = 'single'; // 'single' | 'all'
+
+    // Helper to re-render the modal interface
+    function renderOathModalUI() {
+      const selectedItem = wonCandidatesList[selectedIndex] || wonCandidatesList[0];
+      const totalWon = wonCandidatesList.length;
+      const activeWonCount = wonCandidatesList.filter(item => item.enabled !== false).length;
+
+      modalEl.innerHTML = `
+        <div class="absolute inset-0 bg-slate-950/85 backdrop-blur-md" id="oathBackdrop"></div>
         
-        <!-- Modal Top Bar -->
-        <div class="px-5 py-3.5 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 bg-slate-950/60 shrink-0">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-xl shadow-inner">
-              📜
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <h3 class="font-black text-white text-base leading-tight">Swearing-in Ceremony Oaths</h3>
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-wider font-mono">
-                  ${totalWon} Won Candidates
-                </span>
-              </div>
-              <p class="text-xs text-slate-400 mt-0.5 font-medium">
-                Official single-page A4 Malayalam affirmations (<span class="text-indigo-300 font-semibold">സത്യപ്രതിജ്ഞ</span>) in <span class="text-sky-300 font-semibold font-mono">Anek Malayalam</span> font
-              </p>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <button id="btnPrintCurrentOath" class="btn btn-secondary text-xs font-bold py-2 px-3.5 rounded-xl flex items-center gap-1.5 hover:bg-white/10" title="Print only the selected candidate's single A4 sheet">
-              <span>🖨️</span> Print Current (1 Page)
-            </button>
-            <button id="btnPrintAllOaths" class="btn bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 px-4 rounded-xl flex items-center gap-1.5 shadow-lg shadow-indigo-600/30" title="Print all configured General Union won candidate oaths">
-              <span>🖨️</span> Print All Won Candidates (${activeWonCount} A4 Sheets)
-            </button>
-            <button id="btnCloseOathModalBtn" class="text-slate-400 hover:text-white text-2xl leading-none px-2 py-1">&times;</button>
-          </div>
-        </div>
-
-        <!-- Modal Body (Two-Column Layout) -->
-        <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-0 overflow-hidden divide-y lg:divide-y-0 lg:divide-x divide-white/10">
+        <div class="relative bg-slate-900 border border-white/15 rounded-3xl w-full max-w-6xl max-h-[92vh] flex flex-col z-10 shadow-2xl overflow-hidden animate-scale-in">
           
-          <!-- LEFT COLUMN: Global Settings & Won Candidates List (5 Cols) -->
-          <div class="lg:col-span-5 p-4 sm:p-5 overflow-y-auto space-y-5 bg-slate-900/40">
-            
-            <!-- Global Config Card -->
-            <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3.5">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold uppercase tracking-wider text-indigo-300 flex items-center gap-1.5">
-                  <span>🏛️</span> Institutional Parameters
-                </span>
-                <span class="text-[10px] text-slate-400 font-mono">Applies to all sheets</span>
-              </div>
-
-              <!-- College Name in Malayalam -->
+          <!-- Top Modal Header -->
+          <div class="px-6 py-4 border-b border-white/10 bg-slate-950/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl p-2 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300">📜</span>
               <div>
-                <label class="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                  College Name in Malayalam (with -ലെ)
-                </label>
-                <input type="text" id="inputCollegeMl" class="field text-xs py-2 px-3 w-full font-sans" value="${esc(collegeNameMl)}" placeholder="e.g. ഗവൺമെന്റ് കോളേജ് ചിറ്റൂരിലെ">
-              </div>
-
-              <div class="grid grid-cols-2 gap-3">
-                <!-- Academic Year -->
-                <div>
-                  <label class="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Academic Year
-                  </label>
-                  <input type="text" id="inputAcademicYear" class="field text-xs py-2 px-3 w-full font-mono" value="${esc(academicYear)}" placeholder="e.g. 2026-2027">
-                </div>
-
-                <!-- Ceremony Date -->
-                <div>
-                  <label class="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Ceremony Date
-                  </label>
-                  <input type="text" id="inputOathDate" class="field text-xs py-2 px-3 w-full font-mono" value="${esc(oathDate)}" placeholder="DD/MM/YYYY">
-                </div>
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                  Swearing-in Ceremony Oaths (സത്യപ്രതിജ്ഞ)
+                  <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Won Candidates Only
+                  </span>
+                </h3>
+                <p class="text-xs text-slate-400">
+                  Pre-aligned single A4 sheets in <strong>Anek Malayalam</strong> font with custom college details and candidate registry.
+                </p>
               </div>
             </div>
 
-            <!-- Won Candidates List -->
-            <div class="space-y-2">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                  <span>🏆</span> Elected General Union Candidates (${totalWon})
-                </span>
-                <span class="text-[10px] text-slate-400">Click to preview &amp; edit</span>
-              </div>
-
-              <div class="space-y-2 max-h-[46vh] overflow-y-auto pr-1" id="wonCandidatesCardList">
-                ${wonCandidatesList.map((item, idx) => {
-                  const isSelected = idx === selectedIndex;
-                  return `
-                    <div class="p-3 rounded-xl border transition-all cursor-pointer cand-item-card ${isSelected ? 'bg-indigo-600/20 border-indigo-500 shadow-md shadow-indigo-950/40' : 'bg-black/20 border-white/10 hover:border-white/20 hover:bg-white/5'}" data-index="${idx}">
-                      <div class="flex items-start justify-between gap-2">
-                        <div class="flex items-center gap-2">
-                          <input type="checkbox" class="w-4 h-4 rounded text-indigo-600 item-enable-checkbox" data-index="${idx}" ${item.enabled !== false ? 'checked' : ''} title="Include in Batch Print">
-                          <div>
-                            <div class="text-[11px] font-black uppercase text-indigo-300 leading-tight">
-                              ${esc(item.postTitleEn || item.postLabel)}
-                            </div>
-                            <div class="text-xs font-bold text-white mt-0.5">
-                              ${esc(item.candidateName)}
-                            </div>
-                            <div class="text-[10px] text-slate-400 mt-0.5 font-mono">
-                              ${esc(item.candidateClass || 'Class Not Specified')}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div class="text-right shrink-0">
-                          <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] font-bold uppercase tracking-wider block">
-                            ${esc(item.wonText || 'Elected')}
-                          </span>
-                          <span class="text-[10px] text-slate-500 font-mono mt-1 block">
-                            Sheet #${idx + 1}
-                          </span>
-                        </div>
-                      </div>
-
-                      ${isSelected ? `
-                        <!-- Active Item Quick Inline Edit -->
-                        <div class="mt-3 pt-3 border-t border-white/10 space-y-2.5 text-xs bg-slate-950/40 p-2.5 rounded-lg" onclick="event.stopPropagation()">
-                          <div>
-                            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Post Title (English Heading)</label>
-                            <input type="text" class="field text-xs py-1.5 px-2.5 w-full font-bold uppercase input-active-post-title" value="${esc(item.postTitleEn)}">
-                          </div>
-                          <div>
-                            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Candidate Name</label>
-                            <input type="text" class="field text-xs py-1.5 px-2.5 w-full font-bold uppercase input-active-cand-name" value="${esc(item.candidateName)}">
-                          </div>
-                          <div>
-                            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Class / Course / Dept</label>
-                            <input type="text" class="field text-xs py-1.5 px-2.5 w-full uppercase input-active-cand-class" value="${esc(item.candidateClass)}">
-                          </div>
-                        </div>
-                      ` : ''}
-                    </div>
-                  `;
-                }).join('')}
-              </div>
+            <!-- Action buttons -->
+            <div class="flex items-center gap-2">
+              <button type="button" id="btnPrintCurrentOath" class="btn bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-1.5">
+                <span>🖨️</span> Print Active Sheet
+              </button>
+              <button type="button" id="btnPrintAllOaths" class="btn bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-1.5">
+                <span>🖨️</span> Print All Oaths (${activeWonCount})
+              </button>
+              <button type="button" id="btnCloseOathModalBtn" class="btn btn-secondary text-xs font-bold p-2 rounded-xl text-slate-400 hover:text-white" title="Close Modal">
+                ✕
+              </button>
             </div>
-
           </div>
 
-          <!-- RIGHT COLUMN: Single A4 Sheet Live Preview (7 Cols) -->
-          <div class="lg:col-span-7 p-4 sm:p-6 bg-slate-950 flex flex-col justify-between overflow-y-auto">
+          <!-- Main Body: Two Columns (Left: Configuration & Selector, Right: A4 Preview) -->
+          <div class="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12">
             
-            <!-- Preview Controls Bar -->
-            <div class="flex items-center justify-between mb-4 border-b border-white/10 pb-3">
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>📄</span> Live A4 Print Preview
-                </span>
-                <span class="text-[10px] font-mono text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20">
-                  Font: Anek Malayalam
-                </span>
+            <!-- LEFT PANEL (Cols 1-5): Config & Candidate Selector List -->
+            <div class="lg:col-span-5 p-5 border-r border-white/10 overflow-y-auto space-y-5 bg-slate-900/50">
+              
+              <!-- Global Parameters Card -->
+              <div class="glass p-4 rounded-2xl border border-white/10 space-y-3">
+                <div class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center justify-between">
+                  <span>🏛️ Oath Document Configuration</span>
+                  <span class="text-[10px] font-mono text-slate-400">General Union</span>
+                </div>
+
+                <div class="space-y-2">
+                  <div>
+                    <label class="block text-[11px] font-bold text-slate-300 mb-1">College Name in Malayalam</label>
+                    <input type="text" id="inputCollegeMl" class="input input-sm w-full bg-slate-950 text-white text-xs border border-white/10 rounded-lg px-2.5 py-1.5" value="${esc(collegeNameMl)}" placeholder="e.g. ഗവൺമെന്റ് കോളേജ് ചിറ്റൂരിലെ">
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-[11px] font-bold text-slate-300 mb-1">Academic Year</label>
+                      <input type="text" id="inputAcademicYear" class="input input-sm w-full bg-slate-950 text-white text-xs border border-white/10 rounded-lg px-2.5 py-1.5" value="${esc(academicYear)}" placeholder="2026-2027">
+                    </div>
+                    <div>
+                      <label class="block text-[11px] font-bold text-slate-300 mb-1">Date of Oath</label>
+                      <input type="text" id="inputOathDate" class="input input-sm w-full bg-slate-950 text-white text-xs border border-white/10 rounded-lg px-2.5 py-1.5" value="${esc(oathDate)}" placeholder="DD/MM/YYYY">
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <!-- Preview View Mode Toggle -->
-              <div class="inline-flex p-0.5 bg-slate-900 rounded-lg border border-white/10 text-xs">
-                <button type="button" id="btnPreviewSingle" class="px-2.5 py-1 rounded-md font-bold transition ${viewMode === 'single' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}">
-                  Active Sheet
-                </button>
-                <button type="button" id="btnPreviewAll" class="px-2.5 py-1 rounded-md font-bold transition ${viewMode === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}">
-                  All Sheets (${totalWon})
-                </button>
-              </div>
-            </div>
+              <!-- Won Candidates List -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between px-1">
+                  <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Elected General Post Winners (${totalWon})
+                  </span>
+                  <span class="text-[10px] text-slate-400">Click to preview / edit</span>
+                </div>
 
-            <!-- Interactive Sheet Display Canvas -->
-            <div class="flex-1 flex flex-col items-center justify-start overflow-y-auto py-2 px-1">
-              ${viewMode === 'single' ? renderSingleA4SheetHtml(selectedItem, collegeNameMl, academicYear, oathDate) : `
-                <div class="w-full space-y-6 flex flex-col items-center">
-                  ${wonCandidatesList.filter(item => item.enabled !== false).map((item, i) => `
-                    <div class="relative w-full flex flex-col items-center">
-                      <div class="w-full max-w-[620px] text-right mb-1">
-                        <span class="text-[10px] font-mono text-slate-500">Sheet ${i + 1} of ${activeWonCount}</span>
+                <div class="space-y-2" id="wonCandidatesCardList">
+                  ${wonCandidatesList.map((item, idx) => `
+                    <div class="cand-item-card p-3 rounded-xl border transition cursor-pointer flex items-center justify-between gap-3 ${idx === selectedIndex ? 'bg-indigo-600/20 border-indigo-500 shadow-md ring-1 ring-indigo-500' : 'bg-white/5 border-white/10 hover:border-white/20'}" data-index="${idx}">
+                      <div class="flex items-center gap-3 min-w-0">
+                        <input type="checkbox" class="item-enable-checkbox rounded border-slate-700 text-indigo-600 focus:ring-0" ${item.enabled !== false ? 'checked' : ''} data-index="${idx}" title="Include in batch printing">
+                        <div class="min-w-0">
+                          <div class="text-xs font-bold text-white truncate">${esc(item.postTitleEn)}</div>
+                          <div class="text-[11px] text-indigo-300 font-semibold truncate">${esc(item.candidateName)}</div>
+                          <div class="text-[10px] text-slate-400 truncate">${esc(item.candidateClass)}</div>
+                        </div>
                       </div>
-                      ${renderSingleA4SheetHtml(item, collegeNameMl, academicYear, oathDate)}
+                      <div class="text-right shrink-0">
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 whitespace-nowrap">
+                          ${esc(item.wonText)}
+                        </span>
+                      </div>
                     </div>
                   `).join('')}
                 </div>
-              `}
+              </div>
+
+              <!-- Selected Candidate Live Edit Card -->
+              <div class="glass p-4 rounded-2xl border border-indigo-500/30 space-y-3 bg-gradient-to-br from-indigo-950/30 to-transparent">
+                <div class="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center justify-between">
+                  <span>✏️ Active Sheet Editor</span>
+                  <span class="text-[10px] font-mono text-slate-400">Sheet ${selectedIndex + 1} of ${totalWon}</span>
+                </div>
+
+                <div class="space-y-2">
+                  <div>
+                    <label class="block text-[11px] font-bold text-slate-400 mb-0.5">English Post Title (Centered Upper)</label>
+                    <input type="text" class="input-active-post-title input input-sm w-full bg-slate-950 text-white text-xs border border-white/10 rounded-lg px-2.5 py-1.5 font-bold uppercase" value="${esc(selectedItem.postTitleEn)}">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-bold text-slate-400 mb-0.5">Candidate Name</label>
+                    <input type="text" class="input-active-cand-name input input-sm w-full bg-slate-950 text-white text-xs border border-white/10 rounded-lg px-2.5 py-1.5 font-bold uppercase" value="${esc(selectedItem.candidateName)}">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-bold text-slate-400 mb-0.5">Class / Department</label>
+                    <input type="text" class="input-active-cand-class input input-sm w-full bg-slate-950 text-white text-xs border border-white/10 rounded-lg px-2.5 py-1.5 uppercase" value="${esc(selectedItem.candidateClass)}">
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- RIGHT PANEL (Cols 6-12): Single-Sheet A4 Live Preview -->
+            <div class="lg:col-span-7 p-6 overflow-hidden flex flex-col bg-slate-950/60">
+              
+              <!-- Preview Toolbar -->
+              <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-4 shrink-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <span>📄</span> Live A4 Print Preview
+                  </span>
+                  <span class="text-[10px] font-mono text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20">
+                    Font: Anek Malayalam
+                  </span>
+                </div>
+
+                <!-- Preview View Mode Toggle -->
+                <div class="inline-flex p-0.5 bg-slate-900 rounded-lg border border-white/10 text-xs">
+                  <button type="button" id="btnPreviewSingle" class="px-2.5 py-1 rounded-md font-bold transition ${viewMode === 'single' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}">
+                    Active Sheet
+                  </button>
+                  <button type="button" id="btnPreviewAll" class="px-2.5 py-1 rounded-md font-bold transition ${viewMode === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}">
+                    All Sheets (${totalWon})
+                  </button>
+                </div>
+              </div>
+
+              <!-- Interactive Sheet Display Canvas -->
+              <div class="flex-1 flex flex-col items-center justify-start overflow-y-auto py-2 px-1">
+                ${viewMode === 'single' ? renderSingleA4SheetHtml(selectedItem, collegeNameMl, academicYear, oathDate) : `
+                  <div class="w-full space-y-6 flex flex-col items-center">
+                    ${wonCandidatesList.filter(item => item.enabled !== false).map((item, i) => `
+                      <div class="relative w-full flex flex-col items-center">
+                        <div class="w-full max-w-[620px] text-right mb-1">
+                          <span class="text-[10px] font-mono text-slate-500">Sheet ${i + 1} of ${activeWonCount}</span>
+                        </div>
+                        ${renderSingleA4SheetHtml(item, collegeNameMl, academicYear, oathDate)}
+                      </div>
+                    `).join('')}
+                  </div>
+                `}
+              </div>
+
             </div>
 
           </div>
 
         </div>
+      `;
 
-      </div>
-    `;
+      // ── EVENT LISTENERS BINDING ───────────────────────────────────────────────
+      
+      // Close modal
+      const closeModal = () => modalEl.remove();
+      modalEl.querySelector('#btnCloseOathModalBtn')?.addEventListener('click', closeModal);
+      modalEl.querySelector('#oathBackdrop')?.addEventListener('click', closeModal);
 
-    // ── EVENT LISTENERS BINDING ───────────────────────────────────────────────
-    
-    // Close modal
-    const closeModal = () => modalEl.remove();
-    modalEl.querySelector('#btnCloseOathModalBtn')?.addEventListener('click', closeModal);
-    modalEl.querySelector('#oathBackdrop')?.addEventListener('click', closeModal);
+      // Global parameters change
+      modalEl.querySelector('#inputCollegeMl')?.addEventListener('input', (e) => {
+        collegeNameMl = e.target.value.trim() || 'ഗവൺമെന്റ് കോളേജ് ചിറ്റൂരിലെ';
+        updatePreviewDisplay();
+      });
 
-    // Global parameters change
-    modalEl.querySelector('#inputCollegeMl')?.addEventListener('input', (e) => {
-      collegeNameMl = e.target.value.trim() || 'ഗവൺമെന്റ് കോളേജ് ചിറ്റൂരിലെ';
-      updatePreviewDisplay();
-    });
+      modalEl.querySelector('#inputAcademicYear')?.addEventListener('input', (e) => {
+        academicYear = e.target.value.trim() || '2026-2027';
+        updatePreviewDisplay();
+      });
 
-    modalEl.querySelector('#inputAcademicYear')?.addEventListener('input', (e) => {
-      academicYear = e.target.value.trim() || '2026-2027';
-      updatePreviewDisplay();
-    });
+      modalEl.querySelector('#inputOathDate')?.addEventListener('input', (e) => {
+        oathDate = e.target.value.trim() || getFormattedCurrentDate();
+        updatePreviewDisplay();
+      });
 
-    modalEl.querySelector('#inputOathDate')?.addEventListener('input', (e) => {
-      oathDate = e.target.value.trim() || getFormattedCurrentDate();
-      updatePreviewDisplay();
-    });
+      // View mode switch
+      modalEl.querySelector('#btnPreviewSingle')?.addEventListener('click', () => {
+        viewMode = 'single';
+        renderOathModalUI();
+      });
+      modalEl.querySelector('#btnPreviewAll')?.addEventListener('click', () => {
+        viewMode = 'all';
+        renderOathModalUI();
+      });
 
-    // View mode switch
-    modalEl.querySelector('#btnPreviewSingle')?.addEventListener('click', () => {
-      viewMode = 'single';
-      renderOathModalUI();
-    });
-    modalEl.querySelector('#btnPreviewAll')?.addEventListener('click', () => {
-      viewMode = 'all';
-      renderOathModalUI();
-    });
+      // Select candidate card
+      modalEl.querySelectorAll('.cand-item-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const idx = Number(card.dataset.index);
+          if (!isNaN(idx) && idx !== selectedIndex) {
+            selectedIndex = idx;
+            renderOathModalUI();
+          }
+        });
+      });
 
-    // Select candidate card
-    modalEl.querySelectorAll('.cand-item-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const idx = Number(card.dataset.index);
-        if (!isNaN(idx) && idx !== selectedIndex) {
-          selectedIndex = idx;
-          renderOathModalUI();
+      // Toggle include in batch
+      modalEl.querySelectorAll('.item-enable-checkbox').forEach(chk => {
+        chk.addEventListener('change', (e) => {
+          e.stopPropagation();
+          const idx = Number(chk.dataset.index);
+          if (!isNaN(idx) && wonCandidatesList[idx]) {
+            wonCandidatesList[idx].enabled = chk.checked;
+            renderOathModalUI();
+          }
+        });
+      });
+
+      // Active item inline inputs
+      modalEl.querySelector('.input-active-post-title')?.addEventListener('input', (e) => {
+        if (wonCandidatesList[selectedIndex]) {
+          wonCandidatesList[selectedIndex].postTitleEn = e.target.value.trim().toUpperCase();
+          updatePreviewDisplay();
         }
       });
-    });
 
-    // Toggle include in batch
-    modalEl.querySelectorAll('.item-enable-checkbox').forEach(chk => {
-      chk.addEventListener('change', (e) => {
-        e.stopPropagation();
-        const idx = Number(chk.dataset.index);
-        if (!isNaN(idx) && wonCandidatesList[idx]) {
-          wonCandidatesList[idx].enabled = chk.checked;
-          renderOathModalUI();
+      modalEl.querySelector('.input-active-cand-name')?.addEventListener('input', (e) => {
+        if (wonCandidatesList[selectedIndex]) {
+          wonCandidatesList[selectedIndex].candidateName = e.target.value.trim().toUpperCase();
+          updatePreviewDisplay();
         }
       });
-    });
 
-    // Active item inline inputs
-    modalEl.querySelector('.input-active-post-title')?.addEventListener('input', (e) => {
-      if (wonCandidatesList[selectedIndex]) {
-        wonCandidatesList[selectedIndex].postTitleEn = e.target.value.trim().toUpperCase();
-        updatePreviewDisplay();
-      }
-    });
+      modalEl.querySelector('.input-active-cand-class')?.addEventListener('input', (e) => {
+        if (wonCandidatesList[selectedIndex]) {
+          wonCandidatesList[selectedIndex].candidateClass = e.target.value.trim().toUpperCase();
+          updatePreviewDisplay();
+        }
+      });
 
-    modalEl.querySelector('.input-active-cand-name')?.addEventListener('input', (e) => {
-      if (wonCandidatesList[selectedIndex]) {
-        wonCandidatesList[selectedIndex].candidateName = e.target.value.trim().toUpperCase();
-        updatePreviewDisplay();
-      }
-    });
+      // Print actions
+      modalEl.querySelector('#btnPrintCurrentOath')?.addEventListener('click', () => {
+        printOathSheets([wonCandidatesList[selectedIndex]], { collegeNameMl, academicYear, oathDate });
+      });
 
-    modalEl.querySelector('.input-active-cand-class')?.addEventListener('input', (e) => {
-      if (wonCandidatesList[selectedIndex]) {
-        wonCandidatesList[selectedIndex].candidateClass = e.target.value.trim().toUpperCase();
-        updatePreviewDisplay();
-      }
-    });
+      modalEl.querySelector('#btnPrintAllOaths')?.addEventListener('click', () => {
+        const toPrint = wonCandidatesList.filter(item => item.enabled !== false);
+        if (!toPrint.length) {
+          showToast('Please check at least one candidate oath to print.', 'error');
+          return;
+        }
+        printOathSheets(toPrint, { collegeNameMl, academicYear, oathDate });
+      });
 
-    // Print actions
-    modalEl.querySelector('#btnPrintCurrentOath')?.addEventListener('click', () => {
-      printOathSheets([wonCandidatesList[selectedIndex]], { collegeNameMl, academicYear, oathDate });
-    });
-
-    modalEl.querySelector('#btnPrintAllOaths')?.addEventListener('click', () => {
-      const toPrint = wonCandidatesList.filter(item => item.enabled !== false);
-      if (!toPrint.length) {
-        showToast('Please check at least one candidate oath to print.', 'error');
-        return;
-      }
-      printOathSheets(toPrint, { collegeNameMl, academicYear, oathDate });
-    });
-
-    function updatePreviewDisplay() {
-      const container = modalEl.querySelector('.overflow-y-auto.py-2.px-1');
-      if (!container) return;
-      if (viewMode === 'single') {
-        container.innerHTML = renderSingleA4SheetHtml(wonCandidatesList[selectedIndex], collegeNameMl, academicYear, oathDate);
-      } else {
-        container.innerHTML = `
-          <div class="w-full space-y-6 flex flex-col items-center">
-            ${wonCandidatesList.filter(item => item.enabled !== false).map((item, i) => `
-              <div class="relative w-full flex flex-col items-center">
-                <div class="w-full max-w-[620px] text-right mb-1">
-                  <span class="text-[10px] font-mono text-slate-500">Sheet ${i + 1} of ${activeWonCount}</span>
+      function updatePreviewDisplay() {
+        const container = modalEl.querySelector('.overflow-y-auto.py-2.px-1');
+        if (!container) return;
+        if (viewMode === 'single') {
+          container.innerHTML = renderSingleA4SheetHtml(wonCandidatesList[selectedIndex], collegeNameMl, academicYear, oathDate);
+        } else {
+          container.innerHTML = `
+            <div class="w-full space-y-6 flex flex-col items-center">
+              ${wonCandidatesList.filter(item => item.enabled !== false).map((item, i) => `
+                <div class="relative w-full flex flex-col items-center">
+                  <div class="w-full max-w-[620px] text-right mb-1">
+                    <span class="text-[10px] font-mono text-slate-500">Sheet ${i + 1} of ${activeWonCount}</span>
+                  </div>
+                  ${renderSingleA4SheetHtml(item, collegeNameMl, academicYear, oathDate)}
                 </div>
-                ${renderSingleA4SheetHtml(item, collegeNameMl, academicYear, oathDate)}
-              </div>
-            `).join('')}
-          </div>
-        `;
+              `).join('')}
+            </div>
+          `;
+        }
       }
     }
-  }
 
-  renderOathModalUI();
+    renderOathModalUI();
+
+  } catch (err) {
+    console.error('Fatal error in openOathModal:', err);
+    modalEl.innerHTML = `
+      <div class="absolute inset-0 bg-slate-950/85 backdrop-blur-md" id="oathBackdrop"></div>
+      <div class="relative bg-slate-900 border border-rose-500/30 rounded-2xl p-6 sm:p-8 text-center text-slate-200 z-10 shadow-2xl max-w-lg w-full space-y-4">
+        <div class="w-14 h-14 mx-auto rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center justify-center text-2xl">
+          ⚠️
+        </div>
+        <h3 class="text-lg font-bold text-white">Error Initializing Oath Generator</h3>
+        <p class="text-xs text-rose-300 font-mono bg-black/40 p-3 rounded-lg text-left break-all">
+          ${esc(err.message || String(err))}
+        </p>
+        <div class="flex justify-center gap-3 pt-2">
+          <button id="btnCloseOathErr" class="btn btn-secondary text-xs font-bold py-2 px-5 rounded-xl">Close</button>
+        </div>
+      </div>
+    `;
+    modalEl.querySelector('#btnCloseOathErr')?.addEventListener('click', () => modalEl.remove());
+    modalEl.querySelector('#oathBackdrop')?.addEventListener('click', () => modalEl.remove());
+  }
 }
+
 
 /**
  * Format winner item with candidate details and class lookup

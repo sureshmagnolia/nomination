@@ -1597,7 +1597,7 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
       candidates,
       posts,
       settings: sets,
-      schedule: sched,
+      schedule: schedule,
       pwd
     });
   };
