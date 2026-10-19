@@ -387,13 +387,16 @@ export async function openOathModal(options = {}) {
     }
 
     // ── MODAL STATE MANAGEMENT ──────────────────────────────────────────────────
-    const yearNum = settings.electionYear || schedule.electionYear || new Date().getFullYear();
-    // If year entered in settings is 2026, academic year is 2026 - 2027
-    const defaultAcademicYear = `${Number(yearNum)} - ${Number(yearNum) + 1}`;
+    // Election Year in settings is used to understand the academic year: 2026 -> 2026 - 2027
+    const rawElectionYear = String(settings.electionYear || schedule.electionYear || new Date().getFullYear()).trim();
+    const yearMatch = rawElectionYear.match(/\b(20\d\d)\b/);
+    const parsedStartYear = yearMatch ? parseInt(yearMatch[1], 10) : new Date().getFullYear();
+    const defaultAcademicYear = `${parsedStartYear} - ${parsedStartYear + 1}`;
     
-    let collegeNameMl = localStorage.getItem('gcc_oath_college_name_ml') || 'ഗവൺമെന്റ് കോളേജ് ചിറ്റൂരിലെ';
-    let academicYear = localStorage.getItem('gcc_oath_academic_year') || defaultAcademicYear;
-    let oathDate = localStorage.getItem('gcc_oath_date') || getFormattedCurrentDate();
+    // Read from Database settings first, with fallbacks to defaults and localStorage
+    let academicYear = (settings.academicYear && String(settings.academicYear).trim()) || localStorage.getItem('gcc_oath_academic_year') || defaultAcademicYear;
+    let collegeNameMl = (settings.oathCollegeMl && String(settings.oathCollegeMl).trim()) || localStorage.getItem('gcc_oath_college_name_ml') || 'ഗവൺമെന്റ് കോളേജ് ചിറ്റൂരിലെ';
+    let oathDate = (settings.oathDate && String(settings.oathDate).trim()) || localStorage.getItem('gcc_oath_date') || getFormattedCurrentDate();
     let selectedIndex = 0;
     let viewMode = 'single'; // 'single' | 'all'
 
@@ -460,8 +463,11 @@ export async function openOathModal(options = {}) {
 
                   <div class="grid grid-cols-2 gap-2">
                     <div>
-                      <label class="block text-[11px] font-bold text-slate-300 mb-1">Academic Year</label>
-                      <input type="text" id="inputAcademicYear" class="input input-sm w-full bg-slate-950 text-white text-xs border border-white/10 rounded-lg px-2.5 py-1.5" value="${esc(academicYear)}" placeholder="2026-2027">
+                      <div class="flex items-center justify-between mb-1">
+                        <label class="block text-[11px] font-bold text-slate-300">Academic Year</label>
+                        <span class="text-[9px] font-mono text-emerald-400 font-semibold" id="academicYearDbStatus">💾 Database Synced</span>
+                      </div>
+                      <input type="text" id="inputAcademicYear" class="input input-sm w-full bg-slate-950 text-white text-xs border border-white/10 rounded-lg px-2.5 py-1.5 focus:border-indigo-500" value="${esc(academicYear)}" placeholder="2026 - 2027">
                     </div>
                     <div>
                       <label class="block text-[11px] font-bold text-slate-300 mb-1">Date of Oath</label>
@@ -599,22 +605,55 @@ export async function openOathModal(options = {}) {
       modalEl.querySelector('#btnCloseOathModalBtn')?.addEventListener('click', closeModal);
       modalEl.querySelector('#oathBackdrop')?.addEventListener('click', closeModal);
 
-      // Global parameters change with persistence
+      // Save to Database and LocalStorage
+      let dbSyncTimeout = null;
+      const saveOathSettingsToDb = () => {
+        const statusEl = modalEl.querySelector('#academicYearDbStatus');
+        if (statusEl) statusEl.textContent = '⏳ Saving to DB...';
+
+        clearTimeout(dbSyncTimeout);
+        dbSyncTimeout = setTimeout(async () => {
+          try {
+            // Update local state cache
+            localStorage.setItem('gcc_oath_college_name_ml', collegeNameMl);
+            localStorage.setItem('gcc_oath_academic_year', academicYear);
+            localStorage.setItem('gcc_oath_date', oathDate);
+            
+            // Persist directly to PostgreSQL database settings table
+            await api.adminUpdateSettings(pwd, {
+              academicYear,
+              oathCollegeMl: collegeNameMl,
+              oathDate
+            });
+            if (settings) {
+              settings.academicYear = academicYear;
+              settings.oathCollegeMl = collegeNameMl;
+              settings.oathDate = oathDate;
+            }
+            if (statusEl) statusEl.textContent = '💾 Saved in DB';
+          } catch (err) {
+            console.warn('Failed to save oath settings to database:', err);
+            if (statusEl) statusEl.textContent = '⚠️ DB sync pending';
+          }
+        }, 500);
+      };
+
+      // Global parameters change with Database Persistence
       modalEl.querySelector('#inputCollegeMl')?.addEventListener('input', (e) => {
         collegeNameMl = e.target.value.trim() || 'ഗവൺമെന്റ് കോളേജ് ചിറ്റൂരിലെ';
-        try { localStorage.setItem('gcc_oath_college_name_ml', collegeNameMl); } catch (_) {}
+        saveOathSettingsToDb();
         updatePreviewDisplay();
       });
 
       modalEl.querySelector('#inputAcademicYear')?.addEventListener('input', (e) => {
         academicYear = e.target.value.trim() || defaultAcademicYear;
-        try { localStorage.setItem('gcc_oath_academic_year', academicYear); } catch (_) {}
+        saveOathSettingsToDb();
         updatePreviewDisplay();
       });
 
       modalEl.querySelector('#inputOathDate')?.addEventListener('input', (e) => {
         oathDate = e.target.value.trim() || getFormattedCurrentDate();
-        try { localStorage.setItem('gcc_oath_date', oathDate); } catch (_) {}
+        saveOathSettingsToDb();
         updatePreviewDisplay();
       });
 

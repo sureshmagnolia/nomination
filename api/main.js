@@ -1055,7 +1055,7 @@ export default async function handler(req, res) {
 
     if (action === 'getSettings' || action === 'adminGetSettings') {
       const status = await getFullElectionStatus();
-      const [colName, colShort, colLogo, colPlace, incRS, bindingMode, bookSize, mergeRem, tieDecisions] = await Promise.all([
+      const [colName, colShort, colLogo, colPlace, incRS, bindingMode, bookSize, mergeRem, tieDecisions, acadYear, oathColMl, oDate] = await Promise.all([
         getSetting('collegeName'),
         getSetting('collegeShortName'),
         getSetting('collegeLogo'),
@@ -1064,7 +1064,10 @@ export default async function handler(req, res) {
         getSetting('ballot_binding_mode'),
         getSetting('ballot_book_size'),
         getSetting('ballot_merge_remainders'),
-        getSetting('tie_decisions')
+        getSetting('tie_decisions'),
+        getSetting('academicYear'),
+        getSetting('oathCollegeMl'),
+        getSetting('oathDate')
       ]);
       const obj = {
         ...status,
@@ -1076,7 +1079,10 @@ export default async function handler(req, res) {
         ballot_binding_mode: bindingMode || 'definite',
         ballot_book_size: Number(bookSize) > 0 ? Number(bookSize) : 50,
         ballot_merge_remainders: mergeRem !== 'false',
-        tieDecisions: safeJsonParse(tieDecisions, {})
+        tieDecisions: safeJsonParse(tieDecisions, {}),
+        academicYear: acadYear || '',
+        oathCollegeMl: oathColMl || '',
+        oathDate: oDate || ''
       };
       if (action === 'adminGetSettings') {
         const rows = await sql`SELECT value FROM settings WHERE key = 'adminEmail'`;
@@ -2279,7 +2285,7 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       return jsonOut(res, { ok: true, stage, mode });
     }
 
-    if (action === 'adminUpdateSettings') {
+    if (action === 'adminUpdateSettings' || action === 'saveOathSettings' || action === 'adminSaveOathSettings') {
       if (body.collegeName !== undefined) await setSetting('collegeName', body.collegeName);
       if (body.collegeShortName !== undefined) await setSetting('collegeShortName', body.collegeShortName);
       if (body.electionYear !== undefined) await setSetting('electionYear', body.electionYear);
@@ -2288,6 +2294,9 @@ All students are directed to strictly adhere to the University Code of Conduct, 
       if (body.ballot_binding_mode !== undefined) await setSetting('ballot_binding_mode', body.ballot_binding_mode);
       if (body.ballot_book_size !== undefined) await setSetting('ballot_book_size', String(body.ballot_book_size));
       if (body.ballot_merge_remainders !== undefined) await setSetting('ballot_merge_remainders', String(body.ballot_merge_remainders));
+      if (body.academicYear !== undefined) await setSetting('academicYear', String(body.academicYear).trim());
+      if (body.oathCollegeMl !== undefined) await setSetting('oathCollegeMl', String(body.oathCollegeMl).trim());
+      if (body.oathDate !== undefined) await setSetting('oathDate', String(body.oathDate).trim());
       return jsonOut(res, { ok: true });
     }
 
