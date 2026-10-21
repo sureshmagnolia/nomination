@@ -15,6 +15,7 @@ import { generateAndPrintElectoralRolls, generateAndPrintBallotAccounts, generat
 import { openPrintRollModal } from '../../rollPrinter.js';
 import { getCountingMeta } from '../../offlineStorage.js';
 import { openOathModal } from '../../oathPrinter.js';
+import { openDepositRefundModal } from '../../depositRefundPrinter.js';
 
 
 export async function renderAdminNotices(container) {
@@ -210,6 +211,9 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                 </button>
                 <button id="btnHubQuickOaths" data-action="open-oaths" class="btn bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2" title="Swearing-in Ceremony Oaths (Available after Results Declaration)">
                   <span>📜</span> Swearing-in Oaths
+                </button>
+                <button id="btnHubQuickDepositRefund" data-action="open-deposit-refund" class="btn bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-2" title="Security Deposit Refund & Forfeiture Register (₹50 Deposit, 20% Rule)">
+                  <span>💰</span> Deposit Refund Register
                 </button>
               </div>
             </div>
@@ -717,6 +721,25 @@ function renderAdminNoticesHub(main, pwd, settings, schedule, notices, booths, c
                     <span>📜</span> Open Oath Studio Modal
                   </button>
                 </div>
+
+                <!-- Security Deposit Refund & Forfeiture Register (A4 Landscape - General Candidates) -->
+                <div class="bg-white/5 rounded-xl p-4 border border-emerald-500/30 hover:border-emerald-500/50 transition flex flex-col justify-between space-y-3 min-w-0 bg-gradient-to-br from-emerald-950/20 to-transparent">
+                  <div>
+                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30 whitespace-nowrap">Audit &amp; Disbursement</span>
+                      <span class="text-[10px] font-mono text-emerald-400 whitespace-nowrap">A4 Landscape</span>
+                    </div>
+                    <h5 class="text-sm font-bold text-white flex items-center gap-1.5">
+                      <span>💰</span> Deposit Refund Register (റീഫണ്ട് രജിസ്റ്റർ)
+                    </h5>
+                    <p class="text-xs text-slate-400 mt-1">
+                      Official register of ₹50 security deposits for General Union candidates. Computes 20% vote threshold, refund disbursement signatures, and forfeited deposits.
+                    </p>
+                  </div>
+                  <button id="btnHubOpenDepositRefundModal" data-action="open-deposit-refund" class="btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 px-3 rounded-lg w-full flex items-center justify-center gap-2 shadow-md">
+                    <span>💰</span> Open Deposit Refund Register
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1185,6 +1208,27 @@ function attachAdminNoticesEvents(main, pwd, settings, schedule, notices, booths
     const oathBtn = e.target.closest('#btnHubOpenOathModal, #btnHubQuickOaths, [data-action="open-oaths"]');
     if (oathBtn) {
       handleOpenOaths(e);
+    }
+  });
+
+  // Security Deposit Refund & Forfeiture Register (₹50 fee • 20% Rule)
+  const handleOpenDepositRefund = (e) => {
+    if (e) e.preventDefault();
+    openDepositRefundModal({
+      settings,
+      schedule,
+      posts,
+      nominations,
+      nominalRoll,
+      pwd
+    });
+  };
+  main.querySelector('#btnHubOpenDepositRefundModal')?.addEventListener('click', handleOpenDepositRefund);
+  main.querySelector('#btnHubQuickDepositRefund')?.addEventListener('click', handleOpenDepositRefund);
+  main.addEventListener('click', (e) => {
+    const depBtn = e.target.closest('#btnHubOpenDepositRefundModal, #btnHubQuickDepositRefund, [data-action="open-deposit-refund"]');
+    if (depBtn) {
+      handleOpenDepositRefund(e);
     }
   });
 

@@ -16,6 +16,7 @@ import {
 
 import { router } from '../../router.js';
 import { openOathModal } from '../../oathPrinter.js';
+import { openDepositRefundModal } from '../../depositRefundPrinter.js';
 
 let activeAdminResultsPollTimer = null;
 let lastDataFingerprint = '';
@@ -954,6 +955,9 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
             <button id="btnResultsOpenOaths" data-action="open-oaths" class="btn bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 text-xs flex items-center gap-1.5 font-bold shadow-lg shadow-indigo-600/30" title="Generate Swearing-in Ceremony Oath sheets (സത്യപ്രതിജ്ഞ) for Won candidates of General Union posts on single A4 sheets. (Available only after Results are declared)">
               <span>📜</span> Swearing-in Oaths
             </button>
+            <button id="btnResultsOpenDepositRefund" data-action="open-deposit-refund" class="btn bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 text-xs flex items-center gap-1.5 font-bold shadow-lg shadow-emerald-600/30" title="Security Deposit Refund & Forfeiture Register (₹50 deposit for General Candidates, 20% vote threshold on General Ballots)">
+              <span>💰</span> Deposit Refund Register
+            </button>
             <a href="#/trends" target="_blank" class="btn btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5 font-bold text-sky-300 border-sky-500/30 hover:bg-sky-500/10" title="Action: Opens projector-friendly trends and live declaration screen in a new window.">
               <span>🎯</span> Trends Screen
             </a>
@@ -1606,6 +1610,26 @@ function renderResultsUI(main, pwd, posts, candidates, results, schedule, sets, 
     const oathBtn = e.target.closest('#btnResultsOpenOaths, [data-action="open-oaths"]');
     if (oathBtn) {
       handleOpenResultsOaths(e);
+    }
+  });
+
+  // Security Deposit Refund & Forfeiture Register (₹50 fee • 20% Rule)
+  const handleOpenDepositRefund = (e) => {
+    if (e) e.preventDefault();
+    openDepositRefundModal({
+      results,
+      candidates,
+      posts,
+      settings: sets,
+      schedule: schedule,
+      pwd
+    });
+  };
+  main.querySelector('#btnResultsOpenDepositRefund')?.addEventListener('click', handleOpenDepositRefund);
+  main.addEventListener('click', (e) => {
+    const depBtn = e.target.closest('#btnResultsOpenDepositRefund, [data-action="open-deposit-refund"]');
+    if (depBtn) {
+      handleOpenDepositRefund(e);
     }
   });
 

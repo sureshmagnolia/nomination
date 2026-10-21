@@ -17,6 +17,7 @@ import {
 } from '../../utils.js';
 import { CONFIG } from '../../config.js';
 import { openOathModal } from '../../oathPrinter.js';
+import { openDepositRefundModal } from '../../depositRefundPrinter.js';
 
 export async function renderAdminDashboard(container) {
   const pwd = getAdminPassword();
@@ -321,6 +322,10 @@ function renderDashboardContent(main, pwd, data) {
               <span>Swearing-in Oaths</span>
               ${isResultsPublished ? `<span class="bg-white/20 text-[10px] font-mono px-1.5 py-0.5 rounded">Ready</span>` : ''}
             </button>
+            <button id="btnHeaderDepositRefund" class="btn bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-teal-900/30 flex items-center gap-2 transition transform hover:-translate-y-0.5" title="Security Deposit Refund & Forfeiture Register (₹50 Fee, 20% Rule)">
+              <span>💰</span>
+              <span>Deposit Refund</span>
+            </button>
           </div>
         </div>
       </div>
@@ -575,6 +580,17 @@ function renderDashboardContent(main, pwd, data) {
             <div>
               <div class="text-xs font-bold text-white group-hover:text-emerald-300 transition">Swearing-in</div>
               <p class="text-[10px] text-slate-400 leading-tight mt-0.5">സത്യപ്രതിജ്ഞ</p>
+            </div>
+          </button>
+
+          <button id="btnTileDepositRefund" data-action="open-deposit-refund" class="glass p-3.5 rounded-2xl border border-teal-500/30 hover:border-teal-400 hover:bg-teal-600/15 text-left transition flex flex-col justify-between gap-3 group bg-teal-950/20">
+            <div class="flex items-center justify-between">
+              <span class="text-xl p-2 rounded-xl bg-teal-500/20 border border-teal-500/30 text-teal-300">💰</span>
+              <span class="text-[9px] font-mono text-teal-400 font-bold">₹50 Register</span>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-white group-hover:text-teal-300 transition">Deposit Refund</div>
+              <p class="text-[10px] text-slate-400 leading-tight mt-0.5">20% Threshold</p>
             </div>
           </button>
 
@@ -921,6 +937,23 @@ function renderDashboardContent(main, pwd, data) {
 
   main.querySelector('#btnHeaderOaths')?.addEventListener('click', launchOaths);
   main.querySelector('#btnTileOaths')?.addEventListener('click', launchOaths);
+
+  // Security Deposit Refund Register Launchers
+  const launchDepositRefund = () => {
+    openDepositRefundModal({
+      pwd,
+      settings,
+      schedule,
+      posts,
+      candidates: activeCandidates,
+      results,
+      nominalRoll,
+      isResultsPublished
+    });
+  };
+
+  main.querySelector('#btnHeaderDepositRefund')?.addEventListener('click', launchDepositRefund);
+  main.querySelector('#btnTileDepositRefund')?.addEventListener('click', launchDepositRefund);
 
   // Activity filter tabs
   const filterBtns = main.querySelectorAll('#dashActivityFilterTabs .activity-tab-btn');

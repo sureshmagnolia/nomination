@@ -1,4 +1,5 @@
 import { openOathModal } from './oathPrinter.js';
+import { openDepositRefundModal } from './depositRefundPrinter.js';
 /**
  * main.js - Application entry point
  * Sets up the router and background decorations, then starts the app.
@@ -170,9 +171,18 @@ if ('serviceWorker' in navigator && window.location.protocol.startsWith('http'))
 
 // ─── Global Swearing-in Oath Action Handler ──────────────────────────────────
 document.addEventListener('click', (e) => {
-  const oathTrigger = e.target.closest('#btnResultsOpenOaths, #btnHubOpenOathModal, #btnHubQuickOaths, [data-action="open-oaths"]');
+  const oathTrigger = e.target.closest('#btnResultsOpenOaths, #btnHubOpenOathModal, #btnHubQuickOaths, #btnHeaderOaths, #btnTileOaths, [data-action="open-oaths"]');
   if (oathTrigger) {
     e.preventDefault();
     openOathModal();
+  }
+});
+
+// ─── Global Security Deposit Refund Action Handler ───────────────────────────
+document.addEventListener('click', (e) => {
+  const depositTrigger = e.target.closest('#btnResultsOpenDepositRefund, #btnHubOpenDepositRefundModal, #btnHubQuickDepositRefund, #btnHeaderDepositRefund, #btnTileDepositRefund, [data-action="open-deposit-refund"]');
+  if (depositTrigger) {
+    e.preventDefault();
+    openDepositRefundModal();
   }
 });
